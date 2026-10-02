@@ -69,7 +69,7 @@
         "directory": "data/za-wc-source-authority-v0.2",
         "manifest": {
           "path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
-          "sha256": "80225b78a8590ea116c7bd15e7c762770b7045ece43071d6fd394d4c45c968f5"
+          "sha256": "4c2de8a535106b9ef48c632a3e8da2d3549446814ec69cd351404db9efd18677"
         },
         "artifacts": {
           "geography": "za_wc_factual_canonical_geography_v0.2.jsonl",

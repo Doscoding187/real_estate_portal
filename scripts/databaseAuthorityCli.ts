@@ -18,6 +18,8 @@ import {
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
 import {
   prepareCanonicalPlaces,
+  prepareNationalCanonicalPlaces,
+  verifyNationalCanonicalPlaces,
   verifyCanonicalPlaces,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalPlaces';
 import {
@@ -93,6 +95,8 @@ type Command =
   | 'migration:apply'
   | 'places:prepare'
   | 'places:verify'
+  | 'places:prepare-national'
+  | 'places:verify-national'
   | 'migration-recovery:plan'
   | 'migration-recovery:apply'
   | 'release-migration-recovery:plan'
@@ -468,6 +472,29 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  /**
+   * National storage proof. Separate from `places:prepare` because it answers a
+   * different question: `places:prepare` proves one province on its own target, this
+   * proves all of them coexist in one target in one transaction. It takes no
+   * `--territory`, because a national load that loads some provinces is not national.
+   */
+  if (command === 'places:prepare-national' || command === 'places:verify-national') {
+    const isPrepare = command === 'places:prepare-national';
+    const authority = authorityFor(isPrepare ? 'reference-seed' : 'verification', isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        isPrepare
+          ? await prepareNationalCanonicalPlaces({ authority, decision, connection })
+          : await verifyNationalCanonicalPlaces({ authority, decision, connection }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
@@ -650,6 +677,8 @@ const commands = new Set<Command>([
   'reference:verify',
   'places:prepare',
   'places:verify',
+  'places:prepare-national',
+  'places:verify-national',
   'foundation:prepare',
   'foundation:verify',
   'scenario:prepare',

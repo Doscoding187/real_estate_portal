@@ -315,6 +315,151 @@ async function readStored(sql: any) {
 
 const rowKey = (values: unknown[]) => JSON.stringify(values);
 
+/**
+ * The row-writing body, shared by the per-territory and the national load so the
+ * two cannot drift. Extracted rather than duplicated: a national load that wrote
+ * rows through a second implementation would be a second definition of what a Place
+ * is, and the two would disagree the first time one was changed.
+ *
+ * Every insert is idempotent, so a replay writes nothing and reports zero.
+ */
+async function writePackageRows(connection: any, rows: any, written: WrittenCounts) {
+  for (const place of rows.places as any[]) {
+    if (!PLACE_ID_PATTERN.test(String(place.place_id))) {
+      throw new Error(
+        `canonical-places refused: ${place.place_id} is not a governed Place identity`,
+      );
+    }
+    const [result] = await connection.query(
+      `INSERT INTO \`place\`
+         (place_id, place_type, place_classification, verification_status, lifecycle_status,
+          publication_eligible, search_eligible, search_scope, licensing_classification)
+       VALUES (?,?,?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE place_id = place_id`,
+      [
+        place.place_id,
+        place.place_type,
+        place.place_classification,
+        place.verification_status,
+        place.lifecycle_status,
+        place.publication_eligible,
+        place.search_eligible,
+        place.search_scope ?? null,
+        place.licensing_classification ?? null,
+      ],
+    );
+    written.places += result.affectedRows ?? 0;
+  }
+
+  for (const name of rows.names as any[]) {
+    const [result] = await connection.query(
+      `INSERT INTO \`place_name\`
+         (place_id, name, normalized_name, name_role, name_state, is_searchable, evidence_source, valid_from, valid_to)
+       VALUES (?,?,?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE place_id = place_id`,
+      [
+        name.place_id,
+        name.name,
+        name.normalized_name,
+        name.name_role,
+        name.name_state,
+        name.is_searchable,
+        name.evidence_source,
+        name.valid_from ?? null,
+        name.valid_to ?? null,
+      ],
+    );
+    written.names += result.affectedRows ?? 0;
+  }
+
+  for (const relationship of rows.relationships as any[]) {
+    const [result] = await connection.query(
+      `INSERT INTO \`place_relationship\`
+         (from_place_id, to_place_id, relationship_type, search_scope_authorized, evidence_source, valid_from, valid_to)
+       VALUES (?,?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE from_place_id = from_place_id`,
+      [
+        relationship.from_place_id,
+        relationship.to_place_id,
+        relationship.relationship_type,
+        relationship.search_scope_authorized,
+        relationship.evidence_source,
+        relationship.valid_from ?? null,
+        relationship.valid_to ?? null,
+      ],
+    );
+    written.relationships += result.affectedRows ?? 0;
+  }
+
+  // place_evidence has no natural unique key: `place_id` is nullable by design
+  // so an unresolved signal can exist without a Place, and MySQL treats NULLs
+  // in a unique index as distinct. Idempotency is therefore established here
+  // rather than by an ON DUPLICATE KEY clause, which would silently duplicate
+  // every evidence row on each run.
+  const evidenceIdentity = (row: any) =>
+    rowKey([
+      row.place_id ?? null,
+      row.evidence_kind,
+      row.subject ?? null,
+      row.provider ?? null,
+      row.provider_record_id ?? null,
+    ]);
+  const existingEvidence = new Set(
+    (
+      await queryRows(
+        connection,
+        `SELECT place_id, evidence_kind, subject, provider, provider_record_id FROM \`place_evidence\``,
+      )
+    ).map(existingEvidenceRow => evidenceIdentity(existingEvidenceRow)),
+  );
+  for (const evidence of rows.evidence as any[]) {
+    const identity = evidenceIdentity(evidence);
+    if (existingEvidence.has(identity)) continue;
+    existingEvidence.add(identity);
+    await connection.query(
+      `INSERT INTO \`place_evidence\`
+         (place_id, evidence_kind, evidence_state, subject, provider, provider_record_id, research_priority)
+       VALUES (?,?,?,?,?,?,?)`,
+      [
+        evidence.place_id ?? null,
+        evidence.evidence_kind,
+        evidence.evidence_state,
+        evidence.subject ?? null,
+        evidence.provider ?? null,
+        evidence.provider_record_id ?? null,
+        evidence.research_priority ?? 0,
+      ],
+    );
+    written.evidence += 1;
+  }
+
+  for (const mapping of rows.external_mappings as any[]) {
+    const [result] = await connection.query(
+      `INSERT INTO \`place_external_mapping\`
+         (place_id, provider, provider_record_id, provider_label, normalized_alias, observed_at)
+       VALUES (?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE place_id = place_id`,
+      [
+        mapping.place_id,
+        mapping.provider,
+        mapping.provider_record_id,
+        mapping.provider_label ?? null,
+        mapping.normalized_alias ?? null,
+        mapping.observed_at ?? null,
+      ],
+    );
+    written.externalMappings += result.affectedRows ?? 0;
+  }
+}
+
+interface WrittenCounts {
+  places: number;
+  names: number;
+  relationships: number;
+  evidence: number;
+  externalMappings: number;
+}
+
 export async function prepareCanonicalPlaces(input: {
   authority: any;
   decision: any;
@@ -394,132 +539,7 @@ export async function prepareCanonicalPlaces(input: {
   const written = { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0 };
 
   await withTransaction(connection, async () => {
-    for (const place of rows.places as any[]) {
-      if (!PLACE_ID_PATTERN.test(String(place.place_id))) {
-        throw new Error(
-          `canonical-places refused: ${place.place_id} is not a governed Place identity`,
-        );
-      }
-      const [result] = await connection.query(
-        `INSERT INTO \`place\`
-           (place_id, place_type, place_classification, verification_status, lifecycle_status,
-            publication_eligible, search_eligible, search_scope, licensing_classification)
-         VALUES (?,?,?,?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE place_id = place_id`,
-        [
-          place.place_id,
-          place.place_type,
-          place.place_classification,
-          place.verification_status,
-          place.lifecycle_status,
-          place.publication_eligible,
-          place.search_eligible,
-          place.search_scope ?? null,
-          place.licensing_classification ?? null,
-        ],
-      );
-      written.places += result.affectedRows ?? 0;
-    }
-
-    for (const name of rows.names as any[]) {
-      const [result] = await connection.query(
-        `INSERT INTO \`place_name\`
-           (place_id, name, normalized_name, name_role, name_state, is_searchable, evidence_source, valid_from, valid_to)
-         VALUES (?,?,?,?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE place_id = place_id`,
-        [
-          name.place_id,
-          name.name,
-          name.normalized_name,
-          name.name_role,
-          name.name_state,
-          name.is_searchable,
-          name.evidence_source,
-          name.valid_from ?? null,
-          name.valid_to ?? null,
-        ],
-      );
-      written.names += result.affectedRows ?? 0;
-    }
-
-    for (const relationship of rows.relationships as any[]) {
-      const [result] = await connection.query(
-        `INSERT INTO \`place_relationship\`
-           (from_place_id, to_place_id, relationship_type, search_scope_authorized, evidence_source, valid_from, valid_to)
-         VALUES (?,?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE from_place_id = from_place_id`,
-        [
-          relationship.from_place_id,
-          relationship.to_place_id,
-          relationship.relationship_type,
-          relationship.search_scope_authorized,
-          relationship.evidence_source,
-          relationship.valid_from ?? null,
-          relationship.valid_to ?? null,
-        ],
-      );
-      written.relationships += result.affectedRows ?? 0;
-    }
-
-    // place_evidence has no natural unique key: `place_id` is nullable by design
-    // so an unresolved signal can exist without a Place, and MySQL treats NULLs
-    // in a unique index as distinct. Idempotency is therefore established here
-    // rather than by an ON DUPLICATE KEY clause, which would silently duplicate
-    // every evidence row on each run.
-    const evidenceIdentity = (row: any) =>
-      rowKey([
-        row.place_id ?? null,
-        row.evidence_kind,
-        row.subject ?? null,
-        row.provider ?? null,
-        row.provider_record_id ?? null,
-      ]);
-    const existingEvidence = new Set(
-      (
-        await queryRows(
-          connection,
-          `SELECT place_id, evidence_kind, subject, provider, provider_record_id FROM \`place_evidence\``,
-        )
-      ).map(existingEvidenceRow => evidenceIdentity(existingEvidenceRow)),
-    );
-    for (const evidence of rows.evidence as any[]) {
-      const identity = evidenceIdentity(evidence);
-      if (existingEvidence.has(identity)) continue;
-      existingEvidence.add(identity);
-      await connection.query(
-        `INSERT INTO \`place_evidence\`
-           (place_id, evidence_kind, evidence_state, subject, provider, provider_record_id, research_priority)
-         VALUES (?,?,?,?,?,?,?)`,
-        [
-          evidence.place_id ?? null,
-          evidence.evidence_kind,
-          evidence.evidence_state,
-          evidence.subject ?? null,
-          evidence.provider ?? null,
-          evidence.provider_record_id ?? null,
-          evidence.research_priority ?? 0,
-        ],
-      );
-      written.evidence += 1;
-    }
-
-    for (const mapping of rows.external_mappings as any[]) {
-      const [result] = await connection.query(
-        `INSERT INTO \`place_external_mapping\`
-           (place_id, provider, provider_record_id, provider_label, normalized_alias, observed_at)
-         VALUES (?,?,?,?,?,?)
-         ON DUPLICATE KEY UPDATE place_id = place_id`,
-        [
-          mapping.place_id,
-          mapping.provider,
-          mapping.provider_record_id,
-          mapping.provider_label ?? null,
-          mapping.normalized_alias ?? null,
-          mapping.observed_at ?? null,
-        ],
-      );
-      written.externalMappings += result.affectedRows ?? 0;
-    }
+    await writePackageRows(connection, rows, written);
   });
 
   /**
@@ -566,6 +586,367 @@ export async function prepareCanonicalPlaces(input: {
     expected,
     written,
     schemaMutation: false,
+  };
+}
+
+/**
+ * National storage proof: every registered province into one target, one
+ * transaction, disposable only.
+ *
+ * This answers a storage question and nothing else. It does not activate a
+ * consumer, does not publish a scope, and does not widen a search. It proves that
+ * nine independently admitted and separately proven packages can coexist in one
+ * `place` table without an ID collision and without a partial state.
+ *
+ * Founder decision of record: `place_id` is the identity. A uniqueness constraint
+ * on (parent, normalized_name) is rejected outright, and adding place_type does not
+ * rescue it -- `measure-national-collision-surface.mjs` measures 614 admitted pairs
+ * that share a parent and name, 500 of which also share a type, so both candidate
+ * constraints would reject correct data.
+ *
+ * The four guarantees this must hold, in the order they can fail:
+ *
+ *   1. Every package is loaded and digest-verified BEFORE any row is written, so a
+ *      bad province cannot half-load the target.
+ *   2. Cross-province Place identity is checked across the loaded set, so a package
+ *      change cannot quietly introduce a collision that the static check has not
+ *      seen yet. This is enforced here, not asserted by a report.
+ *   3. One transaction wraps all nine writes. A failure anywhere leaves the target
+ *      holding zero provinces. A half-loaded target is the one unacceptable outcome,
+ *      because seven provinces present and one missing reads as complete to every
+ *      caller that does not recount.
+ *   4. A target already holding a PARTIAL set of provinces is refused rather than
+ *      extended. Extending it would launder a broken prior load into a healthy one.
+ */
+export async function prepareNationalCanonicalPlaces(input: {
+  authority: any;
+  decision: any;
+  connection: any;
+  root?: string;
+}) {
+  const { authority, decision, connection } = input;
+  requireReferenceAdapterTarget(authority);
+  await requireAcceptedMigrationHead({ authority, connection });
+  const root = input.root ?? process.cwd();
+  const disposable = isDisposableTarget(authority);
+
+  const { registry } = loadPlaceAdmissionTerritoryRegistry(root);
+  const territoryIds = registry.territories.map(territory => territory.territoryId);
+  if (territoryIds.length < 2) {
+    throw new Error(
+      `canonical-places national refused: the registry names ${territoryIds.length} territory, ` +
+        `which is not a national load`,
+    );
+  }
+
+  // (1) Load and verify every package before writing anything.
+  const packages = territoryIds.map((territoryId: string) => {
+    const ref: CanonicalPlacesPackageRef = { territoryId };
+    const expected = canonicalPlacesExpected(root, ref);
+    if (expected.osmOnlyPlaces > 0 && !disposable) {
+      throw new Error(
+        `canonical-places national refused: ${territoryId} has ${expected.osmOnlyPlaces} OSM-only ` +
+          `Places, which require the founder ODbL gate before any non-disposable target may hold them`,
+      );
+    }
+    const loaded = loadCanonicalPlacePackage(root, ref);
+    return { territoryId, expected, rows: loaded.rows, digest: loaded.verifiedDigest };
+  });
+
+  // (2) Cross-province Place identity, enforced across the whole set.
+  const owner = new Map<string, string>();
+  const collisions: string[] = [];
+  for (const pkg of packages) {
+    for (const place of pkg.rows.places as any[]) {
+      const id = String(place.place_id);
+      if (!PLACE_ID_PATTERN.test(id)) {
+        throw new Error(`canonical-places national refused: ${id} is not a governed Place identity`);
+      }
+      const existing = owner.get(id);
+      if (existing && existing !== pkg.territoryId) {
+        collisions.push(`${id} claimed by ${existing} and ${pkg.territoryId}`);
+      }
+      owner.set(id, pkg.territoryId);
+    }
+  }
+  if (collisions.length) {
+    throw new Error(
+      `canonical-places national refused: ${collisions.length} Place identities are claimed by two ` +
+        `provinces, so a national load would be ambiguous:\n  ${collisions.slice(0, 20).join('\n  ')}`,
+    );
+  }
+
+  // (4) Refuse a partial target rather than extending it.
+  const storedBefore = await readStored(connection);
+  const alreadyStored = storedBefore.place.length;
+  if (alreadyStored > 0) {
+    const storedIds = new Set(storedBefore.place.map((row: any) => String(row.place_id)));
+    const expectedIds = new Set(Array.from(owner.keys()));
+    const matchesNational = alreadyStored === expectedIds.size;
+    if (!matchesNational) {
+      throw new Error(
+        `canonical-places national refused: the target already holds ${alreadyStored} Places, which is ` +
+          `not the ${expectedIds.size} of a national load. A partially loaded target is refused rather ` +
+          `than extended, so a broken prior load cannot be laundered into a healthy one. Dispose the ` +
+          `target and load from zero.`,
+      );
+    }
+  }
+
+  const totals = packages.reduce(
+    (sum, pkg) => ({
+      places: sum.places + pkg.expected.places,
+      names: sum.names + pkg.expected.names,
+      relationships: sum.relationships + pkg.expected.relationships,
+      evidence: sum.evidence + pkg.expected.evidence,
+      externalMappings: sum.externalMappings + pkg.expected.externalMappings,
+      dispositionLedger: sum.dispositionLedger + pkg.expected.dispositionLedger,
+    }),
+    { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0, dispositionLedger: 0 },
+  );
+
+  // (3) One transaction for all nine. Any throw below rolls the whole load back.
+  const written: WrittenCounts = { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0 };
+  await withTransaction(connection, async () => {
+    for (const pkg of packages) {
+      await writePackageRows(connection, pkg.rows, written);
+    }
+  });
+
+  /**
+   * Verified against the loaded state, not against this run's write counts. A replay
+   * legitimately writes nothing, so counting writes would report a correct idempotent
+   * no-op as a defect -- the same trap the per-territory path documents.
+   */
+  const storedAfter = await readStored(connection);
+  const dropped: string[] = [];
+  const compare = (label: string, actual: number, expectedCount: number) => {
+    if (actual !== expectedCount) dropped.push(`${label} ${actual} != national total ${expectedCount}`);
+  };
+  compare('places', storedAfter.place.length, totals.places);
+  compare('names', storedAfter.placeName.length, totals.names);
+  compare('relationships', storedAfter.placeRelationship.length, totals.relationships);
+  compare('evidence', storedAfter.placeEvidence.length, totals.evidence);
+  compare('external mappings', storedAfter.placeExternalMapping.length, totals.externalMappings);
+  if (dropped.length > 0) {
+    throw new Error(
+      `canonical-places national refused: the target does not hold the national total, so a row was ` +
+        `rejected as a duplicate key under the target collation. This is a data or collation defect, not ` +
+        `a successful load:\n  ${dropped.join('\n  ')}`,
+    );
+  }
+
+  return {
+    adapter: 'canonical-places-national',
+    scope: 'national-storage',
+    consumerActivated: false,
+    publicationPerformed: false,
+    identity: 'place_id',
+    rejectedConstraints: ['UNIQUE(parent, normalized_name)', 'UNIQUE(parent, normalized_name, place_type)'],
+    targetClassDisposable: disposable,
+    provinces: territoryIds,
+    provinceCount: territoryIds.length,
+    expected: totals,
+    written,
+    stored: {
+      places: storedAfter.place.length,
+      names: storedAfter.placeName.length,
+      relationships: storedAfter.placeRelationship.length,
+      evidence: storedAfter.placeEvidence.length,
+      externalMappings: storedAfter.placeExternalMapping.length,
+    },
+    perProvince: packages.map(pkg => ({
+      territoryId: pkg.territoryId,
+      places: pkg.expected.places,
+      names: pkg.expected.names,
+      relationships: pkg.expected.relationships,
+      evidence: pkg.expected.evidence,
+      externalMappings: pkg.expected.externalMappings,
+      dispositionLedger: pkg.expected.dispositionLedger,
+      digest: pkg.digest,
+    })),
+    digests: Object.fromEntries(packages.map(pkg => [pkg.territoryId, pkg.digest])),
+    schemaMutation: false,
+  };
+}
+
+/**
+ * National verification: every registered province checked inside one shared
+ * target.
+ *
+ * The per-territory verifier cannot do this job. It compares the target against a
+ * single province's expected counts, so against a national target it correctly
+ * refuses for all nine, which is why a national load needs its own verifier rather
+ * than a loosened one.
+ *
+ * Per province it establishes that every admitted Place is present, that its
+ * identity-bearing fields still match its own package, and that its row counts are
+ * exactly what that package claims. Then it establishes the national properties
+ * that only exist once the provinces are together: total accounting, nine distinct
+ * province roots, and no Place claimed by two provinces.
+ */
+export async function verifyNationalCanonicalPlaces(input: {
+  authority: any;
+  decision: any;
+  connection: any;
+  root?: string;
+}) {
+  const { authority, decision, connection } = input;
+  requireReferenceAdapterTarget(authority);
+  await requireAcceptedMigrationHead({ authority, connection });
+  const root = input.root ?? process.cwd();
+
+  const { registry } = loadPlaceAdmissionTerritoryRegistry(root);
+  const packages = registry.territories.map((territory: any) => {
+    const ref: CanonicalPlacesPackageRef = { territoryId: territory.territoryId };
+    return {
+      territoryId: territory.territoryId,
+      expected: canonicalPlacesExpected(root, ref),
+      rows: loadCanonicalPlacePackage(root, ref).rows,
+    };
+  });
+
+  const stored = await readStored(connection);
+  const storedPlaces = new Map(stored.place.map((row: any) => [String(row.place_id), row]));
+  const problems: string[] = [];
+  const perProvince: any[] = [];
+
+  for (const pkg of packages) {
+    let present = 0;
+    let identityDrift = 0;
+    for (const place of pkg.rows.places as any[]) {
+      const current = storedPlaces.get(String(place.place_id));
+      if (!current) {
+        problems.push(`${pkg.territoryId}: admitted Place ${place.place_id} is absent from the target`);
+        continue;
+      }
+      present += 1;
+      const expectedIdentity = [
+        place.place_id,
+        place.place_type,
+        place.place_classification,
+        place.verification_status,
+        place.lifecycle_status,
+        place.publication_eligible,
+        place.search_eligible,
+        place.search_scope ?? null,
+        place.licensing_classification ?? null,
+      ];
+      const storedIdentity = [
+        current.place_id,
+        current.place_type,
+        current.place_classification,
+        current.verification_status,
+        current.lifecycle_status,
+        current.publication_eligible,
+        current.search_eligible,
+        current.search_scope ?? null,
+        current.licensing_classification ?? null,
+      ];
+      if (rowKey(expectedIdentity) !== rowKey(storedIdentity)) {
+        identityDrift += 1;
+        problems.push(
+          `${pkg.territoryId}: stored identity for ${place.place_id} differs from its admission package`,
+        );
+      }
+    }
+    perProvince.push({
+      territoryId: pkg.territoryId,
+      admittedPlaces: pkg.expected.places,
+      presentPlaces: present,
+      complete: present === pkg.expected.places,
+      identityDrift,
+    });
+  }
+
+  // National properties, which exist only when the provinces are together.
+  const totals = packages.reduce(
+    (sum, pkg) => ({
+      places: sum.places + pkg.expected.places,
+      names: sum.names + pkg.expected.names,
+      relationships: sum.relationships + pkg.expected.relationships,
+      evidence: sum.evidence + pkg.expected.evidence,
+      externalMappings: sum.externalMappings + pkg.expected.externalMappings,
+    }),
+    { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0 },
+  );
+  if (stored.place.length !== totals.places) {
+    problems.push(`national place rows ${stored.place.length} != total ${totals.places}`);
+  }
+  if (stored.placeName.length !== totals.names) {
+    problems.push(`national place_name rows ${stored.placeName.length} != total ${totals.names}`);
+  }
+  if (stored.placeRelationship.length !== totals.relationships) {
+    problems.push(
+      `national place_relationship rows ${stored.placeRelationship.length} != total ${totals.relationships}`,
+    );
+  }
+  if (stored.placeEvidence.length !== totals.evidence) {
+    problems.push(`national place_evidence rows ${stored.placeEvidence.length} != total ${totals.evidence}`);
+  }
+  if (stored.placeExternalMapping.length !== totals.externalMappings) {
+    problems.push(
+      `national place_external_mapping rows ${stored.placeExternalMapping.length} != ` +
+        `total ${totals.externalMappings}`,
+    );
+  }
+
+  const roots = stored.place.filter((row: any) => row.place_type === 'province');
+  if (roots.length !== packages.length) {
+    problems.push(`national target holds ${roots.length} province roots for ${packages.length} provinces`);
+  }
+
+  // A containment forest must not become cyclic or gain a second parent once the
+  // provinces share one table: that is a hazard that only exists nationally.
+  const parents = new Map<string, string>();
+  for (const edge of stored.placeRelationship) {
+    const child = String(edge.from_place_id);
+    const parent = String(edge.to_place_id);
+    const existing = parents.get(child);
+    if (existing && existing !== parent) {
+      problems.push(`${child} has more than one containment parent: ${existing} and ${parent}`);
+    }
+    parents.set(child, parent);
+  }
+  for (const child of Array.from(parents.keys())) {
+    const seen = new Set<string>([child]);
+    let cursor: string | undefined = parents.get(child);
+    while (cursor) {
+      if (seen.has(cursor)) {
+        problems.push(`containment cycle through ${cursor}`);
+        break;
+      }
+      seen.add(cursor);
+      cursor = parents.get(cursor);
+    }
+  }
+
+  if (problems.length) {
+    throw new Error(
+      `canonical-places national verification failed with ${problems.length} problem(s):\n  ` +
+        `${problems.slice(0, 25).join('\n  ')}`,
+    );
+  }
+
+  return {
+    adapter: 'canonical-places-national',
+    scope: 'national-storage',
+    consumerActivated: false,
+    provinces: packages.length,
+    completeProvinces: perProvince.filter(entry => entry.complete).length,
+    provinceRoots: roots.length,
+    totals: {
+      expected: totals,
+      stored: {
+        places: stored.place.length,
+        names: stored.placeName.length,
+        relationships: stored.placeRelationship.length,
+        evidence: stored.placeEvidence.length,
+        externalMappings: stored.placeExternalMapping.length,
+      },
+    },
+    perProvince,
+    containmentEdges: parents.size,
   };
 }
 

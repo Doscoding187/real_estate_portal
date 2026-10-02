@@ -4,7 +4,7 @@
     "territory_id": "za-kzn",
     "display_name": "KwaZulu-Natal",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "e3dcd6cbfd95dcab78e57f5ffb6a614b06d39899140222b10ecba7eb6415dc64"
+    "admission_registry_sha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433"
   },
   "generated_from": {
     "source_authority_version": "za-kzn-source-authority-v0.2",
