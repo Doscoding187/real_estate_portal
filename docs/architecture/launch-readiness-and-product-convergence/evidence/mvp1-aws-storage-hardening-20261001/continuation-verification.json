@@ -90,17 +90,17 @@
     "latest5ProductionApiAllRemoved": true
   },
   "pending": [
+    "storage delta review and fresh exact-head required CI before production binding",
     "AWS alert email delivery and aggregate provider monitoring",
-    "exact production-build/hosted verification of the saved frontend media setting",
-    "prepared final media operator application/readback, encrypted media-key transfer/decryption and independent runtime verification before binding",
-    "worker provisioning and exact production bindings/session-secret application",
-    "joined API/worker/frontend deployment under checklist 28",
-    "hosted upload/display and private proof owner/wrong-owner/anonymous checks",
+    "exact production-build/hosted verification of the saved frontend media setting and refreshed deployment hold",
+    "remaining worker provisioning and prepared production bindings/session-secret application",
+    "joined API/worker/frontend deployment at accepted M under checklist 28",
+    "hosted upload/display and private proof owner/wrong-owner/anonymous checks; no production fixture or intake bypass",
     "physical USB disconnection custody"
   ],
   "validation": {
     "pythonSecurityContractTests": 25,
-    "nodeTransferRuntimeSecurityContractTests": 6,
+    "nodeTransferRuntimeSecurityContractTests": 14,
     "lint": "pass; new CJS files",
     "format": "pass; new CJS files",
     "whitespace": "pass",
@@ -111,12 +111,11 @@
       "certifiesCurrentFollowupHead": false
     },
     "latestVerifiedGitHubCi": {
-      "head": "ff2b125f0069c8ada556669572ccb6995c48dcdc",
-      "runId": 36926327628,
+      "head": "967a7afd6f3416e83b47d87c7dca194ecf6c7253",
+      "runId": 36990128437,
       "requiredJobsPassed": 5,
-      "laterDocumentationFollowupNeedsItsOwnChecks": true
-    },
-    "nodeTestsUnchangedSincePreviousPassingRun": true
+      "certifiesNewMediaVerifierFollowupHead": false
+    }
   },
   "mutationsThisContinuation": {
     "privateS3TaskObjectWritten": true,
@@ -126,7 +125,10 @@
     "paymentIntakeOpened": false,
     "protectedDatabaseDataChanged": false,
     "temporaryAzureSingleAddressRuleCreatedAndRemoved": true,
-    "productionFrontendMediaSettingSavedByOperator": true
+    "productionFrontendMediaSettingSavedByOperator": true,
+    "finalMediaConfigurationAppliedByOperator": true,
+    "dedicatedMediaRuntimeUserProvisionedByOperator": true,
+    "agentMediaTaskObjectPutAndDeleted": true
   },
   "privateEvidenceSha256": {
     "proof-runtime-verified/transfer-verification.json": "94f324c3bfa3754a84c9cad3091a59d984e18e9c13664e27308d76d2a4002747",
@@ -137,7 +139,13 @@
     "continuation-containment-readback.json": "9eca2c9a2714269b17c07e0d4e0b6ca7393a05ffb07946044ad638e64d56eaf3",
     "azure-media-inventory-authorized-local-result.json": "33fd4d40e3ba35d51300089fbed6fa00324dc2b631ad8d6336b48a8979b9eab7",
     "azure-media-route2-task-rule-cleanup.json": "258a32615bdb0ae24ecdf3bd273c19746b0f745fadc36cb20ad8126d1ac3d3f1",
-    "production-containment-after-media-inventory-20261002.json": "969c6a0e9d64b1f8b39f3cf3e52296baeafa4697881c0d51d095366a4dd9e7df"
+    "production-containment-after-media-inventory-20261002.json": "969c6a0e9d64b1f8b39f3cf3e52296baeafa4697881c0d51d095366a4dd9e7df",
+    "media-runtime-inputs-20261002/result.json": "0122516d90eeea29b3f8b1193d5e5317e387a2bdf2a887dbf27390435a08be2d",
+    "operator-media-hardening-pass-20261002.json": "454a87054717c965713090bccba1453057e6f9c0f8456fb589336285452e13e0",
+    "media-hardening-independent-readback-20261002.json": "fc66fc6b8d9ec844e0f925b3b797fb4e0792811ac6182cf83a6e6d09d1cd8f8a",
+    "media-runtime-verified/transfer-verification.json": "7d5ba2cda252940f369488407d15dcd1b85f016066f7bdc1e9f55adeff823bb4",
+    "media-runtime-verified/runtime-verification.json": "5f5ca1aabc138c2606532cbd822f1f9dd3307f8897e166f2777d65661e455536",
+    "media-runtime-task-object-deletion-readback-20261002.json": "3f3ea3f103139af4c9b16c23c203e236d5209603883916d3919f8924fd31cf10"
   },
   "costAlerts": {
     "configurationReadback": "PASS",
@@ -151,6 +159,29 @@
     "productionViteCloudFrontSettingSavedByOperator": true,
     "activeFrontendBuildVerified": false
   },
-  "updatedAt": "2026-10-02T09:22:30.072873+00:00",
-  "mediaHardeningPreparation": "media-hardening-operator-preparation-20261002.json"
+  "updatedAt": "2026-10-02T10:39:18.437847+00:00",
+  "mediaHardeningPreparation": "media-hardening-operator-preparation-20261002.json",
+  "mediaHardening": {
+    "executionEvidence": "media-hardening-execution-20261002.json",
+    "operatorConfigurationPassed": true,
+    "independentConfigurationAndObjectsVerified": true,
+    "encryptedTransferChecksumAndDecryptionPassed": true,
+    "dedicatedRuntimeUser": "listify-media-runtime-07394cfd",
+    "independentLocalRuntimePermissions": "PASS",
+    "localRuntimeTaskObjectDeletionIndependentlyVerified": true,
+    "productionBindingsChanged": false,
+    "hostedAcceptanceVerified": false,
+    "oldBroadUploaderRetired": false
+  },
+  "productionBindingPreparation": "production-binding-preparation-20261002.json",
+  "protectedReleasePreparation": {
+    "phase": "plan/review only",
+    "canonicalHead": "0094",
+    "manifestSha256": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "localDatabaseStoppedAndNotInitialized": true,
+    "staticApiWorkerConfigurationsPass": true,
+    "protectedRoleApprovalFieldConsistencyPass": true,
+    "protectedDatabaseConnected": false,
+    "providerBindingsChanged": false
+  }
 }

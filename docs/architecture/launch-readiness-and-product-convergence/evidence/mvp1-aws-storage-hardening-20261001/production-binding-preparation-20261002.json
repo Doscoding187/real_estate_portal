@@ -1,0 +1,92 @@
+{
+  "phase": "plan; private payloads not applied",
+  "applicationRelease": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "protectedDatabaseConnected": false,
+  "providerBindingsChanged": false,
+  "servicesStarted": false,
+  "proofAndMediaCredentialsDistinct": true,
+  "freshSessionSecretsDifferFromHistorical": true,
+  "intakePaused": true,
+  "admissionAndDeadlineAbsent": true,
+  "roles": [
+    {
+      "role": "runtime",
+      "operation": "runtime-connect",
+      "targetClass": "production",
+      "credentialClass": "runtime",
+      "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "configurationOk": true,
+      "issues": [],
+      "commercialMode": "preparation_only",
+      "activationEnabled": false,
+      "approvalChannel": "Existing explicit Edward-controlled Azure cutover scope; exact persistent runtime/worker approval fields must be reviewed before application",
+      "noProtectedConnectionAttempted": true
+    },
+    {
+      "role": "worker",
+      "operation": "worker-connect",
+      "targetClass": "production",
+      "credentialClass": "worker",
+      "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "configurationOk": true,
+      "issues": [],
+      "commercialMode": "preparation_only",
+      "activationEnabled": false,
+      "approvalChannel": "Existing explicit Edward-controlled Azure cutover scope; exact persistent runtime/worker approval fields must be reviewed before application",
+      "noProtectedConnectionAttempted": true
+    }
+  ],
+  "staticConfigurationOk": true,
+  "requiredBeforeApplication": [
+    "Separate storage PR review and exact-head required CI",
+    "Review exact protected runtime/worker connection approval fields for the named Azure target",
+    "Refresh current holds and attended Vercel cutover",
+    "Apply using secret channels with deployments held; independent readback before starting exact M"
+  ],
+  "approvalFieldProposal": {
+    "phase": "review proposal; not applied",
+    "approvalSource": "Edward explicitly directed the controlled Azure application/worker cutover under checklist 28 in this session; these fields document that existing scope, not a new permission grant",
+    "databaseConnected": false,
+    "providerBindingsChanged": false,
+    "roles": [
+      {
+        "role": "runtime",
+        "operation": "runtime-connect",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "credentialClass": "runtime",
+        "canonicalAuthorizationFieldsConsistent": true,
+        "protectedConnectionAttempted": false
+      },
+      {
+        "role": "worker",
+        "operation": "worker-connect",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "credentialClass": "worker",
+        "canonicalAuthorizationFieldsConsistent": true,
+        "protectedConnectionAttempted": false
+      }
+    ]
+  },
+  "latestProductionApiDeploymentReadback": "latest five remain REMOVED; bounded observation, not a complete writer census",
+  "preparedSecretCustody": "owned private mode-0600 payloads outside repository; existing prepared session/upload secrets retained",
+  "prospectiveBuildIdentity": "M used only for static preflight evaluation; no BUILD_SHA persisted; provider must attest exact M at deployment",
+  "productionBindingPayloadHashes": {
+    "runtime": "9f80ca50f771d1e054a1733c1c1dae574f0f08c54201546141b0b4d7598c2781",
+    "worker": "208e7dceab3bd4c81eb85167da280e12b2abc5c7e9bd8efeef0e4f7bd1d47ae3"
+  },
+  "previousVariableSnapshotSha256": "5ea9e01c5a0a565a759235a742dc0f12ab9551c28a571a8feba340d575506509",
+  "readbackAndHostedChecksPassed": false,
+  "reviewGate": "Checklist 28 step 1 requires review/fresh checks for storage delta before binding; no reviews present at inspection",
+  "reviewEvidenceAt": "2026-10-02T10:41:16.794847+00:00",
+  "commercialSelectors": "preparation_only, absolute pause true, no admitted owners or sales deadline; no product opening",
+  "remaining": [
+    "Storage-delta review and fresh exact-head required CI",
+    "Apply held production API/worker bindings using existing secret channels and independently read back",
+    "Provision reviewed email supervisor and five-minute lead cron",
+    "Deploy exact accepted M and verify Azure target/readiness, sessions, worker lease/health",
+    "Existing authenticated Vercel operator confirms hold/build inputs and manually deploys exact M",
+    "Hosted browser upload/display and owner/wrong-owner/anonymous proof tests with legitimate normal-flow records; no production fixtures or intake bypass",
+    "Alert email delivery/aggregate monitoring and physical USB disconnection custody"
+  ]
+}

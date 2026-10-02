@@ -22,5 +22,6 @@
   "finalMediaConfigurationVerified": false,
   "hostedAcceptanceVerified": false,
   "existingUploaderRetired": false,
-  "privateSnapshotSummarySha256": "e119f1d1ea2d5fd622f0110e84647f5b8a1eb77106e6ee85ac8b3fd7eefac67c"
+  "privateSnapshotSummarySha256": "e119f1d1ea2d5fd622f0110e84647f5b8a1eb77106e6ee85ac8b3fd7eefac67c",
+  "historicalPreparationSupersededBy": "media-hardening-execution-20261002.json"
 }

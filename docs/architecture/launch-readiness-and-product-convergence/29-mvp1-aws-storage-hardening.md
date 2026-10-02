@@ -133,7 +133,7 @@ containment limits and the remaining gates without credential values.
 
 | Action                                                             | Current evidence / disposition                                                                                                                     |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Existing media IAM/configuration capture                           | Complete for the recorded uploader baseline, group absence, managed policy and private operator backups. Dedicated media identity remains pending. |
+| Existing media IAM/configuration capture                           | Complete for the recorded uploader baseline, group absence, managed policy and private operator backups. Dedicated media identity is now provisioned and independently tested; existing uploader remains unchanged. |
 | Anonymous media write containment                                  | Complete; independent valid unsigned PUT returned 403 and the canary hash was unchanged.                                                           |
 | Authenticated CloudFront origin probe                              | Complete; direct S3 403, fresh CloudFront miss 200, matching hash and policy restoration.                                                          |
 | Private proof bucket/user provisioning                             | Complete; encryption, ownership, blocks, versioning and scoped policy readbacks.                                                                   |
@@ -141,7 +141,7 @@ containment limits and the remaining gates without credential values.
 | Dedicated proof runtime permissions                                | Complete for live bounded positive/negative operations described above; credentials remain local.                                                  |
 | Cost-alert configuration                                           | Complete per Edward’s operator report: budget creation and all three recipient readbacks passed. Email delivery remains unverified. |
 | Current media URL dependencies                                     | Azure inventory complete: 214 canonical tables / 1,450 rows, zero matched references. Production VITE CloudFront setting saved per operator report; exact build/hosted verification pending.                                                                                 |
-| Final media policy, public-access blocks, scoped identity and CORS | Prepared standalone operator program; AWS application/readback and dedicated media-key transfer/testing remain pending.                                                                                   |
+| Final media policy, public-access blocks, scoped identity and CORS | Complete: operator PASS, independent policy/blocks/CORS/object readback, encrypted transfer/decryption and local dedicated runtime tests. Hosted browser effect remains pending.                                                                                   |
 | Production binding/deployment and hosted journeys                  | Pending checklist 28 containment, exact artifacts, attended operator and hosted upload/display plus proof-owner isolation.                         |
 
 1. **Recorded baseline complete.** Keep IAM permission capture current through the operator path. Capture any
@@ -174,11 +174,8 @@ containment limits and the remaining gates without credential values.
    the prerequisite test against the exact recorded post-containment policy,
    restores that policy immediately afterward using guarded readback, and
    retains the harmless task-owned object. It leaves existing media unchanged.
-5. **Prepared; operator application pending.** URL inventory and the authenticated origin prerequisite have passed. Apply
-   `media-bucket-policy.json` and `block-public-access.json`. Read back both,
-   then repeat unsigned S3 denial, unauthorized upload denial and CloudFront
-   retrieval. Keep media object ownership and encryption intact.
-6. **Prepared; provisioning, transfer and binding pending.** The operator program creates and tests one isolated media identity, leaving existing IAM users unchanged. Independently verify its encrypted export and actual local runtime permissions before binding. Use only the media operations in
+5. **Complete; do not replay the application.** The reviewed CloudFront-only policy, all four public-access blocks and production CORS were applied and read back. Operator fresh CloudFront miss/hash, unsigned S3 read/write rejection and allowed/denied preflights passed. Independent agent configuration/object readback matches, with unchanged encryption, ownership and versioning.
+6. **Provisioning, transfer and independent runtime tests complete; binding pending review.** The isolated identity is `listify-media-runtime-07394cfd`. Existing IAM users are unchanged; do not provision another. Its encrypted export matches the pasted SHA256, decryption used the existing transfer key and live local PUT/GET/DELETE plus six real AccessDenied checks passed. Bind only after checklist 28 review, using the media operations in
    `media-runtime-policy.json`. It grants no infrastructure provisioning,
    bucket administration, listing, version deletion, or Explore writes.
    Use an isolated identity if changing the existing uploader would affect
@@ -248,9 +245,9 @@ Do not delete a provisioned proof bucket or its retained evidence as rollback.
 
 Anonymous-write containment, fresh authenticated CloudFront origin access,
 private-proof provisioning, version recovery, encrypted key transfer and
-bounded dedicated proof runtime permissions have passed. S3 cost-warning configuration and all three recipient readbacks also passed per Edward’s operator report. The canonical Azure inventory and operator-confirmed frontend setting are complete. Hardened anonymous
-denial across the complete media bucket, scoped media runtime IAM, production
-CORS, exact frontend build verification, alert email delivery/aggregate monitoring, production
+bounded dedicated proof and media runtime permissions have passed. S3 cost-warning configuration and all three recipient readbacks also passed per Edward’s operator report. The canonical Azure inventory and operator-confirmed frontend setting are complete. Hardened anonymous
+read/write denial, scoped media runtime IAM and production
+CORS have passed the operator and independent readback checks recorded below. Exact frontend build verification, alert email delivery/aggregate monitoring, production
 bindings and hosted browser/owner checks remain unverified. The previous USB physical-removal custody item
 remains outstanding without repeating completed archive capture/readback.
 Storage acceptance alone cannot close the release register or open payments.
@@ -345,13 +342,9 @@ The original failed local/Testing inspections remain historical evidence.
 A fresh read-only S3 snapshot records 2,260 objects / 1,493,411,221 bytes.
 The [operator preparation record](evidence/mvp1-aws-storage-hardening-20261001/media-hardening-operator-preparation-20261002.json)
 records the unchanged post-containment policy and broad CORS baseline.
-`scripts/storage/aws-media-hardening.py` is prepared and locally tested; its
-AWS mutations have **not** been executed. Upload that standalone file to the
-existing AWS CloudShell operator session and run once:
-
-```sh
-python3 aws-media-hardening.py --apply --public-key runtime-transfer.public.pem
-```
+That is the historical preparation snapshot. The subsequent operator
+`aws-media-hardening.py --apply` execution and independent readback are complete,
+as recorded below. Do not rerun the apply command or recreate its runtime user.
 
 Use the existing public transfer key; its private counterpart remains local.
 The program checks account, key and exact baseline, privately backs up current
@@ -364,12 +357,53 @@ encryption, ownership and versioning. It does not change existing IAM users,
 application bindings, database data, budgets or payment intake. The old uploader
 is not claimed retired by this step.
 
-On error, preserve the private state and stop; do not rerun creation or restore
-public grants automatically. On PASS, securely retrieve `media-runtime.encrypted`
-and `result.json`, verify the separately reported checksum, decrypt with the
-existing local transfer key, and independently test the dedicated runtime before
-production binding. Origin/CORS SDK probes do not replace hosted browser or
-proof-owner isolation acceptance. Deploy only through checklist 28.
+The downloaded `media-runtime.encrypted` and `result.json` were privately copied
+and checked against Edward’s separately pasted ciphertext SHA256
+`4b5a32bf0b8d81dbb788e914916b71aed78f848ed980d7b62c7367009f195807`.
+Decryption with the existing local transfer key passed. The isolated user
+`listify-media-runtime-07394cfd` was independently verified by STS before a
+task-owned object was written. Media PUT/GET/hash and DELETE passed; bucket
+listing, CORS/encryption/policy reads, cross-proof read and outside-prefix write
+returned actual AccessDenied/403. Missing objects or expired credentials are
+not accepted as denials. An independent authenticated HEAD confirms the local
+canary was deleted (NotFound/404). Credentials are local mode-0600 files only.
+
+The [execution record](evidence/mvp1-aws-storage-hardening-20261001/media-hardening-execution-20261002.json)
+distinguishes operator origin/preflight checks, independent agent S3 readback
+and live local credential checks. All 2,260 baseline object metadata records
+remain unchanged; the only retained addition is the harmless 67-byte origin
+probe. Existing uploader IAM was not narrowed or retired by this isolated-user
+step. No production binding or hosted acceptance is claimed. Origin/CORS SDK
+probes do not replace hosted browser or proof-owner isolation acceptance.
+Deploy only through checklist 28 after storage-delta review.
+
+## Prepared production bindings — review before application
+
+The [sanitized binding proposal](evidence/mvp1-aws-storage-hardening-20261001/production-binding-preparation-20261002.json)
+records private API/worker payload hashes, exact accepted application M,
+canonical Azure fingerprint and separate runtime/worker credentials. The
+[production configuration proposal](evidence/controlled-production-release-2026-09-30/production-config.proposed.json)
+now names the verified proof bucket rather than the retired preparation
+placeholder, and records both isolated AWS identities and the saved frontend
+CDN setting. Existing prepared session/upload secrets are reused, not regenerated.
+
+Both prospective role configurations pass the static hosted checks with zero
+issues; canonical context and approval-field validation pass for the exact
+runtime-connect/worker-connect roles without a database connection. M is used
+only as the prospective static build identity and is not persisted as BUILD_SHA.
+No variables have been applied and no API or worker has been started. Commercial
+mode remains preparation_only, absolute pause true, with no admitted owner or
+sales deadline. These are configuration checks, not protected database readiness
+or deployed artifact evidence.
+
+Checklist 28 step 1 requires storage-delta review and fresh checks before
+production binding. PR #584 had no recorded review at this inspection. Complete
+that review, refresh provider holds and the attended exact-M cutover, then apply
+through existing private secret channels with deployment held and independent
+readback. Hosted tests still require normal consenting customer/owner records;
+no production fixtures or invoice/intake bypass are introduced to manufacture a
+proof-owner pass. Alert receipt/aggregate monitoring and USB physical custody
+remain separate pending items.
 
 ## Validation and review status
 
@@ -379,12 +413,12 @@ The existing accepted release code-check evidence applies to those unchanged
 sources; it is not evidence for new hosted storage behavior.
 
 Fresh local validation passed twenty-five Python operator/readback security-contract tests
-and six Node transfer/runtime security-contract tests:
+and fourteen Node transfer/runtime security-contract tests:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/storage/tests -v
 node --check scripts/storage/aws-storage-snapshot.cjs
-node --test scripts/storage/tests/proof-runtime-verify.test.cjs
+node --test scripts/storage/tests/proof-runtime-verify.test.cjs scripts/storage/tests/media-runtime-verify.test.cjs
 ```
 
 Additional local checks covered provision/verify sequencing with mocked AWS,
@@ -396,11 +430,11 @@ local evidence only. Eleven final-media tests additionally cover drift-before-wr
 format and whitespace checks are included in preparation. The insecure
 historical policy fixture is test input only and must never be applied.
 
-The new local transfer/runtime-verification helper passed six Node
+The proof transfer/runtime-verification helper passed six Node
 security-contract tests covering tampered ciphertext, incomplete recovery,
 a different transfer key, wrong AWS principal, false permission-denial evidence
 and unexpectedly broad access. Live permission results are recorded separately
-above. The authorized local Azure dependency inventory attempt used the
+above. Eight additional media transfer/runtime cases cover exact target/user/envelope, incomplete metadata, checksum/key mismatch, wrong principal, false denials and unexpectedly broad access. The authorized local Azure dependency inventory attempt used the
 existing inspector and canonical connection authority with exact production
 fingerprint
 `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`.
@@ -445,8 +479,8 @@ not production browser upload, whole-bucket unsigned-read denial, or customer
 owner authorization.
 
 Ready for bounded configuration/script review. Storage acceptance remains
-open pending scoped media provisioning/credential transfer/binding, exact
-frontend build verification, full media hardening, hosted browser/proof-owner checks and
+open pending reviewed production binding, exact
+frontend build verification, hosted browser/proof-owner checks and
 monitoring readbacks. Nothing here authorizes paid opening or another writer.
 
 Pricing and propagation references:
