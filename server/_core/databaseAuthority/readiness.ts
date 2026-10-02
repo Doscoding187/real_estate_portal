@@ -705,7 +705,7 @@ export async function assessRuntimeDatabaseReadiness(
   }
 }
 
-function unavailableReadiness(input: {
+export function unavailableReadiness(input: {
   checkedAt: Date;
   targetFingerprintHash: string;
   targetClass: string;

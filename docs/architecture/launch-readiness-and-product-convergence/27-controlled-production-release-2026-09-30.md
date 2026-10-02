@@ -43,12 +43,30 @@ Both verifiers are corrected and the specific live check passed against the
 retained existing harmless canary (independent proof 200 / media 403 / proof
 200, matching hash/version). Original cross-proof evidence is superseded;
 provisioning was not repeated. [Correction evidence](evidence/mvp1-aws-storage-hardening-20261001/cross-proof-read-correction-20261002.json).
-Checklist 28 binding stays paused pending independent re-review and fresh checks.
+The correction was approved at `fbdfb5f68eb935964b9add487576d094772fb72e`;
+all five required exact-head checks passed. PR #584 merged as
+`51802b7d324c61e5ff79cc3515510b29f76022d5` on October 2 with deployment holds
+intact. The storage review gate is closed.
 
-Remaining: storage-delta re-review and fresh correction-head CI, alert receipt/aggregate monitoring, exact frontend
-build verification, worker provisioning, production
-secret/runtime bindings, exact joined deployment and hosted customer/security
-journeys under checklist 28. Keep TiDB writers stopped and intake closed.
+The [October 2 cutover checkpoint](evidence/controlled-production-cutover-20261002/cutover-checkpoint.json)
+records the attended operator, preserved Testing configuration/stage, stopped
+TiDB writers, completed signing/storage/Azure role bindings and two created
+workers. Every reviewed binding value was independently read back; sales pause
+is true and admission/deadline settings are absent on all three services.
+Email and lead workers deployed at M and completed normal zero-work batches
+against Azure. Both API artifacts failed the provider readiness gate; the one
+unchanged exact-M diagnostic retry collected localhost readiness before its
+replica was removed. The strict Azure assessment passed at canonical 0094, but
+readiness took 12,167 ms (the joined probe allows 8,000 ms), and cache mode was
+memory rather than required Redis. The slow assessment is a plausible provider
+health failure cause, not a proven provider per-request timeout. The bounded
+source correction and regression tests are prepared for independent review;
+no corrected application source is deployed. The original exact-M instruction
+requires a newly accepted source before deploying this correction.
+Manual Vercel deployment and unpaid hosted journeys remain held until API
+readiness passes. Alert receipt/aggregate monitoring, hosted proof-owner tests,
+recovery and operating obligations remain open. Keep TiDB writers stopped and
+intake closed.
 The dated preparation observations and reusable procedure below are retained
 as history; their pending provisioning wording does not supersede this checkpoint.
 
@@ -136,11 +154,11 @@ operations require their own current authority/readback evidence.
 
 ### 4. Bind and deploy backend/workers, then frontend
 
-1. Private proof provisioning, key transfer and bounded live permissions are complete; do not replay them. Media hardening and encrypted dedicated-key transfer/testing in packet 29 are also complete. Review the storage delta and exact private binding proposal before applying either identity; do not replay the operator program. Apply only the [prepared configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) to production services. API uses existing distinct Azure runtime identity; both new workers use existing distinct Azure worker identity. No migrator in application variables. Redis and existing durable public media are retained and independently verified; aliases must agree.
-2. Fresh production JWT and independent media-upload signing secrets are prepared privately; application remains pending. Apply those reviewed secrets and invalidate old sessions by removing the old signing secret from all authentication runtimes, and replace the upload signing secret in the reviewed runtimes. Snapshot rollback custody privately; do not restore the old TiDB JWT on Azure. Test an old session is rejected before fresh numeric IDs can grant access. Retain the founder's existing `OWNER_OPEN_ID` and prove normal OAuth owner login; no seeded admin or direct role update.
-3. Keep general paid intake closed: `PAID_MVP_SALES_PAUSED=true`, no expiring sales window, ordinary canonical billing configuration only. Candidate startup/readiness must pass strict environment/origin/storage/Redis/email requirements. The nine fresh preflight issues are actionable, not waived. A provider-injected exact Git SHA can satisfy identity; do not persist a stale BUILD_SHA across later deploys.
-4. Build/deploy exact M for API using `railway.json` (`pnpm start:hosted:api`, `/api/readiness`); configure explicit required start/healthcheck because the old live service uses `pnpm run start:prod` without the reviewed readiness check. Provision email supervisor and 5-minute lead cron in existing production using their checked-in configs, distinct worker DB credentials, same source/approved origins and release identity. No startup migration/reference apply. Record deployment IDs, source SHA, strict readiness, recent scheduler lease, worker health, cron due-work and configured target fingerprint.
-5. After API/worker admission, the authenticated existing Vercel operator verifies production `VITE_DEPLOY_ENV`, www/API origins and ordinary build inputs, then triggers **manual production deployment of M**, keeping repository main autodeploy held. A dashboard Git-SHA deployment is the proposed path; no failed preview promotion or upgrade. Record successful build/deployment ID, domains/TLS/redirects and frontend `/version.json` exact SHA, then joined browser behavior. Production build failures are gating and repaired within launch scope.
+1. **Storage review and bindings complete.** Private proof/media provisioning, transfer and bounded permissions passed; do not replay them. Reviewed [configuration delta](evidence/controlled-production-release-2026-09-30/production-config.proposed.json) payloads are applied and independently read back. API uses the distinct Azure runtime identity; both workers use the distinct Azure worker identity. No migrator is present. Redis and retained durable public media remain the reviewed targets.
+2. **Prepared signing secrets applied and read back.** Existing prepared production JWT and independent upload secrets were reused through private channels. Old-session rejection remains a hosted acceptance obligation; do not restore the old TiDB JWT on Azure. Retain existing `OWNER_OPEN_ID` and prove normal OAuth owner login after joined readiness, with no seeded admin or direct role update.
+3. **Closed-intake configuration verified.** All three services have `PAID_MVP_SALES_PAUSED=true`, no admitted owners or expiring sales window, and ordinary billing configuration. Actual provider payloads passed static environment/origin/storage/email/authority validation; genuine exact-M identity was then observed on deployed artifacts. Strict runtime Redis/readiness remain gating. Never persist a stale BUILD_SHA.
+4. **Workers deployed; API blocked.** Email supervisor and 5-minute lead cron SUCCESS artifacts at M completed normal zero-work batches against Azure. Reviewed commands/restart/cron settings match provider manifests; new workers use explicit settings because Railway rejects legacy config-file opt-in. Both exact-M API attempts using `railway.json`, `pnpm start:hosted:api` and `/api/readiness` failed the health gate. Do not replay unchanged deployment. Independently review and accept a replacement source for the bounded readiness/Redis correction before deploying it; retain startup migration/reference prohibition. Then collect strict API readiness, scheduler lease, worker health and target identity.
+5. **Frontend held.** After successful API/worker verification, the authenticated Vercel operator reads back Production `VITE_DEPLOY_ENV`, website/API/CDN origins and ordinary inputs before manual deployment at the newly accepted exact source. The original directive pins M until that replacement is explicitly accepted. Keep main autodeploy held; no failed preview promotion or upgrade. Record successful build/deployment ID, domains/TLS/redirects and `/version.json` exact SHA, then joined browser behavior. Production build failures are gating.
 6. Never expose a new frontend against the old API/TiDB. Until joined readiness passes, serve existing maintenance behavior or keep API writes unavailable. Do not claim sales pause is an application-wide write maintenance gate. After Azure accepts any writes, recovery is compatible artifact/maintenance or Azure recovery; **never restart TiDB writers** or invent reverse replication.
 
 ### 5. Controlled real-provider acceptance, intake closed
@@ -157,7 +175,7 @@ Use designated consenting controlled mailboxes and accounts, clearly identified 
 | Delivery/recovery | Real receipt/reply/bounce or controlled known rejection; outbox/job retry and restart without duplicate durable effects; enquiry reaches the intended controlled recipient, queue attention is visible. |
 | Terms/expiry | Reuse unchanged accepted 90-day/renewal/expiry/history evidence; do not change the live clock or rewrite production entitlement timestamps to force expiry. Any expiry simulation stays in a governed disposable target. |
 
-Run the [prepared unpaid checklist](28-controlled-owner-admission-and-execution-2026-09-30.md#unpaid-hosted-checks) while fully paused. Edward authorized the bounded owner-admission implementation; its code and tests require review at the new PR head. Live admission remains disabled until the attended release step configures only server-resolved controlled owner pairs; a direct SDK private-object probe alone is storage evidence, not a passed invoice/proof/customer journey. Actual EFT instructions/receipts and final customer disclosures must be approved before collecting controlled money.
+Run the [prepared unpaid checklist](28-controlled-owner-admission-and-execution-2026-09-30.md#unpaid-hosted-checks) while fully paused. The bounded owner-admission implementation is accepted in #583; live admission remains disabled pending its separate attended review and exact server-resolved controlled owner pairs. A direct SDK private-object probe alone is storage evidence, not a passed invoice/proof/customer journey. Actual EFT instructions/receipts and final customer disclosures must be approved before collecting controlled money.
 
 ### 6. Recovery, operating evidence and separate paid GO
 
@@ -177,4 +195,4 @@ Restore production Railway autodeploy only after stable acceptance, using [prepa
 
 Final-archive focused contract checks pass: **19 cases**, original preliminary/type/encryption cases plus frozen metadata, wrong/stale/future/open/duplicate/empty writer evidence, expiry during capture and approval actor/reference mismatch. No protected database was contacted by these tests. Full authority gate passes **47 files / 442 tests**, typecheck/build pass, full lint passes with **zero errors / 13,419 existing warnings**, and touched-code lint has zero errors. [Verification hashes and limits](evidence/controlled-production-release-2026-09-30/verification.json) record the tested release-code commit `84e9229a428d8432f2ed0f7f9aa80fa8972f5cfc` / tree `813f246d370d17d78a102bc0ff8477139dd26a1b`; subsequent continuation edits are documentation/evidence only. Importing `vercel.ts` confirms main=false; authenticated provider readback remains pending. Exact new-head CI is tracked separately. That earlier verification changed no schema, migration SQL/checksum, canonical catalog, or customer money/access policy. The later owner-admission change is separately verified in packet 28; it restricts new invoices/activations without changing products or entitlement terms.
 
-Prepared trigger mutations, resource proposals, configuration deltas and a read-only geography plan are **not execution evidence**. The preceding verification paragraph describes the September 30 preparation. Completed October 1 execution is distinguished in the current checkpoint above and storage packet 29. Secret application, binding switch, joined deployment, real hosted journeys and paid opening remain pending. Continue from the remaining phase under the existing containment checklist; do not replay completed geography, writer stop, final capture or proof provisioning.
+Prepared mutations and proposals are **not execution evidence**. The preceding verification paragraph describes September 30 preparation; October 1–2 execution is recorded in the current checkpoint and storage packet 29. Signing-secret application, reviewed bindings and successful worker deployment are complete. API correction review/deployment, joined frontend, real hosted journeys and paid opening remain pending. Continue from that remaining phase; do not replay completed geography, writer stop, final capture or storage provisioning.

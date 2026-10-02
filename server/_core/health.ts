@@ -7,8 +7,12 @@ import {
 import { getCacheHealth } from './cache/redis';
 import { getAuthRateLimitStoreHealth, type AuthRateLimitStoreHealth } from './authRateLimitStore';
 import { resolveAppRuntimeEnv } from './runtimeBootstrap';
-import { hostedRuntimeConfigurationIssues, resolveHostedBuildSha } from './hostedRuntimeConfiguration';
+import {
+  hostedRuntimeConfigurationIssues,
+  resolveHostedBuildSha,
+} from './hostedRuntimeConfiguration';
 import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
+import { hostedDatabaseReadinessSnapshot } from './hostedDatabaseReadinessMonitor';
 import {
   getPublicLeadRateLimitStoreHealth,
   type PublicLeadRateLimitStoreHealth,
@@ -82,8 +86,12 @@ export function isS3Configured(env: NodeJS.ProcessEnv = process.env): boolean {
 async function checkCacheStatus(): Promise<{ ok: boolean; mode: 'redis' | 'memory' }> {
   try {
     const cacheHealth = await getCacheHealth();
+    const runtimeEnv = resolveAppRuntimeEnv();
+    const required = runtimeEnv === 'production' || runtimeEnv === 'staging';
     return {
-      ok: cacheHealth.status !== 'unhealthy',
+      ok:
+        cacheHealth.status !== 'unhealthy' &&
+        (!required || (cacheHealth.redis.connected && !cacheHealth.metrics.fallback_mode)),
       mode: cacheHealth.metrics.fallback_mode ? 'memory' : 'redis',
     };
   } catch {
@@ -109,8 +117,9 @@ export async function buildApiReadinessResponse(
   } = {},
 ): Promise<ApiReadinessResponse> {
   const runtimeEnv = resolveAppRuntimeEnv();
+  const deployed = runtimeEnv === 'production' || runtimeEnv === 'staging';
   const [db, cache, authRateLimit, publicLeadRateLimit] = await Promise.all([
-    assessRuntimeDatabaseReadiness(),
+    deployed ? hostedDatabaseReadinessSnapshot() : assessRuntimeDatabaseReadiness(),
     checkCacheStatus(),
     getAuthRateLimitStoreHealth(options.authRateLimitStore, runtimeEnv),
     getPublicLeadRateLimitStoreHealth(runtimeEnv),
@@ -124,7 +133,8 @@ export async function buildApiReadinessResponse(
       cache.ok &&
       authRateLimit.ok &&
       publicLeadRateLimit.ok &&
-      (!s3Required || s3Ok) && configurationOk,
+      (!s3Required || s3Ok) &&
+      configurationOk,
     kind: 'readiness',
     env: runtimeEnv,
     build: {
