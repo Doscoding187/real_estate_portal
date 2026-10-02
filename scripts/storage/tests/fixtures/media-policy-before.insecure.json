@@ -1,0 +1,33 @@
+{
+  "Statement": [
+    {
+      "Action": "s3:GetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Resource": "arn:aws:s3:::listify-properties-sa/*",
+      "Sid": "PublicReadGetObject"
+    },
+    {
+      "Action": "s3:GetObject",
+      "Condition": {
+        "ArnLike": {
+          "AWS:SourceArn": "arn:aws:cloudfront::914683204061:distribution/E3JNW2EP3Z3JSP"
+        }
+      },
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Resource": "arn:aws:s3:::listify-properties-sa/*",
+      "Sid": "AllowCloudFrontServicePrincipal"
+    },
+    {
+      "Action": "s3:PutObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Resource": "arn:aws:s3:::listify-properties-sa/videos/*",
+      "Sid": "AllowPresignedUpload"
+    }
+  ],
+  "Version": "2012-10-17"
+}

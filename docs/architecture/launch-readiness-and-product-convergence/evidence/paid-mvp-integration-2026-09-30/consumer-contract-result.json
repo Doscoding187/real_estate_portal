@@ -1,0 +1,9 @@
+{
+  "command": "pnpm exec cross-env DATABASE_CONSUMER_CONTRACT_PHASE=post-migration pnpm db:authority:consumer-contract",
+  "exitCode": 0,
+  "freshMigrationEvidence": "fresh-migration.json",
+  "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+  "rawOutputSha256": "eaf1488038d1685d5b31a68c2acedcb6337fb429ffbc8e38887ac26565be4d29",
+  "result": "[Consumer Contract] Canonical migration, reference, foundation, scenario, schema congruency, distribution contract, and Search-to-Lead readiness passed.",
+  "limitation": "Default fresh-target phase correctly refused the already migrated target; supported post-migration phase used after separate fresh migration proof. No retry of migration or ledger repair."
+}

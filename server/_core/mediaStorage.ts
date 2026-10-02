@@ -13,6 +13,7 @@ import {
 import { homedir } from 'node:os';
 import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { ENV } from './env';
+import { resolveAppRuntimeEnv } from './runtimeBootstrap';
 
 export type MediaStorageAdapter = 'local' | 's3';
 
@@ -38,20 +39,23 @@ function normalizeAdapter(value: string): MediaStorageAdapter | null {
   throw new Error('MEDIA_STORAGE_ADAPTER must be either local or s3.');
 }
 
-/**
- * Local development defaults to private disk storage. Production defaults to
- * S3 and explicitly refuses a local adapter so a missing deployment secret
- * cannot silently write application media to an ephemeral filesystem.
- */
+/** Local disk is an explicit development/test adapter, never a deployed fallback. */
 export function getMediaStorageAdapter(): MediaStorageAdapter {
   const configured = normalizeAdapter(ENV.mediaStorageAdapter);
-  const adapter = configured ?? (ENV.isProduction ? 's3' : 'local');
+  const runtimeEnv = resolveAppRuntimeEnv();
+  const deployed = runtimeEnv === 'production' || runtimeEnv === 'staging';
 
-  if (ENV.isProduction && adapter === 'local') {
-    throw new Error('Local media storage is not permitted in production. Configure S3 storage.');
+  if (deployed) {
+    if (configured !== 's3') {
+      throw new Error('Deployed media requires MEDIA_STORAGE_ADAPTER=s3; local media is not permitted.');
+    }
+    if (!ENV.s3BucketName.trim() || !ENV.awsRegion.trim()) {
+      throw new Error('Deployed media requires an explicit S3 bucket and AWS region.');
+    }
+    return 's3';
   }
 
-  return adapter;
+  return configured ?? 'local';
 }
 
 export function isLocalMediaStorage(): boolean {

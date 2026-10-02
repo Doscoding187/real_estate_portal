@@ -1,0 +1,19 @@
+{
+  "data": {
+    "deploymentTriggers": {
+      "edges": [
+        {
+          "node": {
+            "branch": "main",
+            "checkSuites": false,
+            "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+            "id": "ecf474c5-5bcc-4d4c-a477-706d10b6865b",
+            "provider": "github",
+            "repository": "Doscoding187/real_estate_portal",
+            "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e"
+          }
+        }
+      ]
+    }
+  }
+}

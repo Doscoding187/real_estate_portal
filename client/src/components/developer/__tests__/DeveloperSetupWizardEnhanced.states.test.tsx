@@ -6,7 +6,9 @@ const { setLocationMock, getProfileResult, authMeResult, createProfileMutateAsyn
   vi.hoisted(() => ({
     setLocationMock: vi.fn(),
     getProfileResult: { current: null as unknown },
-    authMeResult: { current: { data: { email: 'owner@example.com' } } as unknown },
+    authMeResult: {
+      current: { data: { id: 'owner-1', email: 'owner@example.com' }, isLoading: false } as unknown,
+    },
     createProfileMutateAsync: vi.fn(),
     refetchMock: vi.fn(),
   }));
@@ -122,7 +124,11 @@ function profileFixture(
 }
 
 beforeEach(() => {
-  localStorage.removeItem('developer-registration-draft');
+  localStorage.clear();
+  authMeResult.current = {
+    data: { id: 'owner-1', email: 'owner@example.com' },
+    isLoading: false,
+  };
 });
 
 afterEach(() => {
@@ -200,5 +206,60 @@ describe('Developer setup wizard identity states', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetchMock).toHaveBeenCalledOnce();
+  });
+
+  it('resumes only a draft owned by the authenticated principal', async () => {
+    getProfileResult.current = {
+      data: undefined,
+      isLoading: false,
+      error: { data: { code: 'NOT_FOUND' }, message: 'Developer profile not found.' },
+    };
+    localStorage.setItem(
+      'developer-registration-draft:user-owner-1',
+      JSON.stringify({
+        ownerUserId: 'owner-1',
+        draft: { step: 3, name: 'Owner One Development', specializations: ['residential'] },
+      }),
+    );
+
+    render(<DeveloperSetupWizardEnhanced />);
+
+    expect(await screen.findByText('Resume draft dialog')).toBeInTheDocument();
+  });
+
+  it('does not read a draft before auth resolves and clears legacy or mismatched private state', async () => {
+    getProfileResult.current = {
+      data: undefined,
+      isLoading: false,
+      error: { data: { code: 'NOT_FOUND' }, message: 'Developer profile not found.' },
+    };
+    authMeResult.current = { data: undefined, isLoading: true };
+    localStorage.setItem(
+      'developer-registration-draft',
+      JSON.stringify({ step: 3, name: 'Legacy private organisation' }),
+    );
+    localStorage.setItem(
+      'developer-registration-draft:user-owner-2',
+      JSON.stringify({
+        ownerUserId: 'owner-1',
+        draft: { step: 3, name: 'Another account organisation' },
+      }),
+    );
+
+    const view = render(<DeveloperSetupWizardEnhanced />);
+
+    expect(screen.queryByText('Resume draft dialog')).not.toBeInTheDocument();
+    expect(localStorage.getItem('developer-registration-draft')).not.toBeNull();
+
+    authMeResult.current = {
+      data: { id: 'owner-2', email: 'owner-2@example.com' },
+      isLoading: false,
+    };
+    view.rerender(<DeveloperSetupWizardEnhanced />);
+
+    await screen.findByText('Basic info step');
+    expect(screen.queryByText('Resume draft dialog')).not.toBeInTheDocument();
+    expect(localStorage.getItem('developer-registration-draft')).toBeNull();
+    expect(localStorage.getItem('developer-registration-draft:user-owner-2')).toBeNull();
   });
 });

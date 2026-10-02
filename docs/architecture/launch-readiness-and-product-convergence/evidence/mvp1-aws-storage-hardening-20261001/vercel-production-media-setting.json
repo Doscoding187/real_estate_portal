@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-10-02T08:27:26.295765+00:00",
+  "project": "real-estate-portal",
+  "evidenceSource": "Edward dashboard screenshot and subsequent saved-setting confirmation",
+  "initialProductionScreenshot": {
+    "CLOUDFRONT_URL": "https://d3fz99u3go2cmn.cloudfront.net",
+    "scopeShown": "All Environments",
+    "VITE_CLOUDFRONT_URL": "not visible",
+    "VITE_ASSETS_BASE_URL": "not visible; operator also reported not found",
+    "sha256": "abfcf9f719623aa010b5a608350d643a25401cb702e2c83cf8f4bc39e9ab3834"
+  },
+  "operatorSavedCorrection": {
+    "key": "VITE_CLOUDFRONT_URL",
+    "value": "https://d3fz99u3go2cmn.cloudfront.net",
+    "environment": "Production",
+    "type": "Config",
+    "confirmedBy": "Edward: done after manually retyping the key"
+  },
+  "independentPostSaveApiReadback": false,
+  "activeFrontendBuildVerified": false,
+  "joinedProductionDeploymentPerformed": false,
+  "remaining": [
+    "verify saved value in the exact controlled production build",
+    "verify CloudFront display and signed S3 browser upload on joined release",
+    "refresh production deployment hold before promotion"
+  ],
+  "paymentIntakeOpened": false
+}

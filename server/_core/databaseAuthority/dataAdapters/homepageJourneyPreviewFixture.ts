@@ -2,6 +2,8 @@ import bcrypt from 'bcryptjs';
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
+import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
+import { encodeCanonicalLocationId } from '../../../../shared/locationAuthority';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
   assertOperation,
@@ -32,7 +34,7 @@ import {
  * replace Search-to-Lead acceptance data or the small PLE authentication
  * fixture, and it never writes to a shared or protected target.
  */
-export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v1' as const;
+export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v2' as const;
 
 const TARGET = Object.freeze({
   host: '127.0.0.1',
@@ -134,7 +136,6 @@ const AGENT_PROFILE = Object.freeze({
   bio: 'Machine-local approved agent profile for manual homepage journey review.',
   focus: 'both',
   propertyTypes: JSON.stringify(['Apartment', 'Townhouse', 'House']),
-  areasServed: JSON.stringify(['Johannesburg', 'Sandton']),
   languages: JSON.stringify(['English']),
   profileCompletionScore: 90,
 });
@@ -456,6 +457,10 @@ const FIXTURE_PAYLOAD = Object.freeze({
   identities: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES,
   agency: AGENCY,
   agentProfile: AGENT_PROFILE,
+  coverageAuthority: {
+    location: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalLocation,
+    format: 'typed-canonical-location-id-with-resolved-label',
+  },
   developer: {
     organisationId: IDS.developerOrganisation,
     publisherId: IDS.cataloguePublisher,
@@ -802,7 +807,10 @@ async function ensureBranding(connection: AuthoritySqlConnection): Promise<Prepa
   return 'created';
 }
 
-async function ensureAgentProfile(connection: AuthoritySqlConnection): Promise<PreparedState> {
+async function ensureAgentProfile(
+  connection: AuthoritySqlConnection,
+  areasServed: string,
+): Promise<PreparedState> {
   const rows = await queryRows(
     connection,
     `SELECT id, userId, agencyId, slug, status, isVerified
@@ -835,7 +843,7 @@ async function ensureAgentProfile(connection: AuthoritySqlConnection): Promise<P
         USERS.agent.phone,
         AGENT_PROFILE.focus,
         AGENT_PROFILE.propertyTypes,
-        AGENT_PROFILE.areasServed,
+        areasServed,
         AGENT_PROFILE.languages,
         AGENT_PROFILE.profileCompletionScore,
         USERS.agencyAdmin.id,
@@ -865,7 +873,7 @@ async function ensureAgentProfile(connection: AuthoritySqlConnection): Promise<P
       USERS.agent.phone,
       AGENT_PROFILE.focus,
       AGENT_PROFILE.propertyTypes,
-      AGENT_PROFILE.areasServed,
+      areasServed,
       AGENT_PROFILE.languages,
       AGENT_PROFILE.profileCompletionScore,
       USERS.agencyAdmin.id,
@@ -1199,14 +1207,34 @@ async function ensureLaunchAccessSubscription(input: {
   return 'created';
 }
 
-async function resolveExactSandtonLocation(connection: AuthoritySqlConnection): Promise<{
+type CanonicalSandtonLocation = {
   provinceId: number;
+  provinceName: string;
   cityId: number;
+  cityName: string;
   suburbId: number;
-}> {
+  suburbName: string;
+};
+
+function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
+  const coverage = serializeAgentCoverageAreas([
+    {
+      canonicalLocationId: encodeCanonicalLocationId('suburb', location.suburbId),
+      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+    },
+  ]);
+  if (!coverage) throw new Error('Homepage journey preview fixture requires one canonical agent coverage area.');
+  return coverage;
+}
+
+async function resolveExactSandtonLocation(
+  connection: AuthoritySqlConnection,
+): Promise<CanonicalSandtonLocation> {
   const rows = await queryRows(
     connection,
-    `SELECT p.id AS province_id, c.id AS city_id, s.id AS suburb_id
+    `SELECT p.id AS province_id, p.name AS province_name,
+            c.id AS city_id, c.name AS city_name,
+            s.id AS suburb_id, s.name AS suburb_name
        FROM provinces p
        INNER JOIN cities c ON c.provinceId = p.id
        INNER JOIN suburbs s ON s.cityId = c.id
@@ -1220,8 +1248,11 @@ async function resolveExactSandtonLocation(connection: AuthoritySqlConnection): 
   }
   return {
     provinceId: asId({ id: rowValue(rows[0], 'province_id') }, 'province'),
+    provinceName: String(rowValue(rows[0], 'province_name') || '').trim(),
     cityId: asId({ id: rowValue(rows[0], 'city_id') }, 'city'),
+    cityName: String(rowValue(rows[0], 'city_name') || '').trim(),
     suburbId: asId({ id: rowValue(rows[0], 'suburb_id') }, 'suburb'),
+    suburbName: String(rowValue(rows[0], 'suburb_name') || '').trim(),
   };
 }
 
@@ -1354,7 +1385,7 @@ async function verifyPreviewRows(
 
   const agentRows = await queryRows(
     connection,
-    `SELECT a.id, a.userId, a.agencyId, a.slug, a.status, a.isVerified,
+    `SELECT a.id, a.userId, a.agencyId, a.slug, a.status, a.isVerified, a.areasServed,
             m.status AS membership_status, m.governance_mode
        FROM agents a
        INNER JOIN agency_agent_memberships m ON m.agent_id = a.id AND m.agency_id = a.agencyId
@@ -1368,6 +1399,7 @@ async function verifyPreviewRows(
     rowValue(agentRows[0], 'slug') !== AGENT_PROFILE.slug ||
     rowValue(agentRows[0], 'status') !== 'approved' ||
     Number(rowValue(agentRows[0], 'isVerified')) !== 1 ||
+    rowValue(agentRows[0], 'areasServed') !== serializedSandtonCoverage(location) ||
     rowValue(agentRows[0], 'membership_status') !== 'active' ||
     rowValue(agentRows[0], 'governance_mode') !== 'affiliated'
   ) {
@@ -1483,7 +1515,10 @@ export async function prepareHomepageJourneyPreviewFixture(input: {
     const agent = await ensureUser(input.connection, USERS.agent, password);
     const developer = await ensureUser(input.connection, USERS.developer, password);
     const agencyBranding = await ensureBranding(input.connection);
-    const agentProfile = await ensureAgentProfile(input.connection);
+    const agentProfile = await ensureAgentProfile(
+      input.connection,
+      serializedSandtonCoverage(location),
+    );
     const agencyMembership = await ensureAgencyMembership(input.connection);
     await ensureDeveloperIdentity(input.connection);
     const agentLaunchAccess = await ensureLaunchAccessSubscription({

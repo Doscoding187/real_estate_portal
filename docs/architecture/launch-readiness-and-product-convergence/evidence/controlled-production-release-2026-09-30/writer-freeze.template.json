@@ -1,0 +1,19 @@
+{
+  "format": "property-listify-tidb-writer-freeze-v1",
+  "sourceFingerprint": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+  "actor": "Edward",
+  "reference": "Edward-controlled-production-PR583-20260930",
+  "verifiedAt": "<actual ISO verification time, within 15 minutes>",
+  "releaseCommit": "<actual approved merged 40-character SHA>",
+  "censusSha256": "<hash of complete refreshed production-source writer census>",
+  "readbackSha256": "<hash of actual independent freeze provider readbacks>",
+  "publicWritesClosed": false,
+  "operatorWritesClosed": false,
+  "writers": [
+    {
+      "id": "production-api/5045030c-f115-429e-af15-2b2c410a6cb1 including in-process schedulers; refresh identity",
+      "state": "<actual stopped or read-only state>",
+      "evidenceSha256": "<actual sanitized provider freeze readback SHA-256>"
+    }
+  ]
+}

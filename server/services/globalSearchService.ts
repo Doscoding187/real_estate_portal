@@ -10,6 +10,9 @@
 import { getDb } from '../db';
 import { locations, properties, developments, locationSearches } from '../../drizzle/schema';
 import { eq, and, or, like, inArray, SQL, sql, ne } from 'drizzle-orm';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
+import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { resolvePublicPropertyEligibilityIds } from './publicPropertyEligibilityService';
 
 export interface SearchOptions {
   query: string;
@@ -307,7 +310,7 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
   const db = await getDb();
   const searchQuery = `%${query.toLowerCase()}%`;
 
-  const results = (await db
+  const candidateRows = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -330,9 +333,19 @@ async function searchListings(query: string, limit: number = 10): Promise<Listin
         ),
         eq(properties.status, 'published'),
         ne(properties.propertyType, 'commercial'),
+        excludeLandFromGenericPublicProjection(),
       ),
-    )
-    .limit(limit)) as ListingRow[];
+    )) as ListingRow[];
+
+  // A published row is only a projection. Re-resolve every candidate through
+  // the shared public eligibility authority so an expired Launch Access term
+  // cannot remain discoverable through this generic search service.
+  const eligibleIds = new Set(
+    await resolvePublicPropertyEligibilityIds(candidateRows.map(row => Number(row.id))),
+  );
+  const results = candidateRows
+    .filter(row => eligibleIds.has(Number(row.id)))
+    .slice(0, limit);
 
   return results.map((listing: ListingRow) => ({
     ...listing,
@@ -373,6 +386,7 @@ async function searchDevelopments(query: string, limit: number = 10): Promise<De
         ),
         inArray(developments.status, ['launching-soon', 'selling', 'sold-out']),
         ne(developments.developmentType, 'commercial'),
+        publicDevelopmentEligibilityConditions(),
       ),
     )
     .limit(limit)) as DevelopmentRow[];
@@ -421,6 +435,7 @@ export async function filterListingsByPlaceId(
     eq(properties.locationId, location.id),
     eq(properties.status, 'published'),
     ne(properties.propertyType, 'commercial'),
+    excludeLandFromGenericPublicProjection(),
   ];
 
   if (filters?.propertyType?.length)
@@ -430,7 +445,7 @@ export async function filterListingsByPlaceId(
   if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
   if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
-  const results = (await db
+  const candidateRows = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -444,8 +459,14 @@ export async function filterListingsByPlaceId(
       mainImage: properties.mainImage,
     })
     .from(properties)
-    .where(and(...conditions))
-    .limit(limit)) as ListingRow[];
+    .where(and(...conditions))) as ListingRow[];
+
+  const eligibleIds = new Set(
+    await resolvePublicPropertyEligibilityIds(candidateRows.map(row => Number(row.id))),
+  );
+  const results = candidateRows
+    .filter(row => eligibleIds.has(Number(row.id)))
+    .slice(0, limit);
 
   return results.map((listing: ListingRow) => ({
     ...listing,
@@ -469,6 +490,7 @@ async function filterListingsByPlaceIdDirect(
     eq(properties.placeId, placeId),
     eq(properties.status, 'published'),
     ne(properties.propertyType, 'commercial'),
+    excludeLandFromGenericPublicProjection(),
   ];
 
   if (filters?.propertyType?.length)
@@ -478,7 +500,7 @@ async function filterListingsByPlaceIdDirect(
   if (filters?.bedrooms) conditions.push(eq(properties.bedrooms, filters.bedrooms));
   if (filters?.bathrooms) conditions.push(eq(properties.bathrooms, filters.bathrooms));
 
-  const results = (await db
+  const candidateRows = (await db
     .select({
       id: properties.id,
       title: properties.title,
@@ -492,8 +514,14 @@ async function filterListingsByPlaceIdDirect(
       mainImage: properties.mainImage,
     })
     .from(properties)
-    .where(and(...conditions))
-    .limit(limit)) as ListingRow[];
+    .where(and(...conditions))) as ListingRow[];
+
+  const eligibleIds = new Set(
+    await resolvePublicPropertyEligibilityIds(candidateRows.map(row => Number(row.id))),
+  );
+  const results = candidateRows
+    .filter(row => eligibleIds.has(Number(row.id)))
+    .slice(0, limit);
 
   return results.map((listing: ListingRow) => ({
     ...listing,

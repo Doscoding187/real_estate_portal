@@ -1,0 +1,78 @@
+{
+  "recordedAt": "2026-10-02T11:15:33.765181+00:00",
+  "reviewedHead": "abfa798169ca84ff185dca70f2276117b4983561",
+  "finding": "P2: nonexistent cross-proof key can produce ambiguous AccessDenied/403 when listing is denied; evidence gap, no demonstrated exposure",
+  "scope": "Targeted read-only correction; retained harmless proof runtime canary, existing verified dedicated media/proof credentials; no provisioning replay",
+  "refreshedLiveCheck": {
+    "operation": "cross-proof-read",
+    "outcome": "PASS",
+    "status": 403,
+    "code": "AccessDenied",
+    "verifiedAt": "2026-10-02T11:12:34.440Z",
+    "bucket": "listify-paid-proofs-914683204061-eun1-290496c0",
+    "canaryKeySha256": "4e3a6048950ec7dc96657e3b561afed0cc33fa611ae77d521969d80507243ef9",
+    "independentExistenceBefore": {
+      "status": 200,
+      "versionIdSha256": "d209b8fab59114fb43ea7b241a76c3422bce24c4b2abca72366d4916c6da5938",
+      "payloadSha256": "5c95b9e03a36aef755215329ee61440f39098fb9b590b432756b1316b8458ac7"
+    },
+    "independentExistenceAfter": {
+      "status": 200,
+      "versionIdSha256": "d209b8fab59114fb43ea7b241a76c3422bce24c4b2abca72366d4916c6da5938",
+      "payloadSha256": "5c95b9e03a36aef755215329ee61440f39098fb9b590b432756b1316b8458ac7"
+    },
+    "proofReaderArn": "arn:aws:iam::914683204061:user/listify-paid-proof-runtime-290496c0",
+    "mediaReaderArn": "arn:aws:iam::914683204061:user/listify-media-runtime-07394cfd",
+    "productionBindingsChanged": false,
+    "providerWritesPerformed": false,
+    "hostedOwnerIsolationVerified": false
+  },
+  "supersedesOnly": [
+    "media-runtime-verified/cross-proof-read.json",
+    "media-runtime-verified/runtime-verification.json cross-proof-read entry",
+    "media-runtime-inputs-20261002/result.json runtimeNegativeChecks get-object entry"
+  ],
+  "otherRecordedChecksRetained": true,
+  "originalPrivateEvidencePreserved": true,
+  "productionBindingPayloadHashesUnchanged": {
+    "runtime": "9f80ca50f771d1e054a1733c1c1dae574f0f08c54201546141b0b4d7598c2781",
+    "worker": "208e7dceab3bd4c81eb85167da280e12b2abc5c7e9bd8efeef0e4f7bd1d47ae3"
+  },
+  "validation": {
+    "pythonSecurityContractTests": 31,
+    "nodeTransferRuntimeSecurityContractTests": 20,
+    "missingKey403RegressionCoveredInBothVerifiers": true,
+    "readableExistingProofCanaryFails": true,
+    "disappearingOrChangedCanaryFails": true,
+    "targetedModePerformsOnlyGetObject": true,
+    "lint": "PASS: touched CJS",
+    "format": "PASS: touched CJS",
+    "freshExactHeadCi": "Required after push; prior checks do not certify correction",
+    "ciRegressionStep": "Unit & Integration Tests now runs all 51 mocked/local storage contracts before database setup; no AWS credentials/provider calls",
+    "historicalVerifierRegressionSensitivity": {
+      "head": "abfa798169ca84ff185dca70f2276117b4983561",
+      "selectedRegressions": 2,
+      "expectedFailuresConfirmed": 2,
+      "providerCallsPerformed": false,
+      "method": "Reviewed historical module loaded in memory with mocked AWS; new missing-key-403 and readable-existing-proof tests both reject its false PASS"
+    }
+  },
+  "privateEvidenceSha256": {
+    "cross-proof-read-correction-20261002/cross-proof-read.json": "bbf4617d4ac3c68d799d12a09ce145a04975f6979a4850537cef3b0eb15ee6d1",
+    "proof-runtime-verified/probe-object.private.json": "0c26ba357532f60d7ffa65a6bcc23d188a6cc67283c8e434ab2ec66138016474",
+    "cross-proof-regression-audit-20261002/historical-regression-failure.log": "0f143899418a394670087d598a661d53de160aba1d38a31c49ef186cf465b3c2"
+  },
+  "scriptSha256": {
+    "scripts/storage/aws-media-runtime-verify.cjs": "c3a1c0a2ac1cb5c5071168774a38abe8441db06b75fcb46e2798b1931cb43bf0",
+    "scripts/storage/aws-media-hardening.py": "43ae8f02a1fc510f70de5c83ea5a02cfa77f33ecbed9ca0aefd767a23d5d6832"
+  },
+  "reviewGate": "PAUSED: checklist 28 awaits independent re-review of correction and fresh exact-head checks",
+  "productionBindingsChanged": false,
+  "servicesStarted": false,
+  "TiDbWritersRestarted": false,
+  "paymentIntakeOpened": false,
+  "operatorApplyRerun": false,
+  "hostedUploadDisplayVerified": false,
+  "hostedProofOwnerIsolationVerified": false,
+  "reference": "https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetObject.html"
+}

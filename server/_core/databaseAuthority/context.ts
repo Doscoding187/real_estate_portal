@@ -1,3 +1,5 @@
+import { RECOVERY_VALIDATION_FINGERPRINT } from './recoveryValidationTarget';
+import { isRegisteredRehearsal } from './rehearsalAuthority';
 import { createHash, randomUUID } from 'node:crypto';
 import { buildMysqlConnectionSecurityConfig } from '../databaseTls';
 import { storeDatabaseCredentialUrl, readDatabaseCredentialUrl } from './credentialVault';
@@ -23,6 +25,11 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 // CI owns its isolated test service separately; the local development service
 // above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
+const REGISTERED_PROTECTED_REMOTE_TARGETS: Readonly<Record<string, 'production'>> = Object.freeze({
+  [RECOVERY_VALIDATION_FINGERPRINT]: 'production',
+  'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database':
+    'production',
+});
 const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'runtime',
   'worker',
@@ -195,6 +202,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 export function resolveDatabaseAuthority(input: {
+  rehearsal?: { resourceId: string; purpose: string };
   operation: DatabaseOperation;
   cwd?: string;
   processEnv?: NodeJS.ProcessEnv;
@@ -278,7 +286,12 @@ export function resolveDatabaseAuthority(input: {
       targetClass = 'disposable-test';
     }
   } else if (!resolvedLocal) {
-    if (resolvedDatabaseName === 'listify_property_sa') {
+    const registeredClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
+    if (isRegisteredRehearsal(resolvedTargetFingerprint, input.rehearsal)) {
+      targetClass = 'disposable-rehearsal';
+    } else if (registeredClass) {
+      targetClass = registeredClass;
+    } else if (resolvedDatabaseName === 'listify_property_sa') {
       targetClass = 'production';
     } else if (resolvedDatabaseName === 'listify_staging') {
       targetClass = 'staging';
@@ -295,7 +308,9 @@ export function resolveDatabaseAuthority(input: {
   if (parsed.protocol === 'mysql:') {
     const security = buildMysqlConnectionSecurityConfig(parsed.toString(), environment.runtimeMode);
     tlsRequired = Boolean(security.ssl);
-    certificateVerificationRequired = Boolean(security.ssl?.rejectUnauthorized);
+    certificateVerificationRequired = Boolean(
+      security.ssl?.rejectUnauthorized && security.ssl?.verifyIdentity,
+    );
   }
 
   const targetFingerprintHash = sha256(resolvedTargetFingerprint);
@@ -351,6 +366,7 @@ export function resolveDatabaseAuthority(input: {
       : parsed.toString();
   const resolvedAt = input.resolvedAt ?? new Date();
   const context: ResolvedDatabaseContext = deepFreeze({
+    rehearsal: targetClass === 'disposable-rehearsal' ? input.rehearsal : undefined,
     contextVersion: 1,
     contextId: randomUUID(),
     correlationId:

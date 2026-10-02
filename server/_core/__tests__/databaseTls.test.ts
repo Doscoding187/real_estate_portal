@@ -13,6 +13,7 @@ describe('database TLS authority', () => {
       uri: 'mysql://user:pass@db.example.com:4000/listify_property_sa',
       ssl: {
         rejectUnauthorized: true,
+        verifyIdentity: true,
         minVersion: 'TLSv1.2',
       },
     });
@@ -41,6 +42,12 @@ describe('database TLS authority', () => {
         'production',
       ),
     ).toThrow(/Certificate verification cannot be disabled/);
+    expect(() =>
+      buildMysqlConnectionSecurityConfig(
+        'mysql://db.example.com:4000/listify_property_sa?ssl=%7B%22verifyIdentity%22%3Afalse%7D',
+        'production',
+      ),
+    ).toThrow(/Hostname verification cannot be disabled/);
   });
 
   it('allows local development MySQL without TLS', () => {
@@ -75,6 +82,7 @@ describe('database TLS authority', () => {
 
     expect(config.ssl).toEqual({
       rejectUnauthorized: true,
+      verifyIdentity: true,
       minVersion: 'TLSv1.2',
     });
   });
@@ -91,6 +99,7 @@ describe('database TLS authority', () => {
     expect(config.ssl).toEqual({
       minVersion: 'TLSv1.3',
       rejectUnauthorized: true,
+      verifyIdentity: true,
     });
   });
 });

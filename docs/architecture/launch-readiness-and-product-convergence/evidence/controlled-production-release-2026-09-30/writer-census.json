@@ -1,0 +1,44 @@
+{
+  "observedDate": "2026-09-30",
+  "operation": "read-only",
+  "productionSourceFingerprint": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+  "knownProductionWriter": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "deploymentId": "5045030c-f115-429e-af15-2b2c410a6cb1",
+    "status": "SUCCESS",
+    "gitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+  },
+  "otherBindings": [
+    {
+      "environment": "Testing",
+      "environmentId": "2ced17ce-4ada-4aa1-9caf-393fe83a6e31",
+      "database": "listify_test",
+      "productionSourceWriter": false,
+      "mainTriggerNeedsContainment": true,
+      "unrelatedPendingJwtPatchMustBePreserved": true
+    },
+    {
+      "environment": "Staging",
+      "environmentId": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+      "database": "listify_staging",
+      "productionSourceWriter": false,
+      "latestDeploymentStatus": "FAILED",
+      "notProofOfNoOlderActiveInstances": true
+    }
+  ],
+  "additionalProject": {
+    "name": "fulfilling-possibility",
+    "id": "9a34662e-dfab-4bc9-824b-e3a18064aa06",
+    "serviceCount": 0
+  },
+  "emailWorkerOrLeadCronProvisioned": false,
+  "completeFreezeClaim": false,
+  "remainingChecks": [
+    "Refresh all active instances, queued deploys and hooks immediately before freeze",
+    "Operator confirms no scripts, consoles, webhooks, or external clients writing production TiDB",
+    "Drain/stop production API including in-process schedulers; verify no active deployment and traffic refused",
+    "Hash fresh provider readbacks and operator attestation before final source capture"
+  ]
+}

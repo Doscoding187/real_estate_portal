@@ -49,7 +49,7 @@ describe('homepage journey preview Database Authority fixture', () => {
   });
 
   it('defines a ten-card Buy rail, a separate rental, and local-only login identities', () => {
-    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v1');
+    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v2');
     expect(HOMEPAGE_JOURNEY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).toHaveLength(10);
     expect(new Set(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).size).toBe(10);

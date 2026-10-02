@@ -48,11 +48,11 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('AgentTrainingSupport access handoff', () => {
-  it('keeps operational metrics private until Launch Access is active', () => {
+  it('keeps operational metrics private while preparation continues', () => {
     render(<AgentTrainingSupport />);
 
-    expect(screen.getByText('Activate your Agent workspace')).toBeInTheDocument();
-    expect(screen.getByText('Activate Launch Access')).toBeInTheDocument();
+    expect(screen.getByText('Prepare your Agent workspace')).toBeInTheDocument();
+    expect(screen.getByText('Continue preparation')).toBeInTheDocument();
     expect(getDashboardStatsQueryMock.mock.calls[0]?.at(-1)).toEqual(
       expect.objectContaining({ enabled: false }),
     );

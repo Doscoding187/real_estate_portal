@@ -9,8 +9,9 @@
  * Journey stages:
  *  1. Principal registers + email verified
  *  2. Onboarding wizard completes (agency created, plan selected, invoice issued)
- *  3. Payment proof submitted
- *  4. Finance approves → subscription activates → membership established → invitations delivered
+ *  3. Invoice and controlled payment proof submitted
+ *  4. Founder sales pause preserves pending proof; finance approves after resume
+ *     → subscription activates; a later pause preserves paid access
  *  5. Team invitation accepted by agent (conflation guard tested separately)
  *  6. Listing created + attributed to agency via membership
  *  7. Listing submitted for review (publication readiness gate)
@@ -30,6 +31,9 @@ const jwtSecretSetup = vi.hoisted(() => {
 });
 
 import { randomUUID } from 'node:crypto';
+import { rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { and, eq, sql } from 'drizzle-orm';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
@@ -38,11 +42,16 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
       describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
 
 import { db } from '../db';
+import { getDb } from '../db-connection';
 import {
   agencies,
   agencyAgentMemberships,
   agencyBranding,
   agents,
+  billingAuditEvents,
+  billingInvoices,
+  billingPaymentDocuments,
+  billingPayments,
   leads,
   listings,
   planEntitlements,
@@ -51,6 +60,7 @@ import {
   subscriptions,
   users,
   invitations,
+  notifications,
 } from '../../drizzle/schema';
 import { appRouter } from '../routers';
 import { getAgencyOperatingHome } from '../services/agencyOperatingHome';
@@ -68,11 +78,18 @@ let agencyId: number;
 let planId: number;
   let planCreatedByTest = false;
 let invoiceId: number;
-let paymentProofId: number;
+let paymentId: number;
 let listingId: number;
 let leadId: number;
 let invitationToken: string;
   const createdPropertyIds: number[] = [];
+const proofDirectory = join(tmpdir(), `property-listify-b16-agency-proof-${process.pid}-${randomUUID()}`);
+const originalBillingEnv = new Map<string, string | undefined>();
+
+function setBillingTestEnv(key: string, value: string) {
+  if (!originalBillingEnv.has(key)) originalBillingEnv.set(key, process.env[key]);
+  process.env[key] = value;
+}
 
 function caller(user: {
   id: number;
@@ -93,6 +110,15 @@ async function insertId(result: any): Promise<number> {
 
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  setBillingTestEnv('BILLING_PROOF_STORAGE_ADAPTER', 'local');
+  setBillingTestEnv('BILLING_PRIVATE_STORAGE_DIR', proofDirectory);
+  setBillingTestEnv('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');
+  setBillingTestEnv('BILLING_EFT_BANK_NAME', 'Local Test Bank');
+  setBillingTestEnv('BILLING_EFT_BRANCH_CODE', '000000');
+  setBillingTestEnv('BILLING_EFT_ACCOUNT_NUMBER', '0000000000');
+  setBillingTestEnv('BILLING_EFT_ACCOUNT_TYPE', 'Local test account');
+  setBillingTestEnv('BILLING_SUPPORT_EMAIL', 'billing-test@propertylistify.local');
+  await getDb();
   // The acceptance path mints a session token through the auth service.
 
 
@@ -159,6 +185,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  for (const [key, value] of originalBillingEnv) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  rmSync(proofDirectory, { recursive: true, force: true });
   if (!process.env.DATABASE_URL) return;
   // Cleanup in reverse dependency order.
   const tables = [
@@ -170,14 +201,39 @@ afterAll(async () => {
   await db.delete(leads).where(eq(leads.agencyId, agencyId)).catch(() => undefined);
   await db.delete(listings).where(eq(listings.agencyId, agencyId)).catch(() => undefined);
   await db.delete(properties).where(eq(properties.sourceListingId, listingId)).catch(() => undefined);
-  await db.delete(subscriptions).where(eq(subscriptions.planId, planId)).catch(() => undefined);
+  if (agencyId) {
+    await db.delete(billingAuditEvents).where(and(
+      eq(billingAuditEvents.ownerType, 'agency'),
+      eq(billingAuditEvents.ownerId, agencyId),
+    )).catch(() => undefined);
+    await db.delete(billingPaymentDocuments).where(and(
+      eq(billingPaymentDocuments.ownerType, 'agency'),
+      eq(billingPaymentDocuments.ownerId, agencyId),
+    )).catch(() => undefined);
+    await db.delete(billingPayments).where(and(
+      eq(billingPayments.ownerType, 'agency'),
+      eq(billingPayments.ownerId, agencyId),
+    )).catch(() => undefined);
+    await db.delete(billingInvoices).where(and(
+      eq(billingInvoices.ownerType, 'agency'),
+      eq(billingInvoices.ownerId, agencyId),
+    )).catch(() => undefined);
+  }
+  if (agencyId) {
+    await db.delete(subscriptions).where(and(
+      eq(subscriptions.ownerType, 'agency'),
+      eq(subscriptions.ownerId, agencyId),
+    )).catch(() => undefined);
+  }
   if (planCreatedByTest) {
     await db.delete(planEntitlements).where(eq(planEntitlements.planId, planId)).catch(() => undefined);
     await db.delete(plans).where(eq(plans.id, planId)).catch(() => undefined);
   }
-  if (agentUserId) await db.delete(users).where(eq(users.id, agentUserId)).catch(() => undefined);
-  if (principalUserId) await db.delete(users).where(eq(users.id, principalUserId)).catch(() => undefined);
-  if (superAdminUserId) await db.delete(users).where(eq(users.id, superAdminUserId)).catch(() => undefined);
+  for (const userId of [agentUserId, principalUserId, superAdminUserId]) {
+    if (!userId) continue;
+    await db.delete(notifications).where(eq(notifications.userId, userId)).catch(() => undefined);
+    await db.delete(users).where(eq(users.id, userId)).catch(() => undefined);
+  }
   if (agencyId) await db.delete(agencies).where(eq(agencies.id, agencyId)).catch(() => undefined);
 });
 
@@ -259,49 +315,103 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     expect(invoiceId).toBeGreaterThan(0);
   });
 
-  it('STAGE 4a: Finance activates subscription directly (payment proof upload skipped in walkthrough)', async () => {
-    // In production, the agency uploads a proof-of-payment document through
-    // the billing workspace and finance reviews it. The walkthrough skips the
-    // file upload and goes directly to activation.
-    await db
-      .update(subscriptions)
-      .set({
-        status: 'active',
-        currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 19).replace('T', ' '),
-      })
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)));
-
-    const [sub] = await db.select().from(subscriptions).where(
-      and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)),
-    ).limit(1);
-    expect(sub.status).toBe('active');
+  it('STAGE 4a: Agency submits a controlled private EFT proof without receiving access', async () => {
+    const [invoice] = await db.select().from(billingInvoices)
+      .where(eq(billingInvoices.id, invoiceId)).limit(1);
+    expect(invoice).toBeDefined();
+    const proofBuffer = Buffer.from('controlled agency walkthrough proof');
+    const proof = await principalCaller.billing.submitPaymentProof({
+      invoiceId,
+      amount: invoice.amountDue,
+      bankReference: invoice.paymentReference,
+      payerName: 'Journey Agency',
+      paymentDate: new Date().toISOString().slice(0, 10),
+      file: {
+        filename: 'controlled-proof.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: proofBuffer.length,
+        contentBase64: proofBuffer.toString('base64'),
+      },
+    });
+    paymentId = proof.paymentId;
+    const pendingAccess = await principalCaller.agency.getAccessState();
+    expect(pendingAccess.workspaceAccess.publishing).toBe(false);
   });
 
-  it('STAGE 4b: Subscription activated — shadow synced, publication readiness clear', async () => {
-    // In production, finance reviews the payment proof and activates via
-    // billing.admin.reviewManualPayment. The walkthrough activates directly
-    // to avoid file-upload simulation, then verifies cross-slice coherence.
-    await db
-      .update(subscriptions)
-      .set({
-        status: 'active',
-        currentPeriodEnd: new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 19).replace('T', ' '),
-      })
-      .where(and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)));
+  it('STAGE 4b: Founder sales pause blocks new checkout and approval without changing the pending proof', async () => {
+    superAdminCaller = caller({ id: superAdminUserId, role: 'super_admin' });
+    const [invoiceBefore] = await db.select().from(billingInvoices)
+      .where(eq(billingInvoices.id, invoiceId)).limit(1);
+    const [paymentBefore] = await db.select().from(billingPayments)
+      .where(eq(billingPayments.id, paymentId)).limit(1);
+    const previousPause = process.env.PAID_MVP_SALES_PAUSED;
+    process.env.PAID_MVP_SALES_PAUSED = 'true';
+    try {
+      expect((await principalCaller.billing.commercialActivation()).salesPaused).toBe(true);
+      await expect(principalCaller.billing.createCheckoutSession({ planId })).rejects.toThrow(/paused/);
+      await expect(superAdminCaller.billing.admin.reviewManualPayment({
+        paymentId,
+        decision: 'approve',
+        verifiedAmount: invoiceBefore.amountDue,
+        note: 'This approval must remain paused.',
+      })).rejects.toThrow(/paused/);
+      const [invoiceAfter] = await db.select().from(billingInvoices)
+        .where(eq(billingInvoices.id, invoiceId)).limit(1);
+      const [paymentAfter] = await db.select().from(billingPayments)
+        .where(eq(billingPayments.id, paymentId)).limit(1);
+      expect(invoiceAfter.status).toBe(invoiceBefore.status);
+      expect(paymentAfter.status).toBe(paymentBefore.status);
+      expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
+    } finally {
+      if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
+      else process.env.PAID_MVP_SALES_PAUSED = previousPause;
+    }
+  });
 
-    // Shadow column must sync (S1 invariant).
-    await db
-      .update(agencies)
-      .set({ subscriptionStatus: 'active', updatedAt: new Date() })
-      .where(eq(agencies.id, agencyId));
+  it('STAGE 4c: Super Admin verifies payment and subscription activation coherently', async () => {
+    const [invoice] = await db.select().from(billingInvoices)
+      .where(eq(billingInvoices.id, invoiceId)).limit(1);
+    const approved = await superAdminCaller.billing.admin.reviewManualPayment({
+      paymentId,
+      decision: 'approve',
+      verifiedAmount: invoice.amountDue,
+      note: 'Controlled walkthrough payment verified.',
+    });
+    expect(approved).toMatchObject({
+      success: true,
+      invoiceStatus: 'paid',
+      subscriptionStatus: 'active',
+    });
 
     const [sub] = await db.select().from(subscriptions).where(
       and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)),
     ).limit(1);
     expect(sub.status).toBe('active');
 
-    const [agencyRow] = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
-    expect(String(agencyRow.subscriptionStatus)).toBe('active');
+    const access = await principalCaller.agency.getAccessState();
+    expect(access.billingStatus).toBe('active');
+    expect(access.planAccessSource).toBe('subscriptions');
+  });
+
+  it('STAGE 4d: A later founder sales pause preserves the active Agency subscription', async () => {
+    const previousPause = process.env.PAID_MVP_SALES_PAUSED;
+    process.env.PAID_MVP_SALES_PAUSED = 'true';
+    try {
+      expect((await principalCaller.billing.commercialActivation()).salesPaused).toBe(true);
+      await expect(principalCaller.billing.createCheckoutSession({ planId })).rejects.toThrow(/paused/);
+      const access = await principalCaller.agency.getAccessState();
+      expect(access.billingStatus).toBe('active');
+      expect(access.planAccessSource).toBe('subscriptions');
+    } finally {
+      if (previousPause === undefined) delete process.env.PAID_MVP_SALES_PAUSED;
+      else process.env.PAID_MVP_SALES_PAUSED = previousPause;
+    }
+  });
+
+  it('STAGE 4e: Super Admin approves the agency before membership activation', async () => {
+    const approved = await superAdminCaller.agency.verify({ id: agencyId, isVerified: true });
+    expect(Number(approved.isVerified)).toBe(1);
+    expect((await principalCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(true);
   });
 
   it('STAGE 5: Agent invitation accepted — canonical membership established', async () => {
@@ -506,17 +616,14 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
     }
   });
 
-  it('CROSS-SLICE INVARIANT: No compatibility fallback was introduced', async () => {
-    // The legacy agencies.subscriptionStatus column must agree with the
-    // canonical subscriptions table (S1 invariant maintained through all
-    // subsequent slices).
+  it('CROSS-SLICE INVARIANT: Agency public status follows canonical subscriptions', async () => {
+    // Launch Access does not sync the retired agencies.subscriptionStatus
+    // snapshot. The public Agency response must project canonical billing.
     const [canonicalSub] = await db.select().from(subscriptions).where(
       and(eq(subscriptions.ownerType, 'agency'), eq(subscriptions.ownerId, agencyId)),
     ).limit(1);
-    const [agencyRow] = await db.select().from(agencies).where(eq(agencies.id, agencyId)).limit(1);
-    // After the S1 convergence, these MUST agree for active subscriptions.
-    if (canonicalSub?.status === 'active') {
-      expect(String(agencyRow.subscriptionStatus)).toBe('active');
-    }
+    expect(canonicalSub?.status).toBe('active');
+    const publicAgency = await principalCaller.agency.getById({ id: agencyId });
+    expect(publicAgency?.subscriptionStatus).toBe('active');
   });
 });

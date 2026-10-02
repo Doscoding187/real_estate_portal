@@ -1,6 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, ChevronDown, Info, MapPin } from 'lucide-react';
-import { useListingWizardStore, getLocationValidationIssues } from '@/hooks/useListingWizard';
+import {
+  useListingWizardStore,
+  getLocationEvidenceValidationIssues,
+  getLocationValidationIssues,
+} from '@/hooks/useListingWizard';
 import { trpc } from '@/lib/trpc';
 import type { LocationData } from '../../../../../shared/listing-types';
 import type { PrivateAddress } from '../../../../../shared/location-contract';
@@ -102,6 +106,10 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const resolvedArea = [currentLocation.suburb, currentLocation.city].filter(Boolean).join(', ');
   const hasResolvedLocation = Boolean(
     resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province,
+  );
+  const confirmationPrerequisiteIssues = useMemo(
+    () => getLocationEvidenceValidationIssues({ propertyType, location }),
+    [location, propertyType],
   );
   const validationIssues = useMemo(
     () => getLocationValidationIssues({ propertyType, location }),
@@ -610,7 +618,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               type="button"
               className="mt-3 bg-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_86%,black)]"
               onClick={confirmManualLocation}
-              disabled={resolveLocation.isPending || validationIssues.length > 0}
+              disabled={resolveLocation.isPending || confirmationPrerequisiteIssues.length > 0}
             >
               {resolveLocation.isPending
                 ? 'Confirming…'
@@ -618,7 +626,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                   ? 'Reconfirm location'
                   : 'Confirm location'}
             </Button>
-            {!isConfirmed && validationIssues.length > 0 && (
+            {!isConfirmed && confirmationPrerequisiteIssues.length > 0 && (
               <p className="mt-2 text-xs text-slate-500">
                 Complete the required location details above to unlock confirmation.
               </p>

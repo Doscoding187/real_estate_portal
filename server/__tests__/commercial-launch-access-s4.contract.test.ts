@@ -33,6 +33,7 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
       expect(product.priceMonthly).toBe(0);
       expect(product.metadata.commercial_billing_interval).toBe('once_off');
       expect(product.metadata.commercial_action_mode).toBe('request_invoice');
+      expect(product.metadata.tax_treatment).toBe('not_vat_registered');
       if (product.segment === 'agent' || product.segment === 'agency') {
         expect(product.metadata.commercial_launch_access_mode).toBe(
           'full_supported_capability_cohort',
@@ -68,6 +69,7 @@ describe('commercial monetization S4 paid Launch Access contract', () => {
     );
     expect(CANONICAL_LAUNCH_ACCESS_PRODUCTS).toHaveLength(3);
     expect(adapter).toContain("commercial_entitlement_source: 'explicit_launch_capabilities'");
+    expect(adapter).toContain('taxTreatment: metadata.tax_treatment || null');
     expect(adapter).not.toContain('getSupportedEntitlementSource');
     expect(adapter).not.toContain('SELECT * FROM plans WHERE segment = ?');
     expect(adapter).not.toContain('commercial_entitlement_source_plan');

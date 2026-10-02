@@ -1,0 +1,206 @@
+{
+  "tool": "MySQL Shell 8.4.10",
+  "counts": {
+    "errorCount": 13,
+    "warningCount": 10,
+    "noticeCount": 3
+  },
+  "checks": [
+    {
+      "id": "removedSysVars",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Error",
+          "object": "avoid_temporal_upgrade",
+          "description": "Error: The system variable 'avoid_temporal_upgrade' is set to OFF (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "binlog_transaction_dependency_tracking",
+          "description": "Error: The system variable 'binlog_transaction_dependency_tracking' is set to WRITESET (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "expire_logs_days",
+          "description": "Error: The system variable 'expire_logs_days' is set to 0 (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "log_bin_use_v1_row_events",
+          "description": "Error: The system variable 'log_bin_use_v1_row_events' is set to OFF (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "master_info_repository",
+          "description": "Error: The system variable 'master_info_repository' is set to TABLE (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "profiling_history_size",
+          "description": "Error: The system variable 'profiling_history_size' is set to 15 (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "relay_log_info_repository",
+          "description": "Error: The system variable 'relay_log_info_repository' is set to TABLE (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "show_old_temporals",
+          "description": "Error: The system variable 'show_old_temporals' is set to OFF (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "slave_rows_search_algorithms",
+          "description": "Error: The system variable 'slave_rows_search_algorithms' is set to TABLE_SCAN,INDEX_SCAN (EXPLICIT) and will be removed."
+        },
+        {
+          "level": "Error",
+          "object": "transaction_write_set_extraction",
+          "description": "Error: The system variable 'transaction_write_set_extraction' is set to XXHASH64 (EXPLICIT) and will be removed."
+        }
+      ]
+    },
+    {
+      "id": "sysVarsNewDefaults",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Warning",
+          "object": "group_replication_exit_state_action",
+          "description": "default value will change from READ_ONLY to OFFLINE_MODE."
+        },
+        {
+          "level": "Warning",
+          "object": "innodb_log_writer_threads",
+          "description": "default value will change from ON to OFF ( if #vcpu <= 32 )."
+        },
+        {
+          "level": "Warning",
+          "object": "innodb_read_io_threads",
+          "description": "default value will change from 4 to MAX(#vcpu/2, 4)."
+        }
+      ]
+    },
+    {
+      "id": "checkTableCommand",
+      "status": "OK",
+      "problems": []
+    },
+    {
+      "id": "foreignKeyReferences",
+      "status": "OK",
+      "problems": []
+    },
+    {
+      "id": "authMethodUsage",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Warning",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        }
+      ]
+    },
+    {
+      "id": "pluginUsage",
+      "status": "OK",
+      "problems": []
+    },
+    {
+      "id": "deprecatedDefaultAuth",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Error",
+          "object": "default_authentication_plugin",
+          "description": "mysql_native_password authentication method was removed and it must be corrected before upgrading to 8.4.0 release."
+        }
+      ]
+    },
+    {
+      "id": "deprecatedRouterAuthMethod",
+      "status": "OK",
+      "problems": []
+    },
+    {
+      "id": "columnDefinition",
+      "status": "OK",
+      "problems": []
+    },
+    {
+      "id": "sysvarAllowedValues",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Error",
+          "object": "ssl_cipher",
+          "description": "Error: The system variable 'ssl_cipher' is set to 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-CCM:ECDHE-ECDSA-AES128-CCM:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-CCM:DHE-RSA-AES128-CCM', allowed values include: ECDHE-ECDSA-AES128-GCM-SHA256, ECDHE-ECDSA-AES256-GCM-SHA384, ECDHE-RSA-AES128-GCM-SHA256, ECDHE-RSA-AES256-GCM-SHA384, ECDHE-ECDSA-CHACHA20-POLY1305, ECDHE-RSA-CHACHA20-POLY1305, ECDHE-ECDSA-AES256-CCM, ECDHE-ECDSA-AES128-CCM, DHE-RSA-AES128-GCM-SHA256, DHE-RSA-AES256-GCM-SHA384, DHE-RSA-AES256-CCM, DHE-RSA-AES128-CCM, DHE-RSA-CHACHA20-POLY1305, "
+        },
+        {
+          "level": "Error",
+          "object": "tls_ciphersuites",
+          "description": "Error: The system variable 'tls_ciphersuites' is set to 'TLS_AES_256_GCM_SHA384:TLS_AES_128_GCM_SHA256:TLS_AES_128_CCM_SHA256', allowed values include: TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, TLS_CHACHA20_POLY1305_SHA256, TLS_AES_128_CCM_SHA256, "
+        }
+      ]
+    },
+    {
+      "id": "invalidPrivileges",
+      "status": "OK",
+      "problems": [
+        {
+          "level": "Notice",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Notice",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        },
+        {
+          "level": "Notice",
+          "object": "[account]",
+          "description": "Authentication or privilege lifecycle finding; see private sanitized full evidence."
+        }
+      ]
+    },
+    {
+      "id": "partitionsWithPrefixKeys",
+      "status": "OK",
+      "problems": []
+    }
+  ]
+}

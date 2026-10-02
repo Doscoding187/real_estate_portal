@@ -293,20 +293,19 @@ const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] =
     ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
   }));
 
-const GOVERNED_PROVINCE_REFERENCES: readonly ProvinceReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS.filter(
-  row => row.runtimeStorageLevel === 'province',
-).map(row => {
-  if (!row.code) {
-    throw new Error(`Governed province ${row.runtimeNaturalKey} requires a canonical code.`);
-  }
-  return {
-    name: row.name,
-    code: row.code,
-    slug: row.slug,
-    ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
-    ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
-  };
-});
+const GOVERNED_PROVINCE_REFERENCES: readonly ProvinceReference[] =
+  GOVERNED_RUNTIME_REFERENCE_ROWS.filter(row => row.runtimeStorageLevel === 'province').map(row => {
+    if (!row.code) {
+      throw new Error(`Governed province ${row.runtimeNaturalKey} requires a canonical code.`);
+    }
+    return {
+      name: row.name,
+      code: row.code,
+      slug: row.slug,
+      ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
+      ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
+    };
+  });
 
 const EFFECTIVE_PROVINCES: readonly ProvinceReference[] = (() => {
   const bySlug = new Map<string, ProvinceReference>();
@@ -728,4 +727,91 @@ export async function verifyCanonicalGeography(input: {
     },
     migrationHead: manifest.document.expectedHead,
   };
+}
+
+export type GeographyReleaseRow = {
+  table: 'provinces' | 'cities' | 'suburbs';
+  key: string;
+  parentKey?: string;
+  values: Record<string, string | number | null>;
+};
+
+/** Derive release rows from the same foundation/catalog as local materialization. */
+export function canonicalGeographyReleaseRows(): GeographyReleaseRow[] {
+  const rows = new Map<string, GeographyReleaseRow>();
+  const cities = new Map<string, string>();
+  const add = (row: GeographyReleaseRow) => {
+    const previous = rows.get(row.key);
+    if (previous) {
+      if (
+        previous.table !== row.table ||
+        previous.parentKey !== row.parentKey ||
+        previous.values.name !== row.values.name
+      ) {
+        throw new Error(`Conflicting canonical geography identity ${row.key}.`);
+      }
+      // Matches the existing adapter: foundation is inserted first; a repeated
+      // governed identity verifies its name/parent without replacing its values.
+      return;
+    }
+    rows.set(row.key, row);
+  };
+  for (const item of EFFECTIVE_PROVINCES)
+    add({
+      table: 'provinces',
+      key: item.slug,
+      values: {
+        name: item.name,
+        code: item.code,
+        status: 'verified',
+        slug: item.slug,
+        latitude: item.latitude ?? null,
+        longitude: item.longitude ?? null,
+      },
+    });
+  for (const item of [...CITIES, ...GOVERNED_CITY_REFERENCES] as readonly CityReference[]) {
+    const key = `${item.provinceSlug}/${item.slug}`;
+    cities.set(key, key);
+    const old = cities.get(item.slug);
+    cities.set(item.slug, old && old !== key ? '' : key);
+    add({
+      table: 'cities',
+      key,
+      parentKey: item.provinceSlug,
+      values: {
+        name: item.name,
+        slug: item.slug,
+        latitude: item.latitude ?? null,
+        longitude: item.longitude ?? null,
+        isMetro: 1,
+        status: item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
+      },
+    });
+  }
+  for (const item of [...SUBURBS, ...GOVERNED_SUBURB_REFERENCES] as readonly SuburbReference[]) {
+    // Foundation slugs are resolved from the foundation itself, never by choosing
+    // an arbitrary member of the multi-territory catalog.
+    const foundation = CITIES.filter(city => city.slug === item.citySlug);
+    const parentKey = item.citySlug.includes('/')
+      ? item.citySlug
+      : foundation.length === 1
+        ? `${foundation[0].provinceSlug}/${foundation[0].slug}`
+        : cities.get(item.citySlug);
+    if (!parentKey || !rows.has(parentKey))
+      throw new Error('Geography release parent is ambiguous or missing.');
+    add({
+      table: 'suburbs',
+      key: `${parentKey}/${item.slug}`,
+      parentKey,
+      values: {
+        name: item.name,
+        slug: item.slug,
+        latitude: item.latitude ?? null,
+        longitude: item.longitude ?? null,
+        postalCode: item.postalCode ?? null,
+        status: item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
+      },
+    });
+  }
+  return [...rows.values()];
 }

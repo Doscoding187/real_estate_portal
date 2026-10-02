@@ -39,6 +39,8 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
+import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 
 const PLAN_STYLES = [
   {
@@ -72,7 +74,7 @@ function ProductIcon({ index, className }: { index: number; className?: string }
   return <Icon className={className} />;
 }
 
-export default function DeveloperPlans() {
+export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?: boolean }) {
   const [, setLocation] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<CommercialProduct | null>(null);
   const { data: catalog, isLoading, isError } = useCommercialCatalog('developer');
@@ -92,7 +94,9 @@ export default function DeveloperPlans() {
     },
   });
 
-  const products = catalog?.products || [];
+  const products = (catalog?.products || []).filter(
+    product => product.productKey === 'developer_launch_access',
+  );
   const currentPlanId = subscription?.commercial?.entitled
     ? (subscription.commercial.planId ?? null)
     : null;
@@ -104,7 +108,7 @@ export default function DeveloperPlans() {
   };
 
   const continueWithProduct = () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || salesPaused) return;
     if (
       selectedProduct.audience === 'developer' &&
       selectedProduct.term.kind === 'paid_launch_access' &&
@@ -142,6 +146,10 @@ export default function DeveloperPlans() {
             <p className="mx-auto max-w-2xl text-lg text-slate-600">
               Compare the developer products currently configured in Property Listify.
             </p>
+          </div>
+
+          <div className="mx-auto mb-8 max-w-3xl">
+            <CommercialActivationNotice />
           </div>
 
           {isLoading && (
@@ -286,7 +294,9 @@ export default function DeveloperPlans() {
                         disabled={isCurrentPlan || action.disabled}
                         onClick={() => handleSelectProduct(product)}
                       >
-                        {isCurrentPlan ? 'Current Plan' : action.label}
+                        {isCurrentPlan
+                          ? 'Current Plan'
+                          : action.label}
                         {!isCurrentPlan && <ArrowUpRight className="ml-2 h-4 w-4" />}
                       </Button>
                     </div>
@@ -322,8 +332,8 @@ export default function DeveloperPlans() {
           <DialogHeader>
             <DialogTitle>Continue with {selectedProduct?.displayName}</DialogTitle>
             <DialogDescription>
-              This product uses the current canonical commercial action. Paid developer access is
-              not activated by selecting a plan.
+              Your developer profile and preparation workspace can be completed before commercial
+              activation. Selecting a product never grants publishing or paid access.
             </DialogDescription>
           </DialogHeader>
           {selectedProduct && (
@@ -333,7 +343,9 @@ export default function DeveloperPlans() {
                 {getCommercialPricePresentation(selectedProduct).period || ''}
               </p>
               <p>
-                Any paid activation remains subject to an assisted invoice and verified payment.
+                Developer Launch Access is once-off for 90 days and does not renew automatically.
+                An invoice is reusable while payment remains pending; selecting it never grants
+                publication or paid access.
               </p>
               <p>No promotion is shown unless it is configured by the commercial catalog.</p>
             </div>
@@ -342,12 +354,103 @@ export default function DeveloperPlans() {
             <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
-              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Continue'}
+            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending || salesPaused}>
+              {salesPaused
+                ? 'New sales paused'
+                : requestLaunchInvoice.isPending
+                ? 'Requesting invoice…'
+                : 'Continue'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function PreparationDeveloperPlans({
+  availabilityError,
+  onRetry,
+}: {
+  availabilityError?: boolean;
+  onRetry?: () => void;
+}) {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100"
+      data-testid="developer-plans-preparation"
+    >
+      <div className="container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+        <Button
+          variant="ghost"
+          className="mb-6"
+          onClick={() => setLocation('/developer/dashboard')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Dashboard
+        </Button>
+
+        <div className="mx-auto mb-8 max-w-3xl text-center">
+          <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
+            <Sparkles className="mr-1 h-3 w-3" />
+            Developer preparation
+          </Badge>
+          <h1 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">
+            Prepare your development portfolio before commercial activation.
+          </h1>
+          <p className="text-lg text-slate-600">
+            Continue building private development drafts and return to them when you are ready.
+            Public project publication remains available after approved commercial activation.
+          </p>
+        </div>
+
+        <div className="mx-auto mb-10 max-w-3xl">
+          <CommercialActivationNotice />
+        </div>
+
+        {availabilityError ? (
+          <div className="mx-auto mb-6 flex max-w-3xl flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+            <p>Developer Launch Access could not be verified. Paid actions remain closed.</p>
+            <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+              Retry availability check
+            </Button>
+          </div>
+        ) : null}
+
+        <Card className="mx-auto max-w-2xl p-8 text-center">
+          <Building2 className="mx-auto h-10 w-10 text-blue-600" />
+          <h2 className="mt-4 text-2xl font-semibold text-slate-900">
+            Private preparation is available
+          </h2>
+          <p className="mt-3 text-slate-600">
+            Create, edit, and resume private development drafts. Commercial products, invoices, and
+            publishing are unavailable during this onboarding phase.
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Button onClick={() => setLocation('/developer/create-development')}>
+              Prepare a development
+            </Button>
+            <Button variant="outline" onClick={() => setLocation('/developer/drafts')}>
+              Resume private drafts
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function DeveloperPlans() {
+  const availability = useCommercialProductAvailability('developer_launch_access');
+
+  return availability.isAvailable ? (
+    <CommercialDeveloperPlans salesPaused={availability.salesPaused} />
+  ) : (
+    <PreparationDeveloperPlans
+      availabilityError={availability.isError}
+      onRetry={() => void availability.refetch()}
+    />
   );
 }

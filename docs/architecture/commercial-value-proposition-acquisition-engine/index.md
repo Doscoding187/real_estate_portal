@@ -5,8 +5,8 @@
 | Status | Approved AAE-S0 strategic baseline with approved AAE-S1A evidence extension and founder-approved nine-audience AAE-S1B proposition architecture |
 | Scope | Commercial value proposition, public messaging, stakeholder acquisition, commercial journeys, offers, proof, onboarding and future content authority |
 | Owner | Founder — Edward Banda, with product, commercial, marketing, legal/compliance and engineering governance |
-| Implementation status | Public implementation is not authorised |
-| Pricing status | Unresolved; no pricing model is approved by this authority |
+| Implementation status | B01 approves only the Paid MVP commercial policy for the three named Launch Access offers; public/runtime implementation remains unauthorised pending the launch blockers and release gates |
+| Pricing status | Paid MVP fixed once-off prices, 90-day term and manual-EFT/finance activation are approved only for Independent Agent, Agency and Developer Launch Access; all other pricing and future packages remain unresolved |
 | CMS status | A database-backed CMS is not authorised |
 | Next authority decision | Separate founder decision on whether to authorise AAE-S1C; AAE-S1C and public implementation remain unauthorised |
 
@@ -15,6 +15,20 @@
 This index is the entry point for the Property Listify Commercial Value Proposition & Acquisition Engine (AAE).
 
 > **Programme identifier:** `AAE` is retained as the historical workstream identifier originating from the Advertise & Partner Acquisition Engine audit. Its governing scope has since expanded into the Property Listify Commercial Value Proposition & Acquisition Engine.
+
+## Paid MVP B01 amendment — 2026-09-17
+
+The founder has approved a narrow Paid MVP commercial policy for Independent
+Agent, Agency and Developer Launch Access. The authoritative matrix, operating
+rules and boundaries are in [LRC-PAY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17).
+It supersedes this authority's former unresolved-offer wording only for those
+three fixed, once-off, 90-day manual-EFT offers.
+
+This amendment does not authorise a route, public copy, payment collection,
+normal-runtime activation, a trial, a promotion, a recurring product, a new
+audience, or a claim beyond the B01 minimum value floor. B03–B06 and B10,
+B14 and B15 still own the implementation, operational and legal evidence
+needed before an offer becomes customer-facing.
 
 1. [00 — AAE-S0 Final Strategic Audit and Product Direction](00-aae-s0-final-strategic-audit-and-product-direction.md) is the approved strategic baseline.
 2. [01 — AAE-S0A Market and Competitor Research](01-aae-s0a-market-competitor-research.md) is the original supporting research record.
@@ -50,14 +64,17 @@ Approved in principle:
 - structured and version-controlled commercial content authority before any database CMS; and
 - banks and bond originators should default to a strategic-partnership, referral or integration motion; any ordinary advertiser or subscription proposition requires explicit validation and an AAE authority amendment.
 
-Unresolved:
+Unresolved outside the narrow B01 Paid MVP decision:
 
 - final routes and SEO treatment;
-- final pricing, offers, entitlement authority and public-price rules;
-- agency product versus agent-volume-tier model;
+- public presentation, invoice/disclosure wording, evidence and eligibility
+  enforcement for the three approved offers;
+- pricing, offers, entitlement authority and public-price rules for every
+  other audience, package, promotion or future term;
 - service-provider commercial model;
-- exact developer sales and campaign model; and
-- offer, pricing, trial, entitlement and onboarding authority reconciliation.
+- developer campaigns and other post-MVP commercial models; and
+- remaining offer, pricing, trial, entitlement and onboarding reconciliation
+  outside the three approved Launch Access products.
 
 ## Approved AAE-S1A evidence extension
 
@@ -65,7 +82,10 @@ AAE-S1A is approved and extends, but does not amend, the AAE-S0 strategic baseli
 
 AAE-S1B is authorised only as offline Master and Audience Proposition Architecture. It must cite the AAE-S0 strategic baseline together with relevant S1A atomic IDs and may use delivered evidence or explicitly qualified evidence with its limitations. Exploratory evidence may appear only as clearly labelled future direction.
 
-This authorisation does **not** authorise public copy, public routes, pricing, offers, trials, entitlements, commercial availability or implementation. AAE-S1C and AAE-S2 require separate authorisation.
+Except for the narrow B01 Paid MVP policy decision above, this authorisation
+does **not** authorise public copy, public routes, pricing, offers, trials,
+entitlements, commercial availability or implementation. AAE-S1C and AAE-S2
+remain separate authorisations.
 
 ## AAE-S1B review state
 

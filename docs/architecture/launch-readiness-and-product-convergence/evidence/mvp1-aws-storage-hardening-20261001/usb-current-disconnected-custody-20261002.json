@@ -1,0 +1,15 @@
+{
+  "verifiedAt": "2026-10-02T10:50:03.623056+00:00",
+  "operatorCustodySource": "Edward previously replied stored to unplugged secure-custody request",
+  "previouslyReportedSecureRetention": true,
+  "keySeparateOffUsbReported": true,
+  "selectedArchivePartitionUuidAbsent": true,
+  "enumeratedUsbStorageDevices": 0,
+  "priorAttachedRemountConflictResolvedAtCurrentReadback": true,
+  "physicalStorageSecurityIndependentlyInspected": false,
+  "archiveCopiedOrReverifiedAgain": false,
+  "custodyDisposition": "operator-confirmed secure retention now consistent with independent disconnected-device readback",
+  "archiveRetrievalEvidenceRetained": "Completed authenticated USB retrieval: 218 tables / 152 rows; no replay",
+  "privatePriorCustodyEvidenceSha256": "f705e79242ac23fb382012497ba556a88a2af2405bfb65a5eeaddbaf36119e43",
+  "snapshotSha256": "88a48e86eefebd2584743c1032e4b822b1d3fc36aa95b25d5356eab6d589db4b"
+}

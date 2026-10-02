@@ -1,0 +1,22 @@
+{
+  "observedAt": "2026-09-30T15:10:31.275Z",
+  "operation": "read-only get-service-config",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environment": {
+    "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "name": "production"
+  },
+  "service": {
+    "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "name": "real_estate_portal"
+  },
+  "source": {
+    "branch": "main",
+    "checkSuites": false,
+    "repo": "Doscoding187/real_estate_portal"
+  },
+  "staged": null,
+  "limitations": [
+    "This API returns source binding and CI wait setting; a separate operator readback must establish the automatic deployment hold. No provider settings changed."
+  ]
+}

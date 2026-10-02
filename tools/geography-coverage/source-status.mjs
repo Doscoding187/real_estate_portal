@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import process from 'node:process';
+import console from 'node:console';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';

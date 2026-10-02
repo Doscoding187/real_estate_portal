@@ -1,0 +1,2456 @@
+[
+  {
+    "label": "changed client contracts",
+    "rawOutputSha256": "a58c4847f90cd29cdafd9e6f1e7a8ad98044e0d182e7437aa3350a89653d82f5",
+    "files": [
+      {
+        "path": "client/src/lib/agencyInvitationNavigation.test.ts",
+        "cases": [
+          {
+            "title": "agency invitation account-entry navigation preserves a tokenized acceptance route through the canonical next parameter",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation account-entry navigation encodes the invitation token before embedding it in the internal next route",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/agencyJourney.test.ts",
+        "cases": [
+          {
+            "title": "Agency journey action presentation keeps payment proof and finance review as different Agency actions",
+            "status": "passed"
+          },
+          {
+            "title": "Agency journey action presentation keeps a pending commercial selection in preparation when activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "Agency journey action presentation turns an active Agency into a team-and-operations journey",
+            "status": "passed"
+          },
+          {
+            "title": "Agency journey action presentation preserves the Agency support context when access needs review",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/agentJourney.test.ts",
+        "cases": [
+          {
+            "title": "Agent journey support handoff preserves the Agent account context when support is required",
+            "status": "passed"
+          },
+          {
+            "title": "Agent journey support handoff keeps unactivated commercial states in private preparation while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "Agent journey support handoff keeps profile-completion locks truthful while commercial activation is unavailable",
+            "status": "passed"
+          },
+          {
+            "title": "Agent journey support handoff retains a commercial action only for an explicitly enabled runtime",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/agentListingActionIds.test.ts",
+        "cases": [
+          {
+            "title": "Agent listing action identities keeps source listing and public property actions distinct",
+            "status": "passed"
+          },
+          {
+            "title": "Agent listing action identities does not guess an edit identity when a public projection has no source listing",
+            "status": "passed"
+          },
+          {
+            "title": "Agent listing action identities uses the private listing identity for a draft row",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/developmentSubmitPayload.test.ts",
+        "cases": [
+          {
+            "title": "development submit payload helpers retains a confirmed hero receipt when workflow validation exposes its URL at the root",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers normalizes amenity sources from arrays, JSON strings, and grouped objects",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers normalizes submit unit types and strips pricing outside the active transaction",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers builds the flat submit payload from canonical wizard data",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers serializes browser date inputs in the flat submit payload",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers does not manufacture empty media fields when submit source has no media",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers prefers canonical step unit types and transaction type over stale root mirrors",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers embeds the canonical workflow snapshot with normalized submit units",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers allows canonical amenities and feature labels to clear stale caller mirrors",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers builds explicit update payloads from a canonical draft snapshot",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers uses canonical step owners when rebuilding update payloads from resumed snapshots",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps edit identity and legacy draft shell fields out of update mutation payloads",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers uses canonical update inventory over stale root mirrors for full-sync edits",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers uses edited canonical sale prices ahead of stale hydrated base price mirrors",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers omits inventory-owned fields for keyed partial updates outside inventory steps",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers scopes amenities partial updates to explicit amenities_features step fields",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers allows amenities partial updates to explicitly clear feature labels",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps inventory-owned fields for keyed inventory partial updates",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers blocks unit_types partial transaction switches that omit persisted units",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers requires persisted baseline for explicit edit progress saves",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers builds explicit edit progress saves as baseline-aware partial updates",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers allows unit_types partial transaction switches when every persisted unit is included",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps unit display order in explicit unit_types edit progress payloads",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps review edit saves scoped unless publish intent is explicit",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers routes edit save payloads by explicit intent",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps identity partial updates from owning the marketing tagline",
+            "status": "passed"
+          },
+          {
+            "title": "development submit payload helpers keeps the root unit mirror when the legacy edit step slice only contains ids",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/env.verification.test.ts",
+        "cases": [
+          {
+            "title": "frontend API environment contract uses exact approved production and staging API hosts",
+            "status": "passed"
+          },
+          {
+            "title": "frontend API environment contract requires an origin with no path, query, or credentials",
+            "status": "passed"
+          },
+          {
+            "title": "frontend API environment contract keeps unknown deployment labels outside authenticated staging",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/AdvertiseWithUs.commercialTruth.test.tsx",
+        "cases": [
+          {
+            "title": "public advertise entry shows only the available preparation paths while commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public advertise entry does not advertise paid terms, invoice handling, or manual EFT while activation is disabled",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/AgentAnalytics.test.tsx",
+        "cases": [
+          {
+            "title": "AgentAnalytics keeps selected-period leads separate from cumulative current-inventory engagement",
+            "status": "passed"
+          },
+          {
+            "title": "AgentAnalytics keeps the incomplete-profile analytics lock truthful during preparation",
+            "status": "passed"
+          },
+          {
+            "title": "AgentAnalytics moves performance and pipeline data to the same selected lead period",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/AgentLeads.test.tsx",
+        "cases": [
+          {
+            "title": "AgentLeads keeps the CRM available for existing custody when new enquiries are commercially paused",
+            "status": "passed"
+          },
+          {
+            "title": "AgentLeads keeps CRM queries locked when there is no current existing-custody authority",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/AgentMicrosite.test.tsx",
+        "cases": [
+          {
+            "title": "AgentMicrosite public web presence renders the loading state while the public projection resolves",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence renders a graceful unavailable state for non-public agents",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence presents the agent-owned identity, role and agency affiliation",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence exposes direct contact actions with South African WhatsApp normalization",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence captures a consent-aware profile enquiry for the selected agent CRM",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence uses neutral local-market copy instead of an awkward possessive heading",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence never fabricates unpopulated professional claims",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence links served areas only where canonical geography resolved them",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence projects canonically public inventory with links to the marketplace detail route",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence never emits contact PII in analytics payloads",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence reveals the complete bounded inventory progressively via View All",
+            "status": "passed"
+          },
+          {
+            "title": "AgentMicrosite public web presence omits the inventory module entirely when the agent has no public mandates",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/Agents.test.tsx",
+        "cases": [
+          {
+            "title": "Agents public discovery page renders skeleton placeholders while loading",
+            "status": "passed"
+          },
+          {
+            "title": "Agents public discovery page renders a distinct error state with retry instead of an empty catalogue",
+            "status": "passed"
+          },
+          {
+            "title": "Agents public discovery page renders the genuine empty state when no approved agents exist",
+            "status": "passed"
+          },
+          {
+            "title": "Agents public discovery page renders tolerant specialization badges and canonical profile links",
+            "status": "passed"
+          },
+          {
+            "title": "Agents public discovery page fails closed on noncanonical legacy JSON-encoded list fields",
+            "status": "passed"
+          },
+          {
+            "title": "Agents public discovery page filters client-side across name, specialization and served areas",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/AssistedOnboardingRequestPage.test.tsx",
+        "cases": [
+          {
+            "title": "assisted onboarding request page submits a persisted review request with the selected context and no access promise",
+            "status": "passed"
+          },
+          {
+            "title": "assisted onboarding request page fails closed on an unrecognised query-area value",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/DeveloperPlans.test.tsx",
+        "cases": [
+          {
+            "title": "DeveloperPlans preparation-only containment keeps the authenticated direct route in private preparation without loading commercial data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/SubscriptionPlans.test.tsx",
+        "cases": [
+          {
+            "title": "SubscriptionPlans preparation-only onboarding shows only role-specific preparation paths without loading public commercial products",
+            "status": "passed"
+          },
+          {
+            "title": "SubscriptionPlans preparation-only onboarding retains the catalog presentation for a separately enabled commercial runtime",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/__tests__/AgencySetupAccountBoundary.test.tsx",
+        "cases": [
+          {
+            "title": "Agency setup assisted account boundary gives a signed-in agent an actionable Agency conversion path instead of a silent bounce",
+            "status": "passed"
+          },
+          {
+            "title": "Agency setup assisted account boundary explains the boundary for other non-agency roles without the agent cross-sell",
+            "status": "passed"
+          },
+          {
+            "title": "Agency setup assisted account boundary does not mutate or imply mutation of the current account",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/__tests__/EnhancedHero.journey-selection.test.tsx",
+        "cases": [
+          {
+            "title": "EnhancedHero explicit journey selection starts neutral while keeping location search usable and Search non-submittable",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection activates Search for a location-first selection without inferring a journey",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection uses the same neutral destination for Enter as Search click",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection submits sibling locations as one canonical Buy OR intent from the neutral resolver",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection resolves a contradictory parent and child to the latest explicit location",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection rejects an unresolved location identity from activating Search",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection routes a single location through the existing Buy contract after Buy is selected",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection routes an enabled Developments selection to the canonical search URL",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection submits a canonical location through the Commercial Leasing journey",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection does not expose Plots & Land filters while the first-cohort disposition is deferred",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection exposes Commercial Office filters that map to tenant decisions",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection supports journey-first selection but waits for a canonical location",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection exposes the governed bedroom and bathroom filters for Buy",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection opens both price boundaries together for the Buy price decision",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection retains a location when Buy is selected after location-first input",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedHero explicit journey selection does not expose unsupported lease-term or furnished Rent controls",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/__tests__/EnhancedNavbar.buyers-menu.test.tsx",
+        "cases": [
+          {
+            "title": "EnhancedNavbar buyer discovery menu opens the buyer menu with canonical discovery destinations",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedNavbar buyer discovery menu presents the buying guide truthfully and keeps shortlist access honest for visitors",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedNavbar buyer discovery menu does not prompt authenticated buyers to sign in",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedNavbar buyer discovery menu does not nest links inside buttons and closes on Escape",
+            "status": "passed"
+          },
+          {
+            "title": "EnhancedNavbar buyer discovery menu exposes the same governed buyer destinations in mobile navigation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/__tests__/publicRouteConvergence.test.ts",
+        "cases": [
+          {
+            "title": "public route convergence preserves the founder-approved audience navigation labels",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence routes development searches directly to the canonical root with query preservation",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence keeps legacy development links compatible without discarding their query string",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence hands the stale public activation URL to preparation rather than a false live workspace",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence routes legacy development authoring through the protected canonical workspace",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence uses the canonical Land route for the Plots and Land journey",
+            "status": "passed"
+          },
+          {
+            "title": "public route convergence uses the canonical developments root on corrected public discovery surfaces",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/agent/AgentSetupWizard.test.tsx",
+        "cases": [
+          {
+            "title": "AgentSetupWizard completion opens the preparation workspace after profile completion without forcing payment",
+            "status": "passed"
+          },
+          {
+            "title": "AgentSetupWizard completion submits a typed canonical coverage identity instead of its display label",
+            "status": "passed"
+          },
+          {
+            "title": "AgentSetupWizard completion hands off to a retryable dashboard state when the post-save status lookup fails",
+            "status": "passed"
+          },
+          {
+            "title": "AgentSetupWizard completion saves a corrected rejected profile without trying to republish it",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/agent/AgentStatusStrip.test.tsx",
+        "cases": [
+          {
+            "title": "AgentStatusStrip offers private preparation to agents while commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "AgentStatusStrip keeps expired commercial state in preparation-only handling",
+            "status": "passed"
+          },
+          {
+            "title": "AgentStatusStrip renders evaluated CTA labels only, never raw expressions",
+            "status": "passed"
+          },
+          {
+            "title": "AgentStatusStrip reports payment review states truthfully",
+            "status": "passed"
+          },
+          {
+            "title": "AgentStatusStrip keeps an agency member in the agency activation path",
+            "status": "passed"
+          },
+          {
+            "title": "AgentStatusStrip tells a current member that the agency owns active Launch Access",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/agent/AgentTopNav.test.tsx",
+        "cases": [
+          {
+            "title": "AgentTopNav access handoff does not pretend that locked workspace records are searchable or notify-ready",
+            "status": "passed"
+          },
+          {
+            "title": "AgentTopNav access handoff does not turn an unavailable status into a misleading activation prompt",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/dashboard/EntityStatusCard.agentIds.test.tsx",
+        "cases": [
+          {
+            "title": "EntityStatusCard listing action identities uses explicit source and public identifiers when they are deliberately unequal",
+            "status": "passed"
+          },
+          {
+            "title": "EntityStatusCard listing action identities disables editing instead of guessing a source listing identity",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/developer/BillingPanel.preparation.test.tsx",
+        "cases": [
+          {
+            "title": "Developer billing preparation containment keeps the authenticated subscription route in private preparation without loading commercial data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/developer/Overview.preparation.test.tsx",
+        "cases": [
+          {
+            "title": "Developer workspace preparation boundary takes an ineligible developer to private work instead of offering unavailable activation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/developer/SettingsPanel.test.tsx",
+        "cases": [
+          {
+            "title": "SettingsPanel identity truth renders the server identity and explains the controlled team boundary",
+            "status": "passed"
+          },
+          {
+            "title": "SettingsPanel identity truth does not disguise an unavailable profile as editable settings",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/development-wizard/DevelopmentWizard.test.tsx",
+        "cases": [
+          {
+            "title": "DevelopmentWizard publisher context initialization renders the curated create wizard with a platform-reference publisher context",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard publisher context initialization preserves the normal registered-developer create wizard path",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard publisher context initialization waits for auth before selecting a storage key and isolates persistence by account",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard edit-mode lifecycle truth explains that an in-review development cannot be resubmitted until the review completes",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard edit-mode lifecycle truth warns that submitting changes to a live development unpublishes it",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard edit-mode lifecycle truth surfaces reviewer feedback inside the editor so correction needs no detour",
+            "status": "passed"
+          },
+          {
+            "title": "DevelopmentWizard edit-mode lifecycle truth blocks the editor instead of falling through to a blank creation flow when the read fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/hooks/__tests__/useListingWizard.navigation.test.ts",
+        "cases": [
+          {
+            "title": "useListingWizardStore navigation contract does not advance from Step 1 until a sale or rent intent is selected",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract keeps auction as legacy transport without making it a current Step 1 intent",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract does not allow a progress jump over an incomplete prerequisite",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract initializes rental terms explicitly and never carries them into a sale",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract allows backward navigation while guarding the next required step",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract retains shared facts but removes incompatible type-derived state",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract allows a confirmed manual street location without coordinates",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract keeps confirmation separate from the valid manual-location evidence needed to enable it",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract rejects a suburb-only urban location with an actionable contract failure",
+            "status": "passed"
+          },
+          {
+            "title": "useListingWizardStore navigation contract invalidates confirmation when a location is edited without new pin evidence",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/hooks/__tests__/useListingWizard.ownerIsolation.test.ts",
+        "cases": [
+          {
+            "title": "listing wizard persisted draft ownership restores a persisted draft after a refresh for its authenticated owner",
+            "status": "passed"
+          },
+          {
+            "title": "listing wizard persisted draft ownership clears private draft state when a different account opens the wizard",
+            "status": "passed"
+          },
+          {
+            "title": "listing wizard persisted draft ownership does not transfer an unowned legacy draft to the next authenticated account",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/__tests__/consumerJourneyRouter.test.ts",
+        "cases": [
+          {
+            "title": "consumer journey router exposes only executable Buy choices",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router keeps residential Buy semantics in the existing search authority",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router hands every stale Land request to the contained direct route without forwarding geography or filters",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router routes Farms & Smallholdings to its dedicated specialist journey",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router fails closed on unsupported Farm geography instead of widening into a Homes search",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router exposes Commercial only for the executable rental authority",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router forwards only supported Commercial decisions with canonical location identity",
+            "status": "passed"
+          },
+          {
+            "title": "consumer journey router continues to reject unsupported Commercial search-area handoffs",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/__tests__/heroJourneys.test.ts",
+        "cases": [
+          {
+            "title": "hero journey authority uses stable intent keys and approved public labels",
+            "status": "passed"
+          },
+          {
+            "title": "hero journey authority normalizes legacy aliases without using display labels as internal keys",
+            "status": "passed"
+          },
+          {
+            "title": "hero journey authority restores only an explicit journey from the homepage URL",
+            "status": "passed"
+          },
+          {
+            "title": "hero journey authority keeps completed Developments capability separate from hosted release activation",
+            "status": "passed"
+          },
+          {
+            "title": "hero journey authority requires the product disposition as well as an explicit hosted manifest",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/lib/__tests__/landLaunchContainment.test.ts",
+        "cases": [
+          {
+            "title": "Land first-cohort client containment does not let local mode or an explicit hosted release manifest expose the deferred Land journey",
+            "status": "passed"
+          },
+          {
+            "title": "Land first-cohort client containment removes Land from consumer journey selection while retaining its separate domain contract",
+            "status": "passed"
+          },
+          {
+            "title": "Land first-cohort client containment mounts a no-query deferred boundary for old public, authoring, and reviewer URLs",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/__tests__/AgencyOnboarding.planTruth.test.tsx",
+        "cases": [
+          {
+            "title": "Agency onboarding plan selection commercial truth presents the once-off Launch Access offer without monthly-recurring language",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth derives the once-off term presentation from canonical catalog metadata, not literals",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth keeps correct recurring formatting for ordinary recurring plans",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth does not promise flexible plan switching or an invoice during pre-payment onboarding",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth keeps team invitations queued until approved commercial activation",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth uses the canonical plan id as the selectable plan value",
+            "status": "passed"
+          },
+          {
+            "title": "Agency onboarding plan selection commercial truth reports unavailable canonical pricing instead of inventing legacy storage values",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/__tests__/DeveloperRoutes.developmentHome.test.ts",
+        "cases": [
+          {
+            "title": "Development Home route registration routes /new to the canonical creation flow without rendering Development Home or its query",
+            "status": "passed"
+          },
+          {
+            "title": "Development Home route registration registers the static creation route before Development Home and the portfolio list",
+            "status": "passed"
+          },
+          {
+            "title": "Development Home route registration keeps the Home query behind a positive numeric development ID and defaults the UI range to 30 days",
+            "status": "passed"
+          },
+          {
+            "title": "Development Home route registration uses Development Home as the owned portfolio open action while retaining wizard edit navigation",
+            "status": "passed"
+          },
+          {
+            "title": "Development Home route registration redirects the retired static performance page to working analytics",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/__tests__/DeveloperRoutes.onboardingFailure.test.tsx",
+        "cases": [
+          {
+            "title": "Developer workspace onboarding-status failure handling keeps contextual authentication redirects owned by the workspace router",
+            "status": "passed"
+          },
+          {
+            "title": "Developer workspace onboarding-status failure handling never mistakes a failed status query for a missing organisation",
+            "status": "passed"
+          },
+          {
+            "title": "Developer workspace onboarding-status failure handling recovers into the workspace after a successful retry",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/__tests__/DeveloperRoutes.preparationNavigation.test.tsx",
+        "cases": [
+          {
+            "title": "Developer preparation navigation keeps a pending organisation on the safe preparation route for /developer/subscription",
+            "status": "passed"
+          },
+          {
+            "title": "Developer preparation navigation keeps a pending organisation on the safe preparation route for /developer/settings/subscription",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/admin/AgentApprovals.reconsideration.test.tsx",
+        "cases": [
+          {
+            "title": "Agent approvals reconsideration lets a reviewer approve a corrected rejected profile through the existing privileged mutation",
+            "status": "passed"
+          },
+          {
+            "title": "Agent approvals reconsideration does not present profile approval as a suspended-account restoration path",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/advertise/AdvertiseSellPage.commercialTruth.test.tsx",
+        "cases": [
+          {
+            "title": "public role-path chooser routes every role to preparation rather than a paid commercial path while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public role-path chooser does not advertise a paid term or invoice path while activation is disabled",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/advertise/AgencyProductLandingPage.commercialTruth.test.tsx",
+        "cases": [
+          {
+            "title": "public Agency product landing page shows the approved preparation path while normal runtime commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page does not advertise a paid offer, invoice request, or activation period while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page uses the exact Agency product decision instead of another paid product",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page shows the commercial Agency path only when the exact Agency product is available",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page fails closed when availability cannot be read",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page retains the catalog-driven commercial presentation for a separately enabled runtime",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page derives enabled-runtime commercial copy and capacity from the catalog rather than hardcoded offer values",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page retains the enabled-runtime owner account start and commercial proposition",
+            "status": "passed"
+          },
+          {
+            "title": "public Agency product landing page keeps catalog-unavailable Launch Access as an intentional assisted path when separately enabled",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/advertise/AgentProductLandingPage.commercialTruth.test.tsx",
+        "cases": [
+          {
+            "title": "public Agent product landing page shows the approved preparation path while normal runtime commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Agent product landing page does not advertise a paid offer, invoice request, or activation period while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Agent product landing page retains the catalog-driven commercial presentation for a separately enabled runtime",
+            "status": "passed"
+          },
+          {
+            "title": "public Agent product landing page uses the effective Agent product decision rather than another product availability",
+            "status": "passed"
+          },
+          {
+            "title": "public Agent product landing page keeps the Agent landing in preparation when only another product is available",
+            "status": "passed"
+          },
+          {
+            "title": "public Agent product landing page keeps account creation primary when the separately enabled commercial catalog is unavailable",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/advertise/DeveloperProductLandingPage.commercialTruth.test.tsx",
+        "cases": [
+          {
+            "title": "public Developer product landing page shows the approved preparation path while normal runtime commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Developer product landing page does not advertise a paid offer, invoice request, or activation period while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "public Developer product landing page mounts the paid surface only for the exact Developer Launch Access product",
+            "status": "passed"
+          },
+          {
+            "title": "public Developer product landing page retains the catalog-driven commercial presentation for a separately enabled runtime",
+            "status": "passed"
+          },
+          {
+            "title": "public Developer product landing page keeps catalog-unavailable Launch Access as an intentional assisted path",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/agent/AgentPackageSelection.test.tsx",
+        "cases": [
+          {
+            "title": "Agent pre-payment preparation keeps the direct package route in preparation without loading commercial data",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation lands a waiting payer on the dashboard while finance verifies the proof",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation does not open individual billing for a current agency member",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation allows corrected proof for a rejected invoice while finance approval remains required",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation opens the mounted paid workflow only for the effective Agent product decision",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation keeps the Agent workflow closed when another product is available instead",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation keeps paid actions closed while the effective product decision is loading",
+            "status": "passed"
+          },
+          {
+            "title": "Agent pre-payment preparation keeps paid actions closed and offers a retry when the product decision fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/agent/AgentProductivity.test.tsx",
+        "cases": [
+          {
+            "title": "AgentProductivity access handoff guides an unactivated agent to preparation without fetching operational data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/agent/AgentTrainingSupport.test.tsx",
+        "cases": [
+          {
+            "title": "AgentTrainingSupport access handoff keeps operational metrics private while preparation continues",
+            "status": "passed"
+          },
+          {
+            "title": "AgentTrainingSupport access handoff keeps guidance and support available while activation is under review",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/sections/home/HomeTrendingSection.test.tsx",
+        "cases": [
+          {
+            "title": "HomeTrendingSection request states uses a compact horizontal mobile skeleton while published property is loading",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states shows a retryable service error rather than presenting the request as an empty result",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states shows a truthful empty state only after a successful empty response",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states keeps ten selected items in a four-card desktop rail with exterior hover controls",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states saves a property through the authenticated favourite mutation",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states takes an unauthenticated user to sign-in without losing their current location",
+            "status": "passed"
+          },
+          {
+            "title": "HomeTrendingSection request states does not expose a Land handoff while the first-cohort disposition is deferred",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/sections/home/ProfessionalEntrySection.test.tsx",
+        "cases": [
+          {
+            "title": "ProfessionalEntrySection offers each professional audience its canonical preparation entry point while activation is disabled",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.states.test.tsx",
+        "cases": [
+          {
+            "title": "Developer setup wizard identity states shows a truthful under-review state instead of an editable application for pending organisations",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states surfaces the rejection reason and offers correction for rejected organisations",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states never re-opens registration for approved organisations",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states does not offer stale local registration drafts once an organisation exists",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states does not reopen registration when the organisation read fails unexpectedly",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states resumes only a draft owned by the authenticated principal",
+            "status": "passed"
+          },
+          {
+            "title": "Developer setup wizard identity states does not read a draft before auth resolves and clears legacy or mismatched private state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/location/__tests__/LocationHeroSection.rent.test.tsx",
+        "cases": [
+          {
+            "title": "LocationHeroSection Rent controls exposes truthful Rent controls through the canonical journey gate",
+            "status": "passed"
+          },
+          {
+            "title": "LocationHeroSection Rent controls does not expose the deferred Land journey or Land filters",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/components/location/__tests__/LocationTrendingFeedSection.neutral.test.tsx",
+        "cases": [
+          {
+            "title": "LocationTrendingFeedSection neutral mode does not initialise a journey or query live feed data before Buy is chosen",
+            "status": "passed"
+          },
+          {
+            "title": "LocationTrendingFeedSection neutral mode does not expose the deferred Land tab, including when stale state requests it",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/features/agency/operations/AgencyOperationsWorkspaces.preparation.test.tsx",
+        "cases": [
+          {
+            "title": "Agency billing preparation containment keeps the authenticated billing route in private preparation without loading commercial data",
+            "status": "passed"
+          },
+          {
+            "title": "Agency Launch Access billing keeps a selected pending Agency plan actionable for its first once-off invoice",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/features/agency/viewings/agencyViewingDates.test.ts",
+        "cases": [
+          {
+            "title": "agency viewing dates uses Johannesburg day boundaries for an instant around local midnight",
+            "status": "passed"
+          },
+          {
+            "title": "agency viewing dates groups a post-midnight Johannesburg viewing under its local operating day",
+            "status": "passed"
+          },
+          {
+            "title": "agency viewing dates does not assign invalid timestamps to an operating day",
+            "status": "passed"
+          },
+          {
+            "title": "agency viewing dates prepopulates viewing inputs in Johannesburg wall time",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/admin/__tests__/DevelopersPage.trustBoundary.test.tsx",
+        "cases": [
+          {
+            "title": "DevelopersPage trust boundary keeps the trust badge operation separate from organisation approval and commercial publication",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "client/src/pages/admin/__tests__/adminReviewRoute.guard.test.ts",
+        "cases": [
+          {
+            "title": "admin review route keeps the direct review URL behind the super-admin boundary",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "passed": 237,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "label": "shared policy and fixture contracts",
+    "rawOutputSha256": "acfc15e4fe98fa29ac216c13e56e3e71066e799b50bf1f9915b9f014816ffd80",
+    "files": [
+      {
+        "path": "server/__tests__/commercial-launch-access-s4.contract.test.ts",
+        "cases": [
+          {
+            "title": "commercial monetization S4 paid Launch Access contract defines the approved once-off 90-day launch ladder without monthly semantics",
+            "status": "passed"
+          },
+          {
+            "title": "commercial monetization S4 paid Launch Access contract provisions Agent and Agency products from explicit data on a clean baseline",
+            "status": "passed"
+          },
+          {
+            "title": "commercial monetization S4 paid Launch Access contract uses one owner-scoped manual-EFT lifecycle for all three audiences",
+            "status": "passed"
+          },
+          {
+            "title": "commercial monetization S4 paid Launch Access contract contains the old automatic launch free-trial bypasses",
+            "status": "passed"
+          },
+          {
+            "title": "commercial monetization S4 paid Launch Access contract removes stale public pricing and permanent lock-in claims",
+            "status": "passed"
+          },
+          {
+            "title": "commercial monetization S4 paid Launch Access contract keeps proof documents owner-private, including independent agents",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/_core/securityRuntimeConfiguration.test.ts",
+        "cases": [
+          {
+            "title": "deployed security configuration accepts explicit secure production configuration",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects governed test selectors in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects governed test selectors in staging",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the browser fixture selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the browser product selector selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the scenario fixture selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the B04 email capture selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the B05 email capture selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects the B06 email capture selector in production",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects capture paths, fake database selectors, and environment contradictions",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration requires dedicated, strong media signing and explicit S3 selection",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration rejects absent, short, and placeholder session secrets without disclosing their values",
+            "status": "passed"
+          },
+          {
+            "title": "deployed security configuration does not require hosted configuration for local development or test mode",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/agencyInvitationDeliveryService.test.ts",
+        "cases": [
+          {
+            "title": "agency invitation delivery (canonical access gate) delivers invitations when the canonical subscription grants paid access",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) keeps onboarding invitations queued while canonical access is pending payment",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) keeps even a persisted active term queued while commercial activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) refreshes an expired queued invitation only when paid delivery begins",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) refreshes a malformed queued token only when paid delivery begins",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) defers grace_period because fixed Launch Access expires at term end",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) defers when the canonical subscription has expired even if a stale shadow says active",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) defers when no canonical subscription exists yet",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) defers an active subscription whose fixed term has already elapsed",
+            "status": "passed"
+          },
+          {
+            "title": "agency invitation delivery (canonical access gate) delivers within a live grace window and defers an exhausted one",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/billingProofStorage.hosted.test.ts",
+        "cases": [
+          {
+            "title": "hosted private billing proof storage refuses public media credentials as the private storage fallback",
+            "status": "passed"
+          },
+          {
+            "title": "hosted private billing proof storage rejects a private proof bucket that equals the public media bucket",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/commercialActivationPolicy.test.ts",
+        "cases": [
+          {
+            "title": "commercial activation containment is disabled for development and deployed runtimes",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment only permits paid-state fixtures in governed test runtimes",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment limits a governed browser fixture to its explicit exact product key",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment keeps email-only browser fixtures in preparation mode without an explicit product selector",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects a malformed governed product selector",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects a production activation list with a unknown component",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects a production activation list with a wildcard component",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects a production activation list with a duplicate component",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects a production activation list with a empty component component",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment enables only the exact three product keys with release metadata in production",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment requires an exact persisted product for mutations in a production paid release",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment does not treat client-like or customer-state fields as activation authority",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment keeps release references in the super-admin status projection only",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment rejects production subsets and missing release metadata",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment fails closed before a commercial mutation starts",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment allows a future release decision to enable only its explicit paid-MVP product keys",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment does not expose EFT account details while activation is disabled",
+            "status": "passed"
+          },
+          {
+            "title": "commercial activation containment blocks invoice, proof, finance, entitlement, and provider paths before database work",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/commercialTerm.test.ts",
+        "cases": [
+          {
+            "title": "commercial term semantics does not reinterpret paid Launch Access as a free trial",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics requires the exact active owner-scoped MVP Launch Access plan",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics accepts only the three diagonal persisted product and owner pairs",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics rejects missing, unknown, and recurring persisted products",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics rejects malformed persisted authority metadata instead of falling back to the plan name",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics keeps free trials and normal recurring subscriptions as separate terms",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics calculates a fixed 90-day entitlement and never treats it as renewable",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics preserves fixed duration and repeated UTC round trips from 2026-03-01T12:34:56.789Z",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics preserves fixed duration and repeated UTC round trips from 2026-10-01T12:34:56.789Z",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics preserves explicit timezone offsets and rejects invalid timestamps",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics requires a configured fee and verified payment before activation",
+            "status": "passed"
+          },
+          {
+            "title": "commercial term semantics keeps an unconfigured launch fee unavailable rather than treating it as free",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/listingPublicationEntitlementService.test.ts",
+        "cases": [
+          {
+            "title": "paid subscription entitlement timestamps interprets SQL DATETIME values as UTC",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service fails closed for an otherwise valid paid listing while preparation-only is enabled",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service allows a paid agency principal with a valid agency publishing plan",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service allows an agency agent to inherit the paid agency entitlement",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies an agency with no canonical subscription",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies an unverified agency before subscription-backed publication",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies pending, suspended, and explicitly expired agency subscriptions",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies an active agency subscription whose dated period has ended",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service fails closed when an active fixed-term agency subscription has no usable end",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service enforces the canonical numeric active-listing cap for agencies",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service enforces the canonical numeric active-listing cap for independent agents",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service enumerates independent-agent blockers before authoring begins",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service reports capacity facts for a ready independent agent",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service uses current canonical membership rather than stale profile claims for independent preflight",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies unapproved agents and publishes approved agents regardless of the badge flag",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies a grace-period row because fixed Launch Access expires at term end",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies an agency grace period that has ended",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies agency subscriptions without a valid publishing plan",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service does not let a free trial substitute for Launch Access",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies developer, prospect, and unassociated authenticated listing owners",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service fails closed for missing commercial ownership and absent canonical membership",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service uses current canonical membership instead of forged profile affiliation claims",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies suspended canonical membership even when every stored profile claim names the agency",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service denies an agency member who attempts to publish an unattributed listing as an independent",
+            "status": "passed"
+          },
+          {
+            "title": "listing publication entitlement service uses valid stored agency ownership for a seller-converted listing without changing attribution",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/onboardingStateCreation.test.ts",
+        "cases": [
+          {
+            "title": "canonical onboarding creation race returns the persisted winner to concurrent creators without overwriting preferences",
+            "status": "passed"
+          },
+          {
+            "title": "canonical onboarding creation race does not swallow a duplicate when the exact user has no visible state",
+            "status": "passed"
+          },
+          {
+            "title": "canonical onboarding creation race propagates ER_NO_REFERENCED_ROW_2 without retry or alternate schema",
+            "status": "passed"
+          },
+          {
+            "title": "canonical onboarding creation race propagates ER_BAD_FIELD_ERROR without retry or alternate schema",
+            "status": "passed"
+          },
+          {
+            "title": "canonical onboarding creation race propagates ECONNRESET without retry or alternate schema",
+            "status": "passed"
+          },
+          {
+            "title": "canonical onboarding creation race fails closed when a successful insert has no visible row",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/paidMvpSalesPause.test.ts",
+        "cases": [
+          {
+            "title": "founder-only new-sales pause automatically pauses hosted sales at the renewed UTC deadline while preserving product access",
+            "status": "passed"
+          },
+          {
+            "title": "founder-only new-sales pause fails closed without a hosted sales window and rejects an overlong or invalid deadline",
+            "status": "passed"
+          },
+          {
+            "title": "founder-only new-sales pause blocks new invoices while leaving the existing paid product active",
+            "status": "passed"
+          },
+          {
+            "title": "founder-only new-sales pause rejects invoice issuance and finance activation before database access",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/transactionalEmailPolicy.test.ts",
+        "cases": [
+          {
+            "title": "Paid MVP transactional email policy selects only customer-action billing events",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy renders exact once-off terms for agent_launch_access",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy renders exact once-off terms for agency_launch_access",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy renders exact once-off terms for developer_launch_access",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy includes the canonical EFT reference and amount on an invoice email",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy rejects malformed sender and deployed callback origins",
+            "status": "passed"
+          },
+          {
+            "title": "Paid MVP transactional email policy requires both the Resend key and one valid canonical sender",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0
+  },
+  {
+    "label": "joined database contracts before clean-role-target correction",
+    "rawOutputSha256": "32311cecfb92dab60f81faf620f570c320d3352b98db6107e80cd11c188250fd",
+    "files": [
+      {
+        "path": "server/__tests__/billing.foundation.acceptance.integration.test.ts",
+        "cases": [
+          {
+            "title": "billing foundation persisted acceptance persists the agency EFT flow, protects proof documents, activates entitlements, and keeps duplicate approval idempotent",
+            "status": "passed"
+          },
+          {
+            "title": "billing foundation persisted acceptance keeps rejection/correction and partial-payment paths non-activating until full verified payment",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/commercial-launch-access-s4.integration.test.ts",
+        "cases": [
+          {
+            "title": "S4 Launch Access catalog selection invariant selects the three required products without treating unrelated disposable plans as a failure",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime provisions the three first-class launch products without assuming exclusive plan inventory",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects unsupported persisted product and owner pairs before commercial writes in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects stale sessions before invoice, approval, and restore mutations in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime runs Agent and Agency request-proof-finance-activation-expiry with owner isolation",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime preserves existing paid access and blocks new sales while the production release is paused",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime returns a rejected Launch Access proof to the issued state so the owner can resubmit",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime keeps an unreconciled overpayment under review without activating access",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime notifies an agent at every Launch Access billing milestone",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/contract.property-search-detail-lead-ownership.test.ts",
+        "cases": [
+          {
+            "title": "single-property search-detail-lead ownership contract keeps public search, detail and enquiry on the canonical property agent owner",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps pending property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps rejected property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps archived property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps sold property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps rented property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps draft property projections private on public detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract does not expose images for non-public property projections",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract returns images for public property projections",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract keeps published property projections public on detail",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract fails closed instead of blending a public projection with an invalid source lifecycle",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract uses canonical public-search cards for the Detail continuation feed",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract uses canonical Buy search cards for location inventory previews",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract rejects a non-canonical location preview instead of widening the search",
+            "status": "passed"
+          },
+          {
+            "title": "single-property search-detail-lead ownership contract does not disguise a canonical location search failure as an empty preview",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.agency-member-workspace-authority.test.ts",
+        "cases": [
+          {
+            "title": "agency member workspace authority inherits the current agency workspace through canonical membership and never opens individual billing",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.agency-membership-authority.test.ts",
+        "cases": [
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) mirrors an accepted agent affiliation and keeps maintenance idempotent",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) closes the window on suspension, stamps first closure only, and reopens freshly on reactivate",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) establishing a new affiliation closes competing current memberships",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) converges racing maintenance calls onto a single canonical row",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) rejects profile-supplied agency affiliation and leaves direct service callers unaffiliated",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) does not recommend a suspended member through retained agency profile affiliation",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) delivers a public Commercial enquiry to a current unbadged agency member through the agency term",
+            "status": "passed"
+          },
+          {
+            "title": "canonical membership maintenance (atomic unique-pair authority) delivers a direct profile enquiry to a current unbadged agency member with agency Launch Access",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership projects roster lifecycle from canonical memberships even when legacy profile state disagrees",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership does not let a retained agency profile outlive canonical seller-prospect or analytics authority",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership denies every generic private-listing entry after membership becomes suspended",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership denies every generic private-listing entry after membership becomes left",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership keeps an unaffiliated former member draft private from their former agency",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership does not let a suspended member retain agency performance, commission, or daily-work access",
+            "status": "passed"
+          },
+          {
+            "title": "team operations on canonical membership does not let a suspended member retain Agent Home inventory, commission, or property-work authority",
+            "status": "passed"
+          },
+          {
+            "title": "invitation acceptance (production path) requires a verified invitee before creating canonical agency membership",
+            "status": "passed"
+          },
+          {
+            "title": "invitation acceptance (production path) does not turn a queued pre-payment invitation into agency membership",
+            "status": "passed"
+          },
+          {
+            "title": "invitation acceptance (production path) accepting an agent invitation creates consistent identity, profile, and canonical membership",
+            "status": "passed"
+          },
+          {
+            "title": "invitation acceptance (production path) rejects principal conversion for an account carrying an agent identity with no partial writes",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority rejects a verified account with the wrong email without changing affiliation",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority commits expiry as a terminal state and never grants membership from the expired token",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority rejects a cancelled invitation and leaves its terminal history intact",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority rotates a pending token atomically so the old token cannot be replayed",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority consumes an accepted token once and cannot create a second canonical membership on replay",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority serializes two simultaneous accepts of one invitation to one membership grant",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority serializes cancellation against acceptance without rewriting a consumed invitation",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority serializes resend rotation against acceptance and leaves no stale token usable",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority admits one unaffiliated user through at most one competing Agency invitation",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority does not revive a member after a newer suspended membership transition",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority does not revive a member after a newer left membership transition",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority accepts an existing verified visitor through the canonical membership path",
+            "status": "passed"
+          },
+          {
+            "title": "invitation terminal state and concurrency authority rolls back identity writes when canonical profile and membership creation cannot complete",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.agent-lead-transitions.test.ts",
+        "cases": [
+          {
+            "title": "agent lead transitions follow canonical rules rejects an invalid status jump through the production mutation",
+            "status": "passed"
+          },
+          {
+            "title": "agent lead transitions follow canonical rules stamps first-response and contact truth on a contacted transition",
+            "status": "passed"
+          },
+          {
+            "title": "agent lead transitions follow canonical rules requires a lost reason on the agent surface too",
+            "status": "passed"
+          },
+          {
+            "title": "agent lead transitions follow canonical rules keeps another independent Agent from reading or mutating a custodied lead",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+        "cases": [
+          {
+            "title": "B07 mounted global role mutation authority routes both mounted role endpoints through atomic audit and revokes old sessions",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority denies non-super-admin, unsupported role, and missing target requests",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rolls back the mounted user route role change when required audit insertion fails",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin",
+            "status": "failed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin",
+            "status": "failed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.developer-actor-resolution.test.ts",
+        "cases": [
+          {
+            "title": "B06 Developer commercial actor resolution returns no commercial owner for a principal with no active Developer organisation",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer commercial actor resolution resolves one coherent organisation consistently, including within a transaction",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer commercial actor resolution fails closed rather than selecting a first organisation when memberships are ambiguous",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer commercial actor resolution keeps an unapproved organisation out of paid billing and rejects a missing first-party publisher",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.developer-lead-assignment-authority.test.ts",
+        "cases": [
+          {
+            "title": "B06 Developer lead assignment authority allows self, same-organisation active operators, and unassignment without changing lead custody",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer lead assignment authority rejects unrelated, suspended, Agency, and cross-Developer assignment attempts",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.developer-media-authority.test.ts",
+        "cases": [
+          {
+            "title": "B06 Developer confirmed media authority requires reserve \u2192 actual upload \u2192 confirm \u2192 owned attachment and preserves authorised media on edit",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer confirmed media authority binds unit gallery media to the owned development and persisted unit while denying foreign scopes",
+            "status": "passed"
+          },
+          {
+            "title": "B06 Developer confirmed media authority rejects missing and expired confirmed receipts at the shared development write boundary",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.development-publication-lifecycle.test.ts",
+        "cases": [
+          {
+            "title": "Developer development publication lifecycle integration submits an owned development for review and exposes it publicly only after admin approval",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration mirrors reviewer feedback, refuses empty feedback, and approves privately when Launch Access lapsed",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration keeps live external availability updates public and owner-scoped",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration routes a full external catalogue edit back through independent review",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration persists developer lead actions with MySQL-safe timestamps and ownership isolation",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration keeps approval private without Launch Access and restores publication after activation",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration removes expired public eligibility without destroying the approved development",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration queues one durable Developer expiry event for the organisation owner",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration does not transition incomplete development data to pending through the active developer procedure",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration hides foreign and missing unpublish targets while preserving approval on owner unpublish",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration denies draft and rejected developments through all public development reads",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration returns requested changes to draft with persisted reviewer feedback",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration preserves a completed changes-requested row and creates an update row on resubmission",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration denies every self-review decision without changing the pending review",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration serializes duplicate submissions and leaves exactly one unresolved row",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration rejects review with zero unresolved rows without changing the development",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration fails safely when corruption creates multiple unresolved rows",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration rejects an ordinary sequential duplicate submission",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration serializes conflicting concurrent review decisions",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration accepts canonical ownership and rejects an arbitrary ownership value atomically",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration blocks auction publication while preserving private catalogue state",
+            "status": "passed"
+          },
+          {
+            "title": "Developer development publication lifecycle integration blocks every auction publication attempt atomically regardless of persisted terms",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.listing-media-tenant-boundary.test.ts",
+        "cases": [
+          {
+            "title": "listing media tenant boundary denies an unrelated user before issuing a listing media reservation",
+            "status": "passed"
+          },
+          {
+            "title": "listing media tenant boundary rejects confirmation when the listing is deleted after token issuance",
+            "status": "passed"
+          },
+          {
+            "title": "listing media tenant boundary rejects confirmation when listing custody is reassigned after token issuance",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/__tests__/integration.transactional-email-delivery.test.ts",
+        "cases": [
+          {
+            "title": "B10 transactional email delivery authority consumes one canonical invoice event once and fences two workers",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority retries a definite transient rejection with the same key, then records acceptance",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority stops after a hard rejection or the bounded retry limit",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority blocks delivery when a canonical customer email changes after event consumption",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority resolves a single active Developer owner and fails closed when owner authority is ambiguous",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority keeps ambiguous provider and expired-lease outcomes visible without auto-resend",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority consumes a B03 term notice separately from business-event state",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority allows only a super-admin to reconcile unknown provider evidence without resending",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority sends only a current pending Agency invitation token after rotation",
+            "status": "passed"
+          },
+          {
+            "title": "B10 transactional email delivery authority uses the current Agency admin instead of an Agent with a historical left membership",
+            "status": "passed"
+          }
+        ]
+      }
+    ],
+    "passed": 110,
+    "failed": 2,
+    "skipped": 0
+  },
+  {
+    "label": "Independent Agent",
+    "stats": {
+      "startTime": "2026-09-30T15:05:23.845Z",
+      "duration": 190299.758,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "joins registration through durable Agent follow-up without paid-state seeding",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 129076
+          }
+        ]
+      },
+      {
+        "title": "keeps a private listing draft out of a second Agent account in the same browser",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 24324
+          }
+        ]
+      }
+    ],
+    "rawOutputSha256": "ade77cfcd3731dea45edc61dd8d9e5e1d556c05ede37afe7af77a1d3c1e3cad6",
+    "providerBoundary": "local mail capture, local media adapter, in-memory Redis, owned disposable MySQL; no hosted-provider acceptance"
+  },
+  {
+    "label": "Agency/member",
+    "stats": {
+      "startTime": "2026-09-30T15:09:08.079Z",
+      "duration": 141126.745,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "joins, pays, operates Agency inventory and leads, then retains Agency custody through revocation",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 111734
+          }
+        ]
+      }
+    ],
+    "rawOutputSha256": "89b4912533a9cfeebfc680ed2f7c80cf65eefcc7d51b92543ee3e47b640ec346",
+    "providerBoundary": "local mail capture, local media adapter, in-memory Redis, owned disposable MySQL; no hosted-provider acceptance"
+  },
+  {
+    "label": "Developer",
+    "stats": {
+      "startTime": "2026-09-30T15:12:49.966Z",
+      "duration": 106296.469,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "cases": [
+      {
+        "title": "registers, verifies, establishes and approves a Developer organisation before payment",
+        "results": [
+          {
+            "status": "passed",
+            "durationMs": 91970
+          }
+        ]
+      }
+    ],
+    "rawOutputSha256": "09fb8e39e484f55725b0691bb44e89d062194ad01f6f5668e41bd99470fc53fe",
+    "providerBoundary": "local mail capture, local media adapter, in-memory Redis, owned disposable MySQL; no hosted-provider acceptance"
+  },
+  {
+    "label": "B07 role/session/audit on fresh unseeded owned target",
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "rawOutputSha256": "778d68dbd422ceba23e2d6c60a5e79e6261296b4511f7de048946d54d3c2064b",
+    "files": [
+      {
+        "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+        "cases": [
+          {
+            "title": "B07 mounted global role mutation authority routes both mounted role endpoints through atomic audit and revokes old sessions",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority denies non-super-admin, unsupported role, and missing target requests",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rolls back the mounted user route role change when required audit insertion fails",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin",
+            "status": "passed"
+          },
+          {
+            "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "broad server failure rechecks",
+    "rawOutputSha256": "e06640b572ab525b10608372cdc77f8a290fb2901a4baf465c6ac9a3e9589d93",
+    "files": [
+      {
+        "path": "server/__tests__/commercial-launch-access-s4.integration.test.ts",
+        "cases": [
+          {
+            "title": "S4 Launch Access catalog selection invariant selects the three required products without treating unrelated disposable plans as a failure",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime provisions the three first-class launch products without assuming exclusive plan inventory",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects unsupported persisted product and owner pairs before commercial writes in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime rejects stale sessions before invoice, approval, and restore mutations in production",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime runs Agent and Agency request-proof-finance-activation-expiry with owner isolation",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime preserves existing paid access and blocks new sales while the production release is paused",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime returns a rejected Launch Access proof to the issued state so the owner can resubmit",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime keeps an unreconciled overpayment under review without activating access",
+            "status": "passed"
+          },
+          {
+            "title": "S4 paid Launch Access disposable runtime notifies an agent at every Launch Access billing milestone",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/commercialCatalogService.test.ts",
+        "cases": [
+          {
+            "title": "commercial catalog projection projects canonical agency pricing and entitlements without owning checkout",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection does not publish an unbounded early-access override as a public offer",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection honestly projects unsupported paid audiences as assisted contact actions",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection projects paid Developer Launch Access without a free-trial or zero-price claim",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection routes canonical Agent Launch Access to the authenticated invoice handoff",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection routes Agency Launch Access into canonical agency onboarding instead of a contact dead end",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection excludes inactive and explicitly local/internal plans from a public catalog",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection filters products by the requested canonical audience",
+            "status": "passed"
+          },
+          {
+            "title": "commercial catalog projection does not publish retired free-trial products for launch audiences",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "path": "server/services/__tests__/googlePlacesIntegration.integration.test.ts",
+        "cases": [
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Complete autocomplete flow should handle complete autocomplete workflow from input to form population",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location record creation from listing submission should create location hierarchy and link listing",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location record creation from listing submission should reuse existing location records for duplicate submissions",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Location page rendering with static and dynamic content should render location page with merged static and dynamic content",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Search flow: autocomplete \u2192 location page \u2192 filtered listings should handle complete search flow from query to filtered results",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Search flow: autocomplete \u2192 location page \u2192 filtered listings should support multiple location filters with AND logic",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should calculate trending suburbs from search events",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should weight recent searches higher than older searches",
+            "status": "passed"
+          },
+          {
+            "title": "Google Places Autocomplete Integration - Integration Tests Trending suburbs calculation from search events should limit results to top 10 suburbs",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  }
+]

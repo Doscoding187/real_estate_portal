@@ -29,6 +29,18 @@ export function resetDb() {
   if (pool) void pool.end();
 }
 
+/** Await pool drain during hosted process shutdown. */
+export async function shutdownDb(): Promise<void> {
+  connectionGeneration += 1;
+  initialization = null;
+  initializationOperation = null;
+  activeOperation = null;
+  _db = null;
+  const pool = runtimePool;
+  runtimePool = null;
+  if (pool) await pool.end();
+}
+
 // Lazily create the drizzle instance through the caller's bounded identity.
 async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect') {
   if (_db) {

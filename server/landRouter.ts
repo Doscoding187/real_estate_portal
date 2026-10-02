@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
+import { requireLandVerticalAvailable } from '../shared/landLaunchPolicy';
 import { LAND_PUBLIC_CLASSIFICATIONS } from '../shared/land-domain';
 import {
   accessPrivateLandEvidence,
@@ -55,7 +56,19 @@ export const landMarketingAuthorityInput = z
 function author(ctx: { user?: { id: number; role?: string | null } | null }) {
   const user = requireUser(ctx);
   if (!isLandAuthorRole(user.role)) throw new TRPCError({ code: 'FORBIDDEN', message: 'Land authoring requires an authorized seller, agent, agency, or developer role.' });
+  requireLandRoute();
   return user;
+}
+
+export function requireLandRoute(): void {
+  try {
+    requireLandVerticalAvailable('Land route access');
+  } catch (error) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: error instanceof Error ? error.message : 'Land is unavailable for this launch cohort.',
+    });
+  }
 }
 
 function rethrow(error: unknown): never {
@@ -88,12 +101,12 @@ export const landRouter = router({
   submit: protectedProcedure.input(z.object({ listingId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
     try { await submitLandForReview({ listingId: input.listingId, userId: author(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
-  reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => landWorkflowSnapshot(input.listingId)),
-  reviewerQueue: superAdminProcedure.query(() => landReviewQueue()),
+  reviewerWorkspace: superAdminProcedure.input(z.object({ listingId: z.number().int().positive() })).query(async ({ input }) => { requireLandRoute(); return landWorkflowSnapshot(input.listingId); }),
+  reviewerQueue: superAdminProcedure.query(() => { requireLandRoute(); return landReviewQueue(); }),
   review: superAdminProcedure.input(z.object({ listingId: z.number().int().positive(), action: z.enum(['start', 'request_changes', 'reject', 'approve', 'suspend']), reasonCode: z.string().trim().max(100).optional(), comment: z.string().trim().max(4000).optional() })).mutation(async ({ ctx, input }) => {
-    try { await transitionLandReview({ ...input, reviewerUserId: requireUser(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
+    try { requireLandRoute(); await transitionLandReview({ ...input, reviewerUserId: requireUser(ctx).id }); return { success: true }; } catch (error) { return rethrow(error); }
   }),
   accessEvidence: protectedProcedure.input(z.object({ evidenceDocumentId: z.number().int().positive() })).query(async ({ ctx, input }) => {
-    try { return await accessPrivateLandEvidence({ evidenceDocumentId: input.evidenceDocumentId, actorUserId: requireUser(ctx).id, role: requireUser(ctx).role, requestCorrelationId: ctx.requestId }); } catch (error) { return rethrow(error); }
+    try { requireLandRoute(); return await accessPrivateLandEvidence({ evidenceDocumentId: input.evidenceDocumentId, actorUserId: requireUser(ctx).id, role: requireUser(ctx).role, requestCorrelationId: ctx.requestId }); } catch (error) { return rethrow(error); }
   }),
 });

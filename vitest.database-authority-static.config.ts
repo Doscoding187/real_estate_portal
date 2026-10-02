@@ -4,6 +4,10 @@ export default {
     name: 'database-authority-static',
     environment: 'node',
     include: [
+      'server/__tests__/contract.b08-release-reconciliation.test.ts',
+      'server/services/__tests__/onboardingStateCreation.test.ts',
+      'server/migrations/__tests__/runSqlMigrations.test.ts',
+      'server/_core/__tests__/databaseTls.test.ts',
       'server/__tests__/contract.database-production-seed-security.test.ts',
       'server/__tests__/contract.database-final-closure-authority.test.ts',
       'server/__tests__/contract.database-agent-authority.test.ts',

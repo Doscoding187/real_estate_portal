@@ -1,5 +1,13 @@
 # Property Listify Launch Readiness and Product Convergence
 
+> **Current Paid MVP entry point — 2026-09-25:** use the
+> [central blocker dispositions](03-launch-register.md#paid-mvp-working-disposition--2026-09-25)
+> and accepted [senior evidence review](23-paid-mvp-senior-reconciliation-2026-09-25.md).
+> Execute through the [launch closure plan](24-paid-mvp-launch-closure-execution-plan.md):
+> B03 first, one engineering assignment and senior review at a time, with parallel founder preparation.
+> The older stage/governance snapshot below is historical and does not describe
+> the current Paid MVP candidate or grant a release approval.
+
 | Field                    | Current authority                                                                                                                                                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Programme status         | **GME-B2 and the Worktree Lifecycle Reconciliation Audit are complete. Founder disposition review deferred broad retirement and identified six launch-domain worktrees for conditional future review. Stage 2B is authorized as a bounded local-environment contract and non-mutating-diagnostics implementation.** |
@@ -32,6 +40,11 @@ No existing worktree or branch may be deleted, pruned, moved, repaired, reset, r
 12. [GME-B2 — Controlled merge gate probe verification](11-github-merge-gate-probe-verification.md)
 13. [Worktree Lifecycle Reconciliation Audit](12-worktree-lifecycle-reconciliation-audit.md)
 14. [Local-environment authority contract and diagnostics](13-local-environment-authority-contract-and-diagnostics.md)
+15. [Agency Journey Senior Architecture Review](14-agency-journey-senior-review.md)
+16. [Agency Journey Closure — Sequential Goals](15-agency-journey-closure-goals.md)
+17. [First-cohort lead custody recovery runbook](16-first-cohort-lead-custody-recovery-runbook.md)
+18. [Senior Product Architect Escalation Report](17-senior-product-architect-escalation-report.md)
+19. [Assisted onboarding request queue runbook](18-assisted-onboarding-queue-runbook.md)
 
 ## Canonical programme stages
 

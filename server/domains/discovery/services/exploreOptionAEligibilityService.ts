@@ -3,6 +3,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { agencyAgentMemberships, agents, listings, properties } from '../../../../drizzle/schema';
 import { getDb } from '../../../db';
 import { isCurrentActiveAgencyMembership } from '../../../services/agencyMembershipService';
+import { excludeLandFromGenericListingWorkflow } from '../../../services/landLaunchContainmentService';
 
 export type OptionAEligibleProfessionalProfile = {
   professionalProfileId: number;
@@ -84,6 +85,7 @@ class ExploreOptionAEligibilityService {
           and(
             eq(listings.agentId, professionalProfileId),
             inArray(listings.status, PUBLIC_LISTING_STATUSES),
+            excludeLandFromGenericListingWorkflow(),
           ),
         ),
       db
@@ -115,6 +117,7 @@ class ExploreOptionAEligibilityService {
         Number(listing.agentId) === professionalProfileId &&
         Number.isSafeInteger(listingId) &&
         listingId > 0 &&
+        !['plot', 'land'].includes(String(listing.propertyType || '').toLowerCase()) &&
         (listingAgencyId === null || (Number.isSafeInteger(listingAgencyId) && listingAgencyId > 0))
       );
     });

@@ -27,7 +27,7 @@ import {
 
 const OverviewPage = lazy(() => import('./OverviewPage'));
 const EcosystemOverviewPage = lazy(() => import('./EcosystemOverviewPage'));
-const AgenciesPage = lazy(() => import('./AgenciesPage'));
+const AgencyList = lazy(() => import('./AgencyList'));
 const UsersPage = lazy(() => import('./UsersPage'));
 const DevelopersPage = lazy(() => import('./DevelopersPage'));
 const PropertiesPage = lazy(() => import('./PropertiesPage'));
@@ -85,7 +85,7 @@ const ROUTES = {
 
   agenciesNew: { path: '/admin/agencies/new', render: () => <CreateAgency /> },
   agenciesCreate: { path: '/admin/agencies/create', render: () => <CreateAgency /> },
-  agencies: { path: '/admin/agencies', render: () => <AgenciesPage /> },
+  agencies: { path: '/admin/agencies', render: () => <AgencyList /> },
 
   agents: { path: '/admin/agents', render: () => <UsersPage initialRole="agent" /> },
   users: { path: '/admin/users', render: () => <UsersPage /> },

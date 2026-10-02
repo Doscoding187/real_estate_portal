@@ -1,0 +1,3294 @@
+{
+  "sourceAnchor": "3c72617fe1caa75855ef71bed85dfd45f7f9e372",
+  "rawOutputSha256": "d5c9ddca67ca7a1a2de0a9f836adefeee99a34aa58673c5ef48ce6b05309d8c2",
+  "filesExecuted": 417,
+  "passed": 2619,
+  "failed": 5,
+  "pending": 67,
+  "note": "Initial broad run. All five failures were rechecked successfully after setup corrections; this is not represented as a single green full-suite run. Existing skip declarations remain visible.",
+  "files": [
+    {
+      "path": "server/uploadRouter.s3Scope.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/uploadRouter.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/auth.session-security.test.ts",
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/authRateLimitBoundary.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/authRateLimitStore.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/browserSecurity.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/cookies.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/emailDeliveryBoundary.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/hostedRuntimeConfiguration.test.ts",
+      "status": "passed",
+      "passed": 17,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/localMediaRoutes.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/requestBodyBoundary.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/securityRuntimeConfiguration.test.ts",
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/admin.inventory-boundary.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/agent.dashboard-showings.smoke.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/agent.inventory-cutover.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/agent.lead-response-summary.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/agent.offer-readiness.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/agent.showings-compatibility.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/auth.agency-workspace-smoke.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/auth.distribution-identity-projection.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/auth.login-query-mapping.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/auth.role-normalization.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/authRoutes.emailDeliveryBoundary.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/billing.foundation.acceptance.integration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/billing.provider-independent.contract.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/cacheRouter.authorization.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/commercial-access-authority.contract.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/commercial-agent-s2.contract.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/commercial-authority-s0.contract.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/commercial-launch-access-s4.contract.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/commercial-launch-access-s4.integration.test.ts",
+      "status": "failed",
+      "passed": 8,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.admin-revenue-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-canvassing-boundary.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-deal-engine.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-lead-visibility-followup.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-listing-inventory.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-listing-performance-mvp.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-onboarding-journey.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agency-viewings-workflow.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-continuity.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-onboarding-journey.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-presence-proof.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-public-inventory.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-public-profile-route.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-public-profile.test.ts",
+      "status": "passed",
+      "passed": 21,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agent-skill-governance.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.agents-serving-location.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.b08-release-reconciliation.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.catalogue-publisher-lead-boundary.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.commercial-agency-workflow-boundary.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.commercial-lead-workflow-boundary.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.commercial-listing-publication.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.commercial-location-scope.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.core-property-projection.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.cross-supply-projection-authority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.dashboard-analytics-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-agent-authority.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-canonical-model-authority.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-connection-path-authority.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-explore-future-authority.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 4
+    },
+    {
+      "path": "server/__tests__/contract.database-final-closure-authority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-governance-authority.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-local-lifecycle-authority.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-production-seed-security.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-residual-utility-authority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.database-service-partner-authority.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.db-default-normalization.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.demand-authority-boundary.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-create-lead.test.ts",
+      "status": "passed",
+      "passed": 19,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-engine-s0-containment.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-engine-s2-supersession.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-engine-s3-curated-catalogue.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-kpi-status-semantics.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-new-lead-count.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developer-read-boundary.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.development-search-detail-lead-journey.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.developments-search-validation.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.distribution-access-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.distribution-terms-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.explore-analytics-authority.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.features-context.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.feed-ranking-authority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.leads-insert-canonical-authority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.legacy-boost-route-boundary.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.legacy-partner-analytics-route-boundary.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.legacy-partner-lead-route-boundary.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.listing-lifecycle-db.test.ts",
+      "status": "passed",
+      "passed": 39,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.listing-lifecycle.test.ts",
+      "status": "passed",
+      "passed": 45,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.location-contract.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.location-insights-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.location-public-eligibility.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.marketing-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.migration-execution-authority.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.migration-tree-authority.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.partner-admin-runtime-authority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.price-insights-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.pricing-contract.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.properties-create-retirement.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.properties-search-development-listings.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.properties-search.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.property-listify-database-authority-skill.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.property-search-detail-lead-ownership.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.property-taxonomy-schema.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.property-taxonomy.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.prospect-journey-status.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.public-agent-analytics.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.public-buy-entry-eligibility.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.public-inventory-authority-safety.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.public-lead-honeypot.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.public-search-pagination.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.saved-search-alert-history.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.saved-search-apply-delivery-action.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.saved-search-process-notifications.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.saved-search-update-preferences.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.seo-head-agents.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.service-partner-client-authority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.service-partner-runtime-authority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.similar-properties-authority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.sitemap-agents.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.system-lead-routing-audit.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.system-lead-routing-conversion-report.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.system-lead-routing-correction.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/contract.system-saved-search-scheduler-status.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/database-security-containment.contract.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/db-connection.concurrency.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer-development-home.contract.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer-engine-s1-actor-authority.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer-engine-s3-discovery.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer-search-developments.contract.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer.public-profile.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developer.subscription-commercial.contract.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/developmentSupersessionRouting.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distribution-assisted-onboarding-review.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distribution.access-policy.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distribution.admin.schema-guard.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distribution.manager-invite-links.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionBrandOnboardingPresetService.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionCommissionService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionManagerChecklist.integration.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionManagerInviteTokenService.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionManagerVisibilityBoundaries.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionPartnerAccelerator.integration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionPartnerProgramTerms.integration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionPartnerReferralSubmission.integration.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionPayoutMilestoneService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionRequiredDocumentsService.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/distributionRouter.transactionBoundaries.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/explore-legacy-capability-boundary.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/explorePublishingBoundary.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/exploreVideoUploadBoundary.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/guest-migration.contract.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-canvassing-mvp.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 1
+    },
+    {
+      "path": "server/__tests__/integration.agency-deal-engine.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-listing-attribution.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-listing-performance-mvp.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-listing-preparation.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-listing-publication-lifecycle.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-member-workspace-authority.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-membership-authority.test.ts",
+      "status": "passed",
+      "passed": 32,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-operating-home.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-principal-bootstrap.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-value-scorecard.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agency-viewings-workflow.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agent-launch-journey.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agent-lead-transitions.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.agent-profile-reconsideration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+      "status": "failed",
+      "passed": 3,
+      "failed": 2,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.billing-billable-account.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.billing-provider-event-identity.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.commercial-listing-capacity.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.consumer-activity-persistence.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.demand-routing-rollback.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-actor-resolution.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-draft-land-containment.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-platform-publication.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 13
+    },
+    {
+      "path": "server/__tests__/integration.developer-identity-resubmission.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-kpi-unit-types.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-lead-assignment-authority.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-media-authority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-prepayment-approval.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.developer-public-profile.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.development-card-data-flow.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.development-publication-lifecycle.test.ts",
+      "status": "passed",
+      "passed": 22,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.explore-analytics-query-plan.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.explore-analytics-rebuild.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.launch-readiness-walkthrough.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.lead-delivery-authority.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.listing-media-reconciliation.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.listing-media-tenant-boundary.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.listing-publication-readiness.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.location-search-catalog-fallback.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.property-card-data-flow.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.services-engine-idempotency.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.shared-living-spaces.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/integration.transactional-email-delivery.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/landPublicRouter.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/landRouter.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/landSearchGeography.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/launch-preflight.contract.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/launch-safety.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/localDbWorkflow.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/localEnvironmentAuthorityStatus.test.ts",
+      "status": "passed",
+      "passed": 37,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/location-manual-correction.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/location-search-result-adapter.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/locationAuthorityCatalog.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/locationCampaigns.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/locationPagesRouter.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/prospectJourneyE2eGuard.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/prospectJourneyProcessRunner.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/runListingPerformanceE2eSafety.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/smoke.health.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/smoke.superadmin-publishing.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/smoke.version.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/testDbWorkflow.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/trpcErrorFormatter.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/__tests__/user-billing-deletion-authority.contract.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/lib/sanitizeDraftData.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/tests/unitTypeRefactor.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/tests/verify-db-isolation.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/__tests__/databaseTarget.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/__tests__/databaseTls.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/__tests__/runtimeBootstrap.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/__tests__/trustedProxy.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/lib/__tests__/savedSearchContract.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/authSessionSecurityMigration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/canonicalListingLocationMigration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/legacyConsumerProfileRetirementMigration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/manualLocationWithoutCoordinatesMigration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/migrationManifest.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/mysqlEstablishmentBehavior.integration.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/primaryKeyMigrationPreconditions.integration.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/recoverRejectedReleaseCommercialQuoteTermsMigration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/recoverRejectedReleaseZeroStatementMigration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/recoverRejectedZeroStatementMigration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/recoverTidbCheckConstraintConvergence.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/migrations/__tests__/runSqlMigrations.test.ts",
+      "status": "passed",
+      "passed": 32,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/affordabilityAssessmentService.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/affordabilityCalculator.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/agencyInvitationDeliveryService.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/agencyMembershipService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/agencyOperatingHome.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/agentCoverageAreaService.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/approvedPublicPropertyService.test.ts",
+      "status": "passed",
+      "passed": 22,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/billingProofStorage.hosted.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/billingProviderEventService.contract.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/cataloguePublisherMutationPolicy.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/coldStart.smoke.test.ts",
+      "status": "passed",
+      "passed": 55,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialActivationPolicy.test.ts",
+      "status": "passed",
+      "passed": 18,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialCatalogService.agent.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialCatalogService.test.ts",
+      "status": "failed",
+      "passed": 8,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialDomainAuthority.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialLeadContextService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialMarketingMediaIdempotency.contract.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialOfficeService.test.ts",
+      "status": "passed",
+      "passed": 20,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialTerm.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/commercialTermNoticeScheduler.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/coreFunctions.unit.test.ts",
+      "status": "passed",
+      "passed": 55,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developerFunnelService.contract.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developerMediaAuthority.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developerOperatingHome.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developerSubscriptionService.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentDeletionPolicy.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentDerivedListingService.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentHomeAttention.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentInventorySummary.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentRouteAuthority.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentService.auctionDates.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentService.date-normalization.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentService.public-contract.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentSubmissionReadiness.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/developmentSupersessionPolicy.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/discoveryOpsReportService.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/distributionSchemaProbeFailure.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/distributionSchemaReadiness.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 8
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 18
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 5
+    },
+    {
+      "path": "server/services/__tests__/exploreAnalyticsService.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreDiscoverySchema.test.ts",
+      "status": "passed",
+      "passed": 33,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreFeedService.fallback.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreFeedService.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreInteractionService.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/explorePublishingEligibilityService.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 7
+    },
+    {
+      "path": "server/services/__tests__/gautengSearchAreaActivationAcceptance.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/gautengSearchAreaPublicActivation.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/googlePlacesIntegration.integration.test.ts",
+      "status": "failed",
+      "passed": 8,
+      "failed": 1,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/googlePlacesService.test.ts",
+      "status": "passed",
+      "passed": 28,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/governedRuntimeGeographyAuthority.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/homeFeedComposition.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/homeMarketInsightsService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/inventoryLinkResolver.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landDomainService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landEvidenceStorage.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landLaunchContainment.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landPublicProjection.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landPublicService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowClaims.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowCreateDraft.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowEvidenceScope.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowMarketingMedia.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowReviewTransition.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowService.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/landWorkflowSnapshot.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/leadDeliveryService.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/leadRoutingAuditService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/leadRoutingConversionReportService.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/leadRoutingCorrectionService.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/leadTransitionService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/listingContentCustody.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/listingLocationResolver.contract.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/listingMediaAuthority.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/listingPublicationEntitlementService.test.ts",
+      "status": "passed",
+      "passed": 25,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/localPublisherDiscovery.contract.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationAnalytics.property.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationCache.integration.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationCoverageTelemetry.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationHierarchy.property.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationPagesService.hierarchy.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationPagesServiceEnhanced.property.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/locationUrlFormat.property.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/mediaAuthoritySecretContainment.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/monetization.smoke.test.ts",
+      "status": "passed",
+      "passed": 27,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/multiLocationQueryBoundary.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/onboardingStateCreation.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/paidMvpSalesPause.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/placeIdStorage.property.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/propertySchema.property.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 3
+    },
+    {
+      "path": "server/services/__tests__/propertySearchApprovedProjection.test.ts",
+      "status": "passed",
+      "passed": 22,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/propertySearchService.property.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/provincialDiscoveryService.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicDevelopmentEligibility.test.ts",
+      "status": "passed",
+      "passed": 16,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicDevelopmentSearch.contract.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicLeadCaptureService.contract.test.ts",
+      "status": "passed",
+      "passed": 56,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicLeadCustodyService.contract.test.ts",
+      "status": "passed",
+      "passed": 23,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicLeadRateLimitService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicPropertyDto.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicPropertyEligibilityBatch.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicPropertyEligibilityService.test.ts",
+      "status": "passed",
+      "passed": 15,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicSearchService.contract.test.ts",
+      "status": "passed",
+      "passed": 16,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publicSearchValidation.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/publisherLeadService.contract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/savedSearchDeliveryScheduler.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/savedSearchNotificationEngine.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchAreaAuthority.test.ts",
+      "status": "passed",
+      "passed": 18,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchAreaQueryIntegration.test.ts",
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchDiscoveryService.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchIntegration.property.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchRuntimeCacheIdentity.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/searchScope.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/sharedLivingPublicService.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/showingsSchemaDrift.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/superAdminRoleAuthority.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/transactionalEmailPolicy.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "status": "passed",
+      "passed": 0,
+      "failed": 0,
+      "pending": 8
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/adapterProtocol.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/canonicalCommercialAdmission.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts",
+      "status": "passed",
+      "passed": 33,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/dataAdapters.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/dataRoleManifest.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/geographyRelease.test.ts",
+      "status": "passed",
+      "passed": 14,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/governedContainedScenarioFixture.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/homepageJourneyPreviewFixture.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/isolatedCiCredentials.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/isolatedCiGrantVerification.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/lifecycle.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/listingPreviewFixture.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/localServicePaths.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/plePublicationEntitlement.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/pleReviewerFixture.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/readiness.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/rehearsalAuthorization.test.ts",
+      "status": "passed",
+      "passed": 30,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/rehearsalCatalogue.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/rehearsalClosure.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/rehearsalConnection.test.ts",
+      "status": "passed",
+      "passed": 9,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts",
+      "status": "passed",
+      "passed": 22,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/sourceArchive.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/tidbCheckConstraintCapability.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/tidbStructuralAdmission.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/__tests__/worktreeIdentity.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/_core/databaseAuthority/dataAdapters/common.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/__tests__/exploreOptionAEligibilityRouter.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/__tests__/exploreOptionAPilotAccess.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/caching/__tests__/discoveryCache.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/services/__tests__/discoveryEngagementService.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/services/__tests__/discoveryFeedService.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/services/__tests__/discoveryLegacyFeedSource.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/services/__tests__/discoveryRankingService.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "server/domains/discovery/services/__tests__/exploreOptionAEligibilityService.test.ts",
+      "status": "passed",
+      "passed": 13,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/commercialSearchContract.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/agencyJourney.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/agentLeadOfferReadiness.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/factualRuntimeGeographyBridge.test.ts",
+      "status": "passed",
+      "passed": 11,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/farmSearchContract.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/features-context.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/land-domain.test.ts",
+      "status": "passed",
+      "passed": 6,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/listing-highlight-registry.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/listing-media.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/property-presentation.test.ts",
+      "status": "passed",
+      "passed": 3,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/public-property-detail-presentation.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/publicDevelopmentSearch.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/publicSearchValidation.test.ts",
+      "status": "passed",
+      "passed": 12,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/rentSearchContract.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/rental-terms-contract.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "shared/__tests__/sharedLivingSearchContract.test.ts",
+      "status": "passed",
+      "passed": 4,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/emailWorkerSupervisor.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/databaseAuthorityCli.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/databaseUtilityAuthority.test.ts",
+      "status": "passed",
+      "passed": 38,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/geographyCoverageGenerator.test.ts",
+      "status": "passed",
+      "passed": 1,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/launchRuntimeProbeCheck.test.ts",
+      "status": "passed",
+      "passed": 5,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/localDbWorkflow.test.ts",
+      "status": "passed",
+      "passed": 8,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/localEnvironmentAuthority.test.ts",
+      "status": "passed",
+      "passed": 7,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/smokeAuthBoundary.test.ts",
+      "status": "passed",
+      "passed": 2,
+      "failed": 0,
+      "pending": 0
+    },
+    {
+      "path": "scripts/__tests__/testDbWorkflow.test.ts",
+      "status": "passed",
+      "passed": 10,
+      "failed": 0,
+      "pending": 0
+    }
+  ],
+  "failedCases": [
+    {
+      "path": "server/__tests__/commercial-launch-access-s4.integration.test.ts",
+      "title": "S4 paid Launch Access disposable runtime rejects stale sessions before invoice, approval, and restore mutations in production",
+      "recheck": "broad-failure-rechecks.json (27 passed) or role-clean-target.json (5 passed)"
+    },
+    {
+      "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+      "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin",
+      "recheck": "broad-failure-rechecks.json (27 passed) or role-clean-target.json (5 passed)"
+    },
+    {
+      "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+      "title": "B07 mounted global role mutation authority rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin",
+      "recheck": "broad-failure-rechecks.json (27 passed) or role-clean-target.json (5 passed)"
+    },
+    {
+      "path": "server/services/__tests__/commercialCatalogService.test.ts",
+      "title": "commercial catalog projection filters products by the requested canonical audience",
+      "recheck": "broad-failure-rechecks.json (27 passed) or role-clean-target.json (5 passed)"
+    },
+    {
+      "path": "server/services/__tests__/googlePlacesIntegration.integration.test.ts",
+      "title": "Google Places Autocomplete Integration - Integration Tests Location record creation from listing submission should create location hierarchy and link listing",
+      "recheck": "broad-failure-rechecks.json (27 passed) or role-clean-target.json (5 passed)"
+    }
+  ],
+  "skippedCases": [
+    {
+      "path": "server/__tests__/contract.database-explore-future-authority.test.ts",
+      "title": "future Explore database authority retires duplicate and compatibility Explore authorities",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/contract.database-explore-future-authority.test.ts",
+      "title": "future Explore database authority defines one typed Explore publication envelope",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/contract.database-explore-future-authority.test.ts",
+      "title": "future Explore database authority uses type-safe topics, sessions and engagement facts",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/contract.database-explore-future-authority.test.ts",
+      "title": "future Explore database authority consolidates service providers and does not retain a disconnected boost authority",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.agency-canvassing-mvp.test.ts",
+      "title": "agency canvassing MVP integration (requires DATABASE_URL for listify_test) keeps seller acquisition private, scoped, actionable, and traceably convertible",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) verifies explicit custody, rejects self-links, and is idempotent",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) reverses a verified match without changing either publication state",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects competing open relationships on either endpoint",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) serializes conflicting concurrent endpoint verification to one winner",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) blocks verified replacement publication and performs one atomic idempotent cutover",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) redirects by the reserved exact source path and follows replacement slug changes",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects activation after a replacement that was independently made public",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects activation after a source that was made non-public",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects activation after a replacement whose persisted readiness changed",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects activation after a replacement whose custody changed",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) rejects activation after a source whose root route became ambiguous",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) reverses the public cutover without rewriting historical lead attribution",
+      "status": "skipped"
+    },
+    {
+      "path": "server/__tests__/integration.developer-engine-s2-supersession.test.ts",
+      "title": "Developer Engine S2 supersession lifecycle integration (requires S2_DB_TESTS=1 and DATABASE_URL) enforces restrictive endpoint deletion and database lifecycle constraints",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] End-to-end agency feed flow should handle complete agency feed workflow",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Agency analytics calculation should calculate comprehensive agency analytics",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Cache invalidation should cache and invalidate agency feed correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Cache invalidation should cache agency metrics correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Permission enforcement should enforce agency analytics access control",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Migration and rollback should have correct schema after migration",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Migration and rollback should handle NULL agency_id gracefully",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.integration.test.ts",
+      "title": "Explore Agency Content Attribution - Integration Tests [LEGACY - uses exploreShorts] Migration and rollback should enforce foreign key constraints on delete",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyFeed with valid agency ID should return published shorts for valid agency",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyFeed with valid agency ID should support includeAgentContent option",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyFeed with valid agency ID should handle pagination correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyFeed with invalid agency ID should return empty results for non-existent agency",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyFeed with invalid agency ID should throw error when agencyId is missing",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyMetrics aggregation should aggregate metrics correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyMetrics aggregation should return zero metrics for agency with no content",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyMetrics aggregation should return agent breakdown correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] getAgencyMetrics aggregation should return top performing content",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Creator type validation should accept valid agency attribution",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Creator type validation should handle NULL agency_id gracefully",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Foreign key constraints should allow valid agency_id references",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Foreign key constraints should reject invalid agency_id references",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Foreign key constraints should handle agency deletion with SET NULL",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Feed type routing should route to agency feed correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Feed type routing should throw error when agencyId is missing for agency feed",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Backward compatibility should handle content without agency_id",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyAttribution.test.ts",
+      "title": "Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts] Backward compatibility should not break existing feed types",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "title": "Explore Agency Service [LEGACY - uses exploreShorts] should return zero metrics for agency with no content",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "title": "Explore Agency Service [LEGACY - uses exploreShorts] should aggregate metrics across agency content",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "title": "Explore Agency Service [LEGACY - uses exploreShorts] should return agent breakdown within agency",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "title": "Explore Agency Service [LEGACY - uses exploreShorts] should return top performing content",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreAgencyService.test.ts",
+      "title": "Explore Agency Service [LEGACY - uses exploreShorts] should invalidate agency cache",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should have all required tables with correct structure",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should have correct indexes on explore_shorts table",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should have correct indexes on explore_interactions table",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should accept and store valid explore shorts data",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should accept and store valid interaction data",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should accept and store valid highlight tags",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/exploreShorts.schema.test.ts",
+      "title": "Explore Shorts Database Schema [LEGACY - uses exploreShorts] should enforce foreign key constraints",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/propertySchema.property.test.ts",
+      "title": "Property Results Optimization - Database Schema Property 43: should store and retrieve title_type correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/propertySchema.property.test.ts",
+      "title": "Property Results Optimization - Database Schema Property 44: should store and retrieve levy amount correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/propertySchema.property.test.ts",
+      "title": "Property Results Optimization - Database Schema should store and retrieve all SA-specific fields correctly",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Property 31: Search event recording should create a search record for any location search with authenticated user",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Property 31: Search event recording should create a search record for any location search without user (anonymous)",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Property 31: Search event recording should record timestamp for any search event",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Property 31: Search event recording should handle concurrent searches for the same location",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Property 31: Search event recording should maintain referential integrity with location_id",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Trending Score Calculation should return 0 for locations with no searches",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Trending Score Calculation should return a score between 0 and 100 for any number of searches",
+      "status": "skipped"
+    },
+    {
+      "path": "server/services/__tests__/trendingSuburbs.property.test.ts",
+      "title": "Trending Suburbs PBT Trending Score Calculation should increase score as search count increases",
+      "status": "skipped"
+    }
+  ]
+}

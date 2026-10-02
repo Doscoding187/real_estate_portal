@@ -1,0 +1,22 @@
+Source: GitHub Actions run 36057290617, retrieved 2026-09-25T06:39:53.773853+00:00
+Selected lines only; full logs remain on GitHub.
+DB Contract Verification	Checkout code	2026-09-24T20:48:34.0694690Z HEAD is now at 6730d3df Merge e8974ec34b919ceab37bdbd7e7379f96f3abce99 into 4e012b3044628fc06da7489c0055e9ce01bdc8d9
+DB Contract Verification	Run isolated CHECK/FK and lifecycle tests	2026-09-24T20:50:04.2012076Z   S2_DB_TESTS: 1
+DB Contract Verification	Run isolated CHECK/FK and lifecycle tests	2026-09-24T20:50:08.5235422Z  ✓ |server| server/__tests__/integration.developer-engine-s2-supersession.test.ts (13 tests) 1172ms
+DB Contract Verification	Run isolated CHECK/FK and lifecycle tests	2026-09-24T20:50:08.5380673Z       Tests  16 passed (16)
+Unit & Integration Tests	Checkout code	2026-09-24T20:51:44.2256364Z HEAD is now at 6730d3df Merge e8974ec34b919ceab37bdbd7e7379f96f3abce99 into 4e012b3044628fc06da7489c0055e9ce01bdc8d9
+Unit & Integration Tests	Run tests	2026-09-24T21:03:42.3578013Z  ✓ |server| server/__tests__/integration.agency-membership-authority.test.ts (32 tests) 5031ms
+Unit & Integration Tests	Run tests	2026-09-24T21:03:52.1838297Z  ✓ |server| server/__tests__/integration.development-publication-lifecycle.test.ts (22 tests) 2342ms
+Unit & Integration Tests	Run tests	2026-09-24T21:04:00.4143379Z  ✓ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (6 tests) 1323ms
+Unit & Integration Tests	Run tests	2026-09-24T21:04:18.3573184Z  ✓ |server| server/__tests__/integration.transactional-email-delivery.test.ts (10 tests) 657ms
+Unit & Integration Tests	Run tests	2026-09-24T21:04:58.1381007Z  ✓ |server| server/__tests__/billing.foundation.acceptance.integration.test.ts (2 tests) 463ms
+Unit & Integration Tests	Run tests	2026-09-24T21:05:26.4120412Z  ✓ |server| server/__tests__/integration.developer-media-authority.test.ts (3 tests) 462ms
+Unit & Integration Tests	Run tests	2026-09-24T21:05:36.9801591Z  ✓ |server| server/__tests__/integration.agent-launch-journey.test.ts (1 test) 294ms
+Unit & Integration Tests	Run tests	2026-09-24T21:06:22.7934594Z  ✓ |server| server/__tests__/integration.developer-lead-assignment-authority.test.ts (2 tests) 325ms
+Unit & Integration Tests	Run tests	2026-09-24T21:06:34.8937799Z  ✓ |server| server/__tests__/integration.b07-role-session-audit.test.ts (4 tests) 190ms
+Unit & Integration Tests	Run tests	2026-09-24T21:06:43.0107487Z  ✓ |server| server/__tests__/integration.developer-actor-resolution.test.ts (4 tests) 245ms
+Unit & Integration Tests	Run tests	2026-09-24T21:07:15.3142810Z  ✓ |server| server/__tests__/integration.agent-profile-reconsideration.test.ts (2 tests) 135ms
+Unit & Integration Tests	Run tests	2026-09-24T21:11:43.9913638Z  Test Files  397 passed | 8 skipped (405)
+Unit & Integration Tests	Run tests	2026-09-24T21:11:43.9922225Z       Tests  2505 passed | 66 skipped (2571)
+Lint & TypeCheck	Checkout code	2026-09-24T20:50:24.4178253Z HEAD is now at 6730d3df Merge e8974ec34b919ceab37bdbd7e7379f96f3abce99 into 4e012b3044628fc06da7489c0055e9ce01bdc8d9
+Build Application	Checkout code	2026-09-24T20:53:13.9860721Z HEAD is now at 6730d3df Merge e8974ec34b919ceab37bdbd7e7379f96f3abce99 into 4e012b3044628fc06da7489c0055e9ce01bdc8d9

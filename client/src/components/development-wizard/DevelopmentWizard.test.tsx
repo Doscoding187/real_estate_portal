@@ -33,6 +33,7 @@ const testState = vi.hoisted(() => {
         hasHydrated: vi.fn(() => true),
         onFinishHydration: vi.fn(() => () => undefined),
         setOptions: vi.fn(),
+        getOptions: vi.fn(() => ({})),
         rehydrate: vi.fn().mockResolvedValue(undefined),
       },
       getState: vi.fn(() => wizardState),
@@ -41,6 +42,7 @@ const testState = vi.hoisted(() => {
 
   return {
     authUser: { id: 1, role: 'super_admin' },
+    authLoading: false,
     publisherContext: { cataloguePublisherId: 1109 },
     invalidate: vi.fn().mockResolvedValue(undefined),
     mutateAsync: vi.fn().mockResolvedValue({}),
@@ -80,7 +82,7 @@ vi.mock('@/components/development-wizard/phases/DevelopmentTypePhase', () => ({
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
-  useAuth: () => ({ user: testState.authUser }),
+  useAuth: () => ({ user: testState.authUser, loading: testState.authLoading }),
 }));
 
 vi.mock('@/hooks/usePublisherContext', () => ({
@@ -139,6 +141,7 @@ describe('DevelopmentWizard publisher context initialization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     testState.authUser = { id: 1, role: 'super_admin' };
+    testState.authLoading = false;
     testState.publisherContext = { cataloguePublisherId: 1109 };
     testState.wizardState.currentPhase = 0;
     testState.wizardState.developmentType = null;
@@ -176,12 +179,50 @@ describe('DevelopmentWizard publisher context initialization', () => {
     expect(screen.getByText('Development type setup')).toBeInTheDocument();
     expect(testState.setListingIdentity).not.toHaveBeenCalled();
   });
+
+  it('waits for auth before selecting a storage key and isolates persistence by account', async () => {
+    testState.authUser = null as any;
+    testState.authLoading = true;
+    testState.publisherContext = null;
+    localStorage.setItem(
+      'development-wizard',
+      JSON.stringify({ state: { developmentData: { name: 'Legacy private draft' } } }),
+    );
+
+    const view = render(<DevelopmentWizard />);
+
+    expect(localStorage.getItem('development-wizard')).not.toBeNull();
+    expect(testState.useDevelopmentWizardMock.persist.setOptions).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: expect.any(String) }),
+    );
+
+    testState.authUser = { id: 202, role: 'property_developer' };
+    testState.authLoading = false;
+    view.rerender(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.useDevelopmentWizardMock.persist.setOptions).toHaveBeenCalledWith({
+        name: 'development-wizard:user-202',
+      });
+    });
+    expect(localStorage.getItem('development-wizard')).toBeNull();
+
+    testState.authUser = { id: 303, role: 'property_developer' };
+    view.rerender(<DevelopmentWizard />);
+
+    await waitFor(() => {
+      expect(testState.useDevelopmentWizardMock.persist.setOptions).toHaveBeenCalledWith({
+        name: 'development-wizard:user-303',
+      });
+    });
+  });
 });
 
 describe('DevelopmentWizard edit-mode lifecycle truth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     testState.authUser = { id: 2, role: 'property_developer' };
+    testState.authLoading = false;
     testState.publisherContext = null;
     // The wizard parses mode params from window.location.search directly.
     window.history.replaceState({}, '', '/developer/create-development?id=77');

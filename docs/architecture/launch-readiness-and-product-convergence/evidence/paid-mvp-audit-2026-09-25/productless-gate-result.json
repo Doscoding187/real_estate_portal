@@ -1,0 +1,9 @@
+{
+  "scope": "Pure function calls only; no process configuration changed, server started or database accessed.",
+  "disabledProductlessGate": false,
+  "releasedProductlessGate": true,
+  "releasedUnknownExactProduct": false,
+  "releasedMode": "paid_mvp_release",
+  "releasedSalesPaused": false,
+  "meaning": "Legacy callers omit productKey; their generic guard permits the paid release despite an exact unknown product being denied."
+}

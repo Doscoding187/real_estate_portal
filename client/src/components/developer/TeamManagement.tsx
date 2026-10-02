@@ -43,7 +43,13 @@ export default function TeamManagement() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => setLocation('/contact')}>Request team access</Button>
+            <Button
+              onClick={() =>
+                setLocation('/contact?area=developer_operations&topic=team-access')
+              }
+            >
+              Request team access
+            </Button>
             <Button variant="outline" onClick={() => setLocation('/developer/settings')}>
               View organisation settings
             </Button>

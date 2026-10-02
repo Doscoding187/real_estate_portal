@@ -415,7 +415,7 @@ describe('manual property Search approved projection authority', () => {
     expect(result.properties[0].securityEstate).toBe(true);
   });
 
-  it('filters public search candidates through the canonical approved-property authority before pagination', async () => {
+  it('filters public search candidates through the canonical authority and retains canonical suburb labels', async () => {
     mockSelect
       .mockReturnValueOnce(candidateQuery([{ id: 501 }, { id: 502 }]))
       .mockReturnValueOnce(
@@ -461,7 +461,10 @@ describe('manual property Search approved projection authority', () => {
         [
           501,
           {
-            property: { id: 501, suburb: undefined, publicLocationPrecision: 'exact' },
+            // Approximate address precision still has a canonical suburb. The
+            // public card may hide the street, but must not collapse Sandton
+            // into its parent city.
+            property: { id: 501, suburb: undefined, publicLocationPrecision: 'approximate' },
             images: [],
             publicIdentity: {
               role: 'agent',

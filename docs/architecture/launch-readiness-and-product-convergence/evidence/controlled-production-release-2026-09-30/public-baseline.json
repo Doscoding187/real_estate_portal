@@ -1,0 +1,29 @@
+{
+  "observedAt": "2026-09-30T16:49:49.401Z",
+  "records": [
+    {
+      "label": "frontend-version",
+      "url": "https://www.propertylistifysa.co.za/version.json",
+      "status": 200
+    },
+    {
+      "label": "api-version",
+      "url": "https://api.propertylistifysa.co.za/api/version",
+      "status": 200,
+      "gitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "environment": "production"
+    },
+    {
+      "label": "api-health",
+      "url": "https://api.propertylistifysa.co.za/api/health",
+      "status": 200,
+      "environment": "production"
+    },
+    {
+      "label": "api-readiness",
+      "url": "https://api.propertylistifysa.co.za/api/readiness",
+      "status": 503,
+      "environment": "production"
+    }
+  ]
+}

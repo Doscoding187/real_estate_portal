@@ -1,0 +1,18 @@
+{
+  "stage": "authority-plan",
+  "exitCode": 0,
+  "plan": {
+    "adapter": "canonical-geography",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "head": "0094_content_topics_primary_key.sql",
+    "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "sourceIndexDigest": "ad32a26dbaa40d03f63545d5f9af0918cbea2e1d65c8166817b15c52e5d6f8c4",
+    "desiredDigest": "516042933ea242cdaeae18b2436172e2c686136174164486dc008163c228fe97",
+    "planDigest": "7cabc434f7ef796cfae742c9a822e24bd16d59d3f01216dc807b683843ae9d6e",
+    "existingRows": 0,
+    "pendingRows": 1438
+  },
+  "fullPlanSha256": "a581c96b35fcf131dbfef80744637f5cb17dfb6ef26e2409a5d4e4bbf3a39b4d",
+  "stderrBytes": 0,
+  "errorCode": null
+}

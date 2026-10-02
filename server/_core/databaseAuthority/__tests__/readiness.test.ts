@@ -90,6 +90,7 @@ class ReadinessConnection implements AuthoritySqlConnection {
   history: Array<{ filename: string; checksum: string }> = [];
   attempts: Array<{ attempt_id: string; migration_filename: string; state: string }> = [];
   throwOnQuery = false;
+  lowerCaseTableNames = 1;
 
   constructor(selected: string) {
     this.selected = selected;
@@ -98,6 +99,9 @@ class ReadinessConnection implements AuthoritySqlConnection {
   async execute(statement: string): Promise<unknown> {
     if (this.throwOnQuery) throw new Error('unreachable with private connection detail');
     if (statement.startsWith('SELECT DATABASE()')) return [[{ database_name: this.selected }]];
+    if (statement.includes('lower_case_table_names')) {
+      return [[{ lower_case_table_names: this.lowerCaseTableNames }]];
+    }
     if (statement.includes('information_schema.tables')) {
       return [[...this.tables].map(table_name => ({ table_name }))];
     }
@@ -347,5 +351,33 @@ describe('truthful layered readiness', () => {
       state: 'ready',
       code: 'authorized-disposable-test',
     });
+  });
+
+  it('admits only the exact protected Azure target and reconciles mode-1 table casing', async () => {
+    const value = fixture();
+    const authority = resolveDatabaseAuthority({
+      operation: 'readiness', cwd: value.root, gitIdentity: value.identity,
+      explicitDatabaseUrl: 'mysql://propertylistify_app_runtime:private@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'runtime',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const authorization = authorizeDatabaseOperation(authority, {
+      root: process.cwd(), approval: {
+        reference: 'B08-READINESS-TEST', actor: 'test-reviewer', operation: 'readiness',
+        targetFingerprintHash: authority.context.targetFingerprintHash, credentialClass: 'runtime',
+      },
+    });
+    const connection = new ReadinessConnection('propertylistify_database');
+    connection.tables = new Set(['WIDGETS', 'sql_migration_history', 'sql_migration_attempts']);
+    connection.history = [{ filename: value.filename, checksum: value.checksum }];
+    const report = await assessAuthorizedDatabaseReadiness({
+      authority, authorization, connection, manifest: value.manifest, root: value.root,
+    });
+    expect(report.layers.targetOwned.code).toBe('approved-protected-target');
+    expect(report.layers.structuralSchema.state).toBe('ready');
+    connection.lowerCaseTableNames = 0;
+    await expect(assessAuthorizedDatabaseReadiness({
+      authority, authorization, connection, manifest: value.manifest, root: value.root,
+    })).rejects.toThrow('lower_case_table_names is not 1');
   });
 });

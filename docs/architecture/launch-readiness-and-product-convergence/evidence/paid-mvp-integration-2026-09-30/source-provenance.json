@@ -1,0 +1,162 @@
+{
+  "publishedBase": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+  "paidCommit": "a05868c66f493e3cbc972a119074c91a10797777",
+  "paidTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+  "databaseCommit": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+  "importedEvidence": [
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-packet-2026-09-27.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-packet-2026-09-27.md",
+      "sha256": "01879bfea040befb20ab1b5b4de7a4a8a40c2a6968e44f1c6c432a58abcbc104",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-manifest-2026-09-27.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-manifest-2026-09-27.json",
+      "sha256": "1b11a62062e886904638498474b121ad01e11bf7db4fea0f1c3028314f26af7d",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b16-ple-browser-journey-2026-09-27.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b16-ple-browser-journey-2026-09-27.json",
+      "sha256": "6213297757f992b23aabb9f51ed6d1712e227731587fb16104373b7c6321b3e7",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/SHA256SUMS",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/SHA256SUMS",
+      "sha256": "a3b1429c30e65c1a2cc533ea3cb7eb41a0fa90179f6f9291226419bd76c1d5df",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/review-packet.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/review-packet.md",
+      "sha256": "2cdf36a7ea1e29f894d1aa522eae750915dff2d114a8c2424161c819546dd727",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/role-session-audit-cases.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/role-session-audit-cases.json",
+      "sha256": "4329fb5d0ecd80e9a56670d4c31d062ff5b62859cc4c4c155602d31ca1c37d57",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence/docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/security-matrix.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b04-b07-security-matrix-2026-09-26/security-matrix.json",
+      "sha256": "d585cd7db57817c6190d9cf10d7fb89569009e3dfe37d62f4738896aefc36995",
+      "sourceHead": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/19-first-customer-operating-procedure.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/19-first-customer-operating-procedure.md",
+      "sha256": "80545f1092297fb0bf7d634ed54005be45326d49bc634f0fa3d3a610d73b3acf",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-implementation-2026-09-27.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-implementation-2026-09-27.md",
+      "sha256": "13cc6bc91d16e56a14732e87c13f540c06540cbc978f45af9fc3c9c119231d1f",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-proposal-2026-09-27.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-proposal-2026-09-27.md",
+      "sha256": "5a6857e5c41c79f0e0d62cd8fd54850dfd8c425652b8c064930d65781dbc613a",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-proposal-2026-09-27.sha256",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b14-schedule-reconciliation-proposal-2026-09-27.sha256",
+      "sha256": "ced96d7690ad1e1f2e0511e5c1e7d6d7725a31e5919de8a1feadcee1e9419722",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b14-schedule-reconciliation-review/docs/architecture/launch-readiness-and-product-convergence/evidence/b15-founder-approval-candidate-2026-09-27-v0.3.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b15-founder-approval-candidate-2026-09-27-v0.3.md",
+      "sha256": "d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27/docs/architecture/launch-readiness-and-product-convergence/evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md",
+      "sha256": "05c67f7d4e31a0fc6bc182e697f055bd560c00b50f89969c5ef1170c23f4a2a6",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27/docs/architecture/launch-readiness-and-product-convergence/evidence/b15-founder-approval-candidate-2026-09-27-v0.4.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/b15-founder-approval-candidate-2026-09-27-v0.4.md",
+      "sha256": "1e7e88252945b41ebd720712a053cd9fd5c4fe0f30d84a2002d50ac9b74457d8",
+      "sourceHead": "a05868c66f493e3cbc972a119074c91a10797777"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-launch-deadline-audit-20260930/docs/architecture/launch-readiness-and-product-convergence/25-paid-launch-deadline-audit-2026-09-30.md",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/25-paid-launch-deadline-audit-2026-09-30.md",
+      "sha256": "66e8f6edb4ffdd61269f0089474af5be3595ee33bf90bd84e8d5f75ed065dc2f",
+      "sourceHead": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-launch-deadline-audit-20260930/docs/architecture/launch-readiness-and-product-convergence/evidence/paid-launch-deadline-audit-2026-09-30.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/paid-launch-deadline-audit-2026-09-30.json",
+      "sha256": "b12bd32db6745fc22703ed0bc5206c99040ef45383ea178993c01cc918bfea10",
+      "sourceHead": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+    },
+    {
+      "sourcePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-paid-launch-deadline-audit-20260930/docs/architecture/launch-readiness-and-product-convergence/evidence/paid-launch-github-state-2026-09-30.json",
+      "destination": "docs/architecture/launch-readiness-and-product-convergence/evidence/paid-launch-github-state-2026-09-30.json",
+      "sha256": "3fdfb4c3318955384bcc59188e154851f95533ed1221a23950d3ef3aabc31e12",
+      "sourceHead": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+    }
+  ],
+  "b16StagedSourceComparison": [
+    {
+      "path": "e2e/b04/independent-agent-paid-mvp.spec.ts",
+      "sha256": "d209a8f649ff91c5826b30b4b2364abdba5cc3ffc3f4a0316ccdf1341203eee0",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "e2e/ple/agency-operating-journey.spec.ts",
+      "sha256": "0cc29dad31dd47d26b862c2a44ae3711e1436a42321019b42161f462c7675d7c",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "e2e/prepayment/agent-onboarding.spec.ts",
+      "sha256": "a477301180d45b1e419711fb54887ebf29000bec980e0ff8085c0eb1d30078ea",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "playwright.b04-independent-agent.config.ts",
+      "sha256": "8856a3bf3ba5ea7bb47d261c80bb885f06ce9fcae138a9b0335ef4689cbb1946",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "playwright.ple-agency-operating.config.ts",
+      "sha256": "49b48ae4b07da3ca62e1966fa575752c85761c6adacc023f8d7b556ba527dc39",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "server/__tests__/integration.b07-role-session-audit.test.ts",
+      "sha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "server/_core/securityRuntimeConfiguration.test.ts",
+      "sha256": "2d50db3f24163727228f7a91b086613155bba5f2a3d44e7b4a89f21bd58e5613",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "server/services/__tests__/commercialActivationPolicy.test.ts",
+      "sha256": "e82848faf297420c0e55b3575ca60ce4097c07e5e69156dad03f9c3782c9ed5e",
+      "alreadyRepresentedByPaidAnchor": true
+    },
+    {
+      "path": "server/services/commercialActivationPolicy.ts",
+      "sha256": "8701e7b11289e806b2f8bb5500e34640755c61c44931945af566199b37d55f20",
+      "alreadyRepresentedByPaidAnchor": true
+    }
+  ],
+  "limitations": [
+    "Copied historical packets retain dated status wording; the current central register supersedes it.",
+    "B15 copies are drafts; neither publication nor exact-copy approval is claimed.",
+    "Fresh Azure accounts and TiDB archival supersede historical B09 census/import prerequisites."
+  ]
+}

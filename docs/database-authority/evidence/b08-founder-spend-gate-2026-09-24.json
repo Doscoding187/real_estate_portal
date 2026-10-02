@@ -1,0 +1,23 @@
+{
+  "evidenceVersion": 1,
+  "status": "AZURE ESTABLISHED — RAILWAY CUTOVER DEFERRED BY FOUNDER SPEND GATE",
+  "decisionAt": "2026-09-24",
+  "decisionAuthority": "founder",
+  "azureEstablishmentEvidence": "docs/database-authority/evidence/b08-azure-establishment-2026-09-24.json",
+  "azureTargetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "azureMigrationHead": "0094_content_topics_primary_key.sql",
+  "founderSpendGate": "Railway Pro / Static Outbound IPs",
+  "railwayProductionDatabase": "TiDB",
+  "tidbDisposition": "preserved unchanged as current Railway database and rollback/evidence source",
+  "cutoverAuthorized": false,
+  "unsafeNetworkingWorkaroundAuthorized": false,
+  "historicalTidbTransferRequired": false,
+  "tidbCanonicalRedesignDisposition": "closed; do not resume without explicit founder decision",
+  "launchEngineeringDisposition": "continue no-cost launch-critical P0/P1 work outside B08",
+  "scope": {
+    "azureSchemaChanged": false,
+    "tidbChanged": false,
+    "railwayChanged": false,
+    "deploymentChanged": false
+  }
+}

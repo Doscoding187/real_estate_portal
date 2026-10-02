@@ -10,13 +10,7 @@ vi.mock('@/_core/hooks/useAuth', () => ({
 }));
 
 vi.mock('wouter', () => ({
-  Link: ({
-    children,
-    href,
-  }: {
-    children: React.ReactNode;
-    href: string;
-  }) => (
+  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href} data-testid={typeof href === 'string' ? `link-${href}` : 'link-unknown'}>
       {children}
     </a>
@@ -40,9 +34,7 @@ describe('Agency setup assisted account boundary', () => {
     useAuthMock.mockReturnValue({ isAuthenticated: true, user: { role: 'agent' }, loading: false });
     render(<AgencySetupAccountBoundary />);
 
-    expect(
-      screen.getByText(/Agency setup needs an Agency owner account/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Agency setup needs an Agency owner account/i)).toBeInTheDocument();
     expect(screen.getByText(/signed in as an Agent account/i)).toBeInTheDocument();
 
     const registerLink = screen.getByTestId(
@@ -53,7 +45,10 @@ describe('Agency setup assisted account boundary', () => {
       '/login?mode=register&next=%2Fagency%2Fsetup&role=agency_admin',
     );
     expect(screen.getByText(/Back to the Agency overview/i)).toBeInTheDocument();
-    expect(screen.getByText(/Continue to Agent Launch Access/i)).toBeInTheDocument();
+    expect(screen.getByText(/Return to Agent preparation/i)).toBeInTheDocument();
+    expect(screen.getByTestId('link-/agent/dashboard')).toHaveAttribute('href', '/agent/dashboard');
+    expect(screen.getByText(/Commercial activation remains protected/i)).toBeInTheDocument();
+    expect(screen.queryByText(/issues its Launch Access invoice/i)).not.toBeInTheDocument();
   });
 
   it('explains the boundary for other non-agency roles without the agent cross-sell', () => {
@@ -65,7 +60,7 @@ describe('Agency setup assisted account boundary', () => {
     render(<AgencySetupAccountBoundary />);
 
     expect(screen.getByText(/signed in as a Developer account/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Agent Launch Access/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agent preparation/i)).not.toBeInTheDocument();
   });
 
   it('does not mutate or imply mutation of the current account', () => {

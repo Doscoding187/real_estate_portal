@@ -1,0 +1,28 @@
+{
+  "reviewDate": "2026-09-25",
+  "sourceSha": "e8974ec34b919ceab37bdbd7e7379f96f3abce99",
+  "sourceTree": "28d63e530449ee7357a5979684aea42ee2077bdc",
+  "mainSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+  "ciRun": 36057290617,
+  "ciCheckoutSha": "6730d3df1dc7300d15d6a9e095571f13adf74e11",
+  "ciCheckoutTree": "28d63e530449ee7357a5979684aea42ee2077bdc",
+  "originalCriteriaCommit": "a9dbb7ee9d97ddbebeef8e85b445c98db6e3c298",
+  "originalCriteriaSha256": "f3178bc0e71f32fed6f26115eb7deea0f1521f5c17348e5a95a0178e59335f3b",
+  "artifacts": [
+    {
+      "id": 10832499268,
+      "file": "credential-boundary.json",
+      "note": "Original command stdout, including preamble; JSON payload is final line."
+    },
+    {
+      "id": 10832284755,
+      "file": "database-schema-congruency.json"
+    },
+    {
+      "id": 10832084778,
+      "file": "consumer-contract-observability.json"
+    }
+  ],
+  "reviewMethod": "Source and ancestry review; non-DB local unit/component tests; exact-tree hosted CI log/artifact inspection; read-only Railway status and public HTTPS checks. No new joined browser or protected SQL execution.",
+  "mainRecheckedAt": "2026-09-25T06:48:35.542705+00:00"
+}

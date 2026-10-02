@@ -1,0 +1,68 @@
+{
+  "status": "PROPOSED_NOT_PROVISIONED",
+  "account": "Existing AWS account configured for public media; distinct credential required",
+  "region": "eu-north-1",
+  "bucket": "property-listify-private-proofs-pl583-20260930",
+  "ownershipControls": {
+    "Rules": [
+      {
+        "ObjectOwnership": "BucketOwnerEnforced"
+      }
+    ]
+  },
+  "publicAccessBlock": {
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  },
+  "defaultEncryption": {
+    "Rules": [
+      {
+        "ApplyServerSideEncryptionByDefault": {
+          "SSEAlgorithm": "AES256"
+        }
+      }
+    ]
+  },
+  "versioning": {
+    "Status": "Enabled"
+  },
+  "iamIdentity": "property-listify-private-proofs-runtime",
+  "runtimePolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "s3:PutObject",
+          "s3:GetObject"
+        ],
+        "Resource": "arn:aws:s3:::property-listify-private-proofs-pl583-20260930/billing-proofs/*"
+      }
+    ]
+  },
+  "bucketPolicy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DenyInsecureTransport",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:*",
+        "Resource": [
+          "arn:aws:s3:::property-listify-private-proofs-pl583-20260930",
+          "arn:aws:s3:::property-listify-private-proofs-pl583-20260930/*"
+        ],
+        "Condition": {
+          "Bool": {
+            "aws:SecureTransport": "false"
+          }
+        }
+      }
+    ]
+  },
+  "retention": "No automatic deletion before exact customer-copy/retention approval; versioning alone is not independent backup",
+  "cost": "Metered storage/requests/version history in existing account; approval of incremental usage remains outstanding",
+  "noKeyMaterialInEvidence": true
+}

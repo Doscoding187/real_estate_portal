@@ -1,0 +1,1 @@
+mutation RestoreTrigger($input: DeploymentTriggerCreateInput!) { deploymentTriggerCreate(input: $input) { id branch checkSuites } }

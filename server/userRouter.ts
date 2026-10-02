@@ -5,7 +5,12 @@ import { billableAccounts, userOnboardingState, users } from '../drizzle/schema'
 import { eq, like, or, desc, and, isNull } from 'drizzle-orm';
 import type { SQL } from 'drizzle-orm';
 import { getDb } from './db';
+import { createOrReadOnboardingState } from './services/onboardingStateCreation';
 import { logAudit } from './_core/auditLog';
+import {
+  MANAGED_PLATFORM_ROLES,
+  updateUserRoleWithAudit,
+} from './services/superAdminRoleAuthority';
 
 /**
  * User Management Router - Super Admin only
@@ -32,14 +37,7 @@ const userFiltersSchema = z.object({
 
 const updateUserRoleSchema = z.object({
   userId: z.number(),
-  role: z.enum([
-    'visitor',
-    'agent',
-    'agency_admin',
-    'property_developer',
-    'service_provider',
-    'super_admin',
-  ]),
+  role: z.enum(MANAGED_PLATFORM_ROLES),
 });
 
 const assignToAgencySchema = z.object({
@@ -104,26 +102,31 @@ export const userRouter = router({
       .limit(1);
 
     if (!state) {
-      await db.insert(userOnboardingState).values({
-        userId,
-        isFirstSession: 1,
-        welcomeOverlayShown: 0,
-        welcomeOverlayDismissed: 0,
-        suggestedTopics: [],
-        tooltipsShown: [],
-        contentViewCount: 0,
-        saveCount: 0,
-        partnerEngagementCount: 0,
-        featuresUnlocked: [],
-        consumerDashboardPreferences: { intent: 'buyer' },
-        sellerPlanningInputs: null,
-      });
-
-      [state] = await db
-        .select()
-        .from(userOnboardingState)
-        .where(eq(userOnboardingState.userId, userId))
-        .limit(1);
+      state = await createOrReadOnboardingState(
+        async () =>
+          db.insert(userOnboardingState).values({
+            userId,
+            isFirstSession: 1,
+            welcomeOverlayShown: 0,
+            welcomeOverlayDismissed: 0,
+            suggestedTopics: [],
+            tooltipsShown: [],
+            contentViewCount: 0,
+            saveCount: 0,
+            partnerEngagementCount: 0,
+            featuresUnlocked: [],
+            consumerDashboardPreferences: { intent: 'buyer' },
+            sellerPlanningInputs: null,
+          }),
+        async () => {
+          const [winner] = await db
+            .select()
+            .from(userOnboardingState)
+            .where(eq(userOnboardingState.userId, userId))
+            .limit(1);
+          return winner;
+        },
+      );
     }
 
     const preferences = consumerDashboardPreferencesSchema.parse(
@@ -159,26 +162,31 @@ export const userRouter = router({
         .limit(1);
 
       if (!state) {
-        await db.insert(userOnboardingState).values({
-          userId,
-          isFirstSession: 1,
-          welcomeOverlayShown: 0,
-          welcomeOverlayDismissed: 0,
-          suggestedTopics: [],
-          tooltipsShown: [],
-          contentViewCount: 0,
-          saveCount: 0,
-          partnerEngagementCount: 0,
-          featuresUnlocked: [],
-          consumerDashboardPreferences: { intent: 'buyer' },
-          sellerPlanningInputs: null,
-        });
-
-        [state] = await db
-          .select()
-          .from(userOnboardingState)
-          .where(eq(userOnboardingState.userId, userId))
-          .limit(1);
+        state = await createOrReadOnboardingState(
+          async () =>
+            db.insert(userOnboardingState).values({
+              userId,
+              isFirstSession: 1,
+              welcomeOverlayShown: 0,
+              welcomeOverlayDismissed: 0,
+              suggestedTopics: [],
+              tooltipsShown: [],
+              contentViewCount: 0,
+              saveCount: 0,
+              partnerEngagementCount: 0,
+              featuresUnlocked: [],
+              consumerDashboardPreferences: { intent: 'buyer' },
+              sellerPlanningInputs: null,
+            }),
+          async () => {
+            const [winner] = await db
+              .select()
+              .from(userOnboardingState)
+              .where(eq(userOnboardingState.userId, userId))
+              .limit(1);
+            return winner;
+          },
+        );
       }
 
       const currentPreferences = consumerDashboardPreferencesSchema.parse(
@@ -296,42 +304,12 @@ export const userRouter = router({
       throw new Error('Database not available');
     }
 
-    // Get the user
-    const [user] = await db.select().from(users).where(eq(users.id, input.userId)).limit(1);
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Prevent demoting the last super admin
-    if (user.role === 'super_admin' && input.role !== 'super_admin') {
-      const superAdmins = await db.select().from(users).where(eq(users.role, 'super_admin'));
-
-      if (superAdmins.length === 1) {
-        throw new Error('Cannot demote the last super admin');
-      }
-    }
-
-    // Update role
-    await db
-      .update(users)
-      .set({
-        role: input.role,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, input.userId));
-
-    // Audit log
-    await logAudit({
-      userId: ctx.user.id,
-      action: 'user.update_role',
-      targetType: 'user',
-      targetId: input.userId,
-      metadata: {
-        oldRole: user.role,
-        newRole: input.role,
-      },
-      req: ctx.req,
+    await updateUserRoleWithAudit({
+      database: db,
+      actorUserId: ctx.user.id,
+      targetUserId: input.userId,
+      role: input.role,
+      requestId: ctx.requestId,
     });
 
     const [updated] = await db.select().from(users).where(eq(users.id, input.userId));

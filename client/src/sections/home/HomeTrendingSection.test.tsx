@@ -267,7 +267,7 @@ describe('HomeTrendingSection request states', () => {
     expect(testState.setLocation).toHaveBeenCalledWith('/login?redirect=%2F');
   });
 
-  it('hands Land off to its dedicated exact-location journey', () => {
+  it('does not expose a Land handoff while the first-cohort disposition is deferred', () => {
     render(
       <HomeTrendingSection
         selectedProvince="Gauteng"
@@ -276,10 +276,8 @@ describe('HomeTrendingSection request states', () => {
       />,
     );
 
-    expect(screen.getByRole('link', { name: 'Browse plots and land' })).toHaveAttribute(
-      'href',
-      '/plots-and-land',
-    );
+    expect(screen.queryByRole('link', { name: 'Browse plots and land' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Plots & Land')).not.toBeInTheDocument();
     expect(testState.homeFeedUseQuery).toHaveBeenLastCalledWith(
       expect.objectContaining({ tab: 'plot_land' }),
       expect.objectContaining({ enabled: false }),

@@ -175,11 +175,21 @@ export default function AgentApprovals() {
 
                     <div className="text-xs text-slate-500">
                       Applied: {new Date(agent.createdAt).toLocaleDateString()}
+                      {agent.updatedAt &&
+                        ` • Last updated: ${new Date(agent.updatedAt).toLocaleDateString()}`}
                       {agent.approvedAt &&
                         ` • Approved: ${new Date(agent.approvedAt).toLocaleDateString()}`}
                     </div>
 
-                    {agent.status === 'pending' && (
+                    {agent.status === 'rejected' && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                        Review the corrected profile details above before reconsidering this application.
+                        Approval records a manual platform decision and does not create an external
+                        professional-verification badge.
+                      </div>
+                    )}
+
+                    {(agent.status === 'pending' || agent.status === 'rejected') && (
                       <div className="flex gap-2 pt-2 border-t">
                         <Button
                           onClick={() => handleApprove(agent.id)}
@@ -187,17 +197,19 @@ export default function AgentApprovals() {
                           className="flex-1 bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Approve
+                          {agent.status === 'rejected' ? 'Approve Corrected Profile' : 'Approve'}
                         </Button>
-                        <Button
-                          onClick={() => handleRejectClick(agent.id)}
-                          disabled={rejectMutation.isLoading}
-                          variant="destructive"
-                          className="flex-1"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Reject
-                        </Button>
+                        {agent.status === 'pending' && (
+                          <Button
+                            onClick={() => handleRejectClick(agent.id)}
+                            disabled={rejectMutation.isLoading}
+                            variant="destructive"
+                            className="flex-1"
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                          </Button>
+                        )}
                       </div>
                     )}
                   </CardContent>

@@ -1,0 +1,121 @@
+{
+  "recordedAt": "2026-10-02T10:39:18.437847+00:00",
+  "classification": "completed controlled media hardening and independent runtime verification; production bindings not applied",
+  "bucket": "listify-properties-sa",
+  "region": "eu-north-1",
+  "runtimeUser": "listify-media-runtime-07394cfd",
+  "runtimeArn": "arn:aws:iam::914683204061:user/listify-media-runtime-07394cfd",
+  "operatorEvidenceSource": "Edward CloudShell PASS and downloaded result.json",
+  "operatorChecks": {
+    "configurationReadbackPassed": true,
+    "freshCloudFrontMissAndPayloadHashPassed": true,
+    "anonymousS3ReadAndWriteDenied": true,
+    "productionPutPreflightsPassed": 2,
+    "foreignOriginAndDeletePreflightsDenied": true,
+    "actualRuntimePutGetDeletePassed": true,
+    "retainedInventoryUnchanged": true,
+    "existingIamUsersModified": false,
+    "productionBindingsChanged": false
+  },
+  "independentConfigurationReadback": {
+    "verifiedAt": "2026-10-02T10:15:48.063475+00:00",
+    "policyExactReviewedMatch": true,
+    "allFourPublicAccessBlocksEnabled": true,
+    "corsExactReviewedMatch": true,
+    "encryptionOwnershipVersioningUnchanged": true,
+    "originalObjectMetadataUnchanged": 2260,
+    "currentObjectCount": 2261,
+    "onlyAddedObject": "67-byte task-owned hardening origin probe",
+    "runtimeUser": "listify-media-runtime-07394cfd",
+    "configurationAndObjectVerificationSource": "Independent agent authenticated S3 readback using retained existing media identity",
+    "configurationChangesPerformedByAgent": false,
+    "productionBindingsChanged": false,
+    "hostedAcceptanceVerified": false,
+    "beforeInventorySha256": "616a1b0540a1dab4d78697360eae0fdbfe9223a586536089acee30d517dfe5e2",
+    "afterInventorySha256": "20a82c87329f5c807d447d97c79756c363632dd6411e8e0613d86c0c6a335fe5"
+  },
+  "transfer": {
+    "encryptedCredentialsSha256": "4b5a32bf0b8d81dbb788e914916b71aed78f848ed980d7b62c7367009f195807",
+    "checksumVerified": true,
+    "transferKeyVerified": true,
+    "decryptionVerified": true,
+    "runtimeUser": "listify-media-runtime-07394cfd",
+    "verifiedAt": "2026-10-02T10:15:14.794Z"
+  },
+  "liveLocalRuntimePermissions": {
+    "outcome": "Other checks retained; cross-proof denial superseded by targeted correction",
+    "results": [
+      {
+        "operation": "PutObject/GetObject",
+        "outcome": "PASS"
+      },
+      {
+        "operation": "bucket-list",
+        "status": 403,
+        "code": "AccessDenied"
+      },
+      {
+        "operation": "bucket-cors",
+        "status": 403,
+        "code": "AccessDenied"
+      },
+      {
+        "operation": "bucket-encryption",
+        "status": 403,
+        "code": "AccessDenied"
+      },
+      {
+        "operation": "bucket-policy",
+        "status": 403,
+        "code": "AccessDenied"
+      },
+      {
+        "operation": "cross-proof-read",
+        "status": 403,
+        "code": "AccessDenied",
+        "evidenceStatus": "SUPERSEDED: target existence was not established",
+        "replacementEvidence": "cross-proof-read-correction-20261002.json"
+      },
+      {
+        "operation": "outside-prefix-write",
+        "status": 403,
+        "code": "AccessDenied"
+      },
+      {
+        "operation": "DeleteObject",
+        "outcome": "PASS"
+      }
+    ],
+    "taskObjectDeletionAccepted": true,
+    "productionBindingsChanged": false,
+    "hostedOwnerIsolationVerified": false,
+    "infrastructureWritePermissionsTested": false,
+    "reportedOutcome": "PASS (historical operator/local report)"
+  },
+  "taskObjectDeletionReadback": {
+    "verifiedAt": "2026-10-02T10:35:49.064Z",
+    "taskObjectDeletionIndependentlyVerified": true,
+    "status": 404,
+    "code": "NotFound",
+    "credentialSource": "retained prior media identity",
+    "noCustomerObjectTouched": true,
+    "productionBindingsChanged": false
+  },
+  "hostedUploadDisplayVerified": false,
+  "hostedProofOwnerIsolationVerified": false,
+  "oldBroadUploaderRetired": false,
+  "privateEvidenceSha256": {
+    "media-runtime-inputs-20261002/result.json": "0122516d90eeea29b3f8b1193d5e5317e387a2bdf2a887dbf27390435a08be2d",
+    "operator-media-hardening-pass-20261002.json": "454a87054717c965713090bccba1453057e6f9c0f8456fb589336285452e13e0",
+    "media-hardening-independent-readback-20261002.json": "fc66fc6b8d9ec844e0f925b3b797fb4e0792811ac6182cf83a6e6d09d1cd8f8a",
+    "media-runtime-verified/transfer-verification.json": "7d5ba2cda252940f369488407d15dcd1b85f016066f7bdc1e9f55adeff823bb4",
+    "media-runtime-verified/runtime-verification.json": "5f5ca1aabc138c2606532cbd822f1f9dd3307f8897e166f2777d65661e455536",
+    "media-runtime-task-object-deletion-readback-20261002.json": "3f3ea3f103139af4c9b16c23c203e236d5209603883916d3919f8924fd31cf10"
+  },
+  "crossProofDenialCorrection": {
+    "historicalCheckStatus": "SUPERSEDED: nonexistent key; AccessDenied/403 alone did not establish isolation",
+    "specificReplacementEvidence": "cross-proof-read-correction-20261002.json",
+    "otherConfigurationTransferAndRuntimeChecksRetained": true,
+    "originalPrivateEvidenceUnmodified": true
+  }
+}

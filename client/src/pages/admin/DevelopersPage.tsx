@@ -19,7 +19,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, CheckCircle2, XCircle, Search, Building2, MapPin, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function DevelopersPage() {
   const [activeTab, setActiveTab] = useState('pending');
@@ -35,10 +34,10 @@ export default function DevelopersPage() {
 
   const pendingDevelopers = Array.isArray(pendingDevelopersData)
     ? pendingDevelopersData
-    : pendingDevelopersData?.developers ?? [];
+    : (pendingDevelopersData?.developers ?? []);
   const allDevelopers = Array.isArray(allDevelopersData)
     ? allDevelopersData
-    : allDevelopersData?.developers ?? [];
+    : (allDevelopersData?.developers ?? []);
 
   const approveMutation = trpc.developer.adminApproveDeveloper.useMutation({
     onSuccess: () => {
@@ -193,35 +192,28 @@ export default function DevelopersPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-2 mt-3">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2">
-                      <Label
-                        htmlFor={`trust-${developer.id}`}
-                        className="text-xs text-slate-500 font-medium whitespace-nowrap"
-                      >
-                        Trusted Developer
-                      </Label>
-                      <Switch
-                        id={`trust-${developer.id}`}
-                        checked={!!developer.isTrusted}
-                        onCheckedChange={checked =>
-                          setTrustedMutation.mutate({ developerId: developer.id, isTrusted: checked })
-                        }
-                        disabled={setTrustedMutation.isLoading}
-                        className="scale-75 origin-right"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-[200px] text-xs">
-                      Bypasses manual review and publishes immediately
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            <div className="mt-3 text-right">
+              <div className="flex items-center justify-end gap-2">
+                <Label
+                  htmlFor={`trust-${developer.id}`}
+                  className="text-xs text-slate-500 font-medium whitespace-nowrap"
+                >
+                  Trusted Developer
+                </Label>
+                <Switch
+                  id={`trust-${developer.id}`}
+                  checked={!!developer.isTrusted}
+                  onCheckedChange={checked =>
+                    setTrustedMutation.mutate({ developerId: developer.id, isTrusted: checked })
+                  }
+                  disabled={setTrustedMutation.isLoading}
+                  className="scale-75 origin-right"
+                />
+              </div>
+              <p className="mt-1 max-w-[240px] text-xs text-slate-500">
+                Shows the Trusted Partner badge only after the developer has a public profile. It
+                does not approve the organisation, publish projects, or grant Launch Access.
+              </p>
             </div>
           </div>
         </div>

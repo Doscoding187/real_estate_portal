@@ -1,0 +1,52 @@
+{
+  "evidenceVersion": 1,
+  "observedAt": "2026-09-24T07:27:24Z",
+  "operation": "read-only Railway project, deployment, environment-variable-key and outbound-network status inspection",
+  "project": {
+    "name": "successful-tranquility",
+    "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b"
+  },
+  "production": {
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "services": ["real_estate_portal", "Redis"],
+    "apiServiceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "activeApiDeploymentId": "3996ee58-71f7-4976-b6a4-0cc3bc3c7731",
+    "activeApiSourceSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "activeDeploymentRecordedPlan": "hobby",
+    "databaseProvider": "TiDB",
+    "databaseName": "listify_property_sa",
+    "databaseCredentialClass": "runtime",
+    "databaseAuthorityApprovalConfigured": true,
+    "migrationUrlPresent": false,
+    "workerUrlPresent": false,
+    "staticOutboundIpEnabled": false,
+    "staticOutboundIpAddresses": [],
+    "separateLeadOrEmailWorkerServicePresent": false
+  },
+  "otherEnvironments": [
+    {
+      "name": "Testing",
+      "apiDeploymentRunning": true,
+      "databaseProvider": "TiDB",
+      "databaseName": "listify_test"
+    },
+    {
+      "name": "Staging",
+      "apiDeploymentRunning": false,
+      "databaseProvider": "TiDB",
+      "databaseName": "listify_staging"
+    }
+  ],
+  "networkGate": {
+    "railwayDocumentation": "https://docs.railway.com/networking/static-outbound-ips",
+    "documentedStaticOutboundIpPlan": "Pro",
+    "azureBroadFirewallAccessApproved": false,
+    "fixedEgressDecision": "pending founder choice"
+  },
+  "scope": {
+    "railwayConfigurationChanged": false,
+    "tidbSqlInspected": false,
+    "writerCensusComplete": false,
+    "azureCutoverAuthorized": false
+  }
+}

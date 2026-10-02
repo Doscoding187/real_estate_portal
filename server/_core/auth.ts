@@ -33,6 +33,14 @@ const EMAIL_VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 const hashOpaqueToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
+// Canonical MySQL timestamp strings represent UTC, regardless of the host TZ.
+function tokenExpiryMilliseconds(value: string): number {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?$/.test(value)
+    ? `${value.replace(' ', 'T')}Z`
+    : value;
+  return Date.parse(normalized);
+}
+
 const getRequestId = (req: Request): string => {
   const value = (req as any)?.requestId;
   return typeof value === 'string' && value.trim().length > 0 ? value : 'unknown';
@@ -162,6 +170,15 @@ export class AuthService {
     }
     const parsed = parseCookieHeader(cookieHeader);
     return new Map(Object.entries(parsed));
+  }
+
+  /** Revoke all sessions represented by the currently presented JWT version. */
+  async revokeSessionFromCookieHeader(cookieHeader: string | undefined): Promise<void> {
+    const cookies = this.parseCookies(cookieHeader);
+    const session = await this.verifySession(cookies.get(COOKIE_NAME));
+    if (!session) return;
+
+    await db.revokeUserSessions(session.userId, session.sessionVersion);
   }
 
   /**
@@ -402,14 +419,20 @@ export class AuthService {
       return false;
     }
 
-    const emailSent = await EmailService.sendEmail({
-      to: reset.user.email!,
-      subject: 'Password Reset Request',
-      html: `<p>You requested a password reset. Click the link below to reset your password:</p><a href="${reset.resetLink}">${reset.resetLink}</a><p>This link will expire in 1 hour.</p>`,
-      text: `You requested a password reset. Copy and paste this link into your browser to reset your password: ${reset.resetLink}`,
-    });
-
-    return emailSent;
+    try {
+      await sendPasswordResetEmail({
+        to: reset.user.email!,
+        resetToken: reset.token,
+        name: reset.user.name || undefined,
+      });
+      return true;
+    } catch (error) {
+      console.error('[Auth] Password reset email delivery failed', {
+        code: (error as { code?: string } | null)?.code || null,
+        name: (error as { name?: string } | null)?.name || null,
+      });
+      return false;
+    }
   }
 
   /**
@@ -418,12 +441,12 @@ export class AuthService {
    */
   async generatePasswordResetLink(email: string): Promise<string | null> {
     const reset = await this.createPasswordReset(email);
-    return reset?.resetLink ?? null;
+    return reset ? `${ENV.appUrl}/reset-password?token=${reset.token}` : null;
   }
 
   private async createPasswordReset(
     email: string,
-  ): Promise<{ user: User; resetLink: string } | null> {
+  ): Promise<{ user: User; token: string } | null> {
     const user = await db.getUserByEmail(email);
     if (!user) return null;
 
@@ -437,8 +460,7 @@ export class AuthService {
     // Store hashed token and expiry in the database
     await db.updateUserPasswordResetToken(user.id, hashedToken, expiresAt);
 
-    const resetLink = `${ENV.appUrl}/reset-password?token=${token}`;
-    return { user, resetLink };
+    return { user, token };
   }
 
   /**
@@ -479,7 +501,8 @@ export class AuthService {
       throw new Error('Invalid or expired password reset token.');
     }
 
-    if (new Date() > new Date(user.passwordResetTokenExpiresAt)) {
+    const expiry = tokenExpiryMilliseconds(user.passwordResetTokenExpiresAt);
+    if (!Number.isFinite(expiry) || expiry <= Date.now()) {
       throw new Error('Invalid or expired password reset token.');
     }
 
@@ -499,7 +522,8 @@ export class AuthService {
     if (
       !user ||
       !user.emailVerificationTokenExpiresAt ||
-      new Date(user.emailVerificationTokenExpiresAt).getTime() <= Date.now()
+      !Number.isFinite(tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt)) ||
+      tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt) <= Date.now()
     ) {
       throw new Error('Invalid or expired email verification token.');
     }

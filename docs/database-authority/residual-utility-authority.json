@@ -53,6 +53,7 @@
       "scripts/databaseUtilityAuthorityCheck.ts",
       "scripts/generateCanonicalModelInventory.ts",
       "scripts/verifyIsolatedCiDatabaseIdentities.ts",
+      "server/_core/databaseAuthority/b08AzureInspectionIdentity.ts",
       "tools/place-admission/prove-national-storage.mjs"
     ],
     "supportedDiagnostics": [
@@ -314,7 +315,7 @@
         "scripts/quick-check.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 120,
+    "guardedOperationalSurfaceCountAtClosure": 121,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

@@ -5,6 +5,8 @@ Scope: revenue surfaces, sponsored placement boundaries, attribution, billing de
 
 > **Related governing authority:** For audience value propositions, public commercial messaging, acquisition journeys, commercial motions and their review rules, read [Commercial Value Proposition & Acquisition Engine](../commercial-value-proposition-acquisition-engine/index.md). This revenue architecture retains authority over the revenue-domain boundaries and maturity assessment documented here.
 
+> **B01 amendment:** [LRC-PAY-001](../launch-readiness-and-product-convergence/03-launch-register.md#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17) is the sole current Paid MVP commercial-disposition matrix for Independent Agent, Agency and Developer Launch Access. This document remains the compatible technical/revenue architecture; the amendment does not enable runtime, public payment or legal wording.
+
 ## Executive Position
 
 Property Listify should treat revenue architecture as a set of commercial products sitting on top of domain engines and public experiences. The strongest current commercial engine is Distribution and Referral. Subscriptions and entitlements exist, but are fragmented by stakeholder. Sponsored placement and campaign capability is strategically important, but current evidence is split across marketplace tables, monetization labels, advertising pages, marketing router fragments, boost campaign code, location billboard components, and demand campaigns.
@@ -24,7 +26,7 @@ The first Commercial Monetization S0 slice establishes the existing canonical bi
 - The legacy paymentless paid-subscription creation and immediate-upgrade writes are contained. The historical Stripe webhook and local simulated activation route are not part of the active server surface; no provider-specific paid state is authoritative.
 - Public pricing surfaces, coupons, developer/provider/agent migrations, Search, Provincial Discovery and general campaign delivery remain deferred to later slices.
 
-This section records the implementation boundary; it does not approve final prices, VAT policy, public offers or a self-service advertising marketplace.
+This section records the implementation boundary. B01 separately approves the S4 prices, 90-day fixed term and no-VAT treatment for the three named Paid MVP Launch Access offers; it does not approve broader public availability, legal wording, public offers or a self-service advertising marketplace.
 
 ## S1 Canonical Public Commercial Surface
 
@@ -128,6 +130,13 @@ S4 extends the reusable paid fixed-term commercial term to the launch audiences 
 
 All three products are canonical plan/reference data consumed by `billing.commercialCatalog`. Product selection and invoice creation create only pending commercial state. Payment-proof submission remains under review. Finance verification is the activation authority; it starts the fixed 90-day period, writes the canonical paid subscription and entitlement, and records no automatic renewal or recurring conversion. The normal post-launch product remains a deliberate future commercial action.
 
+The reference records now declare `tax_treatment = not_vat_registered`: the
+approved R499, R999 and R1,499 are current total payable amounts and no VAT is
+charged. This is an invoice/catalogue fact, not VAT wording or legal advice;
+B15 must provide the reviewed supplier identity, invoice/disclosure language,
+refund/dispute wording and any later tax-status change. Bank details remain
+runtime configuration, never general application source.
+
 Agent and agency Launch Access is a full supported-capability learning cohort, not an artificially lower recurring tier. The adapter provisions explicit first-class Launch Access entitlements directly: Agent `max_active_listings = 50`; Agency `max_active_listings = 500`; and the supported runtime feature capabilities identified for each audience. Existing plans may be inspected as capability evidence, but they are not required and never donate Launch Access limits or authority. The `commercial_feature_access_policy = all_supported_canonical_capabilities` and `commercial_resource_limit_policy = explicit_launch_safeguard` metadata make that policy explicit. Developer Launch Access retains its explicit `unlimited_development_portfolio` entitlement. Usage meters remain operational measurement and cannot grant or override commercial entitlement.
 
 ### S4 Full-Access Capability Matrix
@@ -151,7 +160,7 @@ Reference-data provisioning is independent of Agent and Agency source-plan rows.
 
 Automatic agent and agency free-trial provisioning is no longer an active launch path. Their legacy free-trial selection/start routes are rejected or filtered, while generic free-trial capability remains available only for a future product that explicitly requires it. No customer is activated by registration, onboarding, product selection, invoice creation or proof upload.
 
-The active public commercial surfaces use canonical catalog values. Historical monthly prices and the agency “locked-in pricing” promise are not commercial authority and are no longer presented as live launch terms. Launch Access does not include guaranteed leads, paid-media spend, search priority or dedicated campaigns. No payment provider, service-provider monetization, campaign monetization, Search change or Provincial Discovery change is included in S4.
+The guarded commercial surfaces use canonical catalog values when a later release gate enables them. Historical monthly prices and the agency “locked-in pricing” promise are not commercial authority and are no longer presented as live launch terms. Launch Access does not include guaranteed leads, paid-media spend, search priority or dedicated campaigns. No payment provider, service-provider monetization, campaign monetization, Search change or Provincial Discovery change is included in S4.
 
 ## Sponsored Placement Boundary Options
 

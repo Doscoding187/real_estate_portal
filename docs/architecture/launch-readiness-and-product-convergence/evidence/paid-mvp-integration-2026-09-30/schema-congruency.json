@@ -1,0 +1,21 @@
+{
+  "targetFingerprintHash": "03e669768734dca8917be9bbd1a5532585e8d7b2fb7b723b402b4288bf8bd7bb",
+  "targetClass": "disposable-worktree",
+  "congruent": true,
+  "desiredDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "actualDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "differences": [],
+  "checkConstraintEnforcement": {
+    "applicable": false,
+    "variable": "tidb_enable_check_constraint",
+    "value": null,
+    "enabled": null,
+    "physical": {
+      "total": 23,
+      "enforced": 23,
+      "allEnforced": true,
+      "unenforced": []
+    }
+  },
+  "omittedDifferenceCount": 0
+}

@@ -7,7 +7,13 @@ import {
   superAdminProcedure,
 } from './_core/trpc';
 import { getDb } from './db';
-import { billableAccounts, billingInvoices, billingPayments, plans, subscriptions } from '../drizzle/schema';
+import {
+  billableAccounts,
+  billingInvoices,
+  billingPayments,
+  plans,
+  subscriptions,
+} from '../drizzle/schema';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
@@ -27,6 +33,7 @@ import {
   submitPaidLaunchAccessPaymentProof,
   submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
+  MAX_PROOF_BASE64_CHARS,
   type BillingCycle,
   type CanonicalSubscriptionStatus,
   type PaymentState,
@@ -37,6 +44,7 @@ import {
   type CommercialAudience,
 } from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
+import { getCommercialActivationStatus } from './services/commercialActivationPolicy';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
@@ -78,7 +86,7 @@ const submitPaymentProofSchema = z.object({
     filename: z.string().min(1).max(255),
     mimeType: z.string().min(1).max(120),
     sizeBytes: z.number().int().positive(),
-    contentBase64: z.string().min(1),
+    contentBase64: z.string().min(1).max(MAX_PROOF_BASE64_CHARS),
   }),
 });
 
@@ -93,7 +101,8 @@ const reviewPaymentSchema = z.object({
     'unmatched',
   ]),
   note: z.string().max(2000).optional(),
-  verifiedAmount: z.number().positive().optional(),
+  verifiedAmount: z.number().int().positive().safe().optional(),
+  overpaymentReconciled: z.boolean().optional(),
 });
 
 const lifecycleSchema = z.object({
@@ -123,6 +132,8 @@ function requireAgencyId(ctx: { user?: { agencyId?: number | null } | null }): n
 }
 
 export const billingRouter = {
+  commercialActivation: publicProcedure.query(() => getCommercialActivationStatus()),
+
   plans: publicProcedure
     .input(
       z.object({ segment: z.enum(['agent', 'agency', 'developer']).default('agency') }).optional(),
@@ -364,6 +375,7 @@ export const billingRouter = {
           decision: input.decision,
           note: input.note,
           verifiedAmount: input.verifiedAmount,
+          overpaymentReconciled: input.overpaymentReconciled,
         }),
       ),
 

@@ -146,6 +146,75 @@ describeWithDb('agent lead transitions follow canonical rules', () => {
       agentCaller(userId).agent.updateLeadStatus({ leadId, status: 'lost' }),
     ).rejects.toThrow(/lost reason is required/i);
   });
+
+  it('keeps another independent Agent from reading or mutating a custodied lead', async () => {
+    const ownerUserId = await insertAgentUser('CustodiedLeadOwner');
+    const outsiderUserId = await insertAgentUser('CustodiedLeadOutsider');
+    const ownerSuffix = suffix();
+    const outsiderSuffix = suffix();
+
+    const [ownerAgentInsert] = await db
+      .insert(agents)
+      .values({
+        userId: ownerUserId,
+        firstName: 'Custodied',
+        lastName: 'Owner',
+        displayName: 'Custodied Lead Owner',
+        email: `custodied-owner-${ownerSuffix}@example.test`,
+        slug: `custodied-owner-${ownerSuffix}`,
+        status: 'approved',
+        isFeatured: 0,
+        isVerified: 0,
+      } as any);
+    const ownerAgentId = await insertId(ownerAgentInsert);
+    created.agentIds.push(ownerAgentId);
+
+    const [outsiderAgentInsert] = await db
+      .insert(agents)
+      .values({
+        userId: outsiderUserId,
+        firstName: 'Custodied',
+        lastName: 'Outsider',
+        displayName: 'Custodied Lead Outsider',
+        email: `custodied-outsider-${outsiderSuffix}@example.test`,
+        slug: `custodied-outsider-${outsiderSuffix}`,
+        status: 'approved',
+        isFeatured: 0,
+        isVerified: 0,
+      } as any);
+    const outsiderAgentId = await insertId(outsiderAgentInsert);
+    created.agentIds.push(outsiderAgentId);
+
+    const leadId = await insertLead({ agentId: ownerAgentId });
+    const outsider = agentCaller(outsiderUserId);
+
+    const outsiderLeads = await outsider.agent.getMyLeads({ status: 'all', limit: 100 });
+    expect(outsiderLeads.some(lead => Number(lead.id) === leadId)).toBe(false);
+
+    await expect(
+      outsider.agent.updateLeadStatus({ leadId, status: 'contacted' }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsider.agent.addLeadActivity({
+        leadId,
+        activityType: 'note',
+        description: 'Unauthorized cross-Agent note.',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsider.agent.setLeadFollowUp({
+        leadId,
+        nextFollowUp: new Date(Date.now() + 86_400_000).toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const [storedLead] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(storedLead).toMatchObject({
+      agentId: ownerAgentId,
+      status: 'new',
+      nextFollowUp: null,
+    });
+  });
 });
 
 function suffix() {

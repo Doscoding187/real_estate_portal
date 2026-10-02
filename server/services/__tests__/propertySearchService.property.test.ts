@@ -7,6 +7,7 @@
  * - Property 14: Pagination info accuracy (Requirements 6.1)
  */
 
+import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fc from 'fast-check';
 import { propertySearchService } from '../propertySearchService';
@@ -20,6 +21,18 @@ describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
   let skipTests = false;
   let testOwnerId: number | null = null;
+  // This suite shares the owned test database with integration files that
+  // create and archive normal-market properties concurrently. Keep every
+  // property-search assertion inside a per-run text-geography namespace so a
+  // separate fixture cannot make a two-page count change between requests.
+  const fixtureNamespace = `property-search-fixture-${randomUUID().slice(0, 12)}`;
+  const fixtureProvince = `${fixtureNamespace}-province`;
+  const fixtureCities = {
+    johannesburg: `${fixtureNamespace}-johannesburg`,
+    capeTown: `${fixtureNamespace}-cape-town`,
+    durban: `${fixtureNamespace}-durban`,
+    pretoria: `${fixtureNamespace}-pretoria`,
+  } as const;
   const getInsertId = (insertResult: unknown): number => {
     const candidate = Array.isArray(insertResult) ? insertResult[0] : insertResult;
     if (candidate && typeof candidate === 'object' && 'insertId' in candidate) {
@@ -41,8 +54,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       bathrooms: 3,
       area: 350,
       address: 'Sandton, Johannesburg',
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      city: fixtureCities.johannesburg,
+      province: fixtureProvince,
       status: 'available' as const,
       featured: 0,
       views: 0,
@@ -63,8 +76,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       bathrooms: 2,
       area: 120,
       address: 'Sea Point, Cape Town',
-      city: 'Cape Town',
-      province: 'Western Cape',
+      city: fixtureCities.capeTown,
+      province: fixtureProvince,
       status: 'available' as const,
       featured: 0,
       views: 0,
@@ -85,8 +98,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       bathrooms: 2,
       area: 180,
       address: 'Umhlanga, Durban',
-      city: 'Durban',
-      province: 'KwaZulu-Natal',
+      city: fixtureCities.durban,
+      province: fixtureProvince,
       status: 'available' as const,
       featured: 0,
       views: 0,
@@ -107,8 +120,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       bathrooms: 2,
       area: 150,
       address: 'Centurion, Pretoria',
-      city: 'Pretoria',
-      province: 'Gauteng',
+      city: fixtureCities.pretoria,
+      province: fixtureProvince,
       status: 'available' as const,
       featured: 0,
       views: 0,
@@ -129,8 +142,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       bathrooms: 3,
       area: 250,
       address: 'Sandton, Johannesburg',
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      city: fixtureCities.johannesburg,
+      province: fixtureProvince,
       status: 'available' as const,
       featured: 0,
       views: 0,
@@ -217,7 +230,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
+            province: fc.constant(fixtureProvince),
             minPrice: fc.option(fc.integer({ min: 0, max: 5000000 }), { nil: undefined }),
             maxPrice: fc.option(fc.integer({ min: 5000000, max: 10000000 }), { nil: undefined }),
           }),
@@ -247,7 +260,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
+            province: fc.constant(fixtureProvince),
           }),
           async filters => {
             const results = await propertySearchService.searchProperties(
@@ -275,7 +288,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            city: fc.constantFrom('Johannesburg', 'Cape Town', 'Durban', 'Pretoria'),
+            city: fc.constantFrom(...Object.values(fixtureCities)),
           }),
           async filters => {
             const results = await propertySearchService.searchProperties(
@@ -308,6 +321,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
           async filters => {
             const normalizedFilters: PropertyFilters = {
               ...filters,
+              province: fixtureProvince,
               propertyType: [filters.propertyType],
             };
             const results = await propertySearchService.searchProperties(
@@ -338,7 +352,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constantFrom('Gauteng', 'Western Cape'),
+            province: fc.constant(fixtureProvince),
           }),
           async filters => {
             const results = await propertySearchService.searchProperties(
@@ -373,10 +387,8 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.option(fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'), {
-              nil: undefined,
-            }),
-            city: fc.option(fc.constantFrom('Johannesburg', 'Cape Town', 'Durban', 'Pretoria'), {
+            province: fc.constant(fixtureProvince),
+            city: fc.option(fc.constantFrom(...Object.values(fixtureCities)), {
               nil: undefined,
             }),
             minPrice: fc.option(fc.integer({ min: 0, max: 3000000 }), { nil: undefined }),
@@ -426,7 +438,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       await fc.assert(
         fc.asyncProperty(
           fc.record({
-            province: fc.constantFrom('Gauteng', 'Western Cape'),
+            province: fc.constant(fixtureProvince),
             minPrice: fc.integer({ min: 1000000, max: 3000000 }),
           }),
           async filters => {
@@ -459,7 +471,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
           fc.record({
             page: fc.integer({ min: 1, max: 5 }),
             pageSize: fc.integer({ min: 1, max: 10 }),
-            province: fc.constantFrom('Gauteng', 'Western Cape', 'KwaZulu-Natal'),
+            province: fc.constant(fixtureProvince),
           }),
           async ({ page, pageSize, province }) => {
             const results = await propertySearchService.searchProperties(
@@ -508,7 +520,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
           async ({ pageSize }) => {
             // Request page 1
             const page1 = await propertySearchService.searchProperties(
-              { province: 'Gauteng' },
+              { province: fixtureProvince },
               'price_asc',
               1,
               pageSize,
@@ -525,7 +537,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
 
               // Request last page
               const lastPageResults = await propertySearchService.searchProperties(
-                { province: 'Gauteng' },
+                { province: fixtureProvince },
                 'price_asc',
                 lastPage,
                 pageSize,
@@ -539,7 +551,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
 
               // Request beyond last page
               const beyondLastPage = await propertySearchService.searchProperties(
-                { province: 'Gauteng' },
+                { province: fixtureProvince },
                 'price_asc',
                 lastPage + 1,
                 pageSize,
@@ -562,7 +574,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
         fc.asyncProperty(
           fc.record({
             pageSize: fc.integer({ min: 1, max: 10 }),
-            province: fc.constantFrom('Gauteng', 'Western Cape'),
+            province: fc.constant(fixtureProvince),
           }),
           async ({ pageSize, province }) => {
             const results = await propertySearchService.searchProperties(

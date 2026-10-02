@@ -49,6 +49,7 @@ import {
   type ResolveSearchAreaOptions,
   type SearchAreaResolution,
 } from './searchAreaAuthority';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 
 export type SearchDiscoveryMode = 'public' | 'controlled_acceptance';
 
@@ -283,7 +284,11 @@ async function searchCanonicalLocationCatalog(
           .from(provinces)
           .leftJoin(
             properties,
-            and(eq(properties.provinceId, provinces.id), eq(properties.status, 'published')),
+            and(
+              eq(properties.provinceId, provinces.id),
+              eq(properties.status, 'published'),
+              excludeLandFromGenericPublicProjection(),
+            ),
           )
           .where(
             and(
@@ -330,7 +335,11 @@ async function searchCanonicalLocationCatalog(
           .innerJoin(provinces, eq(cities.provinceId, provinces.id))
           .leftJoin(
             properties,
-            and(eq(properties.cityId, cities.id), eq(properties.status, 'published')),
+            and(
+              eq(properties.cityId, cities.id),
+              eq(properties.status, 'published'),
+              excludeLandFromGenericPublicProjection(),
+            ),
           )
           .where(
             and(
@@ -388,7 +397,11 @@ async function searchCanonicalLocationCatalog(
           .innerJoin(provinces, eq(cities.provinceId, provinces.id))
           .leftJoin(
             properties,
-            and(eq(properties.suburbId, suburbs.id), eq(properties.status, 'published')),
+            and(
+              eq(properties.suburbId, suburbs.id),
+              eq(properties.status, 'published'),
+              excludeLandFromGenericPublicProjection(),
+            ),
           )
           .where(
             and(

@@ -1,0 +1,62 @@
+{
+  "observedAt": "2026-09-25T06:36:49.384658+00:00",
+  "scope": "public read-only HTTPS",
+  "apiVersion": {
+    "url": "https://api.propertylistifysa.co.za/api/version",
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": {
+      "gitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "buildTime": null,
+      "env": "production"
+    }
+  },
+  "apiHealth": {
+    "url": "https://api.propertylistifysa.co.za/api/health",
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "kind": "liveness"
+  },
+  "apiReadiness": {
+    "url": "https://api.propertylistifysa.co.za/api/readiness",
+    "status": 503,
+    "contentType": "application/json; charset=utf-8",
+    "ok": false,
+    "gitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "targetFingerprintHash": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+    "applicationReady": false,
+    "layerCodes": {
+      "processLiveness": "process-alive",
+      "serviceAvailable": "target-connected",
+      "targetOwned": "target-not-exact-owned-worktree",
+      "schemaMigrated": "manifest-head-behind",
+      "schemaCongruent": "schema-not-congruent",
+      "canonicalReferenceData": "reference-not-evaluated",
+      "commercialReferenceData": "foundation-blocked-by-schema",
+      "acceptanceScenario": "scenario-not-evaluated",
+      "application": "application-not-ready-for-requested-runtime",
+      "targetConnectivity": "target-connected",
+      "migrationHead": "manifest-head-behind",
+      "incompleteAttemptState": "incomplete-migration-attempt",
+      "structuralSchema": "required-schema-missing",
+      "requiredData": "requested-data-not-required",
+      "consumerApi": "consumer-not-evaluated",
+      "browserJourney": "browser-not-evaluated",
+      "release": "release-blocked-by-migration-attempt-authority",
+      "fullDiagnostics": "diagnostics-not-evaluated"
+    },
+    "cache": {
+      "ok": true,
+      "mode": "memory"
+    },
+    "authRateLimit": {
+      "ok": true,
+      "mode": "redis"
+    }
+  },
+  "frontendVersion": {
+    "url": "https://www.propertylistifysa.co.za/version.json",
+    "status": 200,
+    "contentType": "text/html; charset=utf-8"
+  }
+}

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { properties } from '../../drizzle/schema/listings';
 import { developments, unitTypes } from '../../drizzle/schema/developments';
 import { provinces, cities, suburbs, locations } from '../../drizzle/schema/locations';
+import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 
 export interface CityInsights {
   cityName: string;
@@ -88,6 +89,7 @@ class PriceInsightsService {
         WHERE ${properties.status} = 'available' 
           AND ${properties.transactionType} = 'sale' 
           AND ${properties.price} > 0
+          AND ${excludeLandFromGenericPublicProjection()}
         
         UNION ALL
         

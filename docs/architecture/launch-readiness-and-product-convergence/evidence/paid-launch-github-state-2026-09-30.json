@@ -1,0 +1,102 @@
+{
+  "observedDate": "2026-09-30",
+  "main": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+  "openPrs": [
+    {
+      "number": 582,
+      "title": "Reconcile Azure 0094 release authority and canonical geography provisioning",
+      "state": "open",
+      "head": "b625a6dd0be7b105e100383dbc8f919a64d8b0bb",
+      "draft": true,
+      "updated": "2026-09-30T13:55:00Z"
+    },
+    {
+      "number": 581,
+      "title": "Services V1: integrate reviewed launch journey",
+      "state": "open",
+      "head": "b844baec5a6c38edd5e33cffadea5953e5d4aec7",
+      "draft": false,
+      "updated": "2026-09-26T08:51:31Z"
+    },
+    {
+      "number": 580,
+      "title": "B16 no-spend Paid MVP convergence candidate",
+      "state": "open",
+      "head": "e8974ec34b919ceab37bdbd7e7379f96f3abce99",
+      "draft": true,
+      "updated": "2026-09-24T21:13:29Z"
+    },
+    {
+      "number": 579,
+      "title": "fix(db): restore fresh Developer enquiry contract",
+      "state": "open",
+      "head": "c51041acd626e3973cbdc88080bb0074d8c95313",
+      "draft": false,
+      "updated": "2026-09-17T16:07:28Z"
+    },
+    {
+      "number": 578,
+      "title": "MVP closure: consolidated candidate and senior custody corrections",
+      "state": "open",
+      "head": "c51041acd626e3973cbdc88080bb0074d8c95313",
+      "draft": true,
+      "updated": "2026-09-17T16:32:08Z"
+    }
+  ],
+  "databaseCandidateChecks": {
+    "checks": [
+      {
+        "name": "Build Application",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183715/job/109905737859"
+      },
+      {
+        "name": "Unit & Integration Tests",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183715/job/109904069834"
+      },
+      {
+        "name": "Lint & TypeCheck",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183715/job/109904069703"
+      },
+      {
+        "name": "Vercel Preview Comments",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/runs/109903796455"
+      },
+      {
+        "name": "Build Frontend",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183971/job/109903012193"
+      },
+      {
+        "name": "Location Authority",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183715/job/109902999566"
+      },
+      {
+        "name": "DB Contract Verification",
+        "status": "completed",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/36720183715/job/109902999216"
+      }
+    ]
+  },
+  "databaseCandidateStatuses": {
+    "state": "success",
+    "statuses": [
+      {
+        "context": "Vercel",
+        "state": "success",
+        "url": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/HCRBm4hFKj5hR7fmbktnX8TvXe6U"
+      }
+    ]
+  }
+}
