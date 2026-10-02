@@ -1,0 +1,344 @@
+{
+  "checkedAt": "2026-10-02T13:16:29.593728+00:00",
+  "status": "API health gate failed; readiness/Redis correction awaiting review and new accepted source; frontend held",
+  "acceptedApplicationSource": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+  "storageReviewGate": {
+    "headRefOid": "fbdfb5f68eb935964b9add487576d094772fb72e",
+    "mergeCommit": {
+      "oid": "51802b7d324c61e5ff79cc3515510b29f76022d5"
+    },
+    "mergedAt": "2026-10-02T12:05:14Z",
+    "state": "MERGED",
+    "url": "https://github.com/Doscoding187/real_estate_portal/pull/584"
+  },
+  "requiredChecks": [
+    {
+      "name": "DB Contract Verification",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37000403548/job/110816561884"
+    },
+    {
+      "name": "Location Authority",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37000403548/job/110816561947"
+    },
+    {
+      "name": "Lint & TypeCheck",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37000403548/job/110817217749"
+    },
+    {
+      "name": "Unit & Integration Tests",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37000403548/job/110817217845"
+    },
+    {
+      "name": "Build Application",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37000403548/job/110818218121"
+    }
+  ],
+  "bindings": {
+    "checkedAt": "2026-10-02T12:36:30.416Z",
+    "databaseConnected": false,
+    "actualProviderReadback": true,
+    "roles": [
+      {
+        "service": "api",
+        "role": "runtime",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "canonicalOperationAuthorized": true,
+        "configuredUsernameVerified": true,
+        "mediaProofCredentialSeparation": true,
+        "salesPaused": true,
+        "admissionAndDeadlineAbsent": true,
+        "staticConfigurationPassedExceptNotYetDeployedIdentity": true
+      },
+      {
+        "service": "email-worker",
+        "role": "worker",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "canonicalOperationAuthorized": true,
+        "configuredUsernameVerified": true,
+        "mediaProofCredentialSeparation": true,
+        "salesPaused": true,
+        "admissionAndDeadlineAbsent": true,
+        "staticConfigurationPassedExceptNotYetDeployedIdentity": true
+      },
+      {
+        "service": "lead-job",
+        "role": "worker",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "canonicalOperationAuthorized": true,
+        "configuredUsernameVerified": true,
+        "mediaProofCredentialSeparation": true,
+        "salesPaused": true,
+        "admissionAndDeadlineAbsent": true,
+        "staticConfigurationPassedExceptNotYetDeployedIdentity": true
+      }
+    ],
+    "requiredNext": "Review/accept corrected source, deploy and verify API and joined runtime before frontend.",
+    "phase": "Completed static canonical authorization and actual provider readback; independently refreshed at cutover checkpoint",
+    "freshProviderReadback": [
+      {
+        "role": "runtime",
+        "reviewedValuesMatch": true,
+        "salesPaused": true,
+        "admissionDeadlineMigratorAndBuildOverrideAbsent": true
+      },
+      {
+        "role": "worker",
+        "reviewedValuesMatch": true,
+        "salesPaused": true,
+        "admissionDeadlineMigratorAndBuildOverrideAbsent": true
+      },
+      {
+        "role": "worker",
+        "reviewedValuesMatch": true,
+        "salesPaused": true,
+        "admissionDeadlineMigratorAndBuildOverrideAbsent": true
+      }
+    ]
+  },
+  "containment": {
+    "tiDBEditorsClosedOperatorConfirmed": true,
+    "tiDBSourceReadOnlyDiagnostic": {
+      "globalProcessVisibility": false,
+      "visibleOtherConnections": 0,
+      "limitation": "Bounded source-reader visibility, supplemented by retained freeze evidence and stopped old API; not a global process census."
+    },
+    "tiDBWritersRemainStopped": true,
+    "allProductionApplicationGitTriggersAbsent": true,
+    "existingTestingServiceConfigAndStagedChangesPreserved": true,
+    "vercelMainGitDeploymentEnabled": false,
+    "vercelOperatorAttendingAuthenticatedDashboard": true,
+    "vercelNoHooksAndLastDeploymentReady": "operator report; no agent API authentication",
+    "salesPauseTrueAllThreeRoles": true,
+    "admissionAndDeadlineAbsentAllThreeRoles": true
+  },
+  "network": {
+    "azureServerReady": true,
+    "apiAndWorkersUseExistingAllowedProductionAddresses": true,
+    "azureFirewallChanged": false,
+    "newWorkerStaticEgressScopedToProduction": true
+  },
+  "providerConfigurationAdaptation": {
+    "legacyApiFile": "railway.json",
+    "newWorkerCustomConfigFilesRejected": true,
+    "providerReason": "New services cannot opt into deprecated Config as Code. Existing API continues using its legacy file. Worker service settings and deployed manifests match the reviewed build/start/restart/cron fields; application source unchanged.",
+    "source": "https://docs.railway.com/infrastructure-as-code",
+    "reviewedWorkerCommandsReadBackAndArtifactManifestsMatched": true
+  },
+  "artifacts": [
+    {
+      "role": "api",
+      "deploymentId": "c35c0e4c-64eb-4044-9a57-5a1e561a13ab",
+      "status": "FAILED",
+      "sourceSha": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "instances": [
+        {
+          "id": "8c210611-fd24-4b04-b885-3ddf289d5469",
+          "status": "REMOVED"
+        }
+      ]
+    },
+    {
+      "role": "email-worker",
+      "deploymentId": "7c377d5a-6e42-41c9-9bf7-9fd5342b522b",
+      "status": "SUCCESS",
+      "sourceSha": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "instances": [
+        {
+          "id": "c8fe0de2-e9c0-4182-93a8-10edd4acc0ea",
+          "status": "RUNNING"
+        }
+      ]
+    },
+    {
+      "role": "lead-job",
+      "deploymentId": "4d073103-9389-4499-846a-a425d95f219f",
+      "status": "SUCCESS",
+      "sourceSha": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "instances": [
+        {
+          "id": "8e1d5a69-4088-4ee3-a4f8-02f314c35394",
+          "status": "EXITED"
+        }
+      ]
+    },
+    {
+      "role": "api-diagnostic",
+      "deploymentId": "995e3337-bb38-4545-8e7a-92ad1daed971",
+      "status": "FAILED",
+      "sourceSha": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "instances": [
+        {
+          "id": "5a59dd30-5723-4aa5-91f1-d958a0e1dd89",
+          "status": "REMOVED"
+        }
+      ]
+    }
+  ],
+  "hostedAcceptance": "not started; waiting for reviewed correction/new accepted source, API readiness and manual frontend deployment",
+  "remaining": [
+    "Independent review/new accepted application source for readiness/Redis correction, then successful API deployment",
+    "Manual Production frontend deployment and joined release probe",
+    "Unpaid hosted account/email/recovery/session/owner/geography/authoring/media/closed-intake acceptance",
+    "Separate hosted proof-owner tests, recovery, monitoring and operating obligations",
+    "Separate paid-admission review"
+  ],
+  "privateEvidenceHashes": {
+    "approved-head-checks-before-merge.json": "6ffed05dc6371e4013fd76e94d85342addaf770c485595ad004c62ceff320e12",
+    "provider-before-bindings.private.json": "ca6150cac610b2b44781355dc2c650c7d7f00b8cff0cedf2cc921551150c44d7",
+    "independent-bound-config-verification.json": "e2b0d2f5509376c9bc64b18de9646a8817f5de4e62346c859137b3576d5ca3fd",
+    "tidb-session-refresh.private.json": "67386bfac9e16ab22d5221a36e6ed2acb44fe233c05530c2ee251a44b4943ae6",
+    "tidb-editor-closure-operator-confirmation.json": "3eb6941228003f630ec816a2dc3ac5bb509d689a3cbc7ff65c4095656672bbd5",
+    "azure-network-readiness-before-bindings.json": "90a450b670f691517967c2205331bec68ac87fda945bd9e122e3aaed5590d25f",
+    "effective-config-before-first-deploy-validated.response.private.json": "ffbba50e32cbfbac4df637d1fa025af43927cc3517f722b3dd980639fc4dcc40",
+    "api-instance-readiness-diagnostic.response.private.json": "ac826a8867cf4b91b17604673e1bb59d1a378a57fd83390025f0451d51544c48",
+    "api-readiness-diagnostic-purpose.json": "e92be4587bf3b7b4108da07565184d0b97d3d80199807006bbd07fd0163171e5",
+    "checkpoint-live-summary-131605243714.json": "75e95f7346decb6692623aadc4c60576bc763535b7ba2d3611d7b7e04bafecc3",
+    "api-private-readiness-ssh-125122073711.json": "a2d9a648dddf7df3c2faaa2c13ee3a513649d28d17e9863b929c623bf531a1d4",
+    "api-private-readiness-latency-125344291087.json": "d35821220b65288f3c240705b50134bc7c7865f13968a41becc5d55ad75404ec",
+    "api-diagnostic-instance-125658171412.response.private.json": "ebec5e6345e5c30e0e6e603238793441ca781bdbcbcbaa4ad5228c12d9c3dbbd",
+    "email-worker-runtime-logs-124224317064.private.json": "829ad9f071cbd5cb2206f2aa6e79e707bcf02486b4fc7b070b5d1ec5db14344e",
+    "lead-job-runtime-logs-124224177572.private.json": "b53387578b730ede673dca5792cc03a9a2a04e4a0f95f17ae734b43a9bb0aa7a"
+  },
+  "requiredChecksApplyTo": "fbdfb5f68eb935964b9add487576d094772fb72e",
+  "apiDiagnostic": {
+    "deploymentId": "995e3337-bb38-4545-8e7a-92ad1daed971",
+    "sourceSha": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+    "localhostHttpStatus": 200,
+    "readinessOkAtAcceptedM": true,
+    "databaseApplicationReady": true,
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "migrationHead": {
+      "state": "ready",
+      "code": "manifest-head-ready",
+      "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+    },
+    "schemaCongruency": {
+      "state": "ready",
+      "code": "schema-congruent",
+      "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+    },
+    "requestedPurpose": "database verification; not consumer/browser/geography journey acceptance",
+    "observedCache": {
+      "ok": true,
+      "mode": "memory"
+    },
+    "measuredLatency": [
+      {
+        "path": "/api/health",
+        "status": 200,
+        "durationMs": 521,
+        "ok": true
+      },
+      {
+        "path": "/api/readiness",
+        "status": 200,
+        "durationMs": 12167,
+        "ok": true,
+        "cache": {
+          "ok": true,
+          "mode": "memory"
+        },
+        "dbReady": true
+      }
+    ],
+    "joinedProbeTimeoutMs": 8000,
+    "providerFailureCause": "Slow full verification is a plausible contributor; provider per-request timeout cause not independently proven.",
+    "correctionDeployed": false,
+    "unchangedRetryCount": 1
+  },
+  "workerHealthEvidence": [
+    {
+      "kind": "email-worker-batch",
+      "completedAt": "2026-10-02T12:42:10.351Z",
+      "result": {
+        "backlog": {
+          "stale": 0
+        },
+        "consumed": {
+          "attention": 0,
+          "queued": 0
+        },
+        "delivery": {
+          "accepted": 0,
+          "claimed": 0,
+          "permanent": 0,
+          "recovered": 0,
+          "retryable": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "kind": "lead-delivery-run",
+      "completedAt": "2026-10-02T12:40:13.498Z",
+      "result": {
+        "claimed": 0,
+        "completed": 0,
+        "failed": 0,
+        "recovered": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "frontendConfiguration": {
+    "productionKeysAndScopesSeenInOperatorScreenshot": true,
+    "hiddenValuesIndependentlyVerified": false,
+    "publicWebsiteUrlEntryShown": {
+      "key": "VITE_APP_URL",
+      "value": "https://www.propertylistifysa.co.za",
+      "environment": "Production",
+      "recommendedType": "Config"
+    },
+    "allProductionValuesOperatorReadback": "pending",
+    "newDeploymentCreated": false
+  },
+  "controlledMailboxes": {
+    "suppliedPrivately": true,
+    "publicAliases": [
+      "controlled-mailbox-a",
+      "controlled-mailbox-b"
+    ],
+    "accountsCreated": false
+  },
+  "sourceCorrectionReview": {
+    "pullRequest": "https://github.com/Doscoding187/real_estate_portal/pull/585",
+    "reviewedHead": "aa9519b4d7a22deb8355866c957fe7e882aefa92",
+    "seniorVerdictAtReviewedHead": "changes requested",
+    "severity": "P2",
+    "finding": "Lifetime Redis errors permanently prevented readiness recovery after eleven failed PINGs.",
+    "correction": "Cache health uses current connection/fallback state; lifetime connectionErrors remain telemetry.",
+    "mockedTransportRegression": {
+      "preFixRecoveryHttpStatus": 503,
+      "postFixRecoveryHttpStatus": 200,
+      "outageHttpStatus": 503,
+      "failedPingsBeforeRecovery": 11,
+      "sameServerCacheAndClientInstance": true,
+      "cumulativeErrorsPreservedAfterRecovery": 11,
+      "secondOutageErrorsPreserved": 12,
+      "secondOutageAlsoBlocksAndRecovers": true
+    },
+    "freshLocalValidation": {
+      "focusedTestsPassed": 16,
+      "typeScript": "passed",
+      "touchedLintErrors": 0,
+      "touchedLintExistingWarnings": 6
+    },
+    "replacementSourceAccepted": false,
+    "correctionDeployed": false,
+    "requiredNext": [
+      "Fresh CI on the correction head",
+      "Independent senior re-review",
+      "Explicit replacement source acceptance before deployment"
+    ]
+  }
+}

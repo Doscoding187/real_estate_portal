@@ -4,6 +4,8 @@
  */
 
 import Redis from 'ioredis';
+import { isValidAuthRateLimitRedisUrl } from '../authRateLimitStore';
+import { resolveAppRuntimeEnv } from '../runtimeBootstrap';
 
 // Cache prefixes for key naming
 export enum CachePrefixes {
@@ -113,29 +115,39 @@ export class RedisCacheManager {
    * Initialize Redis connection
    */
   private initializeRedis(): void {
-    if (!process.env.REDIS_HOST) {
-      console.warn('REDIS_HOST not configured, skipping Redis initialization');
+    const redisUrl = process.env.REDIS_URL?.trim();
+    const runtimeEnv = resolveAppRuntimeEnv();
+    const deployed = runtimeEnv === 'production' || runtimeEnv === 'staging';
+    if (!redisUrl && (deployed || !process.env.REDIS_HOST)) {
+      console.warn('Redis cache connection not configured, skipping Redis initialization');
       this.fallbackMode = true;
       this.redis = null; // Explicitly set to null
       this.isConnected = false;
       return;
     }
 
+    if (redisUrl && !isValidAuthRateLimitRedisUrl(redisUrl)) {
+      throw new Error('Redis cache requires a valid REDIS_URL.');
+    }
     const config = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
       retryDelayOnFailover: 100,
       retryAttempts: 3,
       maxRetriesPerRequest: 3,
       enableAutoPipelining: true,
-      lazyConnect: true,
+      lazyConnect: false,
       connectTimeout: 5000,
       commandTimeout: 2000,
     };
 
-    this.redis = new Redis(config);
+    this.redis = redisUrl
+      ? new Redis(redisUrl, config)
+      : new Redis({
+          ...config,
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD,
+          db: parseInt(process.env.REDIS_DB || '0'),
+        });
 
     // Handle connection events
     this.redis.on('connect', () => {
@@ -197,6 +209,22 @@ export class RedisCacheManager {
       setTimeout(() => {
         this.checkRedisConnection();
       }, 10000);
+    }
+  }
+
+  /** Probe the actual connection, including before its first connect event. */
+  async probe(): Promise<boolean> {
+    if (!this.redis) return false;
+    try {
+      await this.redis.ping();
+      this.isConnected = true;
+      this.fallbackMode = false;
+      return true;
+    } catch {
+      this.metrics.connectionErrors++;
+      this.isConnected = false;
+      this.fallbackMode = true;
+      return false;
     }
   }
 
@@ -691,14 +719,14 @@ export async function getCacheHealth(): Promise<{
   };
 }> {
   const manager = getRedisCacheManager();
+  await manager.probe();
   const stats = await manager.getStats();
 
   const totalRequests = stats.hits + stats.misses;
   const hitRate = totalRequests > 0 ? stats.hits / totalRequests : 0;
 
-  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-  if (manager['fallbackMode']) status = 'degraded';
-  if (stats.connectionErrors > 10) status = 'unhealthy';
+  // Historical errors remain telemetry; current connection health can recover.
+  const status = manager['isConnected'] && !manager['fallbackMode'] ? 'healthy' : 'degraded';
 
   return {
     status,
