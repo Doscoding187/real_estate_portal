@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-02T16:37:30.465303+00:00",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "accountAlias": "controlled-agent-1",
+  "operatorControlsMailbox": true,
+  "operatorReportedEmailReceived": true,
+  "operatorReportedVerificationLinkSucceeded": true,
+  "tokensShared": false,
+  "followupNormalLoginVerificationPending": true
+}

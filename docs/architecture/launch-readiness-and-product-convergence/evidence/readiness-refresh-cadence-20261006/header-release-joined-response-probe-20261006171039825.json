@@ -1,0 +1,491 @@
+{
+  "checkedAt": "2026-10-06T17:10:39.825Z",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "probeLimitMs": 8000,
+  "tlsVerificationEnabled": true,
+  "responses": [
+    {
+      "kind": "html-home",
+      "url": "https://www.propertylistifysa.co.za/",
+      "status": 200,
+      "durationMs": 561,
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::tmsqf-1791306640312-263d5d3592fc",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "09decc86cb83b42f2740c04f7a17d336890cc573c82c8d6adae3323aa46d9b57",
+      "bytes": 3376
+    },
+    {
+      "kind": "frontend-version",
+      "url": "https://www.propertylistifysa.co.za/version.json",
+      "status": 200,
+      "durationMs": 489,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::8j6k4-1791306640336-051d49afa1d5",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "76a7d76cdb717593d2ee6eb1f524af24558c1faffef7237bff1f5900fa8138b1",
+      "bytes": 112,
+      "body": {
+        "gitSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "buildTime": "2026-10-02T16:29:47.009Z",
+        "env": "production"
+      }
+    },
+    {
+      "kind": "html-login",
+      "url": "https://www.propertylistifysa.co.za/login",
+      "status": 200,
+      "durationMs": 525,
+      "headers": {
+        "content-type": "text/html; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::pqvlp-1791306640393-70ac70dcd211",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "09decc86cb83b42f2740c04f7a17d336890cc573c82c8d6adae3323aa46d9b57",
+      "bytes": 3376
+    },
+    {
+      "kind": "apex",
+      "url": "https://propertylistifysa.co.za/",
+      "status": 307,
+      "durationMs": 847,
+      "headers": {
+        "content-type": "text/plain",
+        "strict-transport-security": "max-age=63072000",
+        "location": "https://www.propertylistifysa.co.za/",
+        "x-vercel-id": "cpt1::6rc7j-1791306640734-00fdfd2b1c54",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "7c040f8633b8823d72ed63da9b3b2dfe9846e912c66a64c9433ec9c4815d76c2",
+      "bytes": 15
+    },
+    {
+      "kind": "api-version",
+      "url": "https://api.propertylistifysa.co.za/api/version",
+      "status": 200,
+      "durationMs": 1299,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "strict-transport-security": "max-age=31536000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "no-referrer",
+        "permissions-policy": "camera=(), geolocation=(), microphone=()",
+        "x-request-id": "26c3b3b3-6bc7-4a1a-b7cf-d0d9086ee499"
+      },
+      "bodySha256": "15545200c4bfab27a6b4e46cacd7404d16dffb5959e44bd1cb6c412e29526f87",
+      "bytes": 106,
+      "body": {
+        "gitSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "buildTime": null,
+        "env": "production",
+        "releaseId": null
+      }
+    },
+    {
+      "kind": "api-health",
+      "url": "https://api.propertylistifysa.co.za/api/health",
+      "status": 200,
+      "durationMs": 3229,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "strict-transport-security": "max-age=31536000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "no-referrer",
+        "permissions-policy": "camera=(), geolocation=(), microphone=()",
+        "x-request-id": "711a2689-78ce-4010-a437-dce7d4199804"
+      },
+      "bodySha256": "0c3ebc4355642d445c07892ae0b9ade4bdee3c9572090b44fe4b82fc5d85215e",
+      "bytes": 122,
+      "body": {
+        "ok": true,
+        "kind": "liveness",
+        "env": "production",
+        "build": {
+          "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+          "builtAt": null
+        }
+      }
+    },
+    {
+      "kind": "api-readiness",
+      "url": "https://api.propertylistifysa.co.za/api/readiness",
+      "status": 200,
+      "durationMs": 3255,
+      "headers": {
+        "content-type": "application/json; charset=utf-8",
+        "strict-transport-security": "max-age=31536000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "no-referrer",
+        "permissions-policy": "camera=(), geolocation=(), microphone=()",
+        "x-request-id": "e759a348-745e-4c24-b1d8-78a21d00719c"
+      },
+      "bodySha256": "9d39a38c1c4887b72ed254e24b8141fdf48d896dd2c80d24edd37fd6c67d18fa",
+      "bytes": 3353,
+      "body": {
+        "ok": true,
+        "kind": "readiness",
+        "env": "production",
+        "build": {
+          "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+          "builtAt": null
+        },
+        "db": {
+          "reportVersion": 1,
+          "checkedAt": "2026-10-06T17:10:34.226Z",
+          "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+          "targetClass": "production",
+          "requestedRuntime": "database",
+          "applicationReady": true,
+          "layers": {
+            "processLiveness": {
+              "state": "ready",
+              "code": "process-alive",
+              "detail": "The process is able to answer."
+            },
+            "serviceAvailable": {
+              "state": "ready",
+              "code": "target-connected",
+              "detail": "Connected to authorized database propertylistify_database."
+            },
+            "targetOwned": {
+              "state": "ready",
+              "code": "approved-protected-target",
+              "detail": "The exact authorized B08 Azure production target is selected."
+            },
+            "schemaMigrated": {
+              "state": "ready",
+              "code": "manifest-head-ready",
+              "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+            },
+            "schemaCongruent": {
+              "state": "ready",
+              "code": "schema-congruent",
+              "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+            },
+            "canonicalReferenceData": {
+              "state": "not-evaluated",
+              "code": "reference-not-evaluated",
+              "detail": "Canonical reference data is evaluated for a requested location runtime."
+            },
+            "commercialReferenceData": {
+              "state": "ready",
+              "code": "canonical-foundation-ready",
+              "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+            },
+            "acceptanceScenario": {
+              "state": "not-evaluated",
+              "code": "scenario-not-evaluated",
+              "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+            },
+            "application": {
+              "state": "ready",
+              "code": "application-ready-for-requested-runtime",
+              "detail": "Database Authority is ready for database verification."
+            },
+            "targetConnectivity": {
+              "state": "ready",
+              "code": "target-connected",
+              "detail": "Connected to authorized database propertylistify_database."
+            },
+            "migrationHead": {
+              "state": "ready",
+              "code": "manifest-head-ready",
+              "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+            },
+            "incompleteAttemptState": {
+              "state": "ready",
+              "code": "no-incomplete-attempts",
+              "detail": "No running, failed, or blocked migration attempt exists."
+            },
+            "structuralSchema": {
+              "state": "ready",
+              "code": "required-schema-present",
+              "detail": "All 214 application tables are present."
+            },
+            "requiredData": {
+              "state": "not-required",
+              "code": "requested-data-not-required",
+              "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+            },
+            "consumerApi": {
+              "state": "not-evaluated",
+              "code": "consumer-not-evaluated",
+              "detail": "Consumer/API smoke is a separate readiness layer."
+            },
+            "browserJourney": {
+              "state": "not-evaluated",
+              "code": "browser-not-evaluated",
+              "detail": "Browser journey readiness is verified separately."
+            },
+            "release": {
+              "state": "not-evaluated",
+              "code": "release-not-evaluated",
+              "detail": "Release readiness requires protected release evidence."
+            },
+            "fullDiagnostics": {
+              "state": "not-evaluated",
+              "code": "diagnostics-not-evaluated",
+              "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+            }
+          }
+        },
+        "cache": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "authRateLimit": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "publicLeadRateLimit": {
+          "ok": true,
+          "mode": "redis",
+          "required": true
+        },
+        "s3": {
+          "ok": true,
+          "required": true
+        },
+        "configuration": {
+          "ok": true
+        },
+        "termScheduler": {
+          "timerActive": true,
+          "running": false,
+          "lastSucceededAt": "2026-10-06T17:01:17.549Z",
+          "lastFailedAt": null,
+          "intervalMs": 900000
+        }
+      }
+    },
+    {
+      "kind": "actual-css",
+      "url": "https://www.propertylistifysa.co.za/assets/vendor-CIGW-MKW.css",
+      "status": 200,
+      "durationMs": 104,
+      "headers": {
+        "content-type": "text/css; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::chztv-1791306643233-d3a23f44daaf",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "fcd9fbeec3e87013f776847f0e76395d4d7eba07d982964933a41bd07503e6fe",
+      "bytes": 15607
+    },
+    {
+      "kind": "actual-css",
+      "url": "https://www.propertylistifysa.co.za/assets/index-TD5rABPY.css",
+      "status": 200,
+      "durationMs": 145,
+      "headers": {
+        "content-type": "text/css; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::7xwmm-1791306643235-7341fbde9af4",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "54a10119f7e9e9352fc051b344755d54a68d2f9b1785583723b2ff7dbba2e8e5",
+      "bytes": 497852
+    },
+    {
+      "kind": "actual-javascript",
+      "url": "https://www.propertylistifysa.co.za/assets/index-DVcAl7OD.js",
+      "status": 200,
+      "durationMs": 195,
+      "headers": {
+        "content-type": "application/javascript; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::hhxmz-1791306643241-00ff9ec489e9",
+        "cache-control": "public, max-age=0, must-revalidate"
+      },
+      "bodySha256": "c65fe4a4e28f512927def61f2f03b611d2bcfe3d882d4e9e73680e4db8a24e77",
+      "bytes": 357137
+    },
+    {
+      "kind": "robots",
+      "url": "https://www.propertylistifysa.co.za/robots.txt",
+      "status": 200,
+      "durationMs": 2159,
+      "headers": {
+        "content-type": "text/plain; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::gsjt7-1791306643429-40e451bf1b18",
+        "x-request-id": "2738cb92-2ae6-4992-92fd-c36d87e6f736",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "c69abac20180bd79be9a8fa563700942c89cc2c0187aa6da2cd7351ab1540278",
+      "bytes": 167
+    },
+    {
+      "kind": "/sitemap.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap.xml",
+      "status": 200,
+      "durationMs": 1380,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::6rc7j-1791306645563-dd52bdbde3fa",
+        "x-request-id": "dc3daaee-33e7-4785-ac4a-55a6cdbea625",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "d598c04f22cfb9500868207ba4428a26905d56655a305453673bbb4be5e3544e",
+      "bytes": 843
+    },
+    {
+      "kind": "/sitemap-developments.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap-developments.xml",
+      "status": 200,
+      "durationMs": 1489,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::x2r6g-1791306645794-c2624583efda",
+        "x-request-id": "3a4c6bd1-ac12-4e22-9411-9034b84d741a",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "512e21439ab1b242ced3b31769ac2c3eae807468a3ddf7b275c6609d423a6448",
+      "bytes": 110
+    },
+    {
+      "kind": "/sitemap-listings.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap-listings.xml",
+      "status": 200,
+      "durationMs": 1869,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::m2l6t-1791306645562-9ce9fc8ef89d",
+        "x-request-id": "e0ccf933-669c-44c7-b2d6-b1d5039c43b6",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "512e21439ab1b242ced3b31769ac2c3eae807468a3ddf7b275c6609d423a6448",
+      "bytes": 110
+    },
+    {
+      "kind": "/sitemap-agents.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap-agents.xml",
+      "status": 200,
+      "durationMs": 3667,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::n97np-1791306645866-2c08dba903d8",
+        "x-request-id": "bc276bdb-2bb7-4ec0-a45f-8a40e830794f",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "512e21439ab1b242ced3b31769ac2c3eae807468a3ddf7b275c6609d423a6448",
+      "bytes": 110
+    },
+    {
+      "kind": "/sitemap-areas.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap-areas.xml",
+      "status": 200,
+      "durationMs": 3769,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::7gsqc-1791306645800-86686741476f",
+        "x-request-id": "9c58b1b0-fc5c-42c3-877d-2c0e3aa40f91",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "512e21439ab1b242ced3b31769ac2c3eae807468a3ddf7b275c6609d423a6448",
+      "bytes": 110
+    },
+    {
+      "kind": "/sitemap-static.xml",
+      "url": "https://www.propertylistifysa.co.za/sitemap-static.xml",
+      "status": 200,
+      "durationMs": 3823,
+      "headers": {
+        "content-type": "application/xml; charset=utf-8",
+        "strict-transport-security": "max-age=63072000",
+        "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
+        "referrer-policy": "strict-origin-when-cross-origin",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+        "x-vercel-id": "cpt1::vtvx7-1791306645859-85a5f17088b0",
+        "x-request-id": "544d4860-9fc4-403d-8f54-d4fbd2e77262",
+        "cache-control": "public, max-age=300, stale-while-revalidate=3600"
+      },
+      "bodySha256": "0e9aaaeeab1b54cf3af2d133c52b4f2e43c58300c64cb5dbb9afff9817106234",
+      "bytes": 6617
+    }
+  ],
+  "issues": [],
+  "actualAssetPaths": {
+    "javascript": [
+      "/assets/index-DVcAl7OD.js"
+    ],
+    "css": [
+      "/assets/vendor-CIGW-MKW.css",
+      "/assets/index-TD5rABPY.css"
+    ]
+  },
+  "buildOrigins": [
+    {
+      "path": "/assets/index-DVcAl7OD.js",
+      "containsApplicationOrigin": true,
+      "containsApiOrigin": true,
+      "containsCloudFrontOrigin": true
+    }
+  ],
+  "robotsBody": "User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /api/\nDisallow: /auth/\n\nSitemap: https://www.propertylistifysa.co.za/sitemap.xml\n\nCrawl-delay: 1",
+  "ok": true
+}

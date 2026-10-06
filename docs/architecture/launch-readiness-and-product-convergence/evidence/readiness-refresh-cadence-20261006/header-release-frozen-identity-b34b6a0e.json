@@ -1,0 +1,19 @@
+{
+  "recordedAt": "2026-10-02T16:12:23.390869+00:00",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "acceptedReviewSha": "154f9aaa29e4bc3de681d27efe083b493b1d35c9",
+  "reviewedTree": "a9ce841bebf64eab7ad32286c58e2b8f83fdce18",
+  "mergedTreeIdenticalToAcceptedReview": true,
+  "acceptanceCoversIdenticalTreeMerge": true,
+  "previousDeploymentSha": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+  "pullRequest": {
+    "headRefOid": "154f9aaa29e4bc3de681d27efe083b493b1d35c9",
+    "mergeCommit": {
+      "oid": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60"
+    },
+    "mergedAt": "2026-10-02T16:11:38Z",
+    "state": "MERGED",
+    "url": "https://github.com/Doscoding187/real_estate_portal/pull/586"
+  },
+  "customerJourneysRequireJoinedSecurityPass": true
+}

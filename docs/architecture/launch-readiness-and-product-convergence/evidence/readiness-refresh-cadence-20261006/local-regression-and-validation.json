@@ -1,0 +1,40 @@
+{
+  "reproducedBeforeCorrection": {
+    "command": "pnpm exec vitest run server/_core/readinessSnapshotMonitor.test.ts --reporter=dot",
+    "result": "1 failed / 7 passed; expected fresh strict result, received null",
+    "simulatedSweepDurationsMs": [
+      12500,
+      13500,
+      12800,
+      13200
+    ]
+  },
+  "afterCorrection": {
+    "focusedFiles": [
+      "readinessSnapshotMonitor.test.ts",
+      "health.hosted-cache.test.ts",
+      "cache/redis.connection.test.ts"
+    ],
+    "passedTests": 15,
+    "typecheck": "passed",
+    "touchedLint": "zero errors / zero warnings",
+    "diffCheck": "passed",
+    "build": "passed; existing bundle-size warning",
+    "simulatedSweepDurationsMs": [
+      12500,
+      14500,
+      12800,
+      13200
+    ]
+  },
+  "databaseProvisioned": false,
+  "productionDatabaseOrRedisFailureInduced": false,
+  "newSourceDeployed": false,
+  "freshCiAndSeniorReviewRequired": true,
+  "diagnosticCorrections": [
+    "Initial browser option selector matched city and suburb; corrected before profile writes.",
+    "An observer used fetch Response.status as a method; invalid diagnostic samples excluded.",
+    "Read-only reconciliation selected the wrong tRPC batch element; corrected procedure selection is the evidence."
+  ],
+  "interruptedJourney": "Owned onboarding browser stopped after joined-probe failure. Successful writes were reconciled read-only; do not rerun them."
+}

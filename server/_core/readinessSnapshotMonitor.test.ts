@@ -59,6 +59,39 @@ describe('bounded readiness snapshots', () => {
     expect(monitor.getSnapshot()).toEqual({ ready: false, target: 'azure-a' });
   });
 
+  it('keeps completed strict verification fresh across observed Azure sweep durations', async () => {
+    const durations = [12_500, 14_500, 12_800, 13_200];
+    let calls = 0;
+    let active = 0;
+    let peakActive = 0;
+    create(
+      () =>
+        new Promise(resolve => {
+          active += 1;
+          peakActive = Math.max(peakActive, active);
+          const duration = durations[calls++ % durations.length];
+          setTimeout(() => {
+            active -= 1;
+            resolve(green);
+          }, duration);
+        }),
+    );
+    try {
+      expect(monitor.getSnapshot()).toBeNull();
+      await vi.advanceTimersByTimeAsync(12_500);
+      for (let elapsed = 0; elapsed < 60_000; elapsed += 500) {
+        expect(monitor.getSnapshot()).toEqual(green);
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      expect(calls).toBeGreaterThanOrEqual(4);
+      expect(peakActive).toBe(1);
+    } finally {
+      const stopped = monitor.stop();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await stopped;
+    }
+  });
+
   it('invalidates the last green result when refresh fails', async () => {
     const read = vi
       .fn()

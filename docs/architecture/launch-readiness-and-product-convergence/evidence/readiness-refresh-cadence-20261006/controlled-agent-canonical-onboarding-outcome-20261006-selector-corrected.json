@@ -1,0 +1,36 @@
+{
+  "checkedAt": "2026-10-06T17:14:56.653Z",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "accountAlias": "controlled-agent-1",
+  "normalBrowserUi": true,
+  "observations": [
+    {
+      "kind": "save-canonical-service-area",
+      "status": 200,
+      "requestId": "388fd13f-755f-4228-8345-faa5f73ec8a7"
+    },
+    {
+      "kind": "save-private-profile-description",
+      "status": 200,
+      "requestId": "507df24e-9d01-46e4-8be2-3802d1e5f80a"
+    },
+    {
+      "kind": "complete-private-setup",
+      "status": 200,
+      "requestId": "b11b8b2e-4fa4-492b-ba13-0f8b3e7a7ee1",
+      "isPublic": false,
+      "statusOfProfile": "pending",
+      "approvalState": "pending_approval"
+    }
+  ],
+  "issues": [
+    "page.waitForTimeout: Target page, context or browser has been closed"
+  ],
+  "selectedLocation": {
+    "name": "Johannesburg",
+    "type": "city",
+    "provinceName": "Gauteng",
+    "canonicalLocationId": "city:1",
+    "parentCanonicalLocationId": "province:3"
+  }
+}

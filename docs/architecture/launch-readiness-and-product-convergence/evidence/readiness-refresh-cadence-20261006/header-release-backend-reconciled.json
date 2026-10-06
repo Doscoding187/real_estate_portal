@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-02T16:28:07.678391+00:00",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "allBackendArtifactsAndSourcePinsAgree": true,
+  "services": [
+    {
+      "service": "api",
+      "deploymentId": "89ffe531-1194-43cd-83ad-8872b1d14bc3",
+      "providerStatus": "SUCCESS",
+      "sourceSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "imageDigest": "sha256:0cb0f9e100a2ff453e349bbf02c8fa99c3726f2c712a957e24341d774953fadb",
+      "instances": [
+        {
+          "id": "3e60547f-858b-430c-b5c1-b6b767091e72",
+          "status": "RUNNING"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admittedOwnersAbsent": true,
+      "salesDeadlineAbsent": true,
+      "gitTriggersAbsent": true,
+      "supersededArtifact": {
+        "id": "41e1710e-7f88-4795-9462-be086d83c418",
+        "instances": [
+          {
+            "id": "e501bc07-3065-4a11-9d5d-fa4634c18092",
+            "status": "REMOVED"
+          }
+        ],
+        "status": "REMOVED"
+      }
+    },
+    {
+      "service": "email-worker",
+      "deploymentId": "b5aac779-1ad5-407f-b67c-373b72343e4a",
+      "providerStatus": "SUCCESS",
+      "sourceSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "imageDigest": "sha256:b40fc5ee6045cfabed698b5e88362a8bacead4943475c1e0852ce17ccb067838",
+      "instances": [
+        {
+          "id": "a75fbe7a-8909-4a6f-b16f-8e377c8719d2",
+          "status": "RUNNING"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admittedOwnersAbsent": true,
+      "salesDeadlineAbsent": true,
+      "gitTriggersAbsent": true,
+      "supersededArtifact": {
+        "id": "969ac24a-80f8-418d-bcf0-430e4e73f809",
+        "instances": [
+          {
+            "id": "977d12b5-4534-480d-bab7-92e3c9420f52",
+            "status": "REMOVED"
+          }
+        ],
+        "status": "REMOVED"
+      }
+    },
+    {
+      "service": "lead-job",
+      "deploymentId": "64838822-59cd-4354-8547-2f92e16b8bf8",
+      "providerStatus": "SUCCESS",
+      "sourceSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "imageDigest": "sha256:ba6255405466b32eb9f4b16e7c02f65225f22660b5b959c6ca8630f8ed17c850",
+      "instances": [
+        {
+          "id": "5eb878af-26bf-40e4-9d4e-c31e1c126ccc",
+          "status": "EXITED"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admittedOwnersAbsent": true,
+      "salesDeadlineAbsent": true,
+      "gitTriggersAbsent": true,
+      "supersededArtifact": {
+        "id": "9b583e76-8c12-4495-928d-417cdbd926ba",
+        "instances": [
+          {
+            "id": "349633b3-c59e-40c9-b0f1-674f842c39b6",
+            "status": "REMOVED"
+          }
+        ],
+        "status": "REMOVED"
+      }
+    }
+  ],
+  "testingConfigurationAndStagedChangesPreserved": true,
+  "productionStageEmpty": true,
+  "knownTiDBWritersRestarted": false,
+  "allPriorBackendArtifactsStopped": true,
+  "frontendPendingManualDeploymentAtSameFrozenSha": true
+}

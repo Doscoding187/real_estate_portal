@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-06T17:11:40.632184+00:00",
+  "services": [
+    {
+      "service": "api",
+      "deploymentId": "89ffe531-1194-43cd-83ad-8872b1d14bc3",
+      "status": "SUCCESS",
+      "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "instances": [
+        {
+          "id": "3e60547f-858b-430c-b5c1-b6b767091e72",
+          "status": "RUNNING"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admissionAndDeadlineAbsent": true,
+      "automaticGitTriggersAbsent": true,
+      "oldArtifactRemoved": true
+    },
+    {
+      "service": "email-worker",
+      "deploymentId": "b5aac779-1ad5-407f-b67c-373b72343e4a",
+      "status": "SUCCESS",
+      "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "instances": [
+        {
+          "id": "a75fbe7a-8909-4a6f-b16f-8e377c8719d2",
+          "status": "RUNNING"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admissionAndDeadlineAbsent": true,
+      "automaticGitTriggersAbsent": true,
+      "oldArtifactRemoved": true
+    },
+    {
+      "service": "lead-job",
+      "deploymentId": "64838822-59cd-4354-8547-2f92e16b8bf8",
+      "status": "SUCCESS",
+      "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "instances": [
+        {
+          "id": "5eb878af-26bf-40e4-9d4e-c31e1c126ccc",
+          "status": "EXITED"
+        }
+      ],
+      "reviewedBindingsPreserved": true,
+      "salesPaused": true,
+      "admissionAndDeadlineAbsent": true,
+      "automaticGitTriggersAbsent": true,
+      "oldArtifactRemoved": true
+    }
+  ],
+  "testingConfigAndStagedChangesPreserved": true,
+  "productionStageEmpty": true,
+  "configurationMutated": false
+}

@@ -73,12 +73,19 @@ export class ReadinessSnapshotMonitor<T> {
       .finally(() => {
         this.inFlight = null;
         if (this.stopped) return;
+        // Reserve time for the next complete sweep within the existing age bound.
+        // A slow sweep consumes idle time; snapshot expiry still uses its start.
+        const durationMs = Math.max(0, this.now() - assessmentStartedAt);
+        const refreshDelayMs = Math.min(
+          this.options.refreshDelayMs,
+          Math.max(1, this.options.maxAgeMs / 2 - durationMs),
+        );
         this.timer = setTimeout(
           () => {
             this.timer = null;
             this.refresh();
           },
-          key === this.options.contextKey() ? this.options.refreshDelayMs : 1,
+          key === this.options.contextKey() ? refreshDelayMs : 1,
         );
         this.timer.unref?.();
       });
