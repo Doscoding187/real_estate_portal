@@ -1,0 +1,91 @@
+{
+  "checkedAt": "2026-10-06T17:10:58.049429+00:00",
+  "service": "email-worker",
+  "deploymentId": "b5aac779-1ad5-407f-b67c-373b72343e4a",
+  "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+  "providerStatus": "SUCCESS",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "imageDigest": "sha256:b40fc5ee6045cfabed698b5e88362a8bacead4943475c1e0852ce17ccb067838",
+  "artifactManifestMatchesReviewedConfiguration": true,
+  "instances": [
+    {
+      "id": "a75fbe7a-8909-4a6f-b16f-8e377c8719d2",
+      "status": "RUNNING"
+    }
+  ],
+  "startCommand": "pnpm email:supervisor",
+  "restartPolicyType": "ALWAYS",
+  "cronSchedule": null,
+  "observedExecutionsOnAcceptedArtifact": 150,
+  "recentHealth": [
+    {
+      "kind": "email-worker-batch",
+      "startedAt": "2026-10-06T17:10:10.545Z",
+      "completedAt": "2026-10-06T17:10:11.790Z",
+      "result": {
+        "backlog": {
+          "stale": 0
+        },
+        "consumed": {
+          "attention": 0,
+          "queued": 0
+        },
+        "delivery": {
+          "accepted": 0,
+          "claimed": 0,
+          "permanent": 0,
+          "recovered": 0,
+          "retryable": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "kind": "email-worker-batch",
+      "startedAt": "2026-10-06T17:10:21.790Z",
+      "completedAt": "2026-10-06T17:10:23.033Z",
+      "result": {
+        "backlog": {
+          "stale": 0
+        },
+        "consumed": {
+          "attention": 0,
+          "queued": 0
+        },
+        "delivery": {
+          "accepted": 0,
+          "claimed": 0,
+          "permanent": 0,
+          "recovered": 0,
+          "retryable": 0,
+          "unknown": 0
+        }
+      }
+    },
+    {
+      "kind": "email-worker-batch",
+      "startedAt": "2026-10-06T17:10:33.041Z",
+      "completedAt": "2026-10-06T17:10:34.278Z",
+      "result": {
+        "backlog": {
+          "stale": 0
+        },
+        "consumed": {
+          "attention": 0,
+          "queued": 0
+        },
+        "delivery": {
+          "accepted": 0,
+          "claimed": 0,
+          "permanent": 0,
+          "recovered": 0,
+          "retryable": 0,
+          "unknown": 0
+        }
+      }
+    }
+  ],
+  "errorLogCount": 0,
+  "realCustomerDeliveryDemonstrated": false,
+  "privateLogEvidence": "header-release-email-worker-health-logs-171051128372.private.json"
+}

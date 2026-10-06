@@ -1,0 +1,39 @@
+{
+  "checkedAt": "2026-10-06T17:12:41.215Z",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "accountAlias": "controlled-agent-1",
+  "method": "Normal Agent setup UI file picker and Save & Continue",
+  "sourceImageSha256": "6f984082b2f0fc5487ed5cf9dffb46382f0ee074be7b38ad365c8f7a4ecf8d8f",
+  "observations": [
+    {
+      "kind": "normal-profile-presign",
+      "status": 200,
+      "requestId": "411afc1b-c8c3-4b75-9163-7f6dbabc0f0e",
+      "error": ""
+    },
+    {
+      "kind": "normal-profile-upload",
+      "status": 200,
+      "host": "listify-properties-sa.s3.eu-north-1.amazonaws.com",
+      "objectPathHash": "5f0a6ea83bd054e24a7c627d8bb459460181257b4de957401a82da4ac59d076c"
+    },
+    {
+      "kind": "normal-profile-save",
+      "status": 200,
+      "requestId": "0c01179c-910f-473e-8bdb-7bca6f6d0591",
+      "error": ""
+    },
+    {
+      "kind": "persisted-profile-media-read",
+      "status": 200,
+      "contentType": "image/png",
+      "sha256": "6f984082b2f0fc5487ed5cf9dffb46382f0ee074be7b38ad365c8f7a4ecf8d8f"
+    }
+  ],
+  "issues": [],
+  "publicMediaUrl": "https://d3fz99u3go2cmn.cloudfront.net/properties/draft-2/1791306773119-35f35da6-8932-4870-9f48-42fcd948520e.png",
+  "advancedToServiceAreas": true,
+  "mediaDisplayedAndPersistedAfterReload": true,
+  "profileRemainsPrivateAndUnderReview": true,
+  "screenshot": "controlled-agent-media-step1-ui.private.png"
+}

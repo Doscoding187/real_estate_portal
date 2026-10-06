@@ -1,0 +1,21 @@
+{
+  "capturedAt": "2026-10-06T17:15:19.674062+00:00",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "exitCode": 2,
+  "probeLimitMs": 8000,
+  "totalCommandDurationMs": 2068,
+  "result": {
+    "kind": "launch-runtime-probe",
+    "checkedAt": "2026-10-06T17:15:19.630Z",
+    "frontendOrigin": "https://www.propertylistifysa.co.za",
+    "apiOrigin": "https://api.propertylistifysa.co.za",
+    "ok": false,
+    "issues": [
+      "api-readiness: HTTP 503",
+      "api-readiness: status/build mismatch",
+      "api-readiness: database target/readiness mismatch"
+    ]
+  },
+  "stdout": "\n> real_estate_portal@1.0.0 launch:probe /home/edwardspc/Desktop/Dev/worktrees/property-listify-vercel-security-header-order-20261002\n> tsx scripts/launchRuntimeProbe.ts\n\n{\"kind\":\"launch-runtime-probe\",\"checkedAt\":\"2026-10-06T17:15:19.630Z\",\"frontendOrigin\":\"https://www.propertylistifysa.co.za\",\"apiOrigin\":\"https://api.propertylistifysa.co.za\",\"ok\":false,\"issues\":[\"api-readiness: HTTP 503\",\"api-readiness: status/build mismatch\",\"api-readiness: database target/readiness mismatch\"]}\n\u2009ELIFECYCLE\u2009 Command failed with exit code 2.\n",
+  "stderr": ""
+}

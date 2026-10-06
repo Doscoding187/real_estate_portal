@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-02T16:35:46.049Z",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "accountAlias": "controlled-agency-1",
+  "method": "Normal production browser UI",
+  "writesAttempted": true,
+  "observations": [
+    {
+      "kind": "registration",
+      "path": "/api/auth/register",
+      "status": 201,
+      "durationMs": 2420,
+      "requestId": "0c2c0e21-7e2f-4f3d-ae47-3373cf16a6af",
+      "success": true,
+      "verificationEmailSent": true,
+      "code": null,
+      "message": "Registration successful. Please check your email to verify your account."
+    },
+    {
+      "kind": "unverified-login",
+      "path": "/api/auth/login",
+      "status": 401,
+      "durationMs": 1919,
+      "requestId": "e02ac7d2-c57e-4587-bc61-cd66d21bf565",
+      "code": "EMAIL_UNVERIFIED",
+      "message": "Please verify your email address before logging in."
+    }
+  ],
+  "issues": [],
+  "emailReceipt": "Awaiting controlled inbox operator; provider acceptance alone is insufficient",
+  "registrationAndUnverifiedLoginPassed": true,
+  "screenshot": "controlled-agency-registration-ui.private.png"
+}
