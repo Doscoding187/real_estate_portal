@@ -1,0 +1,18 @@
+{
+  "frozenAt": "2026-10-06T18:17:14.643315+00:00",
+  "acceptedDeploymentSha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+  "acceptedReviewHead": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+  "reviewedTree": "7e0049c191369fd25613c2933935e8aa84c5b8e3",
+  "mergedTree": "7e0049c191369fd25613c2933935e8aa84c5b8e3",
+  "parents": [
+    "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+    "6a234902e66179d33db9f898c4f5ba0bee75a796"
+  ],
+  "previousDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "mergedTreeIdenticalToAcceptedReview": true,
+  "acceptanceCoversIdenticalTreeMerge": true,
+  "operatorSourceAcceptanceRecorded": true,
+  "operatorAttending": true,
+  "automaticDeploymentsHeld": true,
+  "frontendCustomerWritesHeldUntilFullJoinedVerification": true
+}

@@ -1,0 +1,63 @@
+{
+  "checkedAt": "2026-10-06T17:49:11.905623+00:00",
+  "reviewHead": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+  "requiredChecks": [
+    {
+      "id": 112407938800,
+      "name": "DB Contract Verification",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+      "details_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37504011737/job/112407938800",
+      "started_at": "2026-10-06T17:30:05Z",
+      "completed_at": "2026-10-06T17:32:46Z"
+    },
+    {
+      "id": 112407938391,
+      "name": "Location Authority",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+      "details_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37504011737/job/112407938391",
+      "started_at": "2026-10-06T17:30:05Z",
+      "completed_at": "2026-10-06T17:30:42Z"
+    },
+    {
+      "id": 112409148923,
+      "name": "Lint & TypeCheck",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+      "details_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37504011737/job/112409148923",
+      "started_at": "2026-10-06T17:32:48Z",
+      "completed_at": "2026-10-06T17:36:27Z"
+    },
+    {
+      "id": 112409148700,
+      "name": "Unit & Integration Tests",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+      "details_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37504011737/job/112409148700",
+      "started_at": "2026-10-06T17:32:48Z",
+      "completed_at": "2026-10-06T17:47:47Z"
+    },
+    {
+      "id": 112410782900,
+      "name": "Build Application",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+      "details_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37504011737/job/112410782900",
+      "started_at": "2026-10-06T17:36:30Z",
+      "completed_at": "2026-10-06T17:37:29Z"
+    }
+  ],
+  "allFiveRequiredExactHeadChecksPass": true,
+  "pr": "https://github.com/Doscoding187/real_estate_portal/pull/587",
+  "merged": false,
+  "sourceAccepted": false,
+  "deployed": false,
+  "previewExceptionUnchanged": true,
+  "evidenceHashesVerified": 21
+}

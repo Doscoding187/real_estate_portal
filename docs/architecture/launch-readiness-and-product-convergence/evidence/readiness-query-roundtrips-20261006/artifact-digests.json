@@ -1,0 +1,69 @@
+{
+  "checkedAt": "2026-10-06T18:45:37.069974+00:00",
+  "artifacts": [
+    {
+      "file": "api-initial-readiness.json",
+      "sha256": "973b041c83bbb13ce0cef8fd4ee2fb0fc1a7c07202c423d3087e102c55a153f8"
+    },
+    {
+      "file": "api-provider-success.json",
+      "sha256": "fe8a194540e40963c2338dd786027f06af6604fe2f9b28d3c90ddde81151ce66"
+    },
+    {
+      "file": "containment.json",
+      "sha256": "5f7a4cf02de1fb1d42082c9415178c97e071e9a286fec7435c4c5e20bfdeaee6"
+    },
+    {
+      "file": "email-worker-observation.json",
+      "sha256": "7df6149c61acb51bab92856adcfc672eb8d87477ea8f33951c98b1aa38ec1478"
+    },
+    {
+      "file": "frontend-public-values.json",
+      "sha256": "13de667d438a7923f70c5389f79438b96b9f7da4be41546de8f74398be0d6aed"
+    },
+    {
+      "file": "frontend-queue.json",
+      "sha256": "497a27e07a2a7ef3bca5d2e4e4dcbca03e010f3233a4cd29da6956eac91edab9"
+    },
+    {
+      "file": "frozen-source.json",
+      "sha256": "c35d8bd543b0e00a338063a4b1818e1747724fdb54084f4a61b545e9d4dc7439"
+    },
+    {
+      "file": "lead-job-observation.json",
+      "sha256": "b42f4e70d46914b75d1ed2c078f81093ef3175143a3e91d57023a56a2f1367f3"
+    },
+    {
+      "file": "local-validation.json",
+      "sha256": "3bbb1ea3a55593c273cc6ba0b6b6cdfad554b6a48b6d1ab20a1e577989225ba5"
+    },
+    {
+      "file": "operator-acceptance.json",
+      "sha256": "29a50d743fdbc2c737dd8b25ad56886d9e6c93cc7b93cfc66178f7b54e8f3914"
+    },
+    {
+      "file": "prepared-profile.json",
+      "sha256": "5ebbac9e65764676f1f31eb979b12d9713e352d301f82f0d12e98c72407f48f1"
+    },
+    {
+      "file": "read-only-profile-comparison.json",
+      "sha256": "07de40cb9ee97ed609474eb05cbc259b133b0849bef86293d596e1a9a9486bf1"
+    },
+    {
+      "file": "readiness-cycle-failure.json",
+      "sha256": "925d20b85220b4d89e22a053ca19b9335e6cf46ac55b312fe55cf88c982f0eda"
+    },
+    {
+      "file": "readiness-cycle-samples.json",
+      "sha256": "b56823e5f96d07db9f7bbcbc9ba29da253ce9aef9696ed0a5d5c59d98a3858d9"
+    },
+    {
+      "file": "review-head-ci.json",
+      "sha256": "dd0622755dbb6d4cf94b9ba12f8a7d2de14e71d2a0b53252d5e7ce65a6c83109"
+    },
+    {
+      "file": "staticDirectQuery-profile.json",
+      "sha256": "a0ab167e00c52b1cd5051ee72cb64680a82e3b2b52c4ad543b5866913ba74013"
+    }
+  ]
+}

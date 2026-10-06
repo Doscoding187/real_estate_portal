@@ -1,0 +1,61 @@
+{
+  "checkedAt": "2026-10-06T18:39:27.284095+00:00",
+  "service": "lead-job",
+  "deploymentId": "64838822-59cd-4354-8547-2f92e16b8bf8",
+  "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+  "providerStatus": "SUCCESS",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "imageDigest": "sha256:ba6255405466b32eb9f4b16e7c02f65225f22660b5b959c6ca8630f8ed17c850",
+  "artifactManifestMatchesReviewedConfiguration": true,
+  "instances": [
+    {
+      "id": "5eb878af-26bf-40e4-9d4e-c31e1c126ccc",
+      "status": "EXITED"
+    }
+  ],
+  "startCommand": "pnpm lead-delivery:worker",
+  "restartPolicyType": "NEVER",
+  "cronSchedule": "*/5 * * * *",
+  "observedExecutionsOnAcceptedArtifact": 12,
+  "recentHealth": [
+    {
+      "kind": "lead-delivery-run",
+      "completedAt": "2026-10-06T18:25:10.117Z",
+      "result": {
+        "claimed": 0,
+        "completed": 0,
+        "failed": 0,
+        "recovered": 0,
+        "unknown": 0
+      },
+      "backlog": {}
+    },
+    {
+      "kind": "lead-delivery-run",
+      "completedAt": "2026-10-06T18:30:39.282Z",
+      "result": {
+        "claimed": 0,
+        "completed": 0,
+        "failed": 0,
+        "recovered": 0,
+        "unknown": 0
+      },
+      "backlog": {}
+    },
+    {
+      "kind": "lead-delivery-run",
+      "completedAt": "2026-10-06T18:35:57.384Z",
+      "result": {
+        "claimed": 0,
+        "completed": 0,
+        "failed": 0,
+        "recovered": 0,
+        "unknown": 0
+      },
+      "backlog": {}
+    }
+  ],
+  "errorLogCount": 0,
+  "realCustomerDeliveryDemonstrated": false,
+  "privateLogEvidence": "header-release-lead-job-health-logs-183919555859.private.json"
+}

@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-10-06T18:17:09.538Z",
+  "publicValues": {
+    "VITE_APP_URL": "https://www.propertylistifysa.co.za",
+    "VITE_API_URL": "https://api.propertylistifysa.co.za",
+    "VITE_DEPLOY_ENV": "production",
+    "VITE_CLOUDFRONT_URL": "https://d3fz99u3go2cmn.cloudfront.net"
+  },
+  "productionOverridesAbsent": [
+    "VITE_API_BASE_URL",
+    "BUILD_SHA",
+    "VITE_USE_MOCK_EMAILS"
+  ],
+  "queuedDeployments": [],
+  "automaticMainHoldPreservedInAcceptedSource": true,
+  "deployHooksPriorOperatorReadback": "empty",
+  "configurationMutated": false
+}
