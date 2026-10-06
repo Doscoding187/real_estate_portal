@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-06T18:21:13.314863+00:00",
+  "service": "api",
+  "deploymentId": "072491d6-0eeb-44ae-a5d1-c664134a86e9",
+  "status": "SUCCESS",
+  "sourceSha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+  "instances": [
+    {
+      "id": "e9430969-6804-4465-89a0-73056a36e430",
+      "status": "RUNNING"
+    }
+  ],
+  "createdAt": "2026-10-06T18:18:07.635Z",
+  "updatedAt": "2026-10-06T18:20:46.739Z",
+  "metadataKeys": [
+    "branch",
+    "buildOnly",
+    "commitAuthor",
+    "commitHash",
+    "commitMessage",
+    "configFile",
+    "fileServiceManifest",
+    "ignoreWatchPatterns",
+    "imageDigest",
+    "logsV2",
+    "nixpacksProviders",
+    "plan",
+    "propertyFileMapping",
+    "railpackInfo",
+    "reason",
+    "repo",
+    "rootDirectory",
+    "runtime",
+    "serviceManifest",
+    "skipBuildCache",
+    "volumeMounts"
+  ]
+}

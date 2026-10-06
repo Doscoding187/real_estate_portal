@@ -1,0 +1,60 @@
+{
+  "checkedAt": "2026-10-06T18:45:37.069974+00:00",
+  "baseSha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+  "runtimeFiles": [
+    "server/_core/databaseAuthority/connectionAuthority.ts"
+  ],
+  "runtimeSourceSha256": "8ba4a0ada911d314693d701425cea7f3ac421037cee43f5a5ba091f86f2fe82c",
+  "databaseAuthorityGate": {
+    "command": "pnpm db:authority:check",
+    "exitCode": 0,
+    "testFiles": 48,
+    "passedTests": 449,
+    "newConnectionRegressionTests": 7,
+    "utilitySurfaces": 120,
+    "canonicalTables": 214,
+    "activeMigrationFiles": 95,
+    "deterministicInventory": "passed",
+    "lifecycle": "passed"
+  },
+  "snapshotRegressions": {
+    "command": "SKIP_DB_INIT=1 pnpm exec vitest run --config vitest.server.config.ts server/_core/readinessSnapshotMonitor.test.ts --reporter=basic",
+    "passedTests": 8
+  },
+  "typecheck": {
+    "command": "pnpm type-check",
+    "exitCode": 0,
+    "config": "tsconfig.check.json"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 7,
+    "newWarnings": 0
+  },
+  "frontendBuild": {
+    "command": "pnpm build",
+    "exitCode": 0
+  },
+  "backendBuild": {
+    "command": "pnpm build:railway",
+    "exitCode": 0,
+    "existingNoOp": true,
+    "runtime": "tsx"
+  },
+  "candidateMerged": false,
+  "candidateDeployed": false,
+  "productionDatabaseOrRedisDisruption": false,
+  "databaseProvisioned": false,
+  "protectedDataOrSchemaMutation": false,
+  "privateApiLogEvidence": {
+    "file": "cadence-release-api-failed-cycles-logs-182608882927.private.json",
+    "sha256": "24327ba35b90fe27f469fcc29d0421f895e366472a9dc9ebbede2a1febb60646"
+  },
+  "initialLocalInvocationFailures": [
+    "Pinned Vitest does not support toHaveBeenCalledExactlyOnceWith; assertions replaced with supported count and argument matchers.",
+    "Bare tsc --noEmit used the broad default configuration; the required repository CI typecheck subsequently passes."
+  ],
+  "freshExactHeadCi": "not submitted at packet preparation",
+  "seniorReview": "required",
+  "replacementSourceAcceptance": "required"
+}
