@@ -1,0 +1,121 @@
+{
+  "observedAt": "2026-10-07",
+  "method": "Read-only Railway HTTP logs for Production API, 17:10:35\u201317:11:25 UTC",
+  "deployedSha": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+  "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79",
+  "rows": [
+    {
+      "timestamp": "2026-10-07T17:10:41.981377016Z",
+      "requestId": "k4mOC1aMRceG01xeVOLIQQ",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 493,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 493,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:10:45.217173969Z",
+      "requestId": "mZRJy1mOS6i9gCkNipRofQ",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "httpStatus": 200,
+      "totalDuration": 1551,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 1551,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:10:49.854110110Z",
+      "requestId": "q46x_D5XTQSkcZTJoB_USg",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 3417,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 3417,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:10:50.680938563Z",
+      "requestId": "jesZFdN-QaGfjSmzacI7Nw",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 3390,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 3390,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:10:59.831340223Z",
+      "requestId": "knF1L0jfRcCLGWx6mrpb1w",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 491,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 491,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:10:59.839375298Z",
+      "requestId": "PHX66kHJS_GRh9Vn0ubPiw",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 478,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 478,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:11:00.746729997Z",
+      "requestId": "Yy93TVKUR7OhfDJSacI7Nw",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 200,
+      "totalDuration": 716,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 716,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:11:06.611419629Z",
+      "requestId": "abxEwpx8TzSWB93OV7rehQ",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "httpStatus": 200,
+      "totalDuration": 5649,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 5649,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:11:15.220293443Z",
+      "requestId": "Yzmaway8TvebD25xipRofQ",
+      "method": "GET",
+      "path": "/api/trpc/auth.me",
+      "httpStatus": 499,
+      "totalDuration": 8000,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 8000,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    },
+    {
+      "timestamp": "2026-10-07T17:11:16.181654608Z",
+      "requestId": "I9yyWelaR1iaspzFVOLIQQ",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "httpStatus": 200,
+      "totalDuration": 721,
+      "edgeRegion": "asia-southeast1-eqsg3a",
+      "upstreamRqDuration": 721,
+      "deploymentId": "c01aee96-4f85-4375-8495-50843c2cbb79"
+    }
+  ],
+  "correlationLimit": "Original timed-out Playwright APIRequestContext GET supplied no application request ID; matching path/time and one HTTP 499 identify the candidate provider entry, not a proven application phase correlation. Provider edge request IDs differ from app x-request-id.",
+  "rawLogsContainPrivateNetworkMetadataAndRemainOutsideRepository": true,
+  "noNewLiveCustomerRequestOrDeploymentPerformed": true
+}
