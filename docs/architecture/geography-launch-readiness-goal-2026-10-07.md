@@ -36,8 +36,7 @@ to rewrite an adopted migration. Continue consumer preparation independently.
 Founder identity is now committed in PR #590 at
 `b0cb48f676bfe470ce29c49c9679fd65d1766c7b`, but was still open and unmerged
 when this preparation was reviewed. The accepted remote integration source
-remains `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. No additional SQL sequence is
-assigned by this preparation.
+remains `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. The authoring-boundary preparation assigned no additional SQL sequence.
 
 The prepared `shared/canonicalListingLocation.ts` boundary declares version 2
 and one nullable `canonicalPlaceId`, with private address, a complete coordinate
@@ -222,3 +221,83 @@ database mutation, PR merge, protected release or deployment is implied.
   for the parallel work rather than shutting down another workstream's service.
 - Migration sequence reconciliation, customer integration and physical/browser
   proof remain outstanding. Goal stays active.
+
+
+## Listing persistence candidate review
+
+Classification: additive schema authority within the dedicated geography feature
+worktree. No protected access or data transition. The authority-derived local
+fingerprint remains `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`.
+Current accepted `origin/main` is still `b0bebc343a710f7e5713efc1d36cd5d3bca68455`,
+whose manifest ends at `0094_content_topics_primary_key.sql`. The geography
+candidate contains its own contiguous 0095–0103 expansion; no pending founder
+migration is adopted. A serialized review in this task-owned branch extends only
+that candidate, provisionally 0104–0109: listing column, index, restrictive key,
+then public-property column, index, restrictive key. There is no shared sequence
+reservation. Final integration MUST refresh main and reconcile the known founder
+0095 collision before a merge/release candidate can be accepted.
+
+The current candidate parent is
+`0103_saved_searches_canonical_place_reference_fk.sql`, checksum
+`27098ecba5c8bee31f314ccb47ea694bdcfaeff81870f6506264877b2bb30583`.
+Each new entry is one additive DDL statement (`single-ddl`), with exact parent
+and SHA-256 recorded by the active manifest. The expected candidate head is
+`0109_properties_canonical_place_reference_fk.sql`. Target scope is owned
+**disposable local proof only**. No historical SQL is amended, no existing row
+is backfilled and no foreign key references a provider handle. Model/inventory,
+manifest lineage, structural admission and consumer-reference contracts must
+pass before physical plan/apply. Separate column/index/key operations satisfy
+the TiDB expansion subset; domain publication guards remain necessary, and local
+acceptance does not certify TiDB CHECK/FK capability or protected release.
+
+Precondition: old rows may have no Place assignment and provider `placeId` stays
+separate. Postcondition: each new reference is nullable, width 40, appended in
+matching physical/model order, indexed and constrained to `place.place_id` with
+RESTRICT on delete/update. Unknown references must fail; null draft rows remain
+possible. Consumer evidence must then prove authored identity survives create,
+edit, revision and publication, and that no old handle or label supplies it.
+The schema expansion alone does not activate this consumer or certify launch.
+
+## Approved launch search scope policy
+
+Edward explicitly approved this policy on 2026-10-07 in the goal conversation:
+province search may include listings assigned to approved canonical Places with
+evidenced containment in that province. City/town search may include only
+explicitly reviewed members. This is approval of the consumer search projection,
+not permission to change factual types, synthesize city ancestry, widen a Search
+Area or activate a protected reference-data release.
+
+The province projection must validate the assignment and complete authoritative
+containment chain, include only the selected province's admitted members, and
+refuse malformed/multiple-parent/cyclic/retired chains. Municipality context
+does not become a city. City membership has no inferred default; the current
+national packages contain no approved descendant city membership. Explicit
+exact assignment to the selected city remains exact identity. Search Areas keep
+their existing journey authorization and distinct authority. The projection
+must be executable, versioned and tested before customer search activation.
+
+
+Candidate prerequisite result: Database Authority applied all 110 entries once
+through provisional 0109. Final physical schema matches the desired digest
+`a1c08ce864a31d5c0adee16faf1f3d255d7bf528985e039ff50c5ab180649f98`,
+with all 39 CHECKs enforced. National preparation and before/after verification
+complete all nine provinces. The real prepared resolver passes nine manual
+locality assignments in caller transactions plus unknown/mixed/unconfirmed
+refusals. This writes no Listing/property subject and is not publication proof.
+The target is disposed; the shared native service is left available.
+
+The candidate authority gate passes 617 tests in 56 files; the prepared selector
+passes 16 customer interaction checks. Production type checking, build,
+inventory, utility authority and lifecycle pass. The broad type checker still
+reports 263 baseline errors with none in changed files. Focused selector/reference
+lint is clean. Premature schema/plan observations made while the apply was live
+were superseded by final successful verification; the same apply completed and
+was not restarted.
+
+[Candidate evidence](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-persistence-candidate.json),
+[physical resolver proof](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-physical-proof.json)
+and [physical schema](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-schema-congruency.json)
+record these prerequisites. Product wiring, concurrent publication validation,
+governed Listing membership, Land convergence, browser handoff, serialized
+integration and release review remain required. The goal is active and launch
+readiness remains unproven.

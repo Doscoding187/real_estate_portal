@@ -528,18 +528,12 @@ describe('Place admission: schema alignment', () => {
     }
   });
 
-  it('leaves the three-level runtime and every consumer untouched', () => {
+  it('keeps admission from creating unreviewed domain Place assignments', () => {
     const normalized = normalizedDesiredSchema(schema);
     const desiredTableNames = new Set(normalized.tables.map(t => t.name));
-    // No consumer gained a Place foreign key in Slice 2.
-    for (const tableName of [
-      'listings',
-      'properties',
-      'developments',
-      'land_parcels',
-      'commercial_assets',
-      'sl_places',
-    ]) {
+    // Listing convergence is separately reviewed; admission alone cannot assign
+    // any other domain or silently rewrite the transitional catalog.
+    for (const tableName of ['developments', 'land_parcels', 'commercial_assets', 'sl_places']) {
       const table = normalized.tables.find(t => t.name === tableName);
       expect(
         (table?.foreignKeys ?? []).filter(key => key.name.includes('->place.')).length,

@@ -2,11 +2,13 @@
 
 **Status:** Active authority for territory geography coverage work
 **Owner:** OX Alpha (implementation) / Edward (founder approval boundary)
-**Version:** 0.5 (2026-09-25)
+**Version:** 0.6 (2026-10-07)
 **Supersedes:** ad-hoc per-location additions; complements the runtime
 convergence v0.1 bounded slice without rewriting it; supersedes v0.3
 Section 2 D1, D4 and D8 as noted inline; records the approved typed canonical
 Place Authority doctrine and the reviewed Gauteng checkpoint.
+Version 0.6 additionally records Edward's explicit launch province search
+projection approval in Section 22; identity and admission evidence are unchanged.
 
 This contract records the product and data decisions that govern the
 territory-wide geography coverage pipeline. It is the Phase 0 artifact of the
@@ -307,6 +309,13 @@ relationships (D1). Only relationship types **explicitly authorized** to affect
 executable search scope may expand or narrow it. A relationship that exists in
 the graph but is not authorized for search scope has **no** effect on query
 boundaries.
+
+The versioned province Listing membership projection approved in Section 22 is
+an explicit, bounded consumer authorization. It derives province membership
+from admitted, evidenced administrative containment; it does not grant general
+edge traversal, city expansion or Search Area membership. Existing raw edge
+flags remain unchanged. Outside that approved projection, the per-edge search
+authorization rule continues to apply.
 
 Ambiguity is a first-class resolution outcome. Resolution distinguishes
 **resolved**, **ambiguous** (two or more candidate Places) and **no_result**.
@@ -1167,3 +1176,49 @@ real registry and the real projection catalog are byte-unchanged.
 A territory is admitted by adding a registry entry plus its governed source
 evidence. It is never admitted by adding application architecture, and never by
 copying another territory's rows as a template (Section 11).
+
+
+## 22. Approved launch Listing scope membership (v0.6)
+
+**Approval:** Edward, 2026-10-07, geography launch-readiness goal conversation.
+Selected answer: “Approve that launch scope policy.” The reviewed question
+permits province search to include listings assigned to approved Places with
+evidenced containment in that province, while city/town search includes only
+explicitly reviewed members. The consumer delivery and integration review is
+recorded in `geography-launch-readiness-goal-2026-10-07.md`.
+
+This approval establishes one versioned Listing membership projection, not a
+new Place, a second geography authority or unrestricted graph expansion:
+
+- An explicitly selected province includes exact assignments to that province
+  and assignments to admitted, active, executable Places whose complete
+  accepted administrative containment chain resolves to that province.
+- A locality query remains exact identity. A city/town query includes exact
+  assignments and only separately evidenced and explicitly reviewed members.
+  No city descendant set is currently admitted by the national packages.
+- Municipality context remains context. It cannot supply a city boundary,
+  settlement membership or market association. Search Areas retain their
+  distinct authority, cardinality and journey authorization.
+- A source package must be registered, digest-verified and admitted. Runtime
+  assignment and membership must match that accepted source projection.
+  Unknown identities, conflicting parents, missing/retired referents, cycles,
+  invalid scope tiers or an exhausted traversal cannot contribute membership.
+  A malformed requested scope must fail visibly rather than become unfiltered.
+- No typed/provider/display text or geographic coordinates derive membership.
+  Mixed geography authorities continue to be rejected. A request that fails
+  canonical execution cannot fall back to a parent or legacy catalog.
+- This projection is bounded to province Listing search. It does not set raw
+  `search_scope_authorized` flags or authorize another consumer to traverse
+  arbitrary relationships. Per-edge default refusal remains binding elsewhere.
+- Tier B selection stays allowed under D2. Protected source activation,
+  licensing/ODbL decisions, physical/provider capability and SEO eligibility
+  remain separate gates. Approval of this policy is not a database release.
+
+The implementation must publish its projection version, accepted source pins,
+member set and refusal evidence. It must prove the Listing assignment-to-public
+projection-to-search handoff on the owned target and in the customer interface;
+policy approval and national Place counts alone do not establish launch readiness.
+
+Historical v0.5 sections and package proof pins above remain historical evidence.
+No identity allocation, artifact or earlier operational approval is amended by
+this policy revision.

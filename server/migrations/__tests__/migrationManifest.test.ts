@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0103_saved_searches_canonical_place_reference_fk.sql');
+    expect(manifest.expectedHead.filename).toBe('0109_properties_canonical_place_reference_fk.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0103_saved_searches_canonical_place_reference_fk.sql',
+      expectedNewHead: '0109_properties_canonical_place_reference_fk.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(96);
+    expect(plan.pending).toHaveLength(102);
       expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -471,8 +471,14 @@ describe('canonical migration manifest', () => {
         '0101_place_authority_search_area_member.sql',
         '0102_saved_searches_canonical_place_reference.sql',
         '0103_saved_searches_canonical_place_reference_fk.sql',
+        '0104_listings_canonical_place_reference.sql',
+        '0105_listings_canonical_place_reference_index.sql',
+        '0106_listings_canonical_place_reference_fk.sql',
+        '0107_properties_canonical_place_reference.sql',
+        '0108_properties_canonical_place_reference_index.sql',
+        '0109_properties_canonical_place_reference_fk.sql',
       ]);
-    expect(plan.expectedNewHead).toBe('0103_saved_searches_canonical_place_reference_fk.sql');
+    expect(plan.expectedNewHead).toBe('0109_properties_canonical_place_reference_fk.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

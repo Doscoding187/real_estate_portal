@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0103_saved_searches_canonical_place_reference_fk.sql",
+  "expectedHead": "0109_properties_canonical_place_reference_fk.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1089,6 +1089,66 @@
       "checksum": "27098ecba5c8bee31f314ccb47ea694bdcfaeff81870f6506264877b2bb30583",
       "parent": "0102_saved_searches_canonical_place_reference.sql",
       "parentChecksum": "21babcf0b3823a4cac98fa35174df0e628f8afc0db2ae29eadb02ecc624e6859",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 104,
+      "filename": "0104_listings_canonical_place_reference.sql",
+      "checksum": "d116f8010581c5c24152e2ff10817cea4c6ad3156623bae268bc2b4fe80b15e0",
+      "parent": "0103_saved_searches_canonical_place_reference_fk.sql",
+      "parentChecksum": "27098ecba5c8bee31f314ccb47ea694bdcfaeff81870f6506264877b2bb30583",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 105,
+      "filename": "0105_listings_canonical_place_reference_index.sql",
+      "checksum": "d65369ef2a759231540d70367945a74baee5e2ed5f00d6ed7d88ae0185e9c0b9",
+      "parent": "0104_listings_canonical_place_reference.sql",
+      "parentChecksum": "d116f8010581c5c24152e2ff10817cea4c6ad3156623bae268bc2b4fe80b15e0",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 106,
+      "filename": "0106_listings_canonical_place_reference_fk.sql",
+      "checksum": "c2c14940fc7a15681adafaee85a426a5ad4d32a0e245a5ea1f0d2bdbd9f845f6",
+      "parent": "0105_listings_canonical_place_reference_index.sql",
+      "parentChecksum": "d65369ef2a759231540d70367945a74baee5e2ed5f00d6ed7d88ae0185e9c0b9",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 107,
+      "filename": "0107_properties_canonical_place_reference.sql",
+      "checksum": "05fff766bd53e77252497d54cd253e60ea56b3ad0ba11c91027da27c2edf2d2e",
+      "parent": "0106_listings_canonical_place_reference_fk.sql",
+      "parentChecksum": "c2c14940fc7a15681adafaee85a426a5ad4d32a0e245a5ea1f0d2bdbd9f845f6",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 108,
+      "filename": "0108_properties_canonical_place_reference_index.sql",
+      "checksum": "4b5750bb9ef30a64fd27e6acae3f436504f7e0719d148dadf3131e4b21b4fa3f",
+      "parent": "0107_properties_canonical_place_reference.sql",
+      "parentChecksum": "05fff766bd53e77252497d54cd253e60ea56b3ad0ba11c91027da27c2edf2d2e",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 109,
+      "filename": "0109_properties_canonical_place_reference_fk.sql",
+      "checksum": "2ce21151b1793e94436d3018da62aa730a950409b25dbab9cb68893ec530926b",
+      "parent": "0108_properties_canonical_place_reference_index.sql",
+      "parentChecksum": "4b5750bb9ef30a64fd27e6acae3f436504f7e0719d148dadf3131e4b21b4fa3f",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

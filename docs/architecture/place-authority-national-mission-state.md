@@ -1688,3 +1688,48 @@ available for parallel work. No protected target, push, remote merge or
 deployment is included. The goal remains active for migration reconciliation,
 canonical listing persistence, governed search membership and the customer
 publication/search browser journey.
+
+
+### 2026-10-07 — Listing consumer and province scope handoff
+
+Authoring preparation is committed as `0f8200c59`: version-2 canonical Place
+boundary, caller-transaction resolver, 41 focused checks including nine national
+source-backed assignments, and isolated registry-corruption fixtures. The
+614-test authority gate passed. This prepared boundary is not yet the active
+Listing API or wizard authority.
+
+Edward explicitly approved province Listing membership from approved Places
+with evidenced province containment, while city/town membership must be
+explicitly reviewed. Geography contract is revised to v0.6, Section 22, with
+that bounded projection authority. This revises D12 deliberately and leaves
+identity, source allocations, raw edge flags, Search Area authorization and
+protected activation gates unchanged. No city ancestry is invented. The scope
+projection and full customer handoff remain implementation requirements.
+
+Founder PR #590 remains open at `b0cb48f676bfe470ce29c49c9679fd65d1766c7b`;
+accepted main is still `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. Listing
+persistence extends only this isolated geography candidate with provisional
+0104–0109. Those numbers reserve no shared lineage; final integration must
+serialize against the accepted founder manifest. The candidate adds separate
+nullable Place references to Listing and its public property projection; each
+column/index/restrictive key is independently sequenced. The national source
+and old migration SQL are unchanged. This candidate's authority gate passes
+617 tests across 56 files; deterministic model inventory and lifecycle pass.
+The prepared customer selector passes 16 interaction checks and explicitly
+clears identity on edits, refuses stale responses and requires a named,
+disambiguated selection. Production type checking and build pass.
+
+The same Database Authority apply attempt completed successfully through
+0109. Final physical schema is congruent, including both references, indexes
+and restrictive keys; all 39 CHECKs are enforced. National preparation is
+complete, and real caller-transaction assignment passes in nine provinces,
+with unknown/mixed/unconfirmed refusals and national verification before/after.
+No Listing row was authored or published by this prerequisite proof. The exact
+owned target is disposed; the shared native service stays available. A premature
+schema comparison and plan observed the live baseline attempt; final successful
+apply/congruency supersede those observations, and no apply was retried. No protected access, push, remote merge
+or deployment has occurred. The active goal still requires persistence wiring,
+publication concurrency protection, approved scope implementation, Land
+convergence, customer browser evidence and a release review packet.
+
+Evidence: [canonical-listing-persistence-candidate.json](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-persistence-candidate.json) and its linked physical/schema proof files. This does not close the active launch-readiness goal.

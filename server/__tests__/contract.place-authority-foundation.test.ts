@@ -646,6 +646,7 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
     // Google place id and must NOT be confused with Place Authority identity.
     const normalized = normalizedDesiredSchema(canonical);
     const consumers = [
+      'saved_searches',
       'listings',
       'properties',
       'developments',
@@ -659,10 +660,10 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
       'seller_prospects',
       'agent_coverage_areas',
     ];
-    // Slice 3 approved exactly one additive consumer reference: saved_searches,
-    // the existing governed home of a versioned geographic query intent. It is
-    // the allow-list, so a second consumer gaining a Place reference still fails.
-    const APPROVED_PLACE_CONSUMERS = ['saved_searches'];
+    // Listing launch convergence adds its authored and derived assignments,
+    // as specified by geography Section 15 and the 2026-10-07 goal review.
+    // Other domain cardinalities still require their own convergence review.
+    const APPROVED_PLACE_CONSUMERS = ['saved_searches', 'listings', 'properties'];
     for (const consumer of consumers) {
       const table = normalized.tables.find(candidate => candidate.name === consumer);
       if (!table) continue;
@@ -672,7 +673,7 @@ describe('Place Authority: Slice 1 changed no existing authority', () => {
       if (APPROVED_PLACE_CONSUMERS.includes(consumer)) {
         // Exactly one reference, to the canonical identity, and nothing wider.
         expect(placeReferences, `${consumer} must hold exactly one Place reference`).toEqual([
-          'place_id->place.place_id',
+          `${consumer === 'saved_searches' ? 'place_id' : 'canonical_place_id'}->place.place_id`,
         ]);
         continue;
       }
