@@ -801,7 +801,7 @@ test.describe('pre-payment onboarding browser acceptance', () => {
     await page.getByRole('option', { name: 'Gauteng' }).click();
     await page.getByRole('button', { name: 'Next Step' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Portfolio & Expertise' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Development Expertise' })).toBeVisible();
     await page.getByRole('button', { name: 'Select Residential specialization' }).click();
     await page.getByRole('button', { name: 'Next Step' }).click();
 

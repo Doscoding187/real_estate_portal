@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 schema:sanity /home/edwardspc/Desktop/Dev/worktrees/property-listify-developer-registration-canonical-fields-20261007
+> node scripts/schema-sanity-check.mjs
+
+Schema sanity check passed: 214 canonical tables; 97 active SQL migration file(s).

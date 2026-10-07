@@ -125,32 +125,11 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
           </ReviewSection>
 
           <ReviewSection
-            title="Portfolio & Expertise"
+            title="Development Expertise"
             onEdit={() => onEditStep(2)}
             defaultCollapsed={false}
           >
             <div className="space-y-6">
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Project Portfolio</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <ReviewField
-                    label="Completed Projects"
-                    value={portfolio.completedProjects}
-                    type="metric"
-                  />
-                  <ReviewField
-                    label="Current Projects"
-                    value={portfolio.currentProjects}
-                    type="metric"
-                  />
-                  <ReviewField
-                    label="Upcoming Projects"
-                    value={portfolio.upcomingProjects}
-                    type="metric"
-                  />
-                </div>
-              </div>
-
               <ReviewField
                 label="Development Specializations"
                 value={portfolio.specializations}

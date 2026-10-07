@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-10-07T21:45:31.622454+00:00",
+  "productionSourceSha": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+  "accountAlias": "controlled-developer-bluespace",
+  "formReviewCounts": {
+    "completedProjects": 5,
+    "currentProjects": 5,
+    "upcomingProjects": 5
+  },
+  "normalSubmission": {
+    "status": 200,
+    "id": 1,
+    "statusValue": "pending"
+  },
+  "persistedCounts": {
+    "completedProjects": null,
+    "currentProjects": null,
+    "upcomingProjects": null
+  },
+  "observations": [
+    {
+      "kind": "browser-api-response",
+      "path": "/api/trpc/developer.createProfile",
+      "status": 200,
+      "durationMs": 4059,
+      "requestId": "2ac9f1c6-6e72-4ea7-9dc6-99941ec01dcf"
+    },
+    {
+      "kind": "read-persisted-developer-profile",
+      "status": 200,
+      "durationMs": 1638,
+      "requestId": "63b80544-0353-4b43-8fc8-55209f50fb44"
+    }
+  ],
+  "interpretation": "Normal form displayed and submitted the counts, canonical profile read omitted them. Canonical identity service has no count input; historical developers model is not registration authority.",
+  "productionDataRepaired": false,
+  "noLiveRequestsDuringCorrection": true
+}
