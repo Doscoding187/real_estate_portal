@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
 import { ENV } from './env';
+import { measureAuthMePhase } from './authMeTiming';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
 import { FounderGoogleAccountService } from '../services/founderGoogleAccountService';
@@ -204,14 +205,18 @@ export class AuthService {
     const requestId = getRequestId(req);
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie, requestId);
+    const session = await measureAuthMePhase('session-verification', () =>
+      this.verifySession(sessionCookie, requestId),
+    );
 
     if (!session) {
       throw ForbiddenError('Invalid or missing session cookie');
     }
 
     // Get user from database using userId from session
-    const user = await db.getUserById(session.userId);
+    const user = await measureAuthMePhase('session-user-lookup', () =>
+      db.getUserById(session.userId),
+    );
     if (!user) {
       throw ForbiddenError('User not found');
     }
@@ -228,16 +233,29 @@ export class AuthService {
 
     if (isFounderGoogleAccount(user) || session.founderPrincipal !== undefined) {
       const config = getConfiguredFounderGoogleLogin();
-      if (!config || !session.founderPrincipal || user.loginMethod !== GOOGLE_FOUNDER_LOGIN_METHOD) {
+      if (
+        !config ||
+        !session.founderPrincipal ||
+        user.loginMethod !== GOOGLE_FOUNDER_LOGIN_METHOD
+      ) {
         throw ForbiddenError('Founder authentication is unavailable or has been revoked.');
       }
-      await new FounderGoogleAccountService(config).assertSessionBinding(normalizedUser, session.founderPrincipal);
+      await measureAuthMePhase('founder-binding', () =>
+        new FounderGoogleAccountService(config).assertSessionBinding(
+          normalizedUser,
+          session.founderPrincipal!,
+        ),
+      );
     }
 
-    await this.assertAgentAccountIsAvailable(normalizedUser);
+    await measureAuthMePhase('agent-account-check', () =>
+      this.assertAgentAccountIsAvailable(normalizedUser),
+    );
 
     // Update last signed in timestamp
-    await db.updateUserLastSignIn(normalizedUser.id);
+    await measureAuthMePhase('last-sign-in-update', () =>
+      db.updateUserLastSignIn(normalizedUser.id),
+    );
 
     return normalizedUser;
   }
