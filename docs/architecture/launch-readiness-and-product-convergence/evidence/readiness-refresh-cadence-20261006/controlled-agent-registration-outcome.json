@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-02T16:33:37.480Z",
+  "acceptedDeploymentSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "accountAlias": "controlled-agent-1",
+  "method": "Normal production browser UI",
+  "writesAttempted": true,
+  "observations": [
+    {
+      "kind": "registration",
+      "path": "/api/auth/register",
+      "status": 201,
+      "durationMs": 4865,
+      "requestId": "27a53ceb-f878-43d1-b69e-b171a098c48b",
+      "success": true,
+      "verificationEmailSent": true,
+      "code": null,
+      "message": "Registration successful! Please check your email to verify your account. Your agent profile is pending review and will unlock after verification and approval."
+    },
+    {
+      "kind": "unverified-login",
+      "path": "/api/auth/login",
+      "status": 401,
+      "durationMs": 1938,
+      "requestId": "1ad4acc0-d353-497f-ab84-ce4c1c806293",
+      "code": "EMAIL_UNVERIFIED",
+      "message": "Please verify your email address before logging in."
+    }
+  ],
+  "issues": [],
+  "emailReceipt": "Awaiting controlled inbox operator; provider acceptance alone is insufficient",
+  "registrationAndUnverifiedLoginPassed": true,
+  "screenshot": "controlled-agent-registration-ui.private.png"
+}

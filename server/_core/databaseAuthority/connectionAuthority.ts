@@ -140,7 +140,13 @@ export async function createAuthoritySqlConnection(
         : {}),
     });
     const wrapped: AuthoritySqlConnection = {
-      execute: (statement, values) => connection.execute(statement, values as any),
+      // Each readiness sweep owns a fresh connection. Preparing its static reads
+      // again adds network round trips; use the existing text protocol only when
+      // there are no bound values. Parameterized reads retain driver preparation.
+      execute: (statement, values) =>
+        authority.context.operation === 'readiness' && !values?.length
+          ? connection.query(statement)
+          : connection.execute(statement, values as any),
       query: (statement, values) => connection.query(statement, values as any),
       end: () => connection.end(),
     };

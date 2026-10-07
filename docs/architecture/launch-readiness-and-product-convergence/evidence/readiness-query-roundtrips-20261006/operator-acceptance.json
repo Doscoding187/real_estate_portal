@@ -1,0 +1,13 @@
+{
+  "acceptedAt": "2026-10-06T18:07:26.291293+00:00",
+  "acceptedReviewHead": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+  "reviewedTree": "7e0049c191369fd25613c2933935e8aa84c5b8e3",
+  "operatorExplicitReplacementSourceAcceptance": true,
+  "operatorAttendingNow": true,
+  "authorization": "Merge PR #587, freeze and verify identical reviewed tree, then controlled API/worker/frontend release and gated unpaid verification",
+  "paymentIntakeClosed": true,
+  "admissionAndDeadlineAbsent": true,
+  "tiDBWritersStopped": true,
+  "automaticDeploymentsHeld": true,
+  "customerWritesHeldUntilMultipleReadinessCyclesAndOfficialJoinedProbe": true
+}

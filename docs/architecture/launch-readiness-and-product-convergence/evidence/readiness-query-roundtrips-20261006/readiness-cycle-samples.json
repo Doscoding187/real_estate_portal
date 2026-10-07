@@ -1,0 +1,2720 @@
+[
+  {
+    "sample": 1,
+    "startedAt": "2026-10-06T18:24:24.366Z",
+    "status": 200,
+    "durationMs": 1357,
+    "requestId": "7ede0f0b-f0a0-4870-9d46-6a61976c3e9c",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:13.451Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 2,
+    "startedAt": "2026-10-06T18:24:26.725Z",
+    "status": 200,
+    "durationMs": 844,
+    "requestId": "918431de-9125-48da-b129-679dde0f71f8",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:13.451Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 3,
+    "startedAt": "2026-10-06T18:24:28.569Z",
+    "status": 200,
+    "durationMs": 903,
+    "requestId": "8d3d52ed-ad93-41d0-9b79-006de2df6d5b",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 4,
+    "startedAt": "2026-10-06T18:24:30.473Z",
+    "status": 200,
+    "durationMs": 875,
+    "requestId": "a6363e70-33cc-4812-8d3d-c339d01cb02d",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 5,
+    "startedAt": "2026-10-06T18:24:32.349Z",
+    "status": 200,
+    "durationMs": 906,
+    "requestId": "6dd20b25-d2db-4b5c-9777-88d70a87cf78",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 6,
+    "startedAt": "2026-10-06T18:24:34.255Z",
+    "status": 200,
+    "durationMs": 883,
+    "requestId": "a0b71a6a-c4df-43a0-ab74-6a018e350568",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 7,
+    "startedAt": "2026-10-06T18:24:36.140Z",
+    "status": 200,
+    "durationMs": 894,
+    "requestId": "32a9af47-d492-4124-86d1-57c22f4fe507",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 8,
+    "startedAt": "2026-10-06T18:24:38.034Z",
+    "status": 200,
+    "durationMs": 882,
+    "requestId": "cf36ce90-aaed-43b9-aee4-43bc84291019",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 9,
+    "startedAt": "2026-10-06T18:24:39.917Z",
+    "status": 200,
+    "durationMs": 865,
+    "requestId": "a1eb332a-ad7d-43ee-a3c5-e10c9c4dcd92",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 10,
+    "startedAt": "2026-10-06T18:24:41.783Z",
+    "status": 200,
+    "durationMs": 891,
+    "requestId": "bcb10fac-2a9f-4638-aac1-0455c5f5f97a",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:28.740Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 11,
+    "startedAt": "2026-10-06T18:24:43.674Z",
+    "status": 200,
+    "durationMs": 838,
+    "requestId": "bedc4925-4ead-4d18-bdaf-cde05b547ee8",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 12,
+    "startedAt": "2026-10-06T18:24:45.513Z",
+    "status": 200,
+    "durationMs": 859,
+    "requestId": "a50e25b3-2de1-4092-beab-1eef2c02c001",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 13,
+    "startedAt": "2026-10-06T18:24:47.372Z",
+    "status": 200,
+    "durationMs": 870,
+    "requestId": "86a76fcc-9480-42e4-b00d-90ec4eeaa36b",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 14,
+    "startedAt": "2026-10-06T18:24:49.243Z",
+    "status": 200,
+    "durationMs": 864,
+    "requestId": "dc20f716-f085-4a07-9424-822d8e55a4bf",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 15,
+    "startedAt": "2026-10-06T18:24:51.108Z",
+    "status": 200,
+    "durationMs": 868,
+    "requestId": "c8eb4c45-4720-4dca-b292-b73d56286085",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 16,
+    "startedAt": "2026-10-06T18:24:52.977Z",
+    "status": 200,
+    "durationMs": 867,
+    "requestId": "bc992e80-d079-467d-af33-274310cd1328",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 17,
+    "startedAt": "2026-10-06T18:24:54.845Z",
+    "status": 200,
+    "durationMs": 834,
+    "requestId": "7d14fbeb-4258-444c-99ac-66cd15e3dd5f",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 18,
+    "startedAt": "2026-10-06T18:24:56.679Z",
+    "status": 200,
+    "durationMs": 856,
+    "requestId": "b84dc411-79e1-40fe-9336-115f288891bf",
+    "body": {
+      "ok": true,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:44.071Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": true,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "targetOwned": {
+            "state": "ready",
+            "code": "approved-protected-target",
+            "detail": "The exact authorized B08 Azure production target is selected."
+          },
+          "schemaMigrated": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "schemaCongruent": {
+            "state": "ready",
+            "code": "schema-congruent",
+            "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Canonical reference data is evaluated for a requested location runtime."
+          },
+          "commercialReferenceData": {
+            "state": "ready",
+            "code": "canonical-foundation-ready",
+            "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+          },
+          "application": {
+            "state": "ready",
+            "code": "application-ready-for-requested-runtime",
+            "detail": "Database Authority is ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "ready",
+            "code": "target-connected",
+            "detail": "Connected to authorized database propertylistify_database."
+          },
+          "migrationHead": {
+            "state": "ready",
+            "code": "manifest-head-ready",
+            "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+          },
+          "incompleteAttemptState": {
+            "state": "ready",
+            "code": "no-incomplete-attempts",
+            "detail": "No running, failed, or blocked migration attempt exists."
+          },
+          "structuralSchema": {
+            "state": "ready",
+            "code": "required-schema-present",
+            "detail": "All 214 application tables are present."
+          },
+          "requiredData": {
+            "state": "not-required",
+            "code": "requested-data-not-required",
+            "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    }
+  },
+  {
+    "sample": 19,
+    "startedAt": "2026-10-06T18:24:58.536Z",
+    "status": 503,
+    "durationMs": 887,
+    "requestId": "25458dee-1d1b-47ec-bab7-50d89a3cf7a3",
+    "body": {
+      "ok": false,
+      "kind": "readiness",
+      "env": "production",
+      "build": {
+        "sha": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+        "builtAt": null
+      },
+      "db": {
+        "reportVersion": 1,
+        "checkedAt": "2026-10-06T18:24:59.292Z",
+        "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "targetClass": "production",
+        "requestedRuntime": "database",
+        "applicationReady": false,
+        "layers": {
+          "processLiveness": {
+            "state": "ready",
+            "code": "process-alive",
+            "detail": "The process is able to answer."
+          },
+          "serviceAvailable": {
+            "state": "not-ready",
+            "code": "readiness-verification-pending-or-expired",
+            "detail": "A fresh complete authorized database verification is required."
+          },
+          "targetOwned": {
+            "state": "not-evaluated",
+            "code": "target-ownership-not-evaluated",
+            "detail": "Target ownership could not be evaluated before database connectivity."
+          },
+          "schemaMigrated": {
+            "state": "not-evaluated",
+            "code": "schema-migration-not-evaluated",
+            "detail": "Target readiness failed before migration-head verification."
+          },
+          "schemaCongruent": {
+            "state": "not-evaluated",
+            "code": "schema-congruency-not-evaluated",
+            "detail": "Target readiness failed before schema-congruency verification."
+          },
+          "canonicalReferenceData": {
+            "state": "not-evaluated",
+            "code": "reference-not-evaluated",
+            "detail": "Target readiness failed before canonical reference-data verification."
+          },
+          "commercialReferenceData": {
+            "state": "not-evaluated",
+            "code": "foundation-not-evaluated",
+            "detail": "Target readiness failed before Launch Access foundation-data verification."
+          },
+          "acceptanceScenario": {
+            "state": "not-evaluated",
+            "code": "scenario-not-evaluated",
+            "detail": "Target readiness failed before acceptance-scenario verification."
+          },
+          "application": {
+            "state": "not-ready",
+            "code": "application-not-ready-for-requested-runtime",
+            "detail": "Database Authority is not ready for database verification."
+          },
+          "targetConnectivity": {
+            "state": "not-ready",
+            "code": "readiness-verification-pending-or-expired",
+            "detail": "A fresh complete authorized database verification is required."
+          },
+          "migrationHead": {
+            "state": "not-evaluated",
+            "code": "head-not-evaluated",
+            "detail": "Target readiness failed before ledger verification."
+          },
+          "incompleteAttemptState": {
+            "state": "not-evaluated",
+            "code": "attempts-not-evaluated",
+            "detail": "Target readiness failed before attempt verification."
+          },
+          "structuralSchema": {
+            "state": "not-evaluated",
+            "code": "schema-not-evaluated",
+            "detail": "Target readiness failed before required-schema verification."
+          },
+          "requiredData": {
+            "state": "not-evaluated",
+            "code": "data-not-evaluated",
+            "detail": "Target readiness failed before required-data verification."
+          },
+          "consumerApi": {
+            "state": "not-evaluated",
+            "code": "consumer-not-evaluated",
+            "detail": "Consumer/API smoke is a separate readiness layer."
+          },
+          "browserJourney": {
+            "state": "not-evaluated",
+            "code": "browser-not-evaluated",
+            "detail": "Browser journey readiness is verified separately."
+          },
+          "release": {
+            "state": "not-evaluated",
+            "code": "release-not-evaluated",
+            "detail": "Release readiness requires protected release evidence."
+          },
+          "fullDiagnostics": {
+            "state": "not-evaluated",
+            "code": "diagnostics-not-evaluated",
+            "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+          }
+        }
+      },
+      "cache": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "authRateLimit": {
+        "ok": true,
+        "mode": "redis"
+      },
+      "publicLeadRateLimit": {
+        "ok": true,
+        "mode": "redis",
+        "required": true
+      },
+      "s3": {
+        "ok": true,
+        "required": true
+      },
+      "configuration": {
+        "ok": true
+      },
+      "termScheduler": {
+        "timerActive": true,
+        "running": false,
+        "lastSucceededAt": "2026-10-06T18:20:22.613Z",
+        "lastFailedAt": null,
+        "intervalMs": 900000
+      }
+    },
+    "errorClass": "AssertionError"
+  }
+]

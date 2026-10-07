@@ -1,0 +1,734 @@
+{
+  "observedAt": "2026-10-06T17:26:52.588086+00:00",
+  "method": "Bounded normal read-only readiness requests; no induced production failure",
+  "probeLimitMs": 8000,
+  "sampleCount": 36,
+  "http200Count": 34,
+  "http503Count": 2,
+  "samples": [
+    {
+      "sample": 1,
+      "startedAt": "2026-10-06T17:21:12.980Z",
+      "status": 200,
+      "durationMs": 1233,
+      "requestId": "eb0a3979-3f3d-4a77-b421-96dc2bb55b15",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 2,
+      "startedAt": "2026-10-06T17:21:15.213Z",
+      "status": 200,
+      "durationMs": 740,
+      "requestId": "8868c3d3-5ac1-42ae-887b-ce39c9942890",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 3,
+      "startedAt": "2026-10-06T17:21:16.953Z",
+      "status": 200,
+      "durationMs": 990,
+      "requestId": "11857880-419f-4e3d-86d8-54c0aaf77dd0",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 4,
+      "startedAt": "2026-10-06T17:21:18.944Z",
+      "status": 200,
+      "durationMs": 872,
+      "requestId": "4045f942-3e9e-438c-abea-46e392b68ac4",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 5,
+      "startedAt": "2026-10-06T17:21:20.817Z",
+      "status": 200,
+      "durationMs": 721,
+      "requestId": "3c02a2ff-7e38-464f-8b09-d4c2d1d4a21f",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 6,
+      "startedAt": "2026-10-06T17:21:22.538Z",
+      "status": 200,
+      "durationMs": 707,
+      "requestId": "3c26d7cb-aea8-48ff-9082-1995a2204613",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 7,
+      "startedAt": "2026-10-06T17:21:24.245Z",
+      "status": 200,
+      "durationMs": 931,
+      "requestId": "523717f9-0b22-4fbe-8db5-131a4bb18044",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 8,
+      "startedAt": "2026-10-06T17:21:26.177Z",
+      "status": 200,
+      "durationMs": 692,
+      "requestId": "0979bf76-3807-4251-862c-3525b73fc218",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 9,
+      "startedAt": "2026-10-06T17:21:27.870Z",
+      "status": 200,
+      "durationMs": 793,
+      "requestId": "233718a1-f286-4e68-9b24-1d858f3f09dc",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:12.825Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 10,
+      "startedAt": "2026-10-06T17:21:29.664Z",
+      "status": 503,
+      "durationMs": 910,
+      "requestId": "12323de1-31f4-4de3-8571-cdb085689dac",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": false,
+      "databaseCheckedAt": "2026-10-06T17:21:30.279Z",
+      "databaseConnectivityCode": "readiness-verification-pending-or-expired",
+      "redisConnected": true
+    },
+    {
+      "sample": 11,
+      "startedAt": "2026-10-06T17:21:31.575Z",
+      "status": 200,
+      "durationMs": 729,
+      "requestId": "37af3323-0964-41d1-91b1-a887f31c52f4",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 12,
+      "startedAt": "2026-10-06T17:21:33.304Z",
+      "status": 200,
+      "durationMs": 698,
+      "requestId": "748a06a1-1a06-4c87-af51-5f057a643663",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 13,
+      "startedAt": "2026-10-06T17:21:35.002Z",
+      "status": 200,
+      "durationMs": 705,
+      "requestId": "75bc568a-beda-4d98-b1b3-8e4076e4d944",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 14,
+      "startedAt": "2026-10-06T17:21:36.707Z",
+      "status": 200,
+      "durationMs": 714,
+      "requestId": "126c9fff-6124-4d37-b15c-2a4f10fa1e37",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 15,
+      "startedAt": "2026-10-06T17:21:38.422Z",
+      "status": 200,
+      "durationMs": 693,
+      "requestId": "9764cb5a-7687-4403-9128-8d55f60720e4",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 16,
+      "startedAt": "2026-10-06T17:21:40.116Z",
+      "status": 200,
+      "durationMs": 645,
+      "requestId": "5550a5cc-087d-40a6-b14e-d890d05f87e1",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 17,
+      "startedAt": "2026-10-06T17:21:41.763Z",
+      "status": 200,
+      "durationMs": 678,
+      "requestId": "f47a4c12-8a05-46a4-827e-628ad9b84cb5",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 18,
+      "startedAt": "2026-10-06T17:21:43.441Z",
+      "status": 200,
+      "durationMs": 679,
+      "requestId": "c2e8134b-234c-4e0c-a87a-91c6ebe4dd82",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 19,
+      "startedAt": "2026-10-06T17:21:45.120Z",
+      "status": 200,
+      "durationMs": 2064,
+      "requestId": "87a767a1-1811-48e3-bdd6-10e714b616d3",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:30.585Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 20,
+      "startedAt": "2026-10-06T17:21:48.184Z",
+      "status": 200,
+      "durationMs": 887,
+      "requestId": "2895b4cc-5e30-45bf-a5fb-ad87b734db0c",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 21,
+      "startedAt": "2026-10-06T17:21:50.071Z",
+      "status": 200,
+      "durationMs": 724,
+      "requestId": "b895d1e2-8dee-4c0d-abb4-b6eb42a09a20",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 22,
+      "startedAt": "2026-10-06T17:21:51.796Z",
+      "status": 200,
+      "durationMs": 797,
+      "requestId": "cf04feb4-de6b-4bb6-8b27-6f5459656956",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 23,
+      "startedAt": "2026-10-06T17:21:53.593Z",
+      "status": 200,
+      "durationMs": 743,
+      "requestId": "e2eeabc4-29c2-45ce-ad11-74bcd2341f21",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 24,
+      "startedAt": "2026-10-06T17:21:55.337Z",
+      "status": 200,
+      "durationMs": 739,
+      "requestId": "685a55a4-5f3c-403a-ac39-552b597303cd",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 25,
+      "startedAt": "2026-10-06T17:21:57.077Z",
+      "status": 200,
+      "durationMs": 685,
+      "requestId": "8d5e764c-d66c-4f9a-bd04-1f4641567699",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 26,
+      "startedAt": "2026-10-06T17:21:58.763Z",
+      "status": 200,
+      "durationMs": 855,
+      "requestId": "746417be-cb6b-4e86-b218-1920b5bdffac",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 27,
+      "startedAt": "2026-10-06T17:22:00.619Z",
+      "status": 200,
+      "durationMs": 818,
+      "requestId": "91f202d2-d894-488f-8d6d-14e224327b3a",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 28,
+      "startedAt": "2026-10-06T17:22:02.438Z",
+      "status": 200,
+      "durationMs": 828,
+      "requestId": "d482da45-24fe-4904-beee-d919e09c777b",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 29,
+      "startedAt": "2026-10-06T17:22:04.266Z",
+      "status": 200,
+      "durationMs": 813,
+      "requestId": "4c6b9130-0884-4bbc-b6b5-4ae2d2639461",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:21:48.147Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 30,
+      "startedAt": "2026-10-06T17:22:06.079Z",
+      "status": 503,
+      "durationMs": 819,
+      "requestId": "6198c909-bdc1-45c1-8e4a-4abb6a4367ac",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": false,
+      "databaseCheckedAt": "2026-10-06T17:22:06.826Z",
+      "databaseConnectivityCode": "readiness-verification-pending-or-expired",
+      "redisConnected": true
+    },
+    {
+      "sample": 31,
+      "startedAt": "2026-10-06T17:22:07.899Z",
+      "status": 200,
+      "durationMs": 892,
+      "requestId": "4df69f27-1831-47b6-b0d7-ace83319db5a",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 32,
+      "startedAt": "2026-10-06T17:22:09.792Z",
+      "status": 200,
+      "durationMs": 838,
+      "requestId": "8c15cf56-4876-482e-a4ea-e8ac98e72dcc",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 33,
+      "startedAt": "2026-10-06T17:22:11.631Z",
+      "status": 200,
+      "durationMs": 833,
+      "requestId": "044f139e-bd6b-44e9-bab4-7468106fdb1e",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 34,
+      "startedAt": "2026-10-06T17:22:13.464Z",
+      "status": 200,
+      "durationMs": 862,
+      "requestId": "ca15b0ed-ecbf-4b01-aa13-da709762643d",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 35,
+      "startedAt": "2026-10-06T17:22:15.327Z",
+      "status": 200,
+      "durationMs": 848,
+      "requestId": "89bd537f-7ce1-435e-b5bc-65907879dca7",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    },
+    {
+      "sample": 36,
+      "startedAt": "2026-10-06T17:22:17.177Z",
+      "status": 200,
+      "durationMs": 824,
+      "requestId": "740ecc23-404f-47c0-8b70-9537df897890",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "ok": true,
+      "databaseCheckedAt": "2026-10-06T17:22:07.625Z",
+      "databaseConnectivityCode": "target-connected",
+      "redisConnected": true
+    }
+  ],
+  "failedResponses": [
+    {
+      "sample": 10,
+      "startedAt": "2026-10-06T17:21:29.664Z",
+      "status": 503,
+      "durationMs": 910,
+      "requestId": "12323de1-31f4-4de3-8571-cdb085689dac",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "body": {
+        "ok": false,
+        "kind": "readiness",
+        "env": "production",
+        "build": {
+          "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+          "builtAt": null
+        },
+        "db": {
+          "reportVersion": 1,
+          "checkedAt": "2026-10-06T17:21:30.279Z",
+          "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+          "targetClass": "production",
+          "requestedRuntime": "database",
+          "applicationReady": false,
+          "layers": {
+            "processLiveness": {
+              "state": "ready",
+              "code": "process-alive",
+              "detail": "The process is able to answer."
+            },
+            "serviceAvailable": {
+              "state": "not-ready",
+              "code": "readiness-verification-pending-or-expired",
+              "detail": "A fresh complete authorized database verification is required."
+            },
+            "targetOwned": {
+              "state": "not-evaluated",
+              "code": "target-ownership-not-evaluated",
+              "detail": "Target ownership could not be evaluated before database connectivity."
+            },
+            "schemaMigrated": {
+              "state": "not-evaluated",
+              "code": "schema-migration-not-evaluated",
+              "detail": "Target readiness failed before migration-head verification."
+            },
+            "schemaCongruent": {
+              "state": "not-evaluated",
+              "code": "schema-congruency-not-evaluated",
+              "detail": "Target readiness failed before schema-congruency verification."
+            },
+            "canonicalReferenceData": {
+              "state": "not-evaluated",
+              "code": "reference-not-evaluated",
+              "detail": "Target readiness failed before canonical reference-data verification."
+            },
+            "commercialReferenceData": {
+              "state": "not-evaluated",
+              "code": "foundation-not-evaluated",
+              "detail": "Target readiness failed before Launch Access foundation-data verification."
+            },
+            "acceptanceScenario": {
+              "state": "not-evaluated",
+              "code": "scenario-not-evaluated",
+              "detail": "Target readiness failed before acceptance-scenario verification."
+            },
+            "application": {
+              "state": "not-ready",
+              "code": "application-not-ready-for-requested-runtime",
+              "detail": "Database Authority is not ready for database verification."
+            },
+            "targetConnectivity": {
+              "state": "not-ready",
+              "code": "readiness-verification-pending-or-expired",
+              "detail": "A fresh complete authorized database verification is required."
+            },
+            "migrationHead": {
+              "state": "not-evaluated",
+              "code": "head-not-evaluated",
+              "detail": "Target readiness failed before ledger verification."
+            },
+            "incompleteAttemptState": {
+              "state": "not-evaluated",
+              "code": "attempts-not-evaluated",
+              "detail": "Target readiness failed before attempt verification."
+            },
+            "structuralSchema": {
+              "state": "not-evaluated",
+              "code": "schema-not-evaluated",
+              "detail": "Target readiness failed before required-schema verification."
+            },
+            "requiredData": {
+              "state": "not-evaluated",
+              "code": "data-not-evaluated",
+              "detail": "Target readiness failed before required-data verification."
+            },
+            "consumerApi": {
+              "state": "not-evaluated",
+              "code": "consumer-not-evaluated",
+              "detail": "Consumer/API smoke is a separate readiness layer."
+            },
+            "browserJourney": {
+              "state": "not-evaluated",
+              "code": "browser-not-evaluated",
+              "detail": "Browser journey readiness is verified separately."
+            },
+            "release": {
+              "state": "not-evaluated",
+              "code": "release-not-evaluated",
+              "detail": "Release readiness requires protected release evidence."
+            },
+            "fullDiagnostics": {
+              "state": "not-evaluated",
+              "code": "diagnostics-not-evaluated",
+              "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+            }
+          }
+        },
+        "cache": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "authRateLimit": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "publicLeadRateLimit": {
+          "ok": true,
+          "mode": "redis",
+          "required": true
+        },
+        "s3": {
+          "ok": true,
+          "required": true
+        },
+        "configuration": {
+          "ok": true
+        },
+        "termScheduler": {
+          "timerActive": true,
+          "running": false,
+          "lastSucceededAt": "2026-10-06T17:16:17.726Z",
+          "lastFailedAt": null,
+          "intervalMs": 900000
+        }
+      }
+    },
+    {
+      "sample": 30,
+      "startedAt": "2026-10-06T17:22:06.079Z",
+      "status": 503,
+      "durationMs": 819,
+      "requestId": "6198c909-bdc1-45c1-8e4a-4abb6a4367ac",
+      "buildHeader": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "body": {
+        "ok": false,
+        "kind": "readiness",
+        "env": "production",
+        "build": {
+          "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+          "builtAt": null
+        },
+        "db": {
+          "reportVersion": 1,
+          "checkedAt": "2026-10-06T17:22:06.826Z",
+          "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+          "targetClass": "production",
+          "requestedRuntime": "database",
+          "applicationReady": false,
+          "layers": {
+            "processLiveness": {
+              "state": "ready",
+              "code": "process-alive",
+              "detail": "The process is able to answer."
+            },
+            "serviceAvailable": {
+              "state": "not-ready",
+              "code": "readiness-verification-pending-or-expired",
+              "detail": "A fresh complete authorized database verification is required."
+            },
+            "targetOwned": {
+              "state": "not-evaluated",
+              "code": "target-ownership-not-evaluated",
+              "detail": "Target ownership could not be evaluated before database connectivity."
+            },
+            "schemaMigrated": {
+              "state": "not-evaluated",
+              "code": "schema-migration-not-evaluated",
+              "detail": "Target readiness failed before migration-head verification."
+            },
+            "schemaCongruent": {
+              "state": "not-evaluated",
+              "code": "schema-congruency-not-evaluated",
+              "detail": "Target readiness failed before schema-congruency verification."
+            },
+            "canonicalReferenceData": {
+              "state": "not-evaluated",
+              "code": "reference-not-evaluated",
+              "detail": "Target readiness failed before canonical reference-data verification."
+            },
+            "commercialReferenceData": {
+              "state": "not-evaluated",
+              "code": "foundation-not-evaluated",
+              "detail": "Target readiness failed before Launch Access foundation-data verification."
+            },
+            "acceptanceScenario": {
+              "state": "not-evaluated",
+              "code": "scenario-not-evaluated",
+              "detail": "Target readiness failed before acceptance-scenario verification."
+            },
+            "application": {
+              "state": "not-ready",
+              "code": "application-not-ready-for-requested-runtime",
+              "detail": "Database Authority is not ready for database verification."
+            },
+            "targetConnectivity": {
+              "state": "not-ready",
+              "code": "readiness-verification-pending-or-expired",
+              "detail": "A fresh complete authorized database verification is required."
+            },
+            "migrationHead": {
+              "state": "not-evaluated",
+              "code": "head-not-evaluated",
+              "detail": "Target readiness failed before ledger verification."
+            },
+            "incompleteAttemptState": {
+              "state": "not-evaluated",
+              "code": "attempts-not-evaluated",
+              "detail": "Target readiness failed before attempt verification."
+            },
+            "structuralSchema": {
+              "state": "not-evaluated",
+              "code": "schema-not-evaluated",
+              "detail": "Target readiness failed before required-schema verification."
+            },
+            "requiredData": {
+              "state": "not-evaluated",
+              "code": "data-not-evaluated",
+              "detail": "Target readiness failed before required-data verification."
+            },
+            "consumerApi": {
+              "state": "not-evaluated",
+              "code": "consumer-not-evaluated",
+              "detail": "Consumer/API smoke is a separate readiness layer."
+            },
+            "browserJourney": {
+              "state": "not-evaluated",
+              "code": "browser-not-evaluated",
+              "detail": "Browser journey readiness is verified separately."
+            },
+            "release": {
+              "state": "not-evaluated",
+              "code": "release-not-evaluated",
+              "detail": "Release readiness requires protected release evidence."
+            },
+            "fullDiagnostics": {
+              "state": "not-evaluated",
+              "code": "diagnostics-not-evaluated",
+              "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+            }
+          }
+        },
+        "cache": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "authRateLimit": {
+          "ok": true,
+          "mode": "redis"
+        },
+        "publicLeadRateLimit": {
+          "ok": true,
+          "mode": "redis",
+          "required": true
+        },
+        "s3": {
+          "ok": true,
+          "required": true
+        },
+        "configuration": {
+          "ok": true
+        },
+        "termScheduler": {
+          "timerActive": true,
+          "running": false,
+          "lastSucceededAt": "2026-10-06T17:16:17.726Z",
+          "lastFailedAt": null,
+          "intervalMs": 900000
+        }
+      }
+    }
+  ],
+  "customerWritesHeld": true,
+  "rawObservationSha256": "a7749d7f73cb5e49d33fccedbfa829a99748f3de0cba7e5042a353755f0efd35"
+}

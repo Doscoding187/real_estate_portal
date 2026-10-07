@@ -12,6 +12,7 @@ import { serveStatic, setupVite } from './vite';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
+import { stopHostedDatabaseReadinessMonitor } from './hostedDatabaseReadinessMonitor';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
@@ -314,6 +315,7 @@ async function shutdown(signal: string): Promise<void> {
     }
     savedSearchDeliveryScheduler.stop();
     commercialTermNoticeScheduler.stop();
+    await stopHostedDatabaseReadinessMonitor();
     await activeAuthStore?.shutdown();
     await shutdownPublicLeadRateLimitStore();
     await shutdownCache();

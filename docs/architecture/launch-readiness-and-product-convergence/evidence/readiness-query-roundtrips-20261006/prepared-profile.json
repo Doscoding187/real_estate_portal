@@ -1,0 +1,234 @@
+{
+  "checkedAt": "2026-10-06T18:30:20.867Z",
+  "sourceTree": "7e0049c191369fd25613c2933935e8aa84c5b8e3",
+  "totalDurationMs": 15517,
+  "connectionMs": 3048,
+  "queries": [
+    {
+      "statementHash": "42df8f98ffbc3e332f2f6a21b0ab793c234b1586c29ed55ef6face7dbc307680",
+      "statementClass": "SELECT",
+      "durationMs": 305,
+      "ok": true
+    },
+    {
+      "statementHash": "34d9ab6b46d79f1d7193f4e4211003f09ad63a0d9cea5631d6e913d16ffdd3a2",
+      "statementClass": "SELECT",
+      "durationMs": 619,
+      "ok": true
+    },
+    {
+      "statementHash": "cae9a85797969b7cfe3dbcc6feedc095402b3853fbe0cb50fe28ef77b0d66197",
+      "statementClass": "SELECT",
+      "durationMs": 602,
+      "ok": true
+    },
+    {
+      "statementHash": "b1c590884628594922933536bf762021307f7789fc31d80e85534a3c08d62558",
+      "statementClass": "SELECT",
+      "durationMs": 599,
+      "ok": true
+    },
+    {
+      "statementHash": "5879d428fb9e662da19cdd27fa8ce2891e4d62983f883b05f98fd28e73c2f497",
+      "statementClass": "SELECT",
+      "durationMs": 600,
+      "ok": true
+    },
+    {
+      "statementHash": "5879d428fb9e662da19cdd27fa8ce2891e4d62983f883b05f98fd28e73c2f497",
+      "statementClass": "SELECT",
+      "durationMs": 305,
+      "ok": true
+    },
+    {
+      "statementHash": "bcbfe979fa7c7b8f2badd983ed6aaf7a91a9a2ddadd0278bf37ee5d9edda9be4",
+      "statementClass": "SELECT",
+      "durationMs": 632,
+      "ok": true
+    },
+    {
+      "statementHash": "7a2941d53831ca1531dbd97755006d167921f6c0a873a6bbfc1abf7c3e648f21",
+      "statementClass": "SELECT",
+      "durationMs": 2268,
+      "ok": true
+    },
+    {
+      "statementHash": "003c309b8f5f4e7626b7b3d77eaab76771854f69d651570b30dde41e3ce3aa79",
+      "statementClass": "SELECT",
+      "durationMs": 1010,
+      "ok": true
+    },
+    {
+      "statementHash": "66df96aeb59ae05c2741b1d2daf7020263dc78b3bba3af85a95f59455f947ed9",
+      "statementClass": "SELECT",
+      "durationMs": 632,
+      "ok": true
+    },
+    {
+      "statementHash": "a35422c08b85735ac5bea05cc39a85c634174f679cb7004eba58d780cb34ec47",
+      "statementClass": "SELECT",
+      "durationMs": 791,
+      "ok": true
+    },
+    {
+      "statementHash": "456d42c3e606a10f093ce0efa7158845141650e626f09db385f3ba5bbb3c2470",
+      "statementClass": "SELECT",
+      "durationMs": 299,
+      "ok": false
+    },
+    {
+      "statementHash": "b440d89ccc8dd482a0b8ad09290f1c3b5aeda4e3bac3d5f16d6418a27ebb4377",
+      "statementClass": "SELECT",
+      "durationMs": 601,
+      "ok": true
+    },
+    {
+      "statementHash": "cae9a85797969b7cfe3dbcc6feedc095402b3853fbe0cb50fe28ef77b0d66197",
+      "statementClass": "SELECT",
+      "durationMs": 303,
+      "ok": true
+    },
+    {
+      "statementHash": "b1c590884628594922933536bf762021307f7789fc31d80e85534a3c08d62558",
+      "statementClass": "SELECT",
+      "durationMs": 306,
+      "ok": true
+    },
+    {
+      "statementHash": "4859f752eff166602416be1c6ab8e56ea15e1a3b58ecb5199bdc723241a4106b",
+      "statementClass": "SELECT",
+      "durationMs": 600,
+      "ok": true
+    },
+    {
+      "statementHash": "028b50a8b6a04a6718f68760cd3ae87c579ab2707a138a30aa7252a88dcda552",
+      "statementClass": "SELECT",
+      "durationMs": 604,
+      "ok": true
+    },
+    {
+      "statementHash": "4859f752eff166602416be1c6ab8e56ea15e1a3b58ecb5199bdc723241a4106b",
+      "statementClass": "SELECT",
+      "durationMs": 301,
+      "ok": true
+    },
+    {
+      "statementHash": "028b50a8b6a04a6718f68760cd3ae87c579ab2707a138a30aa7252a88dcda552",
+      "statementClass": "SELECT",
+      "durationMs": 300,
+      "ok": true
+    },
+    {
+      "statementHash": "4859f752eff166602416be1c6ab8e56ea15e1a3b58ecb5199bdc723241a4106b",
+      "statementClass": "SELECT",
+      "durationMs": 300,
+      "ok": true
+    },
+    {
+      "statementHash": "028b50a8b6a04a6718f68760cd3ae87c579ab2707a138a30aa7252a88dcda552",
+      "statementClass": "SELECT",
+      "durationMs": 299,
+      "ok": true
+    }
+  ],
+  "result": {
+    "reportVersion": 1,
+    "checkedAt": "2026-10-06T18:30:20.866Z",
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "targetClass": "production",
+    "requestedRuntime": "database",
+    "applicationReady": true,
+    "layers": {
+      "processLiveness": {
+        "state": "ready",
+        "code": "process-alive",
+        "detail": "The process is able to answer."
+      },
+      "serviceAvailable": {
+        "state": "ready",
+        "code": "target-connected",
+        "detail": "Connected to authorized database propertylistify_database."
+      },
+      "targetOwned": {
+        "state": "ready",
+        "code": "approved-protected-target",
+        "detail": "The exact authorized B08 Azure production target is selected."
+      },
+      "schemaMigrated": {
+        "state": "ready",
+        "code": "manifest-head-ready",
+        "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+      },
+      "schemaCongruent": {
+        "state": "ready",
+        "code": "schema-congruent",
+        "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+      },
+      "canonicalReferenceData": {
+        "state": "not-evaluated",
+        "code": "reference-not-evaluated",
+        "detail": "Canonical reference data is evaluated for a requested location runtime."
+      },
+      "commercialReferenceData": {
+        "state": "ready",
+        "code": "canonical-foundation-ready",
+        "detail": "canonical-launch-foundation-v1 (aaac24d45d655d27) verified: 3 Launch Access products and their entitlements."
+      },
+      "acceptanceScenario": {
+        "state": "not-evaluated",
+        "code": "scenario-not-evaluated",
+        "detail": "The isolated acceptance scenario is evaluated for a requested location runtime."
+      },
+      "application": {
+        "state": "ready",
+        "code": "application-ready-for-requested-runtime",
+        "detail": "Database Authority is ready for database verification."
+      },
+      "targetConnectivity": {
+        "state": "ready",
+        "code": "target-connected",
+        "detail": "Connected to authorized database propertylistify_database."
+      },
+      "migrationHead": {
+        "state": "ready",
+        "code": "manifest-head-ready",
+        "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+      },
+      "incompleteAttemptState": {
+        "state": "ready",
+        "code": "no-incomplete-attempts",
+        "detail": "No running, failed, or blocked migration attempt exists."
+      },
+      "structuralSchema": {
+        "state": "ready",
+        "code": "required-schema-present",
+        "detail": "All 214 application tables are present."
+      },
+      "requiredData": {
+        "state": "not-required",
+        "code": "requested-data-not-required",
+        "detail": "The database-only readiness purpose does not claim feature reference or scenario data readiness."
+      },
+      "consumerApi": {
+        "state": "not-evaluated",
+        "code": "consumer-not-evaluated",
+        "detail": "Consumer/API smoke is a separate readiness layer."
+      },
+      "browserJourney": {
+        "state": "not-evaluated",
+        "code": "browser-not-evaluated",
+        "detail": "Browser journey readiness is verified separately."
+      },
+      "release": {
+        "state": "not-evaluated",
+        "code": "release-not-evaluated",
+        "detail": "Release readiness requires protected release evidence."
+      },
+      "fullDiagnostics": {
+        "state": "not-evaluated",
+        "code": "diagnostics-not-evaluated",
+        "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+      }
+    }
+  }
+}

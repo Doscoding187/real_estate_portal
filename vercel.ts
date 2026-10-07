@@ -10,19 +10,20 @@ export const config = {
   buildCommand: 'pnpm build:frontend',
   outputDirectory: 'dist/public',
   framework: null,
-  headers: [
-    {
-      source: '/(.*)',
-      headers: [
-        { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
-        { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-        { key: 'X-Content-Type-Options', value: 'nosniff' },
-        { key: 'X-Frame-Options', value: 'DENY' },
-        ...(!production ? [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] : []),
-      ],
-    },
-  ],
   routes: [
+    // Explicit routes compile before the top-level headers property. Apply
+    // protection before any terminating asset, sitemap or SPA route.
+    {
+      src: '/(.*)',
+      headers: {
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        ...(!production ? { 'X-Robots-Tag': 'noindex, nofollow' } : {}),
+      },
+      continue: true,
+    },
     ...(production
       ? [
           { src: '/robots.txt', dest: 'https://api.propertylistifysa.co.za/robots.txt' },

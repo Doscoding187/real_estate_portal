@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-06T17:11:15.322Z",
+  "id": "dpl_9h2A4GiPTtKmJqGCWh5eCm1A6gDq",
+  "status": "READY",
+  "sha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+  "aliases": [
+    "www.propertylistifysa.co.za",
+    "real-estate-portal-xi.vercel.app",
+    "propertylistifysa.co.za",
+    "real-estate-portal-edwards-projects-29c395d1.vercel.app",
+    "real-estate-portal-git-b34b6a0-7b335b-edwards-projects-29c395d1.vercel.app"
+  ],
+  "target": "production",
+  "queueEmpty": true,
+  "configurationMutated": false
+}
