@@ -341,6 +341,9 @@ async function loadSearchableNames(placeIds: string[]) {
   return grouped;
 }
 
+/** An existing authorized database or transaction used for one assignment. */
+export type PlaceReadDatabase = Pick<Awaited<ReturnType<typeof getDb>>, 'select'>;
+
 /**
  * Exact geographic execution from one canonical Place identity.
  *
@@ -348,10 +351,14 @@ async function loadSearchableNames(placeIds: string[]) {
  * unresolved parent, a parent that is not genuinely coarser, or a containment
  * cycle are all refused. There is no fallback to a name, a legacy handle, or
  * display text, because a Place-authoritative request that cannot execute must
- * fail rather than quietly become something else.
+ * fail rather than quietly become something else. A supplied transaction owns
+ * every read, including the complete ancestry walk.
  */
-export async function executePlace(placeId: string): Promise<PlaceScopeExecutionResolution> {
-  const db = await getDb();
+export async function executePlace(
+  placeId: string,
+  database?: PlaceReadDatabase,
+): Promise<PlaceScopeExecutionResolution> {
+  const db = database ?? (await getDb());
   const rows = await db
     .select({
       placeId: place.placeId,
@@ -367,7 +374,7 @@ export async function executePlace(placeId: string): Promise<PlaceScopeExecution
 
   let ancestry: Awaited<ReturnType<typeof loadContainmentAncestry>>;
   try {
-    ancestry = await loadContainmentAncestry(placeId);
+    ancestry = await loadContainmentAncestry(placeId, db);
   } catch (error) {
     if (error instanceof PlaceContainmentError) {
       return { ok: false, reason: error.reason };
@@ -403,8 +410,9 @@ class PlaceContainmentError extends Error {
 
 async function loadContainmentAncestry(
   placeId: string,
+  database?: PlaceReadDatabase,
 ): Promise<{ placeId: string; scope: PlaceSearchScope | null }[]> {
-  const db = await getDb();
+  const db = database ?? (await getDb());
   const ancestry: { placeId: string; scope: PlaceSearchScope | null }[] = [];
   const seen = new Set<string>([placeId]);
   let cursor: string | null = placeId;

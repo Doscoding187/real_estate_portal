@@ -17,6 +17,7 @@ export default {
       'server/__tests__/contract.database-residual-utility-authority.test.ts',
       'server/__tests__/contract.place-authority-foundation.test.ts',
       'server/__tests__/contract.place-consumer-geography.test.ts',
+      'server/__tests__/contract.canonical-listing-place.test.ts',
       'server/__tests__/contract.place-admission.test.ts',
       'server/__tests__/contract.place-admission-territory-neutrality.test.ts',
       'server/__tests__/contract.developer-engine-s0-containment.test.ts',

@@ -31,6 +31,68 @@ invalidate stale proof pins. Any pre-adoption amendment must demonstrate all
 five conditions in the Database Change Protocol; it is not automatic permission
 to rewrite an adopted migration. Continue consumer preparation independently.
 
+### Listing consumer preparation
+
+Founder identity is now committed in PR #590 at
+`b0cb48f676bfe470ce29c49c9679fd65d1766c7b`, but was still open and unmerged
+when this preparation was reviewed. The accepted remote integration source
+remains `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. No additional SQL sequence is
+assigned by this preparation.
+
+The prepared `shared/canonicalListingLocation.ts` boundary declares version 2
+and one nullable `canonicalPlaceId`, with private address, a complete coordinate
+pair and source, confirmation, public address policy and a separately typed
+provider observation. It rejects numeric handles, geographic display text,
+Search Areas and sibling scopes. An unresolved draft is allowed; a confirmed
+assignment requires its selected identity and location evidence. Existing
+Listing product consumers have **not** been switched to this boundary yet.
+
+`resolveCanonicalListingPlace` takes the caller's authorized database or
+transaction. All identity and ancestry reads use that supplied reader, and
+transport failures propagate. Explicitly invalid selections are refused even
+for drafts. Direct localities require no city ancestor. Publication preparation
+requires confirmation and property-appropriate evidence; a province-only urban
+assignment is refused. Tier B selection remains permitted under D2, independent
+of Place SEO publication eligibility. Active preferred labels are presentation
+only; absent or conflicting labels are refused rather than reconstructed from
+provider text.
+
+The next schema review must add a nullable, width-40 `canonical_place_id` to
+`listings` and its derived `properties` projection, appended in matching model
+and physical order. Each table needs a separately sequenced restrictive foreign
+key to `place.place_id` and a named lookup index. Existing `placeId` remains
+provider evidence. Draft nullability is intentional; confirmed publication must
+validate the canonical assignment in its domain transaction. No text, numeric
+handle or JSON backfill is authorized to manufacture this reference. Land's
+parcel-owned assignment requires its own contract review and is not inferred
+from the listing projection.
+
+The consumer cutover must persist this reference, carry it through revisions,
+revalidate it at publication with the required concurrency protection, and copy
+it into the public projection. It must replace the Listing API and wizard
+authority together, clear competing handles, derive display labels from the
+selected identity and preserve address privacy. No schema compatibility branch
+or request precedence is proposed. A prepared resolver does not prove customer
+publication or listing search membership.
+
+Preparation verification is recorded in
+[canonical-listing-preparation.json](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-preparation.json):
+41 assignment/boundary tests, including nine source-backed national cases;
+614 tests across 55 files in the authority gate; deterministic inventory,
+121 utility surfaces and lifecycle checks passed. Production type checking
+passed; broad type checking retains 263 baseline errors with none in changed
+files. Focused lint reports zero errors and 11 warnings. No database was
+initialized or mutated for this preparation.
+
+Concurrent broad verification exposed an existing test isolation defect:
+registry-corruption tests backed up and restored the shared working file.
+The task-owned registry was restored to its committed bytes, and all damaged
+fixtures now live in individual temporary directories. Each allocation-loss
+test restores and successfully replays its own registry; the shared committed
+registry is checked unchanged. The final focused admission suite passes 33
+tests. This repair protects parallel verification without weakening identity
+refusals.
+
 ## Verified starting facts
 
 The [admitted catalog audit](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/admitted-catalog-audit.json)

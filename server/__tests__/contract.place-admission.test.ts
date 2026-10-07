@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import {
   cpSync,
@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 import { assessAuditCompleteness } from '../../tools/place-admission/audit-completeness.mjs';
 
@@ -49,6 +49,30 @@ const territory = selectPlaceAdmissionTerritory(registryLoad.registry);
 const packagePaths = resolvePlaceAdmissionPackagePaths(territory);
 const sourcePaths = resolvePlaceAdmissionSourcePaths(territory);
 const coverageBaselinePaths = resolvePlaceAdmissionCoverageBaselinePaths(territory);
+
+function createIdentityGuardFixture() {
+  const scratch = mkdtempSync(join(tmpdir(), 'place-identity-guard-'));
+  for (const relative of [
+    'data/place-admission-territories.v0.1',
+    'data/gauteng-source-authority-v0.2',
+    'data/gauteng-place-admission-v0.1',
+  ]) {
+    mkdirSync(join(scratch, 'data'), { recursive: true });
+    cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
+  }
+  const baseline = JSON.parse(
+    readFileSync(join(packageRoot, coverageBaselinePaths.territoryManifest), 'utf8'),
+  );
+  for (const relative of [
+    coverageBaselinePaths.territoryManifest,
+    coverageBaselinePaths.territoryCatalog,
+    ...(baseline.inputs.researched_parent_edges ?? []),
+  ]) {
+    mkdirSync(dirname(join(scratch, relative)), { recursive: true });
+    cpSync(join(packageRoot, relative), join(scratch, relative));
+  }
+  return scratch;
+}
 
 const loaded = loadCanonicalPlacePackage(packageRoot);
 const places = readJsonl(packagePaths.artifacts.places);
@@ -205,42 +229,52 @@ describe('Place admission: Place identity is assigned and stable', () => {
     // pins the guard. It is a real failure to provoke, not a mock: a corrupt registry
     // is the cheapest faithful way to reach the same refusal path, and it must stop
     // the build instead of being reinterpreted as a first build.
-    const repositoryRoot = process.cwd();
-    const registryRelative =
-      'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
-    const registryPath = join(repositoryRoot, registryRelative);
-    const original = readFileSync(registryPath, 'utf8');
-
+    const repositoryRoot = createIdentityGuardFixture();
     try {
-      writeFileSync(registryPath, '{ not json', 'utf8');
-      let message = '';
-      try {
-        execFileSync(
-          'npx',
-          ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
-          { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
-        );
-      } catch (error) {
-        message = `${(error as { stderr?: string }).stderr ?? ''}${(error as { stdout?: string }).stdout ?? ''}`;
-      }
-      expect(message).toContain('place-admission refused');
-      // And it must name the reason, so an operator is not left guessing whether the
-      // build failed on the registry or on geography.
-      expect(message).toMatch(/Place ID registry/);
-      expect(message).toMatch(/not valid JSON/);
-    } finally {
-      writeFileSync(registryPath, original, 'utf8');
-    }
+      const registryRelative =
+        'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
+      const registryPath = join(repositoryRoot, registryRelative);
+      const original = readFileSync(registryPath, 'utf8');
 
-    // The registry is intact and the package still replays with zero re-minting.
-    expect(readFileSync(registryPath, 'utf8')).toBe(original);
-    expect(() =>
-      execFileSync(
-        'npx',
-        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
-        { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
-      ),
-    ).not.toThrow();
+      try {
+        writeFileSync(registryPath, '{ not json', 'utf8');
+        let message = '';
+        try {
+          execFileSync(
+            join(packageRoot, 'node_modules/.bin/tsx'),
+            [
+              join(packageRoot, 'tools/place-admission/build-place-admission.mjs'),
+              '--territory=za-gp',
+            ],
+            { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+          );
+        } catch (error) {
+          message = `${(error as { stderr?: string }).stderr ?? ''}${(error as { stdout?: string }).stdout ?? ''}`;
+        }
+        expect(message).toContain('place-admission refused');
+        // And it must name the reason, so an operator is not left guessing whether the
+        // build failed on the registry or on geography.
+        expect(message).toMatch(/Place ID registry/);
+        expect(message).toMatch(/not valid JSON/);
+      } finally {
+        writeFileSync(registryPath, original, 'utf8');
+      }
+
+      // The registry is intact and the package still replays with zero re-minting.
+      expect(readFileSync(registryPath, 'utf8')).toBe(original);
+      expect(() =>
+        execFileSync(
+          join(packageRoot, 'node_modules/.bin/tsx'),
+          [
+            join(packageRoot, 'tools/place-admission/build-place-admission.mjs'),
+            '--territory=za-gp',
+          ],
+          { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+        ),
+      ).not.toThrow();
+    } finally {
+      rmSync(repositoryRoot, { recursive: true, force: true });
+    }
   });
 });
 
@@ -536,13 +570,26 @@ describe('Place admission: the identity guard, on the failure paths that lose al
   const registryRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
   const placesRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl';
 
+  // Each process owns its damaged copy. Concurrent authority gates must never
+  // back up, mutate or restore the shared committed identity registry.
+  let scratch: string;
+  beforeEach(() => {
+    scratch = createIdentityGuardFixture();
+  });
+
+  const committedRegistryBytes = readFileSync(join(packageRoot, registryRelative), 'utf8');
+  afterEach(() => {
+    rmSync(scratch, { recursive: true, force: true });
+    expect(readFileSync(join(packageRoot, registryRelative), 'utf8')).toBe(committedRegistryBytes);
+  });
+
   const runBuilder = () => {
     try {
       execFileSync(
-        'npx',
-        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
+        join(packageRoot, 'node_modules/.bin/tsx'),
+        [join(packageRoot, 'tools/place-admission/build-place-admission.mjs'), '--territory=za-gp'],
         {
-          cwd: process.cwd(),
+          cwd: scratch,
           encoding: 'utf8',
           stdio: ['ignore', 'pipe', 'pipe'],
         },
@@ -559,8 +606,8 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     // allocation map reads without complaint, so every group looks unallocated and
     // every Place is re-minted. Measured before the guard: `minted=1466 reused=0`,
     // zero identities retained, exit status 0.
-    const registryPath = join(process.cwd(), registryRelative);
-    const placesPath = join(process.cwd(), placesRelative);
+    const registryPath = join(scratch, registryRelative);
+    const placesPath = join(scratch, placesRelative);
     const originalRegistry = readFileSync(registryPath, 'utf8');
     const originalPlaces = readFileSync(placesPath, 'utf8');
 
@@ -578,10 +625,11 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     } finally {
       writeFileSync(registryPath, originalRegistry, 'utf8');
     }
+    expect(runBuilder()).toBe('');
   });
 
   it('refuses a PARTIAL allocation loss and names how many identities are unallocated', () => {
-    const registryPath = join(process.cwd(), registryRelative);
+    const registryPath = join(scratch, registryRelative);
     const originalRegistry = readFileSync(registryPath, 'utf8');
 
     try {
@@ -596,6 +644,7 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     } finally {
       writeFileSync(registryPath, originalRegistry, 'utf8');
     }
+    expect(runBuilder()).toBe('');
   });
 
   it('refuses swapped source allocations even when every published ID remains allocated', () => {
@@ -642,15 +691,15 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     }
   });
 
-  it('leaves the registry and package reusable after every refusal', () => {
-    const registryPath = join(process.cwd(), registryRelative);
+  it('replays an intact isolated registry without touching the committed package', () => {
+    const registryPath = join(scratch, registryRelative);
     const originalRegistry = readFileSync(registryPath, 'utf8');
     expect(readFileSync(registryPath, 'utf8')).toBe(originalRegistry);
     expect(() =>
       execFileSync(
-        'npx',
-        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
-        { cwd: process.cwd(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+        join(packageRoot, 'node_modules/.bin/tsx'),
+        [join(packageRoot, 'tools/place-admission/build-place-admission.mjs'), '--territory=za-gp'],
+        { cwd: scratch, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
       ),
     ).not.toThrow();
   });
