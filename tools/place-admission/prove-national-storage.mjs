@@ -37,6 +37,8 @@
  */
 
 import { createHash } from 'node:crypto';
+import { inspectStoragePreconditions } from './storage-preconditions.mjs';
+import { buildForeignIdentityFixture } from './foreign-identity-fixture.mjs';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -183,24 +185,17 @@ console.log('');
 // ---------------------------------------------------------------- 1. head and empty
 console.log('1. target is at the reconciled head with the authority tables empty');
 const connection = await connect();
-let head = '';
 try {
-  const history = await queryRows(
-    connection,
-    'SELECT filename FROM `sql_migration_history` ORDER BY applied_at DESC, filename DESC LIMIT 1',
-  );
-  head = String(history[0]?.filename ?? '');
-  const total = await queryRows(connection, 'SELECT COUNT(*) AS n FROM `sql_migration_history`');
-  check(head === RECONCILED_HEAD, 'applied migration head is the reconciled head', `head=${head}`);
-  evidence.push(`      applied migrations: ${total[0].n}`);
-
-  const emptyState = await tableState(connection);
-  const allEmpty = Object.values(emptyState).every(entry => entry.rows === 0);
-  check(allEmpty, 'every authority table is empty before the load', describeState(emptyState));
-} catch (error) {
-  check(false, 'target could not be inspected', String(error.message).slice(0, 120));
+  const initial = await inspectStoragePreconditions({
+    connection, queryRows, tableState, expectedHead: RECONCILED_HEAD,
+  });
+  require(true, 'applied migration head is the reconciled head', `head=${initial.head}`);
+  evidence.push(`      applied migrations: ${initial.migrationCount}`);
+  require(true, 'every authority table is empty before the load', describeState(initial.state));
+} finally {
+  // Inspection errors propagate and abort before any destructive scenario.
+  await connection.end();
 }
-await connection.end();
 
 function describeState(state) {
   return Object.entries(state)
@@ -260,8 +255,8 @@ console.log('2. a fault injected mid-load leaves ALL FIVE authority tables uncha
     await faultConnection.end();
   }
 
-  check(faultAt === 6000, 'the injected fault fired mid-load, not before it', `after ${faultAt} place inserts`);
-  check(/INJECTED/.test(refused), 'the load refused rather than reporting success', refused.slice(0, 90));
+  require(faultAt === 6000, 'the injected fault fired mid-load, not before it', `after ${faultAt} place inserts`);
+  require(/INJECTED/.test(refused), 'the load refused rather than reporting success', refused.slice(0, 90));
 
   const afterConnection = await connect();
   const after = await tableState(afterConnection);
@@ -270,7 +265,7 @@ console.log('2. a fault injected mid-load leaves ALL FIVE authority tables uncha
   const unchanged = Object.keys(after).every(
     table => after[table].rows === 0 && after[table].digest === before[table].digest,
   );
-  check(unchanged, 'all five authority tables are unchanged and empty after the fault', describeState(after));
+  require(unchanged, 'all five authority tables are unchanged and empty after the fault', describeState(after));
 }
 
 // ------------------------------------- 8. refusal scenarios, each digest-guarded
@@ -353,20 +348,7 @@ console.log('   built on a target whose evidence an earlier step erased.');
     // zero shared identities.
     const c = await createAuthoritySqlConnection(authority, decision);
     try {
-      for (const table of ['place_external_mapping', 'place_evidence', 'place_relationship', 'place_name', 'place']) {
-        await c.query(`DELETE FROM \`${table}\``);
-      }
-      // Re-insert the correct number of rows under foreign identities.
-      const ids = Array.from({ length: REQUIRED.places }, (_, i) =>
-        `pl-place-01-${String(i).padStart(24, '0')}`,
-      );
-      for (const id of ids) {
-        await c.query(
-          `INSERT INTO \`place\` (place_id, place_type, place_classification, verification_status,
-             lifecycle_status, publication_eligible, search_eligible) VALUES (?,?,?,?,?,?,?)`,
-          [id, 'locality', 'statutory', 'verified', 'active', 1, 1],
-        );
-      }
+      await buildForeignIdentityFixture(c, REQUIRED.places);
       const drifted = (await queryRows(c, 'SELECT COUNT(*) AS n FROM `place`'))[0].n;
       require(drifted === REQUIRED.places, 'the drifted target holds exactly 17,664 Places', `${drifted}`);
     } finally {
@@ -452,6 +434,102 @@ console.log('   built on a target whose evidence an earlier step erased.');
       Object.keys(after).every(t => after[t].digest === before[t].digest && after[t].rows === 0),
       'the rolled-back load left every authority table empty',
       describeState(after),
+    );
+  }
+  // (d) The per-territory path must also roll back a validation refusal.
+  {
+    const authority = seedAuthority();
+    const decision = authorizeDatabaseOperation(authority);
+    const { prepareCanonicalPlaces } =
+      await import('../../server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts');
+    const before = await snapshot();
+    require(
+      Object.values(before).every(t => t.rows === 0),
+      'per-territory refusal fixture starts empty',
+    );
+    const attempt = await createAuthoritySqlConnection(authority, decision);
+    const realQuery = attempt.query.bind(attempt);
+    let swallowed = false;
+    attempt.query = async (sql, values) => {
+      if (!swallowed && /^\s*INSERT INTO `place_external_mapping`/.test(sql)) {
+        swallowed = true;
+        return [{ affectedRows: 1, insertId: 0, warningStatus: 0 }];
+      }
+      return realQuery(sql, values);
+    };
+    let refusal = '';
+    try {
+      await prepareCanonicalPlaces({
+        authority,
+        decision,
+        connection: attempt,
+        root: ROOT,
+        territoryId: 'za-gp',
+      });
+    } catch (error) {
+      refusal = String(error.message);
+    } finally {
+      await attempt.end();
+    }
+    require(
+      swallowed && /external mappings/.test(refusal),
+      'per-territory validation refusal was reached',
+    );
+    const after = await snapshot();
+    require(
+      Object.keys(after).every(t => after[t].digest === before[t].digest),
+      'per-territory refusal rolled back all five tables',
+    );
+  }
+
+  // (e) Same IDs and totals with a changed identity-bearing field must refuse.
+  {
+    const authority = seedAuthority();
+    const decision = authorizeDatabaseOperation(authority);
+    const fixture = await createAuthoritySqlConnection(authority, decision);
+    try {
+      await prepareNationalCanonicalPlaces({
+        authority,
+        decision,
+        connection: fixture,
+        root: ROOT,
+      });
+      const [row] = await queryRows(
+        fixture,
+        "SELECT place_id FROM `place` WHERE place_type='suburb' LIMIT 1",
+      );
+      require(Boolean(row), 'national field-drift fixture has a suburb');
+      // Both types accept locality search scope; this is valid SQL state with
+      // the wrong admitted identity, not a constraint rejection fixture.
+      await fixture.query("UPDATE `place` SET place_type='locality' WHERE place_id=?", [
+        row.place_id,
+      ]);
+    } finally {
+      await fixture.end();
+    }
+    const before = await snapshot();
+    const attempt = await createAuthoritySqlConnection(authority, decision);
+    let refusal = '';
+    try {
+      await prepareNationalCanonicalPlaces({
+        authority,
+        decision,
+        connection: attempt,
+        root: ROOT,
+      });
+    } catch (error) {
+      refusal = String(error.message);
+    } finally {
+      await attempt.end();
+    }
+    require(
+      /stored identity/.test(refusal),
+      'national identity-field drift is refused before commit',
+    );
+    const after = await snapshot();
+    require(
+      Object.keys(after).every(t => after[t].digest === before[t].digest),
+      'national identity-field refusal changed nothing',
     );
   }
 }

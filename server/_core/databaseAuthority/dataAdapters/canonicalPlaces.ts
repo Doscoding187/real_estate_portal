@@ -218,7 +218,9 @@ export function loadCanonicalPlacePackage(root: string, ref: CanonicalPlacesPack
     rows[key as keyof typeof ARTIFACT_KEYS] = readJsonl(root, path);
   }
 
-  const registryDocument = JSON.parse(readFileSync(resolve(root, paths.placeIdRegistry), 'utf8')) as {
+  const registryDocument = JSON.parse(
+    readFileSync(resolve(root, paths.placeIdRegistry), 'utf8'),
+  ) as {
     allocated: Record<string, string>;
   };
 
@@ -315,6 +317,19 @@ async function readStored(sql: any) {
 
 const rowKey = (values: unknown[]) => JSON.stringify(values);
 
+const placeIdentityKey = (place: Record<string, unknown>) =>
+  rowKey([
+    place.place_id,
+    place.place_type,
+    place.place_classification,
+    place.verification_status,
+    place.lifecycle_status,
+    place.publication_eligible,
+    place.search_eligible,
+    place.search_scope ?? null,
+    place.licensing_classification ?? null,
+  ]);
+
 /** Row counts for every table the write body touches, for before/after differencing. */
 const WRITTEN_TABLES = {
   places: 'place',
@@ -334,7 +349,10 @@ async function snapshotRowCounts(connection: any): Promise<Record<string, number
 }
 
 /** Rows created by a run, measured rather than inferred from a driver's return value. */
-function createdByDiff(before: Record<string, number>, after: Record<string, number>): WrittenCounts {
+function createdByDiff(
+  before: Record<string, number>,
+  after: Record<string, number>,
+): WrittenCounts {
   const created = {} as WrittenCounts;
   for (const field of Object.keys(WRITTEN_TABLES)) {
     created[field] = Math.max(0, (after[field] ?? 0) - (before[field] ?? 0));
@@ -389,7 +407,6 @@ async function writePackageRows(connection: any, rows: any) {
         place.licensing_classification ?? null,
       ],
     );
-    
   }
 
   for (const name of rows.names as any[]) {
@@ -410,7 +427,6 @@ async function writePackageRows(connection: any, rows: any) {
         name.valid_to ?? null,
       ],
     );
-    
   }
 
   for (const relationship of rows.relationships as any[]) {
@@ -429,7 +445,6 @@ async function writePackageRows(connection: any, rows: any) {
         relationship.valid_to ?? null,
       ],
     );
-    
   }
 
   // place_evidence has no natural unique key: `place_id` is nullable by design
@@ -488,7 +503,6 @@ async function writePackageRows(connection: any, rows: any) {
         mapping.observed_at ?? null,
       ],
     );
-    
   }
 }
 
@@ -581,42 +595,42 @@ export async function prepareCanonicalPlaces(input: {
   const countsBefore = await snapshotRowCounts(connection);
   await withTransaction(connection, async () => {
     await writePackageRows(connection, rows);
+    /**
+     * A row the database refused to store must never be reported as a successful
+     * load. Every insert above uses `ON DUPLICATE KEY UPDATE`, so a row whose
+     * `(place_id, role, name)` key the target's collation already holds is dropped
+     * silently, and `place_name.name` is `utf8mb4_0900_ai_ci` — accent- *and*
+     * case-insensitive — so ordinary accented evidence reaches this.
+     *
+     * The check compares the target's resulting state against the package, not the
+     * number of rows written by this run. A replay legitimately writes nothing, so
+     * counting writes would report a correct idempotent no-op as a defect.
+     */
+    const storedAfter = await readStored(connection);
+    const dropped: string[] = [];
+    const compare = (label: string, actual: number, expectedCount: number) => {
+      if (actual !== expectedCount) dropped.push(`${label} ${actual} != package ${expectedCount}`);
+    };
+    compare('places', storedAfter.place.length, expected.places);
+    compare('names', storedAfter.placeName.length, expected.names);
+    compare('relationships', storedAfter.placeRelationship.length, expected.relationships);
+    compare('evidence', storedAfter.placeEvidence.length, expected.evidence);
+    compare(
+      'external mappings',
+      storedAfter.placeExternalMapping.length,
+      expected.externalMappings,
+    );
+    if (dropped.length > 0) {
+      throw new Error(
+        `canonical-places refused: the target does not hold exactly the admission package, so a ` +
+          `row was rejected as a duplicate key under the target collation. This is a data or ` +
+          `collation defect, not a successful load:\n  ${dropped.join('\n  ')}`,
+      );
+    }
+    await verifyCanonicalPlaces({ ...input, root });
   });
   const countsAfter = await snapshotRowCounts(connection);
   const written = createdByDiff(countsBefore, countsAfter);
-
-  /**
-   * A row the database refused to store must never be reported as a successful
-   * load. Every insert above uses `ON DUPLICATE KEY UPDATE`, so a row whose
-   * `(place_id, role, name)` key the target's collation already holds is dropped
-   * silently, and `place_name.name` is `utf8mb4_0900_ai_ci` — accent- *and*
-   * case-insensitive — so ordinary accented evidence reaches this.
-   *
-   * The check compares the target's resulting state against the package, not the
-   * number of rows written by this run. A replay legitimately writes nothing, so
-   * counting writes would report a correct idempotent no-op as a defect.
-   */
-  const storedAfter = await readStored(connection);
-  const dropped: string[] = [];
-  const compare = (label: string, actual: number, expectedCount: number) => {
-    if (actual !== expectedCount) dropped.push(`${label} ${actual} != package ${expectedCount}`);
-  };
-  compare('places', storedAfter.place.length, expected.places);
-  compare('names', storedAfter.placeName.length, expected.names);
-  compare('relationships', storedAfter.placeRelationship.length, expected.relationships);
-  compare('evidence', storedAfter.placeEvidence.length, expected.evidence);
-  compare(
-    'external mappings',
-    storedAfter.placeExternalMapping.length,
-    expected.externalMappings,
-  );
-  if (dropped.length > 0) {
-    throw new Error(
-      `canonical-places refused: the target does not hold exactly the admission package, so a ` +
-        `row was rejected as a duplicate key under the target collation. This is a data or ` +
-        `collation defect, not a successful load:\n  ${dropped.join('\n  ')}`,
-    );
-  }
 
   return {
     adapter: 'canonical-places',
@@ -703,7 +717,9 @@ export async function prepareNationalCanonicalPlaces(input: {
     for (const place of pkg.rows.places as any[]) {
       const id = String(place.place_id);
       if (!PLACE_ID_PATTERN.test(id)) {
-        throw new Error(`canonical-places national refused: ${id} is not a governed Place identity`);
+        throw new Error(
+          `canonical-places national refused: ${id} is not a governed Place identity`,
+        );
       }
       const existing = owner.get(id);
       if (existing && existing !== pkg.territoryId) {
@@ -744,7 +760,10 @@ export async function prepareNationalCanonicalPlaces(input: {
     if (foreign.length || missing.length) {
       const describe = (label: string, ids: string[]) =>
         ids.length ? `${label}: ${ids.length} (for example ${ids.slice(0, 3).join(', ')})` : null;
-      const detail = [describe('stored identities the packages do not claim', foreign), describe('claimed identities the target lacks', missing)]
+      const detail = [
+        describe('stored identities the packages do not claim', foreign),
+        describe('claimed identities the target lacks', missing),
+      ]
         .filter(Boolean)
         .join('; ');
       throw new Error(
@@ -753,6 +772,20 @@ export async function prepareNationalCanonicalPlaces(input: {
           `every identity agrees, so a partially loaded or foreign target is refused rather than ` +
           `extended or adopted. Dispose the target and load from zero.`,
       );
+    }
+  }
+
+  // Refuse an altered loaded identity before attempting any writes. The full
+  // verifier runs again inside the transaction to protect first loads too.
+  const storedPlaces = new Map(storedBefore.place.map(row => [String(row.place_id), row]));
+  for (const pkg of packages) {
+    for (const place of pkg.rows.places) {
+      const current = storedPlaces.get(String(place.place_id));
+      if (current && placeIdentityKey(current) !== placeIdentityKey(place)) {
+        throw new Error(
+          `canonical-places national refused: stored identity for ${place.place_id} differs from its admission package`,
+        );
+      }
     }
   }
 
@@ -765,7 +798,14 @@ export async function prepareNationalCanonicalPlaces(input: {
       externalMappings: sum.externalMappings + pkg.expected.externalMappings,
       dispositionLedger: sum.dispositionLedger + pkg.expected.dispositionLedger,
     }),
-    { places: 0, names: 0, relationships: 0, evidence: 0, externalMappings: 0, dispositionLedger: 0 },
+    {
+      places: 0,
+      names: 0,
+      relationships: 0,
+      evidence: 0,
+      externalMappings: 0,
+      dispositionLedger: 0,
+    },
   );
 
   // (3) One transaction for all nine. Any throw below rolls the whole load back.
@@ -787,7 +827,8 @@ export async function prepareNationalCanonicalPlaces(input: {
     const inside = await readStored(connection);
     const drift: string[] = [];
     const assertTotal = (label: string, actual: number, expectedCount: number) => {
-      if (actual !== expectedCount) drift.push(`${label} ${actual} != national total ${expectedCount}`);
+      if (actual !== expectedCount)
+        drift.push(`${label} ${actual} != national total ${expectedCount}`);
     };
     assertTotal('places', inside.place.length, totals.places);
     assertTotal('names', inside.placeName.length, totals.names);
@@ -796,7 +837,10 @@ export async function prepareNationalCanonicalPlaces(input: {
     assertTotal('external mappings', inside.placeExternalMapping.length, totals.externalMappings);
     const insideIds = new Set(inside.place.map((row: any) => String(row.place_id)));
     const absent = [...owner.keys()].filter(placeId => !insideIds.has(placeId));
-    if (absent.length) drift.push(`${absent.length} claimed identities are absent (for example ${absent.slice(0, 3).join(', ')})`);
+    if (absent.length)
+      drift.push(
+        `${absent.length} claimed identities are absent (for example ${absent.slice(0, 3).join(', ')})`,
+      );
     if (drift.length) {
       throw new Error(
         `canonical-places national refused: the target does not hold the national total, so a row was ` +
@@ -804,6 +848,10 @@ export async function prepareNationalCanonicalPlaces(input: {
           `not a successful load, and the transaction is rolled back:\n  ${drift.join('\n  ')}`,
       );
     }
+    // IDs and totals alone cannot establish identity: a stored Place may have
+    // changed type, scope or eligibility while retaining its ID. Verify the
+    // admitted identity fields and containment before this transaction commits.
+    await verifyNationalCanonicalPlaces({ ...input, root });
   });
   const countsAfter = await snapshotRowCounts(connection);
   const written = createdByDiff(countsBefore, countsAfter);
@@ -821,7 +869,10 @@ export async function prepareNationalCanonicalPlaces(input: {
     consumerActivated: false,
     publicationPerformed: false,
     identity: 'place_id',
-    rejectedConstraints: ['UNIQUE(parent, normalized_name)', 'UNIQUE(parent, normalized_name, place_type)'],
+    rejectedConstraints: [
+      'UNIQUE(parent, normalized_name)',
+      'UNIQUE(parent, normalized_name, place_type)',
+    ],
     targetClassDisposable: disposable,
     provinces: territoryIds,
     provinceCount: territoryIds.length,
@@ -896,7 +947,9 @@ export async function verifyNationalCanonicalPlaces(input: {
     for (const place of pkg.rows.places as any[]) {
       const current = storedPlaces.get(String(place.place_id));
       if (!current) {
-        problems.push(`${pkg.territoryId}: admitted Place ${place.place_id} is absent from the target`);
+        problems.push(
+          `${pkg.territoryId}: admitted Place ${place.place_id} is absent from the target`,
+        );
         continue;
       }
       present += 1;
@@ -961,7 +1014,9 @@ export async function verifyNationalCanonicalPlaces(input: {
     );
   }
   if (stored.placeEvidence.length !== totals.evidence) {
-    problems.push(`national place_evidence rows ${stored.placeEvidence.length} != total ${totals.evidence}`);
+    problems.push(
+      `national place_evidence rows ${stored.placeEvidence.length} != total ${totals.evidence}`,
+    );
   }
   if (stored.placeExternalMapping.length !== totals.externalMappings) {
     problems.push(
@@ -972,7 +1027,9 @@ export async function verifyNationalCanonicalPlaces(input: {
 
   const roots = stored.place.filter((row: any) => row.place_type === 'province');
   if (roots.length !== packages.length) {
-    problems.push(`national target holds ${roots.length} province roots for ${packages.length} provinces`);
+    problems.push(
+      `national target holds ${roots.length} province roots for ${packages.length} provinces`,
+    );
   }
 
   // A containment forest must not become cyclic or gain a second parent once the

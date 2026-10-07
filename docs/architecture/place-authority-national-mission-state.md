@@ -52,10 +52,18 @@ databases. Place Authority remains the only geographic identity source.
 | 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** (superseded as a milestone by row 5) |
 | 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
-| 6 | National authority verification | **national storage proven against the reconciled schema; branch integrated with `origin/main`** |
+| 6 | National authority verification | **review findings repaired; national storage and failure paths proven — ready for review, consumers inactive** |
 | 7 | National consumer handoff | not started; forbidden until activation is decided |
 
 ## Current phase
+
+**Repair checkpoint, 2026-10-07:** the four correctness findings against
+`0cf4022c3` are repaired and protected by regression tests. National storage,
+atomic refusal and populated-target refusal are physically proven on the exact
+owned disposable target. The Azure regression coverage now runs without
+extending its revoked historical approval. See the repair record at the end of
+this file. Code awaits review; consumer activation and protected releases remain
+closed.
 
 **All nine provinces are admitted, reproducible and physically proven**, each on
 its own fresh disposable target, and **no consumer reads any of them**. Nothing
@@ -1452,4 +1460,165 @@ before anything is published. No admitted province currently carries OSM-derived
 rows, so ODbL blocks nothing that exists today.
 
 Still forbidden: activating consumers, publishing an SEO scope, inferring a
-Search Area, widening a search, or claiming national coverage.
+Search Area, widening a search, or claiming published national coverage.
+
+## Takeover inspection — 2026-10-06
+
+Continuation uses the existing dedicated worktree and branch recorded above,
+starting at `0cf4022c3a2225766e08186b362543db8809f0ed`. The worktree was clean
+before this documentation update. The local `origin/main` ref is
+`51802b7d324c61e5ff79cc3515510b29f76022d5` and is an ancestor of the reviewed
+head; no fetch or new integration was performed. The sibling Gauteng worktree
+retains another workstream's uncommitted files and was inspected read-only.
+
+### Review disposition and next engineering action
+
+The later senior review requests changes on this exact head. Inspection confirms
+the affected code still has these gaps; the earlier reproduction evidence comes
+from that review and was not re-run during this takeover:
+
+1. `prove-national-storage.mjs` still records failed initial head/empty-table
+   checks with `check()` and continues, including after inspection errors.
+   Abort before any fault injection or destructive refusal scenario.
+2. `build-place-admission.mjs` checks published IDs against the allocation
+   values as a set. Swapping two source allocations preserves that set while
+   changing which referent an ID denotes. Protect each published source-member
+   association, and test that refusal leaves artifacts unchanged.
+3. National preparation in `canonicalPlaces.ts` compares ID sets and totals,
+   but does not validate every stored identity-bearing field against the
+   admitted packages before commit. Validate content within the transaction.
+4. Per-territory preparation validates stored totals after `withTransaction()`
+   returns. A validation refusal can therefore retain committed rows. Move
+   validation inside the transaction and prove rollback on rejection.
+
+The review also identifies a coverage gap: the six Azure failures do not
+"assert only the stale Azure pins." Early pin failures prevent later migration,
+schema and transport assertions from running. Preserve the historical approval,
+and separate its authorization checks from current integration and mock
+transport coverage without granting a new protected release authorization.
+
+Close these engineering findings before repeating physical proof or describing
+the branch as integration-ready. Consumer activation, protected release,
+boundary currency and any applicable ODbL determination retain their existing
+decision boundaries. No owner decision is needed to inspect and repair the
+four correctness gaps within this workstream.
+
+Two older next-action statements above are historical: migration renumbering
+was implemented by `7a249f3e4`, and storage has a recorded national proof.
+Neither statement removes the newly identified validation defects.
+
+### Fresh takeover checks
+
+- `pnpm db:authority:status`: resolved `disposable-worktree`, exact worktree
+  identity, local-owner credential class, fingerprint
+  `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`, manifest
+  head `0103_saved_searches_canonical_place_reference_fk.sql`. Service
+  unreachable; ledger, attempts, ownership of the database and schema not
+  evaluated. This is not fresh physical database proof.
+- `pnpm place:admission:cross-province`: passed, nine provinces, 17,664 Places,
+  18,309 source identities, zero cross-province Place ID collisions.
+- `pnpm place:admission:national-provenance`: passed its accounting checks;
+  disposition-only ledgers and outstanding research remain explicitly reported.
+- `pnpm place:boundary-currency:check`: no unsupported currency claims; no
+  province certified current, Gauteng boundary provenance still missing.
+- `pnpm test:db-authority:static`: 520 passed, six failed, 526 total; 48/50 files
+  passed. The failures are the two B08 reconciliation tests and four rehearsal
+  connection tests. Passing totals differ from the older recorded run.
+
+No database was provisioned, migrated, loaded or disposed; no physical proof,
+typecheck or browser journey was repeated. No protected or remote database was
+accessed. This takeover changes documentation only and leaves public consumer
+activation closed.
+
+
+## Review corrections and verification — 2026-10-07
+
+This record supersedes the takeover baseline's open engineering findings and
+older claims that six Azure regression tests must remain red. It does not approve
+consumer activation, a durable national target or a protected database release.
+The correction is on the same feature branch and worktree, based on `0cf4022c3`;
+no upstream fetch, merge, push or deployment was performed.
+
+### Correctness changes
+
+1. Storage proof inspection now throws on the wrong head, populated authority
+   tables or unreadable state, closes the inspection connection and stops before
+   fault injection. Failed rollback preconditions also abort immediately.
+2. Admission checks source-member allocations in both directions against the
+   published package before writing. An unchanged ID set no longer permits two
+   source allocations to swap their geographic referents. A scratch-copy test
+   verifies refusal with every package file byte-identical afterwards.
+3. National preparation compares stored identity-bearing fields before writing
+   and runs the full national verifier inside the transaction before commit.
+4. Per-territory counts, identity and containment validation now run inside its
+   transaction. A dropped mapping insert refuses and rolls back the whole load.
+
+The B08 integration assertions now check the preserved migration checksums,
+lineage, indexes and relationships independently of the old release pins. A
+separate assertion preserves the historical registration's revoked status and
+old pins. Transport tests use an in-memory historical manifest; a negative case
+proves that the integrated manifest still refuses before fixture mutation.
+Neither the runtime approval policy nor the registration file was modified.
+
+The proof's foreign-identity fixture now uses one transaction instead of 17,664
+separate commits. Its full-sized construction and rollback are tested with the
+real transaction helper over mock transport; full-sized construction was also
+run on the owned physical target in **15,316 ms**. The full storage proof had
+already run the original fixture construction; the optimized helper was verified
+separately rather than represented as part of that earlier run.
+
+### Physical evidence
+
+Target classification `disposable-worktree`, exact ownership, local-owner
+credential class, fingerprint
+`0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`.
+The target was created from zero, migrated through 104 migrations to head
+`0103_saved_searches_canonical_place_reference_fk.sql`, and schema congruency
+passed with 39/39 physical CHECK constraints enforced. No incomplete attempts
+remained after migration. The proof subsequently used its governed
+disposal/create/migrate sequence for the final load.
+
+| Verification | Result |
+| --- | --- |
+| Fault after 6,000 Place inserts | all five tables rolled back, unchanged and empty |
+| Partial national target | refused, all five table digests unchanged |
+| Same-count foreign identity target | refused, all five table digests unchanged |
+| National post-write mapping validation failure | refused, all five tables rolled back to empty |
+| Per-territory dropped mapping | refused, all five tables rolled back to empty |
+| Correct national ID set with changed Place type | refused before commit, all five digests unchanged |
+| Final national load | 17,664 Places; 26,425 names; 17,655 relationships; 79,925 evidence; 19,792 mappings |
+| Source accounting | 18,309 identities = 17,664 Places + 645 absorbed |
+| National verification | 9/9 provinces complete, nine roots, zero identity drift |
+| Replay | zero rows created, every table digest unchanged |
+| Re-running proof on populated target | exit 1 at the initial guard; no destructive phase reached; fingerprints unchanged |
+
+The final loaded Place ID set digest is
+`75745dac494a0d49457ee36bc97ba38919face6b90b5aafa37e2e7aca4abea75`, identical
+to the committed packages. All nine packages also regenerate byte-identically
+with explicit territory selection and `--check`; no admission artifact or Place
+ID registry changed.
+
+The target was disposed with its freshly emitted acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`. No other-target connections were
+observed before cleanup; the local service was stopped through its exact Unix
+socket. No protected, remote, shared or durable database was accessed.
+
+### Repository gates and next action
+
+- `pnpm db:authority:check`: passed, including **539/539 tests in 52 files**, 121
+  classified utility surfaces, schema sanity, deterministic inventory and the
+  lifecycle contract.
+- `pnpm check`: passed.
+- `pnpm lint:check`: passed with zero errors; existing warnings remain.
+- `pnpm build`: passed; existing bundle-size warnings remain.
+- Full `pnpm typecheck`: final rerun reports the same 263 baseline errors, with
+  none in the changed files.
+- `git diff --check`: passed.
+
+The default broad `test:ci` bootstrap and browser journeys were not run: this
+checkpoint uses the static authority suite and the owned physical proof, without
+activating consumer paths or adopting the legacy raw-connection test bootstrap.
+
+Next action: review the corrective commit and the Place Authority branch.
+Activation, publication, boundary currency, the applicable founder ODbL decision
+and any fresh Azure release/rehearsal approval retain their separate gates.

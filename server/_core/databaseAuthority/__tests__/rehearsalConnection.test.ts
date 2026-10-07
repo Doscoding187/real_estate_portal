@@ -31,11 +31,34 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   arm: vi.fn(),
   dirty: false,
+  currentManifest: false,
   sqlVersion: '8.4.8-azure',
   selected: 'propertylistify_database',
   tls: 'TLS_AES_256_GCM_SHA384',
   queries: [] as string[],
 }));
+// Exercise transport against the historical approved manifest in memory only.
+// The real registration remains revoked; the integrated manifest must be refused.
+vi.mock('../../../migrations/migrationManifest', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../migrations/migrationManifest')>();
+  return {
+    ...actual,
+    loadAndValidateMigrationManifest: (
+      ...args: Parameters<typeof actual.loadAndValidateMigrationManifest>
+    ) => {
+      const current = actual.loadAndValidateMigrationManifest(...args);
+      if (mocks.currentManifest) return current;
+      return {
+        ...current,
+        manifestDigest: '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+        orderedMigrations: current.orderedMigrations.filter(
+          m => Number(m.filename.slice(0, 4)) <= 94,
+        ),
+        document: { ...current.document, expectedHead: '0094_content_topics_primary_key.sql' },
+      };
+    },
+  };
+});
 vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.create } }));
 vi.mock('../rehearsalAuthority', async importOriginal => ({
   ...(await importOriginal<any>()),
@@ -79,6 +102,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
   mocks.dirty = false;
+  mocks.currentManifest = false;
   mocks.sqlVersion = '8.4.8-azure';
   mocks.selected = REHEARSAL.database;
   mocks.tls = 'TLS_AES_256_GCM_SHA384';
@@ -112,7 +136,17 @@ afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
 });
-describe('rehearsal connection boundary (mock transport, no live DB)', () => {
+describe('historical rehearsal connection boundary (mock transport, no live DB)', () => {
+  it('refuses the integrated manifest before any fixture mutation', async () => {
+    mocks.currentManifest = true;
+    const { a, d } = authority();
+    await expect(createAuthorityRehearsalSession(a, d)).rejects.toThrow(
+      'Rehearsal manifest authority mismatch',
+    );
+    expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE|START|COMMIT|ROLLBACK)/.test(q))).toBe(
+      false,
+    );
+  });
   it('verifies ARM before connection, forces TLS, runs bounded probes and cleans up', async () => {
     const { a, d } = authority();
     const session = await createAuthorityRehearsalSession(a, d);

@@ -511,6 +511,32 @@ function assertExistingIdentitiesAreAllocated() {
         `remove the whole package deliberately. Nothing has been written.`,
     );
   }
+  // An unchanged ID set is insufficient: swapping allocation values changes
+  // which real-world referent each ID denotes. Compare source membership in
+  // both directions before allowing any artifact to be rewritten.
+  const publishedById = new Map(published.map(place => [String(place.place_id), place]));
+  for (const place of published) {
+    const members = new Set(place.source_identity_ids);
+    const memberAllocations = [...members].filter(member => registry.allocated[member]);
+    if (
+      !memberAllocations.length ||
+      memberAllocations.some(member => registry.allocated[member] !== place.place_id)
+    ) {
+      throw new Error(
+        `place-admission refused: published source-member allocation for ${place.place_id} differs ` +
+          `from the registry. Place identities must retain their source referents. Nothing has been written.`,
+      );
+    }
+  }
+  for (const [sourceId, placeId] of Object.entries(registry.allocated)) {
+    const place = publishedById.get(String(placeId));
+    if (place && !place.source_identity_ids.includes(sourceId)) {
+      throw new Error(
+        `place-admission refused: published source-member allocation for ${placeId} assigns ` +
+          `an unrelated source identity ${sourceId}. Nothing has been written.`,
+      );
+    }
+  }
 }
 
 /** Read a JSONL artifact, treating a zero-byte file as empty rather than as an error. */

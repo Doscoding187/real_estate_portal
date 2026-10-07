@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { assessAuditCompleteness } from '../../tools/place-admission/audit-completeness.mjs';
@@ -49,9 +58,10 @@ const ledger = readJsonl(packagePaths.artifacts.disposition_ledger);
 const parentEvidence = JSON.parse(
   readFileSync(packagePaths.artifacts.parent_evidence_classification, 'utf8'),
 ) as { edges: any[]; tally: any; governed_input_count: number };
-const sourceManifest = JSON.parse(
-  readFileSync(sourcePaths.manifest, 'utf8'),
-) as { compact_artifacts: { path: string; sha256: string }[]; source_snapshot_id: string };
+const sourceManifest = JSON.parse(readFileSync(sourcePaths.manifest, 'utf8')) as {
+  compact_artifacts: { path: string; sha256: string }[];
+  source_snapshot_id: string;
+};
 
 const placeIds = new Set(places.map(p => p.place_id));
 
@@ -451,9 +461,7 @@ describe('Place admission: schema alignment', () => {
     for (const place of places) {
       if (place.search_scope === 'metro_city') expect(place.place_type).toMatch(/^(city|town)$/);
       if (place.search_scope === 'locality') {
-        expect(place.place_type).toMatch(
-          /^(township|suburb|neighbourhood|locality|village)$/,
-        );
+        expect(place.place_type).toMatch(/^(township|suburb|neighbourhood|locality|village)$/);
       }
     }
   });
@@ -465,15 +473,19 @@ describe('Place admission: schema alignment', () => {
       expect(edge.search_scope_authorized, `${edge.from_place_id} must not widen search`).toBe(0);
     }
     const scopeEstablishment = places.filter(
-      p => (p as unknown as { scope_establishment?: { established: boolean } }).scope_establishment
-        ?.established === true,
+      p =>
+        (p as unknown as { scope_establishment?: { established: boolean } }).scope_establishment
+          ?.established === true,
     );
     expect(scopeEstablishment.length).toBeGreaterThan(0);
     // Establishment proves a province context, never a descendant set.
     for (const place of scopeEstablishment) {
       const establishment = (
         place as unknown as {
-          scope_establishment: { evidenced_scoped_ancestors: string[]; required_coarser_scopes: string[] };
+          scope_establishment: {
+            evidenced_scoped_ancestors: string[];
+            required_coarser_scopes: string[];
+          };
         }
       ).scope_establishment;
       expect(establishment.required_coarser_scopes).toEqual(
@@ -526,11 +538,15 @@ describe('Place admission: the identity guard, on the failure paths that lose al
 
   const runBuilder = () => {
     try {
-      execFileSync('npx', ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'], {
-        cwd: process.cwd(),
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+      execFileSync(
+        'npx',
+        ['tsx', 'tools/place-admission/build-place-admission.mjs', '--territory=za-gp'],
+        {
+          cwd: process.cwd(),
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      );
       return '';
     } catch (error) {
       const failure = error as { stderr?: string; stdout?: string };
@@ -582,6 +598,50 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     }
   });
 
+  it('refuses swapped source allocations even when every published ID remains allocated', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'place-allocation-swap-'));
+    try {
+      for (const relative of [
+        'data/place-admission-territories.v0.1',
+        'data/gauteng-source-authority-v0.2',
+        'data/gauteng-place-admission-v0.1',
+      ]) {
+        mkdirSync(join(scratch, 'data'), { recursive: true });
+        cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
+      }
+      const registryPath = join(scratch, registryRelative);
+      const damaged = JSON.parse(readFileSync(registryPath, 'utf8'));
+      const [first, second] = Object.keys(damaged.allocated);
+      [damaged.allocated[first], damaged.allocated[second]] = [
+        damaged.allocated[second],
+        damaged.allocated[first],
+      ];
+      writeFileSync(registryPath, JSON.stringify(damaged));
+      const directory = join(scratch, 'data/gauteng-place-admission-v0.1');
+      const snapshot = () =>
+        readdirSync(directory).map(file => [file, readFileSync(join(directory, file), 'utf8')]);
+      const before = snapshot();
+      let output = '';
+      try {
+        execFileSync(
+          join(packageRoot, 'node_modules/.bin/tsx'),
+          [
+            join(packageRoot, 'tools/place-admission/build-place-admission.mjs'),
+            '--territory',
+            'za-gp',
+          ],
+          { cwd: scratch, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+        );
+      } catch (error) {
+        output = String((error as { stderr?: string }).stderr);
+      }
+      expect(output).toContain('published source-member allocation');
+      expect(snapshot()).toEqual(before);
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
   it('leaves the registry and package reusable after every refusal', () => {
     const registryPath = join(process.cwd(), registryRelative);
     const originalRegistry = readFileSync(registryPath, 'utf8');
@@ -621,7 +681,9 @@ describe('National storage proof: the audit cannot conclude safety from a target
   it('does not accept a finding that merely has no migrations recorded', () => {
     // A ledger table that is positively absent IS an established fact; a ledger that
     // exists but cannot be read is not. Only the second blocks the conclusion.
-    const noLedger = assessAuditCompleteness([{ database: 'a', inspected: true, note: 'no migration ledger' }]);
+    const noLedger = assessAuditCompleteness([
+      { database: 'a', inspected: true, note: 'no migration ledger' },
+    ]);
     expect(noLedger.complete).toBe(true);
     const bare = assessAuditCompleteness([{ database: 'a' }]);
     expect(bare.complete).toBe(false);
