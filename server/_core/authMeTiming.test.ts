@@ -31,6 +31,7 @@ function run<T>(
   requestId = id,
   res = response(),
   path = '/api/trpc/auth.me',
+  headers: Record<string, string | string[]> = {},
 ) {
   return new Promise<T>((resolve, reject) => {
     middleware(
@@ -38,7 +39,7 @@ function run<T>(
         requestId,
         path,
         method: 'GET',
-        headers: { cookie: 'DO_NOT_LOG_COOKIE' },
+        headers: { cookie: 'DO_NOT_LOG_COOKIE', ...headers },
       } as unknown as Parameters<RequestHandler>[0],
       res as unknown as Parameters<RequestHandler>[1],
       () => {
@@ -79,6 +80,46 @@ afterEach(() => {
 });
 
 describe('bounded account-information timing', () => {
+  it.each([
+    undefined,
+    '',
+    'x'.repeat(129),
+    'invalid id',
+    'invalid\r\nheader',
+    'trailing\n',
+    'first,second',
+    ['first', 'second'],
+    'invalid\u00e9',
+  ])('omits an absent or invalid Railway ID without changing execution: %j', async value => {
+    enable();
+    const headers: Record<string, string | string[]> =
+      value === undefined ? {} : { 'x-railway-request-id': value };
+    const work = vi.fn(async () => 'normal authentication result');
+    expect(
+      await run(createAuthMeTimingMiddleware(), work, id, response(), '/api/trpc/auth.me', headers),
+    ).toBe('normal authentication result');
+    expect(work).toHaveBeenCalledOnce();
+    expect(rows()[0]).toMatchObject({ requestId: id, phase: 'request', event: 'arrived' });
+    expect(rows()[0]).not.toHaveProperty('railwayRequestId');
+    expect(JSON.stringify(rows())).not.toMatch(/DO_NOT_LOG_COOKIE|invalid|first|second/);
+  });
+
+  it('retains the bounded Railway ID at the maximum length', async () => {
+    enable();
+    const railwayRequestId = 'R_-' + 'x'.repeat(125);
+    await run(
+      createAuthMeTimingMiddleware(),
+      async () => true,
+      id,
+      response(),
+      '/api/trpc/auth.me',
+      {
+        'x-railway-request-id': railwayRequestId,
+      },
+    );
+    expect(rows()[0]).toMatchObject({ requestId: id, railwayRequestId, event: 'arrived' });
+  });
+
   it('does nothing when disabled, including leaving the pool untouched', async () => {
     vi.stubEnv('AUTH_ME_TIMING_REQUEST_IDS', '');
     const p = fakePool(),
@@ -284,6 +325,74 @@ describe('bounded account-information timing', () => {
         other,
       ),
     ).rejects.toBe(failure);
+  });
+
+  it('retains both IDs when the HTTP client disconnects before receiving response headers', async () => {
+    enable();
+    const railwayRequestId = 'Yzmaway8TvebD25xipRofQ';
+    let release!: () => void;
+    const held = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let arrived!: () => void;
+    const arrival = new Promise<void>(resolve => {
+      arrived = resolve;
+    });
+    let disconnected!: (headersSent: boolean) => void;
+    const disconnect = new Promise<boolean>(resolve => {
+      disconnected = resolve;
+    });
+    const app = express();
+    app.use((req, res, next) => {
+      (req as typeof req & { requestId: string }).requestId = String(req.headers['x-request-id']);
+      res.setHeader('x-request-id', String(req.headers['x-request-id']));
+      next();
+    });
+    app.use(createAuthMeTimingMiddleware());
+    app.get('/api/trpc/auth.me', async (_req, res) => {
+      res.once('close', () => disconnected(res.headersSent));
+      arrived();
+      await measureAuthMePhase('session-user-lookup', () => held);
+    });
+    const server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const controller = new AbortController();
+    try {
+      const outcome = fetch(
+        `http://127.0.0.1:${(server.address() as AddressInfo).port}/api/trpc/auth.me`,
+        {
+          signal: controller.signal,
+          headers: {
+            'x-request-id': id,
+            'x-railway-request-id': railwayRequestId,
+            cookie: 'DO_NOT_LOG_COOKIE',
+            authorization: 'DO_NOT_LOG_AUTHORIZATION',
+          },
+        },
+      ).then(
+        () => 'unexpected response',
+        (error: Error) => error.name,
+      );
+      await arrival;
+      controller.abort();
+      expect(await outcome).toBe('AbortError');
+      expect(await disconnect).toBe(false);
+      expect(rows()[0]).toMatchObject({
+        requestId: id,
+        railwayRequestId,
+        phase: 'request',
+        event: 'arrived',
+      });
+      expect(rows().at(-1)).toMatchObject({ requestId: id, event: 'closed-before-finish' });
+      expect(rows().some(row => row.event === 'completed')).toBe(false);
+      expect(JSON.stringify(rows())).not.toMatch(/DO_NOT_LOG_COOKIE|DO_NOT_LOG_AUTHORIZATION/);
+    } finally {
+      controller.abort();
+      release();
+      await held;
+      server.closeAllConnections();
+      await new Promise<void>(resolve => server.close(() => resolve()));
+    }
   });
 
   it('correlates actual HTTP arrival, phases and response with the supplied ID', async () => {

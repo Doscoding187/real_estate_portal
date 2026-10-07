@@ -22,6 +22,7 @@ type Trace = { requestId: string; started: number; events: number; operation: nu
 type Context = { trace: Trace; phase: Phase; operation?: number; sqlHash?: string };
 const storage = new AsyncLocalStorage<Context>();
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const invalidRailwayRequestIdCharacter = /[^A-Za-z0-9_-]/;
 
 function selection() {
   const ids = (process.env.AUTH_ME_TIMING_REQUEST_IDS || '').split(',');
@@ -38,7 +39,7 @@ function selection() {
 function emit(context: Context, phase: Phase, event: string, extra: Record<string, unknown> = {}) {
   const { trace } = context;
   if (trace.events++ >= 128 && phase !== 'response') return;
-  // Fixed fields only: never headers, SQL, values, users or exception details.
+  // Fixed fields only, including one validated provider ID; never dump headers or secrets.
   const sha = process.env.RAILWAY_GIT_COMMIT_SHA;
   try {
     console.info(
@@ -91,7 +92,15 @@ export function createAuthMeTimingMiddleware(): RequestHandler {
     };
     res.once('finish', () => finish('completed'));
     res.once('close', () => finish('closed-before-finish'));
-    emit(context, 'request', 'arrived');
+    const incomingRailwayId = req.headers['x-railway-request-id'];
+    const railwayRequestId =
+      typeof incomingRailwayId === 'string' &&
+      incomingRailwayId.length > 0 &&
+      incomingRailwayId.length <= 128 &&
+      !invalidRailwayRequestIdCharacter.test(incomingRailwayId)
+        ? incomingRailwayId
+        : undefined;
+    emit(context, 'request', 'arrived', { railwayRequestId });
     storage.run(context, next);
   };
 }
