@@ -334,3 +334,31 @@ Fresh owned physical consumer proof is still required before launch assessment.
 records the complete filename/checksum translation and accepted prefix.
 
 Combined candidate verification: authority 617/617 in 56 files; 121 utility surfaces, 112 migration files, deterministic inventory, lifecycle and production type checking pass. No combined-lineage physical or customer publication/search certification is claimed.
+
+
+### North Riding authoring priority, 2026-10-08
+
+Edward prioritised the reported `5 Congo Street, North Riding, Roodepoort, 2169`
+private house journey. The admitted North Riding identity already exists as a
+selectable suburb/locality; the older city runtime projection is the demonstrated
+mismatch. Postal text does not authorize a Roodepoort parent. No source rows,
+Place allocations, classifications or containment edges changed.
+
+The wizard/API/create/edit/reload path now carries canonical identity directly,
+with private evidence kept separate and confirmed house street validation retained.
+The owned 0111 target proved real discovery, private Listing router create,
+authenticated reload and edit/reload. No public property or provider suburb row
+was created. All nine reference packages verify complete. The unsafe older
+provider provisional-suburb insert remains rejected and the sibling dirty source
+worktree is untouched. See the [senior review packet](north-riding-authoring-correction-2026-10-08.md).
+
+Current-main readback `7756376c9ec604b352595b4e4ba8ced73f18562b` adds auth and
+developer changes after the accepted founder integration; its migration manifest
+still has the exact 97-entry prefix through 0096. No migration collision with the
+geography candidate is introduced. Those later changes are not silently imported
+into this bounded authoring correction. Integration must pin current main again
+at senior review.
+
+The larger goal remains unfinished: governed public Listing search membership,
+Land convergence and national consumer launch proof remain required. This bounded
+private authoring proof does not certify those journeys or protected materialisation.

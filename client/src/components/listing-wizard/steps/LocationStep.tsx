@@ -5,7 +5,7 @@ import {
   getLocationEvidenceValidationIssues,
   getLocationValidationIssues,
 } from '@/hooks/useListingWizard';
-import { trpc } from '@/lib/trpc';
+import { CanonicalPlaceSelector } from '@/components/location/CanonicalPlaceSelector';
 import type { LocationData } from '../../../../../shared/listing-types';
 import type { PrivateAddress } from '../../../../../shared/location-contract';
 import {
@@ -19,16 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-type HierarchyItem = { id: number; name: string; code?: string; postalCode?: string };
 type AddressField =
   | 'streetName'
   | 'streetNumber'
@@ -75,20 +67,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   const [providerMessage, setProviderMessage] = useState('');
   const [manualError, setManualError] = useState('');
 
-  const provincesQuery = trpc.location.getLocationHierarchy.useQuery({ depth: 'province' });
-  const citiesQuery = trpc.location.getLocationHierarchy.useQuery(
-    { depth: 'city', provinceId: currentLocation.provinceId ?? undefined },
-    { enabled: Boolean(currentLocation.provinceId) },
-  );
-  const suburbsQuery = trpc.location.getLocationHierarchy.useQuery(
-    { depth: 'suburb', cityId: currentLocation.cityId ?? undefined },
-    { enabled: Boolean(currentLocation.cityId) },
-  );
-  const resolveLocation = trpc.location.resolveForAuthoring.useMutation();
-
-  const provinces = (provincesQuery.data || []) as HierarchyItem[];
-  const cities = (citiesQuery.data || []) as HierarchyItem[];
-  const suburbs = (suburbsQuery.data || []) as HierarchyItem[];
   const isFarm = propertyType === 'farm';
   const isConfirmed = currentLocation.locationConfirmationState === 'confirmed';
   const resolvedStreet = [
@@ -103,7 +81,12 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
   ]
     .filter(Boolean)
     .join(' · ');
-  const resolvedArea = [currentLocation.suburb, currentLocation.city].filter(Boolean).join(', ');
+  const resolvedArea = [
+    currentLocation.canonicalPlace?.label,
+    currentLocation.canonicalPlace?.administrativeContext,
+  ]
+    .filter(Boolean)
+    .join(', ');
   const hasResolvedLocation = Boolean(
     resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province,
   );
@@ -133,53 +116,12 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       locationConfirmationState: 'needs_confirmation',
     });
 
-  const updateHierarchy = (level: 'province' | 'city' | 'suburb', idValue: string) => {
-    const id = Number(idValue);
-    if (!Number.isInteger(id) || id <= 0) return;
-
-    if (level === 'province') {
-      const selected = provinces.find(item => item.id === id);
-      setLocation(
-        resetLocationEvidence({
-          provinceId: id,
-          province: selected?.name || '',
-          cityId: null,
-          city: '',
-          suburbId: null,
-          suburb: '',
-        }),
-      );
-      return;
-    }
-
-    if (level === 'city') {
-      const selected = cities.find(item => item.id === id);
-      setLocation(
-        resetLocationEvidence({
-          cityId: id,
-          city: selected?.name || '',
-          suburbId: null,
-          suburb: '',
-        }),
-      );
-      return;
-    }
-
-    const selected = suburbs.find(item => item.id === id);
-    setLocation(
-      resetLocationEvidence({
-        suburbId: id,
-        suburb: selected?.name || '',
-        postalCode: currentLocation.postalCode || selected?.postalCode || '',
-      }),
-    );
-  };
-
   const updateAddress = (field: AddressField, value: string) => {
     const nextPrivateAddress: PrivateAddress = {
       ...(currentLocation.privateAddress || {}),
       [field]: value,
     };
+    if (!value.trim()) delete nextPrivateAddress[field];
     const privateAddress = hasAddressValues(nextPrivateAddress) ? nextPrivateAddress : null;
     setLocation(
       withLocationDefaults({
@@ -197,33 +139,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     setManualError('');
   };
 
-  const applyResolvedLocation = (resolved: any, base: LocationData) => {
-    const coordinatePair = resolved.coordinatePair;
-    setLocation({
-      ...base,
-      provinceId: resolved.provinceId ?? base.provinceId ?? null,
-      cityId: resolved.cityId ?? base.cityId ?? null,
-      suburbId: resolved.suburbId ?? base.suburbId ?? null,
-      province: resolved.province ?? base.province,
-      city: resolved.city ?? base.city,
-      suburb: resolved.suburb ?? base.suburb,
-      privateAddress: resolved.privateAddress ?? base.privateAddress ?? null,
-      address: addressFromPrivate(resolved.privateAddress ?? base.privateAddress) || base.address,
-      latitude: coordinatePair?.latitude ?? null,
-      longitude: coordinatePair?.longitude ?? null,
-      coordinateSource: resolved.coordinateSource ?? null,
-      locationConfirmationState: resolved.locationConfirmationState,
-      publicLocationPrecision: resolved.publicLocationPrecision || 'approximate',
-      providerLocationPlaceId: resolved.providerLocationPlaceId || base.providerLocationPlaceId,
-    });
-  };
-
-  const refreshResolvedSuburb = async (resolved: any) => {
-    if (resolved.suburbId && !suburbs.some(item => item.id === resolved.suburbId)) {
-      await suburbsQuery.refetch();
-    }
-  };
-
   const confirmManualLocation = async () => {
     const nextLocation = withLocationDefaults({
       locationConfirmationState: 'confirmed',
@@ -231,8 +146,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         currentLocation.latitude != null && currentLocation.longitude != null
           ? currentLocation.coordinateSource || 'manual_confirmed'
           : 'manual_confirmed',
-      providerLocationPlaceId: undefined,
-      placeId: undefined,
     });
     const issues = getLocationValidationIssues({ propertyType, location: nextLocation });
     if (issues.length > 0) {
@@ -241,34 +154,13 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     }
 
     setManualError('');
-    try {
-      const resolved = await resolveLocation.mutateAsync({
-        ...nextLocation,
-        propertyType: propertyType || null,
-        providerLocationPlaceId: null,
-        provider: null,
-      });
-      applyResolvedLocation(resolved, nextLocation);
-    } catch (error) {
-      setManualError(
-        error instanceof Error ? error.message : 'We could not confirm this location.',
-      );
-    }
+    setLocation(nextLocation);
   };
 
   const handleProviderLocation = async (selected: any) => {
     const addressComponents = selected.addressComponents || [];
     const component = (type: string) =>
       addressComponents.find((item: any) => item.types.includes(type))?.long_name || '';
-    const resolvedSuburb =
-      selected.suburb ||
-      component('sublocality') ||
-      component('sublocality_level_1') ||
-      component('neighborhood') ||
-      component('administrative_area_level_3');
-    const resolvedCity =
-      selected.city || component('locality') || component('administrative_area_level_2');
-    const resolvedProvince = selected.province || component('administrative_area_level_1');
     const streetName = component('route');
     const privateAddress: PrivateAddress = {
       ...(component('street_number') ? { streetNumber: component('street_number') } : {}),
@@ -281,12 +173,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       address: addressFromPrivate(privateAddress) || selected.address || '',
       latitude: selected.latitude ?? null,
       longitude: selected.longitude ?? null,
-      city: resolvedCity,
-      suburb: resolvedSuburb,
-      province: resolvedProvince,
       postalCode: selected.postalCode || component('postal_code') || '',
-      // A deliberate provider result or pin is the newest location evidence.
-      // Clear prior discovery IDs so stale manual selections cannot win.
+      // Provider enrichment preserves the explicit approved Place choice.
       provinceId: null,
       cityId: null,
       suburbId: null,
@@ -303,18 +191,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     setManualError('');
     setLocation(nextLocation);
 
-    try {
-      const resolved = await resolveLocation.mutateAsync({
-        ...nextLocation,
-        propertyType: propertyType || null,
-      });
-      applyResolvedLocation(resolved, nextLocation);
-      await refreshResolvedSuburb(resolved);
-    } catch (error) {
-      setProviderMessage(
-        error instanceof Error ? error.message : 'We could not resolve that place.',
-      );
-    }
+    setProviderMessage('Map details added. Review and confirm them for your selected location.');
   };
 
   const setPublicPolicy = (policy: PublicLocationPolicy) => {
@@ -335,7 +212,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           Where is the property?
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Start with the canonical area, then confirm the street-level property location. Map search
+          Start with an approved location, then confirm the street-level property location. Map search
           is optional and never required for manual authoring.
         </p>
       </div>
@@ -347,136 +224,36 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
             Enter the property location
           </CardTitle>
           <CardDescription>
-            Select the province, city and suburb first, then add the property address. These fields
-            use Property Listify geography IDs and are ready for manual entry.
+            Choose an approved suburb, locality, city or town, then add the private property
+            address.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="location-province">Province</Label>
-              <Select
-                value={currentLocation.provinceId ? String(currentLocation.provinceId) : ''}
-                onValueChange={value => updateHierarchy('province', value)}
-              >
-                <SelectTrigger id="location-province" className="w-full">
-                  <SelectValue placeholder="Select province" />
-                </SelectTrigger>
-                <SelectContent>
-                  {provincesQuery.isPending ? (
-                    <SelectItem value="__loading" disabled>
-                      Loading provinces…
-                    </SelectItem>
-                  ) : provincesQuery.isError || provinces.length === 0 ? (
-                    <SelectItem value="__unavailable" disabled>
-                      We couldn&apos;t load locations. Try again.
-                    </SelectItem>
-                  ) : (
-                    provinces.map(item => (
-                      <SelectItem key={item.id} value={String(item.id)}>
-                        {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {provincesQuery.isPending && (
-                <p className="text-xs text-slate-500" role="status">
-                  Loading provinces…
-                </p>
-              )}
-              {(provincesQuery.isError ||
-                (!provincesQuery.isPending && provinces.length === 0)) && (
-                <p className="text-xs text-red-600" role="alert">
-                  We couldn&apos;t load locations. Try again.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location-city">City / town</Label>
-              <Select
-                value={currentLocation.cityId ? String(currentLocation.cityId) : ''}
-                onValueChange={value => updateHierarchy('city', value)}
-                disabled={!currentLocation.provinceId}
-              >
-                <SelectTrigger id="location-city" className="w-full">
-                  <SelectValue placeholder="Select city or town" />
-                </SelectTrigger>
-                <SelectContent>
-                  {citiesQuery.isPending ? (
-                    <SelectItem value="__loading" disabled>
-                      Loading cities…
-                    </SelectItem>
-                  ) : citiesQuery.isError || cities.length === 0 ? (
-                    <SelectItem value="__unavailable" disabled>
-                      No cities available
-                    </SelectItem>
-                  ) : (
-                    cities.map(item => (
-                      <SelectItem key={item.id} value={String(item.id)}>
-                        {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {currentLocation.provinceId && citiesQuery.isPending && (
-                <p className="text-xs text-slate-500" role="status">
-                  Loading cities…
-                </p>
-              )}
-              {currentLocation.provinceId &&
-                (citiesQuery.isError || (!citiesQuery.isPending && cities.length === 0)) && (
-                  <p className="text-xs text-red-600" role="alert">
-                    We couldn&apos;t load locations. Try again.
-                  </p>
-                )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="location-suburb">
-                Suburb / locality {isFarm ? '(optional)' : ''}
-              </Label>
-              <Select
-                value={currentLocation.suburbId ? String(currentLocation.suburbId) : ''}
-                onValueChange={value => updateHierarchy('suburb', value)}
-                disabled={!currentLocation.cityId}
-              >
-                <SelectTrigger id="location-suburb" className="w-full">
-                  <SelectValue
-                    placeholder={isFarm ? 'Select if applicable' : 'Select suburb or locality'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {suburbsQuery.isPending ? (
-                    <SelectItem value="__loading" disabled>
-                      Loading suburbs…
-                    </SelectItem>
-                  ) : suburbsQuery.isError || suburbs.length === 0 ? (
-                    <SelectItem value="__unavailable" disabled>
-                      No suburbs available
-                    </SelectItem>
-                  ) : (
-                    suburbs.map(item => (
-                      <SelectItem key={item.id} value={String(item.id)}>
-                        {item.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {currentLocation.cityId && suburbsQuery.isPending && (
-                <p className="text-xs text-slate-500" role="status">
-                  Loading suburbs…
-                </p>
-              )}
-              {currentLocation.cityId &&
-                (suburbsQuery.isError || (!suburbsQuery.isPending && suburbs.length === 0)) && (
-                  <p className="text-xs text-red-600" role="alert">
-                    We couldn&apos;t load locations. Try again.
-                  </p>
-                )}
-            </div>
-          </div>
+          {currentLocation.canonicalLocationRefusal && (
+            <Alert>
+              <AlertDescription>
+                Your saved location is unavailable. Choose an approved replacement.
+              </AlertDescription>
+            </Alert>
+          )}
+          <CanonicalPlaceSelector
+            value={currentLocation.canonicalPlace ?? null}
+            onChange={canonicalPlace => {
+              setLocation(
+                resetLocationEvidence({
+                  canonicalPlace,
+                  canonicalLocationRefusal: null,
+                  provinceId: null,
+                  cityId: null,
+                  suburbId: null,
+                  city: '',
+                  province: '',
+                  suburb: '',
+                }),
+              );
+              setManualError('');
+            }}
+          />
 
           {isFarm ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -618,13 +395,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               type="button"
               className="mt-3 bg-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_86%,black)]"
               onClick={confirmManualLocation}
-              disabled={resolveLocation.isPending || confirmationPrerequisiteIssues.length > 0}
+              disabled={confirmationPrerequisiteIssues.length > 0}
             >
-              {resolveLocation.isPending
-                ? 'Confirming…'
-                : isConfirmed
-                  ? 'Reconfirm location'
-                  : 'Confirm location'}
+              {isConfirmed ? 'Reconfirm location' : 'Confirm location'}
             </Button>
             {!isConfirmed && confirmationPrerequisiteIssues.length > 0 && (
               <p className="mt-2 text-xs text-slate-500">
@@ -696,8 +469,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           <div className="min-w-0 flex-1">
             <p className="text-lg font-semibold text-slate-800">Use map search</p>
             <p className="mt-1 text-sm leading-5 text-slate-500">
-              Optional: search an address or move a pin. The latest map result will synchronize the
-              details above.
+              Optional: search an address or move a pin to update the private address and coordinates.
+              Your selected location stays the same; review and confirm the updated details.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 pt-1">
@@ -724,9 +497,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               searchQuery={[
                 currentLocation.privateAddress?.streetNumber,
                 currentLocation.privateAddress?.streetName,
-                currentLocation.suburb,
-                currentLocation.city,
-                currentLocation.province,
+                currentLocation.canonicalPlace?.label,
+                currentLocation.canonicalPlace?.administrativeContext,
               ]
                 .filter(Boolean)
                 .join(', ')}

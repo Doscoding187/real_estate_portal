@@ -1,0 +1,225 @@
+{
+  "reportedAddress": "5 Congo Street, North Riding, Roodepoort, 2169",
+  "addressAuthority": "private postal evidence, not canonical hierarchy",
+  "candidateParent": "cd8e50ce6f1d019c381d32d4e2090def828a0e4c",
+  "sourceCoverage": "existing admitted source identity present; no source addition required",
+  "admittedPlace": {
+    "admission_version": "gauteng-place-admission-v0.1",
+    "place_id": "pl-place-01-6a145c6d642ba208a2c12de7",
+    "place_type": "suburb",
+    "place_classification": "statutory",
+    "verification_status": "provisional",
+    "lifecycle_status": "active",
+    "publication_eligible": 0,
+    "search_eligible": 1,
+    "search_scope": "locality",
+    "licensing_classification": "mixed_odbl_supported",
+    "primary_source_identity_id": "pl-geo-v01-za-gp-d58dcee9605f848b7881",
+    "source_identity_ids": [
+      "pl-geo-v01-za-gp-d58dcee9605f848b7881"
+    ],
+    "adjudication": {
+      "group_kind": "single_identity",
+      "basis": "single_source_identity",
+      "governed_max_merge_km": null,
+      "member_count": 1,
+      "type_alternatives": [
+        {
+          "type": "suburb",
+          "identity_ids": [
+            "pl-geo-v01-za-gp-d58dcee9605f848b7881"
+          ]
+        }
+      ],
+      "administrative_context": "City of Johannesburg",
+      "province_context": "Gauteng",
+      "representative_latitude": -26.0527861,
+      "representative_longitude": 27.965686650000002
+    },
+    "scope_establishment": {
+      "established": true,
+      "required_coarser_scopes": [
+        "province"
+      ],
+      "evidenced_scoped_ancestors": [
+        "province"
+      ]
+    }
+  },
+  "names": [
+    {
+      "admission_version": "gauteng-place-admission-v0.1",
+      "place_id": "pl-place-01-6a145c6d642ba208a2c12de7",
+      "name": "North Riding",
+      "normalized_name": "north riding",
+      "name_role": "preferred_public",
+      "name_state": "active",
+      "is_searchable": 1,
+      "evidence_source": "geonames+osm",
+      "valid_from": null,
+      "valid_to": null,
+      "source_name_assertion_id": "cln-name-2442b4d08df648091bac",
+      "source_identity_id": "pl-geo-v01-za-gp-d58dcee9605f848b7881",
+      "is_preferred_public": 1
+    },
+    {
+      "admission_version": "gauteng-place-admission-v0.1",
+      "place_id": "pl-place-01-6a145c6d642ba208a2c12de7",
+      "name": "ZAZDV",
+      "normalized_name": "zazdv",
+      "name_role": "common",
+      "name_state": "active",
+      "is_searchable": 0,
+      "evidence_source": "geonames+osm",
+      "valid_from": null,
+      "valid_to": null,
+      "source_name_assertion_id": "cln-name-5c7d665f8bbda0be61b3",
+      "source_identity_id": "pl-geo-v01-za-gp-d58dcee9605f848b7881",
+      "is_preferred_public": 0
+    }
+  ],
+  "containment": [
+    {
+      "edge": {
+        "admission_version": "gauteng-place-admission-v0.1",
+        "from_place_id": "pl-place-01-6a145c6d642ba208a2c12de7",
+        "to_place_id": "pl-place-01-503de72cc29aa712c0e5a597",
+        "relationship_type": "administratively_contains",
+        "search_scope_authorized": 0,
+        "evidence_source": "geoboundaries_administrative_context",
+        "valid_from": null,
+        "valid_to": null,
+        "basis": "source_administrative_context_adm2"
+      },
+      "parent": {
+        "admission_version": "gauteng-place-admission-v0.1",
+        "place_id": "pl-place-01-503de72cc29aa712c0e5a597",
+        "place_type": "local_municipality",
+        "place_classification": "statutory",
+        "verification_status": "provisional",
+        "lifecycle_status": "active",
+        "publication_eligible": 0,
+        "search_eligible": 0,
+        "search_scope": null,
+        "licensing_classification": "permissive_supported",
+        "primary_source_identity_id": "pl-geo-v01-za-gp-9ce51785142e3af771f0",
+        "source_identity_ids": [
+          "pl-geo-v01-za-gp-9ce51785142e3af771f0"
+        ],
+        "adjudication": {
+          "group_kind": "administrative_container",
+          "basis": "unique_administrative_container_name",
+          "governed_max_merge_km": null,
+          "member_count": 1,
+          "type_alternatives": [
+            {
+              "type": "local_municipality",
+              "identity_ids": [
+                "pl-geo-v01-za-gp-9ce51785142e3af771f0"
+              ]
+            }
+          ],
+          "administrative_context": "City of Johannesburg",
+          "province_context": "Gauteng",
+          "representative_latitude": -26.17673,
+          "representative_longitude": 27.96353
+        }
+      }
+    },
+    {
+      "edge": {
+        "admission_version": "gauteng-place-admission-v0.1",
+        "from_place_id": "pl-place-01-503de72cc29aa712c0e5a597",
+        "to_place_id": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "relationship_type": "administratively_contains",
+        "search_scope_authorized": 0,
+        "evidence_source": "geoboundaries_administrative_context",
+        "valid_from": null,
+        "valid_to": null,
+        "basis": "source_administrative_context_province_fallback"
+      },
+      "parent": {
+        "admission_version": "gauteng-place-admission-v0.1",
+        "place_id": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "place_type": "province",
+        "place_classification": "statutory",
+        "verification_status": "provisional",
+        "lifecycle_status": "active",
+        "publication_eligible": 0,
+        "search_eligible": 1,
+        "search_scope": "province",
+        "licensing_classification": "permissive_supported",
+        "primary_source_identity_id": "pl-geo-v01-za-gp-e6b487b96c3959078c70",
+        "source_identity_ids": [
+          "pl-geo-v01-za-gp-1bc4fddfe6b87d4c035f",
+          "pl-geo-v01-za-gp-e6b487b96c3959078c70"
+        ],
+        "adjudication": {
+          "group_kind": "administrative_container",
+          "basis": "unique_administrative_container_name",
+          "governed_max_merge_km": null,
+          "member_count": 2,
+          "type_alternatives": [
+            {
+              "type": "province",
+              "identity_ids": [
+                "pl-geo-v01-za-gp-1bc4fddfe6b87d4c035f",
+                "pl-geo-v01-za-gp-e6b487b96c3959078c70"
+              ]
+            }
+          ],
+          "administrative_context": "Ekurhuleni",
+          "province_context": "Gauteng",
+          "representative_latitude": -26.083333,
+          "representative_longitude": 28.25
+        },
+        "scope_establishment": {
+          "established": true,
+          "required_coarser_scopes": [],
+          "evidenced_scoped_ancestors": []
+        }
+      }
+    }
+  ],
+  "olderRuntimeProjection": [
+    {
+      "runtime_search_scope_kind": "metro_city",
+      "runtime_storage_level": "city",
+      "runtime_natural_key": "gauteng/north-riding",
+      "runtime_parent_natural_key": "gauteng",
+      "name": "North Riding",
+      "slug": "north-riding",
+      "factual_location_ids": [
+        "pl-gp-v01-3531b9dc79c239438abe"
+      ],
+      "factual_preferred_names": [
+        "North Riding"
+      ],
+      "factual_types": [
+        "town"
+      ]
+    }
+  ],
+  "olderRuntimeProjectionSha256": "faad65e4216c2fb62886e5561984a8b82fe3b750942a4bb38c2eba12a8141399",
+  "diagnosis": "older factual town / runtime city projection conflicts with current source-backed suburb/locality; generic authoring depended on legacy city/suburb handles and provider resolution",
+  "productionMaterialisation": "archived release plan includes gauteng/north-riding as legacy city; no current protected database read or apply performed, live state unverified",
+  "providerBranchReview": {
+    "branch": "feat/gauteng-source-authority-closure",
+    "head": "4356c0f7f",
+    "path": "server/services/listingLocationResolver.ts",
+    "workingSourceSha256": "57326b45212777f9cb6b74d0dde53f4470110d438de03edb67915235c1379eff",
+    "unsafePath": "provider locality + cityId + coordinates + provider evidence inserts suburbs(status=provisional,origin=provider)",
+    "decision": "not admitted; no provider-driven suburb row may repair this gap",
+    "currentCandidate": "auto-insert removed; unresolved provider candidate is recorded as evidence and refused pending admission"
+  },
+  "referenceDataChanges": [],
+  "identityChanges": [],
+  "scopeChanges": [],
+  "currentMainReview": {
+    "commit": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+    "head": "0096_user_founder_authority_unique.sql",
+    "entries": 97,
+    "exactPrefixPreserved": true,
+    "importedIntoBoundedCorrection": false
+  }
+}

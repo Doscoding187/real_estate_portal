@@ -207,7 +207,7 @@ export function CanonicalPlaceSelectorView({
   );
 }
 
-/** Prepared for the atomic Listing wizard/API/persistence cutover. */
+/** Approved Place selection for authoring; provider results cannot select identity. */
 export function CanonicalPlaceSelector({
   value,
   onChange,

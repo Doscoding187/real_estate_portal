@@ -2,7 +2,6 @@ import type {
   ListingAction,
   PropertyType,
   PricingFields,
-  LocationData,
   MediaFile,
   SellPricing,
   RentPricing,
@@ -16,11 +15,8 @@ import {
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '@shared/features-context';
 import { buildPricingContract } from '@shared/pricing-contract';
-import { buildListingLocationAuthoringPayload } from '@shared/location-contract';
-import {
-  createDefaultRentalTerms,
-  normalizeRentalTerms,
-} from '@shared/rental-terms-contract';
+import { buildCanonicalListingLocationPayload } from '@shared/canonicalListingLocation';
+import { createDefaultRentalTerms, normalizeRentalTerms } from '@shared/rental-terms-contract';
 
 /**
  * Shape expected by server/listingRouter.ts createListingSchema.
@@ -33,7 +29,7 @@ export interface ListingSubmitPayload {
   description: string;
   pricing: PricingFields;
   propertyDetails: Record<string, any>;
-  location: LocationData;
+  location: import('@shared/canonicalListingLocation').CanonicalListingLocation;
   mediaIds: string[];
   mainMediaId?: string | null;
   status?: 'draft' | 'pending_review';
@@ -54,8 +50,8 @@ export interface ListingSubmitPayload {
  *    is the new semantic authority; legacy typed columns remain compatibility
  *    projections for existing readers.
  *
- * 3. `location` passes LocationData directly (address, lat/lng, city, province,
- *    placeId, addressComponents for server-side hierarchy auto-population).
+ * 3. `location` carries one canonical Place ID and private evidence. Display
+ *    labels, numeric handles and provider components never establish identity.
  *
  * 4. `mediaIds` = store.media[].id filtered to defined values (no empty strings).
  *
@@ -96,11 +92,7 @@ export function buildListingSubmitPayloadFromWizardState(
       listingActionToIntent(action),
       propertyType,
     ),
-    ...buildCanonicalCorePropertyDetails(
-      propertyType,
-      state.propertyDetails,
-      state.basicInfo,
-    ),
+    ...buildCanonicalCorePropertyDetails(propertyType, state.propertyDetails, state.basicInfo),
   };
 
   if (action === 'rent') {
@@ -136,14 +128,11 @@ export function buildListingSubmitPayloadFromWizardState(
     delete propertyDetails[key];
   }
 
-  const mediaIds = (state.media ?? [])
-    .map((m) => m.id)
-    .filter((id): id is string => !!id);
+  const mediaIds = (state.media ?? []).map(m => m.id).filter((id): id is string => !!id);
 
   // Use || not ?? to match V1 — empty string falls through to fallback
   const mainMediaId =
-    state.mainMediaId ||
-    ((state.media?.length ?? 0) > 0 ? state.media![0].id : undefined);
+    state.mainMediaId || ((state.media?.length ?? 0) > 0 ? state.media![0].id : undefined);
 
   return {
     action,
@@ -152,7 +141,7 @@ export function buildListingSubmitPayloadFromWizardState(
     description: state.description ?? '',
     pricing,
     propertyDetails,
-    location: buildListingLocationAuthoringPayload(state.location)!,
+    location: buildCanonicalListingLocationPayload(state.location)!,
     mediaIds,
     mainMediaId,
     status: undefined,
@@ -162,9 +151,7 @@ export function buildListingSubmitPayloadFromWizardState(
 /**
  * Extract the sale-specific pricing fields for testing/validation.
  */
-export function extractSellPricing(
-  pricing: PricingFields | undefined,
-): Partial<SellPricing> {
+export function extractSellPricing(pricing: PricingFields | undefined): Partial<SellPricing> {
   if (!pricing) return {};
   const p = pricing as SellPricing;
   return {
@@ -177,9 +164,7 @@ export function extractSellPricing(
 /**
  * Extract the rent-specific pricing fields for testing/validation.
  */
-export function extractRentPricing(
-  pricing: PricingFields | undefined,
-): Partial<RentPricing> {
+export function extractRentPricing(pricing: PricingFields | undefined): Partial<RentPricing> {
   if (!pricing) return {};
   const p = pricing as RentPricing;
   return {
@@ -192,9 +177,7 @@ export function extractRentPricing(
 /**
  * Extract the auction-specific pricing fields for testing/validation.
  */
-export function extractAuctionPricing(
-  pricing: PricingFields | undefined,
-): Partial<AuctionPricing> {
+export function extractAuctionPricing(pricing: PricingFields | undefined): Partial<AuctionPricing> {
   if (!pricing) return {};
   const p = pricing as AuctionPricing;
   return {

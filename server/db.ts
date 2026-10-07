@@ -102,7 +102,16 @@ import {
   getPrimaryListingImage,
   isCompletedListingMedia,
 } from '../shared/listing-media';
-import { validateListingRecordLocation } from './services/listingLocationResolver';
+import {
+  canonicalListingLocationFromRecord,
+  validateCanonicalListingRecordLocation,
+} from '../shared/canonicalListingLocation';
+import {
+  CanonicalListingPlaceError,
+  assertNoFlatListingLocationInput,
+  canonicalListingLocationPersistence,
+  resolveCanonicalListingPlace,
+} from './services/canonicalListingPlaceResolver';
 import {
   getPresentationMediaDescriptor,
   getSafePropertyPresentationVirtualTour,
@@ -2075,6 +2084,7 @@ export async function createListing(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  assertNoFlatListingLocationInput(listingData);
   try {
     // Use Drizzle transaction API
     const listingId = await db.transaction(async tx => {
@@ -2185,7 +2195,6 @@ export async function createListing(
         agentId: effectiveAgentId,
         agencyId,
         slug: listingData.slug,
-        coords: { lat: listingData.latitude, lng: listingData.longitude },
       });
 
       const pricingContract = buildPricingContract(
@@ -2202,6 +2211,17 @@ export async function createListing(
         pricingContract?.intent === 'rent'
           ? getMoneyFactAmount(pricingContract.deposit)
           : undefined;
+
+      const locationAssignment = await resolveCanonicalListingPlace(listingData.location, {
+        database: tx,
+        propertyType: listingData.propertyType,
+        publication: false,
+        lock: true,
+      });
+      const persistedLocation = canonicalListingLocationPersistence(
+        listingData.location,
+        locationAssignment,
+      );
 
       const insertValues: any = {
         ownerId: listingData.userId,
@@ -2242,19 +2262,7 @@ export async function createListing(
         auctionTermsDocumentUrl: listingData.pricing.auctionTermsDocumentUrl || null,
 
         propertyDetails: listingData.propertyDetails, // Drizzle handles JSON
-        address: listingData.address || null,
-        latitude: listingData.latitude == null ? null : Number(listingData.latitude).toFixed(7),
-        longitude: listingData.longitude == null ? null : Number(listingData.longitude).toFixed(7),
-        city: listingData.city,
-        suburb: listingData.suburb || null,
-        province: listingData.province,
-        provinceId: listingData.provinceId ?? null,
-        cityId: listingData.cityId ?? null,
-        suburbId: listingData.suburbId ?? null,
-        privateAddress: listingData.privateAddress ?? null,
-        coordinateSource: listingData.coordinateSource ?? null,
-        locationConfirmationState: listingData.locationConfirmationState ?? 'needs_confirmation',
-        publicLocationPrecision: listingData.publicLocationPrecision ?? 'approximate',
+        ...persistedLocation,
 
         // Failsafe: Ensure slug is unique
         slug: listingData.slug.match(/-ts-[a-z0-9]+$/)
@@ -2265,17 +2273,6 @@ export async function createListing(
         createdAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
         updatedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       };
-
-      // Add optional fields only if they exist
-      if (listingData.suburb !== undefined) insertValues.suburb = listingData.suburb || null;
-      if (listingData.postalCode !== undefined)
-        insertValues.postalCode = listingData.postalCode || null;
-      if (listingData.placeId) insertValues.placeId = listingData.placeId;
-      if (listingData.locationId) insertValues.locationId = listingData.locationId;
-
-      // Explicit nulls for strictness if needed, but omitting them is cleaner for Drizzle
-      // insertValues.mainMediaId = null;
-      // insertValues.mainMediaType = null;
 
       const [listingResult] = await tx.insert(listings).values(insertValues);
 
@@ -2422,8 +2419,40 @@ export async function getListingById(listingId: number, database?: any) {
     }
   }
 
+  let canonicalPlace:
+    | import('../shared/canonicalListingLocation').CanonicalListingPlaceChoice
+    | null = null;
+  let canonicalLocationRefusal: string | null = null;
+  if (listing.canonicalPlaceId) {
+    try {
+      const assignment = await resolveCanonicalListingPlace(
+        canonicalListingLocationFromRecord(listing),
+        {
+          database: db,
+          propertyType: String(listing.propertyType),
+          publication: false,
+        },
+      );
+      if (assignment)
+        canonicalPlace = {
+          canonicalPlaceId: assignment.execution.placeId,
+          label: assignment.labels.selected,
+          placeType: assignment.placeType,
+          scope: assignment.execution.scope,
+          administrativeContext: [assignment.labels.city, assignment.labels.province]
+            .filter(Boolean)
+            .join(', '),
+        };
+    } catch (error) {
+      if (!(error instanceof CanonicalListingPlaceError)) throw error;
+      canonicalLocationRefusal = error.reason;
+    }
+  }
+
   return {
     ...listing,
+    canonicalPlace,
+    canonicalLocationRefusal,
     userId: listing.ownerId, // Map ownerId to userId for compatibility
     pricing,
     propertyDetails,
@@ -2614,7 +2643,27 @@ export async function updateListing(listingId: number, updateData: any) {
   // propertyDetails is json() type, so pass object directly
   // No need to stringify
 
-  await db.update(listings).set(updateFields).where(eq(listings.id, listingId));
+  // All authored geography enters through the strict nested boundary. Internal
+  // callers cannot bypass Place validation by setting a presentation column.
+  assertNoFlatListingLocationInput(updateData);
+  await db.transaction(async tx => {
+    await lockListingTransitionRow(tx, listingId);
+    const [current] = await tx.select().from(listings).where(eq(listings.id, listingId)).limit(1);
+    if (!current) throw new Error('Listing not found');
+    if (Object.prototype.hasOwnProperty.call(updateData, 'location')) {
+      const assignment = await resolveCanonicalListingPlace(updateData.location, {
+        database: tx,
+        propertyType: updateData.propertyType ?? current.propertyType,
+        publication: false,
+        lock: true,
+      });
+      Object.assign(
+        updateFields,
+        canonicalListingLocationPersistence(updateData.location, assignment),
+      );
+    }
+    await tx.update(listings).set(updateFields).where(eq(listings.id, listingId));
+  });
 }
 
 /**
@@ -2642,10 +2691,6 @@ export async function submitListingForReview(listingId: number, database?: any) 
 
   const listing = await getListingById(listingId, db);
   if (!listing) throw new Error('Listing not found');
-  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
-  if (locationIssues.length > 0) {
-    throw new Error(locationIssues.join(' '));
-  }
   const commercialPricing = await validateCommercialListingPricing(db, listingId);
   if (commercialPricing.kind === 'invalid_commercial_context')
     throw new Error(commercialPricing.message);
@@ -2653,6 +2698,21 @@ export async function submitListingForReview(listingId: number, database?: any) 
     transitionListing,
     commercialPricing,
   );
+  // Dedicated Commercial inventory validates its own authoritative Asset
+  // location. Generic manual Listings use the canonical Place boundary.
+  if (!isCanonicalCommercial) {
+    await resolveCanonicalListingPlace(canonicalListingLocationFromRecord(listing), {
+      database: db,
+      propertyType: String(listing.propertyType),
+      publication: true,
+      lock: true,
+    });
+    const locationIssues = validateCanonicalListingRecordLocation(
+      listing as Record<string, unknown>,
+    );
+    if (locationIssues.length) throw new Error(locationIssues.join(' '));
+  }
+
   const pricingIssues = isCanonicalCommercial
     ? []
     : validatePricingContract(
@@ -3212,25 +3272,12 @@ function finiteCoordinate(value: unknown): string | null {
   return Number.isFinite(number) ? number.toFixed(7) : null;
 }
 
-function readPrivateAddress(value: unknown): PrivateAddress | null {
-  if (!value) return null;
-  if (typeof value === 'object') return value as PrivateAddress;
-  if (typeof value === 'string') {
-    try {
-      return JSON.parse(value) as PrivateAddress;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
 function locationLabels(listing: any) {
   const areaLabel = [listing.suburb, listing.city, listing.province]
     .map(value => String(value || '').trim())
     .filter(Boolean)
     .join(', ');
-  const privateAddress = readPrivateAddress(listing.privateAddress);
+  const privateAddress = listing.privateAddress as PrivateAddress | null;
   const streetName = privateAddress?.streetName?.trim() || '';
   const streetNumber = privateAddress?.streetNumber?.trim() || '';
   const streetLabel = [streetName, areaLabel].filter(Boolean).join(', ');
@@ -3241,7 +3288,7 @@ function locationLabels(listing: any) {
   return { areaLabel, privateAddress, streetLabel, fullAddressLabel };
 }
 
-async function buildPublicLocationProjection(database: any, listing: any) {
+async function buildPublicLocationProjection(_database: any, listing: any) {
   const precision = listing.publicLocationPrecision === 'exact' ? 'exact' : 'approximate';
   const policy = storedPrecisionToPublicLocationPolicy(precision);
   const { areaLabel, streetLabel, fullAddressLabel } = locationLabels(listing);
@@ -3260,38 +3307,12 @@ async function buildPublicLocationProjection(database: any, listing: any) {
     };
   }
 
-  let center: { latitude: string | null; longitude: string | null } | null = null;
-  if (listing.suburbId) {
-    const [suburb] = await database
-      .select({ latitude: suburbs.latitude, longitude: suburbs.longitude })
-      .from(suburbs)
-      .where(eq(suburbs.id, Number(listing.suburbId)))
-      .limit(1);
-    center = suburb || null;
-  }
-  if (!center && listing.cityId) {
-    const [city] = await database
-      .select({ latitude: cities.latitude, longitude: cities.longitude })
-      .from(cities)
-      .where(eq(cities.id, Number(listing.cityId)))
-      .limit(1);
-    center = city || null;
-  }
-  if (!center && listing.provinceId) {
-    const [province] = await database
-      .select({ latitude: provinces.latitude, longitude: provinces.longitude })
-      .from(provinces)
-      .where(eq(provinces.id, Number(listing.provinceId)))
-      .limit(1);
-    center = province || null;
-  }
-
-  const approximateCoordinates = normalizeCoordinatePair(center?.latitude, center?.longitude);
-
+  // The admitted Place packages have no approved public geometry. An
+  // approximate policy publishes the area label without a private/provider pin.
   return {
     publicAddress: streetLabel || areaLabel || null,
-    publicLatitude: approximateCoordinates ? finiteCoordinate(center?.latitude) : null,
-    publicLongitude: approximateCoordinates ? finiteCoordinate(center?.longitude) : null,
+    publicLatitude: null,
+    publicLongitude: null,
     publicLocationPrecision: 'approximate' as const,
     publicLocationPolicy: policy,
   };
@@ -3410,6 +3431,16 @@ async function buildCanonicalPublicPropertyProjection(
     );
   }
 
+  const locationInput = canonicalListingLocationFromRecord(listing);
+  const assignment = await resolveCanonicalListingPlace(locationInput, {
+    database,
+    propertyType: String(listing.propertyType),
+    publication: true,
+    lock: true,
+  });
+  if (!assignment) throw new CanonicalListingPlaceError('missing_publication_assignment');
+  listing = { ...listing, ...canonicalListingLocationPersistence(locationInput, assignment) };
+
   const details = input.propertyDetails
     ? { ...input.propertyDetails }
     : parsePublicationRecord(listing.propertyDetails, 'property details');
@@ -3500,6 +3531,7 @@ async function buildCanonicalPublicPropertyProjection(
       zipCode: listing.postalCode,
       latitude: publicLocation.publicLatitude,
       longitude: publicLocation.publicLongitude,
+      canonicalPlaceId: listing.canonicalPlaceId,
       provinceId: listing.provinceId,
       cityId: listing.cityId,
       suburbId: listing.suburbId,
@@ -3634,6 +3666,7 @@ function buildApprovedRevisionSourceSnapshot(
     suburb: revision.suburb,
     province: revision.province,
     postalCode: revision.postalCode,
+    canonicalPlaceId: revision.canonicalPlaceId,
     placeId: revision.placeId,
     locationId: revision.locationId,
     provinceId: revision.provinceId,
@@ -3740,6 +3773,23 @@ export async function approveListing(
     listing,
     commercialPricing,
   );
+  // Dedicated Commercial inventory validates its own authoritative Asset
+  // location. Generic manual Listings use the canonical Place boundary.
+  if (!isCanonicalCommercial) {
+    const locationInput = canonicalListingLocationFromRecord(listing);
+    const assignment = await resolveCanonicalListingPlace(locationInput, {
+      database: db,
+      propertyType: String(listing.propertyType),
+      publication: true,
+      lock: true,
+    });
+    Object.assign(listing, canonicalListingLocationPersistence(locationInput, assignment));
+    const locationIssues = validateCanonicalListingRecordLocation(
+      listing as Record<string, unknown>,
+    );
+    if (locationIssues.length) throw new Error(locationIssues.join(' '));
+  }
+
   const pricingIssues = isCanonicalCommercial
     ? []
     : validatePricingContract(
@@ -3750,10 +3800,6 @@ export async function approveListing(
       );
   if (pricingIssues.length > 0) {
     throw new Error(pricingIssues.map(issue => issue.message).join(' '));
-  }
-  const locationIssues = validateListingRecordLocation(listing as Record<string, unknown>);
-  if (locationIssues.length > 0) {
-    throw new Error(locationIssues.join(' '));
   }
 
   if (isCanonicalCommercial && (listing as any).revisionOfListingId) {

@@ -5,20 +5,16 @@
  */
 
 import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from './_core/trpc';
+import { router, protectedProcedure } from './_core/trpc';
 import { TRPCError } from '@trpc/server';
-import { and, count, desc, eq } from 'drizzle-orm';
-import { agents, leads, locations, properties } from '../drizzle/schema';
+import { count, desc, eq } from 'drizzle-orm';
+import { agents, leads, properties } from '../drizzle/schema';
 import * as db from './db';
-import { ENV } from './_core/env';
 import {
-  buildListingLocationPersistence,
-  buildUnresolvedDraftLocation,
-  ListingLocationResolutionError,
-  prepareListingLocationUpdate,
-  resolveCanonicalListingLocation,
-  validateListingRecordLocation,
-} from './services/listingLocationResolver';
+  canonicalListingLocationSchema,
+  validateCanonicalListingRecordLocation,
+} from '../shared/canonicalListingLocation';
+import { CanonicalListingPlaceError } from './services/canonicalListingPlaceResolver';
 import { calculateListingReadiness } from './lib/readiness';
 import { calculateListingQualityScore } from './lib/quality';
 import { requireUser } from './_core/requireUser';
@@ -53,12 +49,6 @@ import {
 } from '../shared/pricing-contract';
 import { normalizeRentalTerms, validateRentalTerms } from '../shared/rental-terms-contract';
 import { getPrimaryListingImage } from '../shared/listing-media';
-import {
-  LOCATION_CONFIRMATION_STATES,
-  LOCATION_COORDINATE_SOURCES,
-  PUBLIC_LOCATION_PRECISIONS,
-  privateAddressSchema,
-} from '../shared/location-contract';
 import {
   assertSupportedListingMediaContentType,
   createListingMediaUploadToken,
@@ -247,51 +237,6 @@ function publicationPreflightAction(
   }
 }
 
-// Helper to normalize placeId vs locationId logic
-async function normalizeLocationInput(inputLocation: { placeId?: string; locationId?: number }) {
-  let sanitizedPlaceId: string | null = inputLocation.placeId ?? null;
-  let resolvedLocationId: number | null = inputLocation.locationId ?? null;
-
-  if (sanitizedPlaceId && /^\d+$/.test(sanitizedPlaceId)) {
-    // Numeric placeId = locations.id, move to location_id
-    resolvedLocationId = Number(sanitizedPlaceId);
-    sanitizedPlaceId = null;
-  }
-
-  // If we got a numeric location id, validate it exists
-  if (resolvedLocationId != null) {
-    const dbInstance = await db.getDb();
-    const exists = await dbInstance
-      .select({ id: locations.id })
-      .from(locations)
-      .where(eq(locations.id, resolvedLocationId))
-      .limit(1);
-
-    if (exists.length === 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: `Invalid location_id: ${resolvedLocationId}. Location does not exist.`,
-      });
-    }
-  }
-
-  // If we have a real Google placeId, resolve to a location_id if possible
-  if (sanitizedPlaceId && resolvedLocationId === null) {
-    const dbInstance = await db.getDb();
-    const found = await dbInstance
-      .select({ id: locations.id })
-      .from(locations)
-      .where(eq(locations.placeId, sanitizedPlaceId))
-      .limit(1);
-
-    if (found.length > 0) {
-      resolvedLocationId = found[0].id; // Resolve to internal ID
-    }
-  }
-
-  return { sanitizedPlaceId, resolvedLocationId };
-}
-
 const LISTING_LIFECYCLE_ERROR_PATTERNS = [
   /^Listing is already published$/,
   /^Listing cannot be approved from status ".+"$/,
@@ -302,6 +247,8 @@ const LISTING_LIFECYCLE_ERROR_PATTERNS = [
 
 function mapListingLifecycleError(error: unknown, fallbackMessage: string): TRPCError {
   if (error instanceof TRPCError) return error;
+  if (error instanceof CanonicalListingPlaceError)
+    return new TRPCError({ code: 'BAD_REQUEST', message: error.message });
 
   if (error instanceof ListingPublicationEntitlementError) {
     return new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
@@ -604,36 +551,7 @@ const createListingSchemaBase = z.object({
     auctionTermsDocumentUrl: z.string().optional(),
   }),
   propertyDetails: z.record(z.string(), z.any()),
-  location: z.object({
-    address: z.string().max(500).optional().default(''),
-    latitude: z.number().finite().nullable().optional(),
-    longitude: z.number().finite().nullable().optional(),
-    city: z.string().max(150),
-    suburb: z.string().max(200).optional(),
-    province: z.string().max(100),
-    postalCode: z.string().max(20).optional(),
-    placeId: z.string().optional(),
-    locationId: z.number().optional(), // Added for internal Location ID support
-    providerLocationPlaceId: z.string().max(255).nullable().optional(),
-    provider: z.string().max(32).nullable().optional(),
-    provinceId: z.number().int().positive().nullable().optional(),
-    cityId: z.number().int().positive().nullable().optional(),
-    suburbId: z.number().int().positive().nullable().optional(),
-    privateAddress: privateAddressSchema.nullable().optional(),
-    coordinateSource: z.enum(LOCATION_COORDINATE_SOURCES).nullable().optional(),
-    locationConfirmationState: z.enum(LOCATION_CONFIRMATION_STATES).optional(),
-    publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS).optional(),
-    // Google Places address components for auto-population
-    addressComponents: z
-      .array(
-        z.object({
-          long_name: z.string(),
-          short_name: z.string(),
-          types: z.array(z.string()),
-        }),
-      )
-      .optional(),
-  }),
+  location: canonicalListingLocationSchema,
   // Use string IDs only
   mediaIds: z.array(z.string()),
   // Use string ID or undefined
@@ -760,43 +678,6 @@ export const listingRouter = router({
           }))
         : [];
 
-      let resolvedLocation;
-      try {
-        resolvedLocation = await resolveCanonicalListingLocation({
-          ...input.location,
-          address: input.location.address || null,
-          providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-          provider: input.location.provider || null,
-          privateAddress: input.location.privateAddress || null,
-          locationConfirmationState: input.location.locationConfirmationState,
-          publicLocationPrecision: input.location.publicLocationPrecision,
-          propertyType: input.propertyType,
-        });
-      } catch (error) {
-        if (error instanceof ListingLocationResolutionError) {
-          if (input.status !== 'pending_review') {
-            console.warn('[ListingRouter] Draft location remains unresolved:', error.message);
-            resolvedLocation = buildUnresolvedDraftLocation({
-              ...input.location,
-              propertyType: input.propertyType,
-            });
-          } else {
-            throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
-          }
-        } else if (input.status !== 'pending_review') {
-          console.warn('[ListingRouter] Draft location resolver unavailable:', error);
-          resolvedLocation = buildUnresolvedDraftLocation({
-            ...input.location,
-            propertyType: input.propertyType,
-          });
-        } else {
-          throw error;
-        }
-      }
-
-      // GUARD: Normalize placeId and validate location_id
-      const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(input.location);
-      const persistedLocation = buildListingLocationPersistence(resolvedLocation);
       const propertyDetails = normalizePropertyDetailsForPublicContract(
         input.propertyDetails,
         input.pricing,
@@ -814,22 +695,7 @@ export const listingRouter = router({
         description: input.description,
         pricing: input.pricing,
         propertyDetails,
-        address: persistedLocation.address,
-        latitude: persistedLocation.latitude,
-        longitude: persistedLocation.longitude,
-        city: persistedLocation.city,
-        suburb: persistedLocation.suburb,
-        province: persistedLocation.province,
-        postalCode: persistedLocation.postalCode,
-        placeId: sanitizedPlaceId,
-        locationId: resolvedLocationId, // New: Direct location_id if from numeric placeId
-        provinceId: persistedLocation.provinceId,
-        cityId: persistedLocation.cityId,
-        suburbId: persistedLocation.suburbId,
-        privateAddress: persistedLocation.privateAddress,
-        coordinateSource: persistedLocation.coordinateSource,
-        locationConfirmationState: persistedLocation.locationConfirmationState,
-        publicLocationPrecision: persistedLocation.publicLocationPrecision,
+        location: input.location,
         slug,
         media,
         sellerProspectConversion,
@@ -872,6 +738,8 @@ export const listingRouter = router({
         throw error;
       }
 
+      if (error instanceof CanonicalListingPlaceError)
+        throw mapListingLifecycleError(error, 'Failed to create listing');
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Detailed error message:', errorMessage);
 
@@ -1048,77 +916,7 @@ export const listingRouter = router({
           assertPropertyPresentationMediaReferences(updatePayload.propertyDetails, availableMedia);
         }
 
-        if (input.location) {
-          let resolvedLocation;
-          try {
-            resolvedLocation = await resolveCanonicalListingLocation({
-              ...input.location,
-              address: input.location.address || null,
-              providerLocationPlaceId: input.location.providerLocationPlaceId || null,
-              provider: input.location.provider || null,
-              privateAddress: input.location.privateAddress || null,
-              propertyType: nextPropertyType,
-            });
-          } catch (error) {
-            if (error instanceof ListingLocationResolutionError) {
-              if (listing.status !== 'draft') {
-                throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
-              }
-              console.warn(
-                '[ListingRouter] Draft location remains unresolved during update:',
-                error.message,
-              );
-              resolvedLocation = buildUnresolvedDraftLocation({
-                ...input.location,
-                propertyType: nextPropertyType,
-              });
-            } else if (listing.status !== 'draft') {
-              throw error;
-            } else {
-              console.warn(
-                '[ListingRouter] Draft location resolver unavailable during update:',
-                error,
-              );
-              resolvedLocation = buildUnresolvedDraftLocation({
-                ...input.location,
-                propertyType: nextPropertyType,
-              });
-            }
-          }
-
-          const { sanitizedPlaceId, resolvedLocationId } = await normalizeLocationInput(
-            input.location,
-          );
-          const preparedLocationUpdate = prepareListingLocationUpdate(
-            listing as Record<string, unknown>,
-            resolvedLocation,
-            input.location.locationConfirmationState === 'confirmed' &&
-              Boolean(resolvedLocation.coordinateSource),
-          );
-          const locationToPersist = preparedLocationUpdate.location;
-
-          updatePayload.address = locationToPersist.address;
-          updatePayload.latitude =
-            locationToPersist.latitude === null ? null : locationToPersist.latitude.toFixed(7);
-          updatePayload.longitude =
-            locationToPersist.longitude === null ? null : locationToPersist.longitude.toFixed(7);
-          updatePayload.city = locationToPersist.city;
-          updatePayload.suburb = locationToPersist.suburb;
-          updatePayload.province = locationToPersist.province;
-          updatePayload.postalCode = locationToPersist.postalCode;
-          updatePayload.placeId = sanitizedPlaceId;
-          updatePayload.locationId = resolvedLocationId;
-          updatePayload.provinceId = locationToPersist.provinceId;
-          updatePayload.cityId = locationToPersist.cityId;
-          updatePayload.suburbId = locationToPersist.suburbId;
-          updatePayload.privateAddress = locationToPersist.privateAddress;
-          updatePayload.coordinateSource = locationToPersist.coordinateSource;
-          updatePayload.locationConfirmationState = locationToPersist.locationConfirmationState;
-          updatePayload.publicLocationPrecision = locationToPersist.publicLocationPrecision;
-
-          // Remove nested location object strictly to avoid Drizzle schema errors.
-          delete updatePayload.location;
-        }
+        if (input.location) updatePayload.location = input.location;
 
         if (requiresReviewBeforePublicUpdate) {
           const database = await db.getDb();
@@ -1202,7 +1000,10 @@ export const listingRouter = router({
         if (error instanceof TRPCError) {
           throw error;
         }
-        if (error instanceof ListingPublicationEntitlementError) {
+        if (
+          error instanceof ListingPublicationEntitlementError ||
+          error instanceof CanonicalListingPlaceError
+        ) {
           throw mapListingLifecycleError(error, 'Failed to update listing');
         }
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to update listing' });
@@ -2012,7 +1813,7 @@ export const listingRouter = router({
         const media = await db.getListingMedia(input.listingId);
 
         if (fullListing.action === 'sell' || fullListing.action === 'rent') {
-          const locationIssues = validateListingRecordLocation(
+          const locationIssues = validateCanonicalListingRecordLocation(
             fullListing as Record<string, unknown>,
           );
           if (locationIssues.length > 0) {

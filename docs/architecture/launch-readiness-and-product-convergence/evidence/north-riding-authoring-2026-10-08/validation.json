@@ -1,0 +1,58 @@
+{
+  "parentCommit": "cd8e50ce6f1d019c381d32d4e2090def828a0e4c",
+  "branch": "feat/place-authority-slice0-decision",
+  "checks": {
+    "databaseAuthority": {
+      "passed": 636,
+      "files": 56,
+      "utilitySurfaces": 121,
+      "canonicalTables": 221,
+      "activeMigrations": 112
+    },
+    "productionTypecheck": "passed",
+    "build": "passed; existing bundle size warnings",
+    "ui": {
+      "passed": 56,
+      "files": 5
+    },
+    "listingLifecycle": {
+      "passed": 96,
+      "files": 3
+    },
+    "providerGuard": {
+      "passed": 3,
+      "databaseContact": false
+    },
+    "resolver": {
+      "passed": 60,
+      "includedInDatabaseAuthorityGate": true
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 233
+    }
+  },
+  "sourceOrSchemaChanges": false,
+  "protectedDatabaseContact": false,
+  "hostedCiChanges": false,
+  "pushed": false,
+  "disposedTargetFingerprint": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "currentMainReadback": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "currentMainPrefixExact": true,
+  "limitations": [
+    "Current production rows/materialisation not read back",
+    "No hosted browser or public search certification",
+    "Protected Place reference-data release capability and source activation require separate senior review"
+  ],
+  "logSha256": {
+    "databaseAuthority": "77d51696b8a90a4f465b1169d5fa82ca541e02930c3a287f2a4958e44f6ac4aa",
+    "productionTypecheck": "95f1e5d7b7dea6d3fd189a94ad09553d7d8fa0c683951d475e37018460dba8b7",
+    "build": "28b85d1c65d1993db99a6afa817401528e1098b9754aa2aa015abc0e4fd232eb",
+    "ui": "c08aced5700b6a2e2e8f966be2c17bf952e72a22f46df8e840270e983e9c2d55",
+    "listingLifecycle": "997f6bf33239de8e088550e0ab429a94c7dbd550cd4e23f3063cec7087d93a23",
+    "providerGuard": "226026ddf077dd70fe797d81050c23adfa6666db8485e915c5be116d29835455",
+    "resolver": "dab7b56d4b0c47e8d28ee7ca109e59a8f409230d371dd4b97226f17b9fb3f44c",
+    "lint": "43796a169a01531fae096853d0b429544cd6065edd6e47aed71eae48a8a0050f",
+    "disposal": "d6f2707023f84354c153c0fa8c197616e5de6f76e1de469be7e76324c06cd236"
+  }
+}

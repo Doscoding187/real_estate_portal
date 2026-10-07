@@ -1,5 +1,6 @@
 import { getPrimaryPrice } from '@shared/pricing-contract';
-import { validateManualLocationEvidence } from '@shared/location-contract';
+import { buildCanonicalListingLocationPayload } from '@shared/canonicalListingLocation';
+import { z } from 'zod';
 import { getCompletedListingImages } from '@shared/listing-media';
 import { readCorePropertyInformation } from '@shared/core-property-information';
 
@@ -20,42 +21,15 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   let score = 0;
 
   // 1. Location (20%)
-  const authoredLocation = listing.location || listing;
-  const hasCoordinates =
-    authoredLocation.latitude != null &&
-    authoredLocation.longitude != null &&
-    Number.isFinite(Number(authoredLocation.latitude)) &&
-    Number.isFinite(Number(authoredLocation.longitude)) &&
-    !(Number(authoredLocation.latitude) === 0 && Number(authoredLocation.longitude) === 0);
-  const locationIssues = validateManualLocationEvidence({
-    propertyType: listing.propertyType,
-    discovery: {
-      provinceId: authoredLocation.provinceId,
-      cityId: authoredLocation.cityId,
-      suburbId: authoredLocation.suburbId ?? null,
-    },
-    privateAddress: authoredLocation.privateAddress || null,
-  });
-  const hasCanonicalLocation =
-    locationIssues.length === 0 && authoredLocation.locationConfirmationState === 'confirmed';
-  const hasLegacyLocation = Boolean(authoredLocation.address) && hasCoordinates;
-  if (hasCanonicalLocation || hasLegacyLocation) {
-    score += 20;
-  } else {
-    if (locationIssues.some(issue => /province|city|suburb|locality/i.test(issue))) {
-      missing.location.push('Area');
+  try {
+    const location = buildCanonicalListingLocationPayload(listing.location);
+    if (location.canonicalPlaceId && location.locationConfirmationState === 'confirmed') score += 20;
+    else {
+      if (!location.canonicalPlaceId) missing.location.push('Select an approved location');
+      if (location.locationConfirmationState !== 'confirmed') missing.location.push('Confirm Location');
     }
-    if (locationIssues.some(issue => /street|farm|holding|portion/i.test(issue))) {
-      missing.location.push('Street or rural reference');
-    }
-    if (authoredLocation.locationConfirmationState !== 'confirmed') {
-      missing.location.push('Confirm Location');
-    }
-    const onlyOneCoordinate =
-      (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
-    if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
-      missing.location.push('Map coordinates');
-    }
+  } catch (error) {
+    missing.location.push(...(error instanceof z.ZodError ? error.issues.map(issue => issue.message) : [error instanceof Error ? error.message : 'Review the location']));
   }
 
   // 2. Pricing (20%)

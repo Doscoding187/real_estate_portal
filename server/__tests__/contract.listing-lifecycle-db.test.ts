@@ -103,39 +103,70 @@ class FakeDrizzle {
     return this.selectResults.shift() || [];
   }
 
-  /** Drizzle: db.select({...fields}).from(table).where(...).orderBy(...).limit(...) */
+  /** Place fixtures are explicit synthetic unit rows, isolated from the lifecycle queue. */
   select(_fields?: Record<string, unknown>) {
     let tableName = 'unknown';
     let whereCols: string[] = [];
+    let condition: any;
+    const params = (value: any): string[] => {
+      if (!value || typeof value !== 'object') return [];
+      return [
+        typeof value.value === 'string' ? value.value : '',
+        ...(value.queryChunks || []).flatMap(params),
+      ].filter(Boolean);
+    };
+    const result = () => {
+      this.record({ type: 'select', table: tableName, whereCols });
+      const selectedId = params(condition).find(value => value.startsWith('pl-place-01-'));
+      const child = 'pl-place-01-000000000000000000000001';
+      const province = 'pl-place-01-000000000000000000000002';
+      const revisedChild = 'pl-place-01-000000000000000000000003';
+      const revisedProvince = 'pl-place-01-000000000000000000000004';
+      if (tableName === 'place')
+        return [
+          {
+            placeId: selectedId,
+            scope: [province, revisedProvince].includes(selectedId ?? '') ? 'province' : 'locality',
+            searchScope: [province, revisedProvince].includes(selectedId ?? '')
+              ? 'province'
+              : 'locality',
+            lifecycleStatus: 'active',
+            searchEligible: 1,
+          },
+        ];
+      if (tableName === 'place_relationship')
+        return selectedId === child
+          ? [{ toPlaceId: province }]
+          : selectedId === revisedChild
+            ? [{ toPlaceId: revisedProvince }]
+            : [];
+      if (tableName === 'place_name')
+        return [
+          { placeId: child, name: 'Selected Locality', placeType: 'suburb' },
+          { placeId: province, name: 'Gauteng', placeType: 'province' },
+          { placeId: revisedChild, name: 'Sea Point', placeType: 'suburb' },
+          { placeId: revisedProvince, name: 'Western Cape', placeType: 'province' },
+        ];
+      if (tableName === 'land_listing_links') return this.landLinkResults.shift() || [];
+      if (tableName === 'commercial_availability_listing_links')
+        return this.commercialLinkResults.shift() || [];
+      return this.selectResults.shift() || [];
+    };
     const chain: any = {
       from: (table: any) => {
         tableName = resolveTableName(table);
         return chain;
       },
+      innerJoin: () => chain,
       where: (conds: any) => {
+        condition = conds;
         whereCols = extractColNames(conds);
         return chain;
       },
-      limit: (n: number) => {
-        this.record({ type: 'select', table: tableName, whereCols });
-        if (tableName === 'land_listing_links')
-          return Promise.resolve(this.landLinkResults.shift() || []);
-        if (tableName === 'commercial_availability_listing_links')
-          return Promise.resolve(this.commercialLinkResults.shift() || []);
-        return Promise.resolve(this.selectResults.shift() || []);
-      },
-      orderBy: (_order: any) => {
-        // .orderBy() returns the query builder itself (chainable)
-        return chain;
-      },
-      then: (resolve: (v: any) => void) => {
-        // If awaited directly (no .limit() called), resolve immediately
-        this.record({ type: 'select', table: tableName, whereCols });
-        if (tableName === 'land_listing_links') return resolve(this.landLinkResults.shift() || []);
-        if (tableName === 'commercial_availability_listing_links')
-          return resolve(this.commercialLinkResults.shift() || []);
-        resolve(this.selectResults.shift() || []);
-      },
+      limit: () => chain,
+      for: () => chain,
+      orderBy: () => chain,
+      then: (resolve: (value: any) => void) => Promise.resolve(result()).then(resolve),
     };
     return chain;
   }
@@ -240,6 +271,7 @@ import {
   synchronizeApprovedRevisionMedia,
   syncPublishedListingMediaToPropertyMirror,
   updateListingAgentAssignment,
+  updateListing,
 } from '../db';
 import { getDb } from '../db-connection';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
@@ -268,6 +300,11 @@ const listingRow = (overrides: Record<string, any> = {}) => ({
   monthlyRent: '25000.00',
   deposit: { status: 'zero' },
   startingBid: '1500000.00',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+  coordinateSource: 'map',
+  locationConfirmationState: 'confirmed',
+  publicLocationPrecision: 'approximate',
+  privateAddress: { streetName: 'Oak Ave' },
   address: '42 Oak Ave',
   city: 'Johannesburg',
   province: 'Gauteng',
@@ -469,8 +506,16 @@ describe('createListing (lower-level)', () => {
       description: 'An agency-managed seller conversion.',
       pricing: { askingPrice: 2_500_000 },
       propertyDetails: {},
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      location: {
+        version: 2,
+        canonicalPlaceId: null,
+        privateAddress: null,
+        coordinates: null,
+        coordinateSource: null,
+        locationConfirmationState: 'needs_confirmation',
+        publicLocationPrecision: 'approximate',
+        providerObservation: null,
+      },
       slug: 'seller-conversion-ts-fixed',
       media: [],
       sellerProspectConversion: {
@@ -784,13 +829,14 @@ describe('approveListing (lower-level)', () => {
       privateAddress: { streetNumber: '8', streetName: 'Ocean View' },
       latitude: '-33.9181000',
       longitude: '18.3852000',
-      city: 'Cape Town',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000003',
+      city: '',
       suburb: 'Sea Point',
       province: 'Western Cape',
       postalCode: '8005',
-      provinceId: 1,
-      cityId: 2,
-      suburbId: 3,
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
       coordinateSource: 'manual_confirmed',
       locationConfirmationState: 'confirmed',
       publicLocationPrecision: 'exact',
@@ -813,11 +859,12 @@ describe('approveListing (lower-level)', () => {
       leaseTerms: null,
       availableFrom: null,
       utilitiesIncluded: 0,
-      city: 'Cape Town',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000003',
+      city: '',
       suburb: 'Sea Point',
-      provinceId: 1,
-      cityId: 2,
-      suburbId: 3,
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
       mainMediaId: 99999,
       mainMediaType: 'image',
     });
@@ -845,12 +892,13 @@ describe('approveListing (lower-level)', () => {
       bathrooms: 2,
       area: 135,
       internalAreaM2: 135,
-      city: 'Cape Town',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000003',
+      city: '',
       province: 'Western Cape',
-      provinceId: 1,
-      cityId: 2,
-      suburbId: 3,
-      publicAddress: '8 Ocean View, Sea Point, Cape Town, Western Cape',
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
+      publicAddress: '8 Ocean View, Sea Point, Western Cape',
       publicLocationPrecision: 'exact',
     });
     expect(JSON.parse(String(publicProjection?.set?.propertySettings))).toMatchObject({
@@ -1340,5 +1388,59 @@ describe('deleteListing (lower-level)', () => {
     // Should also delete listing-related rows
     const deletes = fakeDb.calls.filter(c => c.type === 'delete');
     expect(deletes.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('Canonical Listing draft update persistence', () => {
+  const location = {
+    version: 2,
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+    privateAddress: { streetNumber: '5', streetName: 'Congo Street', postalCode: '2169' },
+    coordinates: null,
+    coordinateSource: 'manual_confirmed',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    providerObservation: null,
+  };
+  it('validates and persists a private draft assignment inside one caller transaction', async () => {
+    fakeDb.setNextSelectResult([listingRow({ status: 'draft' })]);
+    await updateListing(1001, { location });
+    const write = fakeDb.calls.find(call => call.type === 'update' && call.table === 'listings');
+    expect(fakeDb.transactionCount).toBe(1);
+    expect(write?.set).toMatchObject({
+      canonicalPlaceId: location.canonicalPlaceId,
+      privateAddress: location.privateAddress,
+      city: '',
+      province: 'Gauteng',
+      suburb: 'Selected Locality',
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
+      latitude: null,
+      longitude: null,
+    });
+    expect(write?.set).not.toHaveProperty('location');
+  });
+  it('refuses a flat canonical identity write before any database mutation', async () => {
+    await expect(
+      updateListing(1001, { canonicalPlaceId: location.canonicalPlaceId }),
+    ).rejects.toThrow('flat_location_write_is_not_authority');
+    expect(fakeDb.calls).toEqual([]);
+  });
+  it('rolls back a private draft update when Place validation loses its database connection', async () => {
+    fakeDb.setNextSelectResult([listingRow({ status: 'draft' })]);
+    fakeDb.failureHook = call =>
+      call.type === 'select' && call.table === 'place'
+        ? new Error('Place transport failed')
+        : undefined;
+    await expect(updateListing(1001, { location })).rejects.toThrow('Place transport failed');
+    expect(fakeDb.calls).toEqual([]);
+  });
+  it('rolls back malformed nested evidence instead of saving an unresolved fallback', async () => {
+    fakeDb.setNextSelectResult([listingRow({ status: 'draft' })]);
+    await expect(
+      updateListing(1001, { location: { ...location, city: 'Roodepoort' } }),
+    ).rejects.toThrow('invalid_location_boundary');
+    expect(fakeDb.calls).toEqual([]);
   });
 });

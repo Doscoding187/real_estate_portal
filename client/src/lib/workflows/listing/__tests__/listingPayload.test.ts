@@ -18,6 +18,17 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
       negotiable: true,
     },
     location: {
+      canonicalPlace: {
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        label: 'Selected Locality',
+        scope: 'locality' as const,
+        placeType: 'suburb',
+        administrativeContext: 'Gauteng',
+      },
+      coordinateSource: 'map',
+      locationConfirmationState: 'confirmed',
+      publicLocationPrecision: 'approximate',
+      privateAddress: { streetName: 'Main Road' },
       address: '123 Main St',
       latitude: -33.9249,
       longitude: 18.4241,
@@ -35,7 +46,7 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
     expect(payload.title).toBe('Modern 2-Bed Apartment');
     expect(payload.description).toBe('Spacious apartment in secure complex');
     expect(payload.pricing).toEqual({ askingPrice: 1500000, negotiable: true });
-    expect(payload.location.address).toBe('123 Main St');
+    expect(payload.location.privateAddress?.streetName).toBe('Main Road');
     expect(payload.mediaIds).toEqual([]);
     expect(payload.mainMediaId).toBeUndefined();
     expect(payload.status).toBeUndefined();
@@ -197,23 +208,20 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
     });
   });
 
-  it('preserves location fields including placeId and addressComponents', () => {
+  it('drops provider display components and classic IDs from the canonical boundary', () => {
     const state: Partial<ListingWizardState> = {
       ...minState,
     };
     const payload = buildListingSubmitPayloadFromWizardState(state);
-    expect(payload.location.placeId).toBe('ChIJ123');
-    expect(payload.location.addressComponents).toEqual({});
+    expect(payload.location.canonicalPlaceId).toBe('pl-place-01-000000000000000000000001');
+    expect(payload.location).not.toHaveProperty('placeId');
+    expect(payload.location).not.toHaveProperty('addressComponents');
   });
 
   it('filters out undefined media ids', () => {
     const state: Partial<ListingWizardState> = {
       ...minState,
-      media: [
-        { id: 'media-1' },
-        { id: undefined },
-        { id: 'media-3' },
-      ] as any,
+      media: [{ id: 'media-1' }, { id: undefined }, { id: 'media-3' }] as any,
     };
     const payload = buildListingSubmitPayloadFromWizardState(state);
     expect(payload.mediaIds).toEqual(['media-1', 'media-3']);
@@ -229,8 +237,16 @@ describe('buildListingSubmitPayloadFromWizardState', () => {
 
 describe('extractSellPricing', () => {
   it('returns sell-specific fields', () => {
-    const result = extractSellPricing({ askingPrice: 2000000, negotiable: false, transferCostEstimate: 50000 });
-    expect(result).toEqual({ askingPrice: 2000000, negotiable: false, transferCostEstimate: 50000 });
+    const result = extractSellPricing({
+      askingPrice: 2000000,
+      negotiable: false,
+      transferCostEstimate: 50000,
+    });
+    expect(result).toEqual({
+      askingPrice: 2000000,
+      negotiable: false,
+      transferCostEstimate: 50000,
+    });
   });
 
   it('returns empty object for undefined', () => {

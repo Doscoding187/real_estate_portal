@@ -357,9 +357,10 @@ export type PlaceReadDatabase = Pick<Awaited<ReturnType<typeof getDb>>, 'select'
 export async function executePlace(
   placeId: string,
   database?: PlaceReadDatabase,
+  options: { lock?: boolean } = {},
 ): Promise<PlaceScopeExecutionResolution> {
   const db = database ?? (await getDb());
-  const rows = await db
+  const query = db
     .select({
       placeId: place.placeId,
       lifecycleStatus: place.lifecycleStatus,
@@ -369,12 +370,13 @@ export async function executePlace(
     .from(place)
     .where(eq(place.placeId, placeId))
     .limit(1);
+  const rows = await (options.lock ? query.for('update') : query);
   if (rows.length === 0) return { ok: false, reason: 'unknown_place' };
   const row = rows[0];
 
   let ancestry: Awaited<ReturnType<typeof loadContainmentAncestry>>;
   try {
-    ancestry = await loadContainmentAncestry(placeId, db);
+    ancestry = await loadContainmentAncestry(placeId, db, options.lock);
   } catch (error) {
     if (error instanceof PlaceContainmentError) {
       return { ok: false, reason: error.reason };
@@ -411,13 +413,14 @@ class PlaceContainmentError extends Error {
 async function loadContainmentAncestry(
   placeId: string,
   database?: PlaceReadDatabase,
+  lock = false,
 ): Promise<{ placeId: string; scope: PlaceSearchScope | null }[]> {
   const db = database ?? (await getDb());
   const ancestry: { placeId: string; scope: PlaceSearchScope | null }[] = [];
   const seen = new Set<string>([placeId]);
   let cursor: string | null = placeId;
   for (let depth = 0; depth < 8 && cursor; depth += 1) {
-    const parent = await db
+    const parentQuery = db
       .select({ toPlaceId: placeRelationship.toPlaceId })
       .from(placeRelationship)
       .where(
@@ -427,16 +430,18 @@ async function loadContainmentAncestry(
         ),
       )
       .limit(2);
+    const parent = await (lock ? parentQuery.for('update') : parentQuery);
     if (parent.length === 0) return ancestry;
     if (parent.length !== 1) throw new PlaceContainmentError('unresolved_parent');
     const parentId = parent[0].toPlaceId;
     if (seen.has(parentId)) throw new PlaceContainmentError('containment_cycle');
     seen.add(parentId);
-    const parentRow = await db
+    const parentPlaceQuery = db
       .select({ scope: place.searchScope, lifecycleStatus: place.lifecycleStatus })
       .from(place)
       .where(eq(place.placeId, parentId))
       .limit(1);
+    const parentRow = await (lock ? parentPlaceQuery.for('update') : parentPlaceQuery);
     if (parentRow.length === 0 || parentRow[0].lifecycleStatus !== 'active') {
       throw new PlaceContainmentError('unresolved_parent');
     }

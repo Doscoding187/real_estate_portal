@@ -1,0 +1,150 @@
+{
+  "adapter": "canonical-places-national",
+  "scope": "national-storage",
+  "consumerActivated": false,
+  "publicationPerformed": false,
+  "identity": "place_id",
+  "rejectedConstraints": [
+    "UNIQUE(parent, normalized_name)",
+    "UNIQUE(parent, normalized_name, place_type)"
+  ],
+  "targetClassDisposable": true,
+  "provinces": [
+    "za-gp",
+    "za-wc",
+    "za-kzn",
+    "za-ec",
+    "za-fs",
+    "za-mp",
+    "za-li",
+    "za-nw",
+    "za-nc"
+  ],
+  "provinceCount": 9,
+  "expected": {
+    "places": 17664,
+    "names": 26425,
+    "relationships": 17655,
+    "evidence": 79925,
+    "externalMappings": 19792,
+    "dispositionLedger": 87930
+  },
+  "written": {
+    "places": 17664,
+    "names": 26425,
+    "relationships": 17655,
+    "evidence": 79925,
+    "externalMappings": 19792
+  },
+  "stored": {
+    "places": 17664,
+    "names": 26425,
+    "relationships": 17655,
+    "evidence": 79925,
+    "externalMappings": 19792
+  },
+  "perProvince": [
+    {
+      "territoryId": "za-gp",
+      "places": 1466,
+      "names": 2476,
+      "relationships": 1465,
+      "evidence": 4463,
+      "externalMappings": 2971,
+      "dispositionLedger": 4350,
+      "digest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f"
+    },
+    {
+      "territoryId": "za-wc",
+      "places": 1862,
+      "names": 3246,
+      "relationships": 1861,
+      "evidence": 11062,
+      "externalMappings": 1905,
+      "dispositionLedger": 13025,
+      "digest": "a93d1cf16be522023be9a9a4bc730705bf31b3299d6b6659117066a3cfe6dd62"
+    },
+    {
+      "territoryId": "za-kzn",
+      "places": 2090,
+      "names": 3429,
+      "relationships": 2089,
+      "evidence": 9660,
+      "externalMappings": 2170,
+      "dispositionLedger": 9176,
+      "digest": "6610e49a5775b019c0160924ff0319b0a969bc76b5ce2ea57f7b8234cadd6cf5"
+    },
+    {
+      "territoryId": "za-ec",
+      "places": 5084,
+      "names": 6892,
+      "relationships": 5083,
+      "evidence": 14951,
+      "externalMappings": 5328,
+      "dispositionLedger": 12661,
+      "digest": "cb1ad152c63ad1e38d37824d8e1d21c4569192a7ea9374ad3f6dadeda3be1f41"
+    },
+    {
+      "territoryId": "za-fs",
+      "places": 1544,
+      "names": 2138,
+      "relationships": 1543,
+      "evidence": 7300,
+      "externalMappings": 1572,
+      "dispositionLedger": 9343,
+      "digest": "4b27674742d69abac7cc9b8a458179558117d8274704c72cfd2f2bb0168598b3"
+    },
+    {
+      "territoryId": "za-mp",
+      "places": 1045,
+      "names": 1607,
+      "relationships": 1044,
+      "evidence": 5059,
+      "externalMappings": 1078,
+      "dispositionLedger": 5855,
+      "digest": "9fbaa16b8ebf7b84bc1542a14d22b939e8eabf694ac2133e1a54cd6f362757aa"
+    },
+    {
+      "territoryId": "za-li",
+      "places": 1669,
+      "names": 2359,
+      "relationships": 1668,
+      "evidence": 9443,
+      "externalMappings": 1747,
+      "dispositionLedger": 11471,
+      "digest": "96a2151f65019623dde06ab96920d24b7a357d929944527fd3d7f0b1c943cb5e"
+    },
+    {
+      "territoryId": "za-nw",
+      "places": 1352,
+      "names": 2086,
+      "relationships": 1351,
+      "evidence": 5113,
+      "externalMappings": 1445,
+      "dispositionLedger": 5177,
+      "digest": "043200f53d4a3d191666b4ceda88666a10ea8a9f711c44958be20b2e4959a5b0"
+    },
+    {
+      "territoryId": "za-nc",
+      "places": 1552,
+      "names": 2192,
+      "relationships": 1551,
+      "evidence": 12874,
+      "externalMappings": 1576,
+      "dispositionLedger": 16872,
+      "digest": "396c94fdc6879a2f16ada91857f755eb2b5f83c4feda9899b6da1c447cf5fc59"
+    }
+  ],
+  "digests": {
+    "za-gp": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f",
+    "za-wc": "a93d1cf16be522023be9a9a4bc730705bf31b3299d6b6659117066a3cfe6dd62",
+    "za-kzn": "6610e49a5775b019c0160924ff0319b0a969bc76b5ce2ea57f7b8234cadd6cf5",
+    "za-ec": "cb1ad152c63ad1e38d37824d8e1d21c4569192a7ea9374ad3f6dadeda3be1f41",
+    "za-fs": "4b27674742d69abac7cc9b8a458179558117d8274704c72cfd2f2bb0168598b3",
+    "za-mp": "9fbaa16b8ebf7b84bc1542a14d22b939e8eabf694ac2133e1a54cd6f362757aa",
+    "za-li": "96a2151f65019623dde06ab96920d24b7a357d929944527fd3d7f0b1c943cb5e",
+    "za-nw": "043200f53d4a3d191666b4ceda88666a10ea8a9f711c44958be20b2e4959a5b0",
+    "za-nc": "396c94fdc6879a2f16ada91857f755eb2b5f83c4feda9899b6da1c447cf5fc59"
+  },
+  "schemaMutation": false
+}

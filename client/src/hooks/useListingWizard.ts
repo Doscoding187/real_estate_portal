@@ -30,10 +30,11 @@ import {
   normalizeRentalTerms,
   validateRentalTerms,
 } from '../../../shared/rental-terms-contract';
+import { z } from 'zod';
 import {
-  coordinatePairSchema,
-  validateManualLocationEvidence,
-} from '../../../shared/location-contract';
+  buildCanonicalListingLocationPayload,
+  canonicalListingLocationEvidenceIssues,
+} from '../../../shared/canonicalListingLocation';
 import {
   getPrimaryListingImage,
   isCompletedListingImage,
@@ -208,31 +209,23 @@ export function getLocationEvidenceValidationIssues(
   const location = state.location;
   if (!location) return ['Enter the property location.'];
 
-  const issues = validateManualLocationEvidence({
-    propertyType: state.propertyType,
-    discovery: {
-      provinceId: location.provinceId ?? null,
-      cityId: location.cityId ?? null,
-      suburbId: location.suburbId ?? null,
-    },
-    privateAddress: location.privateAddress ?? null,
-  });
-
-  const hasLatitude = location.latitude !== null && location.latitude !== undefined;
-  const hasLongitude = location.longitude !== null && location.longitude !== undefined;
-  if (hasLatitude !== hasLongitude) {
-    issues.push('Enter both map coordinates or leave them blank.');
-  } else if (hasLatitude && hasLongitude) {
-    const coordinates = coordinatePairSchema.safeParse({
-      latitude: location.latitude,
-      longitude: location.longitude,
+  if (location.canonicalLocationRefusal)
+    return ['Choose an approved replacement for the unavailable location.'];
+  if (!location.canonicalPlace) return ['Select an approved location.'];
+  try {
+    const payload = buildCanonicalListingLocationPayload({
+      ...location,
+      locationConfirmationState: 'needs_confirmation',
     });
-    if (!coordinates.success) {
-      issues.push(coordinates.error.issues[0]?.message || 'Enter a valid map location.');
-    }
+    return canonicalListingLocationEvidenceIssues(
+      payload,
+      location.canonicalPlace.scope,
+      state.propertyType ?? '',
+    );
+  } catch (error) {
+    if (error instanceof z.ZodError) return error.issues.map(issue => issue.message);
+    throw error;
   }
-
-  return issues;
 }
 
 export function getLocationValidationIssues(
@@ -308,10 +301,15 @@ export const canAdvanceFromStep = (state: WizardNavigationState, step: number): 
       const pricing = state.pricing as Record<string, unknown> | undefined;
       if (!pricing) return false;
       if (state.action === 'sell' || state.action === 'rent') {
-        const pricingIssues = validatePricingContract(state.action, pricing, state.propertyDetails, {
-          mode: 'publish',
-          enforceInputShape: true,
-        });
+        const pricingIssues = validatePricingContract(
+          state.action,
+          pricing,
+          state.propertyDetails,
+          {
+            mode: 'publish',
+            enforceInputShape: true,
+          },
+        );
         const rentalTermsIssues =
           state.action === 'rent'
             ? validateRentalTerms(state.propertyDetails?.rentalTerms, { mode: 'publish' })
@@ -536,6 +534,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         const previous = get().location;
         const materiallyChanged = previous
           ? [
+              previous.canonicalPlace?.canonicalPlaceId !==
+                location.canonicalPlace?.canonicalPlaceId,
               previous.address !== location.address,
               previous.city !== location.city,
               previous.suburb !== location.suburb,

@@ -444,6 +444,8 @@ export interface AdditionalInformation {
 
 // Step 4: Location
 export interface LocationData {
+  canonicalLocationRefusal?: string | null;
+  canonicalPlace?: import('./canonicalListingLocation').CanonicalListingPlaceChoice | null;
   address: string;
   latitude: number | null;
   longitude: number | null;

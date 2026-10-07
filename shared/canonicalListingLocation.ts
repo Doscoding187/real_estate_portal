@@ -10,9 +10,9 @@ import {
 } from './location-contract';
 
 /**
- * Prepared Listing consumer boundary. One canonical identity; private address,
+ * Canonical Listing consumer boundary. One canonical identity; private address,
  * coordinates and provider observations are evidence, never another authority.
- * The product cutover must use this boundary atomically with persisted references.
+ * Create/edit/publication resolve this boundary on their persistence transaction.
  */
 export const CANONICAL_LISTING_LOCATION_VERSION = 2 as const;
 export const canonicalListingLocationSchema = z
@@ -26,7 +26,9 @@ export const canonicalListingLocationSchema = z
     publicLocationPrecision: z.enum(PUBLIC_LOCATION_PRECISIONS),
     providerObservation: z
       .object({
-        provider: z.string().trim().min(1).max(32),
+        // The authored provider column is explicitly Google evidence. Another
+        // provider requires its own persisted evidence boundary before admission.
+        provider: z.literal('google'),
         providerPlaceId: z.string().trim().min(1).max(255),
       })
       .strict()
@@ -65,6 +67,50 @@ export const canonicalListingLocationSchema = z
 
 export type CanonicalListingLocation = z.infer<typeof canonicalListingLocationSchema>;
 
+export interface CanonicalListingPlaceChoice {
+  canonicalPlaceId: string;
+  label: string;
+  placeType: string;
+  scope: PlaceSearchScope;
+  administrativeContext: string | null;
+}
+
+/** Read the declared Listing columns; labels and numeric handles are not inputs. */
+export function canonicalListingLocationFromRecord(record: Record<string, unknown>): unknown {
+  const coordinate = (value: unknown): number | null => {
+    if (value == null) return null;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string' && /^[-+]?\d+(?:\.\d+)?$/.test(value)) return Number(value);
+    // A malformed declared decimal must remain invalid, including blanks and
+    // booleans; coercing either would manufacture a usable coordinate.
+    return Number.NaN;
+  };
+  const latitude = coordinate(record.latitude);
+  const longitude = coordinate(record.longitude);
+  return {
+    version: CANONICAL_LISTING_LOCATION_VERSION,
+    canonicalPlaceId: record.canonicalPlaceId ?? null,
+    privateAddress: record.privateAddress ?? null,
+    coordinates: latitude === null && longitude === null ? null : { latitude, longitude },
+    coordinateSource: record.coordinateSource ?? null,
+    locationConfirmationState: record.locationConfirmationState,
+    publicLocationPrecision: record.publicLocationPrecision,
+    providerObservation: record.placeId
+      ? { provider: 'google', providerPlaceId: record.placeId }
+      : null,
+  };
+}
+
+export function validateCanonicalListingRecordLocation(record: Record<string, unknown>): string[] {
+  const parsed = canonicalListingLocationSchema.safeParse(
+    canonicalListingLocationFromRecord(record),
+  );
+  if (!parsed.success) return parsed.error.issues.map(issue => issue.message);
+  return parsed.data.locationConfirmationState === 'confirmed'
+    ? []
+    : ['Confirm the current location before publication.'];
+}
+
 /** No city ancestor is required for a directly selected locality. */
 export function canonicalListingLocationEvidenceIssues(
   location: CanonicalListingLocation,
@@ -92,4 +138,26 @@ export function canonicalListingLocationEvidenceIssues(
   )
     return ['Enter a farm, holding, road or portion reference.'];
   return [];
+}
+
+/** Allow-list wizard evidence. Persisted display labels and numeric handles never become identity. */
+export function buildCanonicalListingLocationPayload(
+  location: import('./listing-types').LocationData | null | undefined,
+): CanonicalListingLocation {
+  if (location?.canonicalLocationRefusal)
+    throw new Error('Choose a replacement for the unavailable selected location.');
+  const latitude = location?.latitude ?? null;
+  const longitude = location?.longitude ?? null;
+  return canonicalListingLocationSchema.parse({
+    version: CANONICAL_LISTING_LOCATION_VERSION,
+    canonicalPlaceId: location?.canonicalPlace?.canonicalPlaceId ?? null,
+    privateAddress: location?.privateAddress ?? null,
+    coordinates: latitude === null && longitude === null ? null : { latitude, longitude },
+    coordinateSource: location?.coordinateSource ?? null,
+    locationConfirmationState: location?.locationConfirmationState ?? 'needs_confirmation',
+    publicLocationPrecision: location?.publicLocationPrecision ?? 'approximate',
+    providerObservation: location?.providerLocationPlaceId
+      ? { provider: location.provider, providerPlaceId: location.providerLocationPlaceId }
+      : null,
+  });
 }
