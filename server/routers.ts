@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PUBLIC_SEARCH_MAX_PAGE_INDEX } from '../shared/publicSearchPagination';
 import { getSessionCookieOptions } from './_core/cookies';
+import { authService } from './_core/auth';
 import { COOKIE_NAME } from '../shared/const';
 import type { User } from './_core/context';
 import { OWNERSHIP_TYPES, STRUCTURAL_TYPES, FLOOR_TYPES } from '../shared/db-enums';
@@ -219,8 +220,21 @@ const appRouterConfig = {
         trialStatus,
       };
     }),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
+      try {
+        await authService.revokeSessionFromCookieHeader(ctx.req.headers.cookie);
+      } catch (error) {
+        console.error('[Auth] Logout session revocation failed', {
+          requestId: ctx.requestId,
+          code: (error as { code?: string })?.code || null,
+          name: error instanceof Error ? error.name : null,
+        });
+        throw new TRPCError({
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Secure logout is temporarily unavailable. Please retry shortly.',
+        });
+      }
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return {
         success: true,
