@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 db:authority:utilities /home/edwardspc/Desktop/Dev/worktrees/property-listify-developer-registration-canonical-fields-20261007
+> tsx scripts/databaseUtilityAuthorityCheck.ts
+
+Database utility authority check passed: 120 classified surfaces.

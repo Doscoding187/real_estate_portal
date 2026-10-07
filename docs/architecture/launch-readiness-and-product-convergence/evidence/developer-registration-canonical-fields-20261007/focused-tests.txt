@@ -1,0 +1,37 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-developer-registration-canonical-fields-20261007
+
+stdout | server/__tests__/developer-registration-input.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+ ✓ |client| client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.states.test.tsx (7 tests) 1499ms
+   ✓ Developer setup wizard identity states > shows a truthful under-review state instead of an editable application for pending organisations 1094ms
+stdout | server/__tests__/developer-registration-input.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/developer-registration-input.contract.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | server/__tests__/developer-registration-input.contract.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-07T21:41:28.357Z
+
+stdout | server/__tests__/developer-registration-input.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/__tests__/developer-registration-input.contract.test.ts (13 tests) 53ms
+ ✓ |client| client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.registration.test.tsx (2 tests) 5458ms
+   ✓ Developer registration canonical save and reload > collects and submits supported organisation details without asking for unsaved counts 2535ms
+   ✓ Developer registration canonical save and reload > resumes an older owned draft with an explicit count notice and saves only supported fields 2921ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  23:41:16
+   Duration  14.93s (transform 6.80s, setup 857ms, collect 19.17s, tests 7.01s, environment 3.78s, prepare 735ms)
+

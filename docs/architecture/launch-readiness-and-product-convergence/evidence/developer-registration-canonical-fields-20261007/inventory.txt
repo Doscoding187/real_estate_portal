@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 schema:inventory:check /home/edwardspc/Desktop/Dev/worktrees/property-listify-developer-registration-canonical-fields-20261007
+> tsx scripts/generateCanonicalModelInventory.ts
+
+Canonical model inventory is deterministic and current.

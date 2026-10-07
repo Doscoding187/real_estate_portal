@@ -518,23 +518,22 @@ export const developerRouter = router({
 
   createProfile: protectedProcedure
     .input(
-      z.object({
-        name: z.string().min(2),
-        description: z.string().optional().nullable(),
-        category: z.string().optional().nullable(),
-        establishedYear: z.number().int().optional().nullable(),
-        website: z.string().optional().nullable(),
-        email: z.string().email(),
-        phone: z.string().optional().nullable(),
-        address: z.string().optional().nullable(),
-        city: z.string().min(2),
-        province: z.string().min(2),
-        logo: z.string().optional().nullable(),
-        completedProjects: z.number().int().optional(),
-        currentProjects: z.number().int().optional(),
-        upcomingProjects: z.number().int().optional(),
-        specializations: z.array(z.string()).optional(),
-      }),
+      z
+        .object({
+          name: z.string().min(2),
+          description: z.string().optional().nullable(),
+          category: z.string().optional().nullable(),
+          establishedYear: z.number().int().optional().nullable(),
+          website: z.string().optional().nullable(),
+          email: z.string().email(),
+          phone: z.string().optional().nullable(),
+          address: z.string().optional().nullable(),
+          city: z.string().min(2),
+          province: z.string().min(2),
+          logo: z.string().optional().nullable(),
+          specializations: z.array(z.string()).optional(),
+        })
+        .strict(),
     )
     .mutation(async ({ ctx, input }) => {
       const user = requireUser(ctx);

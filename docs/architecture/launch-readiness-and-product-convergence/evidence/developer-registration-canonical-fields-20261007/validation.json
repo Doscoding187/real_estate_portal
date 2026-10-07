@@ -1,0 +1,33 @@
+{
+  "baseSha": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+  "classification": "Database consumer contract correction; organisation persistence service and SQL unchanged",
+  "phase": "Local verification complete; senior review before hosted CI",
+  "targetClass": "disposable-worktree",
+  "targetFingerprint": "aa222d0581d78b2e30e66fb0b027ccc70bdf03c9da058c1176de9ea185a1b2b4",
+  "localServiceRemainedStopped": true,
+  "provisioned": false,
+  "mockedPersistenceOnly": true,
+  "checks": {
+    "focusedTests": {
+      "passed": 22,
+      "failed": 0,
+      "files": 3
+    },
+    "databaseAuthorityStatic": {
+      "passed": 449,
+      "failed": 0,
+      "files": 48
+    },
+    "typecheck": "passed",
+    "touchedLint": "passed; zero errors, warnings retained in log",
+    "finalNewTestLint": "passed; zero errors, four explicit-any test warnings",
+    "applicationBuild": "passed; existing chunk-size warning",
+    "databaseUtilities": "passed; 120 classified surfaces",
+    "schemaSanity": "passed",
+    "inventory": "passed",
+    "lifecycle": "passed"
+  },
+  "physicalDatabaseSaveReload": "Not executed; no database target created or started. Route round-trip mocks canonical persistence; UI checks real form, review, account-owned localStorage autosave and remount.",
+  "hostedCIStarted": false,
+  "productionMutationDeploymentOrConfigChanges": false
+}

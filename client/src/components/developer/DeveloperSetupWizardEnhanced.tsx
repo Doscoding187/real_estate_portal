@@ -46,7 +46,7 @@ type FormValues = BasicInfoData &
 const STEPS = [
   { id: 1, title: 'Company Info', icon: Building2 },
   { id: 2, title: 'Contact Details', icon: Phone },
-  { id: 3, title: 'Portfolio', icon: Briefcase },
+  { id: 3, title: 'Expertise', icon: Briefcase },
   { id: 4, title: 'Review', icon: FileText },
 ];
 
@@ -125,10 +125,7 @@ export default function DeveloperSetupWizardEnhanced() {
       city: '',
       province: '',
       logo: null,
-      // Portfolio
-      completedProjects: 0,
-      currentProjects: 0,
-      upcomingProjects: 0,
+      // Expertise
       specializations: [],
       // Terms
       termsAccepted: false,
@@ -201,10 +198,7 @@ export default function DeveloperSetupWizardEnhanced() {
       // Private browser state is owned by the authenticated principal.  Do
       // not write or resume anything while auth is unresolved.
       enabled:
-        authIdentityResolved &&
-        Boolean(currentUserId) &&
-        step > 1 &&
-        !createProfile.isPending,
+        authIdentityResolved && Boolean(currentUserId) && step > 1 && !createProfile.isPending,
       onSave: draft => {
         if (!currentUserId || typeof window === 'undefined') return;
         localStorage.setItem(
@@ -266,9 +260,6 @@ export default function DeveloperSetupWizardEnhanced() {
         city: draft.city || '',
         province: draft.province || '',
         logo: draft.logo || null,
-        completedProjects: draft.completedProjects || 0,
-        currentProjects: draft.currentProjects || 0,
-        upcomingProjects: draft.upcomingProjects || 0,
         specializations: draft.specializations || [],
         termsAccepted: false,
       });
@@ -277,6 +268,11 @@ export default function DeveloperSetupWizardEnhanced() {
       setStep(draft.step || 1);
       setCompletedSteps(draft.completedSteps || []);
 
+      if (['completedProjects', 'currentProjects', 'upcomingProjects'].some(key => key in draft)) {
+        toast.info(
+          'Project counts from your older draft will not be submitted. Organisation registration collects company details and specialisations.',
+        );
+      }
       toast.success('Draft restored successfully!');
     }
   };
@@ -296,9 +292,6 @@ export default function DeveloperSetupWizardEnhanced() {
       city: '',
       province: '',
       logo: null,
-      completedProjects: 0,
-      currentProjects: 0,
-      upcomingProjects: 0,
       specializations: [],
       termsAccepted: false,
     });
@@ -345,9 +338,6 @@ export default function DeveloperSetupWizardEnhanced() {
         city: data.city || '',
         province: data.province || '',
         logo: data.logo || null,
-        completedProjects: data.completedProjects || 0,
-        currentProjects: data.currentProjects || 0,
-        upcomingProjects: data.upcomingProjects || 0,
         specializations:
           typeof data.specializations === 'string'
             ? (JSON.parse(data.specializations) as string[])
@@ -424,9 +414,6 @@ export default function DeveloperSetupWizardEnhanced() {
         address: data.address || null,
         city: data.city,
         province: data.province,
-        completedProjects: data.completedProjects ? Number(data.completedProjects) : 0,
-        currentProjects: data.currentProjects ? Number(data.currentProjects) : 0,
-        upcomingProjects: data.upcomingProjects ? Number(data.upcomingProjects) : 0,
         logo: data.logo || null,
       });
 
@@ -662,7 +649,7 @@ export default function DeveloperSetupWizardEnhanced() {
               </div>
             )}
 
-            {/* Step 3: Portfolio */}
+            {/* Step 3: Expertise */}
             {step === 3 && (
               <div
                 className={
@@ -673,9 +660,6 @@ export default function DeveloperSetupWizardEnhanced() {
               >
                 <PortfolioStep
                   data={{
-                    completedProjects: formValues.completedProjects,
-                    currentProjects: formValues.currentProjects,
-                    upcomingProjects: formValues.upcomingProjects,
                     specializations: formValues.specializations,
                   }}
                   onChange={handlePortfolioChange}
@@ -711,9 +695,6 @@ export default function DeveloperSetupWizardEnhanced() {
                       logo: formValues.logo,
                     },
                     portfolio: {
-                      completedProjects: formValues.completedProjects,
-                      currentProjects: formValues.currentProjects,
-                      upcomingProjects: formValues.upcomingProjects,
                       specializations: formValues.specializations,
                     },
                     termsAccepted: formValues.termsAccepted,
