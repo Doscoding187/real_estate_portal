@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/mysql2';
+import { instrumentAuthMePool, measureAuthMePhase } from './_core/authMeTiming';
 import * as schema from '../drizzle/schema';
 import {
   authorizeDatabaseOperation,
@@ -411,6 +412,7 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
       }
       let database;
       try {
+        instrumentAuthMePool(createdPool.pool);
         database = drizzle(createdPool.pool, { schema, mode: 'default' });
       } catch (error) {
         // Ownership is not published until the ORM is ready. Preserve the
@@ -447,7 +449,7 @@ async function getDbForOperation(operation: 'runtime-connect' | 'worker-connect'
 }
 
 export async function getDb() {
-  return getDbForOperation('runtime-connect');
+  return measureAuthMePhase('database-access', () => getDbForOperation('runtime-connect'));
 }
 
 /** Worker entrypoints receive their own connection-authority operation. */

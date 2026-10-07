@@ -1,0 +1,41 @@
+
+> real_estate_portal@1.0.0 db:authority:status /home/edwardspc/Desktop/Dev/worktrees/property-listify-developer-registration-canonical-fields-20261007
+> tsx scripts/databaseAuthorityStatus.ts
+
+Database Authority Version: 3
+Canonical Baseline: server/migrations/0000_canonical_launch_baseline.sql
+Canonical Manifest: server/migrations/manifest.json
+Manifest Digest: b18067dd47b0e21cc2c2b44c218b8495bdd14b27e896d55bf65ff3ff39f3ef2b
+Expected Manifest Head: 0096_user_founder_authority_unique.sql
+Current Migration Ledger State: head-not-evaluated
+Incomplete Attempt State: attempts-not-evaluated
+Current Environment: development
+Environment Source: central-local-derived-worktree
+Central Local Environment: found
+Resolved Central Path: /home/edwardspc/.config/property-listify/local.env
+Central Permissions: safe
+Worktree .env.local: missing
+Required Local Variables: DATABASE_URL=configured, LOCAL_DEMO_AGENCY_PASSWORD=configured, JWT_SECRET=configured, APP_URL=configured, FRONTEND_URL=configured, VITE_API_URL=configured, VITE_API_BASE_URL=configured
+Sanitized Target: mysql://127.0.0.1:3307/listify_wt_developer_registration_canonic_0ab143be5690
+Target Fingerprint Hash: aa222d0581d78b2e30e66fb0b027ccc70bdf03c9da058c1176de9ea185a1b2b4
+Target Classification: disposable-worktree
+Credential Source: database-url
+Credential Class: local-owner
+Local Service Host: 127.0.0.1
+Local Service Port: 3307
+Local Service Directory: /var/tmp/property-listify-1000/mysql-3307
+Local Service Data Directory: /var/tmp/property-listify-1000/mysql-3307/data
+Local Service Fingerprint: 2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2
+Worktree Ownership: exact
+Service Availability: database-unreachable
+Target Ownership: target-ownership-not-evaluated
+Schema Migrated: schema-migration-not-evaluated
+Schema Congruency: schema-congruency-not-evaluated
+Canonical Reference Data: reference-not-evaluated
+Launch Access Foundation Data: foundation-not-evaluated
+Acceptance Scenario Data: scenario-not-evaluated
+Requested Runtime: database
+Application Readiness: not-ready
+Authority Contract Path: docs/database-authority/00-database-authority-agent-entry.md
+Operating Playbook Path: docs/database-authority/01-database-operating-playbook.md
+Prohibited Operations: db:push and schema push; schema generation outside an approved migration task; manual DDL and retired schema executors; unapproved remote, shared, staging, production, Railway, and TiDB targets; all mutation of the quarantined current listify_local database

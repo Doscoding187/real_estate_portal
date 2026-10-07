@@ -1,4 +1,8 @@
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
+import type { AddressInfo } from 'node:net';
+import express from 'express';
+import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { SignJWT } from 'jose';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COOKIE_NAME } from '@shared/const';
@@ -51,6 +55,7 @@ vi.mock('./env', () => ({
   ENV: {
     appUrl: 'https://www.propertylistifysa.co.za',
     cookieSecret: 'test-session-secret-that-is-long-enough-for-jwt-signing',
+    mediaStorageAdapter: 'local',
   },
 }));
 
@@ -63,6 +68,8 @@ vi.mock('./emailService', () => ({ EmailService: { sendEmail: vi.fn() } }));
 import { AuthService, authService } from './auth';
 import { registerAuthRoutes } from './authRoutes';
 import { FounderGoogleAccountService } from '../services/founderGoogleAccountService';
+import { appRouter } from '../routers';
+import { createContext } from './context';
 
 const sessionSecret = new TextEncoder().encode(
   'test-session-secret-that-is-long-enough-for-jwt-signing',
@@ -314,6 +321,129 @@ function enableFounderLogin() {
   })) vi.stubEnv(key, value);
 }
 afterEach(() => vi.unstubAllEnvs());
+describe('browser tRPC logout session revocation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAgentByUserId.mockResolvedValue(null);
+  });
+
+  function logoutCaller(cookieHeader?: string) {
+    const response = createRouteResponse();
+    const caller = appRouter.createCaller({
+      user: null,
+      req: { headers: { cookie: cookieHeader } } as never,
+      res: response,
+      requestId: 'browser-logout-regression',
+    });
+    return { caller, response };
+  }
+
+  it.each(['visitor', 'agent', 'agency_admin', 'developer', 'super_admin'])(
+    'rejects replay of both browser sessions after %s logout',
+    async role => {
+      let account = role === 'super_admin' ? founderUser() : user({ role });
+      if (role === 'super_admin') {
+        enableFounderLogin();
+        vi.spyOn(FounderGoogleAccountService.prototype, 'assertSessionBinding').mockResolvedValue();
+      }
+      mockGetUserById.mockImplementation(async () => account);
+      mockRevokeUserSessions.mockImplementation(async (id: number, version: number) => {
+        if (account.id === id && account.sessionVersion === version) {
+          account = { ...account, sessionVersion: version + 1 };
+        }
+      });
+      const claims = role === 'super_admin' ? { founderPrincipal } : undefined;
+      const token = await authService.createSessionToken(42, account.email, account.name, 1, claims);
+      const remembered = await authService.createSessionToken(42, account.email, account.name, 1, claims);
+      for (const session of [token, remembered]) {
+        await expect(authService.authenticateRequest({
+          headers: { cookie: `${COOKIE_NAME}=${session}` },
+        } as any)).resolves.toMatchObject({ id: 42, role });
+      }
+
+      const { caller, response } = logoutCaller(`${COOKIE_NAME}=${token}`);
+      await expect(caller.auth.logout()).resolves.toEqual({ success: true });
+      expect(response.clearCookie).toHaveBeenCalledWith(COOKIE_NAME, expect.any(Object));
+      expect(account.sessionVersion).toBe(2);
+      for (const session of [token, remembered]) {
+        await expect(authService.authenticateRequest({
+          headers: { cookie: `${COOKIE_NAME}=${session}` },
+        } as any)).rejects.toThrow('Session has been revoked');
+      }
+    },
+  );
+
+  it('waits for durable revocation before clearing the cookie or returning success', async () => {
+    let complete!: () => void;
+    mockRevokeUserSessions.mockImplementation(() => new Promise<void>(resolve => {
+      complete = resolve;
+    }));
+    const token = await authService.createSessionToken(42, 'agent@example.com', 'Agent', 1);
+    const { caller, response } = logoutCaller(`${COOKIE_NAME}=${token}`);
+    const result = caller.auth.logout();
+    await vi.waitFor(() => expect(mockRevokeUserSessions).toHaveBeenCalledWith(42, 1));
+    expect(response.clearCookie).not.toHaveBeenCalled();
+    complete();
+    await expect(result).resolves.toEqual({ success: true });
+    expect(response.clearCookie).toHaveBeenCalledOnce();
+  });
+
+  it('fails closed without clearing the cookie or exposing persistence details', async () => {
+    mockRevokeUserSessions.mockRejectedValue(new Error('private database diagnostic'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const token = await authService.createSessionToken(42, 'agent@example.com', 'Agent', 1);
+    const { caller, response } = logoutCaller(`${COOKIE_NAME}=${token}`);
+    await expect(caller.auth.logout()).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Secure logout is temporarily unavailable. Please retry shortly.',
+    });
+    expect(response.clearCookie).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith('[Auth] Logout session revocation failed', {
+      requestId: 'browser-logout-regression', code: null, name: 'Error',
+    });
+  });
+
+  it.each([undefined, 'not-a-signed-session'])(
+    'allows already unauthenticated browser logout for %s',
+    async cookieValue => {
+      const { caller, response } = logoutCaller(
+        cookieValue ? `${COOKIE_NAME}=${cookieValue}` : undefined,
+      );
+      await expect(caller.auth.logout()).resolves.toEqual({ success: true });
+      expect(mockRevokeUserSessions).not.toHaveBeenCalled();
+      expect(response.clearCookie).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('returns HTTP 503 without a cookie clear or private diagnostics when revocation fails', async () => {
+    mockGetUserById.mockResolvedValue(user());
+    mockRevokeUserSessions.mockRejectedValue(new Error('private database diagnostic'));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const token = await authService.createSessionToken(42, 'agent@example.com', 'Agent', 1);
+    const app = express();
+    app.use(express.json());
+    app.use('/api/trpc', createExpressMiddleware({ router: appRouter, createContext }));
+    const server = app.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    try {
+      const { port } = server.address() as AddressInfo;
+      const response = await fetch(`http://127.0.0.1:${port}/api/trpc/auth.logout?batch=1`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: `${COOKIE_NAME}=${token}` },
+        body: JSON.stringify({ '0': { json: null } }),
+      });
+      expect(response.status).toBe(503);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      const body = await response.text();
+      expect(body).toContain('SERVICE_UNAVAILABLE');
+      expect(body).toContain('Secure logout is temporarily unavailable. Please retry shortly.');
+      expect(body).not.toContain('private database diagnostic');
+    } finally {
+      server.close();
+      await once(server, 'close');
+    }
+  });
+});
 describe('Google founder uses genuine provider sessions only', () => {
   beforeEach(() => vi.clearAllMocks());
   it.each([{ loginMethod: 'google-founder' }, { loginMethod: 'email', openId: founderPrincipal }])(

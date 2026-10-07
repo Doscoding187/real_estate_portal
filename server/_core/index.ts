@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { createAuthMeTimingMiddleware } from './authMeTiming';
 
 import express from 'express';
 import cors from 'cors';
@@ -168,6 +169,7 @@ async function startServer() {
     next();
   });
 
+  app.use(createAuthMeTimingMiddleware());
   app.use((req, res, next) => applyApiSecurityHeaders(browserSecurityPolicy, req, res, next));
 
   app.use(
