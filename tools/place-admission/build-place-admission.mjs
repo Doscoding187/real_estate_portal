@@ -40,6 +40,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { normalizePlaceQuery, PLACE_NAME_NORMALIZATION_VERSION } from '../../shared/placeAuthority.ts';
 
 import {
   loadPlaceAdmissionTerritoryRegistry,
@@ -762,7 +763,7 @@ for (const placeRow of placeRows) {
       admission_version: ADMISSION_VERSION,
       place_id: placeRow.place_id,
       name: assertion.name,
-      normalized_name: normalizedName(assertion.name),
+      normalized_name: normalizePlaceQuery(assertion.name),
       name_role: role,
       name_state: nameState,
       is_searchable: isSearchable,
@@ -791,7 +792,7 @@ for (const placeRow of placeRows) {
       admission_version: ADMISSION_VERSION,
       place_id: placeRow.place_id,
       name: form,
-      normalized_name: normalizedName(form),
+      normalized_name: normalizePlaceQuery(form),
       name_role: 'alternate_spelling',
       name_state: 'active',
       is_searchable: 1,
@@ -1511,6 +1512,10 @@ wideSettlementMergeGroups.sort((a, b) => b.max_pairwise_km - a.max_pairwise_km);
 
 const manifest = {
   admission_version: ADMISSION_VERSION,
+  name_index: {
+    normalization_version: PLACE_NAME_NORMALIZATION_VERSION,
+    identity_effect: 'none',
+  },
   territory: {
     territory_id: territory.territoryId,
     display_name: territory.displayName,

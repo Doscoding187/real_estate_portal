@@ -108,7 +108,10 @@ for (const name of names) {
   if (name.name_role !== 'preferred_public') continue;
   const parent = parentOf(name.place_id, name.territory);
   if (parent === '<no-parent>') orphans += 1;
-  const normalized = String(name.normalized_name ?? name.name).normalize('NFC').toLowerCase();
+  // This is the evidence-label comparison used by identity reconciliation,
+  // not the looser search index. Folding punctuation/diacritics for discovery
+  // must never change which referents this identity audit pairs together.
+  const normalized = String(name.name).trim().normalize('NFC').toLowerCase();
   const key = `${parent}|${normalized}`;
   if (!keyGroups.has(key)) keyGroups.set(key, []);
   keyGroups.get(key).push({

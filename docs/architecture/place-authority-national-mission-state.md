@@ -53,7 +53,7 @@ databases. Place Authority remains the only geographic identity source.
 | 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** (superseded as a milestone by row 5) |
 | 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
 | 6 | National authority verification | **review findings repaired; national storage and failure paths proven — ready for review, consumers inactive** |
-| 7 | National consumer handoff | not started; forbidden until activation is decided |
+| 7 | National consumer handoff | launch-readiness source preparation active; customer convergence outstanding, activation held |
 
 ## Current phase
 
@@ -1622,3 +1622,69 @@ activating consumer paths or adopting the legacy raw-connection test bootstrap.
 Next action: review the corrective commit and the Place Authority branch.
 Activation, publication, boundary currency, the applicable founder ODbL decision
 and any fresh Azure release/rehearsal approval retain their separate gates.
+
+## National geography launch-readiness goal — 2026-10-07
+
+Edward has opened the consumer-readiness goal and selected all nine provinces
+with approved locations. The active scope, integration sequence, evidence and
+acceptance criteria are in
+[`geography-launch-readiness-goal-2026-10-07.md`](geography-launch-readiness-goal-2026-10-07.md).
+This authorizes source preparation and owned disposable verification; it does
+not authorize live activation or a protected release.
+
+The task branch now includes accepted integration source `b0bebc343` through
+local merge `8546386dc`; no remote merge, push or deployment occurred. The
+parallel founder identity schema currently proposes migration 0095, which
+collides with this branch's Place series. Final sequencing is a serialized
+integration dependency; do not copy the other worktree's uncommitted files.
+
+**Correction to earlier licensing statements:** the admitted package audit
+finds **720 `osm_only_odbl_provisional` Places in Gauteng**. The earlier statement
+that no admitted province carries OSM-derived rows is incorrect and must not
+justify a production load. The existing materializer's disposable-only gate
+remains in force; the founder production ODbL determination is still required.
+
+The source audit also finds 16,596 locality Places, none with a city-scope
+ancestor, all with provincial context, and zero search-authorized relationship
+edges. Public authoring cannot require an invented city, and public search
+cannot infer broad membership from containment. These are consumer acceptance
+requirements, not reasons to alter Place identities or source classifications.
+
+Reader integrity and national context corrections are prepared with twelve
+focused regressions and nine digest-verified package projection tests. Public
+consumer persistence, governed broad search membership and the physical/browser
+listing-to-search journey remain outstanding. Geography is not launch-ready.
+
+The subsequent real reader probe failed on the admitted preferred name
+`Noord-Kaap`: admission used lowercase-only indexing while query normalization
+folded punctuation. Name-index version 1 now shares query normalization with
+admission and retains Unicode letters/numbers. This changes 3,987 normalized
+index values across nine packages, and records the version in their manifests;
+all 26,425 recorded assertions and every Place ID, source allocation and non-name
+row artifact are preserved. The identity adjudicator and collision measurement
+continue using their original evidence-label comparison, independently of the
+looser search key. Every province regenerates byte-identically.
+
+The adapter rejects a stale name index before national replay and during
+verification. The real refusal proof preserves all five table digests; the
+owned disposable target was then disposed for a fresh canonical load. Do not
+adopt old index data through no-op upserts or mutate a protected target to make
+the reader pass. The new reader and normalized-index proof are additional
+prerequisites, not evidence that public consumer integration is complete.
+
+Final prerequisite evidence: static authority 573/573 tests in 54 files,
+production-scope type check, build and focused lint passed; full typecheck keeps
+263 baseline errors and none in changed files. Fresh disposable application of
+all 104 migrations is congruent with all 39 CHECKs enforced. The canonical
+national load retains the existing five-table totals. Real discovery and exact
+execution pass 31 probes across all nine provinces, including an accepted alias,
+Cyrillic name, cross-province ambiguity and unsupported location; reference
+verification passes before and after. `Noord-Kaap` now resolves correctly.
+
+Evidence is in
+[`national-reader-physical-proof.json`](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/national-reader-physical-proof.json).
+The owned proof target is disposed; the pre-existing native service remains
+available for parallel work. No protected target, push, remote merge or
+deployment is included. The goal remains active for migration reconciliation,
+canonical listing persistence, governed search membership and the customer
+publication/search browser journey.

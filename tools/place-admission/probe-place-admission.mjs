@@ -38,6 +38,7 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../../server/_core/databaseAuthority/authorization.ts';
 import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/common.ts';
+import { normalizePlaceQuery } from '../../shared/placeAuthority.ts';
 import {
   loadPlaceAdmissionTerritoryRegistry,
   selectPlaceAdmissionTerritory,
@@ -134,7 +135,7 @@ check(widening[0].n === 0, 'no relationship-driven search widening in Slice 2', 
 const bySearchableName = async name =>
   read(`SELECT DISTINCT p.place_id, p.place_type, p.verification_status, p.search_scope, p.search_eligible, p.publication_eligible
           FROM \`place\` p JOIN \`place_name\` n ON n.place_id = p.place_id
-         WHERE n.normalized_name = ? AND n.is_searchable = 1`, [name.toLowerCase()]);
+         WHERE n.normalized_name = ? AND n.is_searchable = 1`, [normalizePlaceQuery(name)]);
 
 const cases = [
   ['Soweto', 1, 'one Place, not two, for sources that classified the referent differently'],

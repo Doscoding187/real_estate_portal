@@ -25,6 +25,7 @@
  *   tsx tools/place-admission/verify-cross-province.mjs
  */
 import { readFileSync } from 'node:fs';
+import { normalizePlaceQuery as normalize } from '../../shared/placeAuthority.ts';
 
 import {
   loadPlaceAdmissionTerritoryRegistry,
@@ -34,14 +35,6 @@ import {
 
 const registryLoad = loadPlaceAdmissionTerritoryRegistry(process.cwd());
 const registry = registryLoad.registry;
-
-const normalize = value =>
-  String(value ?? '')
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
 
 const readJsonl = path =>
   readFileSync(path, 'utf8')

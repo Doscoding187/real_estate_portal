@@ -55,7 +55,8 @@ function classifyMatch(
   name: { name: string; normalizedName: string; nameRole: string },
 ): PlaceMatchReason | null {
   const isPreferred = name.nameRole === PLACE_PREFERRED_ROLE;
-  if (name.normalizedName === normalizedQuery) return isPreferred ? 'exact_preferred' : 'exact_name';
+  if (name.normalizedName === normalizedQuery)
+    return isPreferred ? 'exact_preferred' : 'exact_name';
   if (name.normalizedName.startsWith(normalizedQuery)) {
     return isPreferred ? 'prefix_preferred' : 'prefix_name';
   }
@@ -204,7 +205,9 @@ export async function discoverPlaces(
     ) {
       continue;
     }
-    const preferredRow = searchableNames.get(placeId)?.find(item => item.nameRole === PLACE_PREFERRED_ROLE);
+    const preferredRow = searchableNames
+      .get(placeId)
+      ?.find(item => item.nameRole === PLACE_PREFERRED_ROLE);
     const context = contexts.get(placeId);
     candidates.push({
       placeId: row.placeId,
@@ -263,9 +266,7 @@ async function loadPlaceContexts(placeIds: string[]) {
       administrativeContext: string | null;
     }
   >();
-  const ancestorIds = [
-    ...new Set(chains.flat().map(node => node.placeId)),
-  ];
+  const ancestorIds = [...new Set(chains.flat().map(node => node.placeId))];
   const names = ancestorIds.length ? await loadPreferredNames(ancestorIds) : new Map();
 
   for (const [index, placeId] of placeIds.entries()) {
@@ -274,11 +275,18 @@ async function loadPlaceContexts(placeIds: string[]) {
       .slice()
       .reverse()
       .filter((node): node is { placeId: string; scope: PlaceSearchScope } => node.scope !== null);
-    const [province, city, locality] = scoped;
+    const province = scoped.find(node => node.scope === 'province');
+    const city = scoped.find(node => node.scope === 'metro_city');
+    const locality = scoped.find(node => node.scope === 'locality');
     const label = (id?: string) => (id ? (names.get(id) ?? null) : null);
-    const contextParts = [label(province?.placeId), label(city?.placeId), label(locality?.placeId)]
-      .filter(Boolean)
-      .slice(1); // drop the Place's own level; keep the disambiguating context
+    // The chain contains ancestors only. Keep province and context-only
+    // municipalities: neither is the selected Place's own label, and both
+    // can disambiguate same-name Places in a national catalog.
+    const contextParts = chains[index]
+      .slice()
+      .reverse()
+      .map(node => label(node.placeId))
+      .filter(Boolean);
     contexts.set(placeId, {
       provincePlaceId: province?.placeId ?? null,
       cityPlaceId: city?.placeId ?? null,
@@ -357,7 +365,15 @@ export async function executePlace(placeId: string): Promise<PlaceScopeExecution
   if (rows.length === 0) return { ok: false, reason: 'unknown_place' };
   const row = rows[0];
 
-  const ancestry = await loadContainmentAncestry(placeId);
+  let ancestry: Awaited<ReturnType<typeof loadContainmentAncestry>>;
+  try {
+    ancestry = await loadContainmentAncestry(placeId);
+  } catch (error) {
+    if (error instanceof PlaceContainmentError) {
+      return { ok: false, reason: error.reason };
+    }
+    throw error;
+  }
   return projectPlaceScope(
     {
       placeId: row.placeId,
@@ -376,9 +392,15 @@ export async function executePlace(placeId: string): Promise<PlaceScopeExecution
  * dropped, so the caller can distinguish "no scope" from "no parent".
  *
  * Only `administratively_contains` is ever read, the walk is bounded, and a
- * repeated Place is a hard stop, so a corrupted graph can neither loop nor
- * silently produce a shorter path.
+ * repeated Place, missing referent, multiple parents or exhausted bound is a
+ * refusal, so a corrupted graph cannot silently produce a shorter path.
  */
+class PlaceContainmentError extends Error {
+  constructor(readonly reason: 'containment_cycle' | 'unresolved_parent') {
+    super(`Invalid Place containment: ${reason}`);
+  }
+}
+
 async function loadContainmentAncestry(
   placeId: string,
 ): Promise<{ placeId: string; scope: PlaceSearchScope | null }[]> {
@@ -396,24 +418,33 @@ async function loadContainmentAncestry(
           eq(placeRelationship.relationshipType, 'administratively_contains'),
         ),
       )
-      .limit(1);
-    if (parent.length === 0) break;
+      .limit(2);
+    if (parent.length === 0) return ancestry;
+    if (parent.length !== 1) throw new PlaceContainmentError('unresolved_parent');
     const parentId = parent[0].toPlaceId;
-    if (seen.has(parentId)) break; // defensive: never loop on a corrupted graph
+    if (seen.has(parentId)) throw new PlaceContainmentError('containment_cycle');
     seen.add(parentId);
     const parentRow = await db
-      .select({ scope: place.searchScope })
+      .select({ scope: place.searchScope, lifecycleStatus: place.lifecycleStatus })
       .from(place)
       .where(eq(place.placeId, parentId))
       .limit(1);
-    if (parentRow.length === 0) break;
+    if (parentRow.length === 0 || parentRow[0].lifecycleStatus !== 'active') {
+      throw new PlaceContainmentError('unresolved_parent');
+    }
+    if (
+      parentRow[0].scope !== null &&
+      !['province', 'metro_city', 'locality'].includes(parentRow[0].scope)
+    ) {
+      throw new PlaceContainmentError('unresolved_parent');
+    }
     ancestry.push({
       placeId: parentId,
       scope: (parentRow[0].scope as PlaceSearchScope | null) ?? null,
     });
     cursor = parentId;
   }
-  return ancestry;
+  throw new PlaceContainmentError('unresolved_parent');
 }
 
 /**
@@ -431,10 +462,7 @@ export async function discoverSearchAreasForPlace(placeId: string) {
     })
     .from(searchAreaMember)
     .where(
-      and(
-        eq(searchAreaMember.placeId, placeId),
-        ne(searchAreaMember.memberState, 'excluded'),
-      ),
+      and(eq(searchAreaMember.placeId, placeId), ne(searchAreaMember.memberState, 'excluded')),
     );
   return rows.map(row => ({
     kind: 'search_area' as const,

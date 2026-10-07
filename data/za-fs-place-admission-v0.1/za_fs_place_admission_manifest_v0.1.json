@@ -1,5 +1,9 @@
 {
   "admission_version": "za-fs-place-admission-v0.1",
+  "name_index": {
+    "normalization_version": "1",
+    "identity_effect": "none"
+  },
   "territory": {
     "territory_id": "za-fs",
     "display_name": "Free State",

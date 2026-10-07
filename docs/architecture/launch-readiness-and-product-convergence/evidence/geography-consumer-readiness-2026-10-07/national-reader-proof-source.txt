@@ -1,0 +1,113 @@
+import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+
+const root = '/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const moduleAt = (path: string) => import(`${root}/${path}`);
+const { resolveDatabaseAuthority } = await moduleAt('server/_core/databaseAuthority/context.ts');
+const { authorizeDatabaseOperation } = await moduleAt('server/_core/databaseAuthority/authorization.ts');
+const { createAuthoritySqlConnection } = await moduleAt('server/_core/databaseAuthority/connectionAuthority.ts');
+const { requireAcceptedMigrationHead, requireExactAdapterTarget } = await moduleAt('server/_core/databaseAuthority/dataAdapters/common.ts');
+const { loadPlaceAdmissionTerritoryRegistry } = await moduleAt('shared/placeAdmissionTerritories.ts');
+const { loadCanonicalPlacePackage, verifyNationalCanonicalPlaces } = await moduleAt('server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts');
+const { discoverPlaces, executePlace } = await moduleAt('server/services/placeDiscoveryService.ts');
+const { normalizePlaceQuery } = await moduleAt('shared/placeAuthority.ts');
+const { shutdownDb } = await moduleAt('server/db-connection.ts');
+
+const authority = resolveDatabaseAuthority({ operation: 'verification', cwd: root });
+assert.equal(authority.context.targetClass, 'disposable-worktree');
+assert.equal(authority.context.targetFingerprintHash, '0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d');
+requireExactAdapterTarget(authority);
+const decision = authorizeDatabaseOperation(authority);
+const connection = await createAuthoritySqlConnection(authority, decision);
+const evidence: unknown[] = [];
+try {
+  await requireAcceptedMigrationHead({ authority, connection });
+  const before = await verifyNationalCanonicalPlaces({ authority, decision, connection, root });
+  assert.equal(before.completeProvinces, 9);
+  const registry = loadPlaceAdmissionTerritoryRegistry(root).registry;
+  const packages = registry.territories.map((territory: any) => ({
+    territory,
+    ...loadCanonicalPlacePackage(root, { territoryId: territory.territoryId }),
+  }));
+  const nameOwners = new Map<string, Set<string>>();
+  for (const { rows } of packages) {
+    for (const name of rows.names) {
+      if (name.name_state !== 'active' || name.is_searchable !== 1) continue;
+      const key = normalizePlaceQuery(name.name);
+      const owners = nameOwners.get(key) ?? new Set<string>();
+      owners.add(name.place_id);
+      nameOwners.set(key, owners);
+    }
+  }
+  for (const { territory, rows } of packages) {
+    const province = rows.places.find((row: any) => row.place_type === 'province');
+    const preferred = new Map(rows.names.filter((row: any) => row.name_role === 'preferred_public' && row.name_state === 'active').map((row: any) => [row.place_id, row.name]));
+    for (const scope of ['province', 'metro_city', 'locality']) {
+      const candidate = rows.places.find((row: any) => row.search_scope === scope && row.search_eligible === 1 && (scope === 'province' || nameOwners.get(normalizePlaceQuery(preferred.get(row.place_id)))?.size === 1));
+      assert.ok(candidate, `Missing unique ${scope} probe in ${territory.territoryId}`);
+      const execution = await executePlace(candidate.place_id);
+      assert.equal(execution.ok, true);
+      assert.equal(execution.execution.placeId, candidate.place_id);
+      assert.equal(execution.execution.provincePlaceId, province.place_id);
+      const discovery = await discoverPlaces(preferred.get(candidate.place_id), { recordCoverage: false });
+      console.log(JSON.stringify({ probe: territory.territoryId, scope, label: preferred.get(candidate.place_id), discovery }));
+      assert.ok(['resolved', 'ambiguous'].includes(discovery.outcome));
+      if (scope !== 'province') assert.equal(discovery.outcome, 'resolved');
+      const discovered = discovery.results.find((row: any) => row.placeId === candidate.place_id);
+      assert.ok(discovered, `Lost selected ${scope} identity for ${territory.territoryId}`);
+      if (scope === 'locality') {
+        assert.equal(execution.execution.cityPlaceId, null);
+        assert.equal(discovered.context.cityPlaceId, null);
+        assert.ok(discovered.context.administrativeContext.includes(preferred.get(province.place_id)));
+      }
+      evidence.push({ territoryId: territory.territoryId, scope, placeId: candidate.place_id, label: preferred.get(candidate.place_id), discoveryOutcome: discovery.outcome, execution: execution.execution, context: discovered.context });
+    }
+  }
+  const searchable = new Set(packages.flatMap(({ rows }: any) => rows.places.filter((row: any) => row.search_eligible === 1).map((row: any) => row.place_id)));
+  const alias = packages.flatMap(({ rows }: any) => rows.names).find((row: any) => row.name_role !== 'preferred_public' && row.name_state === 'active' && row.is_searchable === 1 && searchable.has(row.place_id) && nameOwners.get(normalizePlaceQuery(row.name))?.size === 1);
+  assert.ok(alias, 'No unique admitted alias for the physical probe');
+  const aliasResult = await discoverPlaces(alias.name, { recordCoverage: false });
+  assert.equal(aliasResult.outcome, 'resolved');
+  assert.equal(aliasResult.results[0].placeId, alias.place_id);
+  evidence.push({ probe: 'accepted_alias', label: alias.name, placeId: alias.place_id, outcome: aliasResult.outcome });
+  const multilingual = packages.flatMap(({ rows }: any) => rows.names).find((row: any) => /[\p{Script=Cyrillic}\p{Script=Hangul}]/u.test(row.name) && row.name_state === 'active' && row.is_searchable === 1 && searchable.has(row.place_id) && nameOwners.get(normalizePlaceQuery(row.name))?.size === 1);
+  assert.ok(multilingual, 'No admitted multilingual probe');
+  const multilingualResult = await discoverPlaces(multilingual.name, { recordCoverage: false });
+  assert.equal(multilingualResult.outcome, 'resolved');
+  assert.equal(multilingualResult.results[0].placeId, multilingual.place_id);
+  evidence.push({ probe: 'accepted_multilingual_name', label: multilingual.name, placeId: multilingual.place_id, outcome: multilingualResult.outcome });
+
+  const homonyms = new Map<string, { label: string; members: { placeId: string; territoryId: string }[] }>();
+  for (const { territory, rows } of packages) {
+    for (const name of rows.names) {
+      if (name.name_role !== 'preferred_public' || name.name_state !== 'active' || !searchable.has(name.place_id)) continue;
+      const key = normalizePlaceQuery(name.name);
+      const entry = homonyms.get(key) ?? { label: name.name, members: [] };
+      entry.members.push({ placeId: name.place_id, territoryId: territory.territoryId });
+      homonyms.set(key, entry);
+    }
+  }
+  const homonym = [...homonyms.values()].find(entry => entry.members.length >= 2 && entry.members.length <= 25 && new Set(entry.members.map(member => member.territoryId)).size >= 2);
+  assert.ok(homonym, 'No cross-province homonym for the physical probe');
+  const ambiguous = await discoverPlaces(homonym.label, { recordCoverage: false });
+  assert.equal(ambiguous.outcome, 'ambiguous');
+  for (const member of homonym.members) {
+    const candidate = ambiguous.results.find((row: any) => row.placeId === member.placeId);
+    assert.ok(candidate, `Lost homonym identity ${member.placeId}`);
+    assert.ok(candidate.context.administrativeContext);
+  }
+  evidence.push({ probe: 'cross_province_homonym', label: homonym.label, outcome: ambiguous.outcome, members: homonym.members, contexts: ambiguous.results.map((row: any) => ({ placeId: row.placeId, context: row.context })) });
+  const noResult = await discoverPlaces('zzgeographylaunchunapprovedlocation20261007zz', { recordCoverage: false });
+  assert.equal(noResult.outcome, 'no_result');
+  assert.deepEqual(noResult.results, []);
+  evidence.push({ probe: 'unsupported_location', outcome: noResult.outcome });
+  const after = await verifyNationalCanonicalPlaces({ authority, decision, connection, root });
+  assert.equal(after.completeProvinces, 9);
+  assert.deepEqual(after.totals, before.totals);
+  const report = { status: 'passed', claim: 'Real national Place discovery and exact execution; customer persistence and browser journeys are not covered', targetFingerprintHash: authority.context.targetFingerprintHash, checks: evidence, referenceVerifiedBeforeAndAfter: true };
+  writeFileSync('/tmp/geography-goal-reader-physical-evidence.json', JSON.stringify(report, null, 2) + '\n');
+  console.log(JSON.stringify({ status: report.status, probes: evidence.length, targetFingerprintHash: report.targetFingerprintHash }));
+} finally {
+  await shutdownDb();
+  await connection.end();
+}

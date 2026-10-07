@@ -103,6 +103,18 @@ function nationalState() {
 }
 
 describe('canonical Place preparation validates before commit', () => {
+  it('refuses stale national name normalization before any write despite correct counts and IDs', async () => {
+    const initial = nationalState();
+    const name = initial.place_name.find(row => row.name === 'Noord-Kaap');
+    expect(name).toBeDefined();
+    name!.normalized_name = 'noord-kaap';
+    const mock = transport(initial);
+    await expect(
+      prepareNationalCanonicalPlaces({ authority, decision: {}, connection: mock.connection }),
+    ).rejects.toThrow('name index');
+    expect(mock.commands).toEqual([]);
+    expect(mock.state()).toEqual(initial);
+  });
   it('rolls back a per-territory load whose mapping insert was silently dropped', async () => {
     const mock = transport(empty(), true);
     await expect(

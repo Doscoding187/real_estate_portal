@@ -1,0 +1,664 @@
+{
+  "status": "passed",
+  "claim": "Real national Place discovery and exact execution; customer persistence and browser journeys are not covered",
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "checks": [
+    {
+      "territoryId": "za-gp",
+      "scope": "province",
+      "placeId": "pl-place-01-131e3e75ad70424e0f9c869a",
+      "label": "Gauteng",
+      "discoveryOutcome": "ambiguous",
+      "execution": {
+        "placeId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-gp",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-00dbe14e9aefa6f6a0425875",
+      "label": "Bantjesloo",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-00dbe14e9aefa6f6a0425875",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-503de72cc29aa712c0e5a597"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Gauteng / City of Johannesburg"
+      }
+    },
+    {
+      "territoryId": "za-gp",
+      "scope": "locality",
+      "placeId": "pl-place-01-00a5071b3470f996c7856dd5",
+      "label": "Birchleigh",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-00a5071b3470f996c7856dd5",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-00a5071b3470f996c7856dd5",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-0e54c64a0664c0d63f098e03"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Gauteng / Ekurhuleni"
+      }
+    },
+    {
+      "territoryId": "za-wc",
+      "scope": "province",
+      "placeId": "pl-place-01-203f5f71cb3565521db4718f",
+      "label": "Western Cape",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-203f5f71cb3565521db4718f",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-wc",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-01cb9abe25fba4e854fc41fc",
+      "label": "Sedgefield",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-01cb9abe25fba4e854fc41fc",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-481a7c1f3e1bb8d44d21f05f"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Western Cape / Eden District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-wc",
+      "scope": "locality",
+      "placeId": "pl-place-01-00097ed4372b9e2ce7cabf53",
+      "label": "Place On The Bay",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-00097ed4372b9e2ce7cabf53",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-00097ed4372b9e2ce7cabf53",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-520696aa0e971e4a34edc17d"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Western Cape / City of Cape Town"
+      }
+    },
+    {
+      "territoryId": "za-kzn",
+      "scope": "province",
+      "placeId": "pl-place-01-153d9daaed02608619c762aa",
+      "label": "KwaZulu-Natal",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-153d9daaed02608619c762aa",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-kzn",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-0a1bb5e0d768fe23d3c157c5",
+      "label": "eMuziwezinto",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-0a1bb5e0d768fe23d3c157c5",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-ab1bb40175eed8e2fe9d4281"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "KwaZulu-Natal / Ugu District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-kzn",
+      "scope": "locality",
+      "placeId": "pl-place-01-001ed8e08633779c9cf30db0",
+      "label": "Ibisikululwa",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-001ed8e08633779c9cf30db0",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-001ed8e08633779c9cf30db0",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-60a0fd9f96789362959c67f0"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "KwaZulu-Natal / Sisonke District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-ec",
+      "scope": "province",
+      "placeId": "pl-place-01-9892b872a77f27e90c5cf091",
+      "label": "Eastern Cape",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-ec",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-00da5c997dedb17c84470620",
+      "label": "Khowa",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-00da5c997dedb17c84470620",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-ab7327f5801f949854361f88"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Eastern Cape / Chris Hani District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-ec",
+      "scope": "locality",
+      "placeId": "pl-place-01-001b1eea75044e5f0697796f",
+      "label": "Twane",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-001b1eea75044e5f0697796f",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-001b1eea75044e5f0697796f",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-0dabca45376ccbc6e88414d6"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Eastern Cape / OR Tambo District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-fs",
+      "scope": "province",
+      "placeId": "pl-place-01-a5e69690b90509167e54a142",
+      "label": "Free State",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-a5e69690b90509167e54a142",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-fs",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-0e872e7224fde8045def497f",
+      "label": "Phuthaditjhaba",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-0e872e7224fde8045def497f",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-236edf9f28f4e562110f52e6"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Free State / Thabo Mofutsanyana District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-fs",
+      "scope": "locality",
+      "placeId": "pl-place-01-003a91e8425512e2c9e416f2",
+      "label": "Petruspan",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-003a91e8425512e2c9e416f2",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-003a91e8425512e2c9e416f2",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-7974647b86952931239e058e"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Free State / Mangaung Metropolitan Municipality"
+      }
+    },
+    {
+      "territoryId": "za-mp",
+      "scope": "province",
+      "placeId": "pl-place-01-c987af17ca8c4427cb59abf5",
+      "label": "Mpumalanga",
+      "discoveryOutcome": "ambiguous",
+      "execution": {
+        "placeId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-mp",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-05e89319ca85cc5c8eb4f420",
+      "label": "Tjakastad",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-05e89319ca85cc5c8eb4f420",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-49f77d1cd44fb38db7b1315c"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Mpumalanga / Gert Sibande District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-mp",
+      "scope": "locality",
+      "placeId": "pl-place-01-01042f5b795d07d7ce1b20cc",
+      "label": "Cobalt",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-01042f5b795d07d7ce1b20cc",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-01042f5b795d07d7ce1b20cc",
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Mpumalanga"
+      }
+    },
+    {
+      "territoryId": "za-li",
+      "scope": "province",
+      "placeId": "pl-place-01-191d11b42d5b13319fa7fca2",
+      "label": "Limpopo",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-li",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-060c1e605d5526a84498ed88",
+      "label": "Phalaborwa",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-060c1e605d5526a84498ed88",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-0a4d509444afdd50bbcfae6c"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Limpopo / Mopani District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-li",
+      "scope": "locality",
+      "placeId": "pl-place-01-001b523f4a4fec3cfc8fbbb6",
+      "label": "Pinkie",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-001b523f4a4fec3cfc8fbbb6",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-001b523f4a4fec3cfc8fbbb6",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-7c8afafb86bbd05edb49aed4"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Limpopo / Capricorn District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-nw",
+      "scope": "province",
+      "placeId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+      "label": "North-West",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-nw",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-09c7d2552c611b79c6df0ffc",
+      "label": "Mogwase",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-09c7d2552c611b79c6df0ffc",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-63cdded77b452c045fbf70da"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "North-West / Bojanala Platinum District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-nw",
+      "scope": "locality",
+      "placeId": "pl-place-01-000a3018e782cab5449038b0",
+      "label": "Kromkuil",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-000a3018e782cab5449038b0",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-000a3018e782cab5449038b0",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-63cdded77b452c045fbf70da"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "North-West / Bojanala Platinum District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-nc",
+      "scope": "province",
+      "placeId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+      "label": "Noord-Kaap",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "scope": "province",
+        "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": []
+      },
+      "context": {
+        "provincePlaceId": null,
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": null
+      }
+    },
+    {
+      "territoryId": "za-nc",
+      "scope": "metro_city",
+      "placeId": "pl-place-01-03b2ab0a0ef1e11874b7cf2b",
+      "label": "Groblershoop",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-03b2ab0a0ef1e11874b7cf2b",
+        "scope": "metro_city",
+        "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "contextAncestorPlaceIds": [
+          "pl-place-01-6553eff62f7cb5a7f830164c"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Noord-Kaap / Siyanda District Municipality"
+      }
+    },
+    {
+      "territoryId": "za-nc",
+      "scope": "locality",
+      "placeId": "pl-place-01-00147ee313884ebc70bc12c8",
+      "label": "Hoenderpoot",
+      "discoveryOutcome": "resolved",
+      "execution": {
+        "placeId": "pl-place-01-00147ee313884ebc70bc12c8",
+        "scope": "locality",
+        "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "cityPlaceId": null,
+        "localityPlaceId": "pl-place-01-00147ee313884ebc70bc12c8",
+        "contextAncestorPlaceIds": [
+          "pl-place-01-bfa33cdf6f6016a2d6713572"
+        ]
+      },
+      "context": {
+        "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+        "cityPlaceId": null,
+        "localityPlaceId": null,
+        "administrativeContext": "Noord-Kaap / Pixley ka Seme District Municipality"
+      }
+    },
+    {
+      "probe": "accepted_alias",
+      "label": "Westbury Ext. 3",
+      "placeId": "pl-place-01-045f6ac18405e5cef8e7ef12",
+      "outcome": "resolved"
+    },
+    {
+      "probe": "accepted_multilingual_name",
+      "label": "Салдана",
+      "placeId": "pl-place-01-0d91f6343d2660c52fc3d33b",
+      "outcome": "resolved"
+    },
+    {
+      "probe": "cross_province_homonym",
+      "label": "Dunvegan",
+      "outcome": "ambiguous",
+      "members": [
+        {
+          "placeId": "pl-place-01-0584614c5e4a6141093cbbf6",
+          "territoryId": "za-gp"
+        },
+        {
+          "placeId": "pl-place-01-1d31f1ea94ff4944fe272b63",
+          "territoryId": "za-ec"
+        }
+      ],
+      "contexts": [
+        {
+          "placeId": "pl-place-01-1d31f1ea94ff4944fe272b63",
+          "context": {
+            "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+            "cityPlaceId": null,
+            "localityPlaceId": null,
+            "administrativeContext": "Eastern Cape / Chris Hani District Municipality"
+          }
+        },
+        {
+          "placeId": "pl-place-01-0584614c5e4a6141093cbbf6",
+          "context": {
+            "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+            "cityPlaceId": null,
+            "localityPlaceId": null,
+            "administrativeContext": "Gauteng / Ekurhuleni"
+          }
+        }
+      ]
+    },
+    {
+      "probe": "unsupported_location",
+      "outcome": "no_result"
+    }
+  ],
+  "referenceVerifiedBeforeAndAfter": true,
+  "proofScriptSha256": "f36a85dae1870a7bc4036240d441d87d313d827503ee0973a624ec6cc386da87",
+  "migrationHead": "0103_saved_searches_canonical_place_reference_fk.sql",
+  "nameNormalizationVersion": "1",
+  "sourceBoundary": "Working candidate over 8546386dc; protected releases and customer publication/browser paths were not exercised"
+}

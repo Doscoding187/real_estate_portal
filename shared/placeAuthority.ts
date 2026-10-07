@@ -61,19 +61,23 @@ export function isSearchAreaId(value: unknown): value is string {
  * Normalize a user-typed query the same way for matching and for the governed
  * coverage signal, so a no-result record is comparable with a later match.
  * Privacy-safe: diacritics folded, punctuation reduced to single spaces, and the
- * stored subject is bounded by the caller.
+ * stored subject is bounded by the caller. Keep Unicode letters and numbers:
+ * recorded names are multilingual, and a valid name must not normalize away.
+ * Admission uses this same function for its searchable-name index, separately
+ * from the evidence-based identity reconciliation rules.
  */
 export function normalizePlaceQuery(value: unknown): string {
   return String(value ?? '')
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{M}/gu, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
 }
 
 /** A name role that is a current statement about the Place's name. */
 export const PLACE_PREFERRED_ROLE = 'preferred_public';
+export const PLACE_NAME_NORMALIZATION_VERSION = '1' as const;
 
 export interface PlaceDiscoveryCandidate {
   placeId: string;
@@ -117,7 +121,7 @@ export function rankPlaceCandidate(
   return (
     base * 1e9 +
     (candidate.preferredPublicLabel ?? '').length * 1000 +
-    Number.parseInt(candidate.placeId.slice(-6), 16) % 1000
+    (Number.parseInt(candidate.placeId.slice(-6), 16) % 1000)
   );
 }
 
@@ -227,10 +231,14 @@ export type PlaceAuthorityResolution =
   | { ok: true; authority: { kind: 'place'; placeId: string } }
   | { ok: true; authority: { kind: 'search_area'; searchAreaId: string } }
   | { ok: true; authority: { kind: 'legacy'; legacyLocationId: string } }
-  | { ok: true; authority: { kind: 'legacy_text'; province?: string; city?: string; suburb?: string } }
+  | {
+      ok: true;
+      authority: { kind: 'legacy_text'; province?: string; city?: string; suburb?: string };
+    }
   | { ok: false; reason: PlaceAuthorityRejection };
 
-const present = (value: unknown) => value !== undefined && value !== null && String(value).trim() !== '';
+const present = (value: unknown) =>
+  value !== undefined && value !== null && String(value).trim() !== '';
 
 /**
  * Exactly one geography authority per request. A caller may not claim a
@@ -264,10 +272,14 @@ export function resolveSingleGeographyAuthority(
   }
 
   if (hasSearchArea) {
-    if (!isSearchAreaId(claim.searchAreaId)) return { ok: false, reason: 'malformed_search_area_id' };
+    if (!isSearchAreaId(claim.searchAreaId))
+      return { ok: false, reason: 'malformed_search_area_id' };
     if (hasLegacyHandle) return { ok: false, reason: 'competing_search_area_and_legacy_geography' };
     if (hasLegacyText) return { ok: false, reason: 'competing_search_area_and_legacy_geography' };
-    return { ok: true, authority: { kind: 'search_area', searchAreaId: claim.searchAreaId as string } };
+    return {
+      ok: true,
+      authority: { kind: 'search_area', searchAreaId: claim.searchAreaId as string },
+    };
   }
 
   if (hasLegacyHandle) {
@@ -369,6 +381,15 @@ export function projectPlaceScope(
     return { ok: false, reason: 'place_has_no_searchable_scope' };
   }
 
+  const seen = new Set([place.placeId]);
+  for (const ancestor of ancestry) {
+    if (seen.has(ancestor.placeId)) return { ok: false, reason: 'containment_cycle' };
+    seen.add(ancestor.placeId);
+    if (ancestor.scope !== null && !PLACE_SEARCH_SCOPES.includes(ancestor.scope)) {
+      return { ok: false, reason: 'unresolved_parent' };
+    }
+  }
+
   const ordered = ancestry.slice().reverse();
   const scoped = ordered.filter(
     (node): node is { placeId: string; scope: PlaceSearchScope } => node.scope !== null,
@@ -386,8 +407,11 @@ export function projectPlaceScope(
   }
   // Any further scoped ancestor must be strictly coarser than the Place, so a
   // scope can never sit above its own level.
-  for (let depth = 1; depth < scoped.length; depth += 1) {
-    if (SCOPE_ORDER[scoped[depth].scope] >= SCOPE_ORDER[scope]) {
+  for (let depth = 0; depth < scoped.length; depth += 1) {
+    if (
+      SCOPE_ORDER[scoped[depth].scope] >= SCOPE_ORDER[scope] ||
+      (depth > 0 && SCOPE_ORDER[scoped[depth].scope] <= SCOPE_ORDER[scoped[depth - 1].scope])
+    ) {
       return { ok: false, reason: 'unresolved_parent' };
     }
   }

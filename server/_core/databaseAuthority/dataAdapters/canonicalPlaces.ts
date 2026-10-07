@@ -45,6 +45,10 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import {
+  normalizePlaceQuery,
+  PLACE_NAME_NORMALIZATION_VERSION,
+} from '../../../../shared/placeAuthority';
 
 import {
   loadPlaceAdmissionTerritoryRegistry,
@@ -82,6 +86,7 @@ export const CANONICAL_PLACES_DIGEST = createHash('sha256')
       'place,place_name,place_relationship,place_evidence,place_external_mapping',
       'osm_only_disposable_only_gate',
       'identity_stability_fail_closed',
+      `canonical_name_index_v${PLACE_NAME_NORMALIZATION_VERSION}`,
       'idempotent_upsert',
     ].join('\n'),
   )
@@ -174,6 +179,7 @@ export function loadCanonicalPlacePackage(root: string, ref: CanonicalPlacesPack
   const { territory, paths, registrySha256 } = resolveCanonicalPlacesPackage(root, ref);
   const manifest = JSON.parse(readFileSync(resolve(root, paths.manifest), 'utf8')) as {
     admission_version: string;
+    name_index: { normalization_version: string; identity_effect: string };
     generated_from: {
       source_snapshot_id: string;
       compact_artifacts: { path: string; sha256: string }[];
@@ -185,6 +191,14 @@ export function loadCanonicalPlacePackage(root: string, ref: CanonicalPlacesPack
   if (manifest.admission_version !== territory.admissionVersion) {
     throw new Error(
       `canonical-places refused: admission version ${manifest.admission_version} is not ${territory.admissionVersion}`,
+    );
+  }
+  if (
+    manifest.name_index?.normalization_version !== PLACE_NAME_NORMALIZATION_VERSION ||
+    manifest.name_index?.identity_effect !== 'none'
+  ) {
+    throw new Error(
+      'canonical-places refused: package name index normalization version is not canonical',
     );
   }
 
@@ -216,6 +230,12 @@ export function loadCanonicalPlacePackage(root: string, ref: CanonicalPlacesPack
       );
     }
     rows[key as keyof typeof ARTIFACT_KEYS] = readJsonl(root, path);
+  }
+  const indexProblems = nameIndexProblems(rows.names);
+  if (indexProblems.length) {
+    throw new Error(
+      `canonical-places refused: package ${territory.territoryId} has ${indexProblems.length} name index problem(s)`,
+    );
   }
 
   const registryDocument = JSON.parse(
@@ -294,7 +314,7 @@ async function readStored(sql: any) {
       ),
       queryRows(
         sql,
-        `SELECT place_id, name, name_role, name_state, is_searchable, evidence_source
+        `SELECT place_id, name, name_role, name_state, is_searchable, evidence_source, normalized_name
          FROM \`place_name\``,
       ),
       queryRows(
@@ -316,6 +336,15 @@ async function readStored(sql: any) {
 }
 
 const rowKey = (values: unknown[]) => JSON.stringify(values);
+
+function nameIndexProblems(names: Record<string, unknown>[]): string[] {
+  return names
+    .filter(name => name.normalized_name !== normalizePlaceQuery(name.name))
+    .map(
+      name =>
+        `name index for ${name.place_id} / ${name.name_role} differs from canonical normalization`,
+    );
+}
 
 const placeIdentityKey = (place: Record<string, unknown>) =>
   rowKey([
@@ -750,6 +779,12 @@ export async function prepareNationalCanonicalPlaces(input: {
    * to be refused.
    */
   const storedBefore = await readStored(connection);
+  const nameDrift = nameIndexProblems(storedBefore.placeName);
+  if (nameDrift.length) {
+    throw new Error(
+      `canonical-places national refused: ${nameDrift.length} name index problem(s): ${nameDrift[0]}`,
+    );
+  }
   const alreadyStored = storedBefore.place.length;
   if (alreadyStored > 0) {
     const storedIds = new Set(storedBefore.place.map((row: any) => String(row.place_id)));
@@ -938,7 +973,7 @@ export async function verifyNationalCanonicalPlaces(input: {
 
   const stored = await readStored(connection);
   const storedPlaces = new Map(stored.place.map((row: any) => [String(row.place_id), row]));
-  const problems: string[] = [];
+  const problems: string[] = nameIndexProblems(stored.placeName);
   const perProvince: any[] = [];
 
   for (const pkg of packages) {
@@ -1110,7 +1145,7 @@ export async function verifyCanonicalPlaces(input: {
   }
 
   const stored = await readStored(connection);
-  const problems: string[] = [];
+  const problems: string[] = nameIndexProblems(stored.placeName);
 
   if (stored.place.length !== expected.places) {
     problems.push(`place rows ${stored.place.length} != expected ${expected.places}`);
