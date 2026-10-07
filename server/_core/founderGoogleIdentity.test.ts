@@ -42,6 +42,7 @@ function harness(
     missingClaim?: string;
     fetchFailure?: boolean;
     providerStatus?: number;
+    purpose?: FounderGoogleState['purpose'];
   } = {},
 ) {
   let now = NOW;
@@ -88,7 +89,7 @@ function harness(
     saved.set(state, { ...value });
     await save(state, value);
   });
-  const proof = new FounderGoogleIdentityProof(CONFIG, store, { keys, fetcher, now: () => now });
+  const proof = new FounderGoogleIdentityProof(CONFIG, store, { keys, fetcher, now: () => now, purpose: options.purpose });
   async function start() {
     const result = await proof.start();
     const url = new URL(result.authorizationUrl);
@@ -325,5 +326,16 @@ describe('founder Google identity proof', () => {
     expect(founderGooglePrincipal(long)).toHaveLength(50);
     expect(founderGooglePrincipal(long)).not.toBe(founderGooglePrincipal(long.slice(0, 64)));
     expect(() => founderGooglePrincipal('x'.repeat(256))).toThrow();
+  });
+});
+
+describe('proof/login configuration transition boundary', () => {
+  it.each(['founder-proof', 'founder-login'] as const)('refuses a callback initiated for the other purpose: %s', async purpose => {
+    const h = harness({ purpose });
+    const started = await h.start();
+    h.records.get(started.state)!.purpose = purpose === 'founder-proof' ? 'founder-login' : 'founder-proof';
+    await expect(h.proof.finish({ state: started.state, code: started.code, browserBinding: started.browserBinding }))
+      .rejects.toMatchObject({ status: 400, code: 'FOUNDER_GOOGLE_STATE_INVALID' });
+    expect(h.fetcher).not.toHaveBeenCalled();
   });
 });

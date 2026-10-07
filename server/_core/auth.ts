@@ -15,12 +15,21 @@ import * as db from '../db';
 import { ENV } from './env';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
+import { FounderGoogleAccountService } from '../services/founderGoogleAccountService';
+import {
+  getConfiguredFounderGoogleLogin,
+  GOOGLE_FOUNDER_LOGIN_METHOD,
+  GOOGLE_FOUNDER_PRINCIPAL_PATTERN,
+  isReservedFounderGoogleEmail,
+  isFounderGoogleAccount,
+} from './founderGoogleLoginConfig';
 
 export type SessionPayload = {
   userId: number;
   email: string;
   name: string;
   sessionVersion: number;
+  founderPrincipal?: string;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -85,10 +94,13 @@ export class AuthService {
     email: string,
     name: string,
     sessionVersion: number,
-    options: { expiresInMs?: number } = {},
+    options: { expiresInMs?: number; founderPrincipal?: string } = {},
   ): Promise<string> {
     if (!isPositiveInteger(sessionVersion)) {
       throw new Error('Cannot create a session without a valid session version.');
+    }
+    if (options.founderPrincipal !== undefined && !GOOGLE_FOUNDER_PRINCIPAL_PATTERN.test(options.founderPrincipal)) {
+      throw new Error('Cannot create a founder session without its verified principal.');
     }
 
     const issuedAt = Date.now();
@@ -101,6 +113,7 @@ export class AuthService {
       email,
       name,
       sessionVersion,
+      ...(options.founderPrincipal ? { founderPrincipal: options.founderPrincipal } : {}),
     })
       .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
       .setIssuedAt(Math.floor(issuedAt / 1000))
@@ -125,12 +138,13 @@ export class AuthService {
         algorithms: ['HS256'],
       });
 
-      const { userId, email, name, sessionVersion } = payload as Record<string, unknown>;
+      const { userId, email, name, sessionVersion, founderPrincipal } = payload as Record<string, unknown>;
 
       if (
         typeof userId !== 'number' ||
         !isNonEmptyString(email) ||
-        !isPositiveInteger(sessionVersion)
+        !isPositiveInteger(sessionVersion) ||
+        (founderPrincipal !== undefined && (typeof founderPrincipal !== 'string' || !GOOGLE_FOUNDER_PRINCIPAL_PATTERN.test(founderPrincipal)))
       ) {
         return null;
       }
@@ -140,6 +154,7 @@ export class AuthService {
         email,
         name: isNonEmptyString(name) ? name : email, // Use email as fallback if name is missing
         sessionVersion,
+        ...(typeof founderPrincipal === 'string' ? { founderPrincipal } : {}),
       };
     } catch {
       return null;
@@ -211,6 +226,14 @@ export class AuthService {
       role: normalizedRole,
     } as User;
 
+    if (isFounderGoogleAccount(user) || session.founderPrincipal !== undefined) {
+      const config = getConfiguredFounderGoogleLogin();
+      if (!config || !session.founderPrincipal || user.loginMethod !== GOOGLE_FOUNDER_LOGIN_METHOD) {
+        throw ForbiddenError('Founder authentication is unavailable or has been revoked.');
+      }
+      await new FounderGoogleAccountService(config).assertSessionBinding(normalizedUser, session.founderPrincipal);
+    }
+
     await this.assertAgentAccountIsAvailable(normalizedUser);
 
     // Update last signed in timestamp
@@ -224,7 +247,7 @@ export class AuthService {
    */
   async resendVerificationEmail(email: string): Promise<{ sent: boolean }> {
     const user = await db.getUserByEmail(email);
-    if (!user || user.emailVerified || !user.email) {
+    if (!user || isFounderGoogleAccount(user) || user.emailVerified || !user.email) {
       return { sent: false };
     }
 
@@ -266,6 +289,9 @@ export class AuthService {
       specializations?: string[];
     },
   ): Promise<{ userId: number; verificationEmailSent: boolean }> {
+    if (isReservedFounderGoogleEmail(email)) {
+      throw new Error('User with this email already exists or uses its original login method.');
+    }
     // Check if user already exists
     const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
@@ -372,6 +398,10 @@ export class AuthService {
       role: normalizeAuthRole(user.role),
     } as User;
 
+    if (isFounderGoogleAccount(normalizedUser)) {
+      throw ForbiddenError('This account uses Google sign-in. Please use your original login method.');
+    }
+
     // Check if user has password (not OAuth-only)
     if (!normalizedUser.passwordHash) {
       throw ForbiddenError('This account uses OAuth login. Please use your original login method.');
@@ -448,7 +478,7 @@ export class AuthService {
     email: string,
   ): Promise<{ user: User; token: string } | null> {
     const user = await db.getUserByEmail(email);
-    if (!user) return null;
+    if (!user || isFounderGoogleAccount(user)) return null;
 
     // Generate a random token
     const token = crypto.randomBytes(32).toString('hex');
@@ -468,7 +498,7 @@ export class AuthService {
    */
   async sendActivationSetPasswordEmail(email: string): Promise<void> {
     const user = await db.getUserByEmail(email);
-    if (!user) {
+    if (!user || isFounderGoogleAccount(user)) {
       return;
     }
 
@@ -497,7 +527,7 @@ export class AuthService {
 
     const user = await db.getUserByPasswordResetToken(hashedToken);
 
-    if (!user || !user.passwordResetTokenExpiresAt) {
+    if (!user || isFounderGoogleAccount(user) || !user.passwordResetTokenExpiresAt) {
       throw new Error('Invalid or expired password reset token.');
     }
 
@@ -521,6 +551,7 @@ export class AuthService {
 
     if (
       !user ||
+      isFounderGoogleAccount(user) ||
       !user.emailVerificationTokenExpiresAt ||
       !Number.isFinite(tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt)) ||
       tokenExpiryMilliseconds(user.emailVerificationTokenExpiresAt) <= Date.now()

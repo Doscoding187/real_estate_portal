@@ -4,6 +4,7 @@ import { RedisFounderGoogleStateStore } from './founderGoogleStateStore';
 import { FOUNDER_GOOGLE_STATE_TTL_MS, type FounderGoogleState } from './founderGoogleIdentity';
 
 const RECORD: FounderGoogleState = {
+  purpose: 'founder-proof',
   nonce: 'N'.repeat(43),
   verifier: 'V'.repeat(43),
   browserHash: 'b'.repeat(64),

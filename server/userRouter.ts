@@ -380,6 +380,9 @@ export const userRouter = router({
       }
 
       // Prevent deleting yourself
+      if (user.founderAuthority === 'platform_founder') {
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'The founder account requires a separately reviewed owner-identity transition.' });
+      }
       if (user.id === ctx.user.id) {
         throw new Error('Cannot delete your own account');
       }

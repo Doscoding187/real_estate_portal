@@ -85,6 +85,7 @@ export function resolveFounderGoogleProofConfig(
 }
 
 export type FounderGoogleState = {
+  purpose: 'founder-proof' | 'founder-login';
   nonce: string;
   verifier: string;
   browserHash: string;
@@ -121,11 +122,12 @@ function invalidState(): FounderGoogleIdentityError {
   );
 }
 
-function validateState(record: FounderGoogleState, browserHash: string, now: number): boolean {
+function validateState(record: FounderGoogleState, browserHash: string, now: number, purpose: FounderGoogleState['purpose']): boolean {
   return (
     record &&
     typeof record === 'object' &&
     !Array.isArray(record) &&
+    record.purpose === purpose &&
     typeof record.nonce === 'string' &&
     typeof record.verifier === 'string' &&
     OPAQUE_VALUE.test(record.nonce) &&
@@ -143,16 +145,18 @@ export class FounderGoogleIdentityProof {
   private readonly keys: JWTVerifyGetKey;
   private readonly fetcher: typeof fetch;
   private readonly now: () => number;
+  private readonly purpose: FounderGoogleState['purpose'];
 
   constructor(
     readonly config: FounderGoogleProofConfig,
     private readonly store: FounderGoogleStateStore,
-    options: { keys?: JWTVerifyGetKey; fetcher?: typeof fetch; now?: () => number } = {},
+    options: { keys?: JWTVerifyGetKey; fetcher?: typeof fetch; now?: () => number; purpose?: FounderGoogleState['purpose'] } = {},
   ) {
     this.keys =
       options.keys ?? createRemoteJWKSet(new URL(GOOGLE_KEYS_URL), { timeoutDuration: 2000 });
     this.fetcher = options.fetcher ?? fetch;
     this.now = options.now ?? Date.now;
+    this.purpose = options.purpose ?? 'founder-proof';
   }
 
   async start(): Promise<{ authorizationUrl: string; browserBinding: string }> {
@@ -162,6 +166,7 @@ export class FounderGoogleIdentityProof {
     const nonce = randomBytes(32).toString('base64url');
     const now = this.now();
     await this.store.save(state, {
+      purpose: this.purpose,
       nonce,
       verifier,
       browserHash: hashGoogleOpaqueValue(browserBinding),
@@ -200,7 +205,7 @@ export class FounderGoogleIdentityProof {
     }
     const browserHash = hashGoogleOpaqueValue(input.browserBinding);
     const record = await this.store.consume(input.state, browserHash);
-    if (!record || !validateState(record, browserHash, this.now())) throw invalidState();
+    if (!record || !validateState(record, browserHash, this.now(), this.purpose)) throw invalidState();
     if (
       input.providerError !== undefined ||
       typeof input.code !== 'string' ||
@@ -250,7 +255,7 @@ export class FounderGoogleIdentityProof {
       });
       const { nonce, sub, email, email_verified, aud, azp } = payload;
       if (
-        !validateState(record, browserHash, this.now()) ||
+        !validateState(record, browserHash, this.now(), this.purpose) ||
         typeof nonce !== 'string' ||
         !OPAQUE_VALUE.test(nonce) ||
         !timingSafeEqual(Buffer.from(nonce), Buffer.from(record.nonce)) ||

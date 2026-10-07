@@ -18,7 +18,7 @@ const approved = {
 describe('approved B08 release authority integration', () => {
   it('preserves the four established migration byte identities and lineage', () => {
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
-    expect(manifest.expectedHead).toBe('0094_content_topics_primary_key.sql');
+    expect(manifest.migrations.find((entry: { filename: string }) => entry.filename === '0095_user_founder_authority.sql').parent).toBe('0094_content_topics_primary_key.sql');
     let parent = '0090_retire_disconnected_boost_campaigns.sql';
     for (const [filename, checksum] of Object.entries(approved)) {
       expect(
@@ -39,7 +39,14 @@ describe('approved B08 release authority integration', () => {
 
   it('integrates email identity, lease indexes and restrictive relationships without sending', () => {
     const desired = normalizedDesiredSchema(schema);
-    expect(desired.digest).toBe('a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9');
+    // Additive founder authority must leave every established B08 table unchanged.
+    const { digest: _digest, ...established } = desired;
+    established.tables = established.tables.map(table => table.name !== 'users' ? table : ({
+      ...table, columns: table.columns.filter(column => column.name !== 'founder_authority'),
+      indexes: table.indexes.filter(index => index.name !== 'users_founder_authority_unique'),
+    }));
+    expect(createHash('sha256').update(JSON.stringify(established)).digest('hex'))
+      .toBe('a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9');
     const deliveries = desired.tables.find(t => t.name === 'transactional_email_deliveries')!;
     const attempts = desired.tables.find(t => t.name === 'transactional_email_attempts')!;
     expect(deliveries.indexes).toEqual(

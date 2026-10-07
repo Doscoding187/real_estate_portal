@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0094_content_topics_primary_key.sql",
+  "expectedHead": "0096_user_founder_authority_unique.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -998,6 +998,28 @@
       "checksum": "0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124",
       "parent": "0093_user_onboarding_state_primary_key.sql",
       "parentChecksum": "fec12311f637e143f36d540e1faf07155c2035fdfeaa159466b14817dc990882",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
+    },
+    {
+      "sequence": 95,
+      "filename": "0095_user_founder_authority.sql",
+      "checksum": "bc8d88afd959c75a3ab1f0e3c5a5dfbe3ae2e11c6465b7458dea922212569c5d",
+      "parent": "0094_content_topics_primary_key.sql",
+      "parentChecksum": "0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": null
+    },
+    {
+      "sequence": 96,
+      "filename": "0096_user_founder_authority_unique.sql",
+      "checksum": "9a78494f5718f589d2c96430a425fa7313615a77cba2c30ba6d04d624e2dda33",
+      "parent": "0095_user_founder_authority.sql",
+      "parentChecksum": "bc8d88afd959c75a3ab1f0e3c5a5dfbe3ae2e11c6465b7458dea922212569c5d",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null,

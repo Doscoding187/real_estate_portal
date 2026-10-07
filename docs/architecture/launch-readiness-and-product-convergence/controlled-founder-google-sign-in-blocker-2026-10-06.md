@@ -1,6 +1,6 @@
 # Controlled founder sign-in: demonstrated blocker and bounded correction brief
 
-Status: **non-privileged Google identity-proof correction implemented locally and awaiting review; no founder account, role grant, production configuration change or deployment performed.** Current production remains the accepted PR #588 merge `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. Broad feature development and paid admission remain held.
+Status: **complete bounded founder correction prepared locally for review; no production founder account, role grant, configuration change or deployment performed.** Current production remains the accepted PR #588 merge `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. Broad feature development and paid admission remain held.
 
 ## Customer outcome and authority conflict
 
@@ -22,9 +22,25 @@ Edward requests a real founder/main admin account authenticated with his permane
 
 Google sign-in is a bounded correction for this demonstrated founder-access blocker. It is not permission to add general customer Google signup, recover retired Manus authentication, open payments, assign customer entitlements or create production fixtures.
 
-The operator clarified that dependable access to the permanent Gmail mailbox motivated this choice. He conditionally accepts the recommended Google sign-in approach without adding paid Google services or moving the existing stack. He subsequently reports creating the Web application OAuth client and supplied its public client ID privately. The client secret was not collected in chat. Actual client redirect settings still require authenticated operator readback; this report is not source or deployment acceptance.
+The operator clarified that dependable access to the permanent Gmail mailbox motivated this choice. He conditionally accepts the recommended Google sign-in approach without adding paid Google services or moving the existing stack. He subsequently reports creating the Web application OAuth client and supplied its public client ID privately. The client secret was not collected in chat. The operator subsequently attested to the exact callback URI, empty JavaScript origins, disabled AI-agent option, External/Testing audience and the consenting founder test user. This is operator settings evidence, not independent live provider proof or source/deployment acceptance.
 
-## First bounded correction: identity proof only
+## Complete candidate after the operator requested full blocker preparation
+
+The combined candidate supersedes the partial proof-only PR #589 for release review.
+[The canonical founder identity plan](../../database-authority/founder-google-identity-authority-2026-10-07.md)
+defines the nullable, unique authority marker on `users`, ordered migrations 0095/0096,
+transactional first-account creation, collision rejection, native session binding,
+password/recovery exclusions, protected role/deletion paths and the normal browser
+founder entry. Proof and login remain separate opt-ins with purpose-bound state.
+The identity plan records the local/CI evidence requirements and exact attended
+protected schema, source, provider-proof and owner-binding gates. Local simulated
+provider tests cannot establish a production Google login.
+
+The following first-slice description records the preserved historical proof-only
+scope. Its account/schema/session limitations are superseded by the combined
+candidate; its provider security properties remain in force.
+
+## First bounded correction: identity proof only (historical)
 
 `server/_core/founderGoogleIdentity.ts`, `founderGoogleStateStore.ts` and `founderGoogleIdentityRoutes.ts` implement the first browser proof step. The routes are wired into the existing API authentication rate-limit boundary. No user model, database consumer, schema, migration, owner binding, legacy OAuth route, customer login or application-session implementation is changed by this correction.
 
@@ -50,7 +66,7 @@ Public routes implemented in this unreleased correction, subject to review: `/ap
 
 Google requires a real client ID/client secret, an exact redirect URI and consent-screen configuration. Secrets must travel through the existing private operator channel, not chat or repository files. Production values must remain held until the bounded correction and configuration are reviewed. [Google's OpenID Connect contract](https://developers.google.com/identity/openid-connect/openid-connect).
 
-## Canonical account audit before implementation
+## Canonical account audit before implementation (historical baseline)
 
 This is database consumer investigation against the frozen accepted source, not a schema release. `drizzle/schema/core.ts:users` defines a nullable `openId` with length 64, an autoincrement primary key and non-unique email/role indexes. The canonical baseline agrees; the active migration sequence adds no unique `openId` constraint. Database Authority status was read in this dedicated worktree. Its derived disposable local database was unavailable; no service, database or scenario was provisioned.
 
@@ -58,7 +74,7 @@ The retained `server/db.ts:upsertUser` uses `onDuplicateKeyUpdate` but does not 
 
 Before privileged account creation, the correction must settle the exact immutable Google-principal representation, duplicate detection and a database-enforced uniqueness or independently reviewed transactional serialization contract. An in-process mutex or expiring Redis lease alone cannot establish durable account uniqueness across API replicas. Any required index or identity-table expansion belongs in a separate schema-authority workstream with canonical migration review and protected release approval. No such migration, owner binding change or privileged write has been performed.
 
-## Required acceptance evidence
+## Required acceptance evidence (proof baseline and live gates)
 
 Local regressions must cover forged/wrong-audience/expired Google claims, wrong nonce/state, replay, unverified/wrong email, owner-principal mismatch, account collision, concurrent first login, idempotent subsequent login, session-version enforcement and provider/Redis failures. Simulate faults locally; do not disrupt production infrastructure.
 
