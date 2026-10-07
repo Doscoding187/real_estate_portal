@@ -45,7 +45,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { APP_TITLE } from '@/const';
-import { apiFetch, ApiError } from '@/lib/api';
+import { apiFetch, ApiError, getApiUrl } from '@/lib/api';
 import { getLoginRedirectPath, getSafeNextPath } from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
 
@@ -247,6 +247,19 @@ export default function Login() {
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [founderLoginAvailable, setFounderLoginAvailable] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const status = await apiFetch<{ founderLoginAvailable: boolean }>('/auth/google/status', { signal: controller.signal });
+        if (active && status?.founderLoginAvailable === true) setFounderLoginAvailable(true);
+      } catch { /* Availability remains false unless the server explicitly enables it. */ }
+    })();
+    return () => { active = false; controller.abort(); };
+  }, []);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -840,6 +853,13 @@ export default function Login() {
                   ) : null}
                 </form>
               </Form>
+              {founderLoginAvailable ? (
+                <div className="mt-5 border-t border-slate-200 pt-5 dark:border-white/[0.08]">
+                  <Button asChild variant="outline" className="h-12 w-full rounded-xl">
+                    <a href={getApiUrl('/auth/google/start')}>Founder sign-in with Google</a>
+                  </Button>
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-5 dark:border-white/[0.08]">

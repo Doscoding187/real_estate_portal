@@ -51,3 +51,13 @@ apply and congruency supersede them. No retry or recovery was performed.
 The shared native service remains available. Final numbering still requires
 serialization against accepted founder integration. Policy approval, prepared
 UI and model congruency do not establish product cutover or launch readiness.
+
+
+`founder-integration-serialization.json` records the subsequent local integration
+of accepted founder main `c1a1b813a44bf033426e026b2253f896cfc6c3b5`. Geography
+moves after founder 0095/0096 to head 0111, preserving all fifteen SQL byte
+identities and the accepted 97-entry prefix. The combined 112-entry candidate
+passes 617 authority checks and production type checking, plus 92 founder
+contracts and ten historical transport checks. This invalidates using the older
+0109 physical checkpoint as current-model certification; its captured evidence
+remains historical. Fresh complete consumer proof is still required.

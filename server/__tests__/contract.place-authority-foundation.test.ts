@@ -47,13 +47,13 @@ const PLACE_AUTHORITY_TABLES = [
 ] as const;
 
 const MIGRATIONS = [
-  '0095_place_authority_place.sql',
-  '0096_place_authority_place_name.sql',
-  '0097_place_authority_place_relationship.sql',
-  '0098_place_authority_place_evidence.sql',
-  '0099_place_authority_place_external_mapping.sql',
-  '0100_place_authority_search_area.sql',
-  '0101_place_authority_search_area_member.sql',
+  '0097_place_authority_place.sql',
+  '0098_place_authority_place_name.sql',
+  '0099_place_authority_place_relationship.sql',
+  '0100_place_authority_place_evidence.sql',
+  '0101_place_authority_place_external_mapping.sql',
+  '0102_place_authority_search_area.sql',
+  '0103_place_authority_search_area_member.sql',
 ] as const;
 
 function migrationSql(filename: string): string {
@@ -323,8 +323,8 @@ describe('Place Authority: contract invariants are enforced by the database', ()
     // DDL is rejected by the server (ER_WRONG_AUTO_KEY) and would silently
     // diverge from the desired model.
     for (const [filename, primaryKeyColumn] of [
-      ['0095_place_authority_place.sql', 'place_id'],
-      ['0100_place_authority_search_area.sql', 'search_area_id'],
+      ['0097_place_authority_place.sql', 'place_id'],
+      ['0102_place_authority_search_area.sql', 'search_area_id'],
     ] as const) {
       const sql = migrationSql(filename);
       expect(sql, filename).toContain(`PRIMARY KEY(\`${primaryKeyColumn}\`)`);
@@ -348,13 +348,13 @@ describe('Place Authority: contract invariants are enforced by the database', ()
       const tableName = getTableName(
         (
           {
-            '0095_place_authority_place.sql': place,
-            '0096_place_authority_place_name.sql': placeName,
-            '0097_place_authority_place_relationship.sql': placeRelationship,
-            '0098_place_authority_place_evidence.sql': placeEvidence,
-            '0099_place_authority_place_external_mapping.sql': placeExternalMapping,
-            '0100_place_authority_search_area.sql': searchArea,
-            '0101_place_authority_search_area_member.sql': searchAreaMember,
+            '0097_place_authority_place.sql': place,
+            '0098_place_authority_place_name.sql': placeName,
+            '0099_place_authority_place_relationship.sql': placeRelationship,
+            '0100_place_authority_place_evidence.sql': placeEvidence,
+            '0101_place_authority_place_external_mapping.sql': placeExternalMapping,
+            '0102_place_authority_search_area.sql': searchArea,
+            '0103_place_authority_search_area_member.sql': searchAreaMember,
           } as Record<string, unknown>
         )[filename] as never,
       );
@@ -371,7 +371,7 @@ describe('Place Authority: contract invariants are enforced by the database', ()
     expect(getTableName(placeRelationship)).toBe('place_relationship');
     expect(placeRelationship.fromPlaceId.name).toBe('from_place_id');
     expect(placeRelationship.toPlaceId.name).toBe('to_place_id');
-    const sqlForRelationship = migrationSql('0097_place_authority_place_relationship.sql');
+    const sqlForRelationship = migrationSql('0099_place_authority_place_relationship.sql');
     expect(sqlForRelationship).toContain('`from_place_id` varchar(40) NOT NULL');
     expect(sqlForRelationship).toContain('`to_place_id` varchar(40) NOT NULL');
     // A single column may not back two logical properties.
@@ -446,7 +446,7 @@ describe('Place Authority: contract invariants are enforced by the database', ()
     expect(expression).toContain("`search_scope` = 'locality'");
 
     // The same invariant must exist physically, not only in the desired model.
-    expect(migrationSql('0095_place_authority_place.sql')).toContain(
+    expect(migrationSql('0097_place_authority_place.sql')).toContain(
       'chk_place_search_scope_derived_from_type',
     );
   });
@@ -460,7 +460,7 @@ describe('Place Authority: contract invariants are enforced by the database', ()
       normalized.tables.find(table => table.name === 'place')?.columns ?? []
     ).map(column => column.name);
     expect(placeColumns.filter(name => /supersed|replaces?/i.test(name))).toEqual([]);
-    expect(migrationSql('0095_place_authority_place.sql')).not.toContain('supersedes_place_id');
+    expect(migrationSql('0097_place_authority_place.sql')).not.toContain('supersedes_place_id');
     // And the typed edge exists with mandatory evidence.
     expect(PLACE_RELATIONSHIP_TYPES).toContain('succeeds');
     expect(placeRelationship.evidenceSource.notNull).toBe(true);
@@ -617,7 +617,7 @@ describe('Place Authority: containment authority is singular', () => {
     // administratively within one municipality and understood as settled within
     // another, so neither may be derived from the other, and both are stored in
     // one canonical direction with the traversal inverse derived by reversal.
-    const placeRelationshipSql = migrationSql('0097_place_authority_place_relationship.sql');
+    const placeRelationshipSql = migrationSql('0099_place_authority_place_relationship.sql');
     expect(placeRelationshipSql).toContain('administratively_contains');
     expect(placeRelationshipSql).toContain('settlement_within');
     // A single unique edge key per (from, to, type) means neither can be inferred

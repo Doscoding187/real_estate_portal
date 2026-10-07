@@ -34,6 +34,7 @@ describe('B08 integration preserves established objects without extending histor
   });
   it('preserves the four established migration byte identities and lineage', () => {
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
+    expect(manifest.migrations.find((entry: { filename: string }) => entry.filename === '0095_user_founder_authority.sql').parent).toBe('0094_content_topics_primary_key.sql');
     let parent = '0090_retire_disconnected_boost_campaigns.sql';
     for (const [filename, checksum] of Object.entries(approved)) {
       expect(

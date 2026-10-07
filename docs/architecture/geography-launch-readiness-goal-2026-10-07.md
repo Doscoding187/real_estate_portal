@@ -301,3 +301,36 @@ record these prerequisites. Product wiring, concurrent publication validation,
 governed Listing membership, Land convergence, browser handoff, serialized
 integration and release review remain required. The goal is active and launch
 readiness remains unproven.
+
+
+### Founder integration accepted and candidate serialized
+
+PR #590 merged as `c1a1b813a44bf033426e026b2253f896cfc6c3b5`. Its accepted
+manifest ends at `0096_user_founder_authority_unique.sql`, with the founder
+column and unique key independently sequenced. The geography candidate was
+serialized after that exact prefix: its fifteen SQL files move by two slots,
+0097–0111, with every SQL byte/checksum preserved. No founder worktree or
+remote branch is changed. Current candidate head is
+`0111_properties_canonical_place_reference_fk.sql` (112 total entries).
+
+The exact owned 0109 proof target had already been disposed. The pre-adoption
+review records unmerged geography, no protected adoption, disposed local target,
+correctness repair of the accepted sequence collision, and unchanged SQL/Place
+identity. Manifest parents/checksums, active classification and source references
+are rebuilt; accepted founder SQL and prefix entries remain exact. Generated
+model inventory includes both founder authority and Listing Place references.
+National package bytes and source allocations remain unchanged.
+
+Local merge conflicts were reconciled in manifest/inventory/classification and
+active assertions. Historical revoked rehearsal authorization stays pinned to
+its original 0094/count-95 fixture; the merged assertion must not extend that
+old approval to a newer model. The historical transport suite passes ten checks,
+and accepted founder identity/account/state/route tests pass 92 checks. Focused
+lineage/foundation tests pass 58 checks. The prior 0109 schema/resolver proof is
+retained as historical evidence and cannot certify the combined 0111 model.
+Fresh owned physical consumer proof is still required before launch assessment.
+
+[Serialization evidence](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/founder-integration-serialization.json)
+records the complete filename/checksum translation and accepted prefix.
+
+Combined candidate verification: authority 617/617 in 56 files; 121 utility surfaces, 112 migration files, deterministic inventory, lifecycle and production type checking pass. No combined-lineage physical or customer publication/search certification is claimed.

@@ -23,7 +23,7 @@ describe('PLE-6C manual location without coordinates migration', () => {
       statementPolicy: 'approved-exception',
       approvalReference: 'PLE-6C-2026-08-10-Edward',
     });
-    expect(manifest.expectedHead.filename).toBe('0109_properties_canonical_place_reference_fk.sql');
+    expect(manifest.expectedHead.filename).toBe('0111_properties_canonical_place_reference_fk.sql');
   });
 
   it('contains only the approved nullable coordinate alteration', () => {

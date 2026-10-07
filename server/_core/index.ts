@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { createExpressMiddleware } from '@trpc/server/adapters/express';
 import { registerAuthRoutes } from './authRoutes';
+import { registerFounderGoogleIdentityRoutes } from './founderGoogleIdentityRoutes';
 import { appRouter } from '../routers';
 import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
@@ -81,6 +82,7 @@ async function mountOptionalRouter(app: express.Express, mountPath: string, impo
 
 let activeServer: ReturnType<typeof createServer> | null = null;
 let activeAuthStore: RedisAuthRateLimitStore | null = null;
+let stopFounderGoogleIdentityProof: (() => Promise<void>) | null = null;
 let shuttingDown = false;
 
 async function startServer() {
@@ -197,6 +199,8 @@ async function startServer() {
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/resend-verification',
+    '/api/auth/google/start',
+    '/api/auth/google/callback',
   ]) {
     app.use(authPath, authLimiter, handleAuthRateLimitStoreUnavailable);
   }
@@ -221,6 +225,7 @@ async function startServer() {
   app.use('/', sitemapRouter);
   app.use('/', developmentSupersessionRedirectRouter);
   registerAuthRoutes(app);
+  stopFounderGoogleIdentityProof = registerFounderGoogleIdentityRoutes(app);
   app.use('/api/agent', agentOnboardingRouter);
   registerHealthEndpoint(app, { authRateLimitStore });
   registerVersionEndpoint(app);
@@ -317,6 +322,7 @@ async function shutdown(signal: string): Promise<void> {
     commercialTermNoticeScheduler.stop();
     await stopHostedDatabaseReadinessMonitor();
     await activeAuthStore?.shutdown();
+    await stopFounderGoogleIdentityProof?.();
     await shutdownPublicLeadRateLimitStore();
     await shutdownCache();
     await shutdownDb();

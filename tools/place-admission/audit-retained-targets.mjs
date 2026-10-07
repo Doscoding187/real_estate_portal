@@ -44,15 +44,15 @@ const OLD_PLACE_AUTHORITY = [
 
 /** The reconciled numbering, reported for contrast so the two are distinguishable. */
 const RECONCILED_PLACE_AUTHORITY = [
-  '0095_place_authority_place.sql',
-  '0096_place_authority_place_name.sql',
-  '0097_place_authority_place_relationship.sql',
-  '0098_place_authority_place_evidence.sql',
-  '0099_place_authority_place_external_mapping.sql',
-  '0100_place_authority_search_area.sql',
-  '0101_place_authority_search_area_member.sql',
-  '0102_saved_searches_canonical_place_reference.sql',
-  '0103_saved_searches_canonical_place_reference_fk.sql',
+  '0097_place_authority_place.sql',
+  '0098_place_authority_place_name.sql',
+  '0099_place_authority_place_relationship.sql',
+  '0100_place_authority_place_evidence.sql',
+  '0101_place_authority_place_external_mapping.sql',
+  '0102_place_authority_search_area.sql',
+  '0103_place_authority_search_area_member.sql',
+  '0104_saved_searches_canonical_place_reference.sql',
+  '0105_saved_searches_canonical_place_reference_fk.sql',
 ];
 
 const authority = resolveDatabaseAuthority({

@@ -35,13 +35,13 @@ describe('Canonical Listing Place persistence expansion', () => {
       /_(listings|properties)_canonical_place_reference/.test(entry.filename),
     );
     expect(entries).toHaveLength(6);
-    expect(entries.map(entry => entry.sequence)).toEqual([104, 105, 106, 107, 108, 109]);
-    expect(entries[0].parent).toBe('0103_saved_searches_canonical_place_reference_fk.sql');
+    expect(entries.map(entry => entry.sequence)).toEqual([106, 107, 108, 109, 110, 111]);
+    expect(entries[0].parent).toBe('0105_saved_searches_canonical_place_reference_fk.sql');
     for (const entry of entries) {
       expect(entry.kind).toBe('ddl');
       expect(entry.statementPolicy).toBe('single-ddl');
       expect(entry.statementCount).toBe(1);
     }
-    expect(manifest.expectedHead.filename).toBe('0109_properties_canonical_place_reference_fk.sql');
+    expect(manifest.expectedHead.filename).toBe('0111_properties_canonical_place_reference_fk.sql');
   });
 });

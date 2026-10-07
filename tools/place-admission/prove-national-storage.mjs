@@ -63,7 +63,7 @@ import {
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 /** The reconciled migration head this proof is stated against. */
-const RECONCILED_HEAD = '0103_saved_searches_canonical_place_reference_fk.sql';
+const RECONCILED_HEAD = '0111_properties_canonical_place_reference_fk.sql';
 
 /** Every table the national load writes. Rollback must leave all of them untouched. */
 const AUTHORITY_TABLES = [
