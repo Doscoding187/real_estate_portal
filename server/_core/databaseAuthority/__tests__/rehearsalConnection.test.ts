@@ -37,10 +37,17 @@ const mocks = vi.hoisted(() => ({
   queries: [] as string[],
 }));
 vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.create } }));
-vi.mock('../rehearsalAuthority', async importOriginal => ({
-  ...(await importOriginal<any>()),
-  verifyRehearsalResource: mocks.arm,
-}));
+vi.mock('../rehearsalAuthority', async importOriginal => {
+  const actual = await importOriginal<any>();
+  const { loadAndValidateMigrationManifest } = await import('../../../migrations/migrationManifest');
+  const manifest = loadAndValidateMigrationManifest();
+  // Current-contract simulated admission only; the real revoked registration stays untouched.
+  return {
+    ...actual,
+    REHEARSAL: { ...actual.REHEARSAL, expectedHead: manifest.expectedHead.filename, manifestDigest: manifest.manifestDigest },
+    verifyRehearsalResource: mocks.arm,
+  };
+});
 vi.mock('../schemaCongruency', () => ({
   normalizedDesiredSchema: () => ({
     digest: 'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
@@ -146,7 +153,7 @@ describe('rehearsal connection boundary (mock transport, no live DB)', () => {
   it('preflight proves identity and closes without DML or transaction controls', async () => {
     const { a, d } = authority();
     const session = await createAuthorityRehearsalSession(a, d, 'preflight');
-    expect(session.evidence.migrationCount).toBe(95);
+    expect(session.evidence.migrationCount).toBe(97);
     await session.run(0, 'read.identity');
     for (const probe of ['user.insert', 'transaction.begin', 'transaction.commit'] as const)
       await expect(session.run(0, probe, probe === 'user.insert' ? [0] : [])).rejects.toThrow(

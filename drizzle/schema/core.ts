@@ -76,8 +76,12 @@ export const users = mysqlTable(
     passwordResetTokenExpiresAt: timestamp({ mode: 'string' }),
     emailVerificationToken: varchar({ length: 255 }),
     emailVerificationTokenExpiresAt: timestamp({ mode: 'string' }),
+    founderAuthority: mysqlEnum('founder_authority', ['platform_founder']),
   },
-  table => [index('email_idx').on(table.email), index('role_idx').on(table.role)],
+  table => [
+    index('email_idx').on(table.email), index('role_idx').on(table.role),
+    unique('users_founder_authority_unique').on(table.founderAuthority),
+  ],
 );
 
 export const auditLogs = mysqlTable('audit_logs', {

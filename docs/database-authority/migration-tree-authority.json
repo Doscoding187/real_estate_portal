@@ -1272,6 +1272,22 @@
       "approvedFiles": [
         "server/migrations/0094_content_topics_primary_key.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0095_user_founder_authority.sql",
+      "classification": "canonical active",
+      "purpose": "Nullable platform founder authority on the canonical user row; no account seed or role backfill.",
+      "approvedFiles": [
+        "server/migrations/0095_user_founder_authority.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0096_user_founder_authority_unique.sql",
+      "classification": "canonical active",
+      "purpose": "Database-enforced singleton founder identity across concurrent first sign-ins.",
+      "approvedFiles": [
+        "server/migrations/0096_user_founder_authority_unique.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

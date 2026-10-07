@@ -466,8 +466,10 @@ describe('migration execution authority', () => {
       '0092_transactional_email_attempts.sql',
       '0093_user_onboarding_state_primary_key.sql',
       '0094_content_topics_primary_key.sql',
+      '0095_user_founder_authority.sql',
+      '0096_user_founder_authority_unique.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0094_content_topics_primary_key.sql');
+    expect(executionManifest.expectedHead).toBe('0096_user_founder_authority_unique.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

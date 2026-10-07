@@ -44,6 +44,7 @@ export async function updateUserRoleWithAudit(input: {
         id: users.id,
         role: users.role,
         sessionVersion: users.sessionVersion,
+        founderAuthority: users.founderAuthority,
       })
       .from(users)
       .where(eq(users.id, input.targetUserId))
@@ -52,6 +53,9 @@ export async function updateUserRoleWithAudit(input: {
 
     if (!target) throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found.' });
     if (target.role === input.role) return;
+    if (target.founderAuthority === 'platform_founder') {
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Founder role changes require a separately reviewed owner-identity transition.' });
+    }
 
     // Preserve the existing last-super-admin safeguard inside the same
     // transaction and lock the matching role rows so concurrent demotions

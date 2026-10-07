@@ -416,8 +416,10 @@ export type InsertProperty = InferInsertModel<typeof properties>;
 export const AUTH_LOGIN_USER_COLUMNS = {
   id: users.id,
   openId: users.openId,
+  founderAuthority: users.founderAuthority,
   email: users.email,
   passwordHash: users.passwordHash,
+  loginMethod: users.loginMethod,
   name: users.name,
   emailVerified: users.emailVerified,
   role: users.role,
@@ -428,6 +430,7 @@ export const AUTH_LOGIN_USER_COLUMNS = {
 export const AUTH_SESSION_USER_COLUMNS = {
   id: users.id,
   openId: users.openId,
+  founderAuthority: users.founderAuthority,
   email: users.email,
   passwordHash: users.passwordHash,
   name: users.name,
@@ -634,7 +637,9 @@ export async function deleteUserById(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  await db.delete(users).where(eq(users.id, userId));
+  const [target] = await db.select({ founderAuthority: users.founderAuthority }).from(users).where(eq(users.id, userId)).limit(1);
+  if (target?.founderAuthority === 'platform_founder') throw new Error('The founder account cannot be removed by registration cleanup.');
+  await db.delete(users).where(and(eq(users.id, userId), isNull(users.founderAuthority)));
 }
 
 /**

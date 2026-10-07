@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { SignJWT } from 'jose';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COOKIE_NAME } from '@shared/const';
 
 const {
@@ -62,6 +62,7 @@ vi.mock('./emailService', () => ({ EmailService: { sendEmail: vi.fn() } }));
 
 import { AuthService, authService } from './auth';
 import { registerAuthRoutes } from './authRoutes';
+import { FounderGoogleAccountService } from '../services/founderGoogleAccountService';
 
 const sessionSecret = new TextEncoder().encode(
   'test-session-secret-that-is-long-enough-for-jwt-signing',
@@ -295,5 +296,109 @@ describe('session security', () => {
       'Invalid or expired email verification token.',
     );
     expect(mockVerifyUserEmail).not.toHaveBeenCalled();
+  });
+});
+
+const founderPrincipal = 'google:' + 'P'.repeat(43);
+function founderUser(overrides: Record<string, unknown> = {}) {
+  return user({ founderAuthority: 'platform_founder', openId: founderPrincipal, email: 'founder@example.test', role: 'super_admin',
+    loginMethod: 'google-founder', passwordHash: null, ...overrides });
+}
+function enableFounderLogin() {
+  for (const [key, value] of Object.entries({
+    FOUNDER_GOOGLE_PROOF_ENABLED: 'true', FOUNDER_GOOGLE_LOGIN_ENABLED: 'true',
+    GOOGLE_OAUTH_CLIENT_ID: 'unit.apps.googleusercontent.com', GOOGLE_OAUTH_CLIENT_SECRET: 'unit-private',
+    GOOGLE_OAUTH_REDIRECT_URI: 'https://api.example.test/api/auth/google/callback',
+    FOUNDER_GOOGLE_EMAIL: 'founder@example.test', OWNER_OPEN_ID: founderPrincipal,
+    APP_URL: 'https://www.example.test', REDIS_URL: 'redis://127.0.0.1:6379',
+  })) vi.stubEnv(key, value);
+}
+afterEach(() => vi.unstubAllEnvs());
+describe('Google founder uses genuine provider sessions only', () => {
+  beforeEach(() => vi.clearAllMocks());
+  it.each([{ loginMethod: 'google-founder' }, { loginMethod: 'email', openId: founderPrincipal }])(
+    'denies password login even if a password was assigned: %j', async overrides => {
+      const service = new AuthService();
+      mockGetUserByEmail.mockResolvedValueOnce(founderUser({ passwordHash: 'injected-hash', ...overrides }));
+      const check = vi.spyOn(service, 'verifyPassword');
+      await expect(service.login('founder@example.test', 'Password!123')).rejects.toThrow('Google sign-in');
+      expect(check).not.toHaveBeenCalled();
+    },
+  );
+  it('does not issue a recovery token or activation password link to the founder', async () => {
+    const service = new AuthService();
+    mockGetUserByEmail.mockResolvedValue(founderUser());
+    await expect(service.forgotPassword('founder@example.test')).resolves.toBe(false);
+    await expect(service.generatePasswordResetLink('founder@example.test')).resolves.toBeNull();
+    await service.sendActivationSetPasswordEmail('founder@example.test');
+    expect(mockUpdateUserPasswordResetToken).not.toHaveBeenCalled();
+    expect(mockSendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+  it('rejects a retained reset token without changing founder credentials', async () => {
+    mockGetUserByPasswordResetToken.mockResolvedValueOnce(founderUser({ passwordResetTokenExpiresAt: new Date(Date.now() + 3600000).toISOString() }));
+    await expect(new AuthService().resetPassword('unit-reset', 'Password!123')).rejects.toThrow('Invalid or expired');
+    expect(mockUpdateUserPassword).not.toHaveBeenCalled();
+  });
+  it('rejects a native email verification token for a founder account', async () => {
+    mockGetUserByEmailVerificationTokenHash.mockResolvedValueOnce(founderUser({ emailVerificationTokenExpiresAt: new Date(Date.now() + 3600000).toISOString() }));
+    await expect(new AuthService().verifyEmail('unit-verification')).rejects.toThrow('Invalid or expired');
+    expect(mockVerifyUserEmail).not.toHaveBeenCalled();
+  });
+  it('reserves the enabled founder mailbox before native registration or password hashing', async () => {
+    enableFounderLogin();
+    const service = new AuthService();
+    const hash = vi.spyOn(service, 'hashPassword');
+    await expect(service.register(' FOUNDER@example.test ', 'Password!123')).rejects.toThrow('original login method');
+    expect(mockGetUserByEmail).not.toHaveBeenCalled();
+    expect(hash).not.toHaveBeenCalled();
+  });
+  it('accepts a verified native founder JWT only after checking its durable binding', async () => {
+    enableFounderLogin();
+    const service = new AuthService();
+    const account = founderUser();
+    mockGetUserById.mockResolvedValueOnce(account);
+    const binding = vi.spyOn(FounderGoogleAccountService.prototype, 'assertSessionBinding').mockResolvedValueOnce();
+    const token = await service.createSessionToken(42, account.email, account.name, 1, { founderPrincipal, expiresInMs: 86400000 });
+    await expect(service.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any)).resolves.toMatchObject({ id: 42, role: 'super_admin' });
+    expect(binding).toHaveBeenCalledWith(expect.objectContaining({ id: 42 }), founderPrincipal);
+  });
+  it('rejects an old native session without provider proof for the newly bound founder', async () => {
+    enableFounderLogin();
+    const service = new AuthService();
+    mockGetUserById.mockResolvedValueOnce(founderUser());
+    const token = await service.createSessionToken(42, 'founder@example.test', 'Founder', 1);
+    await expect(service.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any)).rejects.toThrow('revoked');
+    expect(mockUpdateUserLastSignIn).not.toHaveBeenCalled();
+  });
+  it('rejects a founder session when login is disabled', async () => {
+    enableFounderLogin();
+    vi.stubEnv('FOUNDER_GOOGLE_LOGIN_ENABLED', 'false');
+    const service = new AuthService();
+    mockGetUserById.mockResolvedValueOnce(founderUser());
+    const token = await service.createSessionToken(42, 'founder@example.test', 'Founder', 1, { founderPrincipal });
+    await expect(service.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any)).rejects.toThrow('revoked');
+  });
+  it('rejects a session if the reviewed owner binding no longer agrees', async () => {
+    enableFounderLogin();
+    vi.stubEnv('OWNER_OPEN_ID', 'google:' + 'Q'.repeat(43));
+    const service = new AuthService();
+    mockGetUserById.mockResolvedValueOnce(founderUser());
+    const token = await service.createSessionToken(42, 'founder@example.test', 'Founder', 1, { founderPrincipal });
+    await expect(service.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any)).rejects.toThrow('conflicts');
+  });
+  it('retains session-version revocation before any founder binding lookup', async () => {
+    enableFounderLogin();
+    const service = new AuthService();
+    mockGetUserById.mockResolvedValueOnce(founderUser({ sessionVersion: 2 }));
+    const binding = vi.spyOn(FounderGoogleAccountService.prototype, 'assertSessionBinding');
+    const token = await service.createSessionToken(42, 'founder@example.test', 'Founder', 1, { founderPrincipal });
+    await expect(service.authenticateRequest({ headers: { cookie: `${COOKIE_NAME}=${token}` } } as any)).rejects.toThrow('revoked');
+    expect(binding).not.toHaveBeenCalled();
+  });
+  it('rejects malformed founder claims before account lookup', async () => {
+    const token = await new SignJWT({ userId: 42, email: 'founder@example.test', name: 'Founder', sessionVersion: 1, founderPrincipal: 'invalid' })
+      .setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(sessionSecret);
+    await expect(new AuthService().verifySession(token)).resolves.toBeNull();
+    expect(mockGetUserById).not.toHaveBeenCalled();
   });
 });
