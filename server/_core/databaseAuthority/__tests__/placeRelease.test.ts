@@ -5,6 +5,7 @@ import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { loadAndValidateMigrationManifest } from '../../../migrations/migrationManifest';
 import { loadPlaceAdmissionTerritoryRegistry } from '../../../../shared/placeAdmissionTerritories';
 import {
+  buildPlaceReleaseBatches,
   loadPlaceReleaseCandidate,
   PLACE_RELEASE_TABLES,
   reconcilePlaceRelease,
@@ -140,7 +141,12 @@ function fixture() {
     physicalCount: 5,
     wrongOwner: false,
     failInsert: false,
+    failInsertAt: 0,
+    rollbackThrows: false,
     driftAfterInsert: false,
+    releaseResult: 1 as unknown,
+    releaseThrows: false,
+    commitThrows: false,
   };
   const connection: AuthoritySqlConnection = {
     async execute(sql, values = []) {
@@ -165,21 +171,34 @@ function fixture() {
       if (read) return [structuredClone(snapshot[read[1] as keyof PlaceReleaseRows])];
       const insert = /^INSERT INTO `(.*?)` \((.*?)\) VALUES/.exec(sql);
       if (insert) {
-        if (settings.failInsert) throw new Error('injected insert failure');
+        if (
+          settings.failInsert ||
+          statements.filter(s => s.startsWith('INSERT')).length === settings.failInsertAt
+        )
+          throw new Error('injected insert failure');
         const table = insert[1] as keyof PlaceReleaseRows;
         const columns = insert[2].replace(/`/g, '').split(', ');
-        const row = Object.fromEntries(columns.map((c, i) => [c, values[i]]));
-        if (settings.driftAfterInsert && table === 'place') row.search_eligible = 0;
-        snapshot[table].push(row);
+        for (let offset = 0; offset < values.length; offset += columns.length) {
+          const row = Object.fromEntries(columns.map((c, i) => [c, values[offset + i]]));
+          if (settings.driftAfterInsert && table === 'place') row.search_eligible = 0;
+          snapshot[table].push(row);
+        }
         return [{ insertId: snapshot[table].length }];
       }
       throw new Error(`Unexpected SQL ${sql}`);
     },
     async query(sql) {
       statements.push(sql);
+      if (sql.includes('RELEASE_LOCK')) {
+        if (settings.releaseThrows) throw new Error('injected cleanup failure');
+        return [[{ released: settings.releaseResult }]];
+      }
+      if (sql === 'COMMIT' && settings.commitThrows) throw new Error('injected commit failure');
       if (sql === 'START TRANSACTION') before = structuredClone(snapshot);
-      else if (sql === 'ROLLBACK') snapshot = before;
-      else if (sql !== 'COMMIT' && !sql.includes('RELEASE_LOCK'))
+      else if (sql === 'ROLLBACK') {
+        if (settings.rollbackThrows) throw new Error('injected rollback failure');
+        snapshot = before;
+      } else if (sql !== 'COMMIT' && !sql.includes('RELEASE_LOCK'))
         throw new Error('Unexpected control SQL');
       return [[]];
     },
@@ -365,4 +384,199 @@ describe('governed national production Place reference release', () => {
       }),
     ).rejects.toThrow(/incomplete/);
   });
+});
+
+describe('release review regressions', () => {
+  const signal = (kind: string, priority = 0) => ({
+    place_id: null,
+    evidence_kind: kind,
+    evidence_state: 'recorded',
+    subject: 'missing locality',
+    provider: 'property_listify_search',
+    provider_record_id: null,
+    research_priority: priority,
+    note: `search_coverage_signal:${kind};no Place may be created from this signal; it is research-priority input only`,
+  });
+  it('verifies and replays with zero writes after unresolved, ambiguous and repeated coverage signals', async () => {
+    const f = fixture();
+    const plan = await releaseCanonicalPlaces({
+      ...authority('release-reference-plan'),
+      connection: f.connection,
+    });
+    await releaseCanonicalPlaces({
+      ...authority('release-reference-apply'),
+      connection: f.connection,
+      expectedPlanDigest: plan.planDigest!,
+    });
+    const clean = await releaseCanonicalPlaces({
+      ...authority('release-reference-plan'),
+      connection: f.connection,
+    });
+    for (const row of [
+      signal('unresolved_query'),
+      signal('ambiguous_query'),
+      signal('unresolved_query', 1),
+    ]) {
+      f.snapshot.place_evidence.push(row);
+      const verified = await releaseCanonicalPlaces({
+        ...authority('release-reference-verify'),
+        connection: f.connection,
+      });
+      expect(verified.planDigest).toBe(clean.planDigest);
+      const replay = await releaseCanonicalPlaces({
+        ...authority('release-reference-apply'),
+        connection: f.connection,
+        expectedPlanDigest: clean.planDigest!,
+      });
+      expect(replay).toMatchObject({ writtenRows: 0, insertStatements: 0 });
+    }
+    expect(f.snapshot.place_evidence.filter(r => r.place_id === null)).toHaveLength(3);
+    f.snapshot.place_evidence[0].note = 'unauthorised reference amendment';
+    await expect(
+      releaseCanonicalPlaces({
+        ...authority('release-reference-verify'),
+        connection: f.connection,
+      }),
+    ).rejects.toThrow(/drift/);
+  });
+  it.each([
+    'place_id',
+    'provider',
+    'provider_record_id',
+    'evidence_state',
+    'subject',
+    'research_priority',
+    'note',
+  ])('rejects malformed operational %s', field => {
+    const desired = loadPlaceReleaseCandidate().desired;
+    const stored = structuredClone(desired);
+    stored.place_evidence.push({
+      ...signal('unresolved_query'),
+      [field]: field === 'subject' ? '' : 'unauthorised',
+    });
+    expect(() => reconcilePlaceRelease(desired, stored)).toThrow();
+  });
+  it.each([0, null, 'exception'])(
+    'never reports success when lock release returns %s',
+    async result => {
+      const f = fixture();
+      const plan = await releaseCanonicalPlaces({
+        ...authority('release-reference-plan'),
+        connection: f.connection,
+      });
+      f.settings.releaseResult = result;
+      f.settings.releaseThrows = result === 'exception';
+      await expect(
+        releaseCanonicalPlaces({
+          ...authority('release-reference-apply'),
+          connection: f.connection,
+          expectedPlanDigest: plan.planDigest!,
+        }),
+      ).rejects.toMatchObject({ outcome: 'committed-cleanup-failed' });
+      expect(f.statements.filter(s => s === 'COMMIT')).toHaveLength(1);
+    },
+  );
+  it('preserves the original insert failure when cleanup also fails', async () => {
+    const f = fixture();
+    const plan = await releaseCanonicalPlaces({
+      ...authority('release-reference-plan'),
+      connection: f.connection,
+    });
+    f.settings.failInsert = true;
+    f.settings.releaseThrows = true;
+    await expect(
+      releaseCanonicalPlaces({
+        ...authority('release-reference-apply'),
+        connection: f.connection,
+        expectedPlanDigest: plan.planDigest!,
+      }),
+    ).rejects.toMatchObject({
+      outcome: 'not-committed',
+      cause: { message: 'injected insert failure' },
+      cleanupError: { message: 'injected cleanup failure' },
+    });
+    expect(f.snapshot).toEqual(empty());
+  });
+  it('marks a failed COMMIT response uncertain and never retries or claims rollback', async () => {
+    const f = fixture();
+    const plan = await releaseCanonicalPlaces({
+      ...authority('release-reference-plan'),
+      connection: f.connection,
+    });
+    f.settings.commitThrows = true;
+    await expect(
+      releaseCanonicalPlaces({
+        ...authority('release-reference-apply'),
+        connection: f.connection,
+        expectedPlanDigest: plan.planDigest!,
+      }),
+    ).rejects.toMatchObject({ outcome: 'commit-uncertain' });
+    expect(f.statements.filter(s => s === 'COMMIT')).toHaveLength(1);
+    expect(f.statements).not.toContain('ROLLBACK');
+  });
+  it('bounds batches by rows, parameters and UTF-8 payload, including exact boundaries', () => {
+    const row = loadPlaceReleaseCandidate().desired.place_evidence[0];
+    const rows = Array(501).fill(row);
+    expect([...buildPlaceReleaseBatches('place_evidence', rows)].map(b => b.rows)).toEqual([
+      250, 250, 1,
+    ]);
+    expect(
+      [
+        ...buildPlaceReleaseBatches('place_evidence', rows.slice(0, 3), {
+          rows: 250,
+          parameters: 16,
+          payloadBytes: 262144,
+        }),
+      ].map(b => b.rows),
+    ).toEqual([2, 1]);
+    const unicode = { ...row, note: '地'.repeat(100) };
+    const one = [...buildPlaceReleaseBatches('place_evidence', [unicode])][0];
+    expect(
+      [
+        ...buildPlaceReleaseBatches('place_evidence', [unicode, unicode], {
+          rows: 250,
+          parameters: 4096,
+          payloadBytes: one.estimatedPayloadBytes,
+        }),
+      ].map(b => b.rows),
+    ).toEqual([1, 1]);
+    expect(() => [
+      ...buildPlaceReleaseBatches('place_evidence', [unicode], {
+        rows: 250,
+        parameters: 4096,
+        payloadBytes: one.estimatedPayloadBytes - 1,
+      }),
+    ]).toThrow(/single row/);
+    expect([...buildPlaceReleaseBatches('place_evidence', [])]).toEqual([]);
+  });
+});
+
+describe('multi-batch transactional failures', () => {
+  it.each([false, true])(
+    'retains rollback outcome after a later batch failure: rollback fails=%s',
+    async rollbackThrows => {
+      const f = fixture();
+      const p = await releaseCanonicalPlaces({
+        ...authority('release-reference-plan'),
+        connection: f.connection,
+      });
+      f.settings.failInsertAt = 2;
+      f.settings.rollbackThrows = rollbackThrows;
+      f.settings.releaseResult = 0;
+      await expect(
+        releaseCanonicalPlaces({
+          ...authority('release-reference-apply'),
+          connection: f.connection,
+          expectedPlanDigest: p.planDigest!,
+        }),
+      ).rejects.toMatchObject({
+        outcome: rollbackThrows ? 'rollback-uncertain' : 'not-committed',
+        cause: { message: 'injected insert failure' },
+        cleanupError: { message: 'Place release lock cleanup unsuccessful.' },
+      });
+      expect(f.statements.filter(s => s.startsWith('INSERT'))).toHaveLength(2);
+      expect(f.statements).not.toContain('COMMIT');
+      if (!rollbackThrows) expect(f.snapshot).toEqual(empty());
+    },
+  );
 });

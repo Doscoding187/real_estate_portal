@@ -4,7 +4,7 @@ import { authorizeDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { inspectPlaceReleaseTarget } from '../dataAdapters/placeReleaseInspection';
 
-function fixture() {
+function fixture(columns: string[] = []) {
   const authority = resolveDatabaseAuthority({
     operation: 'release-reference-plan',
     explicitDatabaseUrl:
@@ -52,7 +52,14 @@ function fixture() {
         return [[{ filename: '0096_user_founder_authority_unique.sql', checksum: 'accepted' }]];
       if (sql.includes('information_schema.columns')) {
         expect(sql).toContain("COLUMN_NAME = 'place_id'");
-        return [[]];
+        expect(sql).toContain("COLUMN_NAME = 'canonical_place_id'");
+        expect(sql).not.toContain('canonicalPlaceId');
+        return [
+          columns.map(table_name => ({
+            table_name,
+            column_name: table_name === 'saved_searches' ? 'place_id' : 'canonical_place_id',
+          })),
+        ];
       }
       if (sql.includes('FROM cities'))
         return [
@@ -104,4 +111,20 @@ describe('protected read-only Place release census', () => {
     ).rejects.toThrow();
     expect(f.statements).toEqual([]);
   });
+});
+
+describe('physical canonical reference columns', () => {
+  it.each([
+    [],
+    ['listings', 'properties', 'saved_searches'],
+    ['listings'],
+    ['properties', 'saved_searches'],
+  ])(
+    'reports absent, full or partial installation without inventing columns: %j',
+    async (...args) => {
+      const columns = args as string[];
+      const report = await inspectPlaceReleaseTarget(fixture(columns));
+      expect(report.canonicalReferenceColumns.map(r => r.table_name)).toEqual(columns);
+    },
+  );
 });

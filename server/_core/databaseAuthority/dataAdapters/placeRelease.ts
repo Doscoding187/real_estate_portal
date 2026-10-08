@@ -16,7 +16,6 @@ import {
   requireReleaseReferenceTarget,
   requireReferenceAdapterTarget,
   stableDigest,
-  withTransaction,
 } from './common';
 import * as schemaExports from '../../../../drizzle/schema';
 import {
@@ -25,6 +24,17 @@ import {
   compareNormalizedSchemas,
   summarizeCheckConstraintEnforcement,
 } from '../schemaCongruency';
+
+import {
+  isOperationalPlaceCoverageSignal,
+  PLACE_COVERAGE_SIGNAL_VERSION,
+} from '../../../../shared/placeCoverageSignal';
+
+export const PLACE_RELEASE_BATCH_LIMITS = {
+  rows: 250,
+  parameters: 4096,
+  payloadBytes: 262144,
+} as const;
 
 export const PLACE_RELEASE_POLICY = 'admitted-national-non-osm-only-v1';
 const ELIGIBLE_LICENSING = ['permissive_supported', 'mixed_odbl_supported'] as const;
@@ -83,6 +93,9 @@ export const PLACE_RELEASE_DIGEST = stableDigest({
   policy: PLACE_RELEASE_POLICY,
   eligibleLicensing: ELIGIBLE_LICENSING,
   tables: PLACE_RELEASE_TABLES,
+  coverageSignalVersion: PLACE_COVERAGE_SIGNAL_VERSION,
+  batchLimits: PLACE_RELEASE_BATCH_LIMITS,
+  transactionProtocol: 'explicit-commit-and-lock-outcomes-v2',
 });
 type Table = keyof typeof PLACE_RELEASE_TABLES;
 type Row = Record<string, unknown>;
@@ -244,6 +257,7 @@ export function loadPlaceReleaseCandidate(root = process.cwd()) {
 export function reconcilePlaceRelease(desired: PlaceReleaseRows, stored: PlaceReleaseRows) {
   const pending = emptyRows();
   const observed = emptyRows();
+  let operationalSignals = 0;
   for (const table of tables) {
     const wants = new Map(
       desired[table].map(row => [identity(table, row), canonicalRow(table, row)]),
@@ -253,6 +267,10 @@ export function reconcilePlaceRelease(desired: PlaceReleaseRows, stored: PlaceRe
       const row = canonicalRow(table, raw),
         key = identity(table, row),
         want = wants.get(key);
+      if (!want && table === 'place_evidence' && isOperationalPlaceCoverageSignal(row)) {
+        operationalSignals++;
+        continue;
+      }
       if (!want || seen.has(key))
         throw new Error(`Place release refused: foreign/duplicate ${table} identity.`);
       if (JSON.stringify(row) !== JSON.stringify(want))
@@ -263,7 +281,12 @@ export function reconcilePlaceRelease(desired: PlaceReleaseRows, stored: PlaceRe
     observed[table].sort((a, b) => compare(identity(table, a), identity(table, b)));
     pending[table] = desired[table].filter(row => !seen.has(identity(table, row)));
   }
-  return { pending, observed, pendingRows: tables.reduce((n, t) => n + pending[t].length, 0) };
+  return {
+    pending,
+    observed,
+    operationalSignals,
+    pendingRows: tables.reduce((n, t) => n + pending[t].length, 0),
+  };
 }
 
 async function readSchema(input: {
@@ -367,6 +390,7 @@ async function runPlaceRelease(input: PlaceReleaseInput, disposablePreview: bool
     provinceIds: candidate.provinceIds,
     schemaMutation: false,
     providerWrites: false,
+    batchLimits: PLACE_RELEASE_BATCH_LIMITS,
   };
   if (schema.pendingMigrations.length) {
     if (input.decision.operation !== 'release-reference-plan')
@@ -418,7 +442,8 @@ async function runPlaceRelease(input: PlaceReleaseInput, disposablePreview: bool
         readyForDataRelease: true,
         planDigest: stableDigest(binding),
         pendingRows: reconciliation.pendingRows,
-        existingRows: tables.reduce((n, t) => n + stored[t].length, 0),
+        existingRows: tables.reduce((n, t) => n + reconciliation.observed[t].length, 0),
+        operationalCoverageSignals: reconciliation.operationalSignals,
       },
     };
   };
@@ -444,6 +469,17 @@ async function runPlaceRelease(input: PlaceReleaseInput, disposablePreview: bool
   );
   if (Number(lock[0]?.acquired) !== 1)
     throw new Error('Place release refused: release lock unavailable.');
+  let transactionStarted = false;
+  let commitAttempted = false;
+  let committed = false;
+  let operationFailed = false;
+  let cleanupFailed = false;
+  let rollbackFailed = false;
+  let operationError: unknown;
+  let rollbackError: unknown;
+  let cleanupError: unknown;
+  let result;
+  const startedAt = performance.now();
   try {
     const owner = await queryRows(
       input.connection,
@@ -457,30 +493,159 @@ async function runPlaceRelease(input: PlaceReleaseInput, disposablePreview: bool
       Number(owner[0]?.current_id) !== Number(lock[0]?.owner)
     )
       throw new Error('Place release refused: lock/session mismatch.');
-    return await withTransaction(input.connection, async () => {
-      const plan = await inspect();
-      if (plan.evidence.planDigest !== expectedPlanDigest)
-        throw new Error('Place release refused: target/source plan changed; review fresh plan.');
-      for (const table of tables)
-        for (const row of plan.reconciliation.pending[table]) {
-          const columns = PLACE_RELEASE_TABLES[table];
-          await input.connection.execute(
-            `INSERT INTO \`${table}\` (${columns.map(c => `\`${c}\``).join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`,
-            columns.map(c =>
-              c === 'observed_at' && row[c] !== null ? new Date(String(row[c])) : row[c],
-            ),
-          );
-        }
-      const verified = await inspect();
-      if (verified.evidence.pendingRows)
-        throw new Error('Place release refused: post-write verification incomplete.');
-      return {
-        ...verified.evidence,
-        acceptedPlanDigest: plan.evidence.planDigest,
-        writtenRows: plan.evidence.pendingRows,
-      };
-    });
-  } finally {
-    await input.connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
+    await input.connection.query('START TRANSACTION');
+    transactionStarted = true;
+    const plan = await inspect();
+    if (plan.evidence.planDigest !== expectedPlanDigest)
+      throw new Error('Place release refused: target/source plan changed; review fresh plan.');
+    const insertStatementsByTable = Object.fromEntries(tables.map(t => [t, 0])) as Record<
+      Table,
+      number
+    >;
+    let maximumBatchRows = 0,
+      maximumBatchParameters = 0,
+      maximumEstimatedPayloadBytes = 0;
+    for (const table of tables) {
+      for (const batch of buildPlaceReleaseBatches(table, plan.reconciliation.pending[table])) {
+        await input.connection.execute(batch.sql, batch.values);
+        insertStatementsByTable[table]++;
+        maximumBatchRows = Math.max(maximumBatchRows, batch.rows);
+        maximumBatchParameters = Math.max(maximumBatchParameters, batch.values.length);
+        maximumEstimatedPayloadBytes = Math.max(
+          maximumEstimatedPayloadBytes,
+          batch.estimatedPayloadBytes,
+        );
+      }
+    }
+    const verified = await inspect();
+    if (verified.evidence.pendingRows)
+      throw new Error('Place release refused: post-write verification incomplete.');
+    commitAttempted = true;
+    await input.connection.query('COMMIT');
+    committed = true;
+    result = {
+      ...verified.evidence,
+      acceptedPlanDigest: plan.evidence.planDigest,
+      writtenRows: plan.evidence.pendingRows,
+      insertStatementsByTable,
+      insertStatements: Object.values(insertStatementsByTable).reduce((a, b) => a + b, 0),
+      maximumBatchRows,
+      maximumBatchParameters,
+      maximumEstimatedPayloadBytes,
+    };
+  } catch (error) {
+    operationFailed = true;
+    operationError = error;
+    if (transactionStarted && !commitAttempted) {
+      try {
+        await input.connection.query('ROLLBACK');
+      } catch (error) {
+        rollbackFailed = true;
+        rollbackError = error;
+      }
+    }
   }
+  try {
+    const releaseResult = await input.connection.query('SELECT RELEASE_LOCK(?) AS released', [
+      lockName,
+    ]);
+    const rows = (releaseResult as [unknown])[0] as Array<{ released: unknown }>;
+    if (rows.length !== 1 || (rows[0]?.released !== 1 && rows[0]?.released !== '1'))
+      throw new Error('Place release lock cleanup unsuccessful.');
+  } catch (error) {
+    cleanupFailed = true;
+    cleanupError = error;
+  }
+  if (operationFailed || cleanupFailed) {
+    const outcome = committed
+      ? 'committed-cleanup-failed'
+      : commitAttempted
+        ? 'commit-uncertain'
+        : rollbackFailed
+          ? 'rollback-uncertain'
+          : 'not-committed';
+    throw new PlaceReleaseFailure(
+      outcome,
+      operationFailed ? operationError : cleanupError,
+      cleanupError,
+      rollbackError,
+    );
+  }
+  return {
+    ...result!,
+    transactionOutcome: 'committed' as const,
+    localOperationDurationMs: Math.round(performance.now() - startedAt),
+  };
+}
+
+/** No automatic retry: retain the primary failure and independent cleanup evidence. */
+export class PlaceReleaseFailure extends Error {
+  constructor(
+    public readonly outcome:
+      | 'not-committed'
+      | 'commit-uncertain'
+      | 'rollback-uncertain'
+      | 'committed-cleanup-failed',
+    public readonly cause: unknown,
+    public readonly cleanupError?: unknown,
+    public readonly rollbackError?: unknown,
+  ) {
+    super(
+      `${cause instanceof Error ? cause.message : String(cause)} [${outcome}]. Stop and inspect; do not retry automatically.`,
+    );
+    this.name = 'PlaceReleaseFailure';
+  }
+}
+
+/** Prepared multi-row inserts. Payload budget conservatively includes SQL and JSON-encoded bind values,
+ * plus 16 bytes per parameter for framing; it is an estimate, not a wire-packet measurement. */
+export function* buildPlaceReleaseBatches(
+  table: Table,
+  rows: readonly Row[],
+  limits: { rows: number; parameters: number; payloadBytes: number } = PLACE_RELEASE_BATCH_LIMITS,
+) {
+  if (!Object.values(limits).every(n => Number.isSafeInteger(n) && n > 0))
+    throw new Error('Place release refused: invalid batch limits.');
+  const columns = PLACE_RELEASE_TABLES[table];
+  const prefix = `INSERT INTO \`${table}\` (${columns.map(c => `\`${c}\``).join(', ')}) VALUES `;
+  const tuple = `(${columns.map(() => '?').join(', ')})`;
+  let values: unknown[] = [],
+    count = 0,
+    bytes = Buffer.byteLength(prefix);
+  const batch = () => ({
+    sql: prefix + Array(count).fill(tuple).join(', '),
+    values,
+    rows: count,
+    estimatedPayloadBytes: bytes,
+  });
+  for (const row of rows) {
+    const parameters = columns.map(c =>
+      c === 'observed_at' && row[c] !== null ? new Date(String(row[c])) : row[c],
+    );
+    const parameterBytes = parameters.reduce<number>(
+      (n, value) => n + Buffer.byteLength(JSON.stringify(value) ?? 'null') + 16,
+      0,
+    );
+    const rowBytes = Buffer.byteLength(tuple) + parameterBytes;
+    if (
+      columns.length > limits.parameters ||
+      Buffer.byteLength(prefix) + rowBytes > limits.payloadBytes
+    )
+      throw new Error('Place release refused: single row exceeds batch budget.');
+    if (
+      count &&
+      (count + 1 > limits.rows ||
+        values.length + columns.length > limits.parameters ||
+        bytes + 2 + rowBytes > limits.payloadBytes)
+    ) {
+      yield batch();
+      values = [];
+      count = 0;
+      bytes = Buffer.byteLength(prefix);
+    }
+    bytes += rowBytes + (count ? 2 : 0);
+    values.push(...parameters);
+    count++;
+  }
+  if (count) yield batch();
 }

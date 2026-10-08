@@ -3,12 +3,12 @@ import {
   assertAuthorizedDatabaseOperation,
   B08_AZURE_TARGET_FINGERPRINT_HASH,
   type AuthorizedDatabaseOperation,
-} from '../authorization';
-import type { AuthoritySqlConnection } from '../connectionAuthority';
-import type { ResolvedDatabaseAuthority } from '../types';
-import { queryRows, requireReleaseReferenceTarget } from './common';
+} from '/app/server/_core/databaseAuthority/authorization';
+import type { AuthoritySqlConnection } from '/app/server/_core/databaseAuthority/connectionAuthority';
+import type { ResolvedDatabaseAuthority } from '/app/server/_core/databaseAuthority/types';
+import { queryRows, requireReleaseReferenceTarget } from '/app/server/_core/databaseAuthority/dataAdapters/common';
 
-export async function inspectPlaceReleaseTarget(input: {
+async function inspectPlaceReleaseTarget(input: {
   authority: ResolvedDatabaseAuthority;
   decision: AuthorizedDatabaseOperation;
   connection: AuthoritySqlConnection;
@@ -95,3 +95,8 @@ export async function inspectPlaceReleaseTarget(input: {
     databaseMutation: false,
   };
 }
+
+import {resolveDatabaseAuthority} from '/app/server/_core/databaseAuthority/context';
+import {authorizeDatabaseOperation,protectedDatabaseApprovalFromEnvironment} from '/app/server/_core/databaseAuthority/authorization';
+import {createAuthoritySqlConnection} from '/app/server/_core/databaseAuthority/connectionAuthority';
+async function run(){const authority=resolveDatabaseAuthority({operation:'release-reference-plan',credentialClass:'read-only',processEnv:process.env});const decision=authorizeDatabaseOperation(authority,{approval:protectedDatabaseApprovalFromEnvironment(authority)});const connection=await createAuthoritySqlConnection(authority,decision);try{console.log(JSON.stringify(await inspectPlaceReleaseTarget({authority,decision,connection}),null,2));}finally{await connection.end();}}run().catch(()=>{console.error('Governed Place read-only census failed; no mutation authorised.');process.exitCode=1;});

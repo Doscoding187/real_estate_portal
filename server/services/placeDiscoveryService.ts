@@ -38,11 +38,11 @@ import {
   type PlaceSearchScope,
 } from '../../shared/placeAuthority';
 
-const MAX_QUERY_SUBJECT_LENGTH = 200;
+import { PLACE_COVERAGE_SUBJECT_LIMIT, coverageSignalNote } from '../../shared/placeCoverageSignal';
 const MAX_RESULTS = 25;
 
 /** Bound the governed coverage subject so a long paste cannot become evidence. */
-const coverageSubject = (normalized: string) => normalized.slice(0, MAX_QUERY_SUBJECT_LENGTH);
+const coverageSubject = (normalized: string) => normalized.slice(0, PLACE_COVERAGE_SUBJECT_LIMIT);
 
 const rowOf = <T>(rows: unknown[], index: number): T => rows[index] as T;
 
@@ -101,9 +101,7 @@ async function recordCoverageSignal(kind: 'unresolved_query' | 'ambiguous_query'
     subject,
     provider: 'property_listify_search',
     researchPriority: 0,
-    note:
-      `search_coverage_signal:${kind};` +
-      `no Place may be created from this signal; it is research-priority input only`,
+    note: coverageSignalNote(kind),
   });
 }
 

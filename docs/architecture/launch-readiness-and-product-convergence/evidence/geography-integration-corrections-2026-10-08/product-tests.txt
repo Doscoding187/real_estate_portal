@@ -1,0 +1,167 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle-db.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle-db.test.ts > createListing (lower-level) > persists the validated seller-prospect assignee for an agency-manager conversion
+[db.createListing] Inserting listing: {
+  ownerId: 100,
+  agentId: 55,
+  agencyId: 77,
+  slug: 'seller-conversion-ts-fixed'
+}
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle-db.test.ts (43 tests) 673ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/auth.session-security.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/authMeTiming.test.ts (27 tests) 224ms
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/founderGoogleIdentity.test.ts (43 tests) 1151ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/auth.session-security.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/founderGoogleIdentityRoutes.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/founderGoogleIdentityRoutes.test.ts (6 tests) 760ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T00:21:33.573Z
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/auth.session-security.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T00:21:33.575Z
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/founderGoogleStateStore.test.ts (9 tests) 85ms
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.location-contract.test.ts (8 tests) 114ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > allows the owner to read a draft listing for editing
+[listing.getById] Fetching listing ID: 1001
+[listing.getById] Result: Found: Modern Family Home
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > allows a super admin to read a pending listing for review
+[listing.getById] Fetching listing ID: 1002
+[listing.getById] Result: Found: Modern Family Home
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > rejects non-owners from reading draft listing detail
+[listing.getById] Fetching listing ID: 1001
+[listing.getById] Result: Found: Modern Family Home
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > allows the exact agency manager to read private agency inventory
+[listing.getById] Fetching listing ID: 1001
+[listing.getById] Result: Found: Modern Family Home
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > maps only a known Land policy rejection to the generic-workflow precondition
+[listing.getById] Fetching listing ID: 1001
+[listing.getById] Result: Found: Modern Family Home
+
+stderr | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > maps only a known Land policy rejection to the generic-workflow precondition
+Error fetching listing: TRPCError: Land inventory is unavailable through the generic listing workflow for this launch cohort.
+    at assertGenericListingRouteAvailable (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:107:13)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:1032:7
+    at resolveMiddleware (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:576:22)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at procedure (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:682:20)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/router.ts:474:20
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts:342:5 {
+  cause: undefined,
+  code: 'PRECONDITION_FAILED'
+}
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > keeps an unexpected Land-link lookup failure internal and retains its cause
+[listing.getById] Fetching listing ID: 1001
+[listing.getById] Result: Found: Modern Family Home
+
+stderr | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > keeps an unexpected Land-link lookup failure internal and retains its cause
+Error fetching listing: TRPCError: Listing workflow availability could not be verified.
+    at assertGenericListingRouteAvailable (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:114:11)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:1032:7
+    at resolveMiddleware (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:576:22)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at procedure (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:682:20)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/router.ts:474:20
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts:355:5 {
+  cause: Error: Land link lookup failed
+      at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts:352:27
+      at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14
+      at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11
+      at runWithTimeout (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)
+      at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)
+      at processTicksAndRejections (node:internal/process/task_queues:103:5)
+      at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+      at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+      at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+      at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3),
+  code: 'INTERNAL_SERVER_ERROR'
+}
+
+stderr | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts > listing lifecycle — canonical identity contract > rejects submission when canonical core property facts are incomplete
+Error submitting for review: TRPCError: Enter the internal / floor area in m².
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:1879:19
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at resolveMiddleware (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:576:22)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at callRecursive (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at procedure (file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:682:20)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/router.ts:474:20
+    at /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts:546:5
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5 {
+  cause: undefined,
+  code: 'BAD_REQUEST'
+}
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.listing-lifecycle.test.ts (45 tests) 449ms
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/auth.session-security.test.ts (35 tests) 812ms
+   ✓ browser tRPC logout session revocation > returns HTTP 503 without a cookie clear or private diagnostics when revocation fails 436ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/developer-registration-input.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/founderGoogleLoginConfig.test.ts (17 tests) 28ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/developer-registration-input.contract.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/services/__tests__/founderGoogleAccountService.test.ts (17 tests) 23ms
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/developer-registration-input.contract.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T00:21:48.684Z
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/developer-registration-input.contract.test.ts (13 tests) 78ms
+
+ Test Files  11 passed (11)
+      Tests  263 passed (263)
+   Start at  02:20:54
+   Duration  53.79s (transform 31.92s, setup 0ms, collect 132.90s, tests 4.40s, environment 7ms, prepare 6.20s)
+

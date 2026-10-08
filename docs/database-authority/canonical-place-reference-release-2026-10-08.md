@@ -10,6 +10,25 @@ The protected adapter admits only the registered Azure production fingerprint `b
 
 The target must be frozen against competing reference writers for application. The named lock coordinates this release protocol; it is not a claim that unrelated writers are locked. Connection loss, COMMIT failure or lock-release failure is an ambiguous outcome: preserve evidence, inspect read-only and obtain a fresh review before any further apply. Never blindly replay.
 
+## Senior review corrections to 66c0dd84
+
+The correction candidate continues the same integration branch. Discovery coverage signals are operational research records, not admitted reference assertions. Only the exact writer contract is accepted: null Place and provider-record IDs, unresolved/ambiguous kind, recorded state, bounded nonempty subject, `property_listify_search` provider, the exact non-authorising note and priority 0 or 1. All other evidence identities and all admitted values remain strictly reconciled. Validated operational counts are reported separately and do not bind the immutable reference plan digest; discovery may record or raise priority between plan and apply. Neither reconciliation nor replay deletes signals.
+
+The inspector checks `listings.canonical_place_id`, `properties.canonical_place_id` and `saved_searches.place_id`. Absent, complete and partial installation states are tested.
+
+Application uses parameterised multi-row inserts in dependency order, with at most **250 rows**, **4,096 parameters** and **262,144 estimated payload bytes** per statement. The conservative payload estimate includes UTF-8 SQL, JSON-encoded bind values and 16 framing bytes per parameter; it is not a network packet measurement. A row that cannot fit is refused. All batches remain in one transaction, with exact plan comparison after lock acquisition and complete assertion verification before COMMIT. No partial-table commit or automatic retry exists. Reports include insert counts by table, observed batch maxima and elapsed operation milliseconds. The operation clock starts after lock acquisition and includes transaction reconciliation, insertion, verification, COMMIT and lock cleanup; it excludes source loading and preflight. Local timing does not predict Azure timing. Production review must still set its release-window budget, monitoring and incident handoff before approving an apply; do not use a client timeout as permission to replay.
+
+A successful release requires `RELEASE_LOCK` to return 1. A false/null/missing result or exception prevents a clean-success report. Errors retain the original operation cause plus independent cleanup/rollback errors and an explicit outcome:
+
+- `not-committed`: no COMMIT attempted; any started transaction rolled back successfully.
+- `rollback-uncertain`: rollback acknowledgement failed before any COMMIT attempt.
+- `commit-uncertain`: COMMIT was attempted but no successful response was received; no automatic rollback or replay is claimed.
+- `committed-cleanup-failed`: COMMIT succeeded but lock cleanup was not confirmed.
+
+Every failure stops the release. Preserve the result and inspect the exact target read-only; any further apply needs fresh review. The additional defect found during correction was that the shared transaction helper obscured COMMIT-response uncertainty. The Place release now controls its own transaction outcome; unrelated adapters are unchanged.
+
+Current regression and native evidence is in `docs/architecture/launch-readiness-and-product-convergence/evidence/geography-integration-corrections-2026-10-08/`. The preceding 35-file integration evidence packet remains unchanged as historical evidence.
+
 ## Approved read-only inspection
 
 Use the dedicated `propertylistify_b08_inspector` credential in the protected operator process. The credential must actually retain USAGE plus SELECT on the approved database only. `DATABASE_CREDENTIAL_CLASS=read-only` does not turn another user's grants into inspector authority. No password or complete URL belongs in transcripts.

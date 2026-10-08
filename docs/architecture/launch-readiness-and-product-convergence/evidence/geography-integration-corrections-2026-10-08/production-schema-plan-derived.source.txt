@@ -1,0 +1,8 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+const root='/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const {loadAndValidateMigrationManifest}=await import(`${root}/server/migrations/migrationManifest.ts`);
+const {buildMigrationPlan}=await import(`${root}/server/migrations/runSqlMigrations.ts`);
+const census=JSON.parse(readFileSync('/tmp/geography-production-place-census.json','utf8'));
+const manifest=loadAndValidateMigrationManifest({migrationsDirectory:`${root}/server/migrations`});
+const plan=buildMigrationPlan({manifest,applied:census.migrationHistory.map((r:any)=>({fileName:r.filename,checksum:r.checksum})),incompleteAttempts:census.incompleteAttempts.map((r:any)=>({attemptId:r.attempt_id,fileName:r.migration_filename,state:r.state})),targetFingerprintHash:census.targetFingerprintHash,applicationTableCount:214});
+writeFileSync('/tmp/geography-corrections-production-schema-plan-derived.json', JSON.stringify({basis:'fresh-approved-read-only-census-with-physical-canonical-columns',refreshRequiredBeforeApply:true,censusAt:census.inspectedAt,...plan},null,2));

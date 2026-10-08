@@ -1,0 +1,30 @@
+{
+  "reviewedParent": "66c0dd84a2715f2a7432e5d591252f9a38f5f464",
+  "branch": "feat/place-authority-slice0-decision",
+  "focusedTests": 33,
+  "authorityTests": 669,
+  "authorityTestFiles": 58,
+  "productTests": 263,
+  "clientTests": 48,
+  "providerWriteProtectionTests": 3,
+  "typecheck": "passed after correcting the unknown SQL control-result tuple type; focused regressions and complete authority gate repeated after that change",
+  "build": "passed; existing chunk-size warning",
+  "scopedLint": {
+    "errors": 0,
+    "existingDiscoveryWarnings": 3
+  },
+  "localTargetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "productionReadOnlyInspection": true,
+  "productionMutation": false,
+  "hostedCIStarted": false,
+  "pushed": false,
+  "additionalDefect": "The prior shared transaction helper did not distinguish a failed COMMIT response from a confirmed rollback. The Place release path now retains explicit commit and rollback outcomes without changing unrelated adapters.",
+  "sourceSha256": {
+    "shared/placeCoverageSignal.ts": "a4da777729808cab7a38769a6b5d1c1fcc2c5a0934392a25780541fc60db55c9",
+    "server/services/placeDiscoveryService.ts": "c552899dc80c8f4457dc42c2e01e3fc0d449def391f54749d4f87bdf01c95021",
+    "server/_core/databaseAuthority/dataAdapters/placeRelease.ts": "6281292f93ebc3e3af16c7cfa84eb40afd6cd7b23125627c8da311122758ba21",
+    "server/_core/databaseAuthority/dataAdapters/placeReleaseInspection.ts": "72bb4c97fb833fefd3ed3d369bc29a867ed30365d0258a6d8cd2ae5eaa6d7ab6",
+    "server/_core/databaseAuthority/__tests__/placeRelease.test.ts": "10ade30831dd1bab06678b8429e1e20062551fa2d4c42bacb8845ba7ad449497",
+    "server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts": "a4bfe1fe67c24f45465a7ec938c87dddc77d5dd1e1b45077f57bec61d972eb72"
+  }
+}

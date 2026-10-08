@@ -1,3 +1,9 @@
+> Senior review correction candidate: see the correction evidence packet at
+> `launch-readiness-and-product-convergence/evidence/geography-integration-corrections-2026-10-08/README.md`.
+> It supersedes 66c0dd84 for release-path review on this same branch. The original
+> integration findings below remain historical context. Hosted CI, push, merge,
+> deployment and production application remain held.
+
 # Geography integration candidate for senior review
 
 This candidate integrates the canonical Place workstream with current main `7756376c9ec604b352595b4e4ba8ced73f18562b` in the owned `feat/place-authority-slice0-decision` worktree. Merge `88377eef70b8b2057c664d6202da6b518fa209a0` preserves founder release #590, logout/session revocation #591, auth timing diagnostics #592 and canonical Developer registration #593. No hosted CI, production schema/data application or deployment is authorized by this review packet. The exact final candidate SHA is returned with the handoff; verify it with `git rev-parse HEAD` and review the packet at that commit.
