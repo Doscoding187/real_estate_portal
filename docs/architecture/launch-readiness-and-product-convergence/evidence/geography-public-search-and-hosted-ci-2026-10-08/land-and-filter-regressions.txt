@@ -1,0 +1,528 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 server/__tests__/landPublicRouter.test.ts server/services/__tests__/publicSearchValidation.test.ts server/services/__tests__/propertySearchService.property.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/services/__tests__/propertySearchService.property.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/services/__tests__/propertySearchService.property.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/propertySearchService.property.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | server/services/__tests__/propertySearchService.property.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/services/__tests__/propertySearchService.property.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price ascending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by price descending
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by date ascending (oldest first)
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by date ascending (oldest first)
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by date ascending (oldest first)
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 2: Sort order correctness > should correctly sort properties by suburb alphabetically
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should maintain consistent count across multiple page requests
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should return accurate pagination information
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should handle edge cases for pagination
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+stderr | server/services/__tests__/propertySearchService.property.test.ts > PropertySearchService - Property-Based Tests > Property 14: Pagination info accuracy > should correctly calculate total pages
+[LocationResolver] Province not found: property-search-fixture-710376c2-e2e-province
+
+ ✓ |server| server/services/__tests__/propertySearchService.property.test.ts (10 tests) 1322ms
+stdout | server/services/__tests__/publicSearchValidation.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/services/__tests__/publicSearchValidation.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/services/__tests__/publicSearchValidation.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/publicSearchValidation.test.ts (4 tests) 832ms
+stdout | server/__tests__/landPublicRouter.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/__tests__/landPublicRouter.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/landPublicRouter.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/__tests__/landPublicRouter.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/__tests__/landPublicRouter.test.ts (11 tests) 136ms
+
+ Test Files  3 passed (3)
+      Tests  25 passed (25)
+   Start at  12:03:16
+   Duration  6.65s (transform 1.24s, setup 273ms, collect 3.30s, tests 2.29s, environment 1ms, prepare 237ms)
+

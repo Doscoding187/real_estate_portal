@@ -1,0 +1,28 @@
+{
+  "sourceCandidateSha": "b3fad5cfb1dde7c514425b56f199565da72c2507",
+  "parentHostedCandidateSha": "499cab892902ba1bd4fd6ff7524b8e0e042d17d5",
+  "sourceTree": "7523ee8203f08e0238d66b62833f6aea9f9ba885",
+  "sourceFiles": {
+    "client/src/components/location/CanonicalPlaceSelector.tsx": "28b2b36141171b76b05fa137c9f1af121904e428feddc645fc5ddfd8487cbd97",
+    "client/src/components/search/CanonicalPlaceSearchBar.tsx": "63967c1a06f2c9bfac0b30758b2fba6f6ee89e71225c2414c46795cf0fb19272",
+    "client/src/components/search/__tests__/CanonicalPlaceSearchBar.test.tsx": "2b9df9eecfe532d764544af5f8829754010396a00c2f8a770190bae81bc99990",
+    "client/src/lib/searchIntent.ts": "bd00fac8dc6b14ae01e5093923c20981cf216822241c019e02d14970f692b2f2",
+    "client/src/lib/urlUtils.ts": "dc62f0d825cdb32e5c1e5cc9026328ec872b8a936feb59db275c4361ca9d2e5f",
+    "client/src/pages/SearchResults.tsx": "682143da1d3a9acb67524df0bf0dc41de197e0e4738e2bbe92e4964c3be7cbf6",
+    "server/__tests__/contract.canonical-place-public-search.test.ts": "619c320efd70ae735f2a878bb5444f671e4ae802253ab001c1e434516c6efe73",
+    "server/__tests__/integration.agency-listing-publication-lifecycle.test.ts": "46aee5d1e6fb15d2024590c25c2b83053bde1b40a2b83275373c66da1a9f12e7",
+    "server/routers.ts": "d22971314d6bf30bd641b3b868119e8c036929cbf2efda89ffd407a635e011be",
+    "server/services/__tests__/approvedPublicPropertyService.test.ts": "88e6bdaaf9f0695e9f9ac370f78e65cf0223d5b184594f6cef53d321c8ea5abc",
+    "server/services/__tests__/canonicalPlaceSearchService.test.ts": "3d8a329ed9e5f5a0e19f4195e498d6dfdae62968c7676218e2232c78b9444f74",
+    "server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts": "1ee974ef34c45a3f12d97c4f7547179be2b70c5221e1f9723c765dcaf0c4818c",
+    "server/services/approvedPublicPropertyService.ts": "1387e26c843db9dccce2087fc809101adbd01fd51e81734751d66f6361c4609e",
+    "server/services/canonicalPlaceSearchService.ts": "ed0fc835be7541e66a1e88ddabb27e6882cd88778d181c44c56bfc16848e49c3",
+    "server/services/propertySearchService.ts": "69f67a7539b7a96220e10bc252e3529cfd437287579789a8c321bf1a40241bfb",
+    "server/services/publicSearchService.ts": "8cb599e7648ad7a5c75e8b03fa773c89492190b519e1006bb6c24a2c018d75a5",
+    "server/services/savedSearchNotificationEngine.ts": "2e7b63408bfa5492c50c51d0170e62364e9f2999d3d7829d759c2dbb0528bb2c",
+    "shared/canonicalPlaceSearch.ts": "70349b00f7c2660e71c385efdb8553f7cf7a0b1e4bda5b9736caaf097027d7d6",
+    "shared/publicSearchValidation.ts": "4f73d988fab01f38c1581803626211756df6d925bdee759a09688eaafb59c16f",
+    "shared/types.ts": "f8cc3daa7a61833ea1da0a47433131a952b18b11fde00acef2d724e0089628d8"
+  },
+  "hostedResultsApplyToSearchCandidate": false
+}

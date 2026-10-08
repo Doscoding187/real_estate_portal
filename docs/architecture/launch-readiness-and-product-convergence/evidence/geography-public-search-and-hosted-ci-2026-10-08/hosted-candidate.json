@@ -1,0 +1,56 @@
+{
+  "candidateSha": "499cab892902ba1bd4fd6ff7524b8e0e042d17d5",
+  "integrationBaseSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "testedMergeSha": "d2581f356bfd83b724c147d540f6bb7cab3aa9a0",
+  "candidateAndTestedMergeTree": "6805082360ddbd4df338b90dde674e25116fbfa1",
+  "treeComparison": "identical",
+  "pr": 594,
+  "runId": 37755969972,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "conclusion": "success",
+  "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972",
+  "startedAt": "2026-10-08T09:20:32Z",
+  "completedAt": "2026-10-08T09:45:44Z",
+  "jobs": [
+    {
+      "name": "Location Authority",
+      "id": 113240475924,
+      "conclusion": "success",
+      "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972/job/113240475924"
+    },
+    {
+      "name": "DB Contract Verification",
+      "id": 113240476220,
+      "conclusion": "success",
+      "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972/job/113240476220"
+    },
+    {
+      "name": "Lint & TypeCheck",
+      "id": 113241994692,
+      "conclusion": "success",
+      "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972/job/113241994692"
+    },
+    {
+      "name": "Unit & Integration Tests",
+      "id": 113241995060,
+      "conclusion": "success",
+      "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972/job/113241995060"
+    },
+    {
+      "name": "Build Application",
+      "id": 113243216200,
+      "conclusion": "success",
+      "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37755969972/job/113243216200"
+    }
+  ],
+  "frontendBuildGuard": {
+    "runId": 37755969978,
+    "conclusion": "success"
+  },
+  "separateAutomaticVercelPreview": "failure; no preview/deployment acceptance claimed",
+  "manualWorkflowDispatches": 0,
+  "reruns": 0,
+  "productionApplication": false,
+  "paymentActivation": false
+}

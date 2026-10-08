@@ -1,0 +1,39 @@
+
+> real_estate_portal@1.0.0 db:scenario:prepare /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts scenario:prepare
+
+{
+  "adapter": "search-to-lead-scenario",
+  "version": "search-to-lead-v5",
+  "digest": "a7b62da33e3f416e31728b6306c9b38d46f9b604db9d19b091c98f33ba16165b",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "databaseName": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "ownershipKey": "415473525d2afa0f75f14719",
+  "expected": {
+    "eligibleProperties": 3,
+    "eligibleDevelopments": 1,
+    "canonicalLocation": "gauteng/johannesburg/sandton"
+  },
+  "verified": {
+    "eligibleProperties": 3,
+    "eligibleDevelopments": 1,
+    "canonicalLocation": "gauteng/johannesburg/sandton",
+    "propertyIds": [
+      990001,
+      990002,
+      990003
+    ],
+    "excludedPropertyIds": [
+      990004,
+      990005,
+      990006,
+      990007,
+      990008,
+      990009
+    ],
+    "propertyId": 990001,
+    "developmentId": 990001,
+    "unitId": "00000000-0000-4000-8000-000000000001"
+  },
+  "migrationHead": "0111_properties_canonical_place_reference_fk.sql"
+}

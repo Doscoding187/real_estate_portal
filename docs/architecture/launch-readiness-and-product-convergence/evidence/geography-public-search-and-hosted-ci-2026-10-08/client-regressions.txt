@@ -1,0 +1,16 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+ ✓ |client| client/src/lib/__tests__/searchIntent.test.ts (22 tests) 44ms
+ ✓ |client| client/src/lib/__tests__/searchResultsQueryReactivity.test.tsx (5 tests) 149ms
+ ✓ |client| client/src/lib/__tests__/searchZeroResultRecovery.test.ts (9 tests) 33ms
+ ✓ |client| client/src/lib/__tests__/buySearchContract.test.ts (8 tests) 10ms
+ ✓ |client| client/src/components/search/__tests__/SearchResultsEmptyState.test.tsx (3 tests) 715ms
+   ✓ SearchResultsEmptyState > offers deliberate filter, location, parent and start-over actions 474ms
+ ✓ |client| client/src/lib/__tests__/savedSearchUtils.rent.test.ts (2 tests) 4ms
+
+ Test Files  6 passed (6)
+      Tests  49 passed (49)
+   Start at  11:43:18
+   Duration  8.51s (transform 342ms, setup 530ms, collect 944ms, tests 955ms, environment 4.25s, prepare 542ms)
+

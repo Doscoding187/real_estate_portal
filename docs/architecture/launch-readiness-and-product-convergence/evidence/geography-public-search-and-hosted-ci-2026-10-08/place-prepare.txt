@@ -1,0 +1,38 @@
+
+> real_estate_portal@1.0.0 db:places:prepare /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts places:prepare -- --territory\=za-gp
+
+{
+  "adapter": "canonical-places",
+  "version": "gauteng-place-admission-v0.1",
+  "admissionVersion": "gauteng-place-admission-v0.1",
+  "sourceSnapshotId": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+  "territoryId": "za-gp",
+  "digest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f",
+  "targetClassDisposable": true,
+  "expected": {
+    "territoryId": "za-gp",
+    "admissionVersion": "gauteng-place-admission-v0.1",
+    "sourceSnapshotId": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+    "places": 1466,
+    "names": 2476,
+    "relationships": 1465,
+    "evidence": 4463,
+    "externalMappings": 2971,
+    "dispositionLedger": 4350,
+    "verified": 89,
+    "provisional": 1377,
+    "searchEligible": 1436,
+    "publicationEligible": 69,
+    "osmOnlyPlaces": 720,
+    "verifiedDigest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f"
+  },
+  "written": {
+    "places": 1466,
+    "names": 2476,
+    "relationships": 1465,
+    "evidence": 4463,
+    "externalMappings": 2971
+  },
+  "schemaMutation": false
+}
