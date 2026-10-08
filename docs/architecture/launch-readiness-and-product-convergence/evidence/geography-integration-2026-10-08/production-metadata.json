@@ -1,0 +1,568 @@
+{
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "server": "8.4.9-azure",
+  "selectedDatabase": "propertylistify_database",
+  "inspectorIdentityVerified": true,
+  "tls": {
+    "cipherPresent": true,
+    "version": "TLSv1.3",
+    "certificateVerificationRequired": true,
+    "secureTransportRequired": 1
+  },
+  "session": {
+    "sqlMode": "IGNORE_SPACE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO",
+    "timezone": "+00:00",
+    "transactionIsolation": "REPEATABLE-READ",
+    "characterSet": "utf8mb4",
+    "collation": "utf8mb4_unicode_ci",
+    "lowerCaseTableNames": 1,
+    "generateInvisiblePrimaryKey": 1,
+    "requirePrimaryKey": 0
+  },
+  "tableInventory": {
+    "count": 216,
+    "names": [
+      "activities",
+      "affordability_assessments",
+      "affordability_match_snapshots",
+      "agencies",
+      "agency_agent_memberships",
+      "agency_branding",
+      "agency_commission_settlement_payments",
+      "agency_commission_settlements",
+      "agency_deal_offer_versions",
+      "agency_deals",
+      "agency_join_requests",
+      "agency_listing_performance_activity",
+      "agency_listing_performance_reviews",
+      "agency_transaction_activity",
+      "agency_transaction_conditions",
+      "agency_transaction_documents",
+      "agency_transaction_milestones",
+      "agency_transaction_parties",
+      "agency_transactions",
+      "agent_coverage_areas",
+      "agent_knowledge",
+      "agent_memory",
+      "agent_tasks",
+      "agents",
+      "amenities",
+      "analytics_events",
+      "application_requirements",
+      "audit_logs",
+      "billable_accounts",
+      "billing_audit_events",
+      "billing_invoices",
+      "billing_payment_documents",
+      "billing_payments",
+      "billing_provider_events",
+      "boost_credits",
+      "bundle_attributions",
+      "bundle_partners",
+      "catalogue_publishers",
+      "cities",
+      "city_price_analytics",
+      "commercial_assets",
+      "commercial_availabilities",
+      "commercial_availability_economics",
+      "commercial_availability_lease_terms",
+      "commercial_availability_listing_links",
+      "commercial_lead_contexts",
+      "commercial_space_specifications",
+      "commercial_spaces",
+      "commissions",
+      "content_approval_queue",
+      "content_quality_scores",
+      "content_topics",
+      "coupons",
+      "deal_requirement_statuses",
+      "demand_campaigns",
+      "demand_lead_assignments",
+      "demand_lead_matches",
+      "demand_leads",
+      "demand_unmatched_leads",
+      "developer_brand_profiles",
+      "developer_notifications",
+      "developer_organisation_memberships",
+      "developer_organisations",
+      "developer_subscription_limits",
+      "developer_subscription_usage",
+      "developer_subscriptions",
+      "developers",
+      "development_approval_queue",
+      "development_documents",
+      "development_drafts",
+      "development_lead_routes",
+      "development_manager_assignments",
+      "development_phases",
+      "development_required_documents",
+      "development_supersessions",
+      "development_units",
+      "developments",
+      "distribution_agent_access",
+      "distribution_agent_tiers",
+      "distribution_brand_partnerships",
+      "distribution_commission_entries",
+      "distribution_commission_ledger",
+      "distribution_commission_overrides",
+      "distribution_deal_bank_outcomes",
+      "distribution_deal_documents",
+      "distribution_deal_events",
+      "distribution_deals",
+      "distribution_development_access",
+      "distribution_identities",
+      "distribution_program_workflow_steps",
+      "distribution_program_workflows",
+      "distribution_programs",
+      "distribution_referrer_applications",
+      "distribution_viewing_validations",
+      "distribution_viewings",
+      "email_templates",
+      "explore_content",
+      "explore_discovery_videos",
+      "explore_engagements",
+      "explore_feed_sessions",
+      "explore_partners",
+      "explore_shorts",
+      "favorites",
+      "founding_partners",
+      "google_places_api_alerts",
+      "google_places_api_config",
+      "google_places_api_daily_summary",
+      "google_places_api_logs",
+      "hero_campaigns",
+      "invitations",
+      "invites",
+      "land_assertion_evidence",
+      "land_asset_parcels",
+      "land_assets",
+      "land_claims",
+      "land_conflict_cases",
+      "land_evidence_access_audit",
+      "land_evidence_documents",
+      "land_listing_links",
+      "land_marketing_authorities",
+      "land_parcels",
+      "land_review_cases",
+      "land_review_events",
+      "land_verification_assertions",
+      "land_verification_events",
+      "launch_content_quotas",
+      "launch_metrics",
+      "launch_phases",
+      "lead_activities",
+      "lead_deliveries",
+      "lead_delivery_attempts",
+      "leads",
+      "listing_analytics",
+      "listing_approval_queue",
+      "listing_leads",
+      "listing_media",
+      "listing_settings",
+      "listing_viewings",
+      "listings",
+      "location_provider_mappings",
+      "location_search_cache",
+      "location_searches",
+      "locations",
+      "managerial_audit_logs",
+      "market_insights_cache",
+      "marketplace_bundles",
+      "notifications",
+      "offers",
+      "partner_subscriptions",
+      "partner_tiers",
+      "partners",
+      "payment_methods",
+      "plan_entitlements",
+      "plans",
+      "platform_settings",
+      "platform_team_registrations",
+      "price_analytics",
+      "price_history",
+      "price_predictions",
+      "properties",
+      "property_similarity_index",
+      "propertyimages",
+      "prospect_action_attributions",
+      "prospect_action_claim_tokens",
+      "prospect_identities",
+      "provinces",
+      "qualification_pack_exports",
+      "recent_searches",
+      "recently_viewed",
+      "referral_assessments",
+      "referral_documents",
+      "referral_matches",
+      "referrals",
+      "reviews",
+      "saved_search_delivery_history",
+      "saved_searches",
+      "seller_mandate_comparables",
+      "seller_mandate_operations",
+      "seller_prospect_activities",
+      "seller_prospects",
+      "service_explore_videos",
+      "service_lead_events",
+      "service_leads",
+      "service_provider_locations",
+      "service_provider_profiles",
+      "service_provider_reviews",
+      "service_provider_services",
+      "service_provider_subscriptions",
+      "services",
+      "showings",
+      "sl_lead_contexts",
+      "sl_messages",
+      "sl_moderation_queue",
+      "sl_place_household",
+      "sl_places",
+      "sl_space_availability",
+      "sl_space_specifications",
+      "sl_spaces",
+      "sl_verifications",
+      "sql_migration_attempts",
+      "sql_migration_history",
+      "subscription_events",
+      "subscription_plans",
+      "subscription_usage",
+      "subscriptions",
+      "suburb_price_analytics",
+      "suburbs",
+      "topics",
+      "transactional_email_attempts",
+      "transactional_email_deliveries",
+      "unit_types",
+      "user_onboarding_state",
+      "user_subscriptions",
+      "users",
+      "video_likes",
+      "videos"
+    ],
+    "estimatedNonempty": [
+      {
+        "table": "agencies",
+        "estimatedRows": 1
+      },
+      {
+        "table": "agency_branding",
+        "estimatedRows": 1
+      },
+      {
+        "table": "agents",
+        "estimatedRows": 1
+      },
+      {
+        "table": "analytics_events",
+        "estimatedRows": 4
+      },
+      {
+        "table": "audit_logs",
+        "estimatedRows": 2
+      },
+      {
+        "table": "billable_accounts",
+        "estimatedRows": 2
+      },
+      {
+        "table": "catalogue_publishers",
+        "estimatedRows": 1
+      },
+      {
+        "table": "cities",
+        "estimatedRows": 340
+      },
+      {
+        "table": "developer_organisation_memberships",
+        "estimatedRows": 1
+      },
+      {
+        "table": "developer_organisations",
+        "estimatedRows": 1
+      },
+      {
+        "table": "invitations",
+        "estimatedRows": 1
+      },
+      {
+        "table": "location_search_cache",
+        "estimatedRows": 23
+      },
+      {
+        "table": "partner_tiers",
+        "estimatedRows": 1
+      },
+      {
+        "table": "plan_entitlements",
+        "estimatedRows": 9
+      },
+      {
+        "table": "plans",
+        "estimatedRows": 2
+      },
+      {
+        "table": "provinces",
+        "estimatedRows": 9
+      },
+      {
+        "table": "sql_migration_attempts",
+        "estimatedRows": 92
+      },
+      {
+        "table": "sql_migration_history",
+        "estimatedRows": 88
+      },
+      {
+        "table": "suburbs",
+        "estimatedRows": 1089
+      },
+      {
+        "table": "users",
+        "estimatedRows": 5
+      }
+    ],
+    "engines": [
+      "InnoDB"
+    ],
+    "collations": [
+      "utf8mb4_0900_ai_ci"
+    ]
+  },
+  "propertyImagesPhysicalNames": [
+    "propertyimages"
+  ],
+  "specialColumns": [
+    {
+      "table_name": "content_topics",
+      "column_name": "content_id",
+      "extra": "",
+      "column_key": "PRI",
+      "data_type": "varchar"
+    },
+    {
+      "table_name": "content_topics",
+      "column_name": "topic_id",
+      "extra": "",
+      "column_key": "PRI",
+      "data_type": "varchar"
+    },
+    {
+      "table_name": "content_topics",
+      "column_name": "relevance_score",
+      "extra": "",
+      "column_key": "",
+      "data_type": "decimal"
+    },
+    {
+      "table_name": "content_topics",
+      "column_name": "created_at",
+      "extra": "DEFAULT_GENERATED",
+      "column_key": "",
+      "data_type": "timestamp"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "user_id",
+      "extra": "",
+      "column_key": "PRI",
+      "data_type": "int"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "is_first_session",
+      "extra": "",
+      "column_key": "",
+      "data_type": "tinyint"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "welcome_overlay_shown",
+      "extra": "",
+      "column_key": "",
+      "data_type": "tinyint"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "welcome_overlay_dismissed",
+      "extra": "",
+      "column_key": "",
+      "data_type": "tinyint"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "suggested_topics",
+      "extra": "",
+      "column_key": "",
+      "data_type": "json"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "tooltips_shown",
+      "extra": "",
+      "column_key": "",
+      "data_type": "json"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "content_view_count",
+      "extra": "",
+      "column_key": "",
+      "data_type": "int"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "save_count",
+      "extra": "",
+      "column_key": "",
+      "data_type": "int"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "partner_engagement_count",
+      "extra": "",
+      "column_key": "",
+      "data_type": "int"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "features_unlocked",
+      "extra": "",
+      "column_key": "",
+      "data_type": "json"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "consumer_dashboard_preferences",
+      "extra": "",
+      "column_key": "",
+      "data_type": "json"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "seller_planning_inputs",
+      "extra": "",
+      "column_key": "",
+      "data_type": "json"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "created_at",
+      "extra": "DEFAULT_GENERATED",
+      "column_key": "",
+      "data_type": "timestamp"
+    },
+    {
+      "table_name": "user_onboarding_state",
+      "column_name": "updated_at",
+      "extra": "DEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+      "column_key": "",
+      "data_type": "timestamp"
+    }
+  ],
+  "migrationLedgerPresent": true,
+  "migrationAttemptLedgerPresent": true,
+  "foreignKeyCount": 463,
+  "checks": [
+    {
+      "name": "billable_accounts_exactly_one_owner",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_catalogue_publishers_authority_shape",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_catalogue_publishers_platform_source",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_availabilities_freshness_order",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_availabilities_positive_claim_provenance",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_availability_economics_range",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_availability_economics_value_state",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_lease_terms_nonnegative",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_space_specifications_boolean",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_space_specifications_value_state",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_commercial_spaces_positive_areas",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_activation_order",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_activation_triplet",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_active_shape",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_distinct_endpoints",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_reversal_order",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_reversed_shape",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_source_path",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_verification_note",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_development_supersessions_verified_shape",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_land_claims_one_subject",
+      "enforced": "YES"
+    },
+    {
+      "name": "chk_land_conflict_case_candidate",
+      "enforced": "YES"
+    },
+    {
+      "name": "location_provider_mappings_exactly_one_target",
+      "enforced": "YES"
+    }
+  ],
+  "indexCount": 1012,
+  "jsonColumnCount": "143",
+  "microsecondTimestampCount": "19",
+  "grants": {
+    "count": 2,
+    "onlyUsageAndDatabaseSelect": true,
+    "selectOnApprovedDatabase": true,
+    "mutationPrivilegesPresent": false
+  }
+}

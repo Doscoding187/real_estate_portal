@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-li",
+  "province": "Limpopo",
+  "manifest_version": "0.1",
+  "note": "Limpopo has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "46ca6a7e0973c9550d16adb04ecb5f155d6c8dedd0364cdcf99469303a578120"
+  }
+}

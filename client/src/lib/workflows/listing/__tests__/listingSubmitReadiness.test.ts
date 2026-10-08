@@ -21,6 +21,17 @@ const completeData: ListingWorkflowData = {
   additionalInfo: { furnishingStatus: 'fully_furnished', petPolicy: 'allowed' },
   basicInfo: { propertyCategory: 'existing', possessionStatus: 'immediate' },
   location: {
+    canonicalPlace: {
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      label: 'Selected Locality',
+      placeType: 'suburb',
+      scope: 'locality',
+      administrativeContext: 'Gauteng',
+    },
+    privateAddress: { streetName: 'Oak Ave', streetNumber: '42' },
+    coordinateSource: 'map',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
     address: '42 Oak Ave',
     latitude: -26.2041,
     longitude: 28.0473,
@@ -83,6 +94,33 @@ describe('calculateSubmitReadinessDryRun', () => {
     expect(result.payload.mainMediaPresent).toBe(true);
     expect(result.payload.propertyDetailsKeys).toBeGreaterThan(0);
     expect(result.payload.sizeBytes).toBeGreaterThan(0);
+  });
+
+  it('blocks a provider observation without a canonical locality selection', async () => {
+    const result = await calculateSubmitReadinessDryRun({
+      ...completeData,
+      location: {
+        ...completeData.location,
+        canonicalPlace: null,
+        provider: 'google',
+        providerLocationPlaceId: 'ChIJ123',
+      },
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.payload.built).toBe(false);
+    expect(result.blockingReasons).toContain('Payload build failed');
+  });
+
+  it('blocks coordinates without an explicit source', async () => {
+    const result = await calculateSubmitReadinessDryRun({
+      ...completeData,
+      location: { ...completeData.location, coordinateSource: null },
+    });
+
+    expect(result.ready).toBe(false);
+    expect(result.payload.built).toBe(false);
+    expect(result.blockingReasons).toContain('Payload build failed');
   });
 
   it('returns validation results', async () => {

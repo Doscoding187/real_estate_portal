@@ -1,0 +1,15 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+ ✓ |client| client/src/lib/__tests__/searchIntent.test.ts (22 tests) 63ms
+ ✓ |client| client/src/components/location/__tests__/CanonicalPlaceSelector.test.tsx (16 tests) 1240ms
+   ✓ Canonical Place customer selection > requires explicit selection for same-name Places and carries the chosen identity 569ms
+ ✓ |client| client/src/lib/__tests__/searchResultsQueryReactivity.test.tsx (5 tests) 171ms
+ ✓ |client| client/src/components/search/__tests__/CanonicalPlaceSearchBar.test.tsx (18 tests) 1016ms
+   ✓ canonical Place public search selection > selects identity, preserves refinements, resets pagination and carries it through reload 990ms
+
+ Test Files  4 passed (4)
+      Tests  61 passed (61)
+   Start at  12:04:08
+   Duration  13.52s (transform 594ms, setup 834ms, collect 1.80s, tests 2.49s, environment 6.16s, prepare 704ms)
+

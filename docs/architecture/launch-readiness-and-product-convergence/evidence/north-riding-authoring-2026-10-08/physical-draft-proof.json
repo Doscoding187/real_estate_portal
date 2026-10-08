@@ -1,0 +1,47 @@
+{
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "candidateHead": "0111_properties_canonical_place_reference_fk.sql",
+  "selected": {
+    "placeId": "pl-place-01-6a145c6d642ba208a2c12de7",
+    "label": "North Riding",
+    "placeType": "suburb",
+    "scope": "locality",
+    "context": {
+      "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+      "cityPlaceId": null,
+      "localityPlaceId": null,
+      "administrativeContext": "Gauteng / City of Johannesburg"
+    }
+  },
+  "journey": [
+    "runtime discovery",
+    "explicit existing locality selection",
+    "Listing router private house draft save",
+    "persisted draft reload"
+  ],
+  "privateAddress": {
+    "postalCode": "2169",
+    "streetName": "Congo Street",
+    "streetNumber": "5"
+  },
+  "editReload": {
+    "sameCanonicalPlaceId": true,
+    "privateUnitRetained": true
+  },
+  "derivedPresentation": {
+    "city": "",
+    "suburb": "North Riding",
+    "province": "Gauteng"
+  },
+  "listingId": 3,
+  "status": "draft",
+  "publicPropertyCount": 0,
+  "providerSuburbRowsCreated": 0,
+  "refusals": [
+    "mixed canonical and legacy authority",
+    "malformed coordinates",
+    "house without street evidence",
+    "confirmed house draft without street evidence"
+  ],
+  "productionContact": false
+}

@@ -20,7 +20,7 @@ import {
   type AddressComponent,
   type PlaceGeometry,
 } from '../googlePlacesService';
-import { generateSlug } from '../locationPagesServiceEnhanced';
+import { generateSlug } from '../locationSeoContent';
 
 // ============================================================================
 // Test Helpers

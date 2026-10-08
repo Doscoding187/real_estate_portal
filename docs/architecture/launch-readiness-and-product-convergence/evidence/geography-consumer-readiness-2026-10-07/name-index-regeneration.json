@@ -1,0 +1,142 @@
+{
+  "normalizationVersion": "1",
+  "sourceCommitBeforeRepair": "8546386dc2e190b6b60dc13492468122da646774",
+  "changedFields": [
+    "place_name.normalized_name",
+    "admission_manifest.name_index"
+  ],
+  "changedIndexValues": 3987,
+  "allNameAssertionsPreserved": true,
+  "allPlaceIdRegistriesAndNonNameRowArtifactsUnchanged": true,
+  "byteIdenticalRegenerationPassedForAllNineProvinces": true,
+  "territories": [
+    {
+      "territoryId": "za-gp",
+      "nameAssertions": 2476,
+      "changedIndexValues": 409,
+      "nameArtifactSha256": "fb05b78c54c1386670d50f8ffb3a068c9dc2ebf4c1633613c5014e5034b116be",
+      "packageManifestSha256": "3ccfe4212717f674e42c0f911a2ba8a05e98ed78532bb08e75d7abddfe9f182c"
+    },
+    {
+      "territoryId": "za-wc",
+      "nameAssertions": 3246,
+      "changedIndexValues": 613,
+      "nameArtifactSha256": "1febe0a36b9e81edf4d785f36284f60c1bff933ec9b3b40d0cc88c2769eecef2",
+      "packageManifestSha256": "c6d9739fb34577c00581a8a34f788684f0f761a77a31e56b0491fb38613a0cd5"
+    },
+    {
+      "territoryId": "za-kzn",
+      "nameAssertions": 3429,
+      "changedIndexValues": 487,
+      "nameArtifactSha256": "e875b8eda2866f9f9b04d52f40675fda2eff187d84a1431ce380c6be888e9dfd",
+      "packageManifestSha256": "8c5f2c09526202a2525f3d322a63b5219213a37280a35098e7ba7daf77777995"
+    },
+    {
+      "territoryId": "za-ec",
+      "nameAssertions": 6892,
+      "changedIndexValues": 713,
+      "nameArtifactSha256": "06699e719305a7f6039085068ca7638d29251472d6e08e72405944ebe1f84e63",
+      "packageManifestSha256": "4fecf5bb632c2f3ecabe12d854d37d52c008d389d34e18edb50d8aabba65550c"
+    },
+    {
+      "territoryId": "za-fs",
+      "nameAssertions": 2138,
+      "changedIndexValues": 287,
+      "nameArtifactSha256": "922780b0f06641736a42bb4b33d8977e877ecbf0346f1c7dac528c4ac4bc7778",
+      "packageManifestSha256": "bdcaa1fbfaffb4e45f7be38f58b0caf5c6b4fe320b3b94cc86082ae4b42d5e9e"
+    },
+    {
+      "territoryId": "za-mp",
+      "nameAssertions": 1607,
+      "changedIndexValues": 234,
+      "nameArtifactSha256": "500b4c4f4bb7bcc36c61f2399b0f5e621d08bc89744ebb9bd1cf142257fbe96d",
+      "packageManifestSha256": "c4893b0c137265ba69add667d5cd843cb26da8973ba5f206472129a9ec854882"
+    },
+    {
+      "territoryId": "za-li",
+      "nameAssertions": 2359,
+      "changedIndexValues": 575,
+      "nameArtifactSha256": "ec73318f7b4862e9a51d407e6832196e4a8c83bb71175f95e1b2817be80637f4",
+      "packageManifestSha256": "dcb8725ff9f266a907a4021d7c7268d2f97b7c96a6b5c63a3d2fb9dcad17e08c"
+    },
+    {
+      "territoryId": "za-nw",
+      "nameAssertions": 2086,
+      "changedIndexValues": 345,
+      "nameArtifactSha256": "de836472fab9d42063cc6c2e0b43b4c9cf96d080819b7c895058ae492dda1f75",
+      "packageManifestSha256": "0fdd25b69f300077ba6eca57b5f31c0df1b7afdeb5be839636dd270dca2751c4"
+    },
+    {
+      "territoryId": "za-nc",
+      "nameAssertions": 2192,
+      "changedIndexValues": 324,
+      "nameArtifactSha256": "5f6f1c3d83ace762c09335a4d12b04ea78799b37221bab6029982a92d58df707",
+      "packageManifestSha256": "86c9429ad35ffeda4992143713170b800423c6ee8c6cfe30fe96c3e65400a0c0"
+    }
+  ],
+  "unchangedArtifactDigests": {
+    "data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl": "61b11af2d54ba2e41e5f229a400b3085acbd09bf2d96507427026e9fb74e6adf",
+    "data/gauteng-place-admission-v0.1/gauteng_place_relationships_v0.1.jsonl": "8c7d934fde1d5b41e1937741c21dfddd1714771099cdd9306fc6e774d6979836",
+    "data/gauteng-place-admission-v0.1/gauteng_place_evidence_v0.1.jsonl": "68f7a9c0c25fe2d93a3a46c91a37fa956682ba819f9be905a0090b1606aeed41",
+    "data/gauteng-place-admission-v0.1/gauteng_place_external_mappings_v0.1.jsonl": "bb8ac5c6b8e721d105afd29a49303b49d4352b5314aa2190bfb4329e46332af8",
+    "data/gauteng-place-admission-v0.1/gauteng_place_disposition_ledger_v0.1.jsonl": "3d98e8076bbbec8ed98f1522d7d627a1352d4f2510754f456a1285be857456e0",
+    "data/gauteng-place-admission-v0.1/gauteng_parent_evidence_classification.v0.1.json": "ced5609e683365d20059302c7a527dc754fe039b620918a51a1a27f2245ac5a7",
+    "data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json": "f83d635a043a8475edbf88dc6812cb4b483ea15a33a727d6895d4f91de6b2b6e",
+    "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl": "792f2495d7c668e3598974a250543bbc3b3f0a85261fe04dbe0899b2315c90f6",
+    "data/za-wc-place-admission-v0.1/za_wc_place_relationships_v0.1.jsonl": "0b1734d5eb52715ecffad92cb5b9ec06754a6c3e0968a9a687d6baea072c2a00",
+    "data/za-wc-place-admission-v0.1/za_wc_place_evidence_v0.1.jsonl": "8d6db4f01d50ceadb7ce2c67941c31d62d7001de2b1d3c599f763f9bd87c2375",
+    "data/za-wc-place-admission-v0.1/za_wc_place_external_mappings_v0.1.jsonl": "dc98ca8705cef82f3bc92aa71b3ad5951c4c4a61e236a305bbe49917deb8afad",
+    "data/za-wc-place-admission-v0.1/za_wc_place_disposition_ledger_v0.1.jsonl": "191f92c69cab0cca6809d31d0820d4df838fc63a432f77c5a19dde942ade1033",
+    "data/za-wc-place-admission-v0.1/za_wc_parent_evidence_classification_v0.1.json": "c55e68db28f52a3e8250b728883505a7ae884a5d3d1fc9a6bc0c60f857b8df5c",
+    "data/za-wc-place-admission-v0.1/za_wc_place_id_registry.v0.1.json": "d7b1c310d5ce55ea5c84680f2b882078bf7b80832e8639e7b991274445d1256c",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl": "d586699c05289b5dbf659eeb852c0594cdc7558c7c99d54a1ddae959a39e7ea1",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_relationships_v0.1.jsonl": "fe4d8b63ae5622bc897bd44dc94475bf9acbc5c39af0c2979c4919cf30fe5902",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_evidence_v0.1.jsonl": "9be92fe6be9a62229c008bd17524fcd9ec9430e180f43b5e5e49e7e96bc98702",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_external_mappings_v0.1.jsonl": "f06285406b4ac2983924456f729bcb3b9cb21938bd23eedfd09d887e1f9e7ff8",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_disposition_ledger_v0.1.jsonl": "116635f17f30ca7896b1424b7d12b80b6256ff02f1d2156973849768f55364b4",
+    "data/za-kzn-place-admission-v0.1/za_kzn_parent_evidence_classification_v0.1.json": "99b3e2d04e3964feacc87838eb35ec43470a30a7363b6053cfcd8c782b6f8ce0",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_id_registry.v0.1.json": "768b3102ea2cee6cf10f49991cca96c36d2d3dbb2b14200d752e5b3d1b995048",
+    "data/za-ec-place-admission-v0.1/za_ec_place_admission_v0.1.jsonl": "b8a44f294c26d7f78e1a8a5ac0d4d27f17c46c6076cce83c6fcd1db24498c417",
+    "data/za-ec-place-admission-v0.1/za_ec_place_relationships_v0.1.jsonl": "1f5cccc1ed9b505dfac1b304822787618dfd587cc01e52e6cbbdf0c78459c141",
+    "data/za-ec-place-admission-v0.1/za_ec_place_evidence_v0.1.jsonl": "aad2f5fd076d76e770d385208ef9387422b6ead56ed19ab6d4f9656db7e91087",
+    "data/za-ec-place-admission-v0.1/za_ec_place_external_mappings_v0.1.jsonl": "2c6d3462b5edc4cfde509412a32f9d10c4351c5e767b798444ef0df17c1dce91",
+    "data/za-ec-place-admission-v0.1/za_ec_place_disposition_ledger_v0.1.jsonl": "872aec4f0369a27717d8c82faa7c2aec56fb12036154ceaed7871fc6b817aef9",
+    "data/za-ec-place-admission-v0.1/za_ec_parent_evidence_classification_v0.1.json": "b7e7c93ae81a04c0659bc486dd88e848f5b829d61ced23f2c543ceeca55a7164",
+    "data/za-ec-place-admission-v0.1/za_ec_place_id_registry_v0.1.json": "b4cdd99849cabc0737c8623a7db870c516739ebe2e5946cedf7b48101075e314",
+    "data/za-fs-place-admission-v0.1/za_fs_place_admission_v0.1.jsonl": "8afb4d27bd9e6ed9f94c8dfebc3607d174ce7808e1916ecfc3eedfea7dff042e",
+    "data/za-fs-place-admission-v0.1/za_fs_place_relationships_v0.1.jsonl": "de8658e5668f502bbb6c8beb07fa2156eaa73d67815d657010229c97b1e0a626",
+    "data/za-fs-place-admission-v0.1/za_fs_place_evidence_v0.1.jsonl": "5adf0285a739d00a867c863cbe25079a8e060b402153ae29d50e6b51abb02a89",
+    "data/za-fs-place-admission-v0.1/za_fs_place_external_mappings_v0.1.jsonl": "9e4fb8293dc7f30dc719a160b76ff753d8873952bb9d1c3a62695d92bff51d5e",
+    "data/za-fs-place-admission-v0.1/za_fs_place_disposition_ledger_v0.1.jsonl": "c2f1d8654d44d9014e011e1b842303c3da2671f40d88e46c100261d16ceb8e9c",
+    "data/za-fs-place-admission-v0.1/za_fs_parent_evidence_classification_v0.1.json": "34b82e7d5ea96eaf36eb372c388d97e177f75d9c5222fe457afc350e54e8135a",
+    "data/za-fs-place-admission-v0.1/za_fs_place_id_registry.v0.1.json": "93b1601cebd1151ca1bcadd7333dffd22ba761637e2ca46aa9f14b54168fd552",
+    "data/za-mp-place-admission-v0.1/za_mp_place_admission_v0.1.jsonl": "35a5ef3d78d5fb1f2c1d97867e8935b8e769c000e41306d627b1fc0fa34df209",
+    "data/za-mp-place-admission-v0.1/za_mp_place_relationships_v0.1.jsonl": "5660f7102067370a2c19aed23e2b8d0c67c846b76a0fd2294836d08d98a27a16",
+    "data/za-mp-place-admission-v0.1/za_mp_place_evidence_v0.1.jsonl": "a0a9e11c737899df51bf96be8a8a6e79ebf385d778f069766f02e9b680513419",
+    "data/za-mp-place-admission-v0.1/za_mp_place_external_mappings_v0.1.jsonl": "80c7b5fe121b3ca3f5307bad38ad55e1e566da95ea58447b41d4c4f7e7e25994",
+    "data/za-mp-place-admission-v0.1/za_mp_place_disposition_ledger_v0.1.jsonl": "d700af10d17829560b627875227e76be5a3bb53b0427ab84b38334a970ecde2f",
+    "data/za-mp-place-admission-v0.1/za_mp_parent_evidence_classification_v0.1.json": "00003df930c46e9cecde3b47b4e90573ca09f73dfebbfbd57e3f6757b62a1b7c",
+    "data/za-mp-place-admission-v0.1/za_mp_place_id_registry.v0.1.json": "5f7b02113dd44bb365d362fef9cb9d38aff16dc3530aa95e75126d2f8afa9782",
+    "data/za-li-place-admission-v0.1/za_li_place_admission_v0.1.jsonl": "193bdc99bc05757f66068516d68f1652e9a392496421ae161c783080dad18b7b",
+    "data/za-li-place-admission-v0.1/za_li_place_relationships_v0.1.jsonl": "e2b7f1b48534231bea524f4abbfd2dccb05a8b57d5c57af03abdbed91ef971b6",
+    "data/za-li-place-admission-v0.1/za_li_place_evidence_v0.1.jsonl": "0c50e1889102d74d4e4e9a44fa8de6f16c78d302ad05bf20c2e3827841276dd3",
+    "data/za-li-place-admission-v0.1/za_li_place_external_mappings_v0.1.jsonl": "41cc37cf00e8cc350bdc9449424d52560c990d354d2a141185671b1407de3d4f",
+    "data/za-li-place-admission-v0.1/za_li_place_disposition_ledger_v0.1.jsonl": "996d6dd376cd2e315d3a70c4a48623d2ce0fd9b076a02905c1e15c4e0d53a92e",
+    "data/za-li-place-admission-v0.1/za_li_parent_evidence_classification_v0.1.json": "0f738c0e9c76ae2e78bab344851b2401079e0886551ddbc4b73da7ff77392da9",
+    "data/za-li-place-admission-v0.1/za_li_place_id_registry.v0.1.json": "2d0f7099606e10b7e10055d0c30b8b22423dccde9b0f8ff253ab8654b3cce2f6",
+    "data/za-nw-place-admission-v0.1/za_nw_place_admission_v0.1.jsonl": "3566068ac9f95dbd4b2d30c6d7636d851e1f06a6d587bc59499e855ea2b09561",
+    "data/za-nw-place-admission-v0.1/za_nw_place_relationships_v0.1.jsonl": "68398d70e971f73eaed4e8deefbb2fd0d1b647526aff7107f761ae8484a942f0",
+    "data/za-nw-place-admission-v0.1/za_nw_place_evidence_v0.1.jsonl": "226a2b5cc8a947405865976fca8568ef4d3e686577787a6cb7e5767f5d54642a",
+    "data/za-nw-place-admission-v0.1/za_nw_place_external_mappings_v0.1.jsonl": "a813c308f3cad17ebbf6744ffba124d36bc024fd971826f7324019f8c703d04e",
+    "data/za-nw-place-admission-v0.1/za_nw_place_disposition_ledger_v0.1.jsonl": "e3b29660d1b41b207feb7d95655c6e956ba75554b0608fa2bacc389cda78d420",
+    "data/za-nw-place-admission-v0.1/za_nw_parent_evidence_classification_v0.1.json": "6237fcb340701402a4c366451004b7a44244529b204d4989ad036be12126f8f9",
+    "data/za-nw-place-admission-v0.1/za_nw_place_id_registry.v0.1.json": "05f42260ac4df705ebaf72b5025a29592cf65cda53479ffdfac3ab1ab626eec7",
+    "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl": "5185c948ff53a6ae53e2143a7c9313d63f4a35cb3d43f769056f43d0af788186",
+    "data/za-nc-place-admission-v0.1/za_nc_place_relationships_v0.1.jsonl": "0a4e6830799ef9e44c71ed5eeb12d5181d1ad824738dbd2b303df1837be51ac7",
+    "data/za-nc-place-admission-v0.1/za_nc_place_evidence_v0.1.jsonl": "f794baa64d8905cd1730c212bb01864f25948000bb99f32311c2975209aab9e7",
+    "data/za-nc-place-admission-v0.1/za_nc_place_external_mappings_v0.1.jsonl": "dcaf0c24566253e9696289ebac30a9ae3becb6f56031adf4b5a5498dc373d192",
+    "data/za-nc-place-admission-v0.1/za_nc_place_disposition_ledger_v0.1.jsonl": "28e8dc8979c095219df535fa3dfc1da18159ad4019592518675b1f10c39e9aca",
+    "data/za-nc-place-admission-v0.1/za_nc_parent_evidence_classification_v0.1.json": "c75e95f62f82e99da28b6b717f6e4d0d93455d7855d50b004cdae3c87db5c44d",
+    "data/za-nc-place-admission-v0.1/za_nc_place_id_registry.v0.1.json": "63188a13747f69c8215b8c5989ecd0e099333ea5fbc7968fa304ce75bd3c187b"
+  }
+}

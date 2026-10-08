@@ -1,0 +1,53 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ❯ |client| client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts (28 tests | 2 failed) 49ms
+   × calculateSubmitReadinessDryRun > returns ready for complete data 15ms
+     → expected false to be true // Object.is equality
+   × calculateSubmitReadinessDryRun > builds payload for complete data 2ms
+     → expected false to be true // Object.is equality
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |client|  client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts > calculateSubmitReadinessDryRun > returns ready for complete data
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts:72:26
+     70|   it('returns ready for complete data', async () => {
+     71|     const result = await calculateSubmitReadinessDryRun(completeData);
+     72|     expect(result.ready).toBe(true);
+       |                          ^
+     73|     expect(result.blockingReasons).toHaveLength(0);
+     74|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL |client|  client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts > calculateSubmitReadinessDryRun > builds payload for complete data
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts:78:34
+     76|   it('builds payload for complete data', async () => {
+     77|     const result = await calculateSubmitReadinessDryRun(completeData);
+     78|     expect(result.payload.built).toBe(true);
+       |                                  ^
+     79|     expect(result.payload.action).toBe('sell');
+     80|     expect(result.payload.propertyType).toBe('house');
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 26 passed (28)
+   Start at  04:34:00
+   Duration  1.74s (transform 278ms, setup 152ms, collect 339ms, tests 49ms, environment 795ms, prepare 120ms)

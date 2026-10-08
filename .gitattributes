@@ -7,3 +7,7 @@
 *.js text eol=lf
 *.json text eol=lf
 *.md text eol=lf
+
+# Frozen source evidence must retain exact downloaded bytes, including CRLF
+# and trailing source delimiters. Review metadata through its pinned manifest.
+data/za-wc-source-acquisition-v0.1/snapshot-*/raw/** -text -diff

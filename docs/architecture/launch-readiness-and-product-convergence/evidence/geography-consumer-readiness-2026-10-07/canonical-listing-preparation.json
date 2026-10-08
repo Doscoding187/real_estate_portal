@@ -1,0 +1,52 @@
+{
+  "status": "prepared-not-connected-to-product",
+  "integration_base": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+  "founder_pr": 590,
+  "founder_state": "OPEN",
+  "source_parent": "011573fce",
+  "target_class": "disposable-worktree",
+  "target_fingerprint": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "database_mutation": false,
+  "migration_head": "0103_saved_searches_canonical_place_reference_fk.sql",
+  "new_migrations": false,
+  "verification": {
+    "canonical_assignment_tests": 41,
+    "national_source_assignments": 9,
+    "static_authority_tests": 614,
+    "static_authority_files": 55,
+    "utility_surfaces": 121,
+    "canonical_tables": 221,
+    "migration_files": 104,
+    "production_typecheck": "passed",
+    "broad_typecheck_errors": 263,
+    "changed_file_typecheck_errors": 0,
+    "focused_lint_errors": 0,
+    "focused_lint_warnings": 11,
+    "final_registry_isolation_tests": 33
+  },
+  "test_isolation_repair": {
+    "cause": "overlapping authority and direct static suite runs backed up and restored the same working registry",
+    "restored_registry_sha256": "f83d635a043a8475edbf88dc6812cb4b483ea15a33a727d6895d4f91de6b2b6e",
+    "repair": "all registry corruption uses per-test temporary copies including registered baseline evidence",
+    "canonical_registry_unchanged": true
+  },
+  "source_sha256": {
+    "shared/canonicalListingLocation.ts": "dfafcff398eb3eb29518fea0e6815a9c573982a8d3d050c5848e705bb381b546",
+    "server/services/canonicalListingPlaceResolver.ts": "9b1bb6cbf10ba93cd553d91fefc60bd0f4ed657a4bcbcb14480d53a812c99f08",
+    "server/services/placeDiscoveryService.ts": "c6155943dc3d57e24bb5123a35ba65df526cf4078f3c9aecbbb95b9ac26f31fc",
+    "server/__tests__/contract.canonical-listing-place.test.ts": "d507e65900fbcf3d231645a87d2780d5a344cbccd7f9d3005bc5d59f5e24a027",
+    "server/__tests__/contract.place-admission.test.ts": "f4e333847dba0825c0305a44153600b8097800d6f981065b1b34d668d75602ef",
+    "vitest.database-authority-static.config.ts": "167c3980f234e376a2d9f3b8a12b827107beed52ba55b0f369901fad4565af02"
+  },
+  "remaining": [
+    "serialized schema integration",
+    "Listing API/wizard cutover",
+    "persistence/revision/publication projection",
+    "concurrent retirement protection",
+    "governed scope membership",
+    "Land convergence",
+    "owned physical consumer proof",
+    "browser journey",
+    "source activation and licensing gates"
+  ]
+}

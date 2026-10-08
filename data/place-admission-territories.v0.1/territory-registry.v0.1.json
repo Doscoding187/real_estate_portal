@@ -1,0 +1,520 @@
+{
+  "schema_version": "0.1",
+  "registry_id": "property-listify-place-admission-territories-v0.1",
+  "default_territory_id": "za-gp",
+  "territories": [
+    {
+      "territory_id": "za-gp",
+      "display_name": "Gauteng",
+      "admission_version": "gauteng-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "gauteng-source-authority-v0.2",
+        "directory": "data/gauteng-source-authority-v0.2",
+        "manifest": {
+          "path": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+          "sha256": "334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b"
+        },
+        "artifacts": {
+          "geography": "gauteng_factual_canonical_geography_v0.2.jsonl",
+          "names": "gauteng_factual_canonical_names_v0.2.jsonl",
+          "source_links": "gauteng_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "gauteng_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/geography-coverage-v0.1",
+        "territory_manifest": "gauteng-territory-manifest.v0.1.json",
+        "territory_catalog": "territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 1480,
+          "runtime_row_count": 1414,
+          "queued_count": 116,
+          "awaiting_accepted_parent_edge": 11,
+          "duplicate_natural_key_within_parent": 8,
+          "natural_key_owned_by_accepted_row": 3,
+          "co_published_natural_keys": 14
+        }
+      },
+      "admission_package": {
+        "directory": "data/gauteng-place-admission-v0.1",
+        "manifest": "gauteng_place_admission_manifest.v0.1.json",
+        "place_id_registry": "gauteng_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "gauteng_place_admission_v0.1.jsonl",
+          "names": "gauteng_place_names_v0.1.jsonl",
+          "relationships": "gauteng_place_relationships_v0.1.jsonl",
+          "evidence": "gauteng_place_evidence_v0.1.jsonl",
+          "external_mappings": "gauteng_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "gauteng_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "gauteng_parent_evidence_classification.v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1488,
+        "admitted_places": 1466,
+        "names": 2476,
+        "relationships": 1465,
+        "evidence_rows": 4463,
+        "external_mappings": 2971,
+        "disposition_ledger_rows": 4350,
+        "executable_places": 1436
+      }
+    },
+    {
+      "territory_id": "za-wc",
+      "display_name": "Western Cape",
+      "admission_version": "za-wc-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-wc-source-authority-v0.2",
+        "directory": "data/za-wc-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
+          "sha256": "4c2de8a535106b9ef48c632a3e8da2d3549446814ec69cd351404db9efd18677"
+        },
+        "artifacts": {
+          "geography": "za_wc_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_wc_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_wc_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_wc_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-wc-coverage-v0.1",
+        "territory_manifest": "za-wc-territory-manifest.v0.1.json",
+        "territory_catalog": "za-wc-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-wc-place-admission-v0.1",
+        "manifest": "za_wc_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_wc_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_wc_place_admission_v0.1.jsonl",
+          "names": "za_wc_place_names_v0.1.jsonl",
+          "relationships": "za_wc_place_relationships_v0.1.jsonl",
+          "evidence": "za_wc_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_wc_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_wc_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_wc_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1905,
+        "admitted_places": 1862,
+        "names": 3246,
+        "relationships": 1861,
+        "evidence_rows": 11062,
+        "external_mappings": 1905,
+        "disposition_ledger_rows": 13025,
+        "executable_places": 1832
+      }
+    },
+    {
+      "territory_id": "za-kzn",
+      "display_name": "KwaZulu-Natal",
+      "admission_version": "za-kzn-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-kzn-source-authority-v0.2",
+        "directory": "data/za-kzn-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-kzn-source-authority-v0.2/za_kzn_source_manifest_v0.2.json",
+          "sha256": "6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888"
+        },
+        "artifacts": {
+          "geography": "za_kzn_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_kzn_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_kzn_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_kzn_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-kzn-coverage-v0.1",
+        "territory_manifest": "za-kzn-territory-manifest.v0.1.json",
+        "territory_catalog": "za-kzn-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-kzn-place-admission-v0.1",
+        "manifest": "za_kzn_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_kzn_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_kzn_place_admission_v0.1.jsonl",
+          "names": "za_kzn_place_names_v0.1.jsonl",
+          "relationships": "za_kzn_place_relationships_v0.1.jsonl",
+          "evidence": "za_kzn_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_kzn_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_kzn_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_kzn_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 2170,
+        "admitted_places": 2090,
+        "names": 3429,
+        "relationships": 2089,
+        "evidence_rows": 9660,
+        "external_mappings": 2170,
+        "disposition_ledger_rows": 9176,
+        "executable_places": 2028
+      }
+    },
+    {
+      "territory_id": "za-ec",
+      "display_name": "Eastern Cape",
+      "admission_version": "za-ec-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-ec-source-authority-v0.2",
+        "directory": "data/za-ec-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-ec-source-authority-v0.2/za_ec_source_manifest_v0.2.json",
+          "sha256": "2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7"
+        },
+        "artifacts": {
+          "geography": "za_ec_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_ec_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_ec_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_ec_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-ec-coverage-v0.1",
+        "territory_manifest": "za-ec-territory-manifest.v0.1.json",
+        "territory_catalog": "za-ec-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-ec-place-admission-v0.1",
+        "manifest": "za_ec_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_ec_place_id_registry_v0.1.json",
+        "artifacts": {
+          "places": "za_ec_place_admission_v0.1.jsonl",
+          "names": "za_ec_place_names_v0.1.jsonl",
+          "relationships": "za_ec_place_relationships_v0.1.jsonl",
+          "evidence": "za_ec_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_ec_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_ec_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_ec_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 5328,
+        "admitted_places": 5084,
+        "names": 6892,
+        "relationships": 5083,
+        "evidence_rows": 14951,
+        "external_mappings": 5328,
+        "disposition_ledger_rows": 12661,
+        "executable_places": 5037
+      }
+    },
+    {
+      "territory_id": "za-fs",
+      "display_name": "Free State",
+      "admission_version": "za-fs-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-fs-source-authority-v0.2",
+        "directory": "data/za-fs-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-fs-source-authority-v0.2/za_fs_source_manifest_v0.2.json",
+          "sha256": "cddcdfb8207c7e772f5b7e4cd3cca3b4b2d084d15641c617352423dea59bc0ba"
+        },
+        "artifacts": {
+          "geography": "za_fs_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_fs_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_fs_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_fs_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-fs-coverage-v0.1",
+        "territory_manifest": "za-fs-territory-manifest.v0.1.json",
+        "territory_catalog": "za-fs-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-fs-place-admission-v0.1",
+        "manifest": "za_fs_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_fs_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_fs_place_admission_v0.1.jsonl",
+          "names": "za_fs_place_names_v0.1.jsonl",
+          "relationships": "za_fs_place_relationships_v0.1.jsonl",
+          "evidence": "za_fs_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_fs_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_fs_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_fs_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1572,
+        "admitted_places": 1544,
+        "names": 2138,
+        "relationships": 1543,
+        "evidence_rows": 7300,
+        "external_mappings": 1572,
+        "disposition_ledger_rows": 9343,
+        "executable_places": 1519
+      }
+    },
+    {
+      "territory_id": "za-mp",
+      "display_name": "Mpumalanga",
+      "admission_version": "za-mp-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-mp-source-authority-v0.2",
+        "directory": "data/za-mp-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-mp-source-authority-v0.2/za_mp_source_manifest_v0.2.json",
+          "sha256": "e1aceeb667cda374c7912ce0af6b1b6587ed1d7ab2b2ca2e6a78bb9c914d4d63"
+        },
+        "artifacts": {
+          "geography": "za_mp_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_mp_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_mp_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_mp_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-mp-coverage-v0.1",
+        "territory_manifest": "za-mp-territory-manifest.v0.1.json",
+        "territory_catalog": "za-mp-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-mp-place-admission-v0.1",
+        "manifest": "za_mp_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_mp_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_mp_place_admission_v0.1.jsonl",
+          "names": "za_mp_place_names_v0.1.jsonl",
+          "relationships": "za_mp_place_relationships_v0.1.jsonl",
+          "evidence": "za_mp_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_mp_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_mp_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_mp_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1078,
+        "admitted_places": 1045,
+        "names": 1607,
+        "relationships": 1044,
+        "evidence_rows": 5059,
+        "external_mappings": 1078,
+        "disposition_ledger_rows": 5855,
+        "executable_places": 1024
+      }
+    },
+    {
+      "territory_id": "za-li",
+      "display_name": "Limpopo",
+      "admission_version": "za-li-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-li-source-authority-v0.2",
+        "directory": "data/za-li-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-li-source-authority-v0.2/za_li_source_manifest_v0.2.json",
+          "sha256": "25116e27cd114745fd9775113896772456224c0974c4938d0bfb0aee0af4001a"
+        },
+        "artifacts": {
+          "geography": "za_li_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_li_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_li_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_li_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-li-coverage-v0.1",
+        "territory_manifest": "za-li-territory-manifest.v0.1.json",
+        "territory_catalog": "za-li-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-li-place-admission-v0.1",
+        "manifest": "za_li_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_li_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_li_place_admission_v0.1.jsonl",
+          "names": "za_li_place_names_v0.1.jsonl",
+          "relationships": "za_li_place_relationships_v0.1.jsonl",
+          "evidence": "za_li_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_li_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_li_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_li_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1747,
+        "admitted_places": 1669,
+        "names": 2359,
+        "relationships": 1668,
+        "evidence_rows": 9443,
+        "external_mappings": 1747,
+        "disposition_ledger_rows": 11471,
+        "executable_places": 1639
+      }
+    },
+    {
+      "territory_id": "za-nw",
+      "display_name": "North West",
+      "admission_version": "za-nw-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-nw-source-authority-v0.2",
+        "directory": "data/za-nw-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-nw-source-authority-v0.2/za_nw_source_manifest_v0.2.json",
+          "sha256": "ef18895522fa3c25cbc7241d3307c60e3411c9008dbe019230d421f8230abb86"
+        },
+        "artifacts": {
+          "geography": "za_nw_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_nw_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_nw_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_nw_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-nw-coverage-v0.1",
+        "territory_manifest": "za-nw-territory-manifest.v0.1.json",
+        "territory_catalog": "za-nw-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-nw-place-admission-v0.1",
+        "manifest": "za_nw_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_nw_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_nw_place_admission_v0.1.jsonl",
+          "names": "za_nw_place_names_v0.1.jsonl",
+          "relationships": "za_nw_place_relationships_v0.1.jsonl",
+          "evidence": "za_nw_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_nw_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_nw_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_nw_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1445,
+        "admitted_places": 1352,
+        "names": 2086,
+        "relationships": 1351,
+        "evidence_rows": 5113,
+        "external_mappings": 1445,
+        "disposition_ledger_rows": 5177,
+        "executable_places": 1329
+      }
+    },
+    {
+      "territory_id": "za-nc",
+      "display_name": "Northern Cape",
+      "admission_version": "za-nc-place-admission-v0.1",
+      "source_authority": {
+        "authority_version": "za-nc-source-authority-v0.2",
+        "directory": "data/za-nc-source-authority-v0.2",
+        "manifest": {
+          "path": "data/za-nc-source-authority-v0.2/za_nc_source_manifest_v0.2.json",
+          "sha256": "65924b97d82681250dd6756b0efcb7a5ee34574b26a4ad9661879f55e2b71ec7"
+        },
+        "artifacts": {
+          "geography": "za_nc_factual_canonical_geography_v0.2.jsonl",
+          "names": "za_nc_factual_canonical_names_v0.2.jsonl",
+          "source_links": "za_nc_factual_canonical_source_links_v0.2.jsonl",
+          "candidate_dispositions": "za_nc_candidate_dispositions_v0.2.jsonl"
+        }
+      },
+      "coverage_baseline": {
+        "directory": "data/za-nc-coverage-v0.1",
+        "territory_manifest": "za-nc-territory-manifest.v0.1.json",
+        "territory_catalog": "za-nc-territory-catalog.v0.1.json",
+        "counts": {
+          "factual_identity_count": 0,
+          "runtime_row_count": 0,
+          "queued_count": 0,
+          "awaiting_accepted_parent_edge": 0,
+          "duplicate_natural_key_within_parent": 0,
+          "natural_key_owned_by_accepted_row": 0,
+          "co_published_natural_keys": 0
+        }
+      },
+      "admission_package": {
+        "directory": "data/za-nc-place-admission-v0.1",
+        "manifest": "za_nc_place_admission_manifest_v0.1.json",
+        "place_id_registry": "za_nc_place_id_registry.v0.1.json",
+        "artifacts": {
+          "places": "za_nc_place_admission_v0.1.jsonl",
+          "names": "za_nc_place_names_v0.1.jsonl",
+          "relationships": "za_nc_place_relationships_v0.1.jsonl",
+          "evidence": "za_nc_place_evidence_v0.1.jsonl",
+          "external_mappings": "za_nc_place_external_mappings_v0.1.jsonl",
+          "disposition_ledger": "za_nc_place_disposition_ledger_v0.1.jsonl",
+          "parent_evidence_classification": "za_nc_parent_evidence_classification_v0.1.json"
+        }
+      },
+      "expected_counts": {
+        "source_identities": 1576,
+        "admitted_places": 1552,
+        "names": 2192,
+        "relationships": 1551,
+        "evidence_rows": 12874,
+        "external_mappings": 1576,
+        "disposition_ledger_rows": 16872,
+        "executable_places": 1520
+      }
+    }
+  ]
+}

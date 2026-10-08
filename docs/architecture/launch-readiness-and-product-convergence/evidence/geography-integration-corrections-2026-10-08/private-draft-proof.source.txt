@@ -1,0 +1,89 @@
+import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+const root = '/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const at = (path: string) => import(`${root}/${path}`);
+const { resolveDatabaseAuthority } = await at('server/_core/databaseAuthority/context.ts');
+const { authorizeDatabaseOperation } = await at('server/_core/databaseAuthority/authorization.ts');
+const { createAuthoritySqlConnection } = await at('server/_core/databaseAuthority/connectionAuthority.ts');
+const { requireExactAdapterTarget, requireAcceptedMigrationHead } = await at('server/_core/databaseAuthority/dataAdapters/common.ts');
+const authority = resolveDatabaseAuthority({ operation: 'test-fixture', cwd: root });
+requireExactAdapterTarget(authority);
+assert.equal(authority.context.targetClass, 'disposable-worktree');
+assert.equal(authority.context.targetFingerprintHash, '0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d');
+const connection = await createAuthoritySqlConnection(authority, authorizeDatabaseOperation(authority));
+const { shutdownDb } = await at('server/db-connection.ts');
+try {
+  const manifest = await requireAcceptedMigrationHead({ authority, connection, root });
+  assert.equal(manifest.expectedHead.filename, '0111_properties_canonical_place_reference_fk.sql');
+  const { discoverPlaces } = await at('server/services/placeDiscoveryService.ts');
+  const { previewCanonicalPlaceRelease } = await at('server/_core/databaseAuthority/dataAdapters/placeRelease.ts');
+  async function releaseCheck(operation: 'reference-seed' | 'verification') {
+    const a = resolveDatabaseAuthority({ operation, cwd: root });
+    assert.equal(a.context.targetFingerprintHash, authority.context.targetFingerprintHash);
+    const decision = authorizeDatabaseOperation(a);
+    const c = await createAuthoritySqlConnection(a, decision);
+    try { return await previewCanonicalPlaceRelease({ authority: a, decision, connection: c }); }
+    finally { await c.end(); }
+  }
+  const baseline = await releaseCheck('verification');
+  const coverageProof = [];
+  for (const [query, expected] of [['geography regression nonexistent locality xyz', 'no_result'], ['Richmond', 'ambiguous'], ['geography regression nonexistent locality xyz', 'no_result'], ['Richmond', 'ambiguous']]) {
+    const response = await discoverPlaces(query);
+    assert.equal(response.outcome, expected);
+    const verified = await releaseCheck('verification');
+    assert.equal(verified.planDigest, baseline.planDigest);
+    const replay = await releaseCheck('reference-seed');
+    assert.equal(replay.writtenRows, 0);
+    assert.equal(replay.insertStatements, 0);
+    coverageProof.push({ query, outcome: response.outcome, candidates: response.results.length, operationalSignals: verified.operationalCoverageSignals, referencePlanUnchanged: verified.planDigest === baseline.planDigest, replayWrittenRows: replay.writtenRows, replayInsertStatements: replay.insertStatements });
+  }
+  const [signalRows] = await connection.query("SELECT evidence_kind, research_priority FROM place_evidence WHERE provider = ? ORDER BY evidence_kind", ['property_listify_search']);
+  assert.equal(signalRows.length, 2);
+  assert.ok(signalRows.every((r: any) => r.research_priority === 1));
+  writeFileSync('/tmp/geography-corrections-runtime-signals.json', JSON.stringify({ targetFingerprintHash: authority.context.targetFingerprintHash, coverageProof, signalRows, referencePlanDigest: baseline.planDigest, referenceAssertions: baseline.existingRows, noSignalsDeleted: true, productionContact: false }, null, 2));
+  const { listingRouter } = await at('server/listingRouter.ts');
+  const pid = 'pl-place-01-6a145c6d642ba208a2c12de7';
+  const discovery = await discoverPlaces('North Riding');
+  const selected = discovery.results.find((row: any) => row.placeId === pid);
+  assert.ok(selected);
+  assert.equal(selected.placeType, 'suburb');
+  assert.equal(selected.searchScope, 'locality');
+  assert.match(selected.context.administrativeContext, /Gauteng/);
+  const [before] = await connection.query('SELECT COUNT(*) AS n FROM suburbs');
+  const [existing] = await connection.query('SELECT id FROM users WHERE openId = ?', ['north-riding-private-draft-proof-20261008']);
+  // The isolated author is already established by the first successful run.
+  assert.ok(existing.length <= 1);
+  const inserted = existing.length ? { insertId: existing[0].id } : (await connection.query('INSERT INTO users (openId, email, name, role) VALUES (?, ?, ?, ?)', ['north-riding-private-draft-proof-20261008', 'north-riding-proof@listify.local', 'North Riding Local Proof', 'visitor']))[0];
+  const caller = listingRouter.createCaller({ user: { id: inserted.insertId, role: 'visitor', name: 'North Riding Local Proof', agencyId: null }, req: { headers: {} }, res: {} } as any);
+  const location = { version: 2, canonicalPlaceId: pid, privateAddress: { streetNumber: '5', streetName: 'Congo Street', postalCode: '2169' }, coordinates: null, coordinateSource: 'manual_confirmed', locationConfirmationState: 'confirmed', publicLocationPrecision: 'approximate', providerObservation: null };
+  const created = await caller.create({ action: 'sell', propertyType: 'house', title: 'North Riding private house proof', description: 'Private disposable authoring proof for the reported address.', pricing: { askingPrice: 1000000 }, propertyDetails: {}, location, mediaIds: [], status: 'draft' });
+  const { getListingById, getDb } = await at('server/db.ts');
+  const reloaded = await caller.getById({ id: created.id });
+  const row = reloaded.property;
+  assert.equal(row.status, 'draft');
+  assert.equal(row.canonicalPlaceId, pid);
+  assert.equal(row.canonicalPlace.canonicalPlaceId, pid);
+  assert.equal(row.canonicalPlace.scope, 'locality');
+  assert.equal(row.canonicalPlace.label, 'North Riding');
+  assert.deepEqual(row.privateAddress, location.privateAddress);
+  assert.equal(row.city, '');
+  assert.equal(row.province, 'Gauteng');
+  assert.equal(row.suburb, 'North Riding');
+  for (const field of ['provinceId', 'cityId', 'suburbId', 'locationId', 'latitude', 'longitude']) assert.equal(row[field], null);
+  const [publicRows] = await connection.query('SELECT id FROM properties WHERE sourceListingId = ?', [created.id]);
+  assert.equal(publicRows.length, 0);
+  await caller.update({ id: created.id, location: { ...location, privateAddress: { ...location.privateAddress, unitNumber: 'private draft proof' } } });
+  const edited = (await caller.getById({ id: created.id })).property;
+  assert.equal(edited.canonicalPlaceId, pid);
+  assert.equal(edited.privateAddress.unitNumber, 'private draft proof');
+  await assert.rejects(caller.create({ action: 'sell', propertyType: 'house', title: 'Confirmed house evidence refusal', description: 'A private disposable refusal proof with valid listing description.', pricing: { askingPrice: 1000000 }, propertyDetails: {}, location: { ...location, privateAddress: { farmOrHoldingName: 'Postal evidence without street' } }, mediaIds: [] }), /street name/);
+  const [after] = await connection.query('SELECT COUNT(*) AS n FROM suburbs');
+  assert.equal(after[0].n, before[0].n);
+  await assert.rejects(caller.create({ action: 'sell', propertyType: 'house', title: 'Mixed geography must be refused', description: 'A private disposable refusal proof with valid listing description.', pricing: { askingPrice: 1000000 }, propertyDetails: {}, location: { ...location, city: 'Roodepoort', suburbId: 1 }, mediaIds: [] }), /Unrecognized key/);
+  const { resolveCanonicalListingPlace } = await at('server/services/canonicalListingPlaceResolver.ts');
+  await (await getDb()).transaction(async (tx: any) => {
+    await assert.rejects(resolveCanonicalListingPlace({ ...location, privateAddress: { postalCode: '2169' }, coordinates: { latitude: null, longitude: null } }, { database: tx, propertyType: 'house', publication: true, lock: true }), /invalid_location_boundary/);
+    await assert.rejects(resolveCanonicalListingPlace({ ...location, privateAddress: { farmOrHoldingName: 'Address without street' } }, { database: tx, propertyType: 'house', publication: true, lock: true }), /street name/);
+  });
+  writeFileSync('/tmp/geography-corrections-private-draft-proof.json', JSON.stringify({ targetFingerprintHash: authority.context.targetFingerprintHash, candidateHead: '0111_properties_canonical_place_reference_fk.sql', selected: { placeId: pid, label: selected.preferredPublicLabel, placeType: selected.placeType, scope: selected.searchScope, context: selected.context }, journey: ['runtime discovery', 'explicit existing locality selection', 'Listing router private house draft save', 'persisted draft reload'], privateAddress: row.privateAddress, editReload: { sameCanonicalPlaceId: edited.canonicalPlaceId === pid, privateUnitRetained: edited.privateAddress.unitNumber === 'private draft proof' }, derivedPresentation: { city: row.city, suburb: row.suburb, province: row.province }, listingId: created.id, status: row.status, publicPropertyCount: publicRows.length, providerSuburbRowsCreated: after[0].n - before[0].n, refusals: ['mixed canonical and legacy authority', 'malformed coordinates', 'house without street evidence', 'confirmed house draft without street evidence'], productionContact: false }, null, 2));
+} finally { await connection.end(); await shutdownDb(); }

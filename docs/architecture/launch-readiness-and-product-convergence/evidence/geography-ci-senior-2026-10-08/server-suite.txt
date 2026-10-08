@@ -1,0 +1,675 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 --silent server/uploadRouter.s3Scope.test.ts server/uploadRouter.test.ts server/__tests__/admin.inventory-boundary.test.ts server/__tests__/agent.dashboard-showings.smoke.test.ts server/__tests__/agent.inventory-cutover.test.ts server/__tests__/agent.lead-response-summary.test.ts server/__tests__/agent.offer-readiness.test.ts server/__tests__/agent.showings-compatibility.test.ts server/__tests__/auth.agency-workspace-smoke.test.ts server/__tests__/auth.distribution-identity-projection.test.ts server/__tests__/auth.login-query-mapping.test.ts server/__tests__/auth.role-normalization.test.ts server/__tests__/authRoutes.emailDeliveryBoundary.test.ts server/__tests__/billing.foundation.acceptance.integration.test.ts server/__tests__/billing.provider-independent.contract.test.ts server/__tests__/cacheRouter.authorization.test.ts server/__tests__/commercial-access-authority.contract.test.ts server/__tests__/commercial-agent-s2.contract.test.ts server/__tests__/commercial-authority-s0.contract.test.ts server/__tests__/commercial-launch-access-s4.contract.test.ts server/__tests__/commercial-launch-access-s4.integration.test.ts server/__tests__/contract.admin-revenue-authority.test.ts server/__tests__/contract.agency-canvassing-boundary.test.ts server/__tests__/contract.agency-deal-engine.test.ts server/__tests__/contract.agency-lead-visibility-followup.test.ts server/__tests__/contract.agency-listing-inventory.test.ts server/__tests__/contract.agency-listing-performance-mvp.test.ts server/__tests__/contract.agency-onboarding-journey.test.ts server/__tests__/contract.agency-viewings-workflow.test.ts server/__tests__/contract.agent-continuity.test.ts server/__tests__/contract.agent-onboarding-journey.test.ts server/__tests__/contract.agent-presence-proof.test.ts server/__tests__/contract.agent-public-inventory.test.ts server/__tests__/contract.agent-public-profile-route.test.ts server/__tests__/contract.agent-public-profile.test.ts server/__tests__/contract.agent-skill-governance.test.ts server/__tests__/contract.agents-serving-location.test.ts server/__tests__/contract.b08-release-reconciliation.test.ts server/__tests__/contract.canonical-listing-place.test.ts server/__tests__/contract.catalogue-publisher-lead-boundary.test.ts server/__tests__/contract.commercial-agency-workflow-boundary.test.ts server/__tests__/contract.commercial-lead-workflow-boundary.test.ts server/__tests__/contract.commercial-listing-publication.test.ts server/__tests__/contract.commercial-location-scope.test.ts server/__tests__/contract.core-property-projection.test.ts server/__tests__/contract.cross-supply-projection-authority.test.ts server/__tests__/contract.dashboard-analytics-authority.test.ts server/__tests__/contract.database-agent-authority.test.ts server/__tests__/contract.database-canonical-model-authority.test.ts server/__tests__/contract.database-connection-path-authority.test.ts server/__tests__/contract.database-explore-future-authority.test.ts server/__tests__/contract.database-final-closure-authority.test.ts server/__tests__/contract.database-governance-authority.test.ts server/__tests__/contract.database-local-lifecycle-authority.test.ts server/__tests__/contract.database-production-seed-security.test.ts server/__tests__/contract.database-residual-utility-authority.test.ts server/__tests__/contract.database-service-partner-authority.test.ts server/__tests__/contract.db-default-normalization.test.ts server/__tests__/contract.demand-authority-boundary.test.ts server/__tests__/contract.developer-create-lead.test.ts server/__tests__/contract.developer-engine-s0-containment.test.ts server/__tests__/contract.developer-engine-s2-supersession.test.ts server/__tests__/contract.developer-engine-s3-curated-catalogue.test.ts server/__tests__/contract.developer-kpi-status-semantics.test.ts server/__tests__/contract.developer-new-lead-count.test.ts server/__tests__/contract.developer-read-boundary.test.ts server/__tests__/contract.development-search-detail-lead-journey.test.ts server/__tests__/contract.developments-search-validation.test.ts server/__tests__/contract.distribution-access-authority.test.ts server/__tests__/contract.distribution-terms-authority.test.ts server/__tests__/contract.explore-analytics-authority.test.ts server/__tests__/contract.features-context.test.ts server/__tests__/contract.feed-ranking-authority.test.ts server/__tests__/contract.leads-insert-canonical-authority.test.ts server/__tests__/contract.legacy-boost-route-boundary.test.ts server/__tests__/contract.legacy-partner-analytics-route-boundary.test.ts server/__tests__/contract.legacy-partner-lead-route-boundary.test.ts server/__tests__/contract.listing-lifecycle-db.test.ts server/__tests__/contract.listing-lifecycle.test.ts server/__tests__/contract.location-contract.test.ts server/__tests__/contract.location-insights-authority.test.ts server/__tests__/contract.location-public-eligibility.test.ts server/__tests__/contract.marketing-authority.test.ts server/__tests__/contract.migration-execution-authority.test.ts server/__tests__/contract.migration-tree-authority.test.ts server/__tests__/contract.partner-admin-runtime-authority.test.ts server/__tests__/contract.place-admission-territory-neutrality.test.ts server/__tests__/contract.place-admission.test.ts server/__tests__/contract.place-authority-foundation.test.ts server/__tests__/contract.place-consumer-geography.test.ts server/__tests__/contract.place-executable-foundation.test.ts server/__tests__/contract.price-insights-authority.test.ts server/__tests__/contract.pricing-contract.test.ts server/__tests__/contract.properties-create-retirement.test.ts server/__tests__/contract.properties-search-development-listings.test.ts server/__tests__/contract.properties-search.test.ts server/__tests__/contract.property-listify-database-authority-skill.test.ts server/__tests__/contract.property-search-detail-lead-ownership.test.ts server/__tests__/contract.property-taxonomy-schema.test.ts server/__tests__/contract.property-taxonomy.test.ts server/__tests__/contract.prospect-journey-status.test.ts server/__tests__/contract.public-agent-analytics.test.ts server/__tests__/contract.public-buy-entry-eligibility.test.ts server/__tests__/contract.public-inventory-authority-safety.test.ts server/__tests__/contract.public-lead-honeypot.test.ts server/__tests__/contract.public-search-pagination.test.ts server/__tests__/contract.saved-search-alert-history.test.ts server/__tests__/contract.saved-search-apply-delivery-action.test.ts server/__tests__/contract.saved-search-process-notifications.test.ts server/__tests__/contract.saved-search-update-preferences.test.ts server/__tests__/contract.seo-head-agents.test.ts server/__tests__/contract.service-partner-client-authority.test.ts server/__tests__/contract.service-partner-runtime-authority.test.ts server/__tests__/contract.similar-properties-authority.test.ts server/__tests__/contract.sitemap-agents.test.ts server/__tests__/contract.system-lead-routing-audit.test.ts server/__tests__/contract.system-lead-routing-conversion-report.test.ts server/__tests__/contract.system-lead-routing-correction.test.ts server/__tests__/contract.system-saved-search-scheduler-status.test.ts server/__tests__/database-security-containment.contract.test.ts server/__tests__/db-connection.concurrency.test.ts server/__tests__/developer-development-home.contract.test.ts server/__tests__/developer-engine-s1-actor-authority.test.ts server/__tests__/developer-engine-s3-discovery.contract.test.ts server/__tests__/developer-registration-input.contract.test.ts server/__tests__/developer-search-developments.contract.test.ts server/__tests__/developer.public-profile.contract.test.ts server/__tests__/developer.subscription-commercial.contract.test.ts server/__tests__/developmentSupersessionRouting.test.ts server/__tests__/distribution-assisted-onboarding-review.test.ts server/__tests__/distribution.access-policy.test.ts server/__tests__/distribution.admin.schema-guard.test.ts server/__tests__/distribution.manager-invite-links.test.ts server/__tests__/distributionBrandOnboardingPresetService.test.ts server/__tests__/distributionCommissionService.test.ts server/__tests__/distributionManagerChecklist.integration.test.ts server/__tests__/distributionManagerInviteTokenService.test.ts server/__tests__/distributionManagerVisibilityBoundaries.test.ts server/__tests__/distributionPartnerAccelerator.integration.test.ts server/__tests__/distributionPartnerProgramTerms.integration.test.ts server/__tests__/distributionPartnerReferralSubmission.integration.test.ts server/__tests__/distributionPayoutMilestoneService.test.ts server/__tests__/distributionRequiredDocumentsService.test.ts server/__tests__/distributionRouter.transactionBoundaries.test.ts server/__tests__/explore-legacy-capability-boundary.test.ts server/__tests__/explorePublishingBoundary.test.ts server/__tests__/exploreVideoUploadBoundary.test.ts server/__tests__/guest-migration.contract.test.ts server/__tests__/integration.agency-canvassing-mvp.test.ts server/__tests__/integration.agency-deal-engine.test.ts server/__tests__/integration.agency-listing-attribution.test.ts server/__tests__/integration.agency-listing-performance-mvp.test.ts server/__tests__/integration.agency-listing-preparation.test.ts server/__tests__/integration.agency-listing-publication-lifecycle.test.ts server/__tests__/integration.agency-member-workspace-authority.test.ts server/__tests__/integration.agency-membership-authority.test.ts server/__tests__/integration.agency-operating-home.test.ts server/__tests__/integration.agency-principal-bootstrap.test.ts server/__tests__/integration.agency-value-scorecard.test.ts server/__tests__/integration.agency-viewings-workflow.test.ts server/__tests__/integration.agent-launch-journey.test.ts server/__tests__/integration.agent-lead-transitions.test.ts server/__tests__/integration.agent-profile-reconsideration.test.ts server/__tests__/integration.billing-billable-account.test.ts server/__tests__/integration.billing-provider-event-identity.test.ts server/__tests__/integration.commercial-listing-capacity.test.ts server/__tests__/integration.consumer-activity-persistence.test.ts server/__tests__/integration.demand-routing-rollback.test.ts server/__tests__/integration.developer-actor-resolution.test.ts server/__tests__/integration.developer-draft-land-containment.test.ts server/__tests__/integration.developer-engine-platform-publication.test.ts server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.developer-identity-resubmission.test.ts server/__tests__/integration.developer-kpi-unit-types.test.ts server/__tests__/integration.developer-lead-assignment-authority.test.ts server/__tests__/integration.developer-media-authority.test.ts server/__tests__/integration.developer-prepayment-approval.test.ts server/__tests__/integration.developer-public-profile.test.ts server/__tests__/integration.development-card-data-flow.test.ts server/__tests__/integration.development-publication-lifecycle.test.ts server/__tests__/integration.explore-analytics-query-plan.test.ts server/__tests__/integration.explore-analytics-rebuild.test.ts server/__tests__/integration.launch-readiness-walkthrough.test.ts server/__tests__/integration.lead-delivery-authority.test.ts server/__tests__/integration.listing-media-reconciliation.test.ts server/__tests__/integration.listing-media-tenant-boundary.test.ts server/__tests__/integration.listing-publication-readiness.test.ts server/__tests__/integration.location-search-catalog-fallback.test.ts server/__tests__/integration.property-card-data-flow.test.ts server/__tests__/integration.services-engine-idempotency.test.ts server/__tests__/integration.shared-living-spaces.test.ts server/__tests__/integration.transactional-email-delivery.test.ts server/__tests__/landPublicRouter.test.ts server/__tests__/landRouter.test.ts server/__tests__/landSearchGeography.test.ts server/__tests__/launch-preflight.contract.test.ts server/__tests__/launch-safety.contract.test.ts server/__tests__/localDbWorkflow.test.ts server/__tests__/localEnvironmentAuthorityStatus.test.ts server/__tests__/location-manual-correction.test.ts server/__tests__/location-search-result-adapter.test.ts server/__tests__/locationAuthorityCatalog.test.ts server/__tests__/locationCampaigns.test.ts server/__tests__/locationPagesRouter.test.ts server/__tests__/prospectJourneyE2eGuard.test.ts server/__tests__/prospectJourneyProcessRunner.test.ts server/__tests__/runListingPerformanceE2eSafety.test.ts server/__tests__/smoke.health.test.ts server/__tests__/smoke.superadmin-publishing.test.ts server/__tests__/smoke.version.test.ts server/__tests__/testDbWorkflow.test.ts server/__tests__/trpcErrorFormatter.test.ts server/__tests__/user-billing-deletion-authority.contract.test.ts server/_core/auth.session-security.test.ts server/_core/authMeTiming.test.ts server/_core/authRateLimitBoundary.test.ts server/_core/authRateLimitStore.test.ts server/_core/browserSecurity.test.ts server/_core/cookies.test.ts server/_core/emailDeliveryBoundary.test.ts server/_core/founderGoogleIdentity.test.ts server/_core/founderGoogleIdentityRoutes.test.ts server/_core/founderGoogleLoginConfig.test.ts server/_core/founderGoogleStateStore.test.ts server/_core/health.hosted-cache.test.ts server/_core/hostedRuntimeConfiguration.test.ts server/_core/localMediaRoutes.test.ts server/_core/readinessSnapshotMonitor.test.ts server/_core/requestBodyBoundary.test.ts server/_core/securityRuntimeConfiguration.test.ts server/lib/sanitizeDraftData.test.ts server/tests/unitTypeRefactor.test.ts server/tests/verify-db-isolation.test.ts server/_core/__tests__/databaseTarget.test.ts server/_core/__tests__/databaseTls.test.ts server/_core/__tests__/runtimeBootstrap.test.ts server/_core/__tests__/trustedProxy.test.ts server/_core/cache/redis.connection.test.ts server/lib/__tests__/savedSearchContract.test.ts server/migrations/__tests__/authSessionSecurityMigration.test.ts server/migrations/__tests__/canonicalListingLocationMigration.test.ts server/migrations/__tests__/canonicalListingPlaceReference.test.ts server/migrations/__tests__/legacyConsumerProfileRetirementMigration.test.ts server/migrations/__tests__/manualLocationWithoutCoordinatesMigration.test.ts server/migrations/__tests__/migrationManifest.test.ts server/migrations/__tests__/mysqlEstablishmentBehavior.integration.test.ts server/migrations/__tests__/primaryKeyMigrationPreconditions.integration.test.ts server/migrations/__tests__/recoverRejectedReleaseCommercialQuoteTermsMigration.test.ts server/migrations/__tests__/recoverRejectedReleaseZeroStatementMigration.test.ts server/migrations/__tests__/recoverRejectedZeroStatementMigration.test.ts server/migrations/__tests__/recoverTidbCheckConstraintConvergence.test.ts server/migrations/__tests__/runSqlMigrations.test.ts server/_core/databaseAuthority/__tests__/adapterProtocol.test.ts server/_core/databaseAuthority/__tests__/canonicalCommercialAdmission.test.ts server/_core/databaseAuthority/__tests__/canonicalPlacesTransactions.test.ts server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts server/_core/databaseAuthority/__tests__/dataAdapters.test.ts server/_core/databaseAuthority/__tests__/dataRoleManifest.test.ts server/_core/databaseAuthority/__tests__/geographyRelease.test.ts server/_core/databaseAuthority/__tests__/governedContainedScenarioFixture.test.ts server/_core/databaseAuthority/__tests__/homepageJourneyPreviewFixture.test.ts server/_core/databaseAuthority/__tests__/isolatedCiCredentials.test.ts server/_core/databaseAuthority/__tests__/isolatedCiGrantVerification.test.ts server/_core/databaseAuthority/__tests__/lifecycle.test.ts server/_core/databaseAuthority/__tests__/listingPreviewFixture.test.ts server/_core/databaseAuthority/__tests__/localServicePaths.test.ts server/_core/databaseAuthority/__tests__/placeRelease.test.ts server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts server/_core/databaseAuthority/__tests__/placeStoragePreconditions.test.ts server/_core/databaseAuthority/__tests__/plePublicationEntitlement.test.ts server/_core/databaseAuthority/__tests__/pleReviewerFixture.test.ts server/_core/databaseAuthority/__tests__/readiness.test.ts server/_core/databaseAuthority/__tests__/readinessConnection.test.ts server/_core/databaseAuthority/__tests__/rehearsalAuthorization.test.ts server/_core/databaseAuthority/__tests__/rehearsalCatalogue.test.ts server/_core/databaseAuthority/__tests__/rehearsalClosure.test.ts server/_core/databaseAuthority/__tests__/rehearsalConnection.test.ts server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts server/_core/databaseAuthority/__tests__/sourceArchive.test.ts server/_core/databaseAuthority/__tests__/tidbCheckConstraintCapability.test.ts server/_core/databaseAuthority/__tests__/tidbStructuralAdmission.test.ts server/_core/databaseAuthority/__tests__/worktreeIdentity.test.ts server/services/__tests__/affordabilityAssessmentService.test.ts server/services/__tests__/affordabilityCalculator.test.ts server/services/__tests__/agencyInvitationDeliveryService.test.ts server/services/__tests__/agencyMembershipService.test.ts server/services/__tests__/agencyOperatingHome.test.ts server/services/__tests__/agentCoverageAreaService.test.ts server/services/__tests__/approvedPublicPropertyService.test.ts server/services/__tests__/billingProofStorage.hosted.test.ts server/services/__tests__/billingProviderEventService.contract.test.ts server/services/__tests__/cataloguePublisherMutationPolicy.test.ts server/services/__tests__/coldStart.smoke.test.ts server/services/__tests__/commercialActivationPolicy.test.ts server/services/__tests__/commercialCatalogService.agent.test.ts server/services/__tests__/commercialCatalogService.test.ts server/services/__tests__/commercialDomainAuthority.test.ts server/services/__tests__/commercialLeadContextService.test.ts server/services/__tests__/commercialMarketingMediaIdempotency.contract.test.ts server/services/__tests__/commercialOfficeService.test.ts server/services/__tests__/commercialTerm.test.ts server/services/__tests__/commercialTermNoticeScheduler.test.ts server/services/__tests__/coreFunctions.unit.test.ts server/services/__tests__/developerFunnelService.contract.test.ts server/services/__tests__/developerMediaAuthority.test.ts server/services/__tests__/developerOperatingHome.test.ts server/services/__tests__/developerSubscriptionService.test.ts server/services/__tests__/developmentDeletionPolicy.test.ts server/services/__tests__/developmentDerivedListingService.test.ts server/services/__tests__/developmentHomeAttention.test.ts server/services/__tests__/developmentInventorySummary.test.ts server/services/__tests__/developmentRouteAuthority.test.ts server/services/__tests__/developmentService.auctionDates.test.ts server/services/__tests__/developmentService.date-normalization.test.ts server/services/__tests__/developmentService.public-contract.test.ts server/services/__tests__/developmentService.test.ts server/services/__tests__/developmentSubmissionReadiness.test.ts server/services/__tests__/developmentSupersessionPolicy.test.ts server/services/__tests__/discoveryOpsReportService.test.ts server/services/__tests__/distributionSchemaProbeFailure.test.ts server/services/__tests__/distributionSchemaReadiness.test.ts server/services/__tests__/exploreAgencyAttribution.integration.test.ts server/services/__tests__/exploreAgencyAttribution.test.ts server/services/__tests__/exploreAgencyService.test.ts server/services/__tests__/exploreAnalyticsService.test.ts server/services/__tests__/exploreDiscoverySchema.test.ts server/services/__tests__/exploreFeedService.fallback.test.ts server/services/__tests__/exploreFeedService.test.ts server/services/__tests__/exploreInteractionService.contract.test.ts server/services/__tests__/explorePublishingEligibilityService.test.ts server/services/__tests__/exploreShorts.schema.test.ts server/services/__tests__/founderGoogleAccountService.test.ts server/services/__tests__/gautengSearchAreaActivationAcceptance.test.ts server/services/__tests__/gautengSearchAreaPublicActivation.test.ts server/services/__tests__/googlePlacesService.test.ts server/services/__tests__/governedRuntimeGeographyAuthority.test.ts server/services/__tests__/homeFeedComposition.test.ts server/services/__tests__/homeMarketInsightsService.test.ts server/services/__tests__/inventoryLinkResolver.contract.test.ts server/services/__tests__/landDomainService.test.ts server/services/__tests__/landEvidenceStorage.test.ts server/services/__tests__/landLaunchContainment.test.ts server/services/__tests__/landPublicProjection.test.ts server/services/__tests__/landPublicService.test.ts server/services/__tests__/landWorkflowClaims.test.ts server/services/__tests__/landWorkflowCreateDraft.test.ts server/services/__tests__/landWorkflowEvidenceScope.test.ts server/services/__tests__/landWorkflowMarketingMedia.test.ts server/services/__tests__/landWorkflowReviewTransition.test.ts server/services/__tests__/landWorkflowService.test.ts server/services/__tests__/landWorkflowSnapshot.test.ts server/services/__tests__/leadDeliveryService.contract.test.ts server/services/__tests__/leadRoutingAuditService.test.ts server/services/__tests__/leadRoutingConversionReportService.test.ts server/services/__tests__/leadRoutingCorrectionService.test.ts server/services/__tests__/leadTransitionService.test.ts server/services/__tests__/listingContentCustody.test.ts server/services/__tests__/listingLocationResolver.contract.test.ts server/services/__tests__/listingMediaAuthority.test.ts server/services/__tests__/listingPublicationEntitlementService.test.ts server/services/__tests__/localPublisherDiscovery.contract.test.ts server/services/__tests__/locationAnalytics.property.test.ts server/services/__tests__/locationCache.integration.test.ts server/services/__tests__/locationCoverageTelemetry.test.ts server/services/__tests__/locationHierarchy.property.test.ts server/services/__tests__/locationPagesService.hierarchy.test.ts server/services/__tests__/locationSeoContent.property.test.ts server/services/__tests__/locationUrlFormat.property.test.ts server/services/__tests__/mediaAuthoritySecretContainment.test.ts server/services/__tests__/monetization.smoke.test.ts server/services/__tests__/multiLocationQueryBoundary.test.ts server/services/__tests__/onboardingStateCreation.test.ts server/services/__tests__/paidMvpOwnerAdmission.test.ts server/services/__tests__/paidMvpSalesPause.test.ts server/services/__tests__/propertySchema.property.test.ts server/services/__tests__/propertySearchApprovedProjection.test.ts server/services/__tests__/propertySearchService.property.test.ts server/services/__tests__/provincialDiscoveryService.test.ts server/services/__tests__/publicDevelopmentEligibility.test.ts server/services/__tests__/publicDevelopmentSearch.contract.test.ts server/services/__tests__/publicLeadCaptureService.contract.test.ts server/services/__tests__/publicLeadCustodyService.contract.test.ts server/services/__tests__/publicLeadRateLimitService.test.ts server/services/__tests__/publicPropertyDto.test.ts server/services/__tests__/publicPropertyEligibilityBatch.test.ts server/services/__tests__/publicPropertyEligibilityService.test.ts server/services/__tests__/publicSearchService.contract.test.ts server/services/__tests__/publicSearchValidation.test.ts server/services/__tests__/publisherLeadService.contract.test.ts server/services/__tests__/savedSearchDeliveryScheduler.test.ts server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts server/services/__tests__/savedSearchNotificationEngine.test.ts server/services/__tests__/searchAreaAuthority.test.ts server/services/__tests__/searchAreaQueryIntegration.test.ts server/services/__tests__/searchDiscoveryService.test.ts server/services/__tests__/searchIntegration.property.test.ts server/services/__tests__/searchRuntimeCacheIdentity.test.ts server/services/__tests__/searchScope.test.ts server/services/__tests__/sharedLivingPublicService.test.ts server/services/__tests__/showingsSchemaDrift.test.ts server/services/__tests__/superAdminRoleAuthority.test.ts server/services/__tests__/transactionalEmailPolicy.test.ts server/services/__tests__/trendingSuburbs.property.test.ts server/_core/databaseAuthority/dataAdapters/common.test.ts server/domains/discovery/__tests__/exploreOptionAEligibilityRouter.test.ts server/domains/discovery/__tests__/exploreOptionAPilotAccess.test.ts server/domains/discovery/caching/__tests__/discoveryCache.test.ts server/domains/discovery/services/__tests__/discoveryEngagementService.test.ts server/domains/discovery/services/__tests__/discoveryFeedService.test.ts server/domains/discovery/services/__tests__/discoveryLegacyFeedSource.test.ts server/domains/discovery/services/__tests__/discoveryRankingService.test.ts server/domains/discovery/services/__tests__/exploreOptionAEligibilityService.test.ts shared/commercialSearchContract.test.ts shared/__tests__/agencyJourney.test.ts shared/__tests__/agentLeadOfferReadiness.test.ts shared/__tests__/factualRuntimeGeographyBridge.test.ts shared/__tests__/farmSearchContract.test.ts shared/__tests__/features-context.test.ts shared/__tests__/land-domain.test.ts shared/__tests__/listing-highlight-registry.test.ts shared/__tests__/listing-media.test.ts shared/__tests__/property-presentation.test.ts shared/__tests__/public-property-detail-presentation.test.ts shared/__tests__/publicDevelopmentSearch.test.ts shared/__tests__/publicSearchValidation.test.ts shared/__tests__/rentSearchContract.test.ts shared/__tests__/rental-terms-contract.test.ts shared/__tests__/sharedLivingSearchContract.test.ts scripts/emailWorkerSupervisor.test.ts scripts/__tests__/databaseAuthorityCli.test.ts scripts/__tests__/databaseUtilityAuthority.test.ts scripts/__tests__/geographyCoverageGenerator.test.ts scripts/__tests__/launchRuntimeProbeCheck.test.ts scripts/__tests__/localDbWorkflow.test.ts scripts/__tests__/localEnvironmentAuthority.test.ts scripts/__tests__/smokeAuthBoundary.test.ts scripts/__tests__/testDbWorkflow.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+ ✓ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (10 tests) 8447ms
+   ✓ S4 paid Launch Access disposable runtime > rejects unsupported persisted product and owner pairs before commercial writes in production 3563ms
+   ✓ S4 paid Launch Access disposable runtime > rejects stale sessions before invoice, approval, and restore mutations in production 374ms
+   ✓ S4 paid Launch Access disposable runtime > runs Agent and Agency request-proof-finance-activation-expiry with owner isolation 2438ms
+   ✓ S4 paid Launch Access disposable runtime > admits resolved owner pairs and denies forged intake and finance activation without writes 746ms
+ ❯ |server| server/__tests__/integration.agency-membership-authority.test.ts (32 tests | 1 failed) 18211ms
+   ✓ canonical membership maintenance (atomic unique-pair authority) > closes the window on suspension, stamps first closure only, and reopens freshly on reactivate 1229ms
+   × canonical membership maintenance (atomic unique-pair authority) > delivers a public Commercial enquiry to a current unbadged agency member through the agency term 578ms
+     → expected [] to deeply equal ArrayContaining{…}
+   ✓ team operations on canonical membership > denies every generic private-listing entry after membership becomes suspended 1239ms
+   ✓ team operations on canonical membership > denies every generic private-listing entry after membership becomes left 1086ms
+   ✓ team operations on canonical membership > keeps an unaffiliated former member draft private from their former agency 509ms
+   ✓ team operations on canonical membership > does not let a suspended member retain Agent Home inventory, commission, or property-work authority 484ms
+ ✓ |server| server/__tests__/integration.agency-listing-publication-lifecycle.test.ts (1 test) 3800ms
+   ✓ agency full operating journey acceptance > runs verified agency onboarding through controlled activation, publication, enquiry, and continued custody 3362ms
+ ✓ |server| server/services/__tests__/publicLeadCaptureService.contract.test.ts (56 tests) 360ms
+ ✓ |server| server/__tests__/contract.listing-lifecycle-db.test.ts (43 tests) 152ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts (33 tests) 910ms
+ ✓ |server| server/__tests__/integration.development-publication-lifecycle.test.ts (22 tests) 7341ms
+   ✓ Developer development publication lifecycle integration > submits an owned development for review and exposes it publicly only after admin approval 405ms
+   ✓ Developer development publication lifecycle integration > mirrors reviewer feedback, refuses empty feedback, and approves privately when Launch Access lapsed 441ms
+   ✓ Developer development publication lifecycle integration > keeps live external availability updates public and owner-scoped 427ms
+   ✓ Developer development publication lifecycle integration > routes a full external catalogue edit back through independent review 348ms
+   ✓ Developer development publication lifecycle integration > persists developer lead actions with MySQL-safe timestamps and ownership isolation 581ms
+   ✓ Developer development publication lifecycle integration > keeps approval private without Launch Access and restores publication after activation 308ms
+   ✓ Developer development publication lifecycle integration > hides foreign and missing unpublish targets while preserving approval on owner unpublish 427ms
+   ✓ Developer development publication lifecycle integration > blocks every auction publication attempt atomically regardless of persisted terms 922ms
+ ✓ |server| server/migrations/__tests__/runSqlMigrations.test.ts (32 tests) 256ms
+ ✓ |server| server/__tests__/contract.listing-lifecycle.test.ts (45 tests) 259ms
+ ✓ |server| server/__tests__/integration.agency-deal-engine.test.ts (4 tests) 2200ms
+   ✓ agency deal engine persisted workflow > turns a completed viewing into one accepted transaction with immutable terms, deadlines, private documents, and commission 1011ms
+   ✓ agency deal engine persisted workflow > rolls back offer acceptance atomically when generated transaction work fails 369ms
+   ✓ agency deal engine persisted workflow > serializes concurrent offer acceptance across independent caller requests 439ms
+ ✓ |server| server/__tests__/integration.developer-engine-platform-publication.test.ts (15 tests) 2588ms
+   ✓ Developer Engine platform-curated publication authority integration > converges curated submit, review, public discovery, enquiry custody, and unpublish 503ms
+ ✓ |server| server/services/__tests__/googlePlacesService.test.ts (28 tests) 1521ms
+ ↓ |server| server/services/__tests__/exploreAgencyAttribution.integration.test.ts (8 tests | 8 skipped)
+ ✓ |server| server/__tests__/contract.place-authority-foundation.test.ts (33 tests) 602ms
+ ✓ |server| server/services/__tests__/exploreDiscoverySchema.test.ts (33 tests) 358ms
+ ✓ |server| server/__tests__/contract.place-admission.test.ts (33 tests) 11799ms
+   ✓ Place admission: Place identity is assigned and stable > regenerates deterministically and asserts it 2039ms
+   ✓ Place admission: Place identity is assigned and stable > refuses to re-mint identities when the Place ID registry cannot be read 2277ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses a VALID registry whose allocation map is empty, without touching the package 2007ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses a PARTIAL allocation loss and names how many identities are unallocated 1970ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses swapped source allocations even when every published ID remains allocated 936ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > replays an intact isolated registry without touching the committed package 1123ms
+ ↓ |server| server/__tests__/integration.developer-engine-s2-supersession.test.ts (13 tests | 13 skipped)
+ ↓ |server| server/services/__tests__/exploreAgencyAttribution.test.ts (18 tests | 18 skipped)
+ ✓ |server| server/__tests__/integration.agency-principal-bootstrap.test.ts (4 tests) 2333ms
+   ✓ agency principal bootstrap persisted acceptance > registers, verifies, bootstraps once, reuses EFT checkout, and activates canonical access 738ms
+   ✓ agency principal bootstrap persisted acceptance > denies incompatible principals and plans, and serializes concurrent bootstrap calls 1226ms
+ ✓ |server| server/__tests__/contract.migration-tree-authority.test.ts (6 tests) 1347ms
+   ✓ migration tree authority > contains manual schema executors and keeps diagnostics outside migration authority 322ms
+ ❯ |server| server/__tests__/contract.place-executable-foundation.test.ts (37 tests | 1 failed) 11267ms
+   ✓ Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place 818ms
+   × Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor 11ms
+     → expected +0 to be 1 // Object.is equality
+   ✓ Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically 9868ms
+ ✓ |server| server/migrations/__tests__/migrationManifest.test.ts (15 tests) 352ms
+ ✓ |server| server/__tests__/distributionPartnerReferralSubmission.integration.test.ts (8 tests) 1727ms
+ ✓ |server| server/__tests__/integration.transactional-email-delivery.test.ts (10 tests) 2647ms
+ ✓ |server| server/__tests__/integration.agency-viewings-workflow.test.ts (6 tests) 2843ms
+   ✓ agency viewings and My Day persisted workflow > creates canonical agency viewings, enforces tenancy, and allows same-agency agents to view them 507ms
+   ✓ agency viewings and My Day persisted workflow > does not let a suspended member retain agency viewing access or mutation authority 329ms
+   ✓ agency viewings and My Day persisted workflow > enforces lifecycle transitions, reschedule history, idempotent notifications, reassignment permissions, and feedback follow-up 642ms
+   ✓ agency viewings and My Day persisted workflow > uses Africa/Johannesburg day boundaries for My Day 449ms
+   ✓ agency viewings and My Day persisted workflow > interprets browser datetime-local viewing input as Johannesburg time on a UTC host 363ms
+   ✓ agency viewings and My Day persisted workflow > escalates an ignored buyer lead then records a structured first response 409ms
+ ✓ |server| server/__tests__/integration.launch-readiness-walkthrough.test.ts (14 tests) 875ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts (22 tests) 345ms
+ ✓ |server| server/__tests__/integration.agency-listing-performance-mvp.test.ts (1 test) 2794ms
+   ✓ agency listing performance MVP persisted integration > keeps canonical performance, review, revision, access, and publication contracts intact 2632ms
+ ✓ |server| server/_core/auth.session-security.test.ts (35 tests) 366ms
+ ✓ |server| server/services/__tests__/developmentDerivedListingService.test.ts (14 tests) 86ms
+ ✓ |server| server/__tests__/integration.consumer-activity-persistence.test.ts (9 tests) 1159ms
+ ✓ |server| server/__tests__/distributionManagerChecklist.integration.test.ts (11 tests) 2568ms
+ ✓ |server| server/services/__tests__/coreFunctions.unit.test.ts (55 tests) 955ms
+ ✓ |server| server/services/__tests__/commercialOfficeService.test.ts (20 tests) 158ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/placeRelease.test.ts (25 tests) 12360ms
+   ✓ governed national production Place reference release > plans only reads, atomically applies and verifies, then repeats with zero inserts 1577ms
+   ✓ governed national production Place reference release > returns a prerequisite plan without an applicable digest when production lacks Place schema 502ms
+   ✓ governed national production Place reference release > refuses forged authority, other protected targets and physical constraint drift before writing 355ms
+   ✓ governed national production Place reference release > binds source pins and observed state; changed plans and lost lock ownership refuse before insertion 899ms
+   ✓ governed national production Place reference release > rolls back insert failure before commit 601ms
+   ✓ governed national production Place reference release > rolls back post-write failure before commit 635ms
+   ✓ governed national production Place reference release > refuses same-count identity/value drift and foreign evidence; verify refuses partial data 305ms
+   ✓ release review regressions > verifies and replays with zero writes after unresolved, ambiguous and repeated coverage signals 3018ms
+   ✓ release review regressions > never reports success when lock release returns 0 586ms
+   ✓ release review regressions > never reports success when lock release returns null 606ms
+   ✓ release review regressions > never reports success when lock release returns exception 585ms
+   ✓ release review regressions > preserves the original insert failure when cleanup also fails 630ms
+   ✓ release review regressions > marks a failed COMMIT response uncertain and never retries or claims rollback 604ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=false 603ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=true 587ms
+ ✓ |server| server/__tests__/integration.lead-delivery-authority.test.ts (9 tests) 1316ms
+ ✓ |server| server/services/__tests__/listingPublicationEntitlementService.test.ts (25 tests) 168ms
+ ✓ |server| server/services/__tests__/savedSearchNotificationEngine.test.ts (8 tests) 537ms
+ ✓ |server| server/__tests__/contract.migration-execution-authority.test.ts (4 tests) 903ms
+ ✓ |server| server/services/__tests__/approvedPublicPropertyService.test.ts (22 tests) 199ms
+ ✓ |server| server/services/__tests__/propertySearchService.property.test.ts (10 tests) 1701ms
+   ✓ PropertySearchService - Property-Based Tests > Property 16: Result count accuracy > should return accurate total count for any filter combination 480ms
+ ✓ |server| server/__tests__/integration.shared-living-spaces.test.ts (6 tests) 954ms
+ ❯ |server| server/__tests__/integration.agency-canvassing-mvp.test.ts (1 test | 1 failed) 888ms
+   × agency canvassing MVP integration > keeps seller acquisition private, scoped, actionable, and traceably convertible 730ms
+     → hasIsolatedTestDb is not defined
+ ✓ |server| server/_core/databaseAuthority/__tests__/dataAdapters.test.ts (14 tests) 803ms
+   ✓ bounded Database Authority data adapters > keeps worktree profile strict while routing authorized disposable-test reference adapters 399ms
+ ✓ |server| server/__tests__/contract.property-search-detail-lead-ownership.test.ts (15 tests) 91ms
+ ✓ |server| server/services/__tests__/locationAnalytics.property.test.ts (5 tests) 6034ms
+   ✓ LocationAnalyticsService - Property-Based Tests > Property 21: Province listing count should match actual listings in province 1773ms
+   ✓ LocationAnalyticsService - Property-Based Tests > Property 22: City listing count should match actual listings in city 1071ms
+   ✓ LocationAnalyticsService - Property-Based Tests > Property 23: Suburb listing count should match actual listings in suburb 941ms
+   ✓ LocationAnalyticsService - Property-Based Tests > Property 24: Average sale price should be calculated correctly 1030ms
+   ✓ LocationAnalyticsService - Property-Based Tests > Property 26: Median price should be calculated correctly 1011ms
+ ✓ |server| server/__tests__/integration.agency-listing-preparation.test.ts (1 test) 1106ms
+   ✓ agency listing preparation acceptance > keeps private preparation available to an established agency member while publication is inactive 830ms
+ ✓ |server| server/__tests__/developer-development-home.contract.test.ts (15 tests) 188ms
+ ✓ |server| server/__tests__/billing.foundation.acceptance.integration.test.ts (2 tests) 1159ms
+   ✓ billing foundation persisted acceptance > persists the agency EFT flow, protects proof documents, activates entitlements, and keeps duplicate approval idempotent 530ms
+   ✓ billing foundation persisted acceptance > keeps rejection/correction and partial-payment paths non-activating until full verified payment 489ms
+ ✓ |server| server/migrations/__tests__/recoverTidbCheckConstraintConvergence.test.ts (7 tests) 2316ms
+   ✓ protected TiDB CHECK-constraint convergence > binds apply to the reviewed plan, enables the capability, and records durable completion 461ms
+   ✓ protected TiDB CHECK-constraint convergence > refuses application when the data would violate a missing canonical check 352ms
+   ✓ protected TiDB CHECK-constraint convergence > does not accept durable success evidence when a later violation is observed 547ms
+ ✓ |server| server/__tests__/integration.agency-member-workspace-authority.test.ts (1 test) 862ms
+   ✓ agency member workspace authority > inherits the current agency workspace through canonical membership and never opens individual billing 642ms
+ ✓ |server| server/services/__tests__/governedRuntimeGeographyAuthority.test.ts (8 tests) 158ms
+ ✓ |server| server/services/__tests__/propertySearchApprovedProjection.test.ts (22 tests) 233ms
+ ✓ |server| server/__tests__/locationAuthorityCatalog.test.ts (10 tests) 942ms
+ ✓ |server| server/services/__tests__/searchAreaQueryIntegration.test.ts (13 tests) 234ms
+ ✓ |server| server/services/__tests__/commercialActivationPolicy.test.ts (18 tests) 186ms
+ ✓ |server| server/__tests__/contract.development-search-detail-lead-journey.test.ts (5 tests) 170ms
+ ✓ |server| server/__tests__/contract.canonical-listing-place.test.ts (60 tests) 2353ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Western Cape' supports a manual locality without a city 322ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Eastern Cape' supports a manual locality without a city 450ms
+ ✓ |server| server/__tests__/localEnvironmentAuthorityStatus.test.ts (37 tests) 1711ms
+   ✓ local environment authority diagnostics > returns exit 2 without a stack trace through the CLI for an unsupported target 1491ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/readiness.test.ts (11 tests) 199ms
+ ✓ |server| server/_core/authMeTiming.test.ts (27 tests) 887ms
+ ✓ |server| server/services/__tests__/searchIntegration.property.test.ts (6 tests) 1691ms
+   ✓ Search Integration Property Tests > Property 29: Suburb selection should generate correct hierarchical URL 632ms
+   ✓ Search Integration Property Tests > Property 30: Location results should include Place ID for URL parameters 617ms
+ ↓ |server| server/services/__tests__/propertySchema.property.test.ts (3 tests | 3 skipped)
+ ✓ |server| server/__tests__/contract.agent-public-profile.test.ts (21 tests) 183ms
+ ✓ |server| server/services/__tests__/publicSearchService.contract.test.ts (16 tests) 155ms
+ ✓ |server| server/__tests__/contract.database-local-lifecycle-authority.test.ts (10 tests) 818ms
+ ✓ |server| server/__tests__/integration.commercial-listing-capacity.test.ts (1 test) 879ms
+   ✓ commercial active-listing entitlement enforcement > enforces Agent/Agency caps, ownership/status scope, and publication rollback 732ms
+ ✓ |server| server/services/__tests__/gautengSearchAreaActivationAcceptance.test.ts (6 tests) 173ms
+ ✓ |server| server/__tests__/agent.dashboard-showings.smoke.test.ts (1 test) 586ms
+   ✓ agent dashboard showings smoke > serves agent dashboard, showings, and lead follow-ups against the migrated schema 421ms
+ ✓ |server| server/migrations/__tests__/recoverRejectedReleaseCommercialQuoteTermsMigration.test.ts (3 tests) 1215ms
+   ✓ protected release commercial quote-terms zero-statement migration recovery > binds apply to the plan digest and retains the original plus review evidence 364ms
+   ✓ protected release commercial quote-terms zero-statement migration recovery > fails closed when either replacement column is present or review evidence changes 423ms
+ ✓ |server| server/__tests__/integration.property-card-data-flow.test.ts (3 tests) 515ms
+ ✓ |server| server/services/__tests__/searchDiscoveryService.test.ts (9 tests) 215ms
+ ✓ |server| server/_core/founderGoogleIdentity.test.ts (43 tests) 1041ms
+ ✓ |server| server/__tests__/integration.developer-media-authority.test.ts (3 tests) 1131ms
+   ✓ B06 Developer confirmed media authority > requires reserve → actual upload → confirm → owned attachment and preserves authorised media on edit 409ms
+   ✓ B06 Developer confirmed media authority > binds unit gallery media to the owned development and persisted unit while denying foreign scopes 449ms
+ ✓ |server| server/__tests__/contract.database-governance-authority.test.ts (7 tests) 914ms
+ ✓ |server| server/__tests__/integration.agent-launch-journey.test.ts (1 test) 755ms
+   ✓ independent agent launch journey (publish → receive) > lets an approved, paid, badge-less solo agent publish inventory and receive the enquiry 605ms
+ ✓ |server| server/migrations/__tests__/recoverRejectedReleaseZeroStatementMigration.test.ts (3 tests) 1227ms
+   ✓ protected release zero-statement migration recovery > binds apply to the plan digest and retains the original plus review evidence 374ms
+   ✓ protected release zero-statement migration recovery > fails closed when the rejected physical shape is already present or the digest changes 433ms
+ ✓ |server| server/__tests__/contract.place-admission-territory-neutrality.test.ts (19 tests) 15468ms
+   ✓ Place admission territory registry: a second territory needs no new engine > admits a synthetic non-Gauteng territory through the same builder and materializer 5433ms
+   ✓ Place admission: national verification across registered provinces > keeps province identities distinct and reports national homonyms 1364ms
+   ✓ Place admission: national identity is enforced, not merely reported > fails when two provinces claim the same Place identity 1381ms
+   ✓ Place admission: national identity is enforced, not merely reported > shows UNIQUE(parent, name) is unenforceable, and that adding type does not fix it 1369ms
+   ✓ Place admission: national provenance closes for every source identity > traces every source identity to a Place or a disposition, per province and nationally 2118ms
+   ✓ Place admission: national provenance closes for every source identity > states that the eight disposition-only ledgers are not self-contained 1941ms
+   ✓ Place admission: boundary currency is a gate, not a claim > refuses to let any province claim currency it cannot evidence 736ms
+   ✓ Place admission: boundary currency is a gate, not a claim > covers every registered province and certifies none of them 740ms
+ ✓ |server| server/services/__tests__/publicLeadCustodyService.contract.test.ts (23 tests) 789ms
+ ✓ |server| server/__tests__/distributionRouter.transactionBoundaries.test.ts (12 tests) 170ms
+ ✓ |server| server/services/__tests__/publicPropertyEligibilityService.test.ts (15 tests) 144ms
+ ✓ |server| server/services/__tests__/affordabilityCalculator.test.ts (7 tests) 827ms
+ ✓ |server| shared/__tests__/factualRuntimeGeographyBridge.test.ts (11 tests) 856ms
+ ✓ |server| server/services/__tests__/locationPagesService.hierarchy.test.ts (8 tests) 203ms
+ ✓ |server| server/__tests__/contract.system-saved-search-scheduler-status.test.ts (7 tests) 168ms
+ ✓ |server| server/services/__tests__/coldStart.smoke.test.ts (55 tests) 157ms
+ ✓ |server| scripts/__tests__/databaseUtilityAuthority.test.ts (38 tests) 1148ms
+   ✓ database utility authority guard > accepts the current explicit authority inventory 348ms
+ ✓ |server| server/__tests__/contract.database-agent-authority.test.ts (7 tests) 296ms
+ ✓ |server| server/__tests__/integration.agency-listing-attribution.test.ts (1 test) 885ms
+   ✓ agency principal listing attribution > preserves agency ownership from draft creation through public lead capture 732ms
+ ✓ |server| server/migrations/__tests__/recoverRejectedZeroStatementMigration.test.ts (3 tests) 171ms
+ ✓ |server| server/services/__tests__/searchAreaAuthority.test.ts (18 tests) 145ms
+ ↓ |server| server/services/__tests__/exploreShorts.schema.test.ts (7 tests | 7 skipped)
+ ✓ |server| server/__tests__/contract.developer-engine-s0-containment.test.ts (12 tests) 814ms
+ ✓ |server| server/__tests__/distributionPartnerAccelerator.integration.test.ts (2 tests) 643ms
+ ✓ |server| server/services/__tests__/developmentService.test.ts (4 tests) 11343ms
+   ✓ Development Service - Property Tests > Property 4: Development amenities round-trip consistency (with seed=1893777210) 2762ms
+   ✓ Development Service - Property Tests > Property 35: Phase status transitions are valid (with seed=-841595350) 3138ms
+   ✓ Development Service - Property Tests > Invalid phase status values are rejected (with seed=-2052968915) 2922ms
+   ✓ Development Service - Property Tests > Development profile captures all required fields (with seed=1612465164) 2369ms
+ ✓ |server| server/services/__tests__/publicPropertyDto.test.ts (2 tests) 1000ms
+ ✓ |server| server/services/__tests__/commercialDomainAuthority.test.ts (7 tests) 247ms
+ ✓ |server| server/services/__tests__/agencyInvitationDeliveryService.test.ts (10 tests) 293ms
+ ✓ |server| server/services/__tests__/gautengSearchAreaPublicActivation.test.ts (7 tests) 180ms
+ ✓ |server| server/services/__tests__/locationSeoContent.property.test.ts (14 tests) 962ms
+ ✓ |server| server/__tests__/integration.demand-routing-rollback.test.ts (1 test) 506ms
+   ✓ demand routing transaction rollback > rolls back the complete demand routing graph when the transaction fails after routing 352ms
+ ✓ |server| server/services/__tests__/commercialCatalogService.test.ts (9 tests) 156ms
+ ✓ |server| server/services/__tests__/commercialTerm.test.ts (12 tests) 850ms
+ ✓ |server| server/services/__tests__/locationHierarchy.property.test.ts (3 tests) 1357ms
+   ✓ Location Hierarchy Property Tests > should maintain hierarchical integrity - all parent_ids reference existing locations 500ms
+   ✓ Location Hierarchy Property Tests > should maintain proper hierarchical type ordering 705ms
+ ✓ |server| server/__tests__/distribution.admin.schema-guard.test.ts (5 tests) 162ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/lifecycle.test.ts (3 tests) 197ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/sourceArchive.test.ts (19 tests) 1163ms
+ ✓ |server| server/__tests__/launch-preflight.contract.test.ts (11 tests) 911ms
+ ✓ |server| server/_core/localMediaRoutes.test.ts (5 tests) 1274ms
+ ✓ |server| server/services/__tests__/exploreFeedService.test.ts (8 tests) 1594ms
+   ✓ Explore Feed Service > should return active content in recommended feed 368ms
+   ✓ Explore Feed Service > should handle pagination correctly 342ms
+ ✓ |server| shared/__tests__/publicDevelopmentSearch.test.ts (12 tests) 923ms
+ ✓ |server| server/__tests__/integration.agency-value-scorecard.test.ts (2 tests) 829ms
+ ✓ |server| server/__tests__/integration.developer-lead-assignment-authority.test.ts (2 tests) 1140ms
+   ✓ B06 Developer lead assignment authority > allows self, same-organisation active operators, and unassignment without changing lead custody 462ms
+   ✓ B06 Developer lead assignment authority > rejects unrelated, suspended, Agency, and cross-Developer assignment attempts 488ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/rehearsalConnection.test.ts (10 tests) 1761ms
+ ✓ |server| server/__tests__/contract.place-consumer-geography.test.ts (26 tests) 9553ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Gauteng' preserves every executable identity 696ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Western Cape' preserves every executable identity 1479ms
+   ✓ All admitted provinces support exact consumer scope projection > 'KwaZulu-Natal' preserves every executable identity 1026ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Eastern Cape' preserves every executable identity 2474ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Free State' preserves every executable identity 662ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Mpumalanga' preserves every executable identity 430ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Limpopo' preserves every executable identity 1038ms
+   ✓ All admitted provinces support exact consumer scope projection > 'North West' preserves every executable identity 547ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Northern Cape' preserves every executable identity 956ms
+ ✓ |server| server/__tests__/distributionPartnerProgramTerms.integration.test.ts (3 tests) 621ms
+ ↓ |server| server/services/__tests__/exploreAgencyService.test.ts (5 tests | 5 skipped)
+ ✓ |server| server/domains/discovery/services/__tests__/exploreOptionAEligibilityService.test.ts (13 tests) 555ms
+ ✓ |server| server/__tests__/integration.development-card-data-flow.test.ts (2 tests) 891ms
+   ✓ Development Card Data Flow Integration > returns canonical development SearchCardResult data through public inventory search 444ms
+ ✓ |server| server/__tests__/billing.provider-independent.contract.test.ts (9 tests) 1089ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/geographyRelease.test.ts (14 tests) 3595ms
+   ✓ catalog-bound protected geography release > plans without writes and applies/repeats without replacing IDs 1682ms
+   ✓ catalog-bound protected geography release > rejects stale/missing plans and mismatched lock ownership without INSERT 716ms
+   ✓ catalog-bound protected geography release > rolls back a failed insert and releases the lock 478ms
+ ✓ |server| server/__tests__/contract.database-canonical-model-authority.test.ts (9 tests) 1578ms
+ ✓ |server| server/__tests__/agent.inventory-cutover.test.ts (6 tests) 318ms
+ ✓ |server| server/__tests__/integration.listing-media-tenant-boundary.test.ts (3 tests) 1726ms
+   ✓ listing media tenant boundary > denies an unrelated user before issuing a listing media reservation 556ms
+   ✓ listing media tenant boundary > rejects confirmation when the listing is deleted after token issuance 325ms
+   ✓ listing media tenant boundary > rejects confirmation when listing custody is reassigned after token issuance 424ms
+ ✓ |server| server/__tests__/integration.listing-publication-readiness.test.ts (3 tests) 1051ms
+ ✓ |server| shared/__tests__/public-property-detail-presentation.test.ts (5 tests) 2460ms
+ ❯ |server| server/services/__tests__/publicDevelopmentEligibility.test.ts (16 tests | 16 skipped) 156665ms
+ ✓ |server| server/__tests__/integration.developer-public-profile.test.ts (2 tests) 1484ms
+   ✓ developer public profile integration > exposes only approved published developments for an approved public publisher 371ms
+ ✓ |server| server/__tests__/integration.developer-identity-resubmission.test.ts (4 tests) 904ms
+ ✓ |server| server/__tests__/integration.developer-actor-resolution.test.ts (4 tests) 1376ms
+   ✓ B06 Developer commercial actor resolution > keeps an unapproved organisation out of paid billing and rejects a missing first-party publisher 354ms
+ ❯ |server| server/__tests__/integration.agent-lead-transitions.test.ts (4 tests | 4 skipped) 31494ms
+ ✓ |server| server/__tests__/developer.subscription-commercial.contract.test.ts (7 tests) 1354ms
+ ✓ |server| server/__tests__/location-manual-correction.test.ts (10 tests) 184ms
+ ✓ |server| server/services/__tests__/developerFunnelService.contract.test.ts (10 tests) 232ms
+ ✓ |server| server/services/__tests__/locationUrlFormat.property.test.ts (4 tests) 1076ms
+ ✓ |server| server/_core/founderGoogleIdentityRoutes.test.ts (6 tests) 257ms
+ ✓ |server| server/__tests__/integration.developer-draft-land-containment.test.ts (1 test) 381ms
+ ✓ |server| server/__tests__/contract.developer-create-lead.test.ts (19 tests) 172ms
+ ✓ |server| server/__tests__/contract.database-production-seed-security.test.ts (6 tests) 900ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/rehearsalAuthorization.test.ts (30 tests) 2012ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/canonicalPlacesTransactions.test.ts (6 tests) 24875ms
+   ✓ canonical Place preparation validates before commit > refuses stale national name normalization before any write despite correct counts and IDs 10325ms
+   ✓ canonical Place preparation validates before commit > rolls back a per-territory load whose mapping insert was silently dropped 399ms
+   ✓ canonical Place preparation validates before commit > commits a complete per-territory load and reports zero writes on replay 1515ms
+   ✓ canonical Place preparation validates before commit > refuses national identity-field drift with the correct ID set and totals, without committing 12351ms
+ ✓ |server| server/domains/discovery/services/__tests__/discoveryFeedService.test.ts (4 tests) 216ms
+ ✓ |server| server/_core/authRateLimitStore.test.ts (10 tests) 1259ms
+ ✓ |server| server/__tests__/integration.agency-operating-home.test.ts (2 tests) 645ms
+ ✓ |server| server/services/__tests__/developmentInventorySummary.test.ts (9 tests) 864ms
+ ✓ |server| server/__tests__/contract.agency-lead-visibility-followup.test.ts (4 tests) 177ms
+ ✓ |server| server/services/__tests__/leadRoutingAuditService.test.ts (4 tests) 149ms
+ ✓ |server| server/services/__tests__/monetization.smoke.test.ts (27 tests) 168ms
+ ✓ |server| server/__tests__/commercial-access-authority.contract.test.ts (7 tests) 755ms
+ ✓ |server| server/tests/unitTypeRefactor.test.ts (3 tests) 439ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/isolatedCiCredentials.test.ts (7 tests) 766ms
+ ✓ |server| server/__tests__/contract.agents-serving-location.test.ts (8 tests) 155ms
+ ✓ |server| server/services/__tests__/savedSearchDeliveryScheduler.test.ts (3 tests) 63ms
+ ✓ |server| server/__tests__/contract.developer-engine-s3-curated-catalogue.test.ts (5 tests) 757ms
+ ✓ |server| server/__tests__/contract.agency-deal-engine.test.ts (8 tests) 165ms
+ ✓ |server| server/services/__tests__/landLaunchContainment.test.ts (4 tests) 71ms
+ ✓ |server| server/__tests__/contract.agent-skill-governance.test.ts (6 tests) 956ms
+ ✓ |server| server/__tests__/contract.database-residual-utility-authority.test.ts (5 tests) 768ms
+ ✓ |server| server/__tests__/admin.inventory-boundary.test.ts (4 tests) 142ms
+ ✓ |server| server/__tests__/integration.agent-profile-reconsideration.test.ts (2 tests) 344ms
+ ✓ |server| server/__tests__/contract.public-inventory-authority-safety.test.ts (8 tests) 151ms
+ ✓ |server| server/__tests__/commercial-launch-access-s4.contract.test.ts (6 tests) 192ms
+ ✓ |server| server/_core/founderGoogleStateStore.test.ts (9 tests) 761ms
+ ✓ |server| server/__tests__/integration.developer-prepayment-approval.test.ts (1 test) 303ms
+ ✓ |server| scripts/__tests__/geographyCoverageGenerator.test.ts (1 test) 1067ms
+ ✓ |server| server/__tests__/contract.database-final-closure-authority.test.ts (5 tests) 835ms
+ ✓ |server| server/_core/readinessSnapshotMonitor.test.ts (8 tests) 843ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/readinessConnection.test.ts (7 tests) 504ms
+ ✓ |server| server/__tests__/distribution-assisted-onboarding-review.test.ts (3 tests) 158ms
+ ✓ |server| server/__tests__/contract.agent-onboarding-journey.test.ts (9 tests) 750ms
+ ✓ |server| server/services/__tests__/publicDevelopmentSearch.contract.test.ts (6 tests) 781ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/plePublicationEntitlement.test.ts (12 tests) 170ms
+ ↓ |server| server/services/__tests__/trendingSuburbs.property.test.ts (8 tests | 8 skipped)
+ ✓ |server| server/services/__tests__/agencyOperatingHome.test.ts (6 tests) 165ms
+ ✓ |server| server/services/__tests__/developmentHomeAttention.test.ts (8 tests) 213ms
+ ✓ |server| server/services/__tests__/developmentSubmissionReadiness.test.ts (6 tests) 752ms
+ ✓ |server| server/__tests__/integration.listing-media-reconciliation.test.ts (1 test) 365ms
+ ↓ |server| server/__tests__/contract.database-explore-future-authority.test.ts (4 tests | 4 skipped)
+ ✓ |server| server/services/__tests__/developerOperatingHome.test.ts (3 tests) 189ms
+ ✓ |server| server/__tests__/contract.agency-canvassing-boundary.test.ts (5 tests) 236ms
+ ✓ |server| server/_core/cache/redis.connection.test.ts (4 tests) 294ms
+ ✓ |server| server/_core/securityRuntimeConfiguration.test.ts (13 tests) 205ms
+ ✓ |server| server/__tests__/distribution.access-policy.test.ts (7 tests) 158ms
+ ✓ |server| server/__tests__/contract.location-contract.test.ts (8 tests) 870ms
+ ✓ |server| server/__tests__/developer-engine-s1-actor-authority.test.ts (8 tests) 883ms
+ ✓ |server| server/__tests__/contract.commercial-lead-workflow-boundary.test.ts (4 tests) 157ms
+ ✓ |server| server/__tests__/contract.agency-viewings-workflow.test.ts (7 tests) 812ms
+ ✓ |server| server/__tests__/guest-migration.contract.test.ts (8 tests) 187ms
+ ✓ |server| server/__tests__/contract.agency-listing-inventory.test.ts (6 tests) 192ms
+ ✓ |server| server/__tests__/contract.properties-search-development-listings.test.ts (3 tests) 156ms
+ ✓ |server| scripts/__tests__/testDbWorkflow.test.ts (10 tests) 767ms
+ ✓ |server| server/__tests__/integration.billing-provider-event-identity.test.ts (4 tests) 456ms
+ ✓ |server| server/__tests__/contract.agent-continuity.test.ts (10 tests) 185ms
+ ✓ |server| server/services/__tests__/superAdminRoleAuthority.test.ts (5 tests) 185ms
+ ✓ |server| server/services/__tests__/publicLeadRateLimitService.test.ts (4 tests) 893ms
+ ✓ |server| server/__tests__/contract.property-listify-database-authority-skill.test.ts (3 tests) 875ms
+ ✓ |server| scripts/__tests__/localDbWorkflow.test.ts (8 tests) 894ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/homepageJourneyPreviewFixture.test.ts (7 tests) 365ms
+ ✓ |server| server/domains/discovery/__tests__/exploreOptionAEligibilityRouter.test.ts (4 tests) 808ms
+ ✓ |server| server/services/__tests__/homeMarketInsightsService.test.ts (3 tests) 202ms
+ ✓ |server| server/services/__tests__/leadRoutingCorrectionService.test.ts (7 tests) 169ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/governedContainedScenarioFixture.test.ts (3 tests) 180ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/listingPreviewFixture.test.ts (8 tests) 356ms
+ ✓ |server| server/__tests__/contract.saved-search-apply-delivery-action.test.ts (3 tests) 173ms
+ ✓ |server| shared/__tests__/features-context.test.ts (7 tests) 826ms
+ ✓ |server| server/services/__tests__/leadRoutingConversionReportService.test.ts (1 test) 149ms
+ ✓ |server| server/_core/databaseAuthority/dataAdapters/common.test.ts (3 tests) 398ms
+ ✓ |server| server/__tests__/agent.showings-compatibility.test.ts (3 tests) 162ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts (8 tests) 809ms
+ ✓ |server| server/services/__tests__/discoveryOpsReportService.test.ts (1 test) 166ms
+Thu, 08 Oct 2026 08:37:56 GMT express deprecated res.clearCookie: Passing "options.maxAge" is deprecated. In v5.0.0 of Express, this option will be ignored, as res.clearCookie will automatically set cookies to expire immediately. Please update your code to omit this option. at server/_core/authRoutes.ts:192:9
+ ✓ |server| server/__tests__/auth.agency-workspace-smoke.test.ts (1 test) 201ms
+ ✓ |server| server/__tests__/contract.database-service-partner-authority.test.ts (4 tests) 750ms
+ ✓ |server| server/__tests__/developer-registration-input.contract.test.ts (13 tests) 157ms
+ ✓ |server| server/__tests__/contract.b08-release-reconciliation.test.ts (3 tests) 277ms
+ ✓ |server| server/__tests__/database-security-containment.contract.test.ts (7 tests) 763ms
+ ✓ |server| server/services/__tests__/commercialLeadContextService.test.ts (3 tests) 199ms
+ ✓ |server| server/services/__tests__/provincialDiscoveryService.test.ts (8 tests) 760ms
+ ✓ |server| shared/__tests__/publicSearchValidation.test.ts (12 tests) 754ms
+ ✓ |server| server/__tests__/integration.billing-billable-account.test.ts (3 tests) 204ms
+ ✓ |server| server/services/__tests__/agentCoverageAreaService.test.ts (7 tests) 821ms
+ ✓ |server| server/_core/__tests__/runtimeBootstrap.test.ts (7 tests) 759ms
+ ✓ |server| server/uploadRouter.test.ts (3 tests) 1047ms
+ ✓ |server| server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts (2 tests) 156ms
+ ✓ |server| server/__tests__/contract.agent-public-inventory.test.ts (4 tests) 167ms
+ ✓ |server| server/__tests__/auth.distribution-identity-projection.test.ts (4 tests) 207ms
+ ✓ |server| server/services/__tests__/developmentService.public-contract.test.ts (4 tests) 49ms
+ ✓ |server| server/services/__tests__/paidMvpSalesPause.test.ts (4 tests) 156ms
+ ✓ |server| server/services/__tests__/publisherLeadService.contract.test.ts (3 tests) 149ms
+ ✓ |server| server/__tests__/authRoutes.emailDeliveryBoundary.test.ts (2 tests) 817ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/pleReviewerFixture.test.ts (11 tests) 187ms
+ ✓ |server| server/__tests__/commercial-agent-s2.contract.test.ts (5 tests) 773ms
+ ✓ |server| server/__tests__/integration.developer-kpi-unit-types.test.ts (1 test) 325ms
+ ✓ |server| server/__tests__/contract.core-property-projection.test.ts (4 tests) 156ms
+ ✓ |server| server/migrations/__tests__/mysqlEstablishmentBehavior.integration.test.ts (1 test) 268ms
+ ✓ |server| server/services/__tests__/paidMvpOwnerAdmission.test.ts (22 tests) 194ms
+ ✓ |server| server/services/__tests__/cataloguePublisherMutationPolicy.test.ts (9 tests) 153ms
+ ✓ |server| server/services/__tests__/transactionalEmailPolicy.test.ts (7 tests) 796ms
+ ✓ |server| server/__tests__/contract.developer-engine-s2-supersession.test.ts (5 tests) 780ms
+ ✓ |server| shared/__tests__/land-domain.test.ts (6 tests) 774ms
+ ✓ |server| server/__tests__/contract.public-lead-honeypot.test.ts (15 tests) 168ms
+ ✓ |server| server/__tests__/prospectJourneyProcessRunner.test.ts (5 tests) 1118ms
+ ✓ |server| server/__tests__/contract.properties-search.test.ts (4 tests) 189ms
+ ✓ |server| server/migrations/__tests__/legacyConsumerProfileRetirementMigration.test.ts (3 tests) 957ms
+ ✓ |server| server/services/__tests__/landWorkflowService.test.ts (9 tests) 176ms
+ ✓ |server| server/__tests__/agent.lead-response-summary.test.ts (3 tests) 141ms
+ ✓ |server| server/services/__tests__/developmentService.auctionDates.test.ts (6 tests) 154ms
+ ✓ |server| server/__tests__/exploreVideoUploadBoundary.test.ts (3 tests) 137ms
+ ✓ |server| server/_core/emailDeliveryBoundary.test.ts (4 tests) 749ms
+ ✓ |server| scripts/__tests__/localEnvironmentAuthority.test.ts (7 tests) 777ms
+ ✓ |server| server/services/__tests__/searchScope.test.ts (5 tests) 754ms
+ ✓ |server| server/__tests__/integration.explore-analytics-rebuild.test.ts (1 test) 262ms
+ ✓ |server| server/__tests__/contract.system-lead-routing-correction.test.ts (11 tests) 169ms
+ ✓ |server| server/__tests__/distributionCommissionService.test.ts (3 tests) 747ms
+ ✓ |server| server/__tests__/contract.agent-presence-proof.test.ts (5 tests) 223ms
+ ✓ |server| server/domains/discovery/__tests__/exploreOptionAPilotAccess.test.ts (4 tests) 895ms
+ ✓ |server| server/__tests__/contract.property-taxonomy.test.ts (5 tests) 848ms
+ ✓ |server| server/__tests__/db-connection.concurrency.test.ts (4 tests) 12ms
+ ✓ |server| server/__tests__/contract.catalogue-publisher-lead-boundary.test.ts (14 tests) 168ms
+ ✓ |server| server/_core/hostedRuntimeConfiguration.test.ts (17 tests) 208ms
+ ✓ |server| server/services/__tests__/showingsSchemaDrift.test.ts (4 tests) 300ms
+ ✓ |server| server/__tests__/smoke.superadmin-publishing.test.ts (2 tests) 147ms
+ ✓ |server| server/__tests__/developer.public-profile.contract.test.ts (3 tests) 161ms
+ ✓ |server| scripts/__tests__/launchRuntimeProbeCheck.test.ts (5 tests) 750ms
+ ✓ |server| server/migrations/__tests__/primaryKeyMigrationPreconditions.integration.test.ts (2 tests) 282ms
+ ✓ |server| server/__tests__/commercial-authority-s0.contract.test.ts (6 tests) 773ms
+ ✓ |server| server/services/__tests__/landWorkflowEvidenceScope.test.ts (4 tests) 59ms
+ ✓ |server| server/__tests__/smoke.health.test.ts (2 tests) 193ms
+ ✓ |server| server/services/__tests__/listingContentCustody.test.ts (8 tests) 744ms
+ ✓ |server| server/services/__tests__/landWorkflowMarketingMedia.test.ts (3 tests) 60ms
+ ✓ |server| server/__tests__/integration.location-search-catalog-fallback.test.ts (1 test) 265ms
+ ✓ |server| server/_core/authRateLimitBoundary.test.ts (1 test) 908ms
+ ✓ |server| server/__tests__/explorePublishingBoundary.test.ts (2 tests) 190ms
+ ✓ |server| server/__tests__/contract.pricing-contract.test.ts (6 tests) 848ms
+ ✓ |server| server/domains/discovery/services/__tests__/discoveryLegacyFeedSource.test.ts (3 tests) 208ms
+ ✓ |server| server/services/__tests__/landWorkflowSnapshot.test.ts (1 test) 55ms
+ ✓ |server| server/__tests__/distributionRequiredDocumentsService.test.ts (5 tests) 204ms
+ ✓ |server| server/__tests__/contract.developer-read-boundary.test.ts (4 tests) 153ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/adapterProtocol.test.ts (3 tests) 154ms
+ ✓ |server| server/__tests__/contract.public-buy-entry-eligibility.test.ts (3 tests) 747ms
+ ✓ |server| server/services/__tests__/explorePublishingEligibilityService.test.ts (5 tests) 154ms
+ ✓ |server| server/domains/discovery/services/__tests__/discoveryEngagementService.test.ts (3 tests) 756ms
+ ✓ |server| scripts/__tests__/databaseAuthorityCli.test.ts (2 tests) 195ms
+ ✓ |server| server/_core/__tests__/databaseTls.test.ts (7 tests) 752ms
+ ✓ |server| server/__tests__/contract.saved-search-update-preferences.test.ts (1 test) 170ms
+ ✓ |server| server/_core/browserSecurity.test.ts (4 tests) 746ms
+ ✓ |server| server/__tests__/explore-legacy-capability-boundary.test.ts (7 tests) 172ms
+ ✓ |server| server/services/__tests__/founderGoogleAccountService.test.ts (17 tests) 146ms
+ ✓ |server| server/services/__tests__/agencyMembershipService.test.ts (4 tests) 205ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/tidbStructuralAdmission.test.ts (3 tests) 262ms
+ ✓ |server| server/__tests__/contract.system-lead-routing-audit.test.ts (7 tests) 187ms
+ ✓ |server| server/services/__tests__/developerSubscriptionService.test.ts (5 tests) 147ms
+ ✓ |server| server/__tests__/auth.login-query-mapping.test.ts (4 tests) 57ms
+ ✓ |server| server/services/__tests__/distributionSchemaReadiness.test.ts (4 tests) 181ms
+ ✓ |server| server/__tests__/developmentSupersessionRouting.test.ts (7 tests) 818ms
+ ✓ |server| server/services/__tests__/landPublicService.test.ts (4 tests) 158ms
+ ✓ |server| server/services/__tests__/landDomainService.test.ts (3 tests) 213ms
+ ✓ |server| server/__tests__/contract.commercial-agency-workflow-boundary.test.ts (4 tests) 187ms
+ ✓ |server| server/services/__tests__/landWorkflowReviewTransition.test.ts (1 test) 63ms
+ ✓ |server| server/__tests__/contract.sitemap-agents.test.ts (2 tests) 54ms
+ ✓ |server| server/__tests__/contract.agency-onboarding-journey.test.ts (5 tests) 767ms
+ ✓ |server| server/__tests__/contract.public-search-pagination.test.ts (5 tests) 172ms
+ ✓ |server| server/__tests__/contract.system-lead-routing-conversion-report.test.ts (7 tests) 151ms
+ ✓ |server| server/__tests__/contract.leads-insert-canonical-authority.test.ts (3 tests) 188ms
+ ✓ |server| server/services/__tests__/developerMediaAuthority.test.ts (3 tests) 176ms
+ ✓ |server| server/__tests__/distributionPayoutMilestoneService.test.ts (4 tests) 202ms
+ ✓ |server| server/__tests__/integration.services-engine-idempotency.test.ts (1 test) 236ms
+ ✓ |server| server/services/__tests__/landPublicProjection.test.ts (3 tests) 168ms
+ ✓ |server| server/__tests__/contract.saved-search-alert-history.test.ts (1 test) 150ms
+ ✓ |server| server/services/__tests__/multiLocationQueryBoundary.test.ts (3 tests) 766ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/localServicePaths.test.ts (4 tests) 752ms
+ ✓ |server| server/__tests__/contract.service-partner-client-authority.test.ts (5 tests) 761ms
+ ✓ |server| shared/__tests__/rentSearchContract.test.ts (7 tests) 744ms
+ ✓ |server| server/__tests__/contract.database-connection-path-authority.test.ts (2 tests) 800ms
+ ✓ |server| server/__tests__/contract.prospect-journey-status.test.ts (5 tests) 155ms
+ ✓ |server| server/__tests__/location-search-result-adapter.test.ts (2 tests) 160ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/worktreeIdentity.test.ts (3 tests) 851ms
+ ✓ |server| server/__tests__/contract.partner-admin-runtime-authority.test.ts (5 tests) 762ms
+ ✓ |server| server/migrations/__tests__/canonicalListingLocationMigration.test.ts (2 tests) 838ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/canonicalCommercialAdmission.test.ts (4 tests) 169ms
+ ✓ |server| server/services/__tests__/landWorkflowCreateDraft.test.ts (2 tests) 61ms
+ ✓ |server| server/_core/health.hosted-cache.test.ts (3 tests) 182ms
+ ✓ |server| server/__tests__/developer-engine-s3-discovery.contract.test.ts (3 tests) 789ms
+ ✓ |server| server/services/__tests__/publicPropertyEligibilityBatch.test.ts (1 test) 187ms
+ ✓ |server| server/lib/sanitizeDraftData.test.ts (2 tests) 815ms
+ ✓ |server| server/services/__tests__/homeFeedComposition.test.ts (4 tests) 750ms
+ ✓ |server| server/services/__tests__/exploreFeedService.fallback.test.ts (3 tests) 205ms
+ ✓ |server| server/migrations/__tests__/authSessionSecurityMigration.test.ts (3 tests) 949ms
+ ✓ |server| shared/__tests__/rental-terms-contract.test.ts (4 tests) 768ms
+ ✓ |server| shared/__tests__/property-presentation.test.ts (3 tests) 747ms
+ ✓ |server| server/services/__tests__/landWorkflowClaims.test.ts (1 test) 54ms
+ ✓ |server| server/services/__tests__/listingMediaAuthority.test.ts (4 tests) 161ms
+ ✓ |server| scripts/__tests__/smokeAuthBoundary.test.ts (2 tests) 803ms
+ ✓ |server| server/__tests__/contract.developer-new-lead-count.test.ts (3 tests) 163ms
+ ✓ |server| shared/__tests__/listing-highlight-registry.test.ts (4 tests) 756ms
+ ✓ |server| shared/__tests__/agencyJourney.test.ts (5 tests) 748ms
+ ✓ |server| server/__tests__/contract.properties-create-retirement.test.ts (5 tests) 168ms
+ ✓ |server| server/services/__tests__/publicSearchValidation.test.ts (4 tests) 765ms
+ ✓ |server| server/migrations/__tests__/canonicalListingPlaceReference.test.ts (3 tests) 320ms
+ ✓ |server| server/__tests__/contract.agent-public-profile-route.test.ts (4 tests) 164ms
+ ✓ |server| server/__tests__/contract.service-partner-runtime-authority.test.ts (5 tests) 763ms
+ ✓ |server| server/_core/founderGoogleLoginConfig.test.ts (17 tests) 759ms
+ ✓ |server| shared/__tests__/listing-media.test.ts (3 tests) 760ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/dataRoleManifest.test.ts (2 tests) 198ms
+ ✓ |server| server/services/__tests__/distributionSchemaProbeFailure.test.ts (12 tests) 67ms
+ ✓ |server| server/services/__tests__/commercialTermNoticeScheduler.test.ts (1 test) 224ms
+ ✓ |server| shared/__tests__/sharedLivingSearchContract.test.ts (4 tests) 859ms
+ ✓ |server| server/__tests__/distributionBrandOnboardingPresetService.test.ts (2 tests) 226ms
+ ✓ |server| server/services/__tests__/mediaAuthoritySecretContainment.test.ts (4 tests) 170ms
+ ✓ |server| server/__tests__/contract.property-taxonomy-schema.test.ts (3 tests) 753ms
+ ✓ |server| server/__tests__/contract.agency-listing-performance-mvp.test.ts (2 tests) 749ms
+ ✓ |server| server/services/__tests__/billingProofStorage.hosted.test.ts (2 tests) 756ms
+ ✓ |server| server/services/__tests__/onboardingStateCreation.test.ts (6 tests) 762ms
+ ✓ |server| server/migrations/__tests__/manualLocationWithoutCoordinatesMigration.test.ts (2 tests) 839ms
+ ✓ |server| server/services/__tests__/locationCache.integration.test.ts (3 tests) 159ms
+ ✓ |server| server/__tests__/contract.public-agent-analytics.test.ts (3 tests) 147ms
+ ✓ |server| server/__tests__/distributionManagerVisibilityBoundaries.test.ts (3 tests) 850ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/isolatedCiGrantVerification.test.ts (11 tests) 861ms
+ ✓ |server| server/services/__tests__/exploreAnalyticsService.test.ts (2 tests) 206ms
+ ✓ |server| server/__tests__/agent.offer-readiness.test.ts (1 test) 149ms
+ ✓ |server| server/__tests__/locationPagesRouter.test.ts (2 tests) 161ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/tidbCheckConstraintCapability.test.ts (7 tests) 751ms
+ ✓ |server| server/services/__tests__/searchRuntimeCacheIdentity.test.ts (1 test) 137ms
+ ✓ |server| server/services/__tests__/locationCoverageTelemetry.test.ts (2 tests) 762ms
+ ✓ |server| server/__tests__/integration.explore-analytics-query-plan.test.ts (1 test) 153ms
+ ✓ |server| server/tests/verify-db-isolation.test.ts (1 test) 234ms
+ ✓ |server| server/__tests__/contract.commercial-location-scope.test.ts (6 tests) 158ms
+ ✓ |server| server/services/__tests__/developmentSupersessionPolicy.test.ts (3 tests) 208ms
+ ✓ |server| server/services/__tests__/landEvidenceStorage.test.ts (4 tests) 760ms
+ ✓ |server| shared/commercialSearchContract.test.ts (3 tests) 753ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/placeStoragePreconditions.test.ts (5 tests) 744ms
+ ✓ |server| server/_core/requestBodyBoundary.test.ts (2 tests) 249ms
+ ✓ |server| server/services/__tests__/developmentDeletionPolicy.test.ts (2 tests) 145ms
+ ✓ |server| server/__tests__/landSearchGeography.test.ts (11 tests) 756ms
+ ✓ |server| shared/__tests__/farmSearchContract.test.ts (5 tests) 748ms
+ ✓ |server| server/__tests__/contract.commercial-listing-publication.test.ts (2 tests) 766ms
+ ✓ |server| server/__tests__/contract.location-public-eligibility.test.ts (3 tests) 761ms
+ ✓ |server| server/__tests__/contract.features-context.test.ts (1 test) 169ms
+ ✓ |server| server/__tests__/contract.seo-head-agents.test.ts (4 tests) 852ms
+ ✓ |server| server/__tests__/developer-search-developments.contract.test.ts (1 test) 166ms
+ ✓ |server| server/__tests__/contract.distribution-access-authority.test.ts (1 test) 734ms
+ ✓ |server| server/services/__tests__/leadDeliveryService.contract.test.ts (3 tests) 153ms
+ ✓ |server| server/uploadRouter.s3Scope.test.ts (1 test) 163ms
+ ✓ |server| server/__tests__/contract.developments-search-validation.test.ts (3 tests) 762ms
+ ✓ |server| server/__tests__/contract.similar-properties-authority.test.ts (3 tests) 764ms
+ ✓ |server| server/__tests__/contract.feed-ranking-authority.test.ts (3 tests) 856ms
+ ✓ |server| server/services/__tests__/commercialCatalogService.agent.test.ts (2 tests) 159ms
+ ✓ |server| server/__tests__/distributionManagerInviteTokenService.test.ts (2 tests) 752ms
+ ✓ |server| server/__tests__/contract.saved-search-process-notifications.test.ts (1 test) 159ms
+ ✓ |server| server/_core/__tests__/databaseTarget.test.ts (4 tests) 884ms
+ ✓ |server| server/services/__tests__/localPublisherDiscovery.contract.test.ts (2 tests) 934ms
+ ✓ |server| server/__tests__/cacheRouter.authorization.test.ts (4 tests) 164ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/rehearsalCatalogue.test.ts (2 tests) 760ms
+ ✓ |server| server/services/__tests__/affordabilityAssessmentService.test.ts (2 tests) 135ms
+ ✓ |server| server/__tests__/launch-safety.contract.test.ts (3 tests) 761ms
+ ✓ |server| server/lib/__tests__/savedSearchContract.test.ts (2 tests) 757ms
+ ✓ |server| server/domains/discovery/services/__tests__/discoveryRankingService.test.ts (1 test) 761ms
+ ✓ |server| server/services/__tests__/exploreInteractionService.contract.test.ts (3 tests) 864ms
+ ✓ |server| server/services/__tests__/inventoryLinkResolver.contract.test.ts (3 tests) 195ms
+ ✓ |server| server/__tests__/contract.explore-analytics-authority.test.ts (2 tests) 770ms
+ ✓ |server| server/__tests__/contract.db-default-normalization.test.ts (8 tests) 750ms
+ ✓ |server| server/__tests__/contract.marketing-authority.test.ts (1 test) 778ms
+ ✓ |server| server/_core/databaseAuthority/__tests__/rehearsalClosure.test.ts (1 test) 790ms
+ ✓ |server| server/__tests__/contract.cross-supply-projection-authority.test.ts (3 tests) 750ms
+ ✓ |server| server/services/__tests__/leadTransitionService.test.ts (3 tests) 218ms
+ ✓ |server| server/services/__tests__/developmentRouteAuthority.test.ts (2 tests) 739ms
+ ✓ |server| server/_core/cookies.test.ts (2 tests) 767ms
+ ✓ |server| server/__tests__/smoke.version.test.ts (1 test) 171ms
+ ✓ |server| scripts/emailWorkerSupervisor.test.ts (2 tests) 1165ms
+   ✓ email supervisor loop > repeats batches and drains the current batch on shutdown 1008ms
+ ✓ |server| server/__tests__/landRouter.test.ts (2 tests) 177ms
+ ✓ |server| server/__tests__/trpcErrorFormatter.test.ts (1 test) 160ms
+ ✓ |server| server/__tests__/contract.price-insights-authority.test.ts (1 test) 847ms
+ ✓ |server| server/_core/__tests__/trustedProxy.test.ts (1 test) 878ms
+ ✓ |server| server/services/__tests__/sharedLivingPublicService.test.ts (1 test) 175ms
+ ✓ |server| server/__tests__/contract.legacy-partner-analytics-route-boundary.test.ts (1 test) 864ms
+ ✓ |server| server/domains/discovery/caching/__tests__/discoveryCache.test.ts (1 test) 850ms
+ ✓ |server| shared/__tests__/agentLeadOfferReadiness.test.ts (2 tests) 847ms
+ ✓ |server| server/services/__tests__/billingProviderEventService.contract.test.ts (1 test) 845ms
+ ✓ |server| server/__tests__/distribution.manager-invite-links.test.ts (2 tests) 851ms
+ ✓ |server| server/__tests__/landPublicRouter.test.ts (11 tests) 142ms
+ ✓ |server| server/__tests__/contract.legacy-partner-lead-route-boundary.test.ts (1 test) 748ms
+ ✓ |server| server/__tests__/locationCampaigns.test.ts (3 tests) 748ms
+ ✓ |server| server/__tests__/contract.dashboard-analytics-authority.test.ts (1 test) 753ms
+ ✓ |server| server/__tests__/contract.developer-kpi-status-semantics.test.ts (1 test) 755ms
+ ✓ |server| server/services/__tests__/commercialMarketingMediaIdempotency.contract.test.ts (1 test) 747ms
+ ✓ |server| server/__tests__/contract.distribution-terms-authority.test.ts (1 test) 742ms
+ ✓ |server| server/__tests__/contract.location-insights-authority.test.ts (1 test) 794ms
+ ✓ |server| server/__tests__/contract.demand-authority-boundary.test.ts (1 test) 766ms
+ ✓ |server| server/__tests__/contract.legacy-boost-route-boundary.test.ts (1 test) 758ms
+ ✓ |server| server/__tests__/user-billing-deletion-authority.contract.test.ts (1 test) 764ms
+ ✓ |server| server/services/__tests__/listingLocationResolver.contract.test.ts (2 tests) 137ms
+ ✓ |server| server/__tests__/contract.admin-revenue-authority.test.ts (1 test) 743ms
+ ✓ |server| server/__tests__/auth.role-normalization.test.ts (2 tests) 150ms
+ ✓ |server| server/services/__tests__/developmentService.date-normalization.test.ts (2 tests) 124ms
+ ✓ |server| server/__tests__/prospectJourneyE2eGuard.test.ts (1 test) 738ms
+ ✓ |server| server/__tests__/runListingPerformanceE2eSafety.test.ts (1 test) 741ms
+ ✓ |server| server/__tests__/localDbWorkflow.test.ts (8 tests) 877ms
+ ✓ |server| server/__tests__/testDbWorkflow.test.ts (10 tests) 757ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/integration.agent-lead-transitions.test.ts [ server/__tests__/integration.agent-lead-transitions.test.ts ]
+Error: Got timeout reading communication packets
+ ❯ Object.createConnectionPromise [as createConnection] ../../property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/mysql2@3.17.0/node_modules/mysql2/promise.js:19:31
+ ❯ vitest.setup.ts:44:44
+     42|           globalThis.__TEST_SQL_MIGRATIONS_READY__ = (async () => {
+     43|             const lockName = 'vitest_sql_migrations_lock_v1';
+     44|             const connection = await mysql.createConnection(process.en…
+       |                                            ^
+     45|             let acquiredLock = false;
+     46| 
+ ❯ vitest.setup.ts:170:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL |server|  server/services/__tests__/publicDevelopmentEligibility.test.ts [ server/services/__tests__/publicDevelopmentEligibility.test.ts ]
+Error: connect ETIMEDOUT
+ ❯ Object.createConnectionPromise [as createConnection] ../../property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/mysql2@3.17.0/node_modules/mysql2/promise.js:19:31
+ ❯ vitest.setup.ts:44:44
+     42|           globalThis.__TEST_SQL_MIGRATIONS_READY__ = (async () => {
+     43|             const lockName = 'vitest_sql_migrations_lock_v1';
+     44|             const connection = await mysql.createConnection(process.en…
+       |                                            ^
+     45|             let acquiredLock = false;
+     46| 
+ ❯ vitest.setup.ts:170:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:477:25
+    477|       `),
+    478|     );
+    479|     expect(rows.length).toBe(1);
+       |        ^
+    480|     const result = await executePlace(String(rows[0].placeId));
+    481|     expect(result.ok).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL |server|  server/__tests__/integration.agency-canvassing-mvp.test.ts > agency canvassing MVP integration > keeps seller acquisition private, scoped, actionable, and traceably convertible
+ReferenceError: hasIsolatedTestDb is not defined
+ ❯ server/__tests__/integration.agency-canvassing-mvp.test.ts:109:3
+    107| 
+    108| afterEach(async () => {
+    109|   if (!process.env.DATABASE_URL) return;
+       |   ^
+    110|   authorizeDatabaseOperation(resolveDatabaseAuthority({ operation: 'te…
+    111|   const db = await getDb();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL |server|  server/__tests__/integration.agency-membership-authority.test.ts > canonical membership maintenance (atomic unique-pair authority) > delivers a public Commercial enquiry to a current unbadged agency member through the agency term
+AssertionError: expected [] to deeply equal ArrayContaining{…}
+
+- Expected
++ Received
+
+- ArrayContaining [
+-   ObjectContaining {
+-     "availability": ObjectContaining {
+-       "id": 1,
+-     },
+-     "listingId": 991010,
+-   },
+- ]
++ Array []
+
+ ❯ server/__tests__/integration.agency-membership-authority.test.ts:765:5
+    763|     await maintainAgencyAgentMembership(db, { agencyId, agentId, statu…
+    764|     expect(
+    765|       await db
+       |     ^
+    766|         .select({ id: subscriptions.id })
+    767|         .from(subscriptions)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+ Test Files  5 failed | 424 passed | 8 skipped (437)
+      Tests  3 failed | 3059 passed | 86 skipped (3148)
+   Start at  10:19:44
+   Duration  1387.39s (transform 14.90s, setup 37.54s, collect 628.37s, tests 576.32s, environment 115ms, prepare 35.45s)
+
+ ELIFECYCLE  Command failed with exit code 1.

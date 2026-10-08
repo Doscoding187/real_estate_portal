@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-wc",
+  "province": "Western Cape",
+  "manifest_version": "0.1",
+  "note": "Western Cape has no v0.1 coverage baseline. Unlike Gauteng, this territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list below is therefore a true statement, not a missing input: there is no older Western Cape projection to reconcile against.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb"
+  }
+}

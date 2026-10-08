@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-mp",
+  "province": "Mpumalanga",
+  "manifest_version": "0.1",
+  "note": "Mpumalanga has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "8ff5c0e94ff1f09c798018974baeff7e74333e0888383e2d875281a0d75b950b"
+  }
+}

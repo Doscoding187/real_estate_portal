@@ -1,0 +1,33 @@
+
+> real_estate_portal@1.0.0 db:reference:verify /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts reference:verify
+
+{
+  "adapter": "canonical-geography",
+  "version": "canonical-geography-v2",
+  "digest": "6c3fb68b54fd0db64ea7a67a4b30383a3d6c610babf3e1de1aa531f54827093c",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "databaseName": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "ownershipKey": "415473525d2afa0f75f14719",
+  "expected": {
+    "provinces": 9,
+    "cities": 340,
+    "suburbs": 1089
+  },
+  "verified": {
+    "provinces": 9,
+    "cities": 340,
+    "suburbs": 1089
+  },
+  "runtimeProjection": {
+    "version": "property-listify-location-authority-catalog-v0.1",
+    "digest": "b6d0ce0898bb86cdba19cab577438ee525a53a260b95dc8249475ec32a0150e4",
+    "expected": {
+      "provinces": 9,
+      "cities": 340,
+      "suburbs": 1089
+    },
+    "rows": 1414
+  },
+  "migrationHead": "0111_properties_canonical_place_reference_fk.sql"
+}

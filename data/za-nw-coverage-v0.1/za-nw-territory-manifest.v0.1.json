@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-nw",
+  "province": "North West",
+  "manifest_version": "0.1",
+  "note": "North West has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "7e3cf43408f6e0f03a94085c223a55cf3e845e1bc361abb1bf8c9e2ca29a93de"
+  }
+}

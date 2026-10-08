@@ -1,0 +1,6 @@
+{
+  "client/src/components/search/CanonicalPlaceSearchBar.tsx": "74169bb91878145103297f07654b421d530d4fa2f70428e2fa4f1fa6b036970b",
+  "client/src/components/search/__tests__/CanonicalPlaceSearchBar.test.tsx": "4258866bbdf881cb82ba56000f5f8a288bab9250c4f184f726ee8a6ce634d76a",
+  "server/services/savedSearchNotificationEngine.ts": "b2206a654c3d4a8b4521e0814a671b0c12bac407d4f94f70616c99415a1a5fb4",
+  "server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts": "b877595956a932e279998fea2db57e35c2364f867c0bb6f8fbed70bbdb4fe8b7"
+}

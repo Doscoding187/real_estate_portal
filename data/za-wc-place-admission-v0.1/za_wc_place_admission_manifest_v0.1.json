@@ -1,0 +1,899 @@
+{
+  "admission_version": "za-wc-place-admission-v0.1",
+  "name_index": {
+    "normalization_version": "1",
+    "identity_effect": "none"
+  },
+  "territory": {
+    "territory_id": "za-wc",
+    "display_name": "Western Cape",
+    "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "admission_registry_sha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433"
+  },
+  "generated_from": {
+    "source_authority_version": "za-wc-source-authority-v0.2",
+    "source_snapshot_id": "f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb",
+    "source_manifest_path": "data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json",
+    "source_manifest_sha256": "4c2de8a535106b9ef48c632a3e8da2d3549446814ec69cd351404db9efd18677",
+    "compact_artifacts": [
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_candidate_dispositions_v0.2.jsonl",
+        "sha256": "19f4b8261f06bb063c6f4a2ac7dda52715d75feee40e6c1fdfca5848705cc712",
+        "size_bytes": 17646802
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_geography_v0.2.jsonl",
+        "sha256": "b36aa7e1c3b0efd91028cdb8bdfaec4ba4f146272280d716f3a9f8d0a83e21a2",
+        "size_bytes": 6263704
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_names_v0.2.jsonl",
+        "sha256": "851a68098f956f50453cea3eb9e4100c64270116b9ef78a6ab7ec49385b39f3d",
+        "size_bytes": 4217072
+      },
+      {
+        "path": "data/za-wc-source-authority-v0.2/za_wc_factual_canonical_source_links_v0.2.jsonl",
+        "sha256": "0269ebd16c75c8cc03a1323cc63cb92337f210d83ad537bb92e3a1cd28daea7e",
+        "size_bytes": 2023044
+      }
+    ],
+    "comparison_baseline": {
+      "note": "The v0.1 committed artifacts are retained as comparison and regression evidence only. Their factual source JSONLs are unrecoverable and were not used as forward authority.",
+      "catalogue": "data/za-wc-coverage-v0.1/za-wc-territory-catalog.v0.1.json",
+      "catalogue_sha256": "a9aa752607314c8b637031d2210a0f137c3762a05faa26dbe64a631af968b96e",
+      "factual_identity_count": 0,
+      "runtime_row_count": 0,
+      "queued_count": 0,
+      "awaiting_accepted_parent_edge": 0,
+      "duplicate_natural_key_within_parent": 0,
+      "natural_key_owned_by_accepted_row": 0,
+      "co_published_natural_keys": 0,
+      "parent_evidence_inputs": 0
+    }
+  },
+  "governed_policy": {
+    "container_types": [
+      "district_municipality",
+      "local_municipality",
+      "province"
+    ],
+    "settlement_merge_max_km": 15,
+    "merge_requires_same_administrative_context": true,
+    "type_disagreement_never_blocks_merge": true,
+    "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
+    "one_containment_parent_per_place": true,
+    "search_scope_authorization_in_slice_2": 0,
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+  },
+  "counts": {
+    "source_identities": 1905,
+    "source_name_assertions": 3334,
+    "source_links": 1905,
+    "source_candidates": 13025,
+    "admitted_places": 1862,
+    "merged_equivalence_groups": 42,
+    "absorbed_source_identities": 43,
+    "single_identity_places": 1820,
+    "group_kinds": {
+      "administrative_container": 31,
+      "single_identity": 1790,
+      "merged_same_referent": 41
+    },
+    "verification": {
+      "verified": 1167,
+      "provisional": 695
+    },
+    "licensing": {
+      "permissive_supported": 1862
+    },
+    "scope_establishment": {
+      "established": 1832,
+      "not_established": 30,
+      "by_scope": {
+        "locality": {
+          "established": 1766,
+          "not_established": 0
+        },
+        "metro_city": {
+          "established": 65,
+          "not_established": 0
+        },
+        "province": {
+          "established": 1,
+          "not_established": 0
+        }
+      }
+    },
+    "executable_places": 1832,
+    "executable_by_scope": {
+      "locality": 1766,
+      "metro_city": 65,
+      "province": 1
+    },
+    "admitted_without_executable_scope": 30,
+    "names": 3246,
+    "name_roles": {
+      "preferred_public": 1862,
+      "common": 1377,
+      "official": 5,
+      "historical": 2
+    },
+    "searchable_names": 2745,
+    "preferred_public_names": 1862,
+    "relationships": 1861,
+    "relationship_types": {
+      "administratively_contains": 1861
+    },
+    "containment_parent_count": 1861,
+    "evidence_rows": 11062,
+    "external_mappings": 1905,
+    "disposition_ledger_rows": 13025,
+    "dispositions": {
+      "quarantined_candidate": 13025
+    },
+    "parent_evidence_inputs": 0,
+    "parent_evidence_classification": {
+      "total_edges": 0,
+      "by_class": {},
+      "by_disposition": {}
+    }
+  },
+  "merge_bases": {
+    "settlement_bound_km": 15,
+    "settlement_rule_enforced": "each admitted member lies within the governed distance of the group anchor (single-linkage clustering)",
+    "administrative_container_rule": "unique administrative container name merges are distance-unbounded by design, because a territory has exactly one province and one municipality per name",
+    "container_merge_groups": 1,
+    "settlement_groups_exceeding_diameter": 1,
+    "note": "Settlement groups whose diameter exceeds the bound satisfy the rule but are listed for review, because the rule compares each member to the anchor rather than to every other member. Moving to complete linkage would split these Places and is a reviewed decision, not a silent fix.",
+    "settlement_groups_over_diameter": [
+      {
+        "place_id": "pl-place-01-a5df12403238e2319913240b",
+        "members": 3,
+        "max_pairwise_km": 23.5,
+        "governed_bound_km": 15,
+        "basis": "same_normalized_name_same_administrative_context_within_governed_distance"
+      }
+    ]
+  },
+  "collation_suppressed_names": {
+    "basis": "utf8mb4_0900_ai_ci on place_name.name, which is accent- and case-insensitive",
+    "count": 88,
+    "forms": [
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kaapstad",
+        "suppressed": "Kaapstad",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kaapstad",
+        "suppressed": "Kaapstad",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kapsztad",
+        "suppressed": "Kapsztad",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Cidade do Cabo",
+        "suppressed": "Cidade do Cabo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kaapstad",
+        "suppressed": "Kaapstad",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kapstaden",
+        "suppressed": "Kapstaden",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Le Cap",
+        "suppressed": "Lé Cap",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kapské Mesto",
+        "suppressed": "Kapské Město",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Keyptaun",
+        "suppressed": "Keyptaun",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Lo Cap",
+        "suppressed": "Lo Cap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Keyptaun",
+        "suppressed": "Keýptaun",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кејптаун",
+        "suppressed": "Кејптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "iKapa",
+        "suppressed": "IKapa",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаўн",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "केपटाउन",
+        "suppressed": "केपटाउन",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "کیپ ٹاؤن",
+        "suppressed": "کیپ ٹاؤن",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kapstadt",
+        "suppressed": "Kapstadt",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "كيب تاون",
+        "suppressed": "كيب تاون",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "開普敦",
+        "suppressed": "開普敦",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Kapstadt",
+        "suppressed": "Kapstadt",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Кейптаун",
+        "suppressed": "Кейптаун",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-13ed41eeb1c2f1c0f9dd45b3",
+        "name_role": "common",
+        "kept_spelling": "Keyptaun",
+        "suppressed": "Keyptaun",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1ad521c24ef5eb613d38a60b",
+        "name_role": "common",
+        "kept_spelling": "Kruis River",
+        "suppressed": "Kruis River",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1b539d26dd892921b1b541fc",
+        "name_role": "common",
+        "kept_spelling": "Houtbaai",
+        "suppressed": "Houtbaai",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1eb4ae2cecb4fd8ed1730ad8",
+        "name_role": "common",
+        "kept_spelling": "Джордж",
+        "suppressed": "Джордж",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-1eb4ae2cecb4fd8ed1730ad8",
+        "name_role": "official",
+        "kept_spelling": "George",
+        "suppressed": "George",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "西开普省",
+        "suppressed": "西开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "Westkap",
+        "suppressed": "Westkap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "西开普省",
+        "suppressed": "西开普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "Wes-Kaap",
+        "suppressed": "Wes-Kaap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "West-Kaap",
+        "suppressed": "West-Kaap",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "西開普省",
+        "suppressed": "西開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "Западни Кејп",
+        "suppressed": "Западни Кејп",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "西開普省",
+        "suppressed": "西開普省",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "Western Cape Province",
+        "suppressed": "Western Cape Province",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-203f5f71cb3565521db4718f",
+        "name_role": "common",
+        "kept_spelling": "Cabo Ocidental",
+        "suppressed": "Cabo Ocidental",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-246f1352bc09d211374d7183",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Fisherhaven",
+        "suppressed": "https://en.wikipedia.org/wiki/Fisherhaven",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-337462e869c99e535af46999",
+        "name_role": "common",
+        "kept_spelling": "West Coast",
+        "suppressed": "West Coast",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-337462e869c99e535af46999",
+        "name_role": "common",
+        "kept_spelling": "West Coast",
+        "suppressed": "West Coast",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-38f2786011cf77f81300d500",
+        "name_role": "common",
+        "kept_spelling": "Vishoek",
+        "suppressed": "Vishoek",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-3b8300f74444ea70a3567606",
+        "name_role": "common",
+        "kept_spelling": "Oteniekwa",
+        "suppressed": "Oteniekwa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-3b8300f74444ea70a3567606",
+        "name_role": "common",
+        "kept_spelling": "Outeniqua",
+        "suppressed": "Outeniqua",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-520696aa0e971e4a34edc17d",
+        "name_role": "common",
+        "kept_spelling": "Кейптаўн",
+        "suppressed": "Кейптаун",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-520696aa0e971e4a34edc17d",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/City_of_Cape_Town",
+        "suppressed": "https://en.wikipedia.org/wiki/City_of_Cape_Town",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-520696aa0e971e4a34edc17d",
+        "name_role": "common",
+        "kept_spelling": "Кейптаўн",
+        "suppressed": "Кейптаун",
+        "collision": "target_collation",
+        "reason": "indistinguishable from the kept spelling under utf8mb4_0900_ai_ci, so the target cannot store both"
+      },
+      {
+        "place_id": "pl-place-01-56d5fbb095bc49621bc1954d",
+        "name_role": "common",
+        "kept_spelling": "https://en.wikipedia.org/wiki/Gardens,_Cape_Town",
+        "suppressed": "https://en.wikipedia.org/wiki/Gardens,_Cape_Town",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-585f5417ba70852f0f25f8e7",
+        "name_role": "common",
+        "kept_spelling": "Uniondale Road",
+        "suppressed": "Uniondale Road",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-585f5417ba70852f0f25f8e7",
+        "name_role": "common",
+        "kept_spelling": "Uniondaleweg",
+        "suppressed": "Uniondaleweg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-5be0e995ec88149cc707c8c8",
+        "name_role": "common",
+        "kept_spelling": "Vlei River",
+        "suppressed": "Vlei River",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-80652e9febb511c044e9016c",
+        "name_role": "common",
+        "kept_spelling": "Kalk Bay",
+        "suppressed": "Kalk Bay",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-8237ecd96e39efd88bd9a447",
+        "name_role": "common",
+        "kept_spelling": "کایلیتشا",
+        "suppressed": "کایلیتشا",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-8f9422b4e4645b1c20778f57",
+        "name_role": "common",
+        "kept_spelling": "L’Agulhas",
+        "suppressed": "L’Agulhas",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-934845d02fe00c132f3ab331",
+        "name_role": "common",
+        "kept_spelling": "Nuweland",
+        "suppressed": "Nuweland",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-934845d02fe00c132f3ab331",
+        "name_role": "common",
+        "kept_spelling": "Nuweland",
+        "suppressed": "Nuweland",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-947336684e5e9d3459ac70e7",
+        "name_role": "common",
+        "kept_spelling": "Duiwe River",
+        "suppressed": "Duiwe River",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-9cf07967dbc22c224ecbf1a7",
+        "name_role": "common",
+        "kept_spelling": "Somerset-Wes",
+        "suppressed": "Somerset-Wes",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-a5df12403238e2319913240b",
+        "name_role": "common",
+        "kept_spelling": "Arabella Western Cape Hotel & Spa",
+        "suppressed": "Arabella Western Cape Hotel & Spa",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-a6deb7e58eef60443c30beb4",
+        "name_role": "common",
+        "kept_spelling": "Vlermuisklip",
+        "suppressed": "Vlermuisklip",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-badb1e2ac8e449fad6edcb42",
+        "name_role": "common",
+        "kept_spelling": "Моссел-Бей",
+        "suppressed": "Моссел-Бей",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-c06216cf407b6d9551de6eea",
+        "name_role": "common",
+        "kept_spelling": "Kapweinland",
+        "suppressed": "Kapweinland",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-c06216cf407b6d9551de6eea",
+        "name_role": "common",
+        "kept_spelling": "Кейп-Вайнлендс",
+        "suppressed": "Кейп-Вайнлендс",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-ccf6d510689e8e8635fa5342",
+        "name_role": "common",
+        "kept_spelling": "Оудсхорн",
+        "suppressed": "Оудсхорн",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d315ac6e815d94d1334d6366",
+        "name_role": "common",
+        "kept_spelling": "Overberg",
+        "suppressed": "Overberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d315ac6e815d94d1334d6366",
+        "name_role": "common",
+        "kept_spelling": "Overberg",
+        "suppressed": "Overberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d315ac6e815d94d1334d6366",
+        "name_role": "common",
+        "kept_spelling": "Overberg",
+        "suppressed": "Overberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d315ac6e815d94d1334d6366",
+        "name_role": "common",
+        "kept_spelling": "Overberg",
+        "suppressed": "Overberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-d315ac6e815d94d1334d6366",
+        "name_role": "common",
+        "kept_spelling": "Overberg",
+        "suppressed": "Overberg",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-daa7915d989d2a9842af1d34",
+        "name_role": "common",
+        "kept_spelling": "Central Karoo",
+        "suppressed": "Central Karoo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-daa7915d989d2a9842af1d34",
+        "name_role": "common",
+        "kept_spelling": "Central Karoo",
+        "suppressed": "Central Karoo",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      },
+      {
+        "place_id": "pl-place-01-fcc55c7eb322d064d6bcb81d",
+        "name_role": "common",
+        "kept_spelling": "Бредасдорп",
+        "suppressed": "Бредасдорп",
+        "collision": "exact_duplicate_assertion",
+        "reason": "the source asserted this exact spelling more than once"
+      }
+    ]
+  },
+  "place_id_registry": {
+    "path": "data/za-wc-place-admission-v0.1/za_wc_place_id_registry.v0.1.json",
+    "allocated_ids": 1862,
+    "allocation_sequence": 1862
+  },
+  "invariants_asserted": [
+    "every source identity maps to exactly one admitted Place",
+    "place count equals distinct assigned ids",
+    "one preferred public name per Place",
+    "every settlement member lies within the governed distance of its group anchor, and any settlement group whose diameter exceeds the bound is listed for review",
+    "administrative container merges are governed by unique name, not by distance",
+    "every name, relationship and evidence row references an admitted Place",
+    "every relationship has evidence and is not self-referential",
+    "containment is a forest: one parent, no cycles",
+    "no relationship-driven search widening in Slice 2",
+    "scope, eligibility and classification combinations satisfy the database invariants",
+    "every scoped Place has an evidenced province context, the only mandatory ancestry requirement",
+    "no artificial settlement parent is introduced to complete a search hierarchy",
+    "no municipality is re-typed or promoted into the metro_city search tier",
+    "a Place without a governed executable scope stays admitted but is neither searchable nor publishable",
+    "the disposition ledger covers every source candidate"
+  ],
+  "outputs": {
+    "places": "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl",
+    "names": "data/za-wc-place-admission-v0.1/za_wc_place_names_v0.1.jsonl",
+    "relationships": "data/za-wc-place-admission-v0.1/za_wc_place_relationships_v0.1.jsonl",
+    "evidence": "data/za-wc-place-admission-v0.1/za_wc_place_evidence_v0.1.jsonl",
+    "external_mappings": "data/za-wc-place-admission-v0.1/za_wc_place_external_mappings_v0.1.jsonl",
+    "disposition_ledger": "data/za-wc-place-admission-v0.1/za_wc_place_disposition_ledger_v0.1.jsonl",
+    "parent_evidence_classification": "data/za-wc-place-admission-v0.1/za_wc_parent_evidence_classification_v0.1.json"
+  }
+}

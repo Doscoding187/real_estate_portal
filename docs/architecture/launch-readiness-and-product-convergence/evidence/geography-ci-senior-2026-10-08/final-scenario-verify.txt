@@ -1,0 +1,251 @@
+
+> real_estate_portal@1.0.0 db:scenario:verify /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts scenario:verify
+
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-08T09:04:31.616Z
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+{
+  "adapter": "search-to-lead-scenario",
+  "version": "search-to-lead-v5",
+  "digest": "a7b62da33e3f416e31728b6306c9b38d46f9b604db9d19b091c98f33ba16165b",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "databaseName": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "ownershipKey": "415473525d2afa0f75f14719",
+  "expected": {
+    "eligibleProperties": 3,
+    "eligibleDevelopments": 1,
+    "canonicalLocation": "gauteng/johannesburg/sandton"
+  },
+  "verified": {
+    "eligibleProperties": 3,
+    "eligibleDevelopments": 1,
+    "canonicalLocation": "gauteng/johannesburg/sandton",
+    "propertyIds": [
+      990001,
+      990002,
+      990003
+    ],
+    "excludedPropertyIds": [
+      990004,
+      990005,
+      990006,
+      990007,
+      990008,
+      990009
+    ],
+    "propertyId": 990001,
+    "developmentId": 990001,
+    "unitId": "00000000-0000-4000-8000-000000000001"
+  },
+  "migrationHead": "0111_properties_canonical_place_reference_fk.sql",
+  "acceptance": {
+    "locationState": "resolved",
+    "locationContext": {
+      "provinceId": 3,
+      "cityId": 1,
+      "suburbId": 1
+    },
+    "propertyCardHref": "/property/990001",
+    "developmentCardHref": "/development/dba-verification-development-v1/unit/00000000-0000-4000-8000-000000000001",
+    "propertyPage": "/property/990001",
+    "developmentPage": "/development/dba-verification-development-v1/unit/00000000-0000-4000-8000-000000000001",
+    "total": 4,
+    "page": 0,
+    "pageSize": 10,
+    "hasMore": false,
+    "leadId": 1,
+    "replayedLeadId": 1,
+    "duplicateReplay": true,
+    "leadCustody": "verified_customer_recipient",
+    "deliveryStatus": "delivered",
+    "deliveryMethod": "crm_export",
+    "sourceCounts": {
+      "manual": 3,
+      "development": 1
+    },
+    "development": {
+      "leadId": 4,
+      "replayedLeadId": 4,
+      "duplicateReplay": true,
+      "conflictingReplay": "conflict",
+      "durableLeadCount": 1,
+      "acknowledgement": "This enquiry has already been received by the responsible team."
+    },
+    "scenarios": {
+      "agent": {
+        "propertyId": 990001,
+        "cardHref": "/property/990001",
+        "detailIdentity": {
+          "role": "agent",
+          "provenance": "agent",
+          "name": "Lerato Mokoena"
+        },
+        "leadId": 1,
+        "replayedLeadId": 1,
+        "duplicateReplay": true,
+        "conflictingReplay": "conflict",
+        "durableLeadCount": 1,
+        "custody": {
+          "leadCustody": "verified_customer_recipient",
+          "recipientType": "agent",
+          "recipientId": 990001,
+          "deliveryStatus": "delivered",
+          "deliveryMethod": "crm_export"
+        },
+        "acknowledgement": "This enquiry has already been received by the responsible team."
+      },
+      "agency_only": {
+        "propertyId": 990002,
+        "cardHref": "/property/990002",
+        "detailIdentity": {
+          "role": "agency",
+          "provenance": "agency",
+          "name": "Urban Nest Properties"
+        },
+        "leadId": 2,
+        "replayedLeadId": 2,
+        "duplicateReplay": true,
+        "conflictingReplay": "conflict",
+        "durableLeadCount": 1,
+        "custody": {
+          "leadCustody": "verified_customer_recipient",
+          "recipientType": "agency",
+          "recipientId": 990002,
+          "deliveryStatus": "delivered",
+          "deliveryMethod": "crm_export"
+        },
+        "acknowledgement": "This enquiry has already been received by the responsible team."
+      },
+      "platform": {
+        "propertyId": 990003,
+        "cardHref": "/property/990003",
+        "detailIdentity": {
+          "role": "platform",
+          "provenance": "platform_curated",
+          "name": "Property Listify"
+        },
+        "leadId": 3,
+        "replayedLeadId": 3,
+        "duplicateReplay": true,
+        "conflictingReplay": "conflict",
+        "durableLeadCount": 1,
+        "custody": {
+          "leadCustody": "platform_managed",
+          "recipientType": "manual",
+          "recipientId": null,
+          "deliveryStatus": "attention_required",
+          "deliveryMethod": "manual"
+        },
+        "acknowledgement": "This enquiry has already been received by Property Listify operations."
+      }
+    },
+    "discovery": {
+      "mapRentalExcluded": true,
+      "comparisonRentalExcluded": true,
+      "featuredRentalExcluded": true,
+      "trendingRentalExcluded": true,
+      "relatedRentalExcluded": true
+    },
+    "rental": {
+      "propertyId": 990009,
+      "saleSearchExcluded": true,
+      "rentSearch": {
+        "included": true,
+        "propertyCardHref": "/property/990009",
+        "total": 1
+      },
+      "detail": {
+        "id": 990009,
+        "listingType": "rent",
+        "transactionType": "rent",
+        "price": 25000,
+        "pricingIntent": "rent",
+        "monthlyRent": 25000,
+        "tenantTerms": {
+          "availability": "Available now",
+          "lease": "12-month minimum",
+          "utilities": "Partly included",
+          "furnishing": "Furnished"
+        },
+        "publicIdentity": {
+          "role": "agent",
+          "provenance": "agent",
+          "name": "Lerato Mokoena"
+        }
+      },
+      "enquiry": {
+        "leadId": 5,
+        "replayedLeadId": 5,
+        "duplicateReplay": true,
+        "conflictingReplay": "conflict",
+        "durableLeadCount": 1,
+        "custody": {
+          "leadCustody": "verified_customer_recipient",
+          "recipientType": "agent",
+          "recipientId": 990001,
+          "deliveryStatus": "delivered",
+          "deliveryMethod": "crm_export"
+        },
+        "acknowledgement": "This enquiry has already been received by the responsible team."
+      }
+    },
+    "negative": {
+      "orphan": {
+        "propertyId": 990004,
+        "searchIncluded": false,
+        "detail": null,
+        "enquiry": "rejected"
+      },
+      "unpublished": {
+        "propertyId": 990005,
+        "searchIncluded": false,
+        "detail": null,
+        "enquiry": "rejected"
+      },
+      "archived": {
+        "propertyId": 990006,
+        "searchIncluded": false,
+        "detail": null,
+        "enquiry": "rejected"
+      },
+      "pending": {
+        "propertyId": 990007,
+        "searchIncluded": false,
+        "detail": null,
+        "enquiry": "rejected"
+      },
+      "incoherent": {
+        "propertyId": 990008,
+        "searchIncluded": false,
+        "detail": null,
+        "enquiry": "rejected"
+      }
+    },
+    "authorization": {
+      "agent": {
+        "ownerVisible": true,
+        "unrelatedDenied": true
+      },
+      "agency": {
+        "ownerVisible": true,
+        "unrelatedDenied": true
+      },
+      "developer": {
+        "ownerVisible": true,
+        "unrelatedDenied": true
+      },
+      "platform": {
+        "operationsVisible": true,
+        "nonOperationsDenied": true
+      }
+    }
+  }
+}

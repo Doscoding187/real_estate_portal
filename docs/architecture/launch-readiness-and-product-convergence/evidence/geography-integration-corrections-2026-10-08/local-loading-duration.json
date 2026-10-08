@@ -1,0 +1,7 @@
+{
+  "target": "owned-disposable-native-MySQL-3307",
+  "command": "pnpm db:places:release-preview:prepare",
+  "exitCode": 0,
+  "localWholeCommandDurationMs": 20221,
+  "productionTimingClaim": false
+}

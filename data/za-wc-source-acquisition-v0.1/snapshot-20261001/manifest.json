@@ -1,0 +1,391 @@
+{
+  "artifacts": [
+    {
+      "access_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM1/",
+      "artifact_id": "geoboundaries:metadata:ADM1",
+      "download_sha256": "8274642880064eb7c93c1000b05bd45db3f32a738991462e9f3e85605bb21a1b",
+      "download_size_bytes": 1833,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geoboundaries/ADM1-metadata.json",
+      "resolved_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM1/",
+      "response_headers": {
+        "content-length": "1833",
+        "content-type": "application/json",
+        "etag": "\"729-6121e2dc4d66d\"",
+        "last-modified": "Sat, 24 Feb 2024 10:31:26 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:48:32.896909+00:00",
+      "sha256": "8274642880064eb7c93c1000b05bd45db3f32a738991462e9f3e85605bb21a1b",
+      "size_bytes": 1833,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM1/geoBoundaries-ZAF-ADM1.geojson",
+      "advertised_geometry_url": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/ZAF/ADM1/geoBoundaries-ZAF-ADM1.geojson",
+      "artifact_id": "geoboundaries:geometry:ADM1",
+      "download_sha256": "5d82ed95b034f50d69d96c9b7136e9b5868a5fb4ef2d8905a6a6ac3715fef452",
+      "download_size_bytes": 19806654,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_licence_source": "data.humdata.org/dataset/south-africa-admin-level-1-boundaries",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "metadata_artifact_sha256": "8274642880064eb7c93c1000b05bd45db3f32a738991462e9f3e85605bb21a1b",
+      "path": "raw/geoboundaries/ADM1.geojson.gz",
+      "resolved_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM1/geoBoundaries-ZAF-ADM1.geojson",
+      "response_headers": {
+        "content-length": "19806654",
+        "content-type": "application/octet-stream",
+        "etag": "\"5d82ed95b034f50d69d96c9b7136e9b5868a5fb4ef2d8905a6a6ac3715fef452\"",
+        "last-modified": "Thu, 01 Oct 2026 06:48:33 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:48:41.143742+00:00",
+      "sha256": "7550eb1c0873ae1956e013172b2f09c86f80e6b97e746023626e1ea61e514f7c",
+      "size_bytes": 4248381,
+      "source_version": {
+        "boundaryID": "ZAF-ADM1-76434192",
+        "boundaryYearRepresented": "2020",
+        "buildDate": "Dec 12, 2023",
+        "sourceDataUpdateDate": "Thu Jan 19 07:31:04 2023"
+      },
+      "storage_encoding": "gzip"
+    },
+    {
+      "access_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM2/",
+      "artifact_id": "geoboundaries:metadata:ADM2",
+      "download_sha256": "4cdc4b311fe3429d3370d1505eb4f92bfd35a89b182988783f50744980c2d388",
+      "download_size_bytes": 1843,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geoboundaries/ADM2-metadata.json",
+      "resolved_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM2/",
+      "response_headers": {
+        "content-length": "1843",
+        "content-type": "application/json",
+        "etag": "\"733-6121e2dc56adc\"",
+        "last-modified": "Sat, 24 Feb 2024 10:31:26 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:48:48.505403+00:00",
+      "sha256": "4cdc4b311fe3429d3370d1505eb4f92bfd35a89b182988783f50744980c2d388",
+      "size_bytes": 1843,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM2/geoBoundaries-ZAF-ADM2.geojson",
+      "advertised_geometry_url": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/ZAF/ADM2/geoBoundaries-ZAF-ADM2.geojson",
+      "artifact_id": "geoboundaries:geometry:ADM2",
+      "download_sha256": "6cc504ad835b37823da687a3fd3f0cab63608a6c8a5ad906e1011f1554bbbbdd",
+      "download_size_bytes": 32530325,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_licence_source": "data.humdata.org/dataset/south-africa-admin-level-1-boundaries",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "metadata_artifact_sha256": "4cdc4b311fe3429d3370d1505eb4f92bfd35a89b182988783f50744980c2d388",
+      "path": "raw/geoboundaries/ADM2.geojson.gz",
+      "resolved_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM2/geoBoundaries-ZAF-ADM2.geojson",
+      "response_headers": {
+        "content-length": "32530325",
+        "content-type": "application/octet-stream",
+        "etag": "\"6cc504ad835b37823da687a3fd3f0cab63608a6c8a5ad906e1011f1554bbbbdd\"",
+        "last-modified": "Thu, 01 Oct 2026 06:43:58 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:49:01.413375+00:00",
+      "sha256": "099e34e6ee076c6538c8cb6aeb4cc72f5d6bcc70774513015f5d53043455f5a0",
+      "size_bytes": 7157885,
+      "source_version": {
+        "boundaryID": "ZAF-ADM2-47623444",
+        "boundaryYearRepresented": "2020",
+        "buildDate": "Dec 12, 2023",
+        "sourceDataUpdateDate": "Thu Jan 19 07:31:04 2023"
+      },
+      "storage_encoding": "gzip"
+    },
+    {
+      "access_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM3/",
+      "artifact_id": "geoboundaries:metadata:ADM3",
+      "download_sha256": "91f601e788aca5a4e9bde8d307710e0d05c12e1fc6abb3fc941e96baf55e48c4",
+      "download_size_bytes": 1838,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geoboundaries/ADM3-metadata.json",
+      "resolved_url": "https://www.geoboundaries.org/api/current/gbOpen/ZAF/ADM3/",
+      "response_headers": {
+        "content-length": "1838",
+        "content-type": "application/json",
+        "etag": "\"72e-6121e2dc60334\"",
+        "last-modified": "Sat, 24 Feb 2024 10:31:26 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:49:12.818206+00:00",
+      "sha256": "91f601e788aca5a4e9bde8d307710e0d05c12e1fc6abb3fc941e96baf55e48c4",
+      "size_bytes": 1838,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM3/geoBoundaries-ZAF-ADM3.geojson",
+      "advertised_geometry_url": "https://github.com/wmgeolab/geoBoundaries/raw/9469f09/releaseData/gbOpen/ZAF/ADM3/geoBoundaries-ZAF-ADM3.geojson",
+      "artifact_id": "geoboundaries:geometry:ADM3",
+      "download_sha256": "74e489fd4370972403950719026a317abba443668cea7d49f4b36c61637958f1",
+      "download_size_bytes": 50705428,
+      "licence": {
+        "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution.",
+        "evidence_url": "https://www.geoboundaries.org/api.html",
+        "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+        "upstream_licence_source": "data.humdata.org/dataset/south-africa-admin-level-1-boundaries",
+        "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+        "upstream_source": "OCHA ROSEA, South African Municipal Demarcation Board",
+        "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "metadata_artifact_sha256": "91f601e788aca5a4e9bde8d307710e0d05c12e1fc6abb3fc941e96baf55e48c4",
+      "path": "raw/geoboundaries/ADM3.geojson.gz",
+      "resolved_url": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/ZAF/ADM3/geoBoundaries-ZAF-ADM3.geojson",
+      "response_headers": {
+        "content-length": "50705428",
+        "content-type": "application/octet-stream",
+        "etag": "\"74e489fd4370972403950719026a317abba443668cea7d49f4b36c61637958f1\"",
+        "last-modified": "Thu, 01 Oct 2026 06:44:24 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:49:34.919981+00:00",
+      "sha256": "8c7ab7a110619b5698c586aaff274cc4fcb89098db5930ba18d3cd3ee3b62c43",
+      "size_bytes": 11325519,
+      "source_version": {
+        "boundaryID": "ZAF-ADM3-15628383",
+        "boundaryYearRepresented": "2020",
+        "buildDate": "Dec 12, 2023",
+        "sourceDataUpdateDate": "Thu Jan 19 07:31:04 2023"
+      },
+      "storage_encoding": "gzip"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/ZA.zip",
+      "artifact_id": "geonames:country",
+      "download_sha256": "21a76cfa2512ba8596128679decd0cb15981d785ffd5b3d7cda6445790c19a09",
+      "download_size_bytes": 2694932,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/ZA.zip",
+      "resolved_url": "https://download.geonames.org/export/dump/ZA.zip",
+      "response_headers": {
+        "content-length": "2694932",
+        "content-type": "application/zip",
+        "etag": "\"291f14-65cbde58753e9\"",
+        "last-modified": "Thu, 01 Oct 2026 02:08:49 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:49:55.421197+00:00",
+      "sha256": "21a76cfa2512ba8596128679decd0cb15981d785ffd5b3d7cda6445790c19a09",
+      "size_bytes": 2694932,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "artifact_id": "geonames:admin1-codes",
+      "download_sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "download_size_bytes": 151583,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/admin1CodesASCII.txt",
+      "resolved_url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "response_headers": {
+        "content-length": "151583",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"2501f-65cbde5a07909\"",
+        "last-modified": "Thu, 01 Oct 2026 02:08:51 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:49:56.853845+00:00",
+      "sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+      "size_bytes": 151583,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "artifact_id": "geonames:admin2-codes",
+      "download_sha256": "63a82be925b8704abae683a89e32f40b22f618a93efc4e676e912873f8a3be20",
+      "download_size_bytes": 2375171,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/admin2Codes.txt",
+      "resolved_url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "response_headers": {
+        "content-length": "2375171",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"243e03-65cbde5a07909\"",
+        "last-modified": "Thu, 01 Oct 2026 02:08:51 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:50:01.997146+00:00",
+      "sha256": "63a82be925b8704abae683a89e32f40b22f618a93efc4e676e912873f8a3be20",
+      "size_bytes": 2375171,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/alternatenames/ZA.zip",
+      "artifact_id": "geonames:alternate-names",
+      "download_sha256": "d8ca6d8b771f20f874401cb19a6d888e56d3f37ec573a2accc7f3bf13dd5eacc",
+      "download_size_bytes": 642778,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/alternateNames-ZA.zip",
+      "resolved_url": "https://download.geonames.org/export/dump/alternatenames/ZA.zip",
+      "response_headers": {
+        "content-length": "642778",
+        "content-type": "application/zip",
+        "etag": "\"9ceda-65cbdf7a79e77\"",
+        "last-modified": "Thu, 01 Oct 2026 02:13:53 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:50:04.070570+00:00",
+      "sha256": "d8ca6d8b771f20f874401cb19a6d888e56d3f37ec573a2accc7f3bf13dd5eacc",
+      "size_bytes": 642778,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/featureCodes_en.txt",
+      "artifact_id": "geonames:feature-codes",
+      "download_sha256": "d44f129c1cffdeabf759c99fe7ea5b84f615c7f3e7366fb76ccf990f408f6af7",
+      "download_size_bytes": 58642,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/featureCodes_en.txt",
+      "resolved_url": "https://download.geonames.org/export/dump/featureCodes_en.txt",
+      "response_headers": {
+        "content-length": "58642",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"e512-65cbdc2bffe39\"",
+        "last-modified": "Thu, 01 Oct 2026 01:59:06 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:50:05.334521+00:00",
+      "sha256": "d44f129c1cffdeabf759c99fe7ea5b84f615c7f3e7366fb76ccf990f408f6af7",
+      "size_bytes": 58642,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/iso-languagecodes.txt",
+      "artifact_id": "geonames:language-codes",
+      "download_sha256": "cb0d34f492775deec8ec5713da6efa4463dad99b5e7ba2172bd094cfdcb76571",
+      "download_size_bytes": 137908,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/iso-languagecodes.txt",
+      "resolved_url": "https://download.geonames.org/export/dump/iso-languagecodes.txt",
+      "response_headers": {
+        "content-length": "137908",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"21ab4-65cbdc2acc88b\"",
+        "last-modified": "Thu, 01 Oct 2026 01:59:04 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:50:06.765036+00:00",
+      "sha256": "cb0d34f492775deec8ec5713da6efa4463dad99b5e7ba2172bd094cfdcb76571",
+      "size_bytes": 137908,
+      "storage_encoding": "identity"
+    },
+    {
+      "access_url": "https://download.geonames.org/export/dump/readme.txt",
+      "artifact_id": "geonames:licence-readme",
+      "download_sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "download_size_bytes": 8843,
+      "licence": {
+        "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Western Cape source-code filtering and record indexing by Property Listify; source observations remain unadjudicated.",
+        "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+        "name": "CC BY 4.0",
+        "url": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "path": "raw/geonames/readme.txt",
+      "resolved_url": "https://download.geonames.org/export/dump/readme.txt",
+      "response_headers": {
+        "content-length": "8843",
+        "content-type": "text/plain; charset=utf-8",
+        "etag": "\"228b-65cbdc2b7b541\"",
+        "last-modified": "Thu, 01 Oct 2026 01:59:05 GMT"
+      },
+      "retrieved_at": "2026-10-01T06:50:07.490973+00:00",
+      "sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+      "size_bytes": 8843,
+      "storage_encoding": "identity"
+    }
+  ],
+  "bundle_kind": "acquired_evidence_not_admitted_authority",
+  "counts": {
+    "all_source_records": 27093,
+    "national_geonames_records": 103212,
+    "province_alternate_name_assertions": 11889,
+    "province_geonames_records": 14930
+  },
+  "limitations": [
+    "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
+    "ADM2/ADM3 layers are national; Western Cape spatial selection and current-boundary review are pending.",
+    "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
+    "No OSM data acquired; ODbL founder production gate remains unchanged.",
+    "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission."
+  ],
+  "outputs": [
+    {
+      "path": "acquisition-plan.json",
+      "sha256": "3a9a965267a3df26cde47b39de71b767d9f3c378b42d7c54759a03210b59be38",
+      "size_bytes": 2348
+    },
+    {
+      "path": "source-records.jsonl.gz",
+      "sha256": "de6d2fbd3a7085c447771e2afd1a9b3626e27f6d2b9569b869adf92d74e404ce",
+      "size_bytes": 2667453
+    },
+    {
+      "path": "acquisition-log.jsonl",
+      "sha256": "036aeefc92509843b6400353540fa6a03b705bb252bbf921bd611bc57c60ded7",
+      "size_bytes": 17216
+    }
+  ],
+  "schema_version": "0.1",
+  "territory_id": "za-wc"
+}

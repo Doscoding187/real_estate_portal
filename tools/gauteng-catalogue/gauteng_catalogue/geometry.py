@@ -19,6 +19,46 @@ except ImportError:  # pragma: no cover - exercised only in minimal environments
     SHAPELY_AVAILABLE = False
 
 
+def geometry_backend() -> dict[str, Any]:
+    """The geometry engine actually in use, named and versioned.
+
+    This is a **declared input, not an ambient capability**. A source authority
+    derived with shapely and one derived from the standard-library fallback are
+    different datasets, and which one produced a committed artifact must be
+    readable from the artifact itself. The name and version are recorded in the
+    build summary and the source manifest, so installing a wheel changes the
+    manifest digest and therefore surfaces as a reviewed pin change instead of
+    silently altering committed rows.
+    """
+    if not SHAPELY_AVAILABLE:
+        return {
+            "name": "stdlib_ray_casting",
+            "version": None,
+            "supports_holes": True,
+            "supports_multipart": True,
+            "polygon_validity_repair": False,
+            "note": (
+                "Standard-library ray casting over source GeoJSON rings. Holes and "
+                "multipart features are honoured by construction, but polygon "
+                "validity is not repaired and no true polygon intersection is "
+                "computed."
+            ),
+        }
+    import shapely
+
+    return {
+        "name": "shapely",
+        "version": str(getattr(shapely, "__version__", "unknown")),
+        "supports_holes": True,
+        "supports_multipart": True,
+        "polygon_validity_repair": True,
+        "note": (
+            "shapely with buffer(0) repair of invalid geometry, true polygon "
+            "covers/intersects predicates, and representative_point()."
+        ),
+    }
+
+
 def load_geojson(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
         value = json.load(handle)
@@ -114,17 +154,60 @@ def geometry_point(geometry: dict[str, Any]) -> tuple[float, float] | None:
     return None
 
 
-class GautengSpatialGate:
-    """Small, explicit spatial gate around the approved geoBoundaries province."""
+class TerritorySpatialGate:
+    """Small, explicit spatial gate around one approved geoBoundaries province.
 
-    def __init__(self, province_feature: dict[str, Any], context_features: dict[str, list[dict[str, Any]]] | None = None):
+    The gate is territory-neutral: the province it defends is supplied by the
+    caller and every context value it reports is read from the source feature.
+    Nothing here may name a province, because admitting a second province must
+    be a configuration change and never a code change.
+    """
+
+    def __init__(
+        self,
+        province_feature: dict[str, Any],
+        context_features: dict[str, list[dict[str, Any]]] | None = None,
+        province_name: str | None = None,
+    ):
         self.province_feature = province_feature
         self.context_features = context_features or {"ADM2": [], "ADM3": []}
+        province_properties = province_feature.get("properties") or {}
+        resolved_name = province_name or next(
+            (
+                str(province_properties.get(key))
+                for key in ("shapeName", "NAME_1", "name", "NAME")
+                if province_properties.get(key)
+            ),
+            None,
+        )
+        if not resolved_name:
+            raise ValueError("Territory spatial gate requires an explicit province name.")
+        self.province_name = resolved_name
         self.province_geometry = province_feature.get("geometry") or {}
         self._province_shape = None
         self._context_shapes: dict[str, list[tuple[dict[str, Any], Any]]] = {"ADM2": [], "ADM3": []}
         if SHAPELY_AVAILABLE:
             self._province_shape = self._safe_shape(self.province_geometry)
+            for level, features in self.context_features.items():
+                self._context_shapes[level] = [
+                    (feature, self._safe_shape(feature.get("geometry") or {}))
+                    for feature in features
+                ]
+
+    def attach_context_features(
+        self, context_features: dict[str, list[dict[str, Any]]]
+    ) -> None:
+        """Set the context features and (re)build the shapely index.
+
+        The shapely path resolves context from a prebuilt shape index, while the
+        standard-library path reads the raw geometries. Assigning
+        `context_features` alone therefore leaves the shapely index stale and every
+        context lookup silently returns nothing — a failure that looks like "no
+        administrative context exists" rather than like a bug. Context must always
+        be attached through here.
+        """
+        self.context_features = context_features or {"ADM2": [], "ADM3": []}
+        if SHAPELY_AVAILABLE:
             for level, features in self.context_features.items():
                 self._context_shapes[level] = [
                     (feature, self._safe_shape(feature.get("geometry") or {}))
@@ -183,7 +266,7 @@ class GautengSpatialGate:
 
     def administrative_context(self, latitude: float | None, longitude: float | None) -> dict[str, Any]:
         context: dict[str, Any] = {
-            "province": {"name": "Gauteng", "source": "geoBoundaries", "level": "ADM1"},
+            "province": {"name": self.province_name, "source": "geoBoundaries", "level": "ADM1"},
             "adm2": [],
             "adm3": [],
         }
@@ -237,23 +320,49 @@ class GautengSpatialGate:
         }
 
 
-def select_gauteng_feature(features: Iterable[dict[str, Any]]) -> dict[str, Any]:
+def select_territory_feature(
+    features: Iterable[dict[str, Any]],
+    name_tokens: Iterable[str],
+    iso_codes: Iterable[str] = (),
+) -> dict[str, Any]:
+    """Select exactly one province ADM1 feature by declared tokens or ISO code.
+
+    A territory is identified by configuration, never by a province name written
+    into this module. More than one match is an error rather than a preference.
+    """
+    tokens = tuple(str(token).casefold() for token in name_tokens if str(token).strip())
+    codes = {str(code).upper() for code in iso_codes if str(code).strip()}
     candidates = []
     for feature in features:
         properties = feature.get("properties") or {}
-        values = " ".join(str(properties.get(key, "")) for key in ("shapeName", "shapeISO", "name", "NAME_1"))
-        if "gauteng" in values.casefold() or str(properties.get("shapeISO", "")).upper() in {"GP", "ZA-GP"}:
+        values = " ".join(
+            str(properties.get(key, "")) for key in ("shapeName", "shapeISO", "name", "NAME_1")
+        ).casefold()
+        iso = str(properties.get("shapeISO", "")).upper()
+        if (tokens and any(token in values for token in tokens)) or (codes and iso in codes):
             candidates.append(feature)
     if len(candidates) != 1:
-        raise ValueError(f"Expected one Gauteng ADM1 feature, found {len(candidates)}")
+        raise ValueError(
+            f"Expected exactly one province ADM1 feature for tokens {tokens} / iso {codes}, "
+            f"found {len(candidates)}"
+        )
     return candidates[0]
 
 
-def select_gauteng_overlapping_features(
-    features: Iterable[dict[str, Any]], gate: GautengSpatialGate
+def select_overlapping_features(
+    features: Iterable[dict[str, Any]], gate: TerritorySpatialGate
 ) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     for feature in features:
         if gate.geometry_status(feature.get("geometry")) == "intersects":
             selected.append(feature)
     return selected
+
+
+# Retained so an existing Gauteng-only caller keeps working. New code should use
+# the neutral names above and pass the territory it is admitting.
+GautengSpatialGate = TerritorySpatialGate
+select_gauteng_feature = lambda features: select_territory_feature(  # noqa: E731
+    features, ("gauteng",), ("GP", "ZA-GP")
+)
+select_gauteng_overlapping_features = select_overlapping_features

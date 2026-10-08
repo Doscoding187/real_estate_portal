@@ -8,7 +8,7 @@ import {
   LEGACY_STEP4_PROPERTY_DETAIL_KEYS,
 } from '../../../shared/features-context';
 import { buildPricingContract } from '../../../shared/pricing-contract';
-import { buildListingLocationAuthoringPayload } from '../../../shared/location-contract';
+import { buildCanonicalListingLocationPayload } from '../../../shared/canonicalListingLocation';
 import { buildPropertyPresentationForMedia } from '../../../shared/property-presentation';
 import {
   createDefaultRentalTerms,
@@ -241,7 +241,7 @@ export const buildListingWizardSubmitPayload = (
     description: state.description,
     pricing,
     propertyDetails: buildSubmittedPropertyDetails(state, pricing),
-    location: buildListingLocationAuthoringPayload(state.location)!,
+    location: buildCanonicalListingLocationPayload(state.location)!,
     mediaIds,
     mainMediaId,
     media,

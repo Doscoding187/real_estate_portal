@@ -797,6 +797,8 @@ export interface ImageUrls {
 
 // Filter state
 export interface PropertyFilters {
+  /** Internal, validated Place membership. Empty membership must return no rows. */
+  canonicalPlaceIds?: string[];
   // Location
   province?: string;
   city?: string;
@@ -1006,6 +1008,7 @@ export type SearchCardIdentity =
     });
 
 export interface SearchCardResult {
+  canonicalPlaceId?: string;
   kind: 'property' | 'development';
   id: string;
   href: string;

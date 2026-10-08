@@ -1,0 +1,162 @@
+
+> real_estate_portal@1.0.0 db:authority:check /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCheck.ts
+
+
+> real_estate_portal@1.0.0 test:db-authority:static /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> vitest run --no-cache --config vitest.database-authority-static.config.ts --workspace vitest.database-authority-static.workspace.ts --project database-authority-static --reporter=basic
+
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts (33 tests) 156ms
+ ✓ |database-authority-static| server/migrations/__tests__/runSqlMigrations.test.ts (32 tests) 183ms
+ ✓ |database-authority-static| server/__tests__/contract.place-authority-foundation.test.ts (33 tests) 674ms
+ ✓ |database-authority-static| server/__tests__/contract.migration-tree-authority.test.ts (6 tests) 1040ms
+   ✓ migration tree authority > contains manual schema executors and keeps diagnostics outside migration authority 716ms
+ ✓ |database-authority-static| server/migrations/__tests__/migrationManifest.test.ts (15 tests) 258ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts (22 tests) 68ms
+ ✓ |database-authority-static| server/__tests__/contract.migration-execution-authority.test.ts (4 tests) 93ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/dataAdapters.test.ts (14 tests) 871ms
+   ✓ bounded Database Authority data adapters > keeps worktree profile strict while routing authorized disposable-test reference adapters 558ms
+ ✓ |database-authority-static| server/__tests__/contract.canonical-listing-place.test.ts (60 tests) 4179ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Gauteng' supports a manual locality without a city 474ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Western Cape' supports a manual locality without a city 590ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'KwaZulu-Natal' supports a manual locality without a city 595ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Eastern Cape' supports a manual locality without a city 732ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Free State' supports a manual locality without a city 466ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Limpopo' supports a manual locality without a city 337ms
+   ✓ Prepared Listing assignment against admitted national source rows > 'Northern Cape' supports a manual locality without a city 469ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/readiness.test.ts (11 tests) 67ms
+ ✓ |database-authority-static| server/__tests__/contract.database-local-lifecycle-authority.test.ts (10 tests) 31ms
+ ✓ |database-authority-static| server/__tests__/contract.place-admission.test.ts (33 tests) 16344ms
+   ✓ Place admission: source identity is not Place identity > never creates a Place from a licence-blocked or evidence-blocked candidate 409ms
+   ✓ Place admission: Place identity is assigned and stable > regenerates deterministically and asserts it 2589ms
+   ✓ Place admission: Place identity is assigned and stable > refuses to re-mint identities when the Place ID registry cannot be read 3012ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses a VALID registry whose allocation map is empty, without touching the package 3304ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses a PARTIAL allocation loss and names how many identities are unallocated 2983ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > refuses swapped source allocations even when every published ID remains allocated 1113ms
+   ✓ Place admission: the identity guard, on the failure paths that lose allocations > replays an intact isolated registry without touching the committed package 1504ms
+ ✓ |database-authority-static| scripts/__tests__/databaseUtilityAuthority.test.ts (38 tests) 1137ms
+   ✓ database utility authority guard > accepts the current explicit authority inventory 1100ms
+ ✓ |database-authority-static| server/__tests__/contract.database-agent-authority.test.ts (7 tests) 146ms
+ ✓ |database-authority-static| server/__tests__/contract.developer-engine-s0-containment.test.ts (12 tests) 40ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeRelease.test.ts (25 tests) 18339ms
+   ✓ governed national production Place reference release > plans only reads, atomically applies and verifies, then repeats with zero inserts 2430ms
+   ✓ governed national production Place reference release > returns a prerequisite plan without an applicable digest when production lacks Place schema 872ms
+   ✓ governed national production Place reference release > refuses forged authority, other protected targets and physical constraint drift before writing 616ms
+   ✓ governed national production Place reference release > binds source pins and observed state; changed plans and lost lock ownership refuse before insertion 1669ms
+   ✓ governed national production Place reference release > rolls back insert failure before commit 985ms
+   ✓ governed national production Place reference release > rolls back post-write failure before commit 987ms
+   ✓ governed national production Place reference release > refuses same-count identity/value drift and foreign evidence; verify refuses partial data 426ms
+   ✓ release review regressions > verifies and replays with zero writes after unresolved, ambiguous and repeated coverage signals 4151ms
+   ✓ release review regressions > never reports success when lock release returns 0 1002ms
+   ✓ release review regressions > never reports success when lock release returns null 786ms
+   ✓ release review regressions > never reports success when lock release returns exception 1000ms
+   ✓ release review regressions > preserves the original insert failure when cleanup also fails 816ms
+   ✓ release review regressions > marks a failed COMMIT response uncertain and never retries or claims rollback 748ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=false 878ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=true 800ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/lifecycle.test.ts (3 tests) 33ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/sourceArchive.test.ts (19 tests) 1523ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/rehearsalConnection.test.ts (10 tests) 1621ms
+ ✓ |database-authority-static| server/__tests__/contract.place-admission-territory-neutrality.test.ts (19 tests) 18996ms
+   ✓ Place admission territory registry: a second territory needs no new engine > admits a synthetic non-Gauteng territory through the same builder and materializer 7827ms
+   ✓ Place admission: national verification across registered provinces > keeps province identities distinct and reports national homonyms 1631ms
+   ✓ Place admission: national identity is enforced, not merely reported > fails when two provinces claim the same Place identity 1664ms
+   ✓ Place admission: national identity is enforced, not merely reported > shows UNIQUE(parent, name) is unenforceable, and that adding type does not fix it 1501ms
+   ✓ Place admission: national provenance closes for every source identity > traces every source identity to a Place or a disposition, per province and nationally 2218ms
+   ✓ Place admission: national provenance closes for every source identity > states that the eight disposition-only ledgers are not self-contained 2135ms
+   ✓ Place admission: boundary currency is a gate, not a claim > refuses to let any province claim currency it cannot evidence 839ms
+   ✓ Place admission: boundary currency is a gate, not a claim > covers every registered province and certifies none of them 811ms
+ ✓ |database-authority-static| server/__tests__/contract.place-consumer-geography.test.ts (26 tests) 7033ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Gauteng' preserves every executable identity 716ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Western Cape' preserves every executable identity 830ms
+   ✓ All admitted provinces support exact consumer scope projection > 'KwaZulu-Natal' preserves every executable identity 745ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Eastern Cape' preserves every executable identity 1817ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Free State' preserves every executable identity 571ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Mpumalanga' preserves every executable identity 378ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Limpopo' preserves every executable identity 607ms
+   ✓ All admitted provinces support exact consumer scope projection > 'North West' preserves every executable identity 519ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Northern Cape' preserves every executable identity 828ms
+ ✓ |database-authority-static| server/__tests__/contract.database-canonical-model-authority.test.ts (9 tests) 24ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts (18 tests) 94ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/geographyRelease.test.ts (14 tests) 2655ms
+   ✓ catalog-bound protected geography release > plans without writes and applies/repeats without replacing IDs 1218ms
+   ✓ catalog-bound protected geography release > rejects stale/missing plans and mismatched lock ownership without INSERT 619ms
+   ✓ catalog-bound protected geography release > rolls back a failed insert and releases the lock 464ms
+ ✓ |database-authority-static| server/__tests__/contract.database-production-seed-security.test.ts (6 tests) 68ms
+ ✓ |database-authority-static| scripts/__tests__/localServiceRecovery.test.ts (12 tests) 21264ms
+   ✓ governed local service runtime recovery > treats a cleanly stopped service as an idempotent no-op 3255ms
+   ✓ governed local service runtime recovery > stale PID only is normalized without touching protected files 2176ms
+   ✓ governed local service runtime recovery > stale socket only is normalized without touching protected files 1975ms
+   ✓ governed local service runtime recovery > stale lock only is normalized without touching protected files 1781ms
+   ✓ governed local service runtime recovery > stale PID, socket and lock together is normalized without touching protected files 2794ms
+   ✓ governed local service runtime recovery > is idempotent after stale metadata recovery 4128ms
+   ✓ governed local service runtime recovery > refuses an occupied authority port 1306ms
+   ✓ governed local service runtime recovery > refuses an opened socket 1834ms
+   ✓ governed local service runtime recovery > refuses an opened lock file 1588ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/rehearsalAuthorization.test.ts (30 tests) 1871ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/isolatedCiCredentials.test.ts (7 tests) 21ms
+ ✓ |database-authority-static| server/__tests__/contract.database-residual-utility-authority.test.ts (5 tests) 20ms
+ ✓ |database-authority-static| server/__tests__/contract.database-final-closure-authority.test.ts (5 tests) 68ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/plePublicationEntitlement.test.ts (12 tests) 16ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/readinessConnection.test.ts (7 tests) 913ms
+ ✓ |database-authority-static| server/__tests__/contract.property-listify-database-authority-skill.test.ts (3 tests) 18ms
+ ✓ |database-authority-static| scripts/__tests__/localDbWorkflow.test.ts (8 tests) 241ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/governedContainedScenarioFixture.test.ts (3 tests) 41ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/homepageJourneyPreviewFixture.test.ts (7 tests) 269ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/listingPreviewFixture.test.ts (8 tests) 248ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts (8 tests) 926ms
+ ✓ |database-authority-static| server/__tests__/contract.b08-release-reconciliation.test.ts (3 tests) 153ms
+ ✓ |database-authority-static| scripts/__tests__/localEnvironmentAuthority.test.ts (7 tests) 32ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/pleReviewerFixture.test.ts (11 tests) 47ms
+ ✓ |database-authority-static| server/_core/__tests__/databaseTls.test.ts (7 tests) 10ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/adapterProtocol.test.ts (3 tests) 8ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/localServicePaths.test.ts (4 tests) 10ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/tidbStructuralAdmission.test.ts (3 tests) 151ms
+ ✓ |database-authority-static| server/__tests__/contract.database-connection-path-authority.test.ts (2 tests) 105ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/worktreeIdentity.test.ts (3 tests) 27ms
+ ✓ |database-authority-static| server/migrations/__tests__/canonicalListingLocationMigration.test.ts (2 tests) 200ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/canonicalCommercialAdmission.test.ts (4 tests) 24ms
+ ✓ |database-authority-static| server/migrations/__tests__/canonicalListingPlaceReference.test.ts (3 tests) 160ms
+ ✓ |database-authority-static| server/services/__tests__/onboardingStateCreation.test.ts (6 tests) 17ms
+ ✓ |database-authority-static| server/migrations/__tests__/manualLocationWithoutCoordinatesMigration.test.ts (2 tests) 166ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/dataRoleManifest.test.ts (2 tests) 12ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/isolatedCiGrantVerification.test.ts (11 tests) 13ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/tidbCheckConstraintCapability.test.ts (7 tests) 13ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeStoragePreconditions.test.ts (5 tests) 21ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/rehearsalCatalogue.test.ts (2 tests) 17ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/rehearsalClosure.test.ts (1 test) 118ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/canonicalPlacesTransactions.test.ts (6 tests) 27221ms
+   ✓ canonical Place preparation validates before commit > refuses stale national name normalization before any write despite correct counts and IDs 14425ms
+   ✓ canonical Place preparation validates before commit > rolls back a per-territory load whose mapping insert was silently dropped 621ms
+   ✓ canonical Place preparation validates before commit > commits a complete per-territory load and reports zero writes on replay 2271ms
+   ✓ canonical Place preparation validates before commit > refuses national identity-field drift with the correct ID set and totals, without committing 9773ms
+
+ Test Files  59 passed (59)
+      Tests  688 passed (688)
+   Start at  12:00:42
+   Duration  70.74s (transform 3.06s, setup 0ms, collect 41.79s, tests 130.11s, environment 17ms, prepare 7.99s)
+
+
+> real_estate_portal@1.0.0 db:authority:utilities /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseUtilityAuthorityCheck.ts
+
+Database utility authority check passed: 121 classified surfaces.
+
+> real_estate_portal@1.0.0 schema:sanity /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> node scripts/schema-sanity-check.mjs
+
+Schema sanity check passed: 221 canonical tables; 112 active SQL migration file(s).
+
+> real_estate_portal@1.0.0 schema:inventory:check /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/generateCanonicalModelInventory.ts
+
+Canonical model inventory is deterministic and current.
+
+> real_estate_portal@1.0.0 db:authority:lifecycle /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseLifecycleContractCheck.ts
+
+Database lifecycle contract passed.
+Database authority static gate passed.

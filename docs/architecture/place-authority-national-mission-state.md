@@ -1,0 +1,1780 @@
+# Place Authority — National Rollout Mission State
+
+This is the single canonical progress tracker for the national Place Authority
+mission. Do not create competing trackers.
+
+A new agent or session resumes by reading, in order:
+
+1. `AGENTS.md`
+2. `docs/architecture/geography-coverage-contract.md` (active contract)
+3. `docs/architecture/database-authority-policy.md`
+4. this file
+
+## Mission objective
+
+Deliver one reproducible, evidence-governed, territory-neutral Place Authority
+for South Africa. Preserve factual geographic identity, support canonical search
+and discovery, handle names and aliases correctly, support evidenced
+relationships without fabricating hierarchy, keep Search Areas separate, admit
+provinces through one repeatable pipeline, produce deterministic Place identities
+and artifacts, and prove every change physically on authorized disposable
+databases. Place Authority remains the only geographic identity source.
+
+## Active contract
+
+- `docs/architecture/geography-coverage-contract.md` **v0.5**
+- Sections 0–19 are the delivered record. **Section 20 is the binding scope
+  contract**: `province / metro_city / locality` are product search-scope
+  *categories*, not mandatory levels of the factual containment hierarchy. The
+  only mandatory ancestry requirement for a scope is an evidenced chain to the
+  province. A locality does not require a `metro_city` ancestor.
+
+## Branch and worktree
+
+- Worktree: `/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0`
+- Branch: `feat/place-authority-slice0-decision`
+- `main` is `ad0c4247` and is never modified by this mission.
+- Sibling worktree `property-listify-gauteng-source-authority-closure` is at
+  `4356c0f7` with uncommitted work from another workstream. **Do not touch it.**
+  The v0.2 source it holds was copied into this branch and is committed here.
+- The Phase 3 verification target
+  `listify_wt_place_authority_slice0_f2af5b9a6482` was re-created from zero for
+  the Phase 3 physical proof and **disposed again** afterwards. Do not assume it
+  exists.
+
+## Phase status
+
+| Phase | Scope | State |
+| --- | --- | --- |
+| 0 | Typed Place Authority contract | closed (`52a8ab15`) |
+| 1 | Gauteng scope contract repair | **closed** |
+| 2 | Executable Place foundation | **closed** |
+| 3 | Territory-neutral onboarding proof | **closed** (`ad753b3d` + Phase 3 refactor) |
+| 4 | Western Cape (Province 2) | **admitted and physically proven; not activated** (superseded as a milestone by row 5) |
+| 5 | Remaining provinces | **closed — all nine admitted and physically proven** |
+| 6 | National authority verification | **review findings repaired; national storage and failure paths proven — ready for review, consumers inactive** |
+| 7 | National consumer handoff | launch-readiness source preparation active; customer convergence outstanding, activation held |
+
+## Current phase
+
+**Repair checkpoint, 2026-10-07:** the four correctness findings against
+`0cf4022c3` are repaired and protected by regression tests. National storage,
+atomic refusal and populated-target refusal are physically proven on the exact
+owned disposable target. The Azure regression coverage now runs without
+extending its revoked historical approval. See the repair record at the end of
+this file. Code awaits review; consumer activation and protected releases remain
+closed.
+
+**All nine provinces are admitted, reproducible and physically proven**, each on
+its own fresh disposable target, and **no consumer reads any of them**. Nothing
+has been published, activated, widened or switched. The territory-neutral pipeline
+is now proven nine times over with no new architecture: the same code produced
+Gauteng's 1,466 Places and Eastern Cape's 5,084, and a Karoo village and a
+Sandton suburb go through identical code.
+
+Zero provinces remain, and **national coverage is now proven**: all nine provinces
+load into one target in one transaction, atomically, with every identity unchanged.
+An earlier revision of this file still said a target may hold only one province and
+that national coverage was "unreachable from what has been proven". That was true
+when it was written and stopped being true once combined loading was decided; it is
+corrected here rather than left to contradict its own Phase 6 record below.
+
+The binding constraints are now these, and none of them is admission:
+
+- **Consumer activation** is closed, deliberately. Nothing reads any Place.
+- **The B08 Azure rehearsal authority is invalidated by integration.** It pins four
+  values as one coherent set and was approved against the pre-integration model;
+  Place Authority's seven tables change all four. Re-establishing it is a
+  protected-release decision and is not repinned on this branch.
+- **Boundary currency** is unproven for all nine provinces, and Gauteng's vintage is
+  unrecoverable from committed inputs.
+- **The ODbL determination** remains founder-owned.
+
+## Phase 3 delivery record — territory neutrality
+
+### What was removed
+
+The Phase 3 audit found territory-specific *application logic* in exactly two
+places. Both are gone:
+
+- `tools/place-admission/build-gauteng-admission.mjs` hardcoded `SOURCE_DIR`,
+  `OUT_DIR`, `ADMISSION_VERSION`, `REGISTRY_PATH`, `V01_DIR`, the
+  `gauteng_`-prefixed artifact filenames, and the frozen v0.1 comparison counts
+  (1,480 / 1,414 / 116 / 11 / 8 / 3 / 14).
+- `server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts` hardcoded
+  `CANONICAL_PLACES_VERSION`, `PACKAGE_DIR`, `MANIFEST_PATH` and `REGISTRY_PATH`.
+
+It is renamed to `tools/place-admission/build-place-admission.mjs`, names no
+province, and accepts `--territory <id>` and `--registry <path>`.
+
+Territory-specific *data* was deliberately left alone.
+`server/data/marketIntelligence.ts` and
+`dataAdapters/searchToLeadScenario.ts` remain, as does the named pressure-case
+list in `tools/place-admission/probe-place-admission.mjs`: that list is evidence
+about what happened to specific real referents in the `za-gp` adjudication, so
+admitting another province extends the list rather than the machinery.
+
+### The single authority
+
+`shared/placeAdmissionTerritories.ts` is the one schema, validator and loader.
+`data/place-admission-territories.v0.1/territory-registry.v0.1.json` is the one
+committed registry. A territory entry names its source-authority directory, its
+digest-pinned source manifest, its source artifact filenames, its admission
+version, its coverage-baseline paths and counts, its package directory, and its
+package artifact filenames.
+
+It is deliberately **not** an extension of the Slice 1 projection catalog
+(`data/geography-coverage-v0.1/territory-catalog.v0.1.json`). §12.7 requires the
+neutrality proof to run without adding fictional rows to the real catalog, which
+a single shared file could not satisfy. The two files hold disjoint fields and
+disjoint artifacts: one pins frozen runtime projections, the other names the
+admission pipeline's inputs and outputs.
+
+Every load fails closed on an unregistered territory, a duplicate territory id or
+admission version, a reused filename, a repeated pinned manifest path, a path
+escaping the repository root, or a missing expected count.
+
+### Two real defects found and fixed
+
+1. **The committed admission manifest pointed at a file that does not exist.**
+   `outputs.parent_evidence_classification` recorded
+   `gauteng_parent_evidence_classification_v0.1.json`, while the builder wrote
+   and git tracked `gauteng_parent_evidence_classification.v0.1.json`. Nothing
+   had ever checked a manifest path against the filesystem. The builder now
+   refuses to finish if any path its manifest advertises does not exist.
+2. **The manifest embedded per-run counters.** `ids_minted_this_run` and
+   `ids_reused_this_run` were written into a committed artifact, so
+   `--check` could never pass after any run that minted an ID. This was
+   invisible for `za-gp` only because its Place-ID registry was already complete,
+   so every run was `minted=0 reused=1466`. The first territory to be admitted
+   from scratch would have hit it immediately. The per-run counters are now
+   reported on stdout; the manifest keeps only cumulative registry state.
+
+### The neutrality proof
+
+`pnpm place:admission:territory-neutrality`
+(`tools/place-admission/prove-territory-neutrality.mjs`) writes a synthetic
+province, two municipalities and three suburbs into a throwaway directory and
+drives the real builder and the real materializer against it. It asserts that
+the package is digest-pinned, that regeneration is byte-identical and mints no
+IDs, that the unchanged materializer loads it, that an unregistered territory is
+refused, and that the real registry and the real projection catalog are
+byte-unchanged. Nothing fictional is committed.
+
+## Phase 4 evidence acquisition record
+
+### What arrived
+
+Integration `f9bd8984` carries the reviewed acquisition packet authored on
+`docs/geography-source-unblock-20261001` as `617d4847`, with
+`docs/architecture/geography-source-acquisition-decision.md` as the governing
+decision. The packet was verified offline before and after integration:
+
+- Bundle manifest digest
+  `f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb`, matching
+  the digest the decision records
+- `snapshot.py verify` — 16 files and 27,093 source-native records verified
+  offline, from frozen local files only
+- 7/7 offline integrity tests pass, including that the tooling itself **refuses**
+  to treat the bundle as canonical admission
+
+Bundle: `data/za-wc-source-acquisition-v0.1/snapshot-20261001/`.
+
+### Contents and scope
+
+- **14,930** GeoNames records filtered by source admin1 code `ZA.11`,
+  cross-validated against Western Cape source identity `1085599` in the
+  downloaded admin-code register. Retained national context: 103,212 GeoNames
+  records, so missing, unknown and conflicting province codes stay reviewable
+  instead of vanishing through a filter.
+- **11,889** alternate-name assertions, retaining language, preference,
+  historic and validity columns. These are **source assertions, not accepted
+  Place names**, and they include non-place tokens.
+- **274** geoBoundaries gbOpen boundary features indexed at **national** scope
+  (9 ADM1, 52 ADM2, 213 ADM3).
+
+Feature codes in the province-coded GeoNames set: S populated place 7,333;
+T city/town 3,698; H historical 2,597; P section 901; L light 305; V vegetation
+59; A administrative 32; R religious 5. Admin2 codes present: DC1–DC5 and CPT,
+with 3,902 records carrying no admin2. 25 distinct admin3 codes.
+
+### Licence determinations
+
+GeoNames is **CC BY 4.0, attribution required** — not CC0. This corrects D3, which
+previously read "GeoNames (CC0/attributed)". The D3 correction is applied in the
+v0.5 contract; the newer v0.5 contract content was kept, not replaced by the
+integration branch's older copy.
+
+geoBoundaries **gbOpen** ADM1/2/3 declare `boundaryLicense` CC BY 3.0 IGO, source
+OCHA ROSEA / Municipal Demarcation Board, distributed by geoBoundaries as
+CC BY 4.0. Both notices and the upstream attribution are preserved per record.
+gbAuthoritative and gbHumanitarian were not substituted.
+
+### Recorded limitations — these are not optional
+
+- **The boundaries represent 2020.** `boundaryYearRepresented` is `"2020"` for
+  ADM1, ADM2 and ADM3, with `sourceDataUpdateDate` 2023-01-19 and `buildDate`
+  2023-12-12. This is historical evidence, **not** a current-boundary
+  certification. Download freshness, source modification date, geographic
+  effective date and review date must stay distinct. A currency review is owed
+  before any Western Cape scope is published, and a 2020 boundary must never be
+  presented as a 2026-current fact.
+- **ADM2/ADM3 are national, not Western Cape.** The packet deliberately did
+  **not** assign them to Western Cape and did **not** treat a GeoNames admin
+  code as proof of polygon containment. Assigning them requires resolving
+  context against actual geometry, and code/geometry disagreements must be
+  queued rather than silently resolved.
+- **No Place has been minted, adjudicated, published or materialized.** The
+  packet is acquired evidence, not the digest-pinned v0.2 canonical source
+  authority the admission builder consumes. A registry entry alone cannot
+  substitute for that authority.
+- **Production ODbL approval remains a separate founder decision.** It does not
+  block this engineering. The `osm_only_odbl_provisional` disposable-only gate is
+  unchanged, and a `mixed_odbl_supported` label is not production clearance.
+
+### Provenance and reproducibility
+
+Every source record carries `source_native_id`, an `artifact_sha256`, a
+`source_locator` (zip member and line), the per-record `licence` block, and
+`attribution`. Raw artefact and record links stay resolvable back to the bundle.
+The acquisition tooling reproduces and verifies with the Python standard library
+only; a new acquisition is a new snapshot with a reviewed diff and never
+overwrites an existing or partial bundle.
+
+## Phase 4 delivery record — Western Cape
+
+### Source authority built from the acquired evidence
+
+`tools/gauteng-catalogue/territory_source_authority.py`, territory-driven by
+`TerritoryConfig`. The source pipeline was **parameterized, not duplicated**:
+`TerritoryConfig` supplies province, name tokens, ISO codes and source admin1
+code, so no province is named in code. `TerritorySpatialGate` replaced
+`GautengSpatialGate` (the old name is retained as an alias), and
+`select_territory_feature` replaced `select_gauteng_feature`. All 26 existing
+`gauteng-catalogue` tests still pass.
+
+| Artifact | SHA-256 |
+| --- | --- |
+| `data/za-wc-source-authority-v0.2/za_wc_source_manifest_v0.2.json` | `b3979264d784b4249e5e0692a913feccbac65a8a43ceebb38f56a7a8e3fbd74c` |
+| `data/za-wc-source-authority-v0.2/za_wc_source_build_summary_v0.2.json` | `86d4e02846b0da359eeafe78662aa437ed2359bea50c75144512d7fde0cdef4b` |
+| `data/za-wc-place-admission-v0.1/za_wc_place_admission_manifest_v0.1.json` | `0582f694539ca294e7aa2d1be2cce95faec908545f328a8d2c42bd3987550c0d` |
+| `data/place-admission-territories.v0.1/territory-registry.v0.1.json` | `79e3580c38803fd8e77ed3cb33e9210d50eba75b75e1ab9abaabcd62eddaa4c6` |
+
+Provenance chains unbroken: the source manifest's `source_snapshot_id` is the
+acquisition bundle manifest digest
+`f16907c92b55431f66496d1ffe0abc453be8e11b855d5ec2f262fceb58a005eb`; the registry
+pins the source manifest by digest; the admission manifest records the registry
+digest.
+
+### Admission discipline
+
+- Of **14,930** province-coded source records, **1,905** are admitted and
+  **13,025** carry an explicit disposition. `1,905 + 13,025 = 14,930`, so
+  disposition accounting is **total** against a declared source universe.
+- Non-admission is by governed source class, not by name: 6,568 spot features
+  (farms, airports, ruins, caves), 3,698 terrain and hydrographic, 2,597
+  historical, 96 locality/reserve, 59 vegetation, 5 religious/structural, 2
+  populated-place records outside the admitted codes.
+- 42 merged groups, **all reviewed**: same normalized name, same admitted
+  administrative context, sub-2 km duplicate GeoNames records. One
+  `unique_administrative_container_name` merge, where the City of Cape Town ADM2
+  and ADM3 records are one referent.
+- 1,862 Places, 3,246 names, 1,861 containment edges, 11,062 evidence rows,
+  1,905 external mappings, 13,025 disposition ledger rows.
+- 1,832 searchable (1,766 `locality`, 65 `metro_city`, 1 `province`), 1,138
+  publishable, **30 context-only municipalities with no scope**, 1,167 verified,
+  695 provisional. All `permissive_supported`; **zero** OSM-only, so the founder
+  ODbL gate is not engaged by this package.
+
+### Administrative context is resolved from geometry
+
+A GeoNames admin code is an assertion, recorded and compared, never treated as
+containment proof. An explicit **crosswalk** maps each geoBoundaries polygon to
+the admitted administrative identity, because the two sources disagree on
+labels: the polygon is `West Coast` and the record is
+`West Coast District Municipality`. Without the crosswalk the builder's
+name-based parent join would have silently collapsed **five of six** districts
+to a province parent. All six resolve; 1,886 of 1,905 identities carry an
+`adm2`/`adm3` name that matches an admitted identity; 19 fall outside every
+polygon and are queued as code/geometry disagreements.
+
+**Honest limitation.** No geospatial wheel is installed, so selection and
+containment run on the pipeline's standard-library ray caster, recorded as
+`bounding_box_fallback`. A bounding-box-centre representative point sweeps a
+genuine non-convex coastal unit out as readily as it sweeps an out-of-province
+neighbour in — `Overstrand` is a real Western Cape municipality that a strict
+inner test rejects. Weaker-evidence polygons are therefore retained, and **64
+identities depend on that weaker selection test** (0 at ADM2). The number is
+reported rather than hidden, and installing a GIS wheel is the owed follow-up.
+
+### Reproducibility
+
+- Source authority rebuilt into a scratch directory from the frozen bundle: all
+  four artifact digests identical, and the manifest's `compact_artifacts`
+  digests, build-summary counts, governed policy and administrative crosswalk
+  all identical. **Byte-reproducible.**
+- Admission package `--check` passes byte-identically for both territories with
+  **explicit** `--territory` selection.
+- Replay of the Western Cape materialization is a verified no-op: identical
+  table fingerprints and identical Place-ID set digest
+  `1c2cab66659aa5a776feefb40fbe87f4baeac75140c02430722f004ebad3a88e`.
+- First build minted 1,862 IDs; every subsequent run `minted=0 reused=1862`.
+
+### Physical proof
+
+On a target created from zero through the approved lifecycle and **disposed**
+afterwards:
+
+- Sanitized target `mysql://127.0.0.1:3307/listify_wt_place_authority_slice0_f2af5b9a6482`
+- Target fingerprint `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`
+- Classification `disposable-worktree`; ownership `exact-worktree-owned`;
+  credential class `local-owner`; host `127.0.0.1:3307`
+- Migration head `0099`; `schema-congruent`; `no-incomplete-attempts`
+- Materialized 1,862 Places, 3,246 names, 1,861 relationships, 11,062 evidence
+  rows, 1,905 external mappings; content digest
+  `cccab2b49cde6022c0bcfa3f34b458b03cc6cfee7e2e062c6cc54dd7ae18e2a6`
+- `places:verify --territory=za-wc` passes, **and passes again after the probe**,
+  which is the test-pollution check
+- Western Cape territory probe **30/30**: containment forest, one parent per
+  Place, no self-referential or unevidenced edge, no search widening, no
+  municipality promoted into a search tier, every settlement parented, no
+  homonym pair collapsed (`nooitgedacht` ×4, `die hoek` ×4, `windhoek` ×3
+  preserved), 272 non-Latin searchable names surviving, 5 official and 1,377
+  multilingual names retained, 30 context-only Places neither searchable nor
+  publishable
+- The **default**-territory verify correctly **refuses** against a Western Cape
+  loaded target, proving territory selection is real and a Gauteng pass can
+  never be reported as Western Cape proof
+
+The local service stopped mid-session with a stale PID file and was restored
+through the governed `db:authority:service:recover` path, which removed only the
+stale metadata. The target, its ledger and its data survived the bounce intact.
+
+## Phase 5 delivery record — KwaZulu-Natal
+
+### Evidence, acquired and verified
+
+`data/za-kzn-source-acquisition-v0.1/snapshot-20261001/`, its own frozen snapshot
+rather than a reuse of the Western Cape bundle, so KwaZulu-Natal provenance does
+not depend on a Western-Cape-named directory. Province identity `ZA.02` /
+geonameid `972062`, validated against the frozen `admin1CodesASCII.txt`.
+
+| | |
+| --- | --- |
+| Bundle manifest | `8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff` |
+| Source authority manifest | `6c8ddb9c74b7d0ced4178e5018f16183b1b171a39b7a93511b06d08f0ab42888` |
+| Admission manifest | `af8d09ae309300b15b1c7de00449c8a2913ea633d32f70f6da6543f1b28ad3ae` |
+| Admission registry | `8bbdf08e474d9e1de3977c5cb3b78be307f8c992e2b35080b2fdb1c07007bb21` |
+
+`11,346` province-coded GeoNames records and `8,208` alternate-name assertions,
+from the same `103,212`-record national extract, verified offline: 16 files and
+19,828 source-native records, plus the 7 acquisition integrity tests. Boundaries
+represent **2020**, licence CC BY 3.0 IGO upstream, recorded as limitations.
+
+A real defect was fixed in the acquisition tooling on the way: the recorded
+limitation hardcoded "Western Cape spatial selection ... pending", so a
+KwaZulu-Natal bundle misnamed its own territory in its provenance. It now reads
+the province from the plan.
+
+### Admission
+
+- `11,346` source records → **2,170 admitted**, **9,176 dispositioned**;
+  `2,170 + 9,176 = 11,346`, so accounting is total.
+- **2,090 Places**, 3,429 names, 2,089 containment edges, 9,660 evidence rows,
+  2,170 external mappings.
+- 2,028 searchable, 62 context-only municipalities, 5 `city`, 67 `town`,
+  1,276 `village`, 510 `suburb`, 11 district and 51 local municipalities.
+- **Zero OSM-only**, so the founder ODbL gate is not engaged.
+- shapely 2.1.2 `polygon_predicate` throughout, **0 weaker-evidence reliance**.
+  Out-of-province neighbours were correctly rejected: Alfred Nzo, Gert Sibande and
+  Thabo Mofutsanyane at ADM2; Dr Pixley Ka Isaka Seme, Maluti a Phofung,
+  Matatiele, Mbizana, Mkhondo, Phumelela and Umzimvubu at ADM3.
+- The administrative crosswalk again earned its place: `Umgungundlovu` →
+  `uMgungundlovu District Municipality`, and `eThekwini` → `eThekwini
+  Metropolitan Municipality`, whose Place type stays `district_municipality` and
+  is never promoted into a search tier.
+- All 2,136 `adm2` links resolve to an admitted identity name.
+- 78 name suppressions recorded: 68 exact duplicate source assertions and **10
+  genuine target-collation collisions**.
+- 382 identities have no `adm3`, which is geographically right: large rural
+  KwaZulu-Natal areas belong to a district municipality and to no local
+  municipality. Containment still resolves through `adm2`.
+
+### Merge review — 79 merges, all reviewed
+
+Every merge is `same_normalized_name_same_administrative_context_within_governed_distance`.
+Distribution: 47 at ≤2 km, 16 at 2–5 km, 8 at 5–8 km, 8 beyond 8 km, the widest
+being Umzumbe at 12.08 km. 52 merges combine members of different ranks, e.g.
+`Inanda` as both a `town` of population 10,032 and a `village`.
+
+**The decisive corroboration: all 79 merges include at least one member carrying
+coarse rounded coordinates**, the signature of a secondary or administrative
+source record for a referent that also has a precisely-placed record. That is
+evidence of a duplicate record rather than of two distinct settlements.
+
+The 8 merges beyond 8 km are nonetheless recorded as a **research queue**, not
+accepted silently, because the 15 km governed bound was derived from urban
+Gauteng and its evidence base does not transfer to rural KwaZulu-Natal. The bound
+was **not** changed, because that would change admissions and is a reviewed
+decision.
+
+### Physical proof
+
+Fresh target created from zero, migrated to `0099`, loaded with explicit
+`--territory=za-kzn`, verified, replayed, probed, re-verified, and **disposed**.
+
+- Target fingerprint `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+  classification `disposable-worktree`, ownership `exact-worktree-owned`,
+  credential class `local-owner`, host `127.0.0.1:3307`
+- Materialized content digest
+  `41b7668c1e8ef7df7d953d0445750f0cde46f8cdf2fbf529a7de1284d0a03db5`
+- Replay is a byte-identical no-op: identical table fingerprints and Place-ID set
+  digest `f0e63281c4ac390ca2507b5b45bcc9a1df460504f82dbdb3f8b31b4f99d1a092`
+- Build replays `minted=0 reused=2090`; first build minted 2,090
+- KwaZulu-Natal territory probe **29/29**; reference role re-verified afterwards
+  with no test pollution
+- Regression: Gauteng and Western Cape re-admitted with `minted=0`, so their
+  1,466 and 1,862 Place IDs are preserved and their package rows are untouched;
+  only the registry digest each manifest records changes
+
+### National verification completed so far
+
+Run against the three committed packages, without combined loading:
+
+- **Zero Place ID collisions** across provinces. Identity is territory-scoped by
+  construction.
+- Zero province rows inconsistent with their own territory; each province has
+  exactly one province root.
+- **Shared preferred names across provinces** are common and genuinely distinct
+  referents, and the per-province identity
+  design keeps them apart. The consequence is a hard constraint on Phase 7: a
+  national consumer must resolve a name within a province and must never treat a
+  bare name as a unique Place. The Gauteng suite already proves the in-province
+  ambiguity case, where `Diepkloof` resolves to two Places.
+
+### Blocker: combined loading needs a reviewed decision
+
+Loading a second province into a target that already holds Places is refused:
+
+> `canonical-places refused: target already holds Places but not
+> pl-place-01-…; an admitted Place may not be added to a loaded authority without
+> a reviewed decision`
+
+This is a deliberate guard, not a bug. It means **the current materializer admits
+exactly one province per target**, which cannot become national coverage: Place
+Authority is meant to be the single geographic identity source for the whole
+country, and national deployment needs all provinces in one `place` table.
+
+The guard is **not** weakened here. A decision would need to cover at least:
+per-territory identity verification during a multi-territory load; cross-territory
+Place ID uniqueness as an explicit assertion; the case where two territories claim
+the same natural key; and whether `canonical-places` should load all registered
+territories in one transaction or remain a per-territory command driven by a
+coordinating step. Until that is decided, per-province physical proof is the only
+claim available, and it is what the three provinces have.
+
+## Phase 5 delivery record — Eastern Cape
+
+### Evidence and admission
+
+| | |
+| --- | --- |
+| Bundle manifest | `358c0642cc76f48335c4e428c9871baf06bee05a5343557205939394b93d5678` |
+| Source authority manifest | `2ee57a0f948b7b955e1b7239cafb665a373968620404cd9800df7a0e9d300af7` |
+| Admission manifest | `8671e784d9275a35f7041b6b9e4df98c6df2deebfc117d1823559ca2ce4e314e` |
+| Admission registry at EC delivery | `81f2f808eb9dddc24c77e26b71d2924751bc6f73e602e6d154015cf6040f57e2` |
+
+Province identity `ZA.05` / geonameid `1085593`, validated against the frozen
+admin register; its own frozen snapshot, verified offline at 16 files and 28,374
+source-native records, boundaries **2020**, licence CC BY 3.0 IGO upstream.
+
+`17,989` source records → **5,328 admitted** and **12,661 dispositioned**;
+`5,328 + 12,661 = 17,989`, total accounting. **5,084 Places**, 6,892 names,
+5,083 containment edges, 14,951 evidence rows, 5,328 external mappings, **zero
+OSM-only**. 5,037 searchable, 47 context-only municipalities. Heavily rural:
+4,271 `village`, 444 `suburb`, 256 `locality`, 61 `town`, 4 `city`, 39 local and
+8 district municipalities. 117 name suppressions recorded.
+
+### A real governance defect found: the recorded merge invariant overstated the rule
+
+Reviewing Eastern Cape's 225 merges surfaced that the manifest claimed a bound the
+engine never enforced. Two distinct merge bases exist and only one is
+distance-bounded:
+
+- **Settlement** merges compare each member to the group's **anchor**, which is
+  single-linkage. Two records 14 km apart can therefore share a Place with a third
+  16 km from the first: every member is inside the bound of the anchor while the
+  group's diameter is not.
+- **Administrative container** merges are on unique container name alone, with
+  **no distance test at all**, because a territory has exactly one province and one
+  municipality per name. Their members can legitimately be far apart.
+
+The recorded invariant could be read as a group-diameter bound, which it never was.
+The rule is **unchanged**, because moving to complete linkage would split admitted
+Places and that is a reviewed decision. What changed is that the claim is now
+accurate and the exceptions are visible: `merge_bases` in each manifest records
+the rule actually enforced, the count of distance-unbounded container merges, and
+every settlement group whose diameter exceeds the bound.
+
+Current exposure: **Gauteng 0, KwaZulu-Natal 0, Western Cape 1** (3 members,
+23.5 km), **Eastern Cape 1** (3 members, 16.82 km). Both are three-member
+single-linkage chains and are listed for review. The previously proven Gauteng
+package is unaffected.
+
+All 225 Eastern Cape merges include at least one member with coarse rounded
+coordinates, the same duplicate-record signature found in KwaZulu-Natal.
+
+### Physical proof
+
+Fresh target from zero, migrated to `0099`, loaded with explicit `--territory=za-ec`,
+verified, replayed, probed, re-verified, **disposed**.
+
+- Target fingerprint `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+  `disposable-worktree`, `exact-worktree-owned`, `local-owner`, `127.0.0.1:3307`
+- Content digest `b77ef58e9b648e01797a8502be5edffd16a04525cc2d41549b519229f936c1d4`
+- Replay byte-identical no-op; Place-ID set digest
+  `ab87cb944e323d4090ad61fac171f15245515302c2b30f6bdc829c2e79a8b399`
+- Build replays `minted=0 reused=5084`; first build minted 5,084
+- Eastern Cape territory probe **29/29**; reference role re-verified with no
+  pollution
+- Regression: Gauteng, Western Cape and KwaZulu-Natal re-admit with `minted=0`,
+  so 1,466, 1,862 and 2,090 Place IDs are preserved
+- Cross-province verification green over **4 provinces, 10,502 distinct
+  identities**, with the homonym report still non-zero
+
+## Phase 5 delivery record — national completion (Free State, Mpumalanga, Limpopo, North West, Northern Cape)
+
+### Two real source defects found while admitting the last five
+
+**The gbOpen ADM1 layer misspells the province.** The label is **"Nothern Cape"**,
+not "Northern Cape". Every earlier province had been selected by name token, so
+Northern Cape was the first to expose how fragile that was. It is now matched on
+ISO `NC`, and the misspelling is **preserved as the polygon label** rather than
+corrected in the derived artifact: rewriting upstream data would hide a real
+defect in the evidence. The source authority records `adm1_selected: "Nothern
+Cape"`.
+
+**The ISO codes in this repository's own config were guesses, and the layer
+disagrees.** Gauteng is `GT`, not `GP`; KwaZulu-Natal is `KZ`, not `ZN`. Because
+the name tokens happened to match, selection worked for seven provinces while
+silently relying on nothing else. All nine entries are now aligned to what the
+layer actually carries, so both selectors agree.
+
+A third inconsistency was ours too: `za-kzn`'s manifest had been registered as
+`…_manifest.v0.1.json` while all eight others use `…_manifest_v0.1.json`. The
+registry pins paths, so nothing was broken, but the package was rebuilt and
+replays with `minted=0 reused=2090` under the consistent name.
+
+### Admission
+
+| | Free State | Mpumalanga | Limpopo | North West | Northern Cape |
+| --- | --- | --- | --- | --- | --- |
+| Source universe | 10,915 | 6,933 | 13,218 | 6,622 | 18,448 |
+| Admitted identities | 1,572 | 1,078 | 1,747 | 1,445 | 1,576 |
+| Dispositioned | 9,343 | 5,855 | 11,471 | 5,177 | 16,872 |
+| **Places** | **1,544** | **1,045** | **1,669** | **1,352** | **1,552** |
+| Names | 2,138 | 1,607 | 2,359 | 2,086 | 2,192 |
+| Relationships | 1,543 | 1,044 | 1,668 | 1,351 | 1,551 |
+| Evidence rows | 7,300 | 5,059 | 9,443 | 5,113 | 12,874 |
+| Executable | 1,519 | 1,024 | 1,639 | 1,329 | 1,520 |
+| Merge groups | 28 | 31 | 66 | 76 | 23 |
+| Code/geometry queue | 18 | 93 | 68 | 382 | 13 |
+
+Every territory's accounting is total: admitted identities plus dispositioned
+candidates equals the source universe exactly, in all nine provinces. Boundaries
+are **2020** for all five, and every one resolved **0** identities to weaker
+ADM2/ADM3 evidence.
+
+Northern Cape carries 707 localities, the highest count of the five, against only
+25 towns. Its 18,448-record universe is the largest of any province admitted so
+far, ahead of Eastern Cape.
+
+### Merge review: the last five are clean
+
+| | Free State | Mpumalanga | Limpopo | North West | Northern Cape |
+| --- | --- | --- | --- | --- | --- |
+| Container merges with no distance test | 0 | 0 | 0 | 0 | 0 |
+| Settlement groups over the 15 km diameter bound | 0 | 0 | 0 | 0 | 0 |
+
+**Not one** of the five introduces an exception to the enforced merge rule. Across
+all nine provinces the total exposure remains Western Cape's 1 container merge and
+2 settlement groups (Western Cape 3 members / 23.5 km, Eastern Cape 3 members /
+16.82 km), all three-member single-linkage chains listed for review.
+
+### Physical proof
+
+Each of the five ran the full proven lifecycle on its own target created from zero
+and confirmed empty immediately before loading: migrate to
+`0099_saved_searches_canonical_place_reference_fk.sql`, load with an explicit
+`--territory`, independent verify, fingerprint, replay, re-fingerprint, probe,
+re-verify for pollution, dispose. Every territory probe passed **29/29**.
+
+| | Places | Place-ID set digest |
+| --- | --- | --- |
+| Free State | 1,544 | `c57f0196039a5586add005472fbdf721d14f2325086d33538cfee849bfeaaf2c` |
+| Mpumalanga | 1,045 | `db63702a65c8c2a1724de5555ed2bb283726b487cf13594f3ef9dfde5f43da0b` |
+| Limpopo | 1,669 | `039f03aec6ad5970fa5c00be9d4721df1d2754366392263f6314f86a5b244753` |
+| North West | 1,352 | `2e0917c48c9e1b2c7e49255ffd43d3d1e52557f343f2aa7277e2dddb32512aed` |
+| Northern Cape | 1,552 | `43b0be9c554aae241993aae0bcffebe552ed8b175dea443e3a1d16df90f1ab86` |
+
+Replay was a byte-identical no-op for all five. Free State was proven twice, the
+second time from a freshly disposed target, and produced the **same** Place-ID
+digest both times: IDs are derived from the admitted package, not from load order
+or database history.
+
+### Reproducibility and national verification
+
+- All nine packages replay with `minted=0`: **17,664** admitted Place IDs are
+  stable, none re-minted, none dropped. The source universe behind them is
+  **18,309** identities; 645 identities were absorbed into merge groups.
+- Source-authority geography is byte-identical on rebuild for all five.
+- `place:admission:cross-province` is green over **9 provinces, 17,664 admitted
+  Places, 18,309 source identities**, with no Place ID collision, one province
+  root per province, single-parent forests, total accounting per province, and
+  zero relationship-driven search widening in all nine.
+- **828** preferred names occur in more than one province, up from 359 over four
+  provinces. `rieftontein` is a preferred name in **all nine**. This is the
+  practical case for the geography contract: a bare name is never a unique Place
+  and must never be widened.
+- Static database-authority contract gate: **365/365**.
+
+## Phase 5 delivery record — boundary currency, now executable per province
+
+The currency question was one blanket sentence across the whole country: boundaries
+represent **2020**. That was adequate when three provinces existed and actively
+misleading at nine, because it implied a uniform gap that no reader could check.
+
+`tools/geography-source-evidence/boundary-currency.mjs` now emits a per-province
+ledger and gates on it. Run `pnpm place:boundary-currency:check`.
+
+### It immediately found a gap nobody had recorded
+
+**Gauteng records no boundary provenance at all.** Its source authority predates
+the shared builder and has no `boundary_evidence` block, so its demarcation year
+is not merely old, it is **unknown**. The other eight all record 2020 with an
+upstream source-data date of 19 January 2023 and a geoBoundaries build date of 12
+December 2023 — 1,352 and 1,025 days old respectively at the time of writing.
+
+This matters more than it looks. Gauteng is the originally proven province, the one
+whose 1,466 Place IDs the whole continuity argument rests on, and it is the only
+province whose administrative geometry has **no recorded vintage**. Its admitted
+package is not wrong — it was built from real evidence and is digest-pinned — but
+its evidence is weaker than the other eight, and until now nothing in the
+repository said so.
+
+The tool reports this as a **gap**, not a failure. A province that makes no
+currency claim is not making a false one, and a gate that is permanently red gets
+ignored, which protects nothing. The gate fails only on an unsupported claim; the
+real blocker remains the owner's currency review.
+
+| Territory | Province | Represents | Upstream age | Built | Places |
+| --- | --- | --- | --- | --- | --- |
+| za-gp | Gauteng | **unrecorded** | unrecorded | unrecorded | 1,466 |
+| za-wc | Western Cape | 2020 | 1,352 d | 1,025 d | 1,862 |
+| za-kzn | KwaZulu-Natal | 2020 | 1,352 d | 1,025 d | 2,090 |
+| za-ec | Eastern Cape | 2020 | 1,352 d | 1,025 d | 5,084 |
+| za-fs | Free State | 2020 | 1,352 d | 1,025 d | 1,544 |
+| za-mp | Mpumalanga | 2020 | 1,352 d | 1,025 d | 1,045 |
+| za-li | Limpopo | 2020 | 1,352 d | 1,025 d | 1,669 |
+| za-nw | North West | 2020 | 1,352 d | 1,025 d | 1,352 |
+| za-nc | Northern Cape | 2020 | 1,352 d | 1,025 d | 1,552 |
+
+The ledger is written to
+`data/place-admission-territories.v0.1/boundary-currency-ledger.v0.1.json`, and two
+contract tests in
+`server/__tests__/contract.place-admission-territory-neutrality.test.ts` keep it
+honest: one refuses any province claiming currency it cannot evidence, the other
+requires the ledger to cover **every** registered province and certify **none** of
+them.
+
+The tool deliberately does not fetch, evaluate or substitute newer boundaries.
+Ingesting current demarcation would change admitted packages and Place IDs, which
+is a reviewed decision. The only permitted output is a gate.
+
+## Phase 6 delivery record — national storage proven, decisions applied
+
+### The decision set, applied
+
+| Decision | Applied as |
+| --- | --- |
+| Disposable national proof target, all nine in one transaction, with rollback, replay and per-province verification | `places:prepare-national` / `places:verify-national` |
+| `place_id` is identity; reject `UNIQUE(parent, normalized_name)`; adding type does not establish uniqueness either | Rejected constraints carried in the load's own output and measured by the collision gate |
+| Preserve provincial disposition ledgers, with a national report tracing every source identity | `place:admission:national-provenance`; ledgers untouched |
+| Allow storage proof with Gauteng's provenance gap recorded; keep activation and publication gated | Gap recorded by `place:boundary-currency:check`; no consumer touched |
+| Investigate Gauteng's boundary provenance before re-acquisition, preserving its IDs | Investigated. 33/33 shapeIDs match release `9469f09`, 1,466/1,466 points inside their named polygons. Vintage still unrecoverable; re-acquisition refused; 1,466 IDs untouched |
+
+### The national load
+
+**17,664 Places in one `place` table** — 26,425 names, 17,655 containment edges,
+79,925 evidence rows, 19,792 external mappings — loaded from zero in **one
+transaction** on a disposable target, then disposed. Nine province roots. No consumer
+activated, no scope published, no search widened.
+
+**Rollback is proven, not asserted.** A deliberately injected mid-load fault, thrown
+from inside the `place` insert loop partway through the ninth province, left the
+target holding **zero** Places. That is the one unacceptable outcome, tested directly:
+seven provinces present and one missing reads as complete to any caller that does not
+recount. Replay is a byte-identical no-op on both count and content digest.
+
+The load refuses **before writing anything** if two provinces claim the same Place
+identity, so a package change cannot introduce a collision the static report has not
+seen. It also refuses a target holding a *partial* set of provinces rather than
+extending it, because extending launders a broken prior load into a healthy one.
+
+Per-province verification needed its own verifier. The per-territory verifier compares
+against one province's counts, so against a national target it correctly refuses for
+all nine — the guard working. `places:verify-national` instead checks each province's
+Places, identity fields and counts inside the shared target, then the properties that
+exist only when provinces are together: total accounting, nine distinct roots, and a
+containment forest with no second parent and no cycle. That last check exists because
+a shared forest is a hazard that does not exist one province at a time. Result:
+**9/9 complete, zero identity drift**, every national total exact.
+
+### Two defects found while proving it
+
+**A committed authority pointed at `/tmp`.** `za_wc_source_manifest_v0.2.json` and
+Western Cape's admission manifest both resolved their artifacts through
+`/tmp/opencode/wc-shapely/`, which no longer exists. Every other province uses
+repo-relative paths. Western Cape had been loading and verifying only because that
+temp directory happened to survive — the authority was not self-contained. Rebuilding
+from its frozen committed bundle produced artifacts **byte-identical** to the digests
+already pinned, all four matching exactly, with only the paths corrected. The
+admission package replays `minted=0 reused=1862`, so Western Cape's 1,862 Place IDs
+are untouched. A repository-wide scan confirms no committed authority file references
+an absolute `/tmp` path.
+
+**The disposition ledgers are not uniform, and eight of nine are not
+self-contained.** Only **Gauteng's** ledger records admitted identities. The eight
+provinces admitted by this mission have **disposition-only** ledgers, so their 16,821
+admitted identities are absent from their ledgers entirely.
+
+The national report therefore derives the identity → Place trace from the geography
+artifact's own `source_identity_ids`, which every province records, and uses the
+ledgers for dispositions. The ledgers themselves are preserved unchanged, as decided,
+and the report states each one's coverage rather than presenting all nine as
+equivalent. The consequence is worth stating plainly: **a reader auditing provenance
+from a ledger alone would find nothing for 16,821 admitted Places.** Bringing the
+ledgers to parity is a real, recorded gap, not a silent one.
+
+### National accounting
+
+| | Value |
+| --- | --- |
+| Provinces | 9 |
+| Source identities | **18,309** |
+| Admitted Places | **17,664** |
+| Identities absorbed into merge groups | 645 |
+| Disposition ledger rows preserved | **87,930** |
+| Places absorbing more than one identity | 0 |
+| Identities still awaiting human review | **83,583** |
+| Dangling Place references | 0 |
+
+Every province closes its own accounting before the national sum means anything, and
+every source identity resolves to either its Place or its disposition. 83,583
+identities remain flagged for human review, which is the honest count of adjudication
+still owed a person — total accounting proves nothing leaked, not that every call was
+right.
+
+## Gauteng boundary provenance investigation
+
+Decision of record: investigate Gauteng's existing boundary provenance **before**
+considering re-acquisition, and preserve its Place IDs during the investigation.
+Re-run with `pnpm place:gauteng-provenance`. No evidence was re-acquired and no
+Place ID was touched.
+
+### What was recoverable
+
+**Per-record provenance is committed.** Every Gauteng Place records provider
+`geoBoundaries`, level `ADM1`/`ADM2`/`ADM3`, and a stable upstream `shapeID` — **33**
+distinct pairs. That is real, verifiable provenance. What is missing is only its
+*aggregation* into the `boundary_evidence` block the other eight carry.
+
+### What is not recoverable
+
+**The vintage.** Demarcation year, build date, upstream source-data date and licence
+all live in geoBoundaries' `-metadata.json` sidecars. Gauteng's raw bundle was
+deliberately never committed (`raw_materialization.committed = false`), so no sidecar
+exists for it. **The currency review still cannot quantify Gauteng's gap.**
+
+### What corroborates, and what it does not prove
+
+The eight committed bundles pin exactly one geoBoundaries release, git **`9469f09`**,
+with per-file digests. Against that release:
+
+- **33 of 33** Gauteng shapeIDs are present.
+- **1,466 of 1,466** admitted Places have a representative point **inside** the
+  polygon their own administrative context names.
+- **0** points outside, **0** context names absent.
+
+So Gauteng's administrative context is **consistent with** release `9469f09`. It is
+**not shown to have been built from it**, and must never be read that way: South
+African boundaries change slowly, so an older release would very likely contain the
+same points. This is corroboration, not a vintage record.
+
+### Conclusion
+
+Re-acquisition remains **refused**, and Gauteng's **1,466 Place IDs are untouched**.
+The honest position is unchanged in substance and much better specified: Gauteng's
+boundary *provenance* is committed and consistent with the release the other eight
+used; its boundary *vintage* is unrecoverable from committed inputs. Closing that
+would require either the metadata sidecar for its original release, or an accepted
+re-acquisition with an explicit Place-ID continuity decision.
+
+Two of my own checks were wrong while building this. The first collected candidate
+shapeIDs from ADM2 files only, so Gauteng's 22 local-municipality IDs were never
+looked up and 11 of 33 came back unaccounted for. The second, in the currency tool,
+had described Gauteng as recording "no boundary provenance at all", which is wrong —
+it records provenance per record and lacks only the aggregation. Both are corrected
+rather than left to stand.
+
+## Integration readiness and the reconciled-schema proof
+
+**This is a new proof against a changed schema. It does not replace the historical
+per-province proofs above, which were run against the pre-reconciliation head `0099`**
+and remain the record of those runs.
+
+### Integration base, pinned not assumed
+
+`git fetch --all --prune` then pinned `origin/main` =
+**`cbc18c8fdfb0a900c7255ca695da56bd9a7660c3`**, manifest `expectedHead`
+`0094_content_topics_primary_key.sql`, 95 migrations. Verified rather than assumed; the
+value held. Local `main` remains 600 commits behind at `0065` and is **not** the
+integration base.
+
+The branch was not merely renumbering against that base — it was **missing four of its
+migrations**, which now claim sequence 0091–0094 for transactional email,
+user_onboarding_state and content_topics. Those were integrated from the pinned base
+verbatim, and Place Authority renumbered `0091`–`0099` → `0095`–`0103`. Reconciled
+head: **`0103_saved_searches_canonical_place_reference_fk.sql`**, 104 manifest entries,
+contiguous `0..103`, every checksum verified against the file on disk, **no migration
+body rewritten and no ledger edited**.
+
+Authority: the Database Change Protocol's pre-adoption migration correction,
+`PLACE-S1-PREADOPTION-MIGRATION-AMENDMENT-2026-09-25-Edward`. Its conditions are
+demonstrable: unmerged; `pnpm place:admission:audit-retained-targets` enumerated **94
+databases** on the governed local service and found **none** carrying the old
+numbering, so no persistent or shared environment adopted it; every target that
+applied it was disposable and destroyed; and a sequence correction is not a behavioural
+change. **Nothing required stopping.**
+
+### Two engineering defects fixed at the cause
+
+**TS2802 in `canonicalPlaces.ts`.** `tsconfig.json` set `module: ESNext`, `lib: esnext`
+and a vite toolchain but **never set `target`**, so TypeScript silently applied its ES5
+default, under which a direct `for...of` over a `Map` is an error without
+`downlevelIteration`. Declaring `"target": "ES2022"` corrects the misconfiguration
+rather than loosening anything — `strict` and `noEmit` untouched, no code changed — and
+takes the repository from **332 errors to 262**, because all 70 TS2802 errors were the
+ES5 default calling valid modern code invalid.
+
+The second finding is why `pnpm typecheck` passes `--incremental false`.
+`tsconfig.json` sets `incremental: true` with a shared `tsbuildinfo`, so a plain
+`tsc --noEmit` answered from cache and reported an identical 332 across three attempts
+to change the target. A typecheck that can report stale results is worse than none. The
+262 remaining are pre-existing — 210 client, 52 server — and none are in a file this
+workstream touched.
+
+**The intermittent regeneration failure was not a flaky test.** It was the mission's
+central invariant, one `stat` result away from destruction. The builder chose between
+the committed Place ID registry and a fresh empty one with
+`existsSync(...) ? readJson(...) : empty`, so a single false negative — observed on this
+filesystem — selected the empty registry and re-minted every Place from `randomBytes`.
+Captured rather than described: `minted=1466 reused=0`, **all 1,466 Gauteng identities
+changed with zero shared**, seven of nine artifacts diverged, and only `--check` noticed.
+
+Fixed by reading first and classifying the failure: `ENOENT` means absent, a corrupt
+registry fails closed rather than parsing as empty, and registry-absent-while-artifacts-
+exist is refused as lost allocations rather than treated as a first build. The first
+version of that last guard read `packagePaths.places` instead of
+`packagePaths.artifacts.places` and never fired — caught by testing the failure path,
+not by trusting the guard's presence.
+
+### Reconciled-schema national storage proof
+
+Repeatable via `pnpm place:admission:national-storage`. Fresh owned disposable target
+from zero, migrated with explicit `--accepted-old-head=none --expected-new-head=0103`,
+104 migrations applied, schema congruency **true**.
+
+| Claim | Result |
+| --- | --- |
+| Target empty before the load | 0 rows in all five authority tables |
+| Injected fault after 6,000 of 17,664 inserts | all five tables **unchanged and empty**, by content digest |
+| Atomic load of nine provinces | 17,664 Places, 26,425 names, 17,655 relationships, 79,925 evidence, 19,792 mappings |
+| Source identities | 18,309 = 17,664 Places + 645 absorbed by merge groups |
+| Place identities | loaded set digest `75745dac494a0d49…` equals the committed packages; none missing |
+| Per-province verification | **9/9 complete, zero drift, exactly 9 province roots** |
+| Replay | zero rows written, every table digest unchanged |
+| Partial target | refused, not extended; partial state left untouched |
+| Consumer activation | none |
+
+The write counters were also corrected: they counted `affectedRows`, and
+`ON DUPLICATE KEY UPDATE` against an existing row reports `affectedRows 1` with
+`insertId 0`, so a complete no-op replay was reported as a full write of 17,664 Places.
+The digests already proved the replay was a no-op; the counter contradicted that
+evidence. It now counts rows actually created.
+
+### Target lifecycle
+
+Created from zero, proven, and disposed through the governed acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`, target
+`0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`,
+classification `disposable-worktree`, credential class `local-owner`, host
+`127.0.0.1:3307`. The service was stopped and recovered through the validated socket
+path after an abnormal termination left stale PID/socket/lock metadata, which the
+governed `db:authority:service:recover` classified and removed. **No protected, remote,
+shared or durable target was accessed at any point in this task.**
+
+### Still outside this task
+
+Durable loading, consumer activation, boundary currency review and the ODbL
+determination remain undecided and untouched. The boundary check still proves only the
+**absence of unsupported currency claims**; it does not certify current boundaries for
+any province, and Gauteng's vintage remains unrecoverable from committed inputs.
+
+## Integration and invariant closure
+
+### What review rejected, and what replaced it
+
+An earlier revision of this branch was refused as integration-ready. The blocking
+findings were verified and each was fixed at the cause.
+
+**Place identities could still be silently replaced.** Reading the Place ID registry
+correctly was necessary but not sufficient: a registry that is valid JSON with an empty
+allocation map reads without complaint, so every group looks unallocated and every Place
+is re-minted. Measured at `minted=1466 reused=0`, zero identities retained, exit 0. The
+registry is now cross-checked against the committed package before anything is written,
+so every published identity must be allocated. Verified for total loss (1,466 refused)
+and partial loss (10 refused), with the package byte-identical afterwards.
+
+**National loading did not meet its atomic-refusal contract.** Acceptance compared row
+counts, so any target holding the right *number* of Places was adopted — and it computed
+the stored identity set and never read it, which was the tell. Acceptance now requires
+exact identity agreement in both directions. Post-write verification moved inside the
+transaction, because running it after commit left committed rows behind on failure: a
+refusal that mutates is not a refusal.
+
+**The proof continued after failed preconditions.** One assertion recorded failures and
+carried on, so a run that had already found the target in an unexpected state could still
+delete all five authority tables to build its partial-target case. Preconditions now
+abort immediately, and the destructive refusal scenarios run first, followed by an
+explicit governed dispose/create/migrate so the main proof always describes a pristine
+target.
+
+**The audit could conclude safety without reading a ledger.** An unreadable ledger was
+recorded with an empty migration list, indistinguishable from clean, so the audit printed
+"no retained target carries the old numbering" and exited zero. Completeness is now
+assessed by a dependency-free module — a target counts as inspected only when that was
+positively established — and an incomplete audit exits non-zero and blocks the
+conclusion.
+
+**The write counter was still wrong.** `insertId` is 0 for every statement because
+`place` has a string primary key and no auto-increment column, so the previous
+"correction" made a genuine first load report zero created Places too. Neither driver
+signal is usable: `affectedRows` is 1 for a matched row, `insertId` is always 0. Counts
+are now measured from the target either side of the transaction. Verified in both
+directions — first load exactly 17,664 / 26,425 / 17,655 / 79,925 / 19,792, replay zero.
+
+### Integration was never actually done
+
+The merge base with `origin/main` was `4e012b304`, not the `cbc18c8fd` this workstream
+had been pinning. The earlier task integrated four migrations but never merged upstream's
+code. Sixteen files conflicted, in canonical contracts and database authority files.
+All are resolved, and the resolution was per-file by what each side changed.
+
+`origin/main` is now `51802b7d3`. It added **no migrations**, so the `0095`–`0103`
+renumbering stands unchanged and the reconciled head remains
+`0103_saved_searches_canonical_place_reference_fk.sql`, 104 entries, contiguous.
+
+Two resolutions are worth naming because they are judgement calls, not merges:
+
+- **`googlePlacesIntegration.integration.test.ts` deletion kept.** This branch removed
+  969 lines of it to close provider writes, where a provider result may no longer create
+  canonical geography. Upstream's subsequent six-line change mocks provider lookups to
+  *reject* synthetic Place IDs, which agrees with that contract — but restoring the file
+  would reinstate a test asserting the opposite. Recorded as an intentional divergence
+  rather than dropped silently.
+- **`canonicalGeography.ts` took upstream's.** The only hunk was formatting; the logic
+  was identical on both sides.
+
+### Integration invalidates the B08 Azure rehearsal authority, and that is not repinned here
+
+It pins four values as one coherent set — expected head `0094`, manifest digest
+`93d871e6`, model digest `a8ca8cf3`, apply-plan digest `632f66e7` — and
+`disposable-rehearsal-authorization.json` is a dated approval for an AZURE MYSQL 8.4
+RESTORED-COPY REHEARSAL against exactly those. Place Authority adds seven tables, so all
+four change and the approved subject no longer exists. Rewriting them would extend an
+Azure approval to a model nobody rehearsed and contradict roughly twenty historical
+evidence files. That is a protected-release decision.
+
+Consequently **six tests fail and are left failing**: two in
+`contract.b08-release-reconciliation.test.ts`, four in `rehearsalConnection.test.ts`. All
+six assert only the stale Azure pins. Independently verified: the four established
+migration byte identities are **unchanged**, which is the evidence those tests exist to
+protect.
+
+### Reconciled-schema proof, repeatable
+
+`pnpm place:admission:national-storage` on a fresh owned disposable target, migrated to
+head `0103` with 104 migrations and schema congruency true:
+
+| Claim | Result |
+| --- | --- |
+| Empty before the load | 0 rows in all five authority tables |
+| Injected fault after 6,000 of 17,664 inserts | all five tables unchanged and empty, by digest |
+| Partial target (1,544 Places) | refused, digests unchanged |
+| Same-count identity drift (17,664 foreign Places) | refused, digests unchanged |
+| Post-write validation failure | refused, every table left empty |
+| Owned lifecycle reset | disposed, recreated, migrated, confirmed empty |
+| Atomic load | 17,664 Places, 26,425 names, 17,655 relationships, 79,925 evidence, 19,792 mappings |
+| First-load counters | exact, in both directions |
+| Source identities | 18,309 = 17,664 + 645 absorbed |
+| Place identities | set digest equals the committed packages; none missing |
+| Per-province verification | 9/9 complete, zero drift, exactly 9 province roots |
+| Replay | zero rows written, every digest unchanged |
+
+Target disposed through the governed acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`; service stopped and recovered through the
+validated socket path. **No protected, remote, shared or durable target was accessed.**
+
+### Gate state at the reviewed commit
+
+Manifest valid, schema sanity 221 canonical tables across 104 active SQL migrations,
+inventory deterministic and current, utility authority 121 classified surfaces, lint 0
+errors, collision surface OK, national provenance OK, boundary-claim check reporting no
+unsupported claims and certifying no province's currency, Gauteng provenance reporting
+consistency with release `9469f09` and an unrecoverable vintage.
+
+Static suite: 48 of 50 files, 515 of 521 tests. Typecheck 263 errors, one more than
+before integration; the new one is upstream's own
+`EnhancedHero.journey-selection.test.tsx`, not a file this workstream touched.
+
+## Authoritative digests
+
+Admission territory registry
+`property-listify-place-admission-territories-v0.1`:
+
+- `data/place-admission-territories.v0.1/territory-registry.v0.1.json`
+  `85046d6b0d2c883f53328bbd9322277ea7fa3db4f8db1f9281d24831fc1fac02`
+
+Gauteng source authority `gauteng-source-authority-v0.2`:
+
+- Source snapshot `14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e`
+- Source manifest
+  `334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b`
+- Geography `7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e`
+- Names `b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd`
+- Source links `23559b7fd42c139aefbad4174fca3eadcfc7f9e717c5fa86b6d2b5888612dba7`
+- Candidate dispositions `73212b62fb2999ae2d785b5c338bc6774e949c49b08de67252a1b6e245348943`
+
+Admitted Place package `gauteng-place-admission-v0.1`:
+
+- Admission manifest
+  `3ea71455b1b54f6f682632b9e1017bd7fae4d097fac20a1f92617f0939d14cea`
+- Materializer content digest
+  `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`
+  (**unchanged by Phase 3**, which proves the admitted rows are byte-identical)
+- 1,488 source identities, **1,466 admitted Places**, 22 merged groups
+- 2,476 names, 1,465 `administratively_contains` edges, 4,463 evidence rows,
+  2,971 external mappings, 4,350 disposition ledger rows
+- **1,436 searchable** (1,096 locality, 339 metro_city, 1 province),
+  **69 publishable**, 30 context-only municipalities with no scope
+- 89 verified, 1,377 provisional, 720 OSM-only
+- Regeneration is deterministic and `minted=0 reused=1466`; Place IDs are never
+  remapped.
+
+## Database and migration head
+
+- Migration head: `0099_saved_searches_canonical_place_reference_fk.sql`
+- 100 migrations `0000 → 0099`; 39 Place Authority CHECK constraints, all
+  enforced; 219 canonical tables.
+- `0098` adds the nullable `saved_searches.place_id` column; `0099` adds its
+  `ON DELETE RESTRICT` foreign key. They are separate migrations because TiDB
+  refuses a single `ALTER` that both introduces a column and adds a dependent
+  constraint, and the canonical manifest requires one statement per incremental
+  DDL migration.
+
+## Test status
+
+All green after Phase 4. Both Phase 3 and Phase 4 are **physically proven**
+rather than only statically proven.
+
+### Physical proof on a fresh disposable target
+
+Performed on a target created from zero through the approved lifecycle
+(`db:worktree:create` → `migration:apply --accepted-old-head=none
+--expected-new-head=0099_…` → `db:places:prepare`), then disposed with
+`db:worktree:dispose`. No target was reused to claim a from-zero proof.
+
+- Sanitized target `mysql://127.0.0.1:3307/listify_wt_place_authority_slice0_f2af5b9a6482`
+- Target fingerprint hash
+  `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`
+- Target classification `disposable-worktree`; ownership `exact-worktree-owned`
+- Migration head `0099_saved_searches_canonical_place_reference_fk.sql`;
+  `schema-congruent`
+- Materialized **1,466 Places**, 2,476 names, 1,465 relationships, 4,463
+  evidence rows, 2,971 external mappings
+- Materializer content digest
+  `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`
+  — identical to the committed package
+- `db:places:verify` **passes**, including *after* the behavioural probe and the
+  discovery suite
+- Executable Place behavioural probe **40/40**, including a rerun materialization
+  that is a byte-identical no-op with no Place ID changed
+- Executable discovery suite **36/36**, including "executes every single
+  search-eligible Place deterministically" over all 1,436 searchable Places
+
+The target was disposed after the evidence was captured.
+
+### A third real defect found and fixed
+
+`contract.place-executable-foundation.test.ts` **wrote into the canonical
+reference data role and never cleaned up.** It imported `afterAll` but declared
+no `afterAll`, and three of its tests deliberately call `discoverPlaces` with an
+invented term so that discovery records an `unresolved_query` evidence row. Each
+run left three `place_evidence` rows behind, so `db:places:verify` failed
+afterwards with `place_evidence rows 4466 != expected 4463` — a reference-data
+failure that had nothing to do with the admitted package.
+
+This is pre-existing and was invisible while no database was reachable. The fix
+records every invented subject through `unresolvableTerm()` and deletes those
+rows by canonical primary key in a **file-scoped** `afterAll`. The hook must be
+file-scoped rather than suite-scoped: the subjects are created by the
+"no-result and ambiguity" suite, so a hook inside any single `describe` runs
+before them and cleans up nothing. That was the first attempt, and it was caught
+by re-running `db:places:verify` after the suite.
+
+
+### Phase 4 gates
+
+- Database Authority static gate **364/364**
+- Determinism `--check` byte-identical for **both** territories with explicit
+  `--territory` selection
+- Territory-neutrality proof green
+- Western Cape territory probe **30/30**
+- Source authority byte-reproducible from the frozen bundle
+- `gauteng-catalogue` unit tests 26/26
+- typecheck clean, lint 0 errors, `git diff --check` clean
+- Physical proof on a from-zero disposable target, verified again after the
+  probe for test pollution, then disposed
+
+### Static and regression gates
+
+- Database Authority static gate **364/364** (was 352/352; +12 from the new
+  territory-neutrality contract suite)
+- **Territory-neutrality proof** — a synthetic non-Gauteng territory admitted
+  through the same builder and materializer, package byte-identical across
+  regeneration, `minted=0`
+- Admission determinism check passes (`place:admission:check`)
+- Geography coverage probes **1705/1705**
+- Location authority regression **44/44** (5 files)
+- Listing lifecycle + SEO/slug/place-id property regressions **116/116**
+- typecheck clean, lint 0 errors, build clean, `git diff --check` clean
+
+## Unresolved research backlog
+
+These are governed research cases. They are **not** admission defects and must
+never be closed by manufacturing a Place:
+
+- Kyalami / Khayalami — quarantined candidate, no accepted source identity
+- Sky City — absent from the approved source
+- Eden Park, Azaadville — quarantined candidates
+- `Reiger Park` (two words) — quarantined; the admitted spelling is `Reigerpark`
+- `Broadacres` exact — covered by the admitted `Broadacres AH`
+- Missing estates, newly proclaimed extensions, new precincts generally
+- Metropolitan-municipality classification: three source records carry
+  `proposed_type_hints` naming `metropolitan_municipality` (City of Johannesburg,
+  City of Tshwane, Ekurhuleni). They remain `local_municipality` Places. This is a
+  Place-classification question requiring its own evidence, deliberately not
+  resolved to satisfy a search scope.
+
+The gate for these is **zero unexplained or unsafe admission**, not zero
+outstanding research cases.
+
+## Unsupported broad-scope expansion
+
+Exact Place execution is proven. Broad expansion is **not**, and must fail
+closed:
+
+- A `metro_city` Place does not expand to every Place in its municipality.
+- `Johannesburg` does not expand to all City of Johannesburg localities.
+- `Soweto` does not expand to its constituent or market localities.
+- Every `search_scope_authorized` flag is 0; `market_association` is
+  non-expanding; no generic relationship traversal exists.
+
+Expansion requires explicit governed semantics (evidenced settlement membership,
+a governed executable-scope membership projection, or a Search Area).
+
+## Production-only blockers
+
+- **Founder ODbL gate.** 720 OSM-only Places are admitted but may be materialized
+  only on a disposable target until the gate clears. The materializer refuses any
+  non-disposable target that holds them. This blocks production activation only,
+  not engineering.
+- No consumer has been switched to Place Authority. Runtime convergence is a
+  separate, bounded Phase 7 handoff.
+
+## Review packet — defects, boundaries and gates
+
+### A fourth real defect: silent multilingual name loss
+
+`place_name` carries `UNIQUE(place_id, name_role, name)` and its text columns are
+**`utf8mb4_0900_ai_ci`** — accent-insensitive *and* case-insensitive, and
+whitespace-insensitive. The materializer inserts with
+`ON DUPLICATE KEY UPDATE`, so any name the target's collation already holds is
+**dropped silently, and the load reported success**.
+
+The first Western Cape load proved it: the package held 3,252 names, the target
+stored 3,246, and nothing complained. The six lost names were ordinary
+multilingual evidence — `Lé Cap`, `Keýptaun`, `Kapské Město`, `Кейптаўн`. For a
+South African product this is live multilingual-data loss, and it sat in the
+**Gauteng** path too, merely masked there because its names happened not to
+collide.
+
+Three fixes, all of them strengthening rather than loosening:
+
+1. The admission builder now deduplicates name assertions on the **target's own
+   comparison** instead of exact string equality, so the package is loadable by
+   construction. The surviving spelling is chosen deterministically by the
+   existing ranked order, never by arrival.
+2. Every suppression is recorded in the manifest under
+   `collation_suppressed_names`, distinguished as `exact_duplicate_assertion`
+   versus `target_collation`, with the kept spelling named. Western Cape records
+   88 suppressions: 81 exact duplicate source assertions and **7 genuine
+   collation collisions** the target genuinely cannot store.
+3. The materializer now **fails closed** if the target does not hold exactly the
+   package. The first version of this check compared rows *written this run*,
+   which wrongly reported a correct idempotent replay as a defect; it compares
+   the **resulting target state** instead.
+
+Gauteng is unaffected in substance: 1 suppressed name, an exact duplicate
+assertion, and its admitted rows remain byte-identical with materializer content
+digest `d7859a2e7face1dec4e648bac65a0866b82ef1297178232dbaef2541177adf70`.
+
+### Release-boundary dependency — requires a decision I must not take
+
+`origin/main` (the accepted launch release) declares
+`expectedHead = 0094_content_topics_primary_key.sql` with 95 migrations. This
+branch declares `expectedHead = 0099_saved_searches_canonical_place_reference_fk.sql`
+with 100.
+
+They agree through `0090` and then **nine different migrations occupy the same
+slots**:
+
+| Sequence | `origin/main` | this branch |
+| --- | --- | --- |
+| 0091 | `transactional_email_deliveries` | `place_authority_place` |
+| 0092 | `transactional_email_attempts` | `place_authority_place_name` |
+| 0093 | `user_onboarding_state_primary_key` | `place_authority_place_relationship` |
+| 0094 | `content_topics_primary_key` | `place_authority_place_evidence` |
+| 0095–0099 | — | `place_authority_*`, `saved_searches_canonical_place_reference*` |
+
+This is **not a merge conflict that can be resolved by taking a side.** It is a
+migration renumber/rebase, which is schema-authority work requiring its own
+review under `docs/architecture/database-authority-policy.md` and the change
+protocol. Two consequences:
+
+- The disposable target used here carries a **divergent history** from the
+  release line. It is valid evidence for *this* branch and must never be
+  presented as evidence about the release schema.
+- Integrating Place Authority into the release line needs a reviewed renumber
+  plan first. That plan is a separate, approved piece of work.
+
+Nothing in this work was merged, pushed, deployed, or applied to a release,
+staging, production, Railway, TiDB or Azure target. Every database operation
+was `127.0.0.1:3307`, credential class `local-owner`, on an owned disposable
+worktree target, disposed afterwards.
+
+### Still owed, and deliberately not done
+
+- **No consumer reads Western Cape.** `placeDiscoveryService` and every search
+  path remain Gauteng-scoped. Consumer convergence is Phase 7 and is not
+  authorized.
+- **The 2020 boundary vintage is not a currency certification.** No Western Cape
+  scope may be published on it without a currency review.
+- **No geospatial wheel is installed.** 64 identities depend on the weaker
+  bounding-box selection test. Installing a proper wheel and re-deriving is owed.
+- **The `gauteng-source-authority-v0.2` producer is still not committed, and
+  cannot be made so from what exists.** This is now a recorded finding rather
+  than a deferral, because it was investigated properly.
+
+  The Gauteng v0.2 source authority is committed *data* whose *inputs are not
+  committed at all*. Its own manifest says so: `raw_materialization.committed` is
+  `false` with the reason that the large approved source artifacts "remain
+  digest-pinned and are acquired into disposable storage", and
+  `supersedes.exact_source_status` is `exact_source_unrecoverable`. There is no
+  `data/gauteng-source-acquisition-*` bundle anywhere in the repository; only
+  Western Cape has one. The generator,
+  `tools/geography-coverage/pack-vnext-source.mjs`, exists only as an untracked
+  file in the sibling worktree this mission is told not to touch, and the v0.2
+  authority directory was untracked there too.
+
+  All three routes to a committed generator are closed:
+
+  - **Re-acquiring** Gauteng evidence would produce a *different* source
+    authority, and 1,466 Gauteng Place IDs were assigned from this exact source,
+    so it would break the standing instruction to preserve existing Place IDs.
+  - **Committing the other workstream's untracked tool** copies another stream's
+    uncommitted files, which the worktree-isolation rule forbids.
+  - **Synthesising the missing inputs** is forbidden outright: the mission may not
+    fabricate geographic evidence, and a province cannot be admitted without real
+    evidence.
+
+  So the honest position is that `gauteng-source-authority-v0.2` is
+  digest-pinned, physically proven, admitted, and **not reproducible from
+  committed inputs** — a fact its own manifest already declares. Western Cape does
+  not repeat this: its source authority rebuilds byte-identically from a frozen,
+  committed acquisition bundle. If reproducibility for Gauteng is required, the
+  prerequisite is a governed decision to re-acquire Gauteng evidence and accept
+  that it yields a new authority version, with an explicit Place-ID continuity
+  decision for the 1,466 existing identities. That is an owner decision, not an
+  engineering step.
+- **The production ODbL determination stays founder-owned.** Western Cape has no
+  OSM-derived rows, so nothing here is blocked by it, and `permissive_supported`
+  is not a claim of obligation-free use: GeoNames CC BY 4.0 attribution and the
+  geoBoundaries CC BY 3.0 IGO upstream notice are recorded per identity.
+
+## The former external blocker, now closed
+
+**The Phase 4 evidence blocker is discharged.** Governed Western Cape source
+evidence now exists in this repository as verified, digest-pinned acquisition
+evidence. The old blocker is replaced by the genuine remaining work.
+
+What the blocker was, for the record:
+
+- The only approved, digest-pinned source authority was
+  `gauteng-source-authority-v0.2`.
+- The Gauteng builder resolved its source from a Gauteng-specific committed path
+  and a Gauteng-specific manifest.
+- Admitting any other province therefore required building a new **source
+  authority** first.
+
+What is still missing is narrower and now entirely internal:
+
+- The evidence is **acquired, not canonical**. It contains no adjudicated
+  identity, no factual type and no parent. The admission builder consumes a v0.2
+  source authority; the bundle is not one.
+- ADM2/ADM3 are national. Western Cape administrative context must be resolved
+  against real geometry before any containment edge is asserted.
+- The boundaries represent **2020**, so a currency review is owed before any
+  Western Cape scope may be published.
+
+The mission still forbids fabricating geographic evidence and forbids creating
+a Place to satisfy search. A province cannot be admitted without real evidence —
+and the honest consequence is that unresolved, ambiguous and conflicting records
+stay unresolved and get queued.
+
+Phases 1, 2 and 3 are closed and proven. Nothing about admitting another
+province is an architecture problem any more; what remains is a governed source
+build followed by the same proven pipeline.
+
+## Resolved decisions that must not be reopened silently
+
+1. Place identity is typed and authoritative; the three-level runtime projection
+   is a consumer concern, not identity.
+2. `province / metro_city / locality` are search-scope categories, not mandatory
+   ancestry levels (contract §20.1).
+3. A locality does not require a `metro_city` ancestor (§20.2).
+4. Municipalities stay factual/context Places and are never re-typed as cities
+   (§20.3).
+5. `metro_city` is not redefined to mean municipality; the vocabulary is not
+   renamed (§20.3).
+6. No metropolitan-municipality Place type is introduced to complete a search
+   ladder (§20.3).
+7. Exact execution and broad expansion are separate capabilities (§20.4).
+8. Containment reads child to parent: `from_place_id` is the child,
+   `to_place_id` is the parent.
+
+## Exact next action
+
+**No provinces remain**, and the per-province sequence is proven nine times over.
+Combined loading was decided and is proven: a single target holds all nine provinces,
+atomically, with every Place identity unchanged. Phase 6's storage question is
+closed.
+
+What remains is closed deliberately rather than outstanding by accident. Consumer
+activation, boundary currency review, the ODbL determination, and re-establishing the
+B08 Azure rehearsal authority against the integrated model are all decisions for
+someone other than this workstream.
+
+### What is unblocked and needs no decision
+
+**The 2020 boundary currency question, re-proved per province.** Every province's
+boundary evidence represents **2020**, from OCHA ROSEA / Municipal Demarcation
+Board via geoBoundaries, with an upstream source-data date of 19 January 2023 and
+a build date of 12 December 2023. That was a single blanket sentence when only
+three provinces existed. With nine, the gap is per-province evidence a publication
+gate can check mechanically, instead of prose a reader has to trust.
+`tools/geography-source-evidence/boundary-currency.mjs` emits that ledger and
+fails if any province claims currency it cannot evidence.
+
+Nothing may follow from it except a gate. Substituting newer boundaries would
+change admitted packages and Place IDs, which is a reviewed decision, not an
+engineering step.
+
+**Record that `gauteng-source-authority-v0.2` is unreproducible from committed
+inputs.** That is already the honest position its own manifest declares. The three
+routes to a committed generator are closed: re-acquiring would yield a different
+authority and break Place-ID continuity for 1,466 identities, copying the sibling
+workstream's untracked tool is forbidden by the worktree-isolation rule, and
+synthesising inputs is forbidden outright.
+
+### What needs an owner decision
+
+**Combined loading is decided and proven.** National storage is closed: one
+transaction, rollback proven, replay a no-op, 9/9 per-province verification on a
+disposable target. What remains is not storage but the two questions the storage
+proof deliberately cannot answer — whether a **national target may be
+non-disposable**, and whether activation may follow.
+
+Measuring it changed what the decision actually is. **Place ID collisions across
+provinces are 0, and cross-province (parent, name) collisions are 0** — parents are
+province-scoped, so both properties already hold and neither needs inventing or
+repairing.
+
+What the measurement surfaced instead is that **614 admitted pairs share a parent
+and a normalized name**, so a national table **cannot** enforce
+`UNIQUE(parent, normalized_name)`. None of these are merge misses: 32 sit under the
+15 km bound and every one differs in place type — Oudtshoorn is both a local
+municipality and a town 2.2 km from its own seat, and Mandeni, Nkandla, Nongoma
+and Umvoti follow the same pattern. The remaining 582 are at or past the bound and
+are correctly separate Places, 310 of them more than 50 km apart. A town and the
+municipality containing it sharing a name is ordinary South African geography, and
+the merge rule is type-aware precisely so it is not collapsed.
+
+The plan's requirements are therefore about transactionality and reprovenance, not
+about identity repair: atomicity across all nine provinces with no half-loaded
+target, global ID and natural-key enforcement on the loaded rows rather than the
+packages, and no consumer activation.
+
+**The migration renumber plan**, drafted and awaiting review in
+`docs/architecture/place-authority-migration-reconciliation-plan.md`. Not
+implemented; this branch's evidence is evidence about this branch only.
+
+The national coverage plan raises a question that outranks both: **is a national
+target disposable or durable?** Every proof so far ran on a `disposable-worktree`
+target. Whether the national target is disposable changes the blast radius of every
+load, replay and probe, and it is not an engineering choice.
+
+**The boundary currency review** and the **founder ODbL determination**, both
+before anything is published. No admitted province currently carries OSM-derived
+rows, so ODbL blocks nothing that exists today.
+
+Still forbidden: activating consumers, publishing an SEO scope, inferring a
+Search Area, widening a search, or claiming published national coverage.
+
+## Takeover inspection — 2026-10-06
+
+Continuation uses the existing dedicated worktree and branch recorded above,
+starting at `0cf4022c3a2225766e08186b362543db8809f0ed`. The worktree was clean
+before this documentation update. The local `origin/main` ref is
+`51802b7d324c61e5ff79cc3515510b29f76022d5` and is an ancestor of the reviewed
+head; no fetch or new integration was performed. The sibling Gauteng worktree
+retains another workstream's uncommitted files and was inspected read-only.
+
+### Review disposition and next engineering action
+
+The later senior review requests changes on this exact head. Inspection confirms
+the affected code still has these gaps; the earlier reproduction evidence comes
+from that review and was not re-run during this takeover:
+
+1. `prove-national-storage.mjs` still records failed initial head/empty-table
+   checks with `check()` and continues, including after inspection errors.
+   Abort before any fault injection or destructive refusal scenario.
+2. `build-place-admission.mjs` checks published IDs against the allocation
+   values as a set. Swapping two source allocations preserves that set while
+   changing which referent an ID denotes. Protect each published source-member
+   association, and test that refusal leaves artifacts unchanged.
+3. National preparation in `canonicalPlaces.ts` compares ID sets and totals,
+   but does not validate every stored identity-bearing field against the
+   admitted packages before commit. Validate content within the transaction.
+4. Per-territory preparation validates stored totals after `withTransaction()`
+   returns. A validation refusal can therefore retain committed rows. Move
+   validation inside the transaction and prove rollback on rejection.
+
+The review also identifies a coverage gap: the six Azure failures do not
+"assert only the stale Azure pins." Early pin failures prevent later migration,
+schema and transport assertions from running. Preserve the historical approval,
+and separate its authorization checks from current integration and mock
+transport coverage without granting a new protected release authorization.
+
+Close these engineering findings before repeating physical proof or describing
+the branch as integration-ready. Consumer activation, protected release,
+boundary currency and any applicable ODbL determination retain their existing
+decision boundaries. No owner decision is needed to inspect and repair the
+four correctness gaps within this workstream.
+
+Two older next-action statements above are historical: migration renumbering
+was implemented by `7a249f3e4`, and storage has a recorded national proof.
+Neither statement removes the newly identified validation defects.
+
+### Fresh takeover checks
+
+- `pnpm db:authority:status`: resolved `disposable-worktree`, exact worktree
+  identity, local-owner credential class, fingerprint
+  `0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`, manifest
+  head `0103_saved_searches_canonical_place_reference_fk.sql`. Service
+  unreachable; ledger, attempts, ownership of the database and schema not
+  evaluated. This is not fresh physical database proof.
+- `pnpm place:admission:cross-province`: passed, nine provinces, 17,664 Places,
+  18,309 source identities, zero cross-province Place ID collisions.
+- `pnpm place:admission:national-provenance`: passed its accounting checks;
+  disposition-only ledgers and outstanding research remain explicitly reported.
+- `pnpm place:boundary-currency:check`: no unsupported currency claims; no
+  province certified current, Gauteng boundary provenance still missing.
+- `pnpm test:db-authority:static`: 520 passed, six failed, 526 total; 48/50 files
+  passed. The failures are the two B08 reconciliation tests and four rehearsal
+  connection tests. Passing totals differ from the older recorded run.
+
+No database was provisioned, migrated, loaded or disposed; no physical proof,
+typecheck or browser journey was repeated. No protected or remote database was
+accessed. This takeover changes documentation only and leaves public consumer
+activation closed.
+
+
+## Review corrections and verification — 2026-10-07
+
+This record supersedes the takeover baseline's open engineering findings and
+older claims that six Azure regression tests must remain red. It does not approve
+consumer activation, a durable national target or a protected database release.
+The correction is on the same feature branch and worktree, based on `0cf4022c3`;
+no upstream fetch, merge, push or deployment was performed.
+
+### Correctness changes
+
+1. Storage proof inspection now throws on the wrong head, populated authority
+   tables or unreadable state, closes the inspection connection and stops before
+   fault injection. Failed rollback preconditions also abort immediately.
+2. Admission checks source-member allocations in both directions against the
+   published package before writing. An unchanged ID set no longer permits two
+   source allocations to swap their geographic referents. A scratch-copy test
+   verifies refusal with every package file byte-identical afterwards.
+3. National preparation compares stored identity-bearing fields before writing
+   and runs the full national verifier inside the transaction before commit.
+4. Per-territory counts, identity and containment validation now run inside its
+   transaction. A dropped mapping insert refuses and rolls back the whole load.
+
+The B08 integration assertions now check the preserved migration checksums,
+lineage, indexes and relationships independently of the old release pins. A
+separate assertion preserves the historical registration's revoked status and
+old pins. Transport tests use an in-memory historical manifest; a negative case
+proves that the integrated manifest still refuses before fixture mutation.
+Neither the runtime approval policy nor the registration file was modified.
+
+The proof's foreign-identity fixture now uses one transaction instead of 17,664
+separate commits. Its full-sized construction and rollback are tested with the
+real transaction helper over mock transport; full-sized construction was also
+run on the owned physical target in **15,316 ms**. The full storage proof had
+already run the original fixture construction; the optimized helper was verified
+separately rather than represented as part of that earlier run.
+
+### Physical evidence
+
+Target classification `disposable-worktree`, exact ownership, local-owner
+credential class, fingerprint
+`0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d`.
+The target was created from zero, migrated through 104 migrations to head
+`0103_saved_searches_canonical_place_reference_fk.sql`, and schema congruency
+passed with 39/39 physical CHECK constraints enforced. No incomplete attempts
+remained after migration. The proof subsequently used its governed
+disposal/create/migrate sequence for the final load.
+
+| Verification | Result |
+| --- | --- |
+| Fault after 6,000 Place inserts | all five tables rolled back, unchanged and empty |
+| Partial national target | refused, all five table digests unchanged |
+| Same-count foreign identity target | refused, all five table digests unchanged |
+| National post-write mapping validation failure | refused, all five tables rolled back to empty |
+| Per-territory dropped mapping | refused, all five tables rolled back to empty |
+| Correct national ID set with changed Place type | refused before commit, all five digests unchanged |
+| Final national load | 17,664 Places; 26,425 names; 17,655 relationships; 79,925 evidence; 19,792 mappings |
+| Source accounting | 18,309 identities = 17,664 Places + 645 absorbed |
+| National verification | 9/9 provinces complete, nine roots, zero identity drift |
+| Replay | zero rows created, every table digest unchanged |
+| Re-running proof on populated target | exit 1 at the initial guard; no destructive phase reached; fingerprints unchanged |
+
+The final loaded Place ID set digest is
+`75745dac494a0d49457ee36bc97ba38919face6b90b5aafa37e2e7aca4abea75`, identical
+to the committed packages. All nine packages also regenerate byte-identically
+with explicit territory selection and `--check`; no admission artifact or Place
+ID registry changed.
+
+The target was disposed with its freshly emitted acknowledgement
+`CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e`. No other-target connections were
+observed before cleanup; the local service was stopped through its exact Unix
+socket. No protected, remote, shared or durable database was accessed.
+
+### Repository gates and next action
+
+- `pnpm db:authority:check`: passed, including **539/539 tests in 52 files**, 121
+  classified utility surfaces, schema sanity, deterministic inventory and the
+  lifecycle contract.
+- `pnpm check`: passed.
+- `pnpm lint:check`: passed with zero errors; existing warnings remain.
+- `pnpm build`: passed; existing bundle-size warnings remain.
+- Full `pnpm typecheck`: final rerun reports the same 263 baseline errors, with
+  none in the changed files.
+- `git diff --check`: passed.
+
+The default broad `test:ci` bootstrap and browser journeys were not run: this
+checkpoint uses the static authority suite and the owned physical proof, without
+activating consumer paths or adopting the legacy raw-connection test bootstrap.
+
+Next action: review the corrective commit and the Place Authority branch.
+Activation, publication, boundary currency, the applicable founder ODbL decision
+and any fresh Azure release/rehearsal approval retain their separate gates.
+
+## National geography launch-readiness goal — 2026-10-07
+
+Edward has opened the consumer-readiness goal and selected all nine provinces
+with approved locations. The active scope, integration sequence, evidence and
+acceptance criteria are in
+[`geography-launch-readiness-goal-2026-10-07.md`](geography-launch-readiness-goal-2026-10-07.md).
+This authorizes source preparation and owned disposable verification; it does
+not authorize live activation or a protected release.
+
+The task branch now includes accepted integration source `b0bebc343` through
+local merge `8546386dc`; no remote merge, push or deployment occurred. The
+parallel founder identity schema currently proposes migration 0095, which
+collides with this branch's Place series. Final sequencing is a serialized
+integration dependency; do not copy the other worktree's uncommitted files.
+
+**Correction to earlier licensing statements:** the admitted package audit
+finds **720 `osm_only_odbl_provisional` Places in Gauteng**. The earlier statement
+that no admitted province carries OSM-derived rows is incorrect and must not
+justify a production load. The existing materializer's disposable-only gate
+remains in force; the founder production ODbL determination is still required.
+
+The source audit also finds 16,596 locality Places, none with a city-scope
+ancestor, all with provincial context, and zero search-authorized relationship
+edges. Public authoring cannot require an invented city, and public search
+cannot infer broad membership from containment. These are consumer acceptance
+requirements, not reasons to alter Place identities or source classifications.
+
+Reader integrity and national context corrections are prepared with twelve
+focused regressions and nine digest-verified package projection tests. Public
+consumer persistence, governed broad search membership and the physical/browser
+listing-to-search journey remain outstanding. Geography is not launch-ready.
+
+The subsequent real reader probe failed on the admitted preferred name
+`Noord-Kaap`: admission used lowercase-only indexing while query normalization
+folded punctuation. Name-index version 1 now shares query normalization with
+admission and retains Unicode letters/numbers. This changes 3,987 normalized
+index values across nine packages, and records the version in their manifests;
+all 26,425 recorded assertions and every Place ID, source allocation and non-name
+row artifact are preserved. The identity adjudicator and collision measurement
+continue using their original evidence-label comparison, independently of the
+looser search key. Every province regenerates byte-identically.
+
+The adapter rejects a stale name index before national replay and during
+verification. The real refusal proof preserves all five table digests; the
+owned disposable target was then disposed for a fresh canonical load. Do not
+adopt old index data through no-op upserts or mutate a protected target to make
+the reader pass. The new reader and normalized-index proof are additional
+prerequisites, not evidence that public consumer integration is complete.
+
+Final prerequisite evidence: static authority 573/573 tests in 54 files,
+production-scope type check, build and focused lint passed; full typecheck keeps
+263 baseline errors and none in changed files. Fresh disposable application of
+all 104 migrations is congruent with all 39 CHECKs enforced. The canonical
+national load retains the existing five-table totals. Real discovery and exact
+execution pass 31 probes across all nine provinces, including an accepted alias,
+Cyrillic name, cross-province ambiguity and unsupported location; reference
+verification passes before and after. `Noord-Kaap` now resolves correctly.
+
+Evidence is in
+[`national-reader-physical-proof.json`](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/national-reader-physical-proof.json).
+The owned proof target is disposed; the pre-existing native service remains
+available for parallel work. No protected target, push, remote merge or
+deployment is included. The goal remains active for migration reconciliation,
+canonical listing persistence, governed search membership and the customer
+publication/search browser journey.
+
+
+### 2026-10-07 — Listing consumer and province scope handoff
+
+Authoring preparation is committed as `0f8200c59`: version-2 canonical Place
+boundary, caller-transaction resolver, 41 focused checks including nine national
+source-backed assignments, and isolated registry-corruption fixtures. The
+614-test authority gate passed. This prepared boundary is not yet the active
+Listing API or wizard authority.
+
+Edward explicitly approved province Listing membership from approved Places
+with evidenced province containment, while city/town membership must be
+explicitly reviewed. Geography contract is revised to v0.6, Section 22, with
+that bounded projection authority. This revises D12 deliberately and leaves
+identity, source allocations, raw edge flags, Search Area authorization and
+protected activation gates unchanged. No city ancestry is invented. The scope
+projection and full customer handoff remain implementation requirements.
+
+Founder PR #590 remains open at `b0cb48f676bfe470ce29c49c9679fd65d1766c7b`;
+accepted main is still `b0bebc343a710f7e5713efc1d36cd5d3bca68455`. Listing
+persistence extends only this isolated geography candidate with provisional
+0104–0109. Those numbers reserve no shared lineage; final integration must
+serialize against the accepted founder manifest. The candidate adds separate
+nullable Place references to Listing and its public property projection; each
+column/index/restrictive key is independently sequenced. The national source
+and old migration SQL are unchanged. This candidate's authority gate passes
+617 tests across 56 files; deterministic model inventory and lifecycle pass.
+The prepared customer selector passes 16 interaction checks and explicitly
+clears identity on edits, refuses stale responses and requires a named,
+disambiguated selection. Production type checking and build pass.
+
+The same Database Authority apply attempt completed successfully through
+0109. Final physical schema is congruent, including both references, indexes
+and restrictive keys; all 39 CHECKs are enforced. National preparation is
+complete, and real caller-transaction assignment passes in nine provinces,
+with unknown/mixed/unconfirmed refusals and national verification before/after.
+No Listing row was authored or published by this prerequisite proof. The exact
+owned target is disposed; the shared native service stays available. A premature
+schema comparison and plan observed the live baseline attempt; final successful
+apply/congruency supersede those observations, and no apply was retried. No protected access, push, remote merge
+or deployment has occurred. The active goal still requires persistence wiring,
+publication concurrency protection, approved scope implementation, Land
+convergence, customer browser evidence and a release review packet.
+
+Evidence: [canonical-listing-persistence-candidate.json](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/canonical-listing-persistence-candidate.json) and its linked physical/schema proof files. This does not close the active launch-readiness goal.
+
+
+### Founder integration accepted and candidate serialized
+
+PR #590 merged as `c1a1b813a44bf033426e026b2253f896cfc6c3b5`. Its accepted
+manifest ends at `0096_user_founder_authority_unique.sql`, with the founder
+column and unique key independently sequenced. The geography candidate was
+serialized after that exact prefix: its fifteen SQL files move by two slots,
+0097–0111, with every SQL byte/checksum preserved. No founder worktree or
+remote branch is changed. Current candidate head is
+`0111_properties_canonical_place_reference_fk.sql` (112 total entries).
+
+The exact owned 0109 proof target had already been disposed. The pre-adoption
+review records unmerged geography, no protected adoption, disposed local target,
+correctness repair of the accepted sequence collision, and unchanged SQL/Place
+identity. Manifest parents/checksums, active classification and source references
+are rebuilt; accepted founder SQL and prefix entries remain exact. Generated
+model inventory includes both founder authority and Listing Place references.
+National package bytes and source allocations remain unchanged.
+
+Local merge conflicts were reconciled in manifest/inventory/classification and
+active assertions. Historical revoked rehearsal authorization stays pinned to
+its original 0094/count-95 fixture; the merged assertion must not extend that
+old approval to a newer model. The historical transport suite passes ten checks,
+and accepted founder identity/account/state/route tests pass 92 checks. Focused
+lineage/foundation tests pass 58 checks. The prior 0109 schema/resolver proof is
+retained as historical evidence and cannot certify the combined 0111 model.
+Fresh owned physical consumer proof is still required before launch assessment.
+
+[Serialization evidence](launch-readiness-and-product-convergence/evidence/geography-consumer-readiness-2026-10-07/founder-integration-serialization.json)
+records the complete filename/checksum translation and accepted prefix.
+
+Combined candidate verification: authority 617/617 in 56 files; 121 utility surfaces, 112 migration files, deterministic inventory, lifecycle and production type checking pass. No combined-lineage physical or customer publication/search certification is claimed.
+
+## 2026-10-08 integration handoff
+
+The [integration review candidate](geography-integration-review-2026-10-08.md)
+merges released main through 7756376c9, supplies the protected canonical Place
+release mechanism and retains D3's held OSM-only set. Native 0111 evidence proves
+the 16,944-Place production subset, zero-write replay and private North Riding
+draft save/reload. Production is independently inspected as Azure MySQL head
+0096 without Place tables; no hosted changes were applied. This continuation
+supersedes the earlier missing-release-capability handoff, while retaining
+historical storage proofs and leaving public-search/hosted acceptance and
+production approval gates open.

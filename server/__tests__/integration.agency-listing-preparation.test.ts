@@ -1,3 +1,7 @@
+import {
+  canonicalPlaceFixtureLocation,
+  CANONICAL_PLACE_FIXTURE_ID,
+} from './helpers/canonicalPlaceFixture';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -22,10 +26,7 @@ import {
   listingMedia,
   listings,
   plans,
-  cities,
-  provinces,
   properties,
-  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -166,24 +167,6 @@ async function insertUser(label: string, role: 'visitor' | 'agency_admin'): Prom
   const id = insertId(result);
   if (!id) throw new Error(`Could not create ${label} fixture user.`);
   return { id, email, name, sessionVersion: 1 };
-}
-
-async function canonicalSandtonLocation() {
-  const [location] = await db
-    .select({ provinceId: provinces.id, cityId: cities.id, suburbId: suburbs.id })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
-    .where(
-      and(
-        eq(provinces.slug, 'gauteng'),
-        eq(cities.slug, 'johannesburg'),
-        eq(suburbs.slug, 'sandton'),
-      ),
-    )
-    .limit(1);
-  if (!location) throw new Error('Canonical Gauteng/Johannesburg/Sandton data is required.');
-  return location;
 }
 
 async function cleanup() {
@@ -356,7 +339,6 @@ describeWithDb('agency listing preparation acceptance', () => {
     created.outsiderId = outsider.id;
     const outsiderApi = trpcClient(await sessionCookie(outsider.id));
 
-    const location = await canonicalSandtonLocation();
     const mediaManifest: Array<{
       id: string;
       mediaType: 'image';
@@ -394,7 +376,7 @@ describeWithDb('agency listing preparation acceptance', () => {
     }
 
     const description =
-      'A carefully prepared family home in Sandton with verified private address details, clear pricing, and enough context for a reviewer to assess the private inventory before commercial activation resumes.';
+      'A carefully prepared family home in North Riding with verified private address details, clear pricing, and enough context for a reviewer to assess the private inventory before commercial activation resumes.';
     const propertyDetails = {
       corePropertyInformation: {
         version: 1,
@@ -407,30 +389,11 @@ describeWithDb('agency listing preparation acceptance', () => {
     const listingInput = {
       action: 'sell' as const,
       propertyType: 'house' as const,
-      title: `Private Sandton family home ${suffix}`,
+      title: `Private North Riding family home ${suffix}`,
       description,
       pricing: { askingPrice: 2_450_000, negotiability: 'not_negotiable' as const },
       propertyDetails,
-      location: {
-        address: '18 Example Avenue',
-        latitude: -26.1076,
-        longitude: 28.0567,
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
-        postalCode: '2196',
-        provinceId: Number(location.provinceId),
-        cityId: Number(location.cityId),
-        suburbId: Number(location.suburbId),
-        privateAddress: {
-          streetNumber: '18',
-          streetName: 'Example Avenue',
-          postalCode: '2196',
-        },
-        coordinateSource: 'manual_confirmed' as const,
-        locationConfirmationState: 'confirmed' as const,
-        publicLocationPrecision: 'approximate' as const,
-      },
+      location: await canonicalPlaceFixtureLocation('18 Example Avenue'),
       mediaIds: mediaManifest.map(item => item.id),
       mainMediaId: mediaManifest[0].id,
       media: mediaManifest,
@@ -448,6 +411,7 @@ describeWithDb('agency listing preparation acceptance', () => {
         agencyId: listings.agencyId,
         status: listings.status,
         approvalStatus: listings.approvalStatus,
+        canonicalPlaceId: listings.canonicalPlaceId,
         provinceId: listings.provinceId,
         cityId: listings.cityId,
         suburbId: listings.suburbId,
@@ -462,11 +426,12 @@ describeWithDb('agency listing preparation acceptance', () => {
       ownerId: member.id,
       agentId: created.agentId,
       agencyId: created.agencyId,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       status: 'draft',
       approvalStatus: 'pending',
-      provinceId: Number(location.provinceId),
-      cityId: Number(location.cityId),
-      suburbId: Number(location.suburbId),
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
       locationConfirmationState: 'confirmed',
       coordinateSource: 'manual_confirmed',
     });
@@ -498,11 +463,13 @@ describeWithDb('agency listing preparation acceptance', () => {
 
     await memberApi.listing.update.mutate({
       id: created.listingId,
-      title: `Updated private Sandton family home ${suffix}`,
+      title: `Updated private North Riding family home ${suffix}`,
       description,
     });
     const reopenedAfterEdit = await memberApi.listing.getById.query({ id: created.listingId });
-    expect(reopenedAfterEdit?.property.title).toBe(`Updated private Sandton family home ${suffix}`);
+    expect(reopenedAfterEdit?.property.title).toBe(
+      `Updated private North Riding family home ${suffix}`,
+    );
 
     await expect(
       outsiderApi.listing.getById.query({ id: created.listingId }),

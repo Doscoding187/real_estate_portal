@@ -1,0 +1,7 @@
+
+> real_estate_portal@1.0.0 typecheck /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsc --noEmit --incremental false -p .
+
+Terminated
+ ELIFECYCLE  Command failed with exit code 143.
+ost memory exhaustion (available RAM 824 MiB; swap fully used). Required production pnpm check passed separately. No full-repository TypeScript result is claimed.

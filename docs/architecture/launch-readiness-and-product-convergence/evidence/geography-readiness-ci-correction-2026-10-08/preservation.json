@@ -1,0 +1,21 @@
+{
+  "parent_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+  "evidence_manifests": [
+    {
+      "packet": "geography-integration-2026-10-08",
+      "verified_files": 35,
+      "manifest_sha256": "570aa998d39d6b08e7cd775aefdefd8583fe3c4ce744c2ab4bfdf741389d79b0"
+    },
+    {
+      "packet": "geography-integration-corrections-2026-10-08",
+      "verified_files": 40,
+      "manifest_sha256": "aaa15965528e556d5dfc3f47600fb42799065bbed9ed24678c3b36cdccf42f25"
+    },
+    {
+      "packet": "geography-place-command-boundary-2026-10-08",
+      "verified_files": 12,
+      "manifest_sha256": "b30e5604e34d2f89e3fb1790b83a11534318ad09280e4e3560c9e1ee37b7c18f"
+    }
+  ],
+  "scope": "Only the listing readiness test fixture and regression cases change; all runtime code, release commands, migrations, admitted data and source pins remain byte-identical to the parent."
+}

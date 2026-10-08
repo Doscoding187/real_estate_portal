@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:ack /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:ack
+
+{
+  "operation": "database-dispose",
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_place_authority_slice0_f2af5b9a6482",
+  "acknowledgement": "CONFIRM_DATABASE_DISPOSE_0c822b50ba97506e"
+}

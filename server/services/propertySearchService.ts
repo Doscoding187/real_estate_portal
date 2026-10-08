@@ -1,3 +1,7 @@
+import {
+  loadCanonicalPlaceSearchProjection,
+  type CanonicalPlaceSearchProjection,
+} from './canonicalPlaceSearchService';
 /**
  * Property Search Service
  * Handles property search with filtering, sorting, pagination, and caching
@@ -50,10 +54,8 @@ import {
   buildPublicRentalEssentials,
 } from '../../shared/public-property-detail-presentation';
 
-// SearchCardResult v10 transports governed highlight objects and compact,
-// server-built rental facts instead of browser-interpreted listing JSON.
-// Advance the namespace so cached v9 cards cannot reach the current client.
-const CACHE_PREFIX = 'property:search:v10:';
+// v11 carries canonical Place identity and preferred-name locality labels.
+const CACHE_PREFIX = 'property:search:v11:';
 
 const propertyOwnerAgencies = alias(agencies, 'property_owner_agencies');
 
@@ -62,6 +64,8 @@ type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 export interface PropertySearchOptions {
   /** Apply the canonical approved source-listing public contract. */
   publicOnly?: boolean;
+  /** One request uses the same validated graph for scope membership and labels. */
+  placeProjection?: CanonicalPlaceSearchProjection;
 }
 
 /**
@@ -340,6 +344,7 @@ function buildPropertySearchCardResult(property: any): SearchCardResult {
 
   return {
     kind: 'property',
+    canonicalPlaceId: property.canonicalPlaceId || undefined,
     id: String(property.id),
     href: `/property/${property.id}`,
     title: String(property.title || '').trim(),
@@ -404,6 +409,17 @@ export class PropertySearchService {
     queryBoundary?: PublicSearchQueryBoundary,
     options: PropertySearchOptions = {},
   ): Promise<SearchResults> {
+    if (
+      filters.canonicalPlaceIds !== undefined &&
+      (queryBoundary ||
+        filters.canonicalLocation ||
+        filters.province ||
+        filters.city ||
+        filters.suburb?.length ||
+        filters.locations?.length)
+    ) {
+      throw new Error('Canonical Place search cannot combine geography authorities.');
+    }
     if (queryBoundary && queryLocationIdsFromBoundary(queryBoundary).length === 0) {
       return {
         properties: [],
@@ -460,7 +476,9 @@ export class PropertySearchService {
       : [];
     let resolvedLocation: ResolvedLocation | null = null;
 
-    if (queryBoundary) {
+    if (filters.canonicalPlaceIds !== undefined) {
+      // The validated Place boundary is complete; no legacy resolver is consulted.
+    } else if (queryBoundary) {
       // Search Area boundaries are already resolved by the server authority.
       // Never fall back to a parent or to text when the boundary is present.
     } else if (filters.canonicalLocation) {
@@ -559,18 +577,27 @@ export class PropertySearchService {
     let total = 0;
     let eligiblePageIds: number[] | undefined;
     let publicResolutionById = new Map<number, PublicPropertyEligibilityResolution>();
+    let placeLabels = new Map<
+      string,
+      import('./canonicalPlaceSearchService').CanonicalPlaceSearchLabel
+    >();
     if (options.publicOnly) {
       const candidateRows = await db
-        .select({ id: properties.id })
+        .select({ id: properties.id, canonicalPlaceId: properties.canonicalPlaceId })
         .from(properties)
         .leftJoin(developments, eq(properties.developmentId, developments.id))
         .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
         .where(and(...publicConditions))
         .orderBy(...buildManualPropertySortOrder(sortOption));
+      if (candidateRows.some(row => row.canonicalPlaceId)) {
+        placeLabels = (options.placeProjection ?? (await loadCanonicalPlaceSearchProjection()))
+          .labels;
+      }
       publicResolutionById = await resolvePublicPropertyEligibilities(
         candidateRows.map(row => Number(row.id)),
       );
       const eligibleIds = candidateRows
+        .filter(row => !row.canonicalPlaceId || placeLabels.has(row.canonicalPlaceId))
         .map(row => Number(row.id))
         .filter(propertyId => publicResolutionById.has(propertyId));
       total = eligibleIds.length;
@@ -593,6 +620,7 @@ export class PropertySearchService {
     const results = await db
       .select({
         id: properties.id,
+        canonicalPlaceId: properties.canonicalPlaceId,
         title: properties.title,
         description: properties.description,
         price: properties.price,
@@ -723,6 +751,9 @@ export class PropertySearchService {
     // Transform results to Property type
     const transformedProperties: Property[] = results.map((rawProperty: any) => {
       const publicResolution = publicResolutionById.get(Number(rawProperty.id));
+      const placeLabel = rawProperty.canonicalPlaceId
+        ? placeLabels.get(rawProperty.canonicalPlaceId)
+        : undefined;
       const prop = publicResolution
         ? { ...rawProperty, ...publicResolution.property }
         : rawProperty;
@@ -905,9 +936,10 @@ export class PropertySearchService {
         title: prop.title,
         description: prop.description ?? undefined,
         price: prop.price,
-        suburb: canonicalPublicSuburb || prop.city,
-        city: prop.city,
-        province: prop.province,
+        canonicalPlaceId: rawProperty.canonicalPlaceId || undefined,
+        suburb: placeLabel ? placeLabel.locality : canonicalPublicSuburb || prop.city,
+        city: placeLabel ? placeLabel.city : prop.city,
+        province: placeLabel ? placeLabel.province : prop.province,
         propertyType: prop.propertyType as Property['propertyType'],
         listingType: prop.listingType as Property['listingType'],
         bedrooms: prop.bedrooms || undefined,
@@ -1043,6 +1075,13 @@ export class PropertySearchService {
     locationIds: QueryLocationIds = [],
   ): SQL[] {
     const conditions: SQL[] = [];
+    if (filters.canonicalPlaceIds !== undefined) {
+      conditions.push(
+        filters.canonicalPlaceIds.length
+          ? inArray(properties.canonicalPlaceId, filters.canonicalPlaceIds)
+          : sql`0 = 1`,
+      );
+    }
 
     // Only show published/available properties by default
     conditions.push(or(eq(properties.status, 'available'), eq(properties.status, 'published'))!);
@@ -1091,7 +1130,11 @@ export class PropertySearchService {
 
     // 2. Process Text Fallbacks (if no IDs found or explicit text overrides)
     // Legacy support for single text filters if not covered by ID list
-    if (locationIds.length === 0 && !filters.canonicalLocation) {
+    if (
+      locationIds.length === 0 &&
+      !filters.canonicalLocation &&
+      filters.canonicalPlaceIds === undefined
+    ) {
       if (filters.province) {
         locationConditions.push(sql`LOWER(${properties.province}) = LOWER(${filters.province})`);
       }

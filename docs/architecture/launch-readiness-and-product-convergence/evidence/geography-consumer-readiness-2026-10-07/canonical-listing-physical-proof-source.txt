@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+const root = '/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const moduleAt = (path: string) => import(`${root}/${path}`);
+const { resolveDatabaseAuthority } = await moduleAt('server/_core/databaseAuthority/context.ts');
+const { authorizeDatabaseOperation } = await moduleAt('server/_core/databaseAuthority/authorization.ts');
+const { createAuthoritySqlConnection } = await moduleAt('server/_core/databaseAuthority/connectionAuthority.ts');
+const { requireAcceptedMigrationHead, requireExactAdapterTarget } = await moduleAt('server/_core/databaseAuthority/dataAdapters/common.ts');
+const { loadPlaceAdmissionTerritoryRegistry } = await moduleAt('shared/placeAdmissionTerritories.ts');
+const { loadCanonicalPlacePackage, verifyNationalCanonicalPlaces } = await moduleAt('server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts');
+const { resolveCanonicalListingPlace } = await moduleAt('server/services/canonicalListingPlaceResolver.ts');
+const { getDb } = await moduleAt('server/db.ts');
+const { shutdownDb } = await moduleAt('server/db-connection.ts');
+const authority = resolveDatabaseAuthority({ operation: 'verification', cwd: root });
+assert.equal(authority.context.targetClass, 'disposable-worktree');
+assert.equal(authority.context.targetFingerprintHash, '0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d');
+requireExactAdapterTarget(authority);
+const decision = authorizeDatabaseOperation(authority);
+const connection = await createAuthoritySqlConnection(authority, decision);
+const base = { version: 2, canonicalPlaceId: null, privateAddress: { streetName: 'Physical proof street', unitNumber: 'private proof' }, coordinates: null, coordinateSource: 'manual_confirmed', locationConfirmationState: 'confirmed', publicLocationPrecision: 'approximate', providerObservation: null };
+const checks: unknown[] = [];
+try {
+  await requireAcceptedMigrationHead({ authority, connection });
+  const before = await verifyNationalCanonicalPlaces({ authority, decision, connection, root });
+  assert.equal(before.completeProvinces, 9);
+  const database = await getDb();
+  const registry = loadPlaceAdmissionTerritoryRegistry(root).registry;
+  for (const territory of registry.territories) {
+    const { rows } = loadCanonicalPlacePackage(root, { territoryId: territory.territoryId });
+    const selected = rows.places.find((row: any) => row.search_scope === 'locality' && row.search_eligible === 1);
+    const province = rows.places.find((row: any) => row.place_type === 'province');
+    const assignment = await database.transaction(async (transaction: any) => resolveCanonicalListingPlace({ ...base, canonicalPlaceId: selected.place_id }, { database: transaction, propertyType: 'house', publication: true }));
+    assert.equal(assignment.execution.placeId, selected.place_id);
+    assert.equal(assignment.execution.provincePlaceId, province.place_id);
+    assert.equal(assignment.execution.cityPlaceId, null);
+    assert.equal(assignment.labels.city, null);
+    assert.equal(assignment.location.privateAddress.unitNumber, 'private proof');
+    checks.push({ territoryId: territory.territoryId, selectedPlaceId: selected.place_id, provincePlaceId: province.place_id, cityPlaceId: null, selectedLabel: assignment.labels.selected, provinceLabel: assignment.labels.province, callerTransaction: true });
+  }
+  await assert.rejects(resolveCanonicalListingPlace({ ...base, canonicalPlaceId: 'pl-place-01-000000000000000000000000' }, { database, propertyType: 'house', publication: false }), /unknown_place/);
+  await assert.rejects(resolveCanonicalListingPlace({ ...base, canonicalPlaceId: checks[0].selectedPlaceId, cityId: 1 }, { database, propertyType: 'house', publication: true }), /invalid_location_boundary/);
+  await assert.rejects(resolveCanonicalListingPlace({ ...base, canonicalPlaceId: checks[0].selectedPlaceId, locationConfirmationState: 'needs_confirmation' }, { database, propertyType: 'house', publication: true }), /location_needs_confirmation/);
+  const after = await verifyNationalCanonicalPlaces({ authority, decision, connection, root });
+  assert.equal(after.completeProvinces, 9);
+  const report = { status: 'passed-prepared-resolver-only', targetClass: authority.context.targetClass, targetFingerprintHash: authority.context.targetFingerprintHash, candidateHead: '0109_properties_canonical_place_reference_fk.sql', positiveAssignments: checks, refusalChecks: ['unknown selection in draft', 'mixed numeric authority', 'unconfirmed publication'], nationalReferenceVerification: { before: before.completeProvinces, after: after.completeProvinces }, limitation: 'No Listing or property row was authored or published; UI/API cutover and concurrent retirement locking remain required.' };
+  writeFileSync('/tmp/geography-canonical-listing-physical-evidence.json', JSON.stringify(report, null, 2) + '\n');
+  console.log('Prepared canonical Listing resolver physical proof passed: 9 provinces, 3 refusals.');
+} finally { await connection.end(); await shutdownDb(); }

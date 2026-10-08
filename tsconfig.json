@@ -13,6 +13,14 @@
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
     "noEmit": true,
+    // `module: ESNext`, `lib: esnext` and the vite bundler all declare an ES2022+
+    // language target, but `target` was unset, so TypeScript silently applied its
+    // ES5 default. That default is incoherent with ESNext modules and it produced
+    // 70 false TS2802 errors for ordinary `for...of` over a Map or Set across the
+    // repository. Declaring the target the project already assumes corrects the
+    // misconfiguration rather than loosening it: `strict` and `noEmit` are
+    // untouched, no code changed, and the error count falls from 332 to 262.
+    "target": "ES2022",
     "module": "ESNext",
     "strict": true,
     "noImplicitAny": false,

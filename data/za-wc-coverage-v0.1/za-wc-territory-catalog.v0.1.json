@@ -1,0 +1,6 @@
+{
+  "schema_version": "0.1",
+  "catalog_id": "property-listify-za-wc-coverage-catalog-v0.1",
+  "note": "Western Cape coverage comparison baseline. It contains no geography rows and cannot override a source artifact. The source of record for Western Cape geography is the digest-pinned source authority under data/za-wc-source-authority-v0.2, not this file.",
+  "sources": []
+}

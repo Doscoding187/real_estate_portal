@@ -1,0 +1,12 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |client| client/src/components/location/__tests__/CanonicalPlaceSelector.test.tsx (16 tests) 1263ms
+   ✓ Canonical Place customer selection > requires explicit selection for same-name Places and carries the chosen identity 652ms
+ ✓ |client| client/src/components/listing-wizard/steps/LocationStep.canonical.test.tsx (3 tests) 1244ms
+   ✓ North Riding private house authoring > requires explicit locality selection and preserves street/postal evidence without inventing a city 939ms
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  01:51:11
+   Duration  4.98s (transform 987ms, setup 365ms, collect 2.42s, tests 2.51s, environment 2.52s, prepare 312ms)

@@ -1,0 +1,99 @@
+{
+  "status": "passed-prepared-resolver-only",
+  "targetClass": "disposable-worktree",
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "candidateHead": "0109_properties_canonical_place_reference_fk.sql",
+  "positiveAssignments": [
+    {
+      "territoryId": "za-gp",
+      "selectedPlaceId": "pl-place-01-00a5071b3470f996c7856dd5",
+      "provincePlaceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+      "cityPlaceId": null,
+      "selectedLabel": "Birchleigh",
+      "provinceLabel": "Gauteng",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-wc",
+      "selectedPlaceId": "pl-place-01-00097ed4372b9e2ce7cabf53",
+      "provincePlaceId": "pl-place-01-203f5f71cb3565521db4718f",
+      "cityPlaceId": null,
+      "selectedLabel": "Place On The Bay",
+      "provinceLabel": "Western Cape",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-kzn",
+      "selectedPlaceId": "pl-place-01-001ed8e08633779c9cf30db0",
+      "provincePlaceId": "pl-place-01-153d9daaed02608619c762aa",
+      "cityPlaceId": null,
+      "selectedLabel": "Ibisikululwa",
+      "provinceLabel": "KwaZulu-Natal",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-ec",
+      "selectedPlaceId": "pl-place-01-001b1eea75044e5f0697796f",
+      "provincePlaceId": "pl-place-01-9892b872a77f27e90c5cf091",
+      "cityPlaceId": null,
+      "selectedLabel": "Twane",
+      "provinceLabel": "Eastern Cape",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-fs",
+      "selectedPlaceId": "pl-place-01-003a91e8425512e2c9e416f2",
+      "provincePlaceId": "pl-place-01-a5e69690b90509167e54a142",
+      "cityPlaceId": null,
+      "selectedLabel": "Petruspan",
+      "provinceLabel": "Free State",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-mp",
+      "selectedPlaceId": "pl-place-01-0072305c69317ef61bbaf94c",
+      "provincePlaceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+      "cityPlaceId": null,
+      "selectedLabel": "Meadowbank",
+      "provinceLabel": "Mpumalanga",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-li",
+      "selectedPlaceId": "pl-place-01-001b523f4a4fec3cfc8fbbb6",
+      "provincePlaceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+      "cityPlaceId": null,
+      "selectedLabel": "Pinkie",
+      "provinceLabel": "Limpopo",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-nw",
+      "selectedPlaceId": "pl-place-01-000a3018e782cab5449038b0",
+      "provincePlaceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+      "cityPlaceId": null,
+      "selectedLabel": "Kromkuil",
+      "provinceLabel": "North-West",
+      "callerTransaction": true
+    },
+    {
+      "territoryId": "za-nc",
+      "selectedPlaceId": "pl-place-01-00147ee313884ebc70bc12c8",
+      "provincePlaceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+      "cityPlaceId": null,
+      "selectedLabel": "Hoenderpoot",
+      "provinceLabel": "Noord-Kaap",
+      "callerTransaction": true
+    }
+  ],
+  "refusalChecks": [
+    "unknown selection in draft",
+    "mixed numeric authority",
+    "unconfirmed publication"
+  ],
+  "nationalReferenceVerification": {
+    "before": 9,
+    "after": 9
+  },
+  "limitation": "No Listing or property row was authored or published; UI/API cutover and concurrent retirement locking remain required."
+}

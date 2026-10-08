@@ -1,0 +1,66 @@
+{
+  "territory_id": "za-mp",
+  "country_iso2": "ZA",
+  "country_iso3": "ZAF",
+  "province_name": "Mpumalanga",
+  "province_geoname_id": "1085595",
+  "geonames_admin1_code": "ZA.07",
+  "boundary_levels": [
+    "ADM1",
+    "ADM2",
+    "ADM3"
+  ],
+  "licences": {
+    "geonames": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "evidence_url": "https://download.geonames.org/export/dump/readme.txt",
+      "attribution": "GeoNames geographic database (https://www.geonames.org), CC BY 4.0. Mpumalanga source-code filtering and record indexing by Property Listify; source observations remain unadjudicated."
+    },
+    "geoboundaries": {
+      "name": "geoBoundaries gbOpen CC BY 4.0 distribution",
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "evidence_url": "https://www.geoboundaries.org/api.html",
+      "upstream_name": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)",
+      "upstream_url": "https://creativecommons.org/licenses/by/3.0/igo/",
+      "attribution": "geoBoundaries gbOpen, William & Mary geoLab; upstream OCHA ROSEA / South African Municipal Demarcation Board, CC BY 3.0 IGO as declared in layer metadata. Property Listify indexed source features and losslessly compressed the original GeoJSON; no boundary adjudication. Retain geoBoundaries citation and upstream notices on redistribution."
+    }
+  },
+  "geonames_artifacts": [
+    {
+      "id": "country",
+      "url": "https://download.geonames.org/export/dump/ZA.zip",
+      "filename": "ZA.zip"
+    },
+    {
+      "id": "admin1-codes",
+      "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "filename": "admin1CodesASCII.txt"
+    },
+    {
+      "id": "admin2-codes",
+      "url": "https://download.geonames.org/export/dump/admin2Codes.txt",
+      "filename": "admin2Codes.txt"
+    },
+    {
+      "id": "alternate-names",
+      "url": "https://download.geonames.org/export/dump/alternatenames/ZA.zip",
+      "filename": "alternateNames-ZA.zip"
+    },
+    {
+      "id": "feature-codes",
+      "url": "https://download.geonames.org/export/dump/featureCodes_en.txt",
+      "filename": "featureCodes_en.txt"
+    },
+    {
+      "id": "language-codes",
+      "url": "https://download.geonames.org/export/dump/iso-languagecodes.txt",
+      "filename": "iso-languagecodes.txt"
+    },
+    {
+      "id": "licence-readme",
+      "url": "https://download.geonames.org/export/dump/readme.txt",
+      "filename": "readme.txt"
+    }
+  ]
+}

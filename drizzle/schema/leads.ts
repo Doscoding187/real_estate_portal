@@ -19,6 +19,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 import { users } from './core';
+import { place } from './placeAuthority';
 import { properties, listings } from './listings';
 import { developments, developerBrandProfiles } from './developments';
 import { cataloguePublishers, developerOrganisations } from './developerIdentity';
@@ -497,6 +498,20 @@ export const savedSearches = mysqlTable(
     lastNotifiedAt: timestamp('last_notified_at', { mode: 'string' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    /**
+     * Canonical Place reference for this search's geography, when the search was
+     * created from the Place Authority. When present it is the sole geographic
+     * authority: the legacy geography fields inside `criteria` are not consulted
+     * for geography. Additive and nullable; no existing row is rewritten.
+     *
+     * Declared last on purpose: the physical column is appended at the end of
+     * the table by its own migration, so the model ordinal must match the
+     * physical ordinal exactly or schema congruency reports a drift.
+     */
+    placeId: varchar('place_id', { length: 40 }).references(() => place.placeId, {
+      onDelete: 'restrict',
+      onUpdate: 'restrict',
+    }),
   },
   table => [
     index('idx_saved_searches_user').on(table.userId),

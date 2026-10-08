@@ -1,0 +1,6 @@
+import { writeFileSync } from 'node:fs';
+const root = '/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const { loadPlaceReleaseCandidate, PLACE_RELEASE_DIGEST, PLACE_RELEASE_BATCH_LIMITS, buildPlaceReleaseBatches } = await import(`${root}/server/_core/databaseAuthority/dataAdapters/placeRelease.ts`);
+const c = loadPlaceReleaseCandidate(root);
+const counts = Object.fromEntries(Object.entries(c.desired).map(([t, rows]) => [t, [...buildPlaceReleaseBatches(t as any, rows)].length]));
+writeFileSync('/tmp/geography-corrections-data-candidate.json', JSON.stringify({ policy: c.policy, adapterDigest: PLACE_RELEASE_DIGEST, registrySha256:c.registrySha256, packagePins:c.pins, desiredDigest:c.desiredDigest, desiredRows:Object.fromEntries(Object.entries(c.desired).map(([k,v])=>[k,v.length])), heldPlaceIds:c.heldPlaceIds, heldDigest:c.heldDigest, heldRows:c.heldRows, provinceIds:c.provinceIds, batchLimits:PLACE_RELEASE_BATCH_LIMITS, expectedInsertStatementsByTable:counts, expectedInsertStatements:Object.values(counts).reduce((a,b)=>a+b,0), applicableProductionDataPlanDigest:null, reason:'Production schema head remains 0096; refresh named reference plan after separately approved schema release.', northRidingPlaceId:'pl-place-01-6a145c6d642ba208a2c12de7' },null,2));

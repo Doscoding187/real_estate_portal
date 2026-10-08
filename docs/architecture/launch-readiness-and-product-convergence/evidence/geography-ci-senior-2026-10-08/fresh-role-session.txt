@@ -1,0 +1,132 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 --no-file-parallelism server/__tests__/integration.b07-role-session-audit.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T08:15:52.613Z
+
+stdout | server/__tests__/integration.b07-role-session-audit.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ❯ |server| server/__tests__/integration.b07-role-session-audit.test.ts (5 tests | 5 failed) 68ms
+   × B07 mounted global role mutation authority > routes both mounted role endpoints through atomic audit and revokes old sessions 50ms
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+   × B07 mounted global role mutation authority > denies non-super-admin, unsupported role, and missing target requests 1ms
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+   × B07 mounted global role mutation authority > rolls back the mounted user route role change when required audit insertion fails 9ms
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+   × B07 mounted global role mutation authority > rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin 3ms
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+   × B07 mounted global role mutation authority > rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin 3ms
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+     → Database not initialized. Call getDb() first or use await getDb() in async functions.
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > routes both mounted role endpoints through atomic audit and revokes old sessions
+Error: Database not initialized. Call getDb() first or use await getDb() in async functions.
+ ❯ Object.get server/db.ts:511:13
+    509|   get(_target, prop) {
+    510|     if (!_db) {
+    511|       throw new Error(
+       |             ^
+    512|         'Database not initialized. Call getDb() first or use await get…
+    513|       );
+ ❯ insertUser server/__tests__/integration.b07-role-session-audit.test.ts:64:31
+ ❯ server/__tests__/integration.b07-role-session-audit.test.ts:92:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > routes both mounted role endpoints through atomic audit and revokes old sessions
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > denies non-super-admin, unsupported role, and missing target requests
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rolls back the mounted user route role change when required audit insertion fails
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin
+Error: Database not initialized. Call getDb() first or use await getDb() in async functions.
+ ❯ Object.get server/db.ts:511:13
+    509|   get(_target, prop) {
+    510|     if (!_db) {
+    511|       throw new Error(
+       |             ^
+    512|         'Database not initialized. Call getDb() first or use await get…
+    513|       );
+ ❯ server/__tests__/integration.b07-role-session-audit.test.ts:35:8
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > denies non-super-admin, unsupported role, and missing target requests
+Error: Database not initialized. Call getDb() first or use await getDb() in async functions.
+ ❯ Object.get server/db.ts:511:13
+    509|   get(_target, prop) {
+    510|     if (!_db) {
+    511|       throw new Error(
+       |             ^
+    512|         'Database not initialized. Call getDb() first or use await get…
+    513|       );
+ ❯ insertUser server/__tests__/integration.b07-role-session-audit.test.ts:64:31
+ ❯ server/__tests__/integration.b07-role-session-audit.test.ts:168:25
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rolls back the mounted user route role change when required audit insertion fails
+Error: Database not initialized. Call getDb() first or use await getDb() in async functions.
+ ❯ Object.get server/db.ts:511:13
+    509|   get(_target, prop) {
+    510|     if (!_db) {
+    511|       throw new Error(
+       |             ^
+    512|         'Database not initialized. Call getDb() first or use await get…
+    513|       );
+ ❯ insertUser server/__tests__/integration.b07-role-session-audit.test.ts:64:31
+ ❯ server/__tests__/integration.b07-role-session-audit.test.ts:196:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rejects last-super-admin removal through 'user.updateRole' with exactly one canonical admin
+ FAIL |server|  server/__tests__/integration.b07-role-session-audit.test.ts > B07 mounted global role mutation authority > rejects last-super-admin removal through 'admin.updateUserRole' with exactly one canonical admin
+Error: Database not initialized. Call getDb() first or use await getDb() in async functions.
+ ❯ Object.get server/db.ts:511:13
+    509|   get(_target, prop) {
+    510|     if (!_db) {
+    511|       throw new Error(
+       |             ^
+    512|         'Database not initialized. Call getDb() first or use await get…
+    513|       );
+ ❯ insertUser server/__tests__/integration.b07-role-session-audit.test.ts:64:31
+ ❯ server/__tests__/integration.b07-role-session-audit.test.ts:226:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ Test Files  1 failed (1)
+      Tests  5 failed (5)
+   Start at  10:15:31
+   Duration  24.59s (transform 12.03s, setup 318ms, collect 23.34s, tests 68ms, environment 0ms, prepare 197ms)
+
+ ELIFECYCLE  Command failed with exit code 1.

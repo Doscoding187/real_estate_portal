@@ -1,0 +1,19 @@
+{
+  "reviewedParent": "66c0dd84a2715f2a7432e5d591252f9a38f5f464",
+  "integrationBase": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "releasedMigrationEntriesPreserved": 97,
+  "releasedFilesIdentical": [
+    "server/_core/auth.ts",
+    "server/_core/authMeTiming.ts",
+    "server/developerRouter.ts",
+    "client/src/components/developer/DeveloperSetupWizardEnhanced.tsx",
+    "server/services/founderGoogleAccountService.ts",
+    "server/_core/founderGoogleIdentity.ts"
+  ],
+  "originalEvidenceHashesVerified": 35,
+  "originalEvidenceManifestSha256": "570aa998d39d6b08e7cd775aefdefd8583fe3c4ce744c2ab4bfdf741389d79b0",
+  "packagePinsUnchanged": true,
+  "desiredAssertionsDigestUnchanged": "2c73e89e9827ad855762a76ebf1dca4fe72e6de6b7d67c54bb2a72d827421c85",
+  "heldPlaceIdsUnchanged": 720,
+  "northRidingIdentityUnchanged": "pl-place-01-6a145c6d642ba208a2c12de7"
+}

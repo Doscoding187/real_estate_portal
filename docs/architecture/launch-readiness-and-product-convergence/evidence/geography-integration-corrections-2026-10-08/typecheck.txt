@@ -1,0 +1,4 @@
+
+> real_estate_portal@1.0.0 check /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+> tsc -p tsconfig.check.json --noEmit
+

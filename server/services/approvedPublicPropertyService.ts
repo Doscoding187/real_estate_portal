@@ -487,6 +487,17 @@ function mapApprovedListingProperty(
   const price = getPrimaryPrice(sourceListing.action, sourceListing.pricing, propertyDetails);
   if (price === undefined || !Number.isFinite(Number(price)) || Number(price) <= 0) return null;
 
+  // Geography is an authored identity. A stale projection cannot claim a
+  // different Place or retain competing numeric geography for that subject.
+  if ((property.canonicalPlaceId ?? null) !== (sourceListing.canonicalPlaceId ?? null)) return null;
+  if (
+    sourceListing.canonicalPlaceId &&
+    [property, sourceListing].some(row =>
+      ['provinceId', 'cityId', 'suburbId', 'locationId'].some(key => row[key] != null),
+    )
+  )
+    return null;
+
   // These fields are mirrored on every successful approval. A mismatch means
   // the source and public projection no longer describe one committed version.
   if (

@@ -1,3 +1,4 @@
+import { canonicalPlaceFixtureLocation } from './helpers/canonicalPlaceFixture';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
@@ -52,7 +53,9 @@ afterEach(async () => {
 
   if (created.listingId) {
     await db.delete(listingMedia).where(eq(listingMedia.listingId, created.listingId));
-    await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, created.listingId));
+    await db
+      .delete(listingApprovalQueue)
+      .where(eq(listingApprovalQueue.listingId, created.listingId));
     await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
     await db.delete(listings).where(eq(listings.id, created.listingId));
   }
@@ -101,13 +104,6 @@ describeWithDb('listing media reconciliation', () => {
       description: 'A complete listing used to verify canonical listing media reconciliation.',
       pricing: { askingPrice: 2_500_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 },
-      address: '1 Listing Media Street',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      postalCode: '2001',
-      placeId: null,
       slug: `listing-media-home-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
       media: [
         {
@@ -125,6 +121,7 @@ describeWithDb('listing media reconciliation', () => {
           processingStatus: 'completed',
         },
       ],
+      location: await canonicalPlaceFixtureLocation('1 Listing Media Street'),
     });
 
     const initialMedia = await db

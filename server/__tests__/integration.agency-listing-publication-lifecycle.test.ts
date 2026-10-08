@@ -1,7 +1,12 @@
+import {
+  canonicalPlaceFixtureLocation,
+  CANONICAL_PLACE_FIXTURE_ID,
+} from './helpers/canonicalPlaceFixture';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 import express from 'express';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createTRPCProxyClient, httpLink } from '@trpc/client';
@@ -91,6 +96,8 @@ const created = {
   agentId: 0,
   replacementAgentId: 0,
   listingId: 0,
+  unrelatedListingId: 0,
+  cityListingId: 0,
   leadId: 0,
   showingId: 0,
 };
@@ -288,21 +295,23 @@ async function cleanup() {
     await db.delete(leads).where(eq(leads.id, created.leadId));
   }
 
-  if (created.listingId) {
-    await db.delete(listingMedia).where(eq(listingMedia.listingId, created.listingId));
-    await db
-      .delete(listingApprovalQueue)
-      .where(eq(listingApprovalQueue.listingId, created.listingId));
-    await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
+  for (const ownedListingId of [
+    created.listingId,
+    created.unrelatedListingId,
+    created.cityListingId,
+  ].filter(Boolean)) {
+    await db.delete(listingMedia).where(eq(listingMedia.listingId, ownedListingId));
+    await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, ownedListingId));
+    await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, ownedListingId));
     const propertyRows = await db
       .select({ id: properties.id })
       .from(properties)
-      .where(eq(properties.sourceListingId, created.listingId));
+      .where(eq(properties.sourceListingId, ownedListingId));
     for (const property of propertyRows) {
       await db.delete(propertyImages).where(eq(propertyImages.propertyId, Number(property.id)));
     }
-    await db.delete(properties).where(eq(properties.sourceListingId, created.listingId));
-    await db.delete(listings).where(eq(listings.id, created.listingId));
+    await db.delete(properties).where(eq(properties.sourceListingId, ownedListingId));
+    await db.delete(listings).where(eq(listings.id, ownedListingId));
   }
   if (created.agencyId) {
     await db
@@ -394,8 +403,14 @@ beforeAll(async () => {
       createContext,
     }),
   );
+  if (process.env.GEOGRAPHY_BROWSER_PROOF === '1') {
+    app.use(express.static(resolve('dist/public')));
+    app.get('*', (_req, res) => res.sendFile(resolve('dist/public/index.html')));
+  }
   server = createServer(app);
-  await new Promise<void>(resolve => server!.listen(0, '127.0.0.1', resolve));
+  await new Promise<void>(resolve =>
+    server!.listen(Number(process.env.GEOGRAPHY_BROWSER_PORT ?? 0), '127.0.0.1', resolve),
+  );
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Acceptance server has no address.');
   baseUrl = `http://127.0.0.1:${address.port}`;
@@ -737,41 +752,46 @@ describeWithDb('agency full operating journey acceptance', () => {
       canAccessExistingLeads: true,
     });
 
-    const mediaManifest: Array<{
-      id: string;
-      mediaType: 'image';
-      uploadToken: string;
-      fileName: string;
-      fileSize: number;
-    }> = [];
-    for (let index = 0; index < 5; index += 1) {
-      const fileName = `publication-home-${index + 1}.png`;
-      const reservation = await memberApi.listing.uploadMedia.mutate({
-        type: 'image',
-        filename: fileName,
-        contentType: 'image/png',
-      });
-      const body = Buffer.from(`publication-media-${index + 1}-${suffix}`);
-      const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
-        body,
-      });
-      expect(uploadResponse.status).toBe(200);
-      const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
-        uploadToken: reservation.uploadToken,
-      });
-      expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
-      mediaManifest.push({
-        id: reservation.mediaId,
-        mediaType: 'image',
-        uploadToken: confirmed.uploadToken,
-        fileName,
-        fileSize: body.length,
-      });
-    }
+    const uploadImages = async (prefix: string) => {
+      const mediaManifest: Array<{
+        id: string;
+        mediaType: 'image';
+        uploadToken: string;
+        fileName: string;
+        fileSize: number;
+      }> = [];
+      for (let index = 0; index < 5; index += 1) {
+        const fileName = `${prefix}-${index + 1}.png`;
+        const reservation = await memberApi.listing.uploadMedia.mutate({
+          type: 'image',
+          filename: fileName,
+          contentType: 'image/png',
+        });
+        const body = Buffer.from(`publication-media-${index + 1}-${suffix}`);
+        const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
+          method: 'PUT',
+          headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
+          body,
+        });
+        expect(uploadResponse.status).toBe(200);
+        const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
+          uploadToken: reservation.uploadToken,
+        });
+        expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
+        mediaManifest.push({
+          id: reservation.mediaId,
+          mediaType: 'image',
+          uploadToken: confirmed.uploadToken,
+          fileName,
+          fileSize: body.length,
+        });
+      }
 
-    const title = `Reviewable Sandton family home ${suffix}`;
+      return mediaManifest;
+    };
+    const mediaManifest = await uploadImages('publication-home');
+
+    const title = `Reviewable North Riding family home ${suffix}`;
     const description =
       'A reviewable family home with verified private address details, clear pricing, and enough context for a reviewer to assess the agency inventory.';
     const listingInput = {
@@ -789,26 +809,7 @@ describeWithDb('agency full operating journey acceptance', () => {
           erfArea: { status: 'known', valueM2: 620, unit: 'm2' },
         },
       },
-      location: {
-        address: '18 Review Avenue',
-        latitude: -26.1076,
-        longitude: 28.0567,
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
-        postalCode: '2196',
-        provinceId: Number(location.provinceId),
-        cityId: Number(location.cityId),
-        suburbId: Number(location.suburbId),
-        privateAddress: {
-          streetNumber: '18',
-          streetName: 'Review Avenue',
-          postalCode: '2196',
-        },
-        coordinateSource: 'manual_confirmed' as const,
-        locationConfirmationState: 'confirmed' as const,
-        publicLocationPrecision: 'approximate' as const,
-      },
+      location: await canonicalPlaceFixtureLocation('18 Review Avenue'),
       mediaIds: mediaManifest.map(item => item.id),
       mainMediaId: mediaManifest[0].id,
       media: mediaManifest,
@@ -1025,6 +1026,7 @@ describeWithDb('agency full operating journey acceptance', () => {
         status: properties.status,
         ownerId: properties.ownerId,
         agentId: properties.agentId,
+        canonicalPlaceId: properties.canonicalPlaceId,
         provinceId: properties.provinceId,
         cityId: properties.cityId,
         suburbId: properties.suburbId,
@@ -1034,13 +1036,14 @@ describeWithDb('agency full operating journey acceptance', () => {
       .limit(1);
     expect(property).toMatchObject({
       sourceListingId: created.listingId,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       title: `${title} — corrected`,
       status: 'available',
       ownerId: member.id,
       agentId: created.agentId,
-      provinceId: Number(location.provinceId),
-      cityId: Number(location.cityId),
-      suburbId: Number(location.suburbId),
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
     });
     if (!property)
       throw new Error('Approval did not create the canonical public property projection.');
@@ -1056,7 +1059,7 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(publicDetail.property).toMatchObject({
       id: Number(property.id),
       title: `${title} — corrected`,
-      city: 'Johannesburg',
+      city: '',
       province: 'Gauteng',
       publicIdentity: {
         role: 'agent',
@@ -1069,9 +1072,10 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(publicDetail.property.detailPresentation.location).toMatchObject({
       precision: 'approximate',
     });
-    expect(publicDetail.property.detailPresentation.location.label).toContain('Sandton');
+    expect(publicDetail.property.detailPresentation.location.label).toContain('North Riding');
 
-    const publicSearch = await publicApi.properties.searchPublicInventory.query({
+    // Legacy numeric geography must never bridge into canonical Place inventory.
+    const legacyScopedSearch = await publicApi.properties.searchPublicInventory.query({
       locationId: canonicalSuburbId,
       propertyType: 'house',
       listingType: 'sale',
@@ -1079,22 +1083,49 @@ describeWithDb('agency full operating journey acceptance', () => {
       page: 0,
       pageSize: 50,
     });
-    expect(publicSearch).toMatchObject({
-      locationState: 'resolved',
-      locationContext: {
-        type: 'suburb',
-        name: 'Sandton',
-        slug: 'sandton',
-        confidence: 'exact',
-        fallbackLevel: 'none',
-        hierarchy: { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
-        ids: {
-          provinceId: Number(location.provinceId),
-          cityId: Number(location.cityId),
-          suburbId: Number(location.suburbId),
-        },
+    expect(legacyScopedSearch.cards.some(card => card.propertyId === Number(property.id))).toBe(
+      false,
+    );
+    const unrelatedMedia = await uploadImages('unrelated-bryanston');
+    const unrelatedListing = await memberApi.listing.create.mutate({
+      ...listingInput,
+      title: `Unrelated Bryanston family home ${suffix}`,
+      location: {
+        ...listingInput.location,
+        canonicalPlaceId: 'pl-place-01-f175328139bb845a4645b9d4',
       },
+      mediaIds: unrelatedMedia.map(item => item.id),
+      mainMediaId: unrelatedMedia[0].id,
+      media: unrelatedMedia,
     });
+    created.unrelatedListingId = Number(unrelatedListing.id);
+    await memberApi.listing.submitForReview.mutate({ listingId: created.unrelatedListingId });
+    await reviewerApi.listing.approve.mutate({
+      listingId: created.unrelatedListingId,
+      notes: 'Reviewed unrelated locality control.',
+    });
+    const [unrelatedProperty] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.sourceListingId, created.unrelatedListingId));
+    expect(unrelatedProperty?.id).toBeGreaterThan(0);
+
+    const publicSearch = await publicApi.properties.searchPublicInventory.query({
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      page: 0,
+      pageSize: 50,
+    });
+    expect(publicSearch.locationState).toBe('resolved');
+    expect(publicSearch.canonicalPlaceContext).toMatchObject({
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      label: 'North Riding',
+    });
+    expect(publicSearch.cards.some(card => card.propertyId === Number(unrelatedProperty.id))).toBe(
+      false,
+    );
     const publicCard = publicSearch.cards.find(
       card => card.propertyId === Number(property.id) || card.title === `${title} — corrected`,
     );
@@ -1102,14 +1133,183 @@ describeWithDb('agency full operating journey acceptance', () => {
       kind: 'property',
       propertyId: Number(property.id),
       title: `${title} — corrected`,
-      city: 'Johannesburg',
-      suburb: 'Sandton',
+      city: '',
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      suburb: 'North Riding',
+      location: 'North Riding, Gauteng',
       province: 'Gauteng',
       propertyType: 'house',
       listingType: 'sale',
       listingSource: 'manual',
     });
     expect(publicCard?.images).toHaveLength(5);
+    // Opening the returned card target uses the same public detail contract.
+    expect(publicCard?.href).toBe(`/property/${property.id}`);
+    const openedDetail = await publicApi.properties.getById.query({
+      id: Number(publicCard!.propertyId),
+    });
+    expect(openedDetail.property.detailPresentation.location.label).toContain('North Riding');
+
+    // Broader scope policy is a separate proof: evidenced province containment
+    // includes both localities; an unreviewed city never expands to them.
+    const cityMedia = await uploadImages('exact-soweto');
+    const cityListing = await memberApi.listing.create.mutate({
+      ...listingInput,
+      title: `Exact Soweto city assignment ${suffix}`,
+      location: {
+        ...listingInput.location,
+        canonicalPlaceId: 'pl-place-01-99b91be60755ea1f09bf6349',
+        coordinates: { latitude: -26.25, longitude: 27.86 },
+        coordinateSource: 'map' as const,
+      },
+      mediaIds: cityMedia.map(item => item.id),
+      mainMediaId: cityMedia[0].id,
+      media: cityMedia,
+    });
+    created.cityListingId = Number(cityListing.id);
+    await memberApi.listing.submitForReview.mutate({ listingId: created.cityListingId });
+    await reviewerApi.listing.approve.mutate({
+      listingId: created.cityListingId,
+      notes: 'Reviewed exact city assignment.',
+    });
+    const [cityProperty] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.sourceListingId, created.cityListingId));
+    expect(cityProperty?.id).toBeGreaterThan(0);
+
+    const provincial = await publicApi.properties.searchPublicInventory.query({
+      canonicalPlaceId: 'pl-place-01-131e3e75ad70424e0f9c869a',
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      pageSize: 50,
+    });
+    expect(provincial.canonicalPlaceContext?.scope).toBe('province');
+    expect(provincial.cards.map(card => card.propertyId)).toEqual(
+      expect.arrayContaining([Number(property.id), Number(unrelatedProperty.id)]),
+    );
+    const cityOnly = await publicApi.properties.searchPublicInventory.query({
+      canonicalPlaceId: 'pl-place-01-99b91be60755ea1f09bf6349',
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      pageSize: 50,
+    });
+    expect(cityOnly.canonicalPlaceContext?.scope).toBe('metro_city');
+    expect(cityOnly.cards.some(card => card.propertyId === Number(cityProperty.id))).toBe(true);
+    expect(
+      cityOnly.cards.some(card =>
+        [Number(property.id), Number(unrelatedProperty.id)].includes(card.propertyId!),
+      ),
+    ).toBe(false);
+    for (const competing of [
+      { province: 'gauteng' },
+      { city: 'johannesburg' },
+      { suburb: ['north-riding'] },
+      { locationId: canonicalSuburbId },
+      { locationIds: ['suburb:1', 'suburb:2'] },
+      { searchAreaId: 'sandton-core' },
+      { searchAreaIds: ['sandton-core', 'rosebank-core'] },
+    ]) {
+      await expect(
+        publicApi.properties.searchPublicInventory.query({
+          canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+          listingType: 'sale',
+          ...competing,
+        }),
+      ).rejects.toMatchObject({ data: { code: 'BAD_REQUEST' } });
+    }
+
+    if (process.env.GEOGRAPHY_BROWSER_PROOF === '1') {
+      const { chromium, expect: browserExpect } = await import('@playwright/test');
+      const browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      const browserErrors: string[] = [];
+      page.on('pageerror', error => browserErrors.push(error.message));
+      try {
+        await page.route('**/*', route => {
+          const url = route.request().url();
+          return url.startsWith(baseUrl) || url.startsWith('data:')
+            ? route.continue()
+            : route.abort();
+        });
+        await page.goto(`${baseUrl}/property-for-sale?propertyType=house&listingSource=manual`);
+        await page
+          .getByRole('combobox', { name: 'City, town, suburb or locality' })
+          .fill('North Riding');
+        await page.getByRole('option', { name: /North Riding/ }).click();
+        const requestPromise = page.waitForRequest(
+          request =>
+            request.url().includes('properties.searchPublicInventory') &&
+            decodeURIComponent(request.url()).includes(CANONICAL_PLACE_FIXTURE_ID),
+        );
+        await page.getByRole('button', { name: 'Search', exact: true }).click();
+        const searchRequest = await requestPromise;
+        const requestInput = new URL(searchRequest.url()).searchParams.get('input')!;
+        expect(requestInput).toContain(`"canonicalPlaceId":"${CANONICAL_PLACE_FIXTURE_ID}"`);
+        const encodedInputs = JSON.parse(requestInput);
+        const encodedSearch = Object.values(encodedInputs).find(
+          (value: any) => value.json?.canonicalPlaceId === CANONICAL_PLACE_FIXTURE_ID,
+        );
+        const actualRequest = superjson.deserialize(encodedSearch as any) as Record<
+          string,
+          unknown
+        >;
+        for (const forbidden of ['locationId', 'province', 'city', 'suburb', 'searchAreaId'])
+          expect(actualRequest[forbidden]).toBeUndefined();
+        await browserExpect(page).toHaveURL(
+          new RegExp(`canonicalPlaceId=${CANONICAL_PLACE_FIXTURE_ID}`),
+        );
+        await browserExpect(page.getByText(`${title} — corrected`, { exact: true })).toBeVisible();
+        await browserExpect(
+          page.getByText(`Unrelated Bryanston family home ${suffix}`, { exact: true }),
+        ).toHaveCount(0);
+        await browserExpect(
+          page.getByText('North Riding, Gauteng', { exact: true }).first(),
+        ).toBeVisible();
+        await page.screenshot({
+          path: '/tmp/geography-search-north-riding-results.png',
+          fullPage: true,
+        });
+        await page.getByRole('link', { name: `View ${title} — corrected`, exact: true }).click();
+        await browserExpect(page).toHaveURL(new RegExp(`/property/${property.id}`));
+        await browserExpect(
+          page.getByText(`${title} — corrected`, { exact: true }).first(),
+        ).toBeVisible();
+        await browserExpect(page.getByText(/North Riding/).first()).toBeVisible();
+        await page.screenshot({
+          path: '/tmp/geography-search-north-riding-detail.png',
+          fullPage: true,
+        });
+        console.info(
+          'GEOGRAPHY_BROWSER_PROOF',
+          JSON.stringify({
+            canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+            propertyId: property.id,
+            unrelatedPropertyId: unrelatedProperty.id,
+            cardLabel: publicCard!.location,
+            detailHref: publicCard!.href,
+            outcome: 'selected-searched-excluded-labelled-opened',
+          }),
+        );
+      } catch (error) {
+        console.info(
+          'GEOGRAPHY_BROWSER_FAILURE',
+          JSON.stringify({
+            errors: browserErrors,
+            body: (await page.locator('body').innerText()).slice(0, 3000),
+          }),
+        );
+        await page.screenshot({
+          path: '/tmp/geography-search-browser-failure.png',
+          fullPage: true,
+        });
+        throw error;
+      } finally {
+        await browser.close();
+      }
+    }
 
     // Goal 7: the public HTTP enquiry path must create one durable custody
     // record for the assigned agency agent. The caller cannot select a
@@ -1119,7 +1319,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       name: `Prospect ${suffix}`,
       email: `prospect-${suffix}@example.test`,
       phone: '+27825550199',
-      message: 'Please arrange a viewing for this Sandton home.',
+      message: 'Please arrange a viewing for this North Riding home.',
       leadType: 'inquiry' as const,
       source: 'property_detail',
       leadSource: 'property_detail',
@@ -1171,7 +1371,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       agentId: created.agentId,
       name: `Prospect ${suffix}`,
       email: `prospect-${suffix}@example.test`,
-      message: 'Please arrange a viewing for this Sandton home.',
+      message: 'Please arrange a viewing for this North Riding home.',
       captureRequestId: enquiryInput.captureRequestId,
       consentVersion: 'launch-privacy-1',
       consentSource: 'property_detail_contact_modal',

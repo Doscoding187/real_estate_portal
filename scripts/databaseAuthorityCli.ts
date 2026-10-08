@@ -1,4 +1,10 @@
 import {
+  completePlaceReleaseCommand,
+  placeCommandFailure,
+  PlaceReleaseCommandFailure,
+  type PlaceReleaseCommand,
+} from './placeReleaseCommand';
+import {
   capturePreliminaryTiDbArchive,
   captureFinalTiDbArchive,
   openSourceArchive,
@@ -13,6 +19,11 @@ import {
   realpathSync,
 } from 'node:fs';
 import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
+import {
+  releaseCanonicalPlaces,
+  previewCanonicalPlaceRelease,
+} from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
+import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
 import { resolve } from 'node:path';
 import * as schema from '../drizzle/schema';
 import {
@@ -48,6 +59,12 @@ import {
   prepareCanonicalGeography,
   verifyCanonicalGeography,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalGeography';
+import {
+  prepareCanonicalPlaces,
+  prepareNationalCanonicalPlaces,
+  verifyNationalCanonicalPlaces,
+  verifyCanonicalPlaces,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalPlaces';
 import {
   assertDataRoleManifest,
   DATA_ROLE_MANIFEST,
@@ -131,6 +148,10 @@ type Command =
   | 'worktree:ack'
   | 'migration:plan'
   | 'migration:apply'
+  | 'places:prepare'
+  | 'places:verify'
+  | 'places:prepare-national'
+  | 'places:verify-national'
   | 'migration-recovery:plan'
   | 'migration-recovery:apply'
   | 'release-migration-recovery:plan'
@@ -144,6 +165,9 @@ type Command =
   | 'source-archive:preliminary'
   | 'source-archive:final'
   | 'release-reference:plan'
+  | 'release-reference:inspect'
+  | 'places:release-preview:prepare'
+  | 'places:release-preview:verify'
   | 'release-reference:apply'
   | 'release-reference:verify'
   | 'readiness'
@@ -696,13 +720,45 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'places:release-preview:prepare' || command === 'places:release-preview:verify') {
+    const prepare = command.endsWith(':prepare');
+    const authority = authorityFor(
+      prepare ? 'reference-seed' : 'verification',
+      prepare ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection => previewCanonicalPlaceRelease({ authority, decision, connection }),
+      }),
+    );
+    return;
+  }
+
+  if (command === 'release-reference:inspect') {
+    if (requiredOption('adapter') !== 'places')
+      throw new Error('Only Place release inspection is supported.');
+    const authority = authorityFor('release-reference-plan', 'read-only');
+    const decision = authorizationFor(authority);
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection => inspectPlaceReleaseTarget({ authority, decision, connection }),
+      }),
+    );
+    return;
+  }
+
   if (
     command === 'release-reference:plan' ||
     command === 'release-reference:apply' ||
     command === 'release-reference:verify'
   ) {
     const adapter = option('adapter') ?? 'commercial';
-    if (!['commercial', 'geography'].includes(adapter))
+    if (!['commercial', 'geography', 'places'].includes(adapter))
       throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
@@ -713,6 +769,22 @@ async function run(command: Command): Promise<void> {
         : 'release-reference-verify';
     const authority = authorityFor(operation, isApply ? 'migration' : 'read-only');
     const decision = authorizationFor(authority, option('ack'));
+    if (adapter === 'places') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            releaseCanonicalPlaces({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence =
@@ -741,6 +813,55 @@ async function run(command: Command): Promise<void> {
         purpose: (option('purpose') as any) ?? 'location-discovery',
       }),
     );
+    return;
+  }
+
+  if (command === 'places:prepare' || command === 'places:verify') {
+    const isPrepare = command === 'places:prepare';
+    const operation: DatabaseOperation = isPrepare ? 'reference-seed' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    // Explicit territory selection. Without it a second province's load is
+    // indistinguishable from the default territory's, and a Gauteng pass would be
+    // reported as Western Cape proof.
+    const territoryId = option('territory');
+    const territory = territoryId ? { territoryId } : {};
+    try {
+      print(
+        isPrepare
+          ? await prepareCanonicalPlaces({ authority, decision, connection, ...territory })
+          : await verifyCanonicalPlaces({ authority, decision, connection, ...territory }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  /**
+   * National storage proof. Separate from `places:prepare` because it answers a
+   * different question: `places:prepare` proves one province on its own target, this
+   * proves all of them coexist in one target in one transaction. It takes no
+   * `--territory`, because a national load that loads some provinces is not national.
+   */
+  if (command === 'places:prepare-national' || command === 'places:verify-national') {
+    const isPrepare = command === 'places:prepare-national';
+    const authority = authorityFor(
+      isPrepare ? 'reference-seed' : 'verification',
+      isPrepare ? 'local-owner' : undefined,
+    );
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        isPrepare
+          ? await prepareNationalCanonicalPlaces({ authority, decision, connection })
+          : await verifyNationalCanonicalPlaces({ authority, decision, connection }),
+      );
+    } finally {
+      await connection.end();
+    }
     return;
   }
 
@@ -896,6 +1017,25 @@ async function run(command: Command): Promise<void> {
   }
 }
 
+/** Actual CLI entry boundary; only Place commands receive this structured failure policy. */
+export async function runDatabaseAuthorityCommand(command: Command): Promise<void> {
+  try {
+    await run(command);
+  } catch (error) {
+    const placeCommand =
+      command.startsWith('places:release-preview:') ||
+      command === 'release-reference:inspect' ||
+      (command.startsWith('release-reference:') && option('adapter') === 'places');
+    if (!placeCommand) throw error;
+    const failure =
+      error instanceof PlaceReleaseCommandFailure
+        ? error
+        : placeCommandFailure(command as PlaceReleaseCommand, error);
+    console.error(JSON.stringify(failure.record, null, 2));
+    throw failure;
+  }
+}
+
 const command = process.argv[2] as Command | undefined;
 const commands = new Set<Command>([
   'context',
@@ -931,6 +1071,9 @@ const commands = new Set<Command>([
   'source-archive:preliminary',
   'source-archive:final',
   'release-reference:plan',
+  'release-reference:inspect',
+  'places:release-preview:prepare',
+  'places:release-preview:verify',
   'release-reference:apply',
   'release-reference:verify',
   'readiness',
@@ -938,6 +1081,10 @@ const commands = new Set<Command>([
   'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
+  'places:prepare',
+  'places:verify',
+  'places:prepare-national',
+  'places:verify-national',
   'foundation:prepare',
   'foundation:verify',
   'scenario:prepare',
@@ -957,8 +1104,9 @@ if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pat
     console.error(`Usage: databaseAuthorityCli.ts <${[...commands].join('|')}> [--name=value]`);
     process.exit(1);
   }
-  run(command).catch(error => {
-    console.error(error instanceof Error ? error.message : 'Database authority command failed.');
+  runDatabaseAuthorityCommand(command).catch(error => {
+    if (!(error instanceof PlaceReleaseCommandFailure))
+      console.error(error instanceof Error ? error.message : 'Database authority command failed.');
     process.exit(1);
   });
 }

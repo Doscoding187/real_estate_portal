@@ -1,3 +1,7 @@
+import {
+  CANONICAL_PLACE_FIXTURE_ID,
+  canonicalPlaceFixtureLocation,
+} from './helpers/canonicalPlaceFixture';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
@@ -8,17 +12,14 @@ import {
   agencies,
   agencyBranding,
   billableAccounts,
-  cities,
   leads,
   listingAnalytics,
   listingApprovalQueue,
   listingMedia,
   listings,
   plans,
-  provinces,
   properties,
   propertyImages,
-  suburbs,
   subscriptions,
   users,
 } from '../../drizzle/schema';
@@ -76,34 +77,6 @@ function toMySqlTimestamp(value: Date) {
   return value.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-async function canonicalSandtonLocation(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-) {
-  const [location] = await db
-    .select({
-      provinceId: provinces.id,
-      cityId: cities.id,
-      suburbId: suburbs.id,
-    })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
-    .where(
-      and(
-        eq(provinces.slug, 'gauteng'),
-        eq(cities.slug, 'johannesburg'),
-        eq(suburbs.slug, 'sandton'),
-      ),
-    )
-    .limit(1);
-
-  if (!location) {
-    throw new Error('Canonical Gauteng/Johannesburg/Sandton geography is required by this fixture.');
-  }
-
-  return location;
-}
-
 async function makeAgencyPublicationReady(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   agencyId: number,
@@ -128,7 +101,11 @@ async function makeAgencyPublicationReady(
   }
 
   const now = new Date();
-  const [account] = await db.select({ id: billableAccounts.id }).from(billableAccounts).where(eq(billableAccounts.agencyId, agencyId)).limit(1);
+  const [account] = await db
+    .select({ id: billableAccounts.id })
+    .from(billableAccounts)
+    .where(eq(billableAccounts.agencyId, agencyId))
+    .limit(1);
   if (!account) throw new Error(`Missing agency billable account ${agencyId}`);
   const [subscriptionResult] = await db.insert(subscriptions).values({
     ownerType: 'agency',
@@ -152,7 +129,9 @@ afterEach(async () => {
   if (created.propertyId) await db.delete(properties).where(eq(properties.id, created.propertyId));
   if (created.listingId) {
     await db.delete(listingMedia).where(eq(listingMedia.listingId, created.listingId));
-    await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, created.listingId));
+    await db
+      .delete(listingApprovalQueue)
+      .where(eq(listingApprovalQueue.listingId, created.listingId));
     await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
     await db.delete(listings).where(eq(listings.id, created.listingId));
   }
@@ -193,9 +172,10 @@ describeWithDb('agency principal listing attribution', () => {
       isVerified: 1,
     } as any);
     created.agencyId = insertId(agencyResult);
-    await db.insert(billableAccounts).values({ accountKind: 'agency', agencyId: created.agencyId } as any);
+    await db
+      .insert(billableAccounts)
+      .values({ accountKind: 'agency', agencyId: created.agencyId } as any);
     await makeAgencyPublicationReady(db, created.agencyId, suffix);
-    const location = await canonicalSandtonLocation(db);
 
     const [userResult] = await db.insert(users).values({
       email: `principal-${suffix}@example.com`,
@@ -217,25 +197,6 @@ describeWithDb('agency principal listing attribution', () => {
       description: 'A complete principal-created listing used to verify agency attribution.',
       pricing: { askingPrice: 2_500_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 },
-      address: '1 Agency Attribution Street',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      province: 'Gauteng',
-      postalCode: '2001',
-      placeId: null,
-      provinceId: location.provinceId,
-      cityId: location.cityId,
-      suburbId: location.suburbId,
-      privateAddress: {
-        streetNumber: '1',
-        streetName: 'Agency Attribution Street',
-        postalCode: '2001',
-      },
-      coordinateSource: 'manual_confirmed',
-      locationConfirmationState: 'confirmed',
-      publicLocationPrecision: 'approximate',
       slug: `agency-owned-family-home-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
       media: [
         {
@@ -253,28 +214,66 @@ describeWithDb('agency principal listing attribution', () => {
           processingStatus: 'completed',
         },
       ],
+      location: await canonicalPlaceFixtureLocation('1 Agency Attribution Street'),
     });
 
     const [draft] = await db
-      .select({ agencyId: listings.agencyId, agentId: listings.agentId })
+      .select({
+        agencyId: listings.agencyId,
+        agentId: listings.agentId,
+        canonicalPlaceId: listings.canonicalPlaceId,
+        locationId: listings.locationId,
+        provinceId: listings.provinceId,
+        cityId: listings.cityId,
+        suburbId: listings.suburbId,
+      })
       .from(listings)
       .where(eq(listings.id, created.listingId))
       .limit(1);
-    expect(draft).toMatchObject({ agencyId: created.agencyId, agentId: null });
+    expect(draft).toMatchObject({
+      agencyId: created.agencyId,
+      agentId: null,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      locationId: null,
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
+    });
 
     await submitListingForReview(created.listingId);
     await approveListing(created.listingId, created.userId, 'Attribution acceptance test');
 
     const [projection] = await db
-      .select({ id: properties.id, sourceListingId: properties.sourceListingId, agentId: properties.agentId })
+      .select({
+        id: properties.id,
+        sourceListingId: properties.sourceListingId,
+        agentId: properties.agentId,
+        canonicalPlaceId: properties.canonicalPlaceId,
+        locationId: properties.locationId,
+        provinceId: properties.provinceId,
+        cityId: properties.cityId,
+        suburbId: properties.suburbId,
+      })
       .from(properties)
       .where(eq(properties.sourceListingId, created.listingId))
       .limit(1);
     created.propertyId = Number(projection?.id || 0);
-    expect(projection).toMatchObject({ sourceListingId: created.listingId, agentId: null });
+    expect(projection).toMatchObject({
+      sourceListingId: created.listingId,
+      agentId: null,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      locationId: null,
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
+    });
 
     const [initialImage] = await db
-      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .select({
+        imageUrl: propertyImages.imageUrl,
+        displayOrder: propertyImages.displayOrder,
+        isPrimary: propertyImages.isPrimary,
+      })
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, created.propertyId));
     expect(initialImage).toMatchObject({
@@ -287,7 +286,9 @@ describeWithDb('agency principal listing attribution', () => {
     const [video] = await db
       .select({ id: listingMedia.id })
       .from(listingMedia)
-      .where(and(eq(listingMedia.listingId, created.listingId), eq(listingMedia.mediaType, 'video')))
+      .where(
+        and(eq(listingMedia.listingId, created.listingId), eq(listingMedia.mediaType, 'video')),
+      )
       .limit(1);
     expect(video).toBeDefined();
     await replaceListingMedia(
@@ -301,19 +302,35 @@ describeWithDb('agency principal listing attribution', () => {
 
     const firstRebuild = await syncPublishedListingMediaToPropertyMirror(created.listingId);
     const firstMirror = await db
-      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .select({
+        imageUrl: propertyImages.imageUrl,
+        displayOrder: propertyImages.displayOrder,
+        isPrimary: propertyImages.isPrimary,
+      })
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, created.propertyId))
       .orderBy(propertyImages.displayOrder);
     const secondRebuild = await syncPublishedListingMediaToPropertyMirror(created.listingId);
     const secondMirror = await db
-      .select({ imageUrl: propertyImages.imageUrl, displayOrder: propertyImages.displayOrder, isPrimary: propertyImages.isPrimary })
+      .select({
+        imageUrl: propertyImages.imageUrl,
+        displayOrder: propertyImages.displayOrder,
+        isPrimary: propertyImages.isPrimary,
+      })
       .from(propertyImages)
       .where(eq(propertyImages.propertyId, created.propertyId))
       .orderBy(propertyImages.displayOrder);
 
-    expect(firstRebuild).toMatchObject({ synced: true, propertyId: created.propertyId, imageCount: 1 });
-    expect(secondRebuild).toMatchObject({ synced: true, propertyId: created.propertyId, imageCount: 1 });
+    expect(firstRebuild).toMatchObject({
+      synced: true,
+      propertyId: created.propertyId,
+      imageCount: 1,
+    });
+    expect(secondRebuild).toMatchObject({
+      synced: true,
+      propertyId: created.propertyId,
+      imageCount: 1,
+    });
     expect(firstMirror).toEqual([{ imageUrl: kitchenKey, displayOrder: 0, isPrimary: 1 }]);
     expect(secondMirror).toEqual(firstMirror);
 

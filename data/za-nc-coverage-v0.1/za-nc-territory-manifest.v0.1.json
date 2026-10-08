@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-nc",
+  "province": "Northern Cape",
+  "manifest_version": "0.1",
+  "note": "Northern Cape has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "df65381a2075ec898db4adf3fca9d341db6bcf7387fcde6afb7215aa9f6a8584"
+  }
+}

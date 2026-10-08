@@ -1,3 +1,7 @@
+import {
+  canonicalPlaceFixtureLocation,
+  canonicalPlaceFixturePersistence,
+} from './helpers/canonicalPlaceFixture';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 // server/_core/env snapshots cookieSecret from process.env at module load,
@@ -1069,11 +1073,9 @@ describeWithDb('team operations on canonical membership', () => {
         description: 'Private agency draft.',
         pricing: { askingPrice: 1_900_000 },
         propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
-        address: '10 Membership Authority Road',
-        city: 'Johannesburg',
-        province: 'Gauteng',
         slug: `private-custody-${randomUUID()}`,
         media: [],
+        location: await canonicalPlaceFixtureLocation('10 Membership Authority Road'),
       } as any);
       created.listingIds.push(listingId);
       const [propertyInsert] = await db.insert(properties).values({
@@ -1087,15 +1089,13 @@ describeWithDb('team operations on canonical membership', () => {
         area: 160,
         bedrooms: 3,
         bathrooms: 2,
-        address: '10 Membership Authority Road',
-        city: 'Johannesburg',
-        province: 'Gauteng',
         status: 'available',
         featured: 0,
         views: 0,
         enquiries: 0,
         ownerId: authorId,
         agentId,
+        ...(await canonicalPlaceFixturePersistence('10 Membership Authority Road')),
       } as any);
       const propertyId = Number(propertyInsert.insertId);
       created.propertyIds.push(propertyId);
@@ -1197,12 +1197,9 @@ describeWithDb('team operations on canonical membership', () => {
       description: 'This draft remains agency inventory after its author later leaves the team.',
       pricing: { askingPrice: 2_100_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 170 },
-      address: '8 Membership Authority Road',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      province: 'Gauteng',
       slug: `active-membership-${randomUUID().slice(0, 8)}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('8 Membership Authority Road'),
     } as any);
     created.listingIds.push(agencyOwnedListingId);
 
@@ -1221,12 +1218,9 @@ describeWithDb('team operations on canonical membership', () => {
       description: 'This draft proves stale profile affiliation cannot mint agency inventory.',
       pricing: { askingPrice: 1_900_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 160 },
-      address: '10 Membership Authority Road',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      province: 'Gauteng',
       slug: `suspended-membership-${randomUUID().slice(0, 8)}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('10 Membership Authority Road'),
     } as any);
     created.listingIds.push(listingId);
 
@@ -1286,12 +1280,9 @@ describeWithDb('team operations on canonical membership', () => {
       description: 'This private inventory exercises agency operational workspace authority.',
       pricing: { askingPrice: 2_300_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 175 },
-      address: '12 Operational Authority Road',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      province: 'Gauteng',
       slug: `operational-membership-${randomUUID().slice(0, 8)}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('12 Operational Authority Road'),
     } as any);
     created.listingIds.push(listingId);
 
@@ -1348,15 +1339,13 @@ describeWithDb('team operations on canonical membership', () => {
       bedrooms: 3,
       bathrooms: 2,
       area: 180,
-      address: '27 Agent Home Authority Road',
-      city: 'Johannesburg',
-      province: 'Gauteng',
       status: 'available',
       featured: 0,
       views: 0,
       enquiries: 0,
       ownerId: memberUserId,
       agentId,
+      ...(await canonicalPlaceFixturePersistence('27 Agent Home Authority Road')),
     } as any);
     const propertyId = Number((propertyInsert as any).insertId);
     if (!propertyId) throw new Error('Expected Agent Home authority property');
@@ -1618,12 +1607,9 @@ describeWithDb('invitation acceptance (production path)', () => {
       description: 'An invited member can create a private draft through canonical membership.',
       pricing: { askingPrice: 2_100_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 180 },
-      address: '11 Invitation Authority Road',
-      city: 'Johannesburg',
-      suburb: 'Sandton',
-      province: 'Gauteng',
       slug: `invited-membership-${randomUUID().slice(0, 8)}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('11 Invitation Authority Road'),
     } as any);
     created.listingIds.push(listingId);
 
@@ -1720,9 +1706,9 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     });
     const invitation = await getInvitation(invitationId);
 
-    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
-      /different email address/i,
-    );
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ).rejects.toThrow(/different email address/i);
 
     expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
     expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
@@ -1744,18 +1730,17 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
       .where(eq(invitations.id, invitationId));
     const invitation = await getInvitation(invitationId);
 
-    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
-      /expired/i,
-    );
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ).rejects.toThrow(/expired/i);
 
     expect((await getInvitation(invitationId)).status).toBe('expired');
     expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
   });
 
   it('rejects a cancelled invitation and leaves its terminal history intact', async () => {
-    const { agencyId, ownerUserId, ownerCaller } = await createActivatedAgencyOwner(
-      'Cancelled invitation',
-    );
+    const { agencyId, ownerUserId, ownerCaller } =
+      await createActivatedAgencyOwner('Cancelled invitation');
     const invitee = await insertVerifiedInvitee('CancelledInvitee');
     const invitationId = await insertPendingInvitation({
       agencyId,
@@ -1769,9 +1754,9 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
       /cancelled/i,
     );
-    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow(
-      /cancelled/i,
-    );
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ).rejects.toThrow(/cancelled/i);
 
     expect((await getInvitation(invitationId)).status).toBe('cancelled');
     expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);
@@ -1799,9 +1784,11 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     await inviteeCaller(invitee).invitation.accept({ token: rotatedInvitation.token });
 
     expect((await getInvitation(invitationId)).status).toBe('accepted');
-    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
-      1,
-    );
+    expect(
+      (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+        isCurrentActiveAgencyMembership(membership),
+      ),
+    ).toHaveLength(1);
   });
 
   it('consumes an accepted token once and cannot create a second canonical membership on replay', async () => {
@@ -1820,10 +1807,14 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     await expect(publicCaller().invitation.getByToken({ token: invitation.token })).rejects.toThrow(
       /accepted/i,
     );
-    await expect(caller.invitation.accept({ token: invitation.token })).rejects.toThrow(/accepted/i);
+    await expect(caller.invitation.accept({ token: invitation.token })).rejects.toThrow(
+      /accepted/i,
+    );
 
     const memberships = await currentMembershipsForUser(invitee.userId);
-    expect(memberships.filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(1);
+    expect(
+      memberships.filter(membership => isCurrentActiveAgencyMembership(membership)),
+    ).toHaveLength(1);
     expect((await getInvitation(invitationId)).status).toBe('accepted');
   });
 
@@ -1845,9 +1836,11 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
 
     expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
     expect((await getInvitation(invitationId)).status).toBe('accepted');
-    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
-      1,
-    );
+    expect(
+      (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+        isCurrentActiveAgencyMembership(membership),
+      ),
+    ).toHaveLength(1);
   });
 
   it('serializes cancellation against acceptance without rewriting a consumed invitation', async () => {
@@ -1869,9 +1862,11 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
 
     const terminal = await getInvitation(invitationId);
     expect(['accepted', 'cancelled']).toContain(terminal.status);
-    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
-      terminal.status === 'accepted' ? 1 : 0,
-    );
+    expect(
+      (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+        isCurrentActiveAgencyMembership(membership),
+      ),
+    ).toHaveLength(terminal.status === 'accepted' ? 1 : 0);
   });
 
   it('serializes resend rotation against acceptance and leaves no stale token usable', async () => {
@@ -1901,9 +1896,11 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     }
 
     expect((await getInvitation(invitationId)).status).toBe('accepted');
-    expect((await currentMembershipsForUser(invitee.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
-      1,
-    );
+    expect(
+      (await currentMembershipsForUser(invitee.userId)).filter(membership =>
+        isCurrentActiveAgencyMembership(membership),
+      ),
+    ).toHaveLength(1);
   });
 
   it('admits one unaffiliated user through at most one competing Agency invitation', async () => {
@@ -1936,10 +1933,12 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     );
     expect(memberships).toHaveLength(1);
     expect([first.agencyId, second.agencyId]).toContain(Number(memberships[0].agencyId));
-    expect([
-      (await getInvitation(firstInvitationId)).status,
-      (await getInvitation(secondInvitationId)).status,
-    ].filter(status => status === 'accepted')).toHaveLength(1);
+    expect(
+      [
+        (await getInvitation(firstInvitationId)).status,
+        (await getInvitation(secondInvitationId)).status,
+      ].filter(status => status === 'accepted'),
+    ).toHaveLength(1);
   });
 
   it.each(['suspended', 'left'] as const)(
@@ -2008,9 +2007,11 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     await inviteeCaller(existingUser).invitation.accept({ token: invitation.token });
 
     expect((await getInvitation(invitationId)).status).toBe('accepted');
-    expect((await currentMembershipsForUser(existingUser.userId)).filter(membership => isCurrentActiveAgencyMembership(membership))).toHaveLength(
-      1,
-    );
+    expect(
+      (await currentMembershipsForUser(existingUser.userId)).filter(membership =>
+        isCurrentActiveAgencyMembership(membership),
+      ),
+    ).toHaveLength(1);
   });
 
   it('rolls back identity writes when canonical profile and membership creation cannot complete', async () => {
@@ -2032,7 +2033,9 @@ describeWithDb('invitation terminal state and concurrency authority', () => {
     });
     const invitation = await getInvitation(invitationId);
 
-    await expect(inviteeCaller(invitee).invitation.accept({ token: invitation.token })).rejects.toThrow();
+    await expect(
+      inviteeCaller(invitee).invitation.accept({ token: invitation.token }),
+    ).rejects.toThrow();
 
     expect(await getUser(invitee.userId)).toMatchObject({ role: 'visitor', agencyId: null });
     expect(await currentMembershipsForUser(invitee.userId)).toHaveLength(0);

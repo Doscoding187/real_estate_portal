@@ -1,0 +1,18 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+stdout | ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.place-executable-foundation.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+ ✓ |database-authority-static| ../home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/__tests__/contract.place-executable-foundation.test.ts (36 tests | 33 skipped) 21ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed | 33 skipped (36)
+   Start at  02:20:55
+   Duration  17.70s (transform 6.15s, setup 0ms, collect 15.79s, tests 21ms, environment 0ms, prepare 472ms)
+

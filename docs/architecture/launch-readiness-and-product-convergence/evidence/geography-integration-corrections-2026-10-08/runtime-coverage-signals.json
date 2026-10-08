@@ -1,0 +1,55 @@
+{
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "coverageProof": [
+    {
+      "query": "geography regression nonexistent locality xyz",
+      "outcome": "no_result",
+      "candidates": 0,
+      "operationalSignals": 1,
+      "referencePlanUnchanged": true,
+      "replayWrittenRows": 0,
+      "replayInsertStatements": 0
+    },
+    {
+      "query": "Richmond",
+      "outcome": "ambiguous",
+      "candidates": 4,
+      "operationalSignals": 2,
+      "referencePlanUnchanged": true,
+      "replayWrittenRows": 0,
+      "replayInsertStatements": 0
+    },
+    {
+      "query": "geography regression nonexistent locality xyz",
+      "outcome": "no_result",
+      "candidates": 0,
+      "operationalSignals": 2,
+      "referencePlanUnchanged": true,
+      "replayWrittenRows": 0,
+      "replayInsertStatements": 0
+    },
+    {
+      "query": "Richmond",
+      "outcome": "ambiguous",
+      "candidates": 4,
+      "operationalSignals": 2,
+      "referencePlanUnchanged": true,
+      "replayWrittenRows": 0,
+      "replayInsertStatements": 0
+    }
+  ],
+  "signalRows": [
+    {
+      "evidence_kind": "unresolved_query",
+      "research_priority": 1
+    },
+    {
+      "evidence_kind": "ambiguous_query",
+      "research_priority": 1
+    }
+  ],
+  "referencePlanDigest": "7066a999d955ca471e7e6a88ec2849d677df24af8b15f23e61b0319d472ae75c",
+  "referenceAssertions": 157728,
+  "noSignalsDeleted": true,
+  "productionContact": false
+}

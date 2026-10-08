@@ -1,0 +1,25 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts (8 tests) 830ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeRelease.test.ts (25 tests) 13380ms
+   ✓ governed national production Place reference release > plans only reads, atomically applies and verifies, then repeats with zero inserts 2586ms
+   ✓ governed national production Place reference release > returns a prerequisite plan without an applicable digest when production lacks Place schema 653ms
+   ✓ governed national production Place reference release > refuses forged authority, other protected targets and physical constraint drift before writing 355ms
+   ✓ governed national production Place reference release > binds source pins and observed state; changed plans and lost lock ownership refuse before insertion 908ms
+   ✓ governed national production Place reference release > rolls back insert failure before commit 611ms
+   ✓ governed national production Place reference release > rolls back post-write failure before commit 594ms
+   ✓ release review regressions > verifies and replays with zero writes after unresolved, ambiguous and repeated coverage signals 3071ms
+   ✓ release review regressions > never reports success when lock release returns 0 578ms
+   ✓ release review regressions > never reports success when lock release returns null 578ms
+   ✓ release review regressions > never reports success when lock release returns exception 588ms
+   ✓ release review regressions > preserves the original insert failure when cleanup also fails 624ms
+   ✓ release review regressions > marks a failed COMMIT response uncertain and never retries or claims rollback 603ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=false 589ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=true 589ms
+
+ Test Files  2 passed (2)
+      Tests  33 passed (33)
+   Start at  02:24:16
+   Duration  16.61s (transform 1.27s, setup 0ms, collect 5.17s, tests 14.21s, environment 14ms, prepare 450ms)
+
