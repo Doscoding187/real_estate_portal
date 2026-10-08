@@ -149,6 +149,9 @@ async function loadRequestedGraph(
       frontier.forEach(id => visited.add(id));
       // Includes competing/outside parents so partial graph reads cannot admit bad chains.
       await readAncestry(frontier);
+      // No executable scope is finer than locality. A descendant beneath that
+      // scoped ancestor would fail projectPlaceScope, even through context nodes.
+      frontier = frontier.filter(id => nodes.get(id)?.searchScope !== 'locality');
     }
   }
   return {

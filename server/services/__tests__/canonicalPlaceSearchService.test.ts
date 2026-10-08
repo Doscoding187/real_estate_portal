@@ -110,6 +110,23 @@ describe('fresh request-scoped Place reads', () => {
     expect(fixture.readIds).not.toContain('other');
   });
 
+  it('does not admit or traverse descendants beneath a locality-scoped ancestor', async () => {
+    const fixture = fixtureReader();
+    fixture.nodes.set('invalid-descendant', node('invalid-descendant', 'locality'));
+    fixture.edges.push({ from: 'invalid-descendant', to: 'north' });
+    fixture.names.push({ placeId: 'invalid-descendant', name: 'Invalid descendant' });
+    const projection = await loadCanonicalPlaceSearchProjection(fixture.database, {
+      placeIds: ['gp'],
+      includeProvinceMembers: true,
+    });
+    expect(canonicalPlaceSearchMembers(projection.executions.get('gp')!, projection)).toEqual([
+      'city',
+      'gp',
+      'north',
+    ]);
+    expect(fixture.readIds).not.toContain('invalid-descendant');
+  });
+
   it('observes changed names and parent lifecycle on the next request and rejects duplicate preferred names', async () => {
     const fixture = fixtureReader();
     const options = { placeIds: ['north'] };
