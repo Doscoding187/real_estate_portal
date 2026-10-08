@@ -376,8 +376,187 @@ describe('truthful layered readiness', () => {
     expect(report.layers.targetOwned.code).toBe('approved-protected-target');
     expect(report.layers.structuralSchema.state).toBe('ready');
     connection.lowerCaseTableNames = 0;
-    await expect(assessAuthorizedDatabaseReadiness({
-      authority, authorization, connection, manifest: value.manifest, root: value.root,
-    })).rejects.toThrow('lower_case_table_names is not 1');
+    await expect(
+      assessAuthorizedDatabaseReadiness({
+        authority,
+        authorization,
+        connection,
+        manifest: value.manifest,
+        root: value.root,
+      }),
+    ).rejects.toThrow('lower_case_table_names is not 1');
+  });
+});
+
+describe('readiness assessment probe (diagnostic, behavior-preserving)', () => {
+  const now = new Date('2026-10-08T00:00:00.000Z');
+  function recorder() {
+    const rec = {
+      targets: [] as Array<string | null>,
+      events: [] as string[],
+      verdicts: [] as Array<{
+        applicationReady: boolean;
+        notReadyLayers: Array<{ layer: string; code: string }>;
+      }>,
+    };
+    const probe = {
+      target: (hash: string | null) => rec.targets.push(hash),
+      begin: (stage: string) => rec.events.push(`begin:${stage}`),
+      end: (stage: string, outcome: string) => rec.events.push(`end:${stage}:${outcome}`),
+      verdict: (verdict: (typeof rec.verdicts)[number]) => rec.verdicts.push(verdict),
+    };
+    return { rec, probe };
+  }
+
+  it('records the authority identity and ordered stages without changing the verdict', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    const base = {
+      authority: value.authority,
+      authorization: value.authorization,
+      root: value.root,
+      now,
+      connectionFactory: async () => connection,
+    };
+    const plain = await assessRuntimeDatabaseReadiness(base);
+    const { rec, probe } = recorder();
+    const observed = await assessRuntimeDatabaseReadiness({ ...base, probe });
+    expect(observed).toEqual(plain);
+    expect(rec.targets).toEqual([value.authority.context.targetFingerprintHash]);
+    expect(rec.events).toEqual([
+      'begin:authorize',
+      'end:authorize:ok',
+      'begin:connect',
+      'end:connect:ok',
+      'begin:verify',
+      'end:verify:ok',
+      'begin:cleanup',
+      'end:cleanup:ok',
+    ]);
+    expect(rec.verdicts).toEqual([
+      {
+        applicationReady: plain.applicationReady,
+        notReadyLayers: Object.entries(plain.layers)
+          .filter(([, layer]) => layer.state === 'not-ready')
+          .map(([layer, detail]) => ({ layer, code: detail.code })),
+      },
+    ]);
+  });
+
+  it('isolates a connection failure to the connect stage with a bounded code only', async () => {
+    const value = fixture();
+    const { rec, probe } = recorder();
+    const report = await assessRuntimeDatabaseReadiness({
+      authority: value.authority,
+      authorization: value.authorization,
+      root: value.root,
+      probe,
+      connectionFactory: async () => {
+        throw new Error('unreachable with private connection detail');
+      },
+    });
+    expect(report.layers.targetConnectivity.code).toBe('database-unreachable');
+    expect(rec.events).toEqual([
+      'begin:authorize',
+      'end:authorize:ok',
+      'begin:connect',
+      'end:connect:threw',
+    ]);
+    expect(rec.verdicts[0].notReadyLayers).toContainEqual({
+      layer: 'targetConnectivity',
+      code: 'database-unreachable',
+    });
+    expect(JSON.stringify(rec)).not.toContain('private connection detail');
+  });
+
+  it('isolates a verification failure to the verify stage and keeps cleanup separate', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    connection.throwOnQuery = true;
+    const { rec, probe } = recorder();
+    const report = await assessRuntimeDatabaseReadiness({
+      authority: value.authority,
+      authorization: value.authorization,
+      root: value.root,
+      probe,
+      connectionFactory: async () => connection,
+    });
+    expect(report.layers.targetConnectivity.code).toBe('readiness-check-failed');
+    expect(rec.events).toEqual([
+      'begin:authorize',
+      'end:authorize:ok',
+      'begin:connect',
+      'end:connect:ok',
+      'begin:verify',
+      'end:verify:threw',
+      'begin:cleanup',
+      'end:cleanup:ok',
+    ]);
+  });
+
+  it('records the assessment verdict before a cleanup failure, which still propagates unchanged', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    connection.end = async () => {
+      throw new Error('driver close failed');
+    };
+    const { rec, probe } = recorder();
+    await expect(
+      assessRuntimeDatabaseReadiness({
+        authority: value.authority,
+        authorization: value.authorization,
+        root: value.root,
+        probe,
+        connectionFactory: async () => connection,
+      }),
+    ).rejects.toThrow('driver close failed');
+    expect(rec.events.slice(-2)).toEqual(['begin:cleanup', 'end:cleanup:threw']);
+    expect(rec.events).toContain('end:verify:ok');
+    expect(rec.verdicts).toHaveLength(1);
+    expect(JSON.stringify(rec)).not.toContain('driver close failed');
+  });
+
+  it('records unresolved authority as an explicit unresolved identity with no stages', async () => {
+    const value = fixture();
+    const { rec, probe } = recorder();
+    const report = await assessRuntimeDatabaseReadiness({ root: value.root, probe });
+    expect(report.layers.targetConnectivity.code).toBe('authority-unresolved');
+    expect(rec.targets).toEqual([null]);
+    expect(rec.events).toEqual([]);
+    expect(rec.verdicts[0]).toMatchObject({ applicationReady: false });
+  });
+
+  it('a probe that throws on every call changes neither the report nor the cleanup outcome', async () => {
+    const value = fixture();
+    const connection = new ReadinessConnection(value.authority.context.databaseName);
+    const base = {
+      authority: value.authority,
+      authorization: value.authorization,
+      root: value.root,
+      now,
+      connectionFactory: async () => connection,
+    };
+    const plain = await assessRuntimeDatabaseReadiness(base);
+    const hostile = {
+      target: () => {
+        throw new Error('probe target failed');
+      },
+      begin: () => {
+        throw new Error('probe begin failed');
+      },
+      end: () => {
+        throw new Error('probe end failed');
+      },
+      verdict: () => {
+        throw new Error('probe verdict failed');
+      },
+    };
+    expect(await assessRuntimeDatabaseReadiness({ ...base, probe: hostile })).toEqual(plain);
+    connection.end = async () => {
+      throw new Error('driver close failed');
+    };
+    await expect(assessRuntimeDatabaseReadiness({ ...base, probe: hostile })).rejects.toThrow(
+      'driver close failed',
+    );
   });
 });

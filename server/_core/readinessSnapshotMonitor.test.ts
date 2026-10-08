@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ReadinessSnapshotMonitor, type ReadinessMonitorEvent } from './readinessSnapshotMonitor';
+import {
+  ReadinessSnapshotMonitor,
+  type AssessmentProbe,
+  type ReadinessMonitorEvent,
+} from './readinessSnapshotMonitor';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -24,7 +28,7 @@ describe('bounded readiness snapshots', () => {
     vi.useRealTimers();
   });
   function create(
-    read: () => Promise<Report>,
+    read: (probe: AssessmentProbe) => Promise<Report>,
     contextKey = () => 'azure-a',
     observe?: (event: ReadinessMonitorEvent) => void,
   ) {
@@ -324,5 +328,277 @@ describe('bounded readiness snapshots', () => {
     refresh.reject(new Error('database detail'));
     await vi.advanceTimersByTimeAsync(0);
     expect(monitor.getSnapshot()).toBeNull();
+  });
+
+  const FP_A = 'a'.repeat(64);
+  const FP_B = 'b'.repeat(64);
+  const notReadyProbe = (probe: AssessmentProbe) =>
+    probe.verdict({
+      applicationReady: false,
+      notReadyLayers: [{ layer: 'targetConnectivity', code: 'database-unreachable' }],
+    });
+
+  it('binds the target identity to the same assessment at start, completion and throw', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const work = deferred<Report>();
+    create(
+      probe => {
+        probe.target(FP_A);
+        return work.promise;
+      },
+      undefined,
+      event => events.push(event),
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    work.resolve(green);
+    await vi.advanceTimersByTimeAsync(0);
+    const started = events.find(event => event.event === 'assessment-started')!;
+    const completed = events.find(event => event.event === 'assessment-completed')!;
+    expect(started).toMatchObject({ targetIdentity: 'not-reached', targetFingerprintHash: null });
+    expect(completed).toMatchObject({
+      assessmentId: started.assessmentId,
+      targetIdentity: 'resolved',
+      targetFingerprintHash: FP_A,
+    });
+  });
+
+  it('keeps the identity of a thrown assessment and never serializes the exception', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    create(
+      async probe => {
+        probe.target(FP_A);
+        throw new Error('database detail with password');
+      },
+      undefined,
+      event => events.push(event),
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    const threw = events.find(event => event.event === 'assessment-threw')!;
+    expect(threw).toMatchObject({ targetIdentity: 'resolved', targetFingerprintHash: FP_A });
+    expect(JSON.stringify(events)).not.toContain('password');
+  });
+
+  it('records an unresolved authority explicitly and never inherits an earlier attempt identity', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const read = vi
+      .fn()
+      .mockImplementationOnce(async (probe: AssessmentProbe) => {
+        probe.target(FP_A);
+        return green;
+      })
+      .mockImplementation(async (probe: AssessmentProbe) => {
+        probe.target(null);
+        return green;
+      });
+    create(read, undefined, event => events.push(event));
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    const completed = events.filter(event => event.event === 'assessment-completed');
+    expect(completed.map(event => [event.targetIdentity, event.targetFingerprintHash])).toEqual([
+      ['resolved', FP_A],
+      ['unresolved', null],
+    ]);
+  });
+
+  it('keeps an attempt that straddles a context change bound to its own identity and generation', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    let context = 'context-a';
+    const work = deferred<Report>();
+    const read = vi
+      .fn()
+      .mockImplementationOnce(async (probe: AssessmentProbe) => {
+        probe.target(FP_A);
+        return work.promise;
+      })
+      .mockImplementation(async (probe: AssessmentProbe) => {
+        probe.target(FP_B);
+        return green;
+      });
+    create(
+      read,
+      () => context,
+      event => events.push(event),
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    context = 'context-b';
+    monitor.getSnapshot();
+    work.resolve(green);
+    await vi.advanceTimersByTimeAsync(1);
+    const discarded = events.find(
+      event => event.event === 'assessment-completed' && event.reason === 'context-changed',
+    )!;
+    expect(discarded).toMatchObject({
+      targetFingerprintHash: FP_A,
+      assessmentGeneration: 0,
+      contextGeneration: 1,
+    });
+    const next = events.find(
+      event => event.event === 'assessment-completed' && event.reason === 'ready',
+    )!;
+    expect(next).toMatchObject({
+      targetFingerprintHash: FP_B,
+      assessmentGeneration: 1,
+      contextGeneration: 1,
+      trigger: 'scheduled',
+    });
+    expect(next.assessmentId).not.toBe(discarded.assessmentId);
+  });
+
+  it('names the unfinished stage when a fresh snapshot expires during a pending verification', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const hang = deferred<Report>();
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce(green)
+      .mockImplementation(async (probe: AssessmentProbe) => {
+        probe.target(FP_A);
+        probe.begin('connect');
+        probe.end('connect', 'ok');
+        probe.begin('verify');
+        return hang.promise;
+      });
+    create(read, undefined, event => events.push(event));
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(monitor.getSnapshot()).toBeNull();
+    const expired = events.find(
+      event => event.event === 'snapshot-unavailable' && event.reason === 'expired',
+    )!;
+    expect(expired).toMatchObject({
+      inFlight: true,
+      activeStage: 'verify',
+      targetFingerprintHash: FP_A,
+      snapshotAgeMs: 30_000,
+      stages: [
+        { name: 'connect', durationMs: 0, outcome: 'ok' },
+        { name: 'verify', durationMs: null, outcome: null },
+      ],
+    });
+    hang.resolve(green);
+    await vi.advanceTimersByTimeAsync(0);
+  });
+
+  it('attributes a thrown assessment to the stage that threw and keeps the verdict when cleanup fails', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    create(
+      async probe => {
+        probe.target(FP_A);
+        probe.begin('verify');
+        probe.end('verify', 'ok');
+        notReadyProbe(probe);
+        probe.begin('cleanup');
+        probe.end('cleanup', 'threw');
+        throw new Error('driver close failed');
+      },
+      undefined,
+      event => events.push(event),
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    const threw = events.find(event => event.event === 'assessment-threw')!;
+    expect(threw).toMatchObject({
+      reason: 'assessment-threw',
+      activeStage: null,
+      verdict: {
+        applicationReady: false,
+        notReadyLayers: [{ layer: 'targetConnectivity', code: 'database-unreachable' }],
+      },
+      stages: [
+        { name: 'verify', outcome: 'ok' },
+        { name: 'cleanup', outcome: 'threw' },
+      ],
+    });
+    expect(JSON.stringify(events)).not.toContain('driver close failed');
+  });
+
+  it('one slow refresh expires a fresh snapshot before it completes', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const slow = deferred<Report>();
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce(green)
+      .mockImplementationOnce(async (probe: AssessmentProbe) => {
+        probe.begin('verify');
+        return slow.promise;
+      });
+    create(read, undefined, event => events.push(event));
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    // Scheduled at 5s: duration 0 gives a 5s delay. The slow sweep starts at 5s, its
+    // previous snapshot (started at 0s) expires at 30s, and this sweep completes at 31s.
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(monitor.getSnapshot()).toBeNull();
+    const expired = events.find(
+      event => event.event === 'snapshot-unavailable' && event.reason === 'expired',
+    )!;
+    expect(expired).toMatchObject({
+      inFlight: true,
+      trigger: 'scheduled',
+      scheduledStartAt: 5_000,
+      startLagMs: 0,
+      activeStage: 'verify',
+    });
+    await vi.advanceTimersByTimeAsync(1_000);
+    slow.resolve(green);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(monitor.getSnapshot()).toEqual(green);
+  });
+
+  it('records scheduled refresh lateness separately from the scheduled delay', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    let clock = 0;
+    monitor = new ReadinessSnapshotMonitor({
+      read: async () => green,
+      contextKey: () => 'azure-a',
+      maxAgeMs: 30_000,
+      refreshDelayMs: 5_000,
+      now: () => clock,
+      observe: event => events.push(event),
+      classify: value => (value.ready ? 'ready' : 'not-ready'),
+    });
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    // The timer is due at 5s on the scheduling clock; the loop runs it when the clock reads 5.3s.
+    clock = 5_300;
+    await vi.advanceTimersByTimeAsync(5_000);
+    const scheduled = events.find(
+      event => event.event === 'assessment-started' && event.trigger === 'scheduled',
+    )!;
+    expect(scheduled).toMatchObject({
+      scheduledStartAt: 5_000,
+      scheduledDelayMs: 5_000,
+      startLagMs: 300,
+      assessmentStartedAt: 5_300,
+    });
+  });
+
+  it('a probe that cannot observe (clock failure) leaves a green assessment publishable', async () => {
+    let clock = 0;
+    let breakClock = false;
+    monitor = new ReadinessSnapshotMonitor({
+      read: async probe => {
+        breakClock = true;
+        probe.begin('verify');
+        breakClock = false;
+        return green;
+      },
+      contextKey: () => 'azure-a',
+      maxAgeMs: 30_000,
+      refreshDelayMs: 5_000,
+      now: () => {
+        if (breakClock) throw new Error('clock unavailable');
+        return clock;
+      },
+      classify: value => (value.ready ? 'ready' : 'not-ready'),
+    });
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(monitor.getSnapshot()).toEqual(green);
   });
 });
