@@ -1,0 +1,90 @@
+{
+  "candidateSha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e",
+  "baseSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "testedMergeSha": "895b649fd06aa2b5e5097c55220026139bf34c54",
+  "candidateAndMergeTree": "9839a1d085edd6fcdc4786125cba54e4c29fd4ef",
+  "integrationChanges": false,
+  "ci": {
+    "conclusion": "success",
+    "created_at": "2026-10-08T10:26:11Z",
+    "event": "pull_request",
+    "head_sha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e",
+    "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694",
+    "id": 37763446694,
+    "name": "CI Pipeline",
+    "pull_requests": [
+      {
+        "base": {
+          "ref": "main",
+          "repo": {
+            "id": 1090889528,
+            "name": "real_estate_portal",
+            "url": "https://api.github.com/repos/Doscoding187/real_estate_portal"
+          },
+          "sha": "7756376c9ec604b352595b4e4ba8ced73f18562b"
+        },
+        "head": {
+          "ref": "feat/place-authority-slice0-decision",
+          "repo": {
+            "id": 1090889528,
+            "name": "real_estate_portal",
+            "url": "https://api.github.com/repos/Doscoding187/real_estate_portal"
+          },
+          "sha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e"
+        },
+        "id": 4780887425,
+        "number": 594,
+        "url": "https://api.github.com/repos/Doscoding187/real_estate_portal/pulls/594"
+      }
+    ],
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-10-08T10:53:27Z"
+  },
+  "jobs": [
+    {
+      "completed_at": "2026-10-08T10:26:43Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694/job/113265215991",
+      "id": 113265215991,
+      "name": "Location Authority",
+      "started_at": "2026-10-08T10:26:13Z"
+    },
+    {
+      "completed_at": "2026-10-08T10:30:15Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694/job/113265216324",
+      "id": 113265216324,
+      "name": "DB Contract Verification",
+      "started_at": "2026-10-08T10:26:14Z"
+    },
+    {
+      "completed_at": "2026-10-08T10:33:56Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694/job/113266681157",
+      "id": 113266681157,
+      "name": "Lint & TypeCheck",
+      "started_at": "2026-10-08T10:30:18Z"
+    },
+    {
+      "completed_at": "2026-10-08T10:53:26Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694/job/113266681160",
+      "id": 113266681160,
+      "name": "Unit & Integration Tests",
+      "started_at": "2026-10-08T10:30:18Z"
+    },
+    {
+      "completed_at": "2026-10-08T10:34:59Z",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37763446694/job/113268026497",
+      "id": 113268026497,
+      "name": "Build Application",
+      "started_at": "2026-10-08T10:33:58Z"
+    }
+  ],
+  "prRemainsDraft": true,
+  "vercelPreview": "failure; separate unresolved preview deployment",
+  "hostedBrowserProof": false,
+  "browserProof": "Existing local North Riding browser outcome and separately mocked responsive navigation packets; this hosted record does not claim a hosted browser run."
+}
