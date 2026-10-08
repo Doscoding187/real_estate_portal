@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:scenario:verify /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts scenario:verify
+
+Governed contained scenario fixtures require the test runtime.
+ ELIFECYCLE  Command failed with exit code 1.

@@ -10,6 +10,7 @@ import {
   validateListingRecordLocation,
 } from '../services/listingLocationResolver';
 import { isSpatialLocationAction } from '../../shared/location-contract';
+import { canonicalListingLocationSchema } from '../../shared/canonicalListingLocation';
 
 const manualUrbanListing = {
   propertyType: 'house',
@@ -54,7 +55,27 @@ describe('PLE-6C manual location correction', () => {
   });
 
   it('does not report Map Location for a valid confirmed manual listing', () => {
-    const readiness = calculateListingReadiness(manualUrbanListing);
+    const location = canonicalListingLocationSchema.parse({
+      version: 2,
+      // Admitted North Riding identity; the address is private evidence only.
+      canonicalPlaceId: 'pl-place-01-6a145c6d642ba208a2c12de7',
+      privateAddress: { streetNumber: '5', streetName: 'Congo Street', postalCode: '2169' },
+      coordinates: null,
+      coordinateSource: 'manual_confirmed',
+      locationConfirmationState: 'confirmed',
+      publicLocationPrecision: 'approximate',
+      providerObservation: null,
+    });
+    const readiness = calculateListingReadiness({
+      propertyType: manualUrbanListing.propertyType,
+      title: manualUrbanListing.title,
+      description: manualUrbanListing.description,
+      propertyDetails: manualUrbanListing.propertyDetails,
+      action: manualUrbanListing.action,
+      pricing: manualUrbanListing.pricing,
+      media: manualUrbanListing.media,
+      location,
+    });
     expect(readiness.missing.location).not.toContain('Map Location');
     expect(readiness.missing.location).toEqual([]);
   });

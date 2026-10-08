@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:ack /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:ack
+
+{
+  "operation": "database-dispose",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "acknowledgement": "CONFIRM_DATABASE_DISPOSE_d6a578f82a01027c"
+}

@@ -42,17 +42,37 @@ function rowsOf(result: unknown): Record<string, unknown>[] {
   return Array.isArray(result) ? (result as Record<string, unknown>[]) : [];
 }
 
-async function placeByPreferredName(name: string): Promise<string | null> {
+// These identities are pinned in the admitted Gauteng package. Display names
+// alone are not unique in a national dataset and must never pick the first row.
+const requiredPlaces = {
+  Gauteng: 'pl-place-01-131e3e75ad70424e0f9c869a',
+  Lyttelton: 'pl-place-01-1a30ae4d635ef747d6c987df',
+  Bryanston: 'pl-place-01-f175328139bb845a4645b9d4',
+  Soweto: 'pl-place-01-99b91be60755ea1f09bf6349',
+  Sandton: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+  'North Riding': 'pl-place-01-6a145c6d642ba208a2c12de7',
+} as const;
+const requiredOsmPlaceId = 'pl-place-01-00a8aa324ee0aabf33eb3c71';
+const requiredDiepkloofPlaceIds = [
+  'pl-place-01-27a63c126cf908282985f8d5',
+  'pl-place-01-e417e2e8049345e728be0ad2',
+] as const;
+
+async function placeByPreferredName(name: keyof typeof requiredPlaces): Promise<string> {
   const db = await getDb();
   const result = await db.execute(sql`
     SELECT p.place_id AS placeId
     FROM place p
     JOIN place_name n ON n.place_id = p.place_id
-    WHERE n.name = ${name} AND n.name_role = 'preferred_public' AND n.name_state = 'active'
-    LIMIT 1
+    WHERE p.place_id = ${requiredPlaces[name]} AND n.name = ${name}
+      AND n.name_role = 'preferred_public' AND n.name_state = 'active'
   `);
   const rows = rowsOf(result);
-  return rows.length > 0 ? String(rows[0].placeId) : null;
+  expect(
+    rows,
+    `Required admitted ${name} identity must have exactly one active preferred name`,
+  ).toHaveLength(1);
+  return String(rows[0].placeId);
 }
 
 /**
@@ -92,12 +112,31 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     await getDb();
   });
 
-  it('resolves an exact preferred name to exactly one canonical Place', async () => {
+  it('requires the admitted Place fixture identities', async () => {
+    const db = await getDb();
+    const requiredIds = [
+      ...Object.values(requiredPlaces),
+      requiredOsmPlaceId,
+      ...requiredDiepkloofPlaceIds,
+    ];
+    const installed = await db.select({ id: place.placeId }).from(place);
+    const installedIds = new Set(installed.map(row => row.id));
+    const missing = requiredIds.filter(id => !installedIds.has(id));
+    expect(
+      missing,
+      'Missing admitted Gauteng Place fixtures: prepare and verify db:places with --territory=za-gp before dependent tests',
+    ).toEqual([]);
+    for (const name of Object.keys(requiredPlaces) as (keyof typeof requiredPlaces)[]) {
+      expect(await placeByPreferredName(name)).toBe(requiredPlaces[name]);
+    }
+  });
+
+  it('refuses to collapse an ambiguous exact preferred name to one canonical Place', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
     // "Diepkloof" is two distinct admitted Places, so this must be ambiguous
     // rather than collapsed to the first row the database happened to return.
-    expect(['resolved', 'ambiguous']).toContain(response.outcome);
-    expect(response.results.length).toBeGreaterThan(0);
+    expect(response.outcome).toBe('ambiguous');
+    expect(response.results).toHaveLength(2);
     for (const result of response.results) {
       expect(result.placeId).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
       expect(result.searchScope).not.toBeNull();
@@ -107,6 +146,7 @@ describe('Slice 3: discovery resolves canonical identity', () => {
   it('returns distinct canonical identities for the two admitted Diepkloof Places', async () => {
     const response = await discoverPlaces('Diepkloof', { recordCoverage: false });
     const ids = new Set(response.results.map(r => r.placeId));
+    expect([...ids].sort()).toEqual([...requiredDiepkloofPlaceIds].sort());
     expect(ids.size).toBe(response.results.length);
   });
 
@@ -152,21 +192,22 @@ describe('Slice 3: discovery resolves canonical identity', () => {
     const db = await getDb();
     const osmOnly = await db.execute(sql`
       SELECT p.place_id AS placeId, p.verification_status AS verificationStatus,
-             p.publication_eligible AS publicationEligible
+             p.search_eligible AS searchEligible, p.publication_eligible AS publicationEligible,
+             p.licensing_classification AS licensingClassification
       FROM place p
-      WHERE p.search_eligible = 1 AND p.publication_eligible = 0
-      LIMIT 1
+      WHERE p.place_id = ${requiredOsmPlaceId}
     `);
-    const rows = osmOnly as unknown as {
-      placeId: string;
-      verificationStatus: string;
-      publicationEligible: number;
-    }[];
-    if (rows.length === 0) return; // dataset without ODbL-only Places
+    const rows = rowsOf(osmOnly);
+    expect(rows, 'Required admitted disposable OSM-only fixture is absent').toHaveLength(1);
+    expect(rows[0].placeId).toBe(requiredOsmPlaceId);
+    expect(rows[0].licensingClassification).toBe('osm_only_odbl_provisional');
+    expect(Number(rows[0].searchEligible)).toBe(1);
+    expect(Number(rows[0].publicationEligible)).toBe(0);
+    expect(rows[0].verificationStatus).toBe('provisional');
     expect(
       isPublishable({
-        publicationEligible: rows[0].publicationEligible === 1,
-        verificationStatus: rows[0].verificationStatus,
+        publicationEligible: Number(rows[0].publicationEligible) === 1,
+        verificationStatus: String(rows[0].verificationStatus),
         lifecycleStatus: 'active',
       }),
     ).toBe(false);
@@ -190,7 +231,11 @@ describe('Slice 3: no-result and ambiguity produce governed evidence', () => {
     expect(response.coverageSignal).not.toBeNull();
 
     const after = await db
-      .select({ id: placeEvidence.id, subject: placeEvidence.subject, priority: placeEvidence.researchPriority })
+      .select({
+        id: placeEvidence.id,
+        subject: placeEvidence.subject,
+        priority: placeEvidence.researchPriority,
+      })
       .from(placeEvidence)
       .where(isNull(placeEvidence.placeId));
     expect(after.length).toBeGreaterThan(before.length);
@@ -350,11 +395,13 @@ describe('Slice 3: canonical execution is exact and fail-closed', () => {
     // ancestors. A Place legitimately occupies two roles at once — a
     // locality-scoped Place is both the selected Place and the locality level — so
     // the self-reference is the only permitted repetition.
-    const ancestorIds = new Set([
-      ...result.execution.contextAncestorPlaceIds,
-      result.execution.provincePlaceId,
-      result.execution.cityPlaceId,
-    ].filter((value): value is string => Boolean(value) && value !== placeId));
+    const ancestorIds = new Set(
+      [
+        ...result.execution.contextAncestorPlaceIds,
+        result.execution.provincePlaceId,
+        result.execution.cityPlaceId,
+      ].filter((value): value is string => Boolean(value) && value !== placeId),
+    );
     const otherRoles = [
       result.execution.provincePlaceId,
       result.execution.cityPlaceId,
@@ -404,7 +451,8 @@ describe('Slice 3: canonical execution is exact and fail-closed', () => {
     const provinces = rowsOf(
       await db.execute(sql`
         SELECT place_id AS placeId FROM place
-        WHERE search_scope = 'province' AND search_eligible = 1
+        WHERE place_id = ${requiredPlaces.Gauteng}
+          AND search_scope = 'province' AND search_eligible = 1
       `),
     );
     expect(provinces.length).toBe(1);
@@ -424,15 +472,8 @@ describe('Slice 3: canonical execution is exact and fail-closed', () => {
       await db.execute(sql`
         SELECT p.place_id AS placeId
         FROM place p
-        WHERE p.search_scope = 'metro_city' AND p.search_eligible = 1
-          AND EXISTS (
-            SELECT 1 FROM place_relationship r
-            JOIN place a ON a.place_id = r.to_place_id
-            WHERE r.from_place_id = p.place_id
-              AND r.relationship_type = 'administratively_contains'
-              AND a.search_scope = 'province'
-          )
-        LIMIT 1
+        WHERE p.place_id = ${requiredPlaces.Soweto}
+          AND p.search_scope = 'metro_city' AND p.search_eligible = 1
       `),
     );
     expect(rows.length).toBe(1);
@@ -440,44 +481,52 @@ describe('Slice 3: canonical execution is exact and fail-closed', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.execution.scope).toBe('metro_city');
-      expect(result.execution.provincePlaceId).toMatch(/^pl-place-01-[a-f0-9]{24}$/);
+      // Soweto's evidenced province is reached through municipality context.
+      // The canonical executor validates that chain; a direct province edge
+      // is not required and must never be manufactured for this fixture.
+      expect(result.execution.provincePlaceId).toBe(requiredPlaces.Gauteng);
     }
   });
 
-  it('executes every single search-eligible Place deterministically', { timeout: 300_000 }, async () => {
-    // The exhaustive proof behind the Slice 2 hierarchy repair: not a sample, but
-    // every Place the materializer certifies as search-eligible must resolve to a
-    // real scope, and resolving it twice must give the identical answer.
-    const db = await getDb();
-    const eligible = rowsOf(
-      await db.execute(sql`
+  it(
+    'executes every single search-eligible Place deterministically',
+    { timeout: 300_000 },
+    async () => {
+      // The exhaustive proof behind the Slice 2 hierarchy repair: not a sample, but
+      // every Place the materializer certifies as search-eligible must resolve to a
+      // real scope, and resolving it twice must give the identical answer.
+      const db = await getDb();
+      const eligible = rowsOf(
+        await db.execute(sql`
         SELECT place_id AS placeId FROM place WHERE search_eligible = 1 ORDER BY place_id
       `),
-    );
-    expect(eligible.length).toBeGreaterThan(0);
-    const refusals: { placeId: string; reason: string }[] = [];
-    let resolved = 0;
-    for (const row of eligible) {
-      const placeId = String(row.placeId);
-      const first = await executePlace(placeId);
-      if (!first.ok) {
-        refusals.push({ placeId, reason: first.reason });
-        continue;
+      );
+      expect(eligible.length).toBeGreaterThan(0);
+      const refusals: { placeId: string; reason: string }[] = [];
+      let resolved = 0;
+      for (const row of eligible) {
+        const placeId = String(row.placeId);
+        const first = await executePlace(placeId);
+        if (!first.ok) {
+          refusals.push({ placeId, reason: first.reason });
+          continue;
+        }
+        const second = await executePlace(placeId);
+        expect(second.ok, `${placeId} resolved once and failed on rerun`).toBe(true);
+        if (second.ok) {
+          // Deterministic: the same identity yields byte-identical execution.
+          expect(JSON.stringify(second.execution)).toBe(JSON.stringify(first.execution));
+        }
+        resolved += 1;
       }
-      const second = await executePlace(placeId);
-      expect(second.ok, `${placeId} resolved once and failed on rerun`).toBe(true);
-      if (second.ok) {
-        // Deterministic: the same identity yields byte-identical execution.
-        expect(JSON.stringify(second.execution)).toBe(JSON.stringify(first.execution));
-      }
-      resolved += 1;
-    }
-    // A single certified-but-unexecutable Place would be a contract breach.
-    expect(refusals, `search-eligible Places that could not execute: ${JSON.stringify(refusals)}`).toEqual(
-      [],
-    );
-    expect(resolved).toBe(eligible.length);
-  });
+      // A single certified-but-unexecutable Place would be a contract breach.
+      expect(
+        refusals,
+        `search-eligible Places that could not execute: ${JSON.stringify(refusals)}`,
+      ).toEqual([]);
+      expect(resolved).toBe(eligible.length);
+    },
+  );
 
   it('refuses a Place that does not exist', async () => {
     const result = await executePlace('pl-place-01-000000000000000000000000');

@@ -1,0 +1,90 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008/server/__tests__/integration.agency-canvassing-mvp.test.ts
+   39:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   49:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   70:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   96:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  174:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  187:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008/server/__tests__/integration.agency-listing-attribution.test.ts
+   72:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   91:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  119:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  173:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  177:72  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  189:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008/server/__tests__/integration.agency-listing-performance-mvp.test.ts
+   10:10  warning  'and' is defined but never used. Allowed unused vars must match /^_/u              @typescript-eslint/no-unused-vars
+   39:10  warning  'usesListifyTest' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   70:23  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+   78:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+   98:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  118:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  132:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  156:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  161:77  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  179:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  218:10  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  238:8   warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  311:12  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  314:91  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  349:35  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  361:39  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  365:69  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  398:10  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  418:10  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  442:12  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  450:10  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  474:49  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  521:39  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  529:50  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  532:46  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  539:53  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  580:16  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  678:10  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008/server/__tests__/integration.agency-membership-authority.test.ts
+    90:7   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+    91:28  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   120:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   148:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   163:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   176:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   258:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   278:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   302:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   318:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   372:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   383:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   398:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   411:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   437:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   445:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   704:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1079:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1099:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1203:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1224:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1286:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1349:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1350:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1361:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1362:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1369:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1370:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1613:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008/server/__tests__/integration.agent-launch-journey.test.ts
+   54:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  141:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  176:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  201:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  227:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  346:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  395:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 77 problems (0 errors, 77 warnings)
+

@@ -1,3 +1,7 @@
+import {
+  canonicalPlaceFixtureLocation,
+  CANONICAL_PLACE_FIXTURE_ID,
+} from './helpers/canonicalPlaceFixture';
 import { randomUUID } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -771,7 +775,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       });
     }
 
-    const title = `Reviewable Sandton family home ${suffix}`;
+    const title = `Reviewable North Riding family home ${suffix}`;
     const description =
       'A reviewable family home with verified private address details, clear pricing, and enough context for a reviewer to assess the agency inventory.';
     const listingInput = {
@@ -789,26 +793,7 @@ describeWithDb('agency full operating journey acceptance', () => {
           erfArea: { status: 'known', valueM2: 620, unit: 'm2' },
         },
       },
-      location: {
-        address: '18 Review Avenue',
-        latitude: -26.1076,
-        longitude: 28.0567,
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
-        postalCode: '2196',
-        provinceId: Number(location.provinceId),
-        cityId: Number(location.cityId),
-        suburbId: Number(location.suburbId),
-        privateAddress: {
-          streetNumber: '18',
-          streetName: 'Review Avenue',
-          postalCode: '2196',
-        },
-        coordinateSource: 'manual_confirmed' as const,
-        locationConfirmationState: 'confirmed' as const,
-        publicLocationPrecision: 'approximate' as const,
-      },
+      location: await canonicalPlaceFixtureLocation('18 Review Avenue'),
       mediaIds: mediaManifest.map(item => item.id),
       mainMediaId: mediaManifest[0].id,
       media: mediaManifest,
@@ -1025,6 +1010,7 @@ describeWithDb('agency full operating journey acceptance', () => {
         status: properties.status,
         ownerId: properties.ownerId,
         agentId: properties.agentId,
+        canonicalPlaceId: properties.canonicalPlaceId,
         provinceId: properties.provinceId,
         cityId: properties.cityId,
         suburbId: properties.suburbId,
@@ -1034,13 +1020,14 @@ describeWithDb('agency full operating journey acceptance', () => {
       .limit(1);
     expect(property).toMatchObject({
       sourceListingId: created.listingId,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       title: `${title} — corrected`,
       status: 'available',
       ownerId: member.id,
       agentId: created.agentId,
-      provinceId: Number(location.provinceId),
-      cityId: Number(location.cityId),
-      suburbId: Number(location.suburbId),
+      provinceId: null,
+      cityId: null,
+      suburbId: null,
     });
     if (!property)
       throw new Error('Approval did not create the canonical public property projection.');
@@ -1056,7 +1043,7 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(publicDetail.property).toMatchObject({
       id: Number(property.id),
       title: `${title} — corrected`,
-      city: 'Johannesburg',
+      city: '',
       province: 'Gauteng',
       publicIdentity: {
         role: 'agent',
@@ -1069,9 +1056,10 @@ describeWithDb('agency full operating journey acceptance', () => {
     expect(publicDetail.property.detailPresentation.location).toMatchObject({
       precision: 'approximate',
     });
-    expect(publicDetail.property.detailPresentation.location.label).toContain('Sandton');
+    expect(publicDetail.property.detailPresentation.location.label).toContain('North Riding');
 
-    const publicSearch = await publicApi.properties.searchPublicInventory.query({
+    // Legacy numeric geography must never bridge into canonical Place inventory.
+    const legacyScopedSearch = await publicApi.properties.searchPublicInventory.query({
       locationId: canonicalSuburbId,
       propertyType: 'house',
       listingType: 'sale',
@@ -1079,22 +1067,19 @@ describeWithDb('agency full operating journey acceptance', () => {
       page: 0,
       pageSize: 50,
     });
-    expect(publicSearch).toMatchObject({
-      locationState: 'resolved',
-      locationContext: {
-        type: 'suburb',
-        name: 'Sandton',
-        slug: 'sandton',
-        confidence: 'exact',
-        fallbackLevel: 'none',
-        hierarchy: { province: 'Gauteng', city: 'Johannesburg', suburb: 'Sandton' },
-        ids: {
-          provinceId: Number(location.provinceId),
-          cityId: Number(location.cityId),
-          suburbId: Number(location.suburbId),
-        },
-      },
+    expect(legacyScopedSearch.cards.some(card => card.propertyId === Number(property.id))).toBe(
+      false,
+    );
+    // This proves publication visibility only. Place-filtered public search is a
+    // separately recorded acceptance gap, not a label/numeric-ID fallback.
+    const publicSearch = await publicApi.properties.searchPublicInventory.query({
+      propertyType: 'house',
+      listingType: 'sale',
+      listingSource: 'manual',
+      page: 0,
+      pageSize: 50,
     });
+    expect(publicSearch.locationState).toBe('not_requested');
     const publicCard = publicSearch.cards.find(
       card => card.propertyId === Number(property.id) || card.title === `${title} — corrected`,
     );
@@ -1102,8 +1087,9 @@ describeWithDb('agency full operating journey acceptance', () => {
       kind: 'property',
       propertyId: Number(property.id),
       title: `${title} — corrected`,
-      city: 'Johannesburg',
-      suburb: 'Sandton',
+      city: '',
+      // Public card locality projection is still a separate Place-consumer gap.
+      suburb: '',
       province: 'Gauteng',
       propertyType: 'house',
       listingType: 'sale',
@@ -1119,7 +1105,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       name: `Prospect ${suffix}`,
       email: `prospect-${suffix}@example.test`,
       phone: '+27825550199',
-      message: 'Please arrange a viewing for this Sandton home.',
+      message: 'Please arrange a viewing for this North Riding home.',
       leadType: 'inquiry' as const,
       source: 'property_detail',
       leadSource: 'property_detail',
@@ -1171,7 +1157,7 @@ describeWithDb('agency full operating journey acceptance', () => {
       agentId: created.agentId,
       name: `Prospect ${suffix}`,
       email: `prospect-${suffix}@example.test`,
-      message: 'Please arrange a viewing for this Sandton home.',
+      message: 'Please arrange a viewing for this North Riding home.',
       captureRequestId: enquiryInput.captureRequestId,
       consentVersion: 'launch-privacy-1',
       consentSource: 'property_detail_contact_modal',

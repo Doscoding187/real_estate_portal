@@ -1,0 +1,90 @@
+{
+  "completedAt": "2026-10-08T09:08:19.039944+00:00",
+  "classification": "database-consumer-and-fixture",
+  "phase": "handoff",
+  "branch": "fix/geography-ci-senior-20261008",
+  "baseHead": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+  "observedOriginMain": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "sourceHashesUnchangedDuringFinalVerification": true,
+  "schemaAuthorityChanged": false,
+  "targetClass": "disposable-worktree",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "freshMigrations": 112,
+  "migrationHead": "0111_properties_canonical_place_reference_fk.sql",
+  "pendingMigrationsAfterTests": 0,
+  "incompleteAttemptsAfterTests": 0,
+  "schemaCongruent": true,
+  "schemaDigest": "a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97",
+  "checksEnforced": 39,
+  "tests": {
+    "finalServer": {
+      "exit": 0,
+      "passedFiles": 429,
+      "skippedFiles": 8,
+      "passedTests": 3082,
+      "skippedTests": 66,
+      "failedTests": 0
+    },
+    "placeCommand": {
+      "exit": 0,
+      "passedTests": 18,
+      "databaseSetup": false
+    },
+    "freshRoleSession": {
+      "exit": 0,
+      "passedTests": 5
+    },
+    "freshFounder": {
+      "exit": 0,
+      "passedTests": 10
+    },
+    "correctedAndTimeoutCases": {
+      "exit": 0,
+      "passedFiles": 5,
+      "passedTests": 90
+    },
+    "staticAuthorityGate": {
+      "exit": 0,
+      "passedFiles": 59,
+      "passedTests": 688
+    }
+  },
+  "requiredProductionTypecheck": {
+    "command": "pnpm check",
+    "exit": 0
+  },
+  "fullLint": {
+    "command": "pnpm lint:check",
+    "exit": 0
+  },
+  "finalScopedLint": {
+    "exit": 0
+  },
+  "changedSourceFormatting": {
+    "exit": 0
+  },
+  "build": {
+    "command": "pnpm build",
+    "exit": 0
+  },
+  "optionalFullRepositoryTypecheck": {
+    "completed": false,
+    "reason": "stopped during host memory exhaustion; no result claimed"
+  },
+  "postTestDataVerifiers": {
+    "reference": 0,
+    "places": 0,
+    "foundation": 0,
+    "scenarioTestRuntime": 0
+  },
+  "disposableTargetDisposed": true,
+  "sharedService": "pre-existing and left available",
+  "protectedOrRemoteDatabaseAccess": false,
+  "schemaOrDataRepair": false,
+  "hostedRunOrPushOrMergeOrDeployment": false,
+  "openLaunchDependencies": [
+    "Place-filtered public inventory search",
+    "Canonical Place locality projection on public search cards",
+    "Reviewed exact-commit hosted CI and protected release acceptance"
+  ]
+}

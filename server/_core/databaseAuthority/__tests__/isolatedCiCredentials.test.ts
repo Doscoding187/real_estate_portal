@@ -127,4 +127,24 @@ describe('isolated CI physical credential boundary', () => {
     expect(workflow).toContain('export DATABASE_URL="${DATABASE_MIGRATION_URL}"');
     expect(workflow).toContain('export DATABASE_URL="${DATABASE_VERIFIER_URL}"');
   });
+
+  it('proves fresh authority before the admitted Place fixtures and dependent journeys', () => {
+    const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    const orderedSteps = [
+      'Verify role and session authority before reviewer fixtures',
+      'Verify founder identity authority before reviewer fixtures',
+      'Prepare canonical disposable reference data',
+      'Prepare admitted Place integration fixtures',
+      'Verify admitted Place integration fixtures',
+      'Require dependent admitted Place identities',
+      'Prepare canonical disposable foundation data',
+      'Prepare canonical disposable scenario data',
+      'Run tests',
+    ].map(name => workflow.indexOf(`- name: ${name}`));
+    expect(orderedSteps.every(position => position >= 0)).toBe(true);
+    expect(orderedSteps).toEqual([...orderedSteps].sort((left, right) => left - right));
+    expect(workflow).toContain('pnpm db:places:prepare -- --territory=za-gp');
+    expect(workflow).toContain('pnpm db:places:verify -- --territory=za-gp');
+    expect(workflow).toContain('pnpm vitest run --project place-command');
+  });
 });

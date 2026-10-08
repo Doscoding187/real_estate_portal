@@ -1,0 +1,57 @@
+
+> real_estate_portal@1.0.0 db:authority:context /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts context
+
+{
+  "contextVersion": 1,
+  "contextId": "8cba4758-fc16-4bd8-bff8-311750ecd08d",
+  "correlationId": "d3a154ef-640c-47af-a98d-cf15639139d7",
+  "resolvedAt": "2026-10-08T09:05:51.445Z",
+  "operation": "read-only-connect",
+  "runtimeMode": "development",
+  "environmentSource": "worktree-profile",
+  "environmentFiles": [
+    "/home/edwardspc/.config/property-listify/local.env"
+  ],
+  "targetFingerprint": "mysql://127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+  "host": "127.0.0.1",
+  "port": "3307",
+  "provider": "mysql",
+  "dialect": "mysql",
+  "local": true,
+  "tls": {
+    "required": false,
+    "certificateVerificationRequired": false
+  },
+  "credentialClass": "local-owner",
+  "credentialSource": "database-url",
+  "repository": {
+    "root": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008",
+    "gitCommonDirectoryFingerprint": "93fc65e6eeca51305b9e499eb130579e323d5501ceaa87cb76c4b5665185d04f",
+    "head": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd"
+  },
+  "worktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008",
+    "branch": "fix/geography-ci-senior-20261008",
+    "upstream": null,
+    "registered": true,
+    "clean": false,
+    "ownershipKey": "415473525d2afa0f75f14719",
+    "expectedDatabase": "listify_wt_geography_ci_senior_20261008_415473525d2a",
+    "ownershipMatches": true,
+    "cleanMainOwnershipMatches": false
+  },
+  "localService": {
+    "applicability": "local",
+    "host": "127.0.0.1",
+    "port": "3307",
+    "directory": "/var/tmp/property-listify-1000/mysql-3307",
+    "dataDirectory": "/var/tmp/property-listify-1000/mysql-3307/data",
+    "fingerprint": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "legacyHomeDirectory": "/home/edwardspc/.config/property-listify/mysql-3307",
+    "legacyPathPolicy": "inactive-residue-only; never adopted or deleted automatically"
+  }
+}

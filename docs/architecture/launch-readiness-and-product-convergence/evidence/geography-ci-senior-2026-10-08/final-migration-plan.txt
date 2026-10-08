@@ -1,0 +1,16 @@
+
+> real_estate_portal@1.0.0 db:migrate:plan /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts migration:plan
+
+{
+  "mode": "plan",
+  "planId": "c5605a21e8a979bfcc3b314c",
+  "planDigest": "c5605a21e8a979bfcc3b314c6158c7d77ef4af0f2615b04fea440840f5cc0206",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "acceptedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+  "pending": [],
+  "expectedNewHead": "0111_properties_canonical_place_reference_fk.sql",
+  "lock": null,
+  "applied": [],
+  "freshSessionEvidence": null
+}

@@ -1,0 +1,205 @@
+{
+  "captured_at": "2026-10-08T03:16:09.680207+00:00",
+  "approved_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+  "pr": {
+    "number": 594,
+    "url": "https://github.com/Doscoding187/real_estate_portal/pull/594",
+    "draft": true,
+    "state": "open",
+    "head": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+    "base": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+    "merge_ref": "22683c974a9efc4e99022a184cd22adf708e6e7b",
+    "auto_merge": null,
+    "merged": false
+  },
+  "tree_binding": {
+    "candidate_tree": "b072bbba997821ed186d26ec82731956f29dd43d",
+    "merge_tree": "b072bbba997821ed186d26ec82731956f29dd43d",
+    "identical": true,
+    "merge_parents": [
+      "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd"
+    ]
+  },
+  "runs": [
+    {
+      "id": 37719600819,
+      "name": "CI Pipeline",
+      "event": "pull_request",
+      "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:47:32Z",
+      "updated_at": "2026-10-08T03:14:13Z",
+      "jobs": [
+        {
+          "id": 113123964517,
+          "name": "DB Contract Verification",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819/job/113123964517",
+          "started_at": "2026-10-08T02:47:34Z",
+          "completed_at": "2026-10-08T02:51:36Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113123964732,
+          "name": "Location Authority",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819/job/113123964732",
+          "started_at": "2026-10-08T02:47:34Z",
+          "completed_at": "2026-10-08T02:48:05Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113125011716,
+          "name": "Lint & TypeCheck",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819/job/113125011716",
+          "started_at": "2026-10-08T02:51:41Z",
+          "completed_at": "2026-10-08T02:54:04Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113125011720,
+          "name": "Unit & Integration Tests",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819/job/113125011720",
+          "started_at": "2026-10-08T02:51:41Z",
+          "completed_at": "2026-10-08T03:14:12Z",
+          "failed_steps": [
+            "Run tests"
+          ]
+        },
+        {
+          "id": 113125626606,
+          "name": "Build Application",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600819/job/113125626606",
+          "started_at": "2026-10-08T02:54:06Z",
+          "completed_at": "2026-10-08T02:55:06Z",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37719600834,
+      "name": "Frontend Build Guard",
+      "event": "pull_request",
+      "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600834",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:47:32Z",
+      "updated_at": "2026-10-08T02:48:28Z",
+      "jobs": [
+        {
+          "id": 113123964440,
+          "name": "Build Frontend",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719600834/job/113123964440",
+          "started_at": "2026-10-08T02:47:34Z",
+          "completed_at": "2026-10-08T02:48:27Z",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37719597248,
+      "name": "Frontend Build Guard",
+      "event": "push",
+      "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719597248",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:47:29Z",
+      "updated_at": "2026-10-08T02:48:34Z",
+      "jobs": [
+        {
+          "id": 113123954592,
+          "name": "Build Frontend",
+          "head_sha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37719597248/job/113123954592",
+          "started_at": "2026-10-08T02:47:32Z",
+          "completed_at": "2026-10-08T02:48:33Z",
+          "failed_steps": []
+        }
+      ]
+    }
+  ],
+  "failures": {
+    "cases": [
+      "server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts [ server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts ]",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > resolves an exact preferred name to exactly one canonical Place",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > resolves an alias to the same canonical identity as the preferred name",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > finds a Place by a searchable historical or common name form",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical metro-city Place to its exact evidenced scope",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical locality Place with only a province context",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > records the municipality on the path as context, never as a search level",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > admits many locality-scoped Places, because scope is a category",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > does not expand a selected Place into other Places",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > refuses every admitted Place that carries no executable scope",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes the province-scoped Place, which needs no ancestor",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor",
+      "server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically",
+      "server/__tests__/integration.agency-canvassing-mvp.test.ts > agency canvassing MVP integration > keeps seller acquisition private, scoped, actionable, and traceably convertible",
+      "server/__tests__/integration.agency-listing-attribution.test.ts > agency principal listing attribution > preserves agency ownership from draft creation through public lead capture",
+      "server/__tests__/integration.agency-listing-performance-mvp.test.ts > agency listing performance MVP persisted integration > keeps canonical performance, review, revision, access, and publication contracts intact",
+      "server/__tests__/integration.agency-listing-preparation.test.ts > agency listing preparation acceptance > keeps private preparation available to an established agency member while publication is inactive",
+      "server/__tests__/integration.agency-listing-publication-lifecycle.test.ts > agency full operating journey acceptance > runs verified agency onboarding through controlled activation, publication, enquiry, and continued custody",
+      "server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > denies every generic private-listing entry after membership becomes suspended",
+      "server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > denies every generic private-listing entry after membership becomes left",
+      "server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > keeps an unaffiliated former member draft private from their former agency",
+      "server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > does not let a suspended member retain agency performance, commission, or daily-work access",
+      "server/__tests__/integration.agency-membership-authority.test.ts > invitation acceptance (production path) > accepting an agent invitation creates consistent identity, profile, and canonical membership",
+      "server/__tests__/integration.agent-launch-journey.test.ts > independent agent launch journey (publish \u2192 receive) > lets an approved, paid, badge-less solo agent publish inventory and receive the enquiry",
+      "server/__tests__/integration.listing-media-reconciliation.test.ts > listing media reconciliation > retains explicit media, removes omitted media, and preserves video type and primary order",
+      "server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > denies an unrelated user before issuing a listing media reservation",
+      "server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > rejects confirmation when the listing is deleted after token issuance",
+      "server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > rejects confirmation when listing custody is reassigned after token issuance",
+      "server/__tests__/location-manual-correction.test.ts > PLE-6C manual location correction > does not report Map Location for a valid confirmed manual listing"
+    ],
+    "counts": {
+      "serverFailedFiles": 12,
+      "serverPassedFiles": 418,
+      "serverSkippedFiles": 8,
+      "serverFailedTests": 29,
+      "serverPassedTests": 3051,
+      "serverSkippedTests": 84,
+      "clientFileInvocations": 284
+    },
+    "summary": "Client loop completed including fixed readiness 30/30. Server suite executed and failed: absent admitted Place fixtures, legacy flat listing-location test inputs, manual readiness stale fixture and command-boundary mocked authorization colliding with global database setup."
+  },
+  "other_statuses": [
+    {
+      "context": "Vercel",
+      "state": "failure",
+      "target_url": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/J3Xm6vX9JwGxqnMpAjUUvzjk3pkc"
+    }
+  ],
+  "holds": {
+    "merge": true,
+    "deployment": true,
+    "production_schema_data": true,
+    "payment_closure": true
+  },
+  "changes": "Exact normal push only. No files/body edits, commits, merges, force pushes, local materialisation or reruns."
+}
