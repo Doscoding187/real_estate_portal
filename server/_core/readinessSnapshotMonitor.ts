@@ -13,13 +13,17 @@ export type ReadinessMonitorStage = {
   outcome: 'ok' | 'threw' | null;
 };
 
+export const READINESS_MONITOR_EVENTS = [
+  'assessment-started',
+  'assessment-phase-started',
+  'assessment-completed',
+  'assessment-threw',
+  'context-invalidated',
+  'snapshot-unavailable',
+] as const;
+
 export type ReadinessMonitorEvent = {
-  event:
-    | 'assessment-started'
-    | 'assessment-completed'
-    | 'assessment-threw'
-    | 'context-invalidated'
-    | 'snapshot-unavailable';
+  event: (typeof READINESS_MONITOR_EVENTS)[number];
   assessmentId: string | null;
   assessmentStartedAt: number | null;
   assessmentCompletedAt: number | null;
@@ -141,11 +145,11 @@ export class ReadinessSnapshotMonitor<T> {
     completed = false,
     value?: T,
     snapshot: Snapshot<T> | null = this.snapshot,
+    record: AssessmentRecord | null = this.assessment,
   ): void {
     try {
       const observedAt = this.now();
       const completedAt = completed ? observedAt : null;
-      const record = this.assessment;
       this.options.observe?.(
         {
           event,
@@ -211,6 +215,9 @@ export class ReadinessSnapshotMonitor<T> {
               endedAt: null,
               outcome: null,
             });
+            // One event per phase start (at most four per assessment on the current path).
+            // Passing the record keeps the event bound to the assessment that began the phase.
+            this.emit('assessment-phase-started', null, false, undefined, this.snapshot, record);
           }
         }),
       end: (stage, outcome) =>

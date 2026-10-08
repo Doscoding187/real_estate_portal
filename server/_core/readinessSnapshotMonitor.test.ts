@@ -578,6 +578,68 @@ describe('bounded readiness snapshots', () => {
     });
   });
 
+  it('emits one phase-start event per phase, bound to its assessment, and an observer failure cannot change the outcome', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const work = deferred<Report>();
+    create(
+      async probe => {
+        probe.target(FP_A);
+        probe.begin('authorize');
+        probe.end('authorize', 'ok');
+        probe.begin('verify');
+        return work.promise;
+      },
+      undefined,
+      event => {
+        if (event.event === 'assessment-phase-started') throw new Error('phase sink down');
+        events.push(event);
+      },
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    // Phase-start hooks threw, yet the probe calls and the assessment itself were unaffected.
+    expect(events.filter(event => event.event === 'assessment-phase-started')).toEqual([]);
+    work.resolve(green);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(monitor.getSnapshot()).toEqual(green);
+  });
+
+  it('emits one phase-start per phase, each carrying the captured target and active stage', async () => {
+    const events: ReadinessMonitorEvent[] = [];
+    const work = deferred<Report>();
+    create(
+      async probe => {
+        probe.target(FP_A);
+        probe.begin('authorize');
+        probe.end('authorize', 'ok');
+        probe.begin('connect');
+        probe.end('connect', 'ok');
+        probe.begin('verify');
+        return work.promise;
+      },
+      undefined,
+      event => events.push(event),
+    );
+    monitor.getSnapshot();
+    await vi.advanceTimersByTimeAsync(0);
+    const phases = events.filter(event => event.event === 'assessment-phase-started');
+    expect(phases.map(event => event.activeStage)).toEqual(['authorize', 'connect', 'verify']);
+    expect(new Set(phases.map(event => event.assessmentId)).size).toBe(1);
+    expect(phases.at(-1)).toMatchObject({
+      targetIdentity: 'resolved',
+      targetFingerprintHash: FP_A,
+      inFlight: true,
+      assessmentCompletedAt: null,
+    });
+    // The phase event precedes completion; completion is the only later event for this assessment.
+    work.resolve(green);
+    await vi.advanceTimersByTimeAsync(0);
+    const order = events.map(event => event.event);
+    expect(order.lastIndexOf('assessment-phase-started')).toBeLessThan(
+      order.indexOf('assessment-completed'),
+    );
+  });
+
   it('a probe that cannot observe (clock failure) leaves a green assessment publishable', async () => {
     let clock = 0;
     let breakClock = false;

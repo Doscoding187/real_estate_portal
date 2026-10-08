@@ -10,7 +10,8 @@ const captured = vi.hoisted(() => ({
     classify: (value: { applicationReady: boolean }) => string;
   },
 }));
-vi.mock('./readinessSnapshotMonitor', () => ({
+vi.mock('./readinessSnapshotMonitor', async importOriginal => ({
+  ...(await importOriginal<typeof import('./readinessSnapshotMonitor')>()),
   ReadinessSnapshotMonitor: class {
     constructor(options: typeof captured.options) {
       captured.options = options;
@@ -107,9 +108,9 @@ describe('hosted readiness diagnostic allowlist', () => {
         'durationMs',
         'event',
         'inFlight',
+        'moduleInitializedAt',
         'observedAt',
         'processId',
-        'processStartedAt',
         'reason',
         'replica',
         'scheduledDelayMs',
@@ -220,6 +221,17 @@ describe('hosted readiness diagnostic allowlist', () => {
       verdict: null,
       targetFingerprintMatchesReport: null,
     });
+  });
+
+  it('logs only allowlisted event names, including the phase-start event', () => {
+    const log = vi.spyOn(console, 'info').mockImplementation(() => {});
+    captured.options.observe(
+      completedEvent({ event: 'assessment-phase-started' as never, reason: null }),
+    );
+    captured.options.observe(completedEvent({ event: 'arbitrary password=hunter2' as never }));
+    expect(logged(log, 0)).toMatchObject({ event: 'assessment-phase-started' });
+    expect(logged(log, 1)).toMatchObject({ event: null });
+    expect(log.mock.calls[1][0]).not.toContain('hunter2');
   });
 
   it('classifies only the application verdict', () => {

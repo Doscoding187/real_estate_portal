@@ -6,7 +6,11 @@ import {
   unavailableReadiness,
   type LayeredDatabaseReadiness,
 } from './databaseAuthority/readiness';
-import { ReadinessSnapshotMonitor, type ReadinessMonitorEvent } from './readinessSnapshotMonitor';
+import {
+  READINESS_MONITOR_EVENTS,
+  ReadinessSnapshotMonitor,
+  type ReadinessMonitorEvent,
+} from './readinessSnapshotMonitor';
 
 const SHA_PATTERN = /^[a-f0-9]{40}$/i;
 const HASH_PATTERN = /^[a-f0-9]{64}$/i;
@@ -16,7 +20,10 @@ const IDENTITY_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_LOGGED_STAGES = 16;
 const MAX_LOGGED_LAYERS = 32;
-const PROCESS_STARTED_AT = new Date().toISOString();
+// Module initialization time for this process instance. It is not the operating-system
+// process start time; provider deployment and replica identity are logged separately.
+const MODULE_INITIALIZED_AT = new Date().toISOString();
+const EVENT_NAMES: ReadonlySet<string> = new Set(READINESS_MONITOR_EVENTS);
 
 function fingerprintOrNull(value: unknown): string | null {
   return typeof value === 'string' && HASH_PATTERN.test(value) ? value : null;
@@ -52,7 +59,7 @@ function readinessDiagnosticLine(
   const targetFingerprintHash = fingerprintOrNull(event.targetFingerprintHash);
   return JSON.stringify({
     component: 'hosted-database-readiness',
-    event: event.event,
+    event: EVENT_NAMES.has(event.event) ? event.event : null,
     reason: event.reason,
     assessmentId: uuidOrNull(event.assessmentId),
     assessmentStartedAt: event.assessmentStartedAt,
@@ -94,7 +101,7 @@ function readinessDiagnosticLine(
     deployment: platformIdentity('RAILWAY_DEPLOYMENT_ID'),
     replica: platformIdentity('RAILWAY_REPLICA_ID'),
     processId: process.pid,
-    processStartedAt: PROCESS_STARTED_AT,
+    moduleInitializedAt: MODULE_INITIALIZED_AT,
   });
 }
 
