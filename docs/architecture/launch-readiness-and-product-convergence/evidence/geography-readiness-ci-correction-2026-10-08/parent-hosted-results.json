@@ -1,0 +1,183 @@
+{
+  "approved_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+  "pr": {
+    "number": 594,
+    "url": "https://github.com/Doscoding187/real_estate_portal/pull/594",
+    "draft": true,
+    "state": "open",
+    "head": "e0164dd41b18de2ef15b322389776fafd67c6408",
+    "base": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+    "merge_ref": "1d43ef6e2c08ce9e17b669e62d2492859e9a1320",
+    "auto_merge": null,
+    "merged": false
+  },
+  "tree_binding": {
+    "candidate_tree": "c805e778d22e170b43f01926f1a21d2ad89d0286",
+    "merge_tree": "c805e778d22e170b43f01926f1a21d2ad89d0286",
+    "identical": true,
+    "merge_parents": [
+      "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "e0164dd41b18de2ef15b322389776fafd67c6408"
+    ]
+  },
+  "runs": [
+    {
+      "id": 37717159056,
+      "name": "CI Pipeline",
+      "event": "pull_request",
+      "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:17:42Z",
+      "updated_at": "2026-10-08T02:31:47Z",
+      "jobs": [
+        {
+          "id": 113116166857,
+          "name": "Location Authority",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056/job/113116166857",
+          "started_at": "2026-10-08T02:17:44Z",
+          "completed_at": "2026-10-08T02:18:13Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113116167163,
+          "name": "DB Contract Verification",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056/job/113116167163",
+          "started_at": "2026-10-08T02:17:44Z",
+          "completed_at": "2026-10-08T02:21:05Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113117042564,
+          "name": "Lint & TypeCheck",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056/job/113117042564",
+          "started_at": "2026-10-08T02:21:07Z",
+          "completed_at": "2026-10-08T02:24:35Z",
+          "failed_steps": []
+        },
+        {
+          "id": 113117042648,
+          "name": "Unit & Integration Tests",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "failure",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056/job/113117042648",
+          "started_at": "2026-10-08T02:21:07Z",
+          "completed_at": "2026-10-08T02:31:46Z",
+          "failed_steps": [
+            "Run tests"
+          ]
+        },
+        {
+          "id": 113117968931,
+          "name": "Build Application",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159056/job/113117968931",
+          "started_at": "2026-10-08T02:24:38Z",
+          "completed_at": "2026-10-08T02:25:42Z",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37717159046,
+      "name": "Frontend Build Guard",
+      "event": "pull_request",
+      "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159046",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:17:42Z",
+      "updated_at": "2026-10-08T02:18:38Z",
+      "jobs": [
+        {
+          "id": 113116166874,
+          "name": "Build Frontend",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717159046/job/113116166874",
+          "started_at": "2026-10-08T02:17:44Z",
+          "completed_at": "2026-10-08T02:18:37Z",
+          "failed_steps": []
+        }
+      ]
+    },
+    {
+      "id": 37717146875,
+      "name": "Frontend Build Guard",
+      "event": "push",
+      "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717146875",
+      "run_attempt": 1,
+      "created_at": "2026-10-08T02:17:32Z",
+      "updated_at": "2026-10-08T02:18:28Z",
+      "jobs": [
+        {
+          "id": 113116126138,
+          "name": "Build Frontend",
+          "head_sha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37717146875/job/113116126138",
+          "started_at": "2026-10-08T02:17:35Z",
+          "completed_at": "2026-10-08T02:18:27Z",
+          "failed_steps": []
+        }
+      ]
+    }
+  ],
+  "failure": {
+    "file": "client/src/lib/workflows/listing/__tests__/listingSubmitReadiness.test.ts",
+    "failed": 2,
+    "passed": 26,
+    "tests": [
+      {
+        "name": "returns ready for complete data",
+        "line": 72
+      },
+      {
+        "name": "builds payload for complete data",
+        "line": 78
+      }
+    ],
+    "assertion": "expected false to be true",
+    "inferred_cause": "Unchanged completeData fixture lacks canonicalPlace required by strict canonical locality payload boundary.",
+    "remaining_client_files": "Not executed after first failed test file.",
+    "server_suite": "Not executed because sequential client loop failed.",
+    "localReproduction": {
+      "failed": 2,
+      "passed": 26,
+      "log": "/tmp/geography-e0164-readiness-failure-local.txt",
+      "candidateUnchanged": true
+    }
+  },
+  "vercelPreview": {
+    "deployment": "dpl_BUnv73VSQpd2Ab8rPKRopjm7r1N2",
+    "candidateSha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+    "source": "automatic-git-preview",
+    "target": null,
+    "state": "ERROR",
+    "errorCode": "ENOENT",
+    "observedError": "[property-listify-hosted-frontend-contract] no such file or directory opening /vercel/path0/dist/public/version.json from closeBundle",
+    "initialFailureCauseEstablished": false,
+    "url": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/BUnv73VSQpd2Ab8rPKRopjm7r1N2",
+    "manualRetryOrPromotion": false
+  }
+}
