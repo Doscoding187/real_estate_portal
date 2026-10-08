@@ -16,6 +16,7 @@ describe('Database Authority data-role manifest', () => {
     expect(DATA_ROLE_MANIFEST.roles.map(role => role.key)).toEqual([
       'reference.geography',
       'reference.places',
+      'reference.places-release-preview',
       'foundation.launch-access',
       'demo.listing-preview-authentication',
       'demo.homepage-journey-preview',

@@ -1222,3 +1222,26 @@ policy approval and national Place counts alone do not establish launch readines
 Historical v0.5 sections and package proof pins above remain historical evidence.
 No identity allocation, artifact or earlier operational approval is amended by
 this policy revision.
+
+## 23. Protected Place reference release candidate (2026-10-08)
+
+The integration candidate registers a Place-specific protected reference adapter
+on the existing Database Authority release-reference operations. It does not
+reuse the numeric catalog's `--adapter=geography` materialiser, grant provider
+write authority, or clear D3. Policy `admitted-national-non-osm-only-v1` verifies
+all nine admitted packages, releases only `permissive_supported` and
+`mixed_odbl_supported` Place assertions unchanged, and holds all
+`osm_only_odbl_provisional` identities and their dependent rows. Unknown licensing
+classifications refuse. Every included non-province Place retains a single
+bounded evidenced province chain. There is no licensing override flag and no
+new SEO or relationship search authorization.
+
+The exact protected subset has 16,944 Places; the complete disposable national
+storage fixture still has 17,664. These are distinct data-role contracts, not
+interchangeable readiness counts. The release-specific verifier proves the
+protected subset. A registered disposable preview role exercises the same
+transaction protocol under local ownership authority without admitting any
+protected operation. The [release runbook](../database-authority/canonical-place-reference-release-2026-10-08.md)
+and [integration review](geography-integration-review-2026-10-08.md) bind schema,
+source, target and operation approval. Production application remains separately
+approved after senior review and required hosted CI.

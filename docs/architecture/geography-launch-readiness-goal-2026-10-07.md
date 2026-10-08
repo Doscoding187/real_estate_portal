@@ -362,3 +362,17 @@ at senior review.
 The larger goal remains unfinished: governed public Listing search membership,
 Land convergence and national consumer launch proof remain required. This bounded
 private authoring proof does not certify those journeys or protected materialisation.
+
+### Integration/release candidate continuation — 2026-10-08
+
+The [current-main integration packet](geography-integration-review-2026-10-08.md)
+preserves released founder/logout/Developer corrections and registers the
+protected Place reference release adapter. Fresh approved read-only census
+establishes production head 0096 with no Place schema; no production mutation is
+performed. The D3-respecting national release subset has 16,944 Places across
+all nine provinces, with 720 OSM-only Places and dependants held. The shared
+release protocol was exercised on an owned native 0111 target, verified and
+repeated with zero writes, followed by a real private North Riding draft
+save/reload. The target was disposed. Senior review and exact-SHA hosted CI are
+next; protected application and the remaining public-search launch evidence
+remain separate dependencies. This does not complete the broader launch goal.

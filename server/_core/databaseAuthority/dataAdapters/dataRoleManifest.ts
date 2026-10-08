@@ -1,4 +1,5 @@
 import type { DatabaseOperation } from '../types';
+import { PLACE_RELEASE_DIGEST, PLACE_RELEASE_POLICY } from './placeRelease';
 import {
   CANONICAL_PLACES_DIGEST,
   CANONICAL_PLACES_VERSION,
@@ -92,6 +93,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['place-authority', 'location-discovery'],
+    },
+    {
+      key: 'reference.places-release-preview',
+      role: 'reference',
+      adapter: 'canonical-places-release-preview',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/placeRelease.ts',
+      version: PLACE_RELEASE_POLICY,
+      digest: PLACE_RELEASE_DIGEST,
+      prepareCommand: 'db:places:release-preview:prepare',
+      verifyCommand: 'db:places:release-preview:verify',
+      prepareOperation: 'reference-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['place-release-preview'],
     },
     {
       key: 'foundation.launch-access',

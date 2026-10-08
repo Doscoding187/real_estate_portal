@@ -1766,3 +1766,15 @@ Fresh owned physical consumer proof is still required before launch assessment.
 records the complete filename/checksum translation and accepted prefix.
 
 Combined candidate verification: authority 617/617 in 56 files; 121 utility surfaces, 112 migration files, deterministic inventory, lifecycle and production type checking pass. No combined-lineage physical or customer publication/search certification is claimed.
+
+## 2026-10-08 integration handoff
+
+The [integration review candidate](geography-integration-review-2026-10-08.md)
+merges released main through 7756376c9, supplies the protected canonical Place
+release mechanism and retains D3's held OSM-only set. Native 0111 evidence proves
+the 16,944-Place production subset, zero-write replay and private North Riding
+draft save/reload. Production is independently inspected as Azure MySQL head
+0096 without Place tables; no hosted changes were applied. This continuation
+supersedes the earlier missing-release-capability handoff, while retaining
+historical storage proofs and leaving public-search/hosted acceptance and
+production approval gates open.

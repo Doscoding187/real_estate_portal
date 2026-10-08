@@ -1,0 +1,56 @@
+[
+  {
+    "branch": "feat/gauteng-source-authority-closure",
+    "sha": "4356c0f7fbe1086c069fa97d1a7c92d379862f67",
+    "worktreeDirty": true,
+    "uncommittedV02Package": "not-adopted"
+  },
+  {
+    "branch": "feat/location-authority-slice1",
+    "sha": "4356c0f7fbe1086c069fa97d1a7c92d379862f67",
+    "ancestorOfCandidate": true,
+    "latestCommits": "4356c0f7f feat(location): establish canonical geography foundation\n4e012b304 Merge pull request #577 from Doscoding187/feat/database-transition-stage-1-fresh-establishment"
+  },
+  {
+    "branch": "docs/geography-source-unblock-20261001",
+    "sha": "617d4847bc1d336a37b22e52c4936bb32607438e",
+    "ancestorOfCandidate": false,
+    "latestCommits": "617d4847b feat(geography): acquire verifiable Western Cape source evidence and unblock Phase 4\nad0c42474 Merge pull request #566 from Doscoding187/security/discovery-engagement-abuse-boundary-current"
+  },
+  {
+    "branch": "origin/feat/property-location-authority",
+    "sha": "9f66cf3e3d5d28d1324cfc0ac3c41ac484e1af23",
+    "ancestorOfCandidate": true,
+    "latestCommits": "9f66cf3e3 Harden public property location projection\nc1bcf2328 Converge property location write authority"
+  },
+  {
+    "branch": "origin/feat/provincial-discovery-gauteng-s0",
+    "sha": "aba2aa8d9e4e3f3133e9e8b7bd40edea8b58e562",
+    "ancestorOfCandidate": true,
+    "latestCommits": "aba2aa8d9 chore(ci): update ts-nocheck baseline for province page\nec3c1df90 feat(search): ship Gauteng provincial discovery vertical slice"
+  },
+  {
+    "branch": "origin/feat/search-discovery-s2b2-geography-handoff",
+    "sha": "b42f7c77bd35bda3d990598c9b3ec00fd22fe716",
+    "ancestorOfCandidate": true,
+    "latestCommits": "b42f7c77b feat(search): converge geography search handoff\n5563983b8 Merge pull request #448 from Doscoding187/feat/search-area-query-integration-s2bm2"
+  },
+  {
+    "branch": "origin/geography/search-discoverability",
+    "sha": "19ab22a2921b90a9770f35da6b0fa6b17b420342",
+    "ancestorOfCandidate": true,
+    "latestCommits": "19ab22a29 Merge branch 'main' into geography/search-discoverability\n8ed7df416 feat(geography): make governed locations searchable across consumers"
+  },
+  {
+    "branch": "origin/geography/territory-coverage-pipeline-clean",
+    "sha": "0b24464063564474c17b2824be3022a756cd69d7",
+    "ancestorOfCandidate": true,
+    "latestCommits": "0b2446406 Merge branch 'main' into geography/territory-coverage-pipeline-clean\n5648dd94e Merge pull request #532 from Doscoding187/gate0/search-to-lead-recon-isolated"
+  },
+  {
+    "branch": "origin/release/gauteng-search-area-production-launch-v0-1",
+    "sha": "2b56ede37e34545397d1f190aab7dce049741861",
+    "ancestorOfCandidate": true,
+    "latestCommits": "2b56ede37 feat(geography): establish Gauteng Search Area public activation v0.1\nc76337bd9 Merge pull request #467 from Doscoding187/feat/rent-journey-convergence"
+  }
+]

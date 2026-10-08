@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |client| client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.registration.test.tsx (2 tests) 6479ms
+   ✓ Developer registration canonical save and reload > collects and submits supported organisation details without asking for unsaved counts 3078ms
+   ✓ Developer registration canonical save and reload > resumes an older owned draft with an explicit count notice and saves only supported fields 3399ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  01:50:38
+   Duration  18.40s (transform 1.22s, setup 449ms, collect 7.22s, tests 6.48s, environment 2.95s, prepare 250ms)

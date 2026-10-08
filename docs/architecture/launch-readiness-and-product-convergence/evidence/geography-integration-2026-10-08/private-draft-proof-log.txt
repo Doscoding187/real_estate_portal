@@ -1,0 +1,50 @@
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'development',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Database] Authorized runtime-connect target 0c822b50ba97506e is connected.
+[db.createListing] Inserting listing: {
+  ownerId: 1,
+  agentId: null,
+  agencyId: null,
+  slug: 'north-riding-private-house-proof-muyrvaxb'
+}
+[listing.getById] Fetching listing ID: 1
+[listing.getById] Result: Found: North Riding private house proof
+[listing.getById] Fetching listing ID: 1
+[listing.getById] Result: Found: North Riding private house proof
+[db.createListing] Inserting listing: {
+  ownerId: 1,
+  agentId: null,
+  agencyId: null,
+  slug: 'confirmed-house-evidence-refusal-muyrvb22'
+}
+[Database] Failed to create listing: CanonicalListingPlaceError: Listing location refused: Enter the street name.
+    at resolveCanonicalListingPlace (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/services/canonicalListingPlaceResolver.ts:57:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/db.ts:2215:34)
+    at async MySql2Session.transaction (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/drizzle-orm@0.44.7_@tidbcloud+serverless@0.2.0_mysql2@3.17.0/node_modules/src/mysql2/session.ts:311:19)
+    at async Module.createListing (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/db.ts:2090:23)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:690:25)
+    at async resolveMiddleware (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:576:22)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20) {
+  reason: 'Enter the street name.'
+}
+[Database] Error details: Listing location refused: Enter the street name.
+Error creating listing: CanonicalListingPlaceError: Listing location refused: Enter the street name.
+    at resolveCanonicalListingPlace (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/services/canonicalListingPlaceResolver.ts:57:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/db.ts:2215:34)
+    at async MySql2Session.transaction (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/drizzle-orm@0.44.7_@tidbcloud+serverless@0.2.0_mysql2@3.17.0/node_modules/src/mysql2/session.ts:311:19)
+    at async Module.createListing (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/db.ts:2090:23)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/listingRouter.ts:690:25)
+    at async resolveMiddleware (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:576:22)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20)
+    at async callRecursive (/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-location-authority-slice1/node_modules/.pnpm/@trpc+server@11.10.0_typescript@5.9.3/node_modules/@trpc/server/src/unstable-core-do-not-import/procedureBuilder.ts:642:20) {
+  reason: 'Enter the street name.'
+}

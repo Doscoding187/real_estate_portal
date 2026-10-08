@@ -1,0 +1,92 @@
+{
+  "integrationBase": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "parentIntegrationMerge": "88377eef70b8b2057c664d6202da6b518fa209a0",
+  "candidateBranch": "feat/place-authority-slice0-decision",
+  "sourceDigests": {
+    "scripts/databaseAuthorityCli.ts": "65284b293fe85a4ae2748879f5e0cfce7bccf04d58f7a04da1b9a50e2c91d524",
+    "server/_core/databaseAuthority/dataAdapters/placeRelease.ts": "9614638c5c4435cd6e694b978c696a238d9ecb1cc3c1023180fa361223797f04",
+    "server/_core/databaseAuthority/dataAdapters/placeReleaseInspection.ts": "684d512260f8ec85fd4eabf146b19b56bb0f62bffd1939801f7df4fc9350dd95",
+    "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts": "bcc2bfb6131d1c7c0c8179cf973bfa7a12f385bef301af1511bc943acbadb176"
+  },
+  "localChecks": {
+    "authorityGate": {
+      "tests": 649,
+      "files": 58,
+      "utilitySurfaces": 121,
+      "canonicalTables": 221,
+      "activeMigrations": 112
+    },
+    "releasedCorrectionsAndListingLifecycle": {
+      "tests": 263,
+      "files": 11
+    },
+    "developerClient": {
+      "tests": 2,
+      "files": 1
+    },
+    "placeSelectionClient": {
+      "tests": 19,
+      "files": 2
+    },
+    "authoringMappers": {
+      "tests": 27,
+      "files": 2
+    },
+    "releaseProtocolAndInspection": {
+      "tests": 15,
+      "files": 3
+    },
+    "providerWriteProtections": {
+      "tests": 3
+    },
+    "productionTypecheck": "passed",
+    "clientBuild": "passed; existing chunk-size warning",
+    "focusedLint": "0 errors, 22 warnings; retained baseline formatting/any warnings"
+  },
+  "nativeProof": {
+    "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+    "head": "0111_properties_canonical_place_reference_fk.sql",
+    "checksEnforced": 39,
+    "placeAssertions": 157728,
+    "places": 16944,
+    "replayWrites": 0,
+    "privateDraftJourney": "passed",
+    "publicPropertyCount": 0,
+    "providerSuburbRowsCreated": 0,
+    "disposed": true,
+    "sharedServicePreserved": true,
+    "initialMaterializationBeforeFinalExplicitLicensingAllowlist": true,
+    "finalReplayAndVerifierUseFinalGuards": true
+  },
+  "production": {
+    "inspectionOperation": "release-reference-plan",
+    "credentialClass": "read-only",
+    "dedicatedInspectorIdentityAndSelectOnlyGrantsVerified": true,
+    "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "schemaHead": "0096_user_founder_authority_unique.sql",
+    "incompleteAttempts": 0,
+    "placeSchemaPresent": false,
+    "mutationPerformed": false,
+    "deploymentPerformed": false,
+    "serviceVariablesChanged": false,
+    "hostedFilesChanged": false,
+    "inspectorDelivery": "SSH stdin to in-memory program, not command arguments or persistent files"
+  },
+  "scope": {
+    "allNineProvinces": true,
+    "releasedPlaceCandidateCount": 16944,
+    "osmOnlyHeld": 720,
+    "newFactOrPlaceInvented": false,
+    "oldProviderSuburbBranchAdopted": false,
+    "houseValidationWeakened": false
+  },
+  "hostedCI": "pending senior review; no push/PR created",
+  "limitations": [
+    "not a hosted browser/network-authentication proof",
+    "not a national public-search launch certificate",
+    "production schema plan derived from approved live census; refresh via named runner after accepted merge",
+    "production application separately approved",
+    "direct local protected reader connection unavailable; valid SSH inspector census succeeded",
+    "first bundle packaging attempt failed before any database connection; corrected tsx census passed"
+  ]
+}

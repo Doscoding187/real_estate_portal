@@ -1,0 +1,29 @@
+
+/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/scripts/databaseAuthorityCli.ts
+  388:24  warning  Insert `⏎········`                                                                                                                                                                                     prettier/prettier
+  397:72  warning  Insert `⏎······`                                                                                                                                                                                       prettier/prettier
+  409:29  warning  Insert `⏎·······`                                                                                                                                                                                      prettier/prettier
+  413:26  warning  Insert `⏎·······`                                                                                                                                                                                      prettier/prettier
+  418:22  warning  Insert `⏎·······`                                                                                                                                                                                      prettier/prettier
+  427:25  warning  Insert `⏎·······`                                                                                                                                                                                      prettier/prettier
+  428:1   warning  Insert `··`                                                                                                                                                                                            prettier/prettier
+  429:1   warning  Insert `··`                                                                                                                                                                                            prettier/prettier
+  454:36  warning  Replace `.filter(table·=>·Number(table.estimated_rows)·>·0)` with `⏎············.filter(table·=>·Number(table.estimated_rows)·>·0)⏎············`                                                       prettier/prettier
+  455:1   warning  Insert `··`                                                                                                                                                                                            prettier/prettier
+  456:13  warning  Insert `··`                                                                                                                                                                                            prettier/prettier
+  457:1   warning  Insert `··`                                                                                                                                                                                            prettier/prettier
+  461:44  warning  Replace `.filter(table·=>⏎··········String(table.table_name).toLowerCase()·===·'propertyimages',` with `⏎··········.filter(table·=>·String(table.table_name).toLowerCase()·===·'propertyimages')`      prettier/prettier
+  463:9   warning  Replace `)` with `··`                                                                                                                                                                                  prettier/prettier
+  466:52  warning  Replace `table·=>·table.table_name·===·'sql_migration_attempts'` with `⏎··········table·=>·table.table_name·===·'sql_migration_attempts',⏎········`                                                    prettier/prettier
+  477:95  warning  Replace `grant` with `⏎··············grant,⏎············`                                                                                                                                              prettier/prettier
+  719:36  warning  Replace `prepare·?·'reference-seed'·:·'verification',·prepare·?·'local-owner'·:·undefined` with `⏎······prepare·?·'reference-seed'·:·'verification',⏎······prepare·?·'local-owner'·:·undefined,⏎····`  prettier/prettier
+  793:40  warning  Unexpected any. Specify a different type                                                                                                                                                               @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts
+   3:9  warning  Replace `⏎··CANONICAL_PLACES_DIGEST,⏎··CANONICAL_PLACES_VERSION,⏎` with `·CANONICAL_PLACES_DIGEST,·CANONICAL_PLACES_VERSION·`                  prettier/prettier
+   7:9  warning  Replace `⏎··CANONICAL_FOUNDATION_DIGEST,⏎··CANONICAL_FOUNDATION_VERSION,⏎` with `·CANONICAL_FOUNDATION_DIGEST,·CANONICAL_FOUNDATION_VERSION·`  prettier/prettier
+  11:9  warning  Replace `⏎··CANONICAL_GEOGRAPHY_DIGEST,⏎··CANONICAL_GEOGRAPHY_VERSION,⏎` with `·CANONICAL_GEOGRAPHY_DIGEST,·CANONICAL_GEOGRAPHY_VERSION·`      prettier/prettier
+  27:9  warning  Replace `⏎··PLE_REVIEWER_FIXTURE_DIGEST,⏎··PLE_REVIEWER_FIXTURE_VERSION,⏎` with `·PLE_REVIEWER_FIXTURE_DIGEST,·PLE_REVIEWER_FIXTURE_VERSION·`  prettier/prettier
+
+✖ 22 problems (0 errors, 22 warnings)
+  0 errors and 21 warnings potentially fixable with the `--fix` option.

@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |client| client/src/lib/workflows/listing/__tests__/listingDraftPayload.test.ts (18 tests) 13ms
+ ✓ |client| client/src/lib/__tests__/listingWizardSubmitMapper.test.ts (9 tests) 29ms
+
+ Test Files  2 passed (2)
+      Tests  27 passed (27)
+   Start at  01:51:52
+   Duration  1.93s (transform 368ms, setup 212ms, collect 464ms, tests 42ms, environment 1.74s, prepare 272ms)

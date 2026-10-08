@@ -13,6 +13,11 @@ import {
   realpathSync,
 } from 'node:fs';
 import { releaseCanonicalGeography } from '../server/_core/databaseAuthority/dataAdapters/geographyRelease';
+import {
+  releaseCanonicalPlaces,
+  previewCanonicalPlaceRelease,
+} from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
+import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
 import { resolve } from 'node:path';
 import * as schema from '../drizzle/schema';
 import {
@@ -154,6 +159,9 @@ type Command =
   | 'source-archive:preliminary'
   | 'source-archive:final'
   | 'release-reference:plan'
+  | 'release-reference:inspect'
+  | 'places:release-preview:prepare'
+  | 'places:release-preview:verify'
   | 'release-reference:apply'
   | 'release-reference:verify'
   | 'readiness'
@@ -706,13 +714,40 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'places:release-preview:prepare' || command === 'places:release-preview:verify') {
+    const prepare = command.endsWith(':prepare');
+    const authority = authorityFor(prepare ? 'reference-seed' : 'verification', prepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(await previewCanonicalPlaceRelease({ authority, decision, connection }));
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
+  if (command === 'release-reference:inspect') {
+    if (requiredOption('adapter') !== 'places')
+      throw new Error('Only Place release inspection is supported.');
+    const authority = authorityFor('release-reference-plan', 'read-only');
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(await inspectPlaceReleaseTarget({ authority, decision, connection }));
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (
     command === 'release-reference:plan' ||
     command === 'release-reference:apply' ||
     command === 'release-reference:verify'
   ) {
     const adapter = option('adapter') ?? 'commercial';
-    if (!['commercial', 'geography'].includes(adapter))
+    if (!['commercial', 'geography', 'places'].includes(adapter))
       throw new Error('Unknown reference adapter.');
     const isPlan = command.endsWith(':plan');
     const isApply = command.endsWith(':apply');
@@ -726,18 +761,25 @@ async function run(command: Command): Promise<void> {
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence =
-        adapter === 'geography'
-          ? await releaseCanonicalGeography({
+        adapter === 'places'
+          ? await releaseCanonicalPlaces({
               authority,
               decision,
               connection,
               expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
             })
-          : isPlan
-            ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
-            : isApply
-              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-              : await verifyCanonicalCommercialReference({ authority, decision, connection });
+          : adapter === 'geography'
+            ? await releaseCanonicalGeography({
+                authority,
+                decision,
+                connection,
+                expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+              })
+            : isPlan
+              ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+              : isApply
+                ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+                : await verifyCanonicalCommercialReference({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -785,7 +827,10 @@ async function run(command: Command): Promise<void> {
    */
   if (command === 'places:prepare-national' || command === 'places:verify-national') {
     const isPrepare = command === 'places:prepare-national';
-    const authority = authorityFor(isPrepare ? 'reference-seed' : 'verification', isPrepare ? 'local-owner' : undefined);
+    const authority = authorityFor(
+      isPrepare ? 'reference-seed' : 'verification',
+      isPrepare ? 'local-owner' : undefined,
+    );
     const decision = authorizationFor(authority);
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
@@ -987,6 +1032,9 @@ const commands = new Set<Command>([
   'source-archive:preliminary',
   'source-archive:final',
   'release-reference:plan',
+  'release-reference:inspect',
+  'places:release-preview:prepare',
+  'places:release-preview:verify',
   'release-reference:apply',
   'release-reference:verify',
   'readiness',

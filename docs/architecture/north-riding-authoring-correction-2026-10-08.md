@@ -143,3 +143,17 @@ checking and build pass; lint reports zero errors with existing warnings.
 and evidence checksums bind the results. No source/schema/migration edits are part
 of this bounded correction; its existing Place-model prerequisites remain in the
 same review branch.
+
+## Integration continuation
+
+The [complete integration candidate](geography-integration-review-2026-10-08.md)
+now preserves released main through 7756376c9 and supplies the missing protected
+Place reference-data release capability discussed above. Fresh approved
+read-only inspection proves production is at 0096 with no Place tables and
+North Riding stored as legacy city ID 211; this replaces the earlier historical
+0094 plan as current target evidence. The release plan is all nine admitted
+provinces with the D3-held OSM-only set excluded, preserving North Riding's
+existing mixed-source locality and municipality/province context. The original
+bounded proof remains historical evidence; the integration packet records a new
+native release-preview and private draft journey. No production correction or
+hosted launch certificate is claimed by either packet.
