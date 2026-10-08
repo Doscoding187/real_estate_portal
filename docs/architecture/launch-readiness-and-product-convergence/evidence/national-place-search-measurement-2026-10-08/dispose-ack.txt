@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:ack /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:ack
+
+{
+  "operation": "database-dispose",
+  "targetFingerprintHash": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_national_place_search_measurem_4c206eab78b5",
+  "acknowledgement": "CONFIRM_DATABASE_DISPOSE_03e11127da916a0b"
+}
