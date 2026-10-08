@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.check.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "scripts/geography-release-cli-baseline.tmp.ts",
+    "server/types/**/*.d.ts"
+  ]
+}

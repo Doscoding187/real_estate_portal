@@ -1,4 +1,10 @@
 import {
+  completePlaceReleaseCommand,
+  placeCommandFailure,
+  PlaceReleaseCommandFailure,
+  type PlaceReleaseCommand,
+} from './placeReleaseCommand';
+import {
   capturePreliminaryTiDbArchive,
   captureFinalTiDbArchive,
   openSourceArchive,
@@ -716,14 +722,18 @@ async function run(command: Command): Promise<void> {
 
   if (command === 'places:release-preview:prepare' || command === 'places:release-preview:verify') {
     const prepare = command.endsWith(':prepare');
-    const authority = authorityFor(prepare ? 'reference-seed' : 'verification', prepare ? 'local-owner' : undefined);
+    const authority = authorityFor(
+      prepare ? 'reference-seed' : 'verification',
+      prepare ? 'local-owner' : undefined,
+    );
     const decision = authorizationFor(authority);
-    const connection = await createAuthoritySqlConnection(authority, decision);
-    try {
-      print(await previewCanonicalPlaceRelease({ authority, decision, connection }));
-    } finally {
-      await connection.end();
-    }
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection => previewCanonicalPlaceRelease({ authority, decision, connection }),
+      }),
+    );
     return;
   }
 
@@ -732,12 +742,13 @@ async function run(command: Command): Promise<void> {
       throw new Error('Only Place release inspection is supported.');
     const authority = authorityFor('release-reference-plan', 'read-only');
     const decision = authorizationFor(authority);
-    const connection = await createAuthoritySqlConnection(authority, decision);
-    try {
-      print(await inspectPlaceReleaseTarget({ authority, decision, connection }));
-    } finally {
-      await connection.end();
-    }
+    print(
+      await completePlaceReleaseCommand({
+        command,
+        open: () => createAuthoritySqlConnection(authority, decision),
+        operation: connection => inspectPlaceReleaseTarget({ authority, decision, connection }),
+      }),
+    );
     return;
   }
 
@@ -758,28 +769,37 @@ async function run(command: Command): Promise<void> {
         : 'release-reference-verify';
     const authority = authorityFor(operation, isApply ? 'migration' : 'read-only');
     const decision = authorizationFor(authority, option('ack'));
+    if (adapter === 'places') {
+      print(
+        await completePlaceReleaseCommand({
+          command,
+          open: () => createAuthoritySqlConnection(authority, decision),
+          operation: connection =>
+            releaseCanonicalPlaces({
+              authority,
+              decision,
+              connection,
+              expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
+            }),
+        }),
+      );
+      return;
+    }
     const connection = await createAuthoritySqlConnection(authority, decision);
     try {
       const evidence =
-        adapter === 'places'
-          ? await releaseCanonicalPlaces({
+        adapter === 'geography'
+          ? await releaseCanonicalGeography({
               authority,
               decision,
               connection,
               expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
             })
-          : adapter === 'geography'
-            ? await releaseCanonicalGeography({
-                authority,
-                decision,
-                connection,
-                expectedPlanDigest: isApply ? requiredOption('plan-digest') : undefined,
-              })
-            : isPlan
-              ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
-              : isApply
-                ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
-                : await verifyCanonicalCommercialReference({ authority, decision, connection });
+          : isPlan
+            ? await planCanonicalCommercialReferenceData({ authority, decision, connection })
+            : isApply
+              ? await prepareCanonicalCommercialReferenceData({ authority, decision, connection })
+              : await verifyCanonicalCommercialReference({ authority, decision, connection });
       print(evidence);
     } finally {
       await connection.end();
@@ -997,6 +1017,25 @@ async function run(command: Command): Promise<void> {
   }
 }
 
+/** Actual CLI entry boundary; only Place commands receive this structured failure policy. */
+export async function runDatabaseAuthorityCommand(command: Command): Promise<void> {
+  try {
+    await run(command);
+  } catch (error) {
+    const placeCommand =
+      command.startsWith('places:release-preview:') ||
+      command === 'release-reference:inspect' ||
+      (command.startsWith('release-reference:') && option('adapter') === 'places');
+    if (!placeCommand) throw error;
+    const failure =
+      error instanceof PlaceReleaseCommandFailure
+        ? error
+        : placeCommandFailure(command as PlaceReleaseCommand, error);
+    console.error(JSON.stringify(failure.record, null, 2));
+    throw failure;
+  }
+}
+
 const command = process.argv[2] as Command | undefined;
 const commands = new Set<Command>([
   'context',
@@ -1065,8 +1104,9 @@ if (process.argv[1] && resolve(process.argv[1]) === new URL(import.meta.url).pat
     console.error(`Usage: databaseAuthorityCli.ts <${[...commands].join('|')}> [--name=value]`);
     process.exit(1);
   }
-  run(command).catch(error => {
-    console.error(error instanceof Error ? error.message : 'Database authority command failed.');
+  runDatabaseAuthorityCommand(command).catch(error => {
+    if (!(error instanceof PlaceReleaseCommandFailure))
+      console.error(error instanceof Error ? error.message : 'Database authority command failed.');
     process.exit(1);
   });
 }

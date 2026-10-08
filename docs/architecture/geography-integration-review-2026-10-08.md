@@ -1,3 +1,8 @@
+> Current Place command-boundary correction: see
+> `launch-readiness-and-product-convergence/evidence/geography-place-command-boundary-2026-10-08/README.md`.
+> This reporting-only revision supersedes 5f2c6e94 for senior review. The native
+> adapter evidence and preceding integration packets remain unchanged.
+
 > Senior review correction candidate: see the correction evidence packet at
 > `launch-readiness-and-product-convergence/evidence/geography-integration-corrections-2026-10-08/README.md`.
 > It supersedes 66c0dd84 for release-path review on this same branch. The original

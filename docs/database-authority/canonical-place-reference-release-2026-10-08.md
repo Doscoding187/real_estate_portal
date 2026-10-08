@@ -29,6 +29,16 @@ Every failure stops the release. Preserve the result and inspect the exact targe
 
 Current regression and native evidence is in `docs/architecture/launch-readiness-and-product-convergence/evidence/geography-integration-corrections-2026-10-08/`. The preceding 35-file integration evidence packet remains unchanged as historical evidence.
 
+## Place command closure and failure reporting
+
+All protected `release-reference:plan/apply/verify --adapter=places`, `release-reference:inspect --adapter=places` and owned `places:release-preview:prepare/verify` commands now buffer their evidence until the acquired connection closes successfully. Final successful evidence includes `connectionClosed=true`. The adapter must already have confirmed transaction and lock cleanup before returning; the command must then confirm connection closure before printing success.
+
+If any phase fails, the Place command emits one sanitised JSON failure record to stderr and exits unsuccessfully. The record identifies the command, transaction outcome, primary failed phase and independent operation/rollback/lock-cleanup/connection-close failure flags, plus `nextAction=stop-and-inspect` and `automaticRetryAllowed=false`. It does not contain exception messages, stacks, credentials, SQL, parameter values or raw exception objects. Internal causes retain the original release failure and independent close error without replacing one with the other. Setup/open failures report `not-started`; completed read-only operations with failed closure report `not-applicable`; transaction failures preserve their adapter outcome.
+
+If COMMIT and lock cleanup succeeded but connection closure fails, the record retains `transactionOutcome=committed` and identifies connection-close failure. This is a failed command with committed data, not a rollback or permission to replay. An uncertain COMMIT remains `commit-uncertain` even if closure also fails. Stop, preserve the structured evidence, inspect read-only and obtain fresh review before any further apply. Neither the operation nor closure is retried automatically. Other reference adapters retain their existing command handling.
+
+The reporting-only correction packet is `docs/architecture/launch-readiness-and-product-convergence/evidence/geography-place-command-boundary-2026-10-08/`. Native reference materialisation was not repeated: the pinned packages, loader, adapter digest and schema are unchanged from the preceding correction candidate. Its measured native evidence remains historical proof of that unchanged adapter. Production census evidence remains timestamped, not a claim of a new inspection.
+
 ## Approved read-only inspection
 
 Use the dedicated `propertylistify_b08_inspector` credential in the protected operator process. The credential must actually retain USAGE plus SELECT on the approved database only. `DATABASE_CREDENTIAL_CLASS=read-only` does not turn another user's grants into inspector authority. No password or complete URL belongs in transcripts.

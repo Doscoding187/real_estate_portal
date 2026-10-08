@@ -1,0 +1,46 @@
+{
+  "reviewedParent": "5f2c6e94b49ccc2a5fa590fcfd160261ad244967",
+  "branch": "feat/place-authority-slice0-decision",
+  "focusedTests": {
+    "total": 89,
+    "files": 4,
+    "commandBoundary": 18,
+    "releaseAndInspection": 33,
+    "utilityAuthority": 38,
+    "exitCode": 0
+  },
+  "typechecks": {
+    "repository": {
+      "command": "pnpm check",
+      "exitCode": 0
+    },
+    "newBoundaryHelper": {
+      "command": "pnpm exec tsc -p tsconfig.place-release-command-helper-check.tmp.json --noEmit",
+      "exitCode": 0
+    },
+    "explicitFullCLI": {
+      "command": "pnpm exec tsc -p tsconfig.place-release-command-check.tmp.json --noEmit",
+      "exitCode": 2,
+      "diagnostic": "TS2322: existing unrelated localServiceContextReport port string/number mismatch",
+      "newErrors": 0
+    },
+    "parentFullCLI": {
+      "exitCode": 2,
+      "diagnostic": "Identical TS2322 reproduced from parent CLI source"
+    }
+  },
+  "scopedLint": {
+    "errors": 0,
+    "warnings": 0,
+    "exitCode": 0
+  },
+  "nativeMaterialisationRepeated": false,
+  "protectedAccess": false,
+  "productionMutation": false,
+  "sourceSha256": {
+    "scripts/databaseAuthorityCli.ts": "8ce3a6aa08adfd38bb6c71a8ae44b262421670ee2a3fe83a6c97c0a1faa095b1",
+    "scripts/placeReleaseCommand.ts": "214ba910b02dd85adb4b368f6b2e0dcf28a41d6f5c83e70801bd0d7177618418",
+    "server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts": "6021992da6f134abebd2cc3cf8708c0564d0107c44dc6ada842280c47bfef3b3",
+    "docs/database-authority/canonical-place-reference-release-2026-10-08.md": "2f904d928d6f84203a3d78e0f77d39805f66a7378bf711e5e677ddd9b3abd71a"
+  }
+}

@@ -1,0 +1,28 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |database-authority-static| scripts/__tests__/databaseUtilityAuthority.test.ts (38 tests) 418ms
+   ✓ database utility authority guard > accepts the current explicit authority inventory 404ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts (8 tests) 703ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts (18 tests) 116ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeRelease.test.ts (25 tests) 12083ms
+   ✓ governed national production Place reference release > plans only reads, atomically applies and verifies, then repeats with zero inserts 1821ms
+   ✓ governed national production Place reference release > returns a prerequisite plan without an applicable digest when production lacks Place schema 494ms
+   ✓ governed national production Place reference release > refuses forged authority, other protected targets and physical constraint drift before writing 334ms
+   ✓ governed national production Place reference release > binds source pins and observed state; changed plans and lost lock ownership refuse before insertion 871ms
+   ✓ governed national production Place reference release > rolls back insert failure before commit 575ms
+   ✓ governed national production Place reference release > rolls back post-write failure before commit 587ms
+   ✓ release review regressions > verifies and replays with zero writes after unresolved, ambiguous and repeated coverage signals 2857ms
+   ✓ release review regressions > never reports success when lock release returns 0 572ms
+   ✓ release review regressions > never reports success when lock release returns null 630ms
+   ✓ release review regressions > never reports success when lock release returns exception 574ms
+   ✓ release review regressions > preserves the original insert failure when cleanup also fails 581ms
+   ✓ release review regressions > marks a failed COMMIT response uncertain and never retries or claims rollback 577ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=false 598ms
+   ✓ multi-batch transactional failures > retains rollback outcome after a later batch failure: rollback fails=true 591ms
+
+ Test Files  4 passed (4)
+      Tests  89 passed (89)
+   Start at  04:12:06
+   Duration  14.50s (transform 1.74s, setup 0ms, collect 5.81s, tests 13.32s, environment 1ms, prepare 556ms)
+

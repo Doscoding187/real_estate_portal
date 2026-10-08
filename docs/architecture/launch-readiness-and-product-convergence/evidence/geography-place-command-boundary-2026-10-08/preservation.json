@@ -1,0 +1,31 @@
+{
+  "reviewedParent": "5f2c6e94b49ccc2a5fa590fcfd160261ad244967",
+  "historicalPackets": {
+    "geography-integration-2026-10-08": {
+      "verifiedHashes": 35,
+      "manifestSha256": "570aa998d39d6b08e7cd775aefdefd8583fe3c4ce744c2ab4bfdf741389d79b0"
+    },
+    "geography-integration-corrections-2026-10-08": {
+      "verifiedHashes": 40,
+      "manifestSha256": "aaa15965528e556d5dfc3f47600fb42799065bbed9ed24678c3b36cdccf42f25"
+    }
+  },
+  "unchangedPaths": [
+    "server/migrations/manifest.json",
+    "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
+    "server/_core/databaseAuthority/dataAdapters/placeRelease.ts",
+    "server/_core/databaseAuthority/dataAdapters/placeReleaseInspection.ts",
+    "server/services/placeDiscoveryService.ts",
+    "shared/placeCoverageSignal.ts",
+    "server/_core/auth.ts",
+    "server/_core/authMeTiming.ts",
+    "server/developerRouter.ts",
+    "client/src/components/developer/DeveloperSetupWizardEnhanced.tsx",
+    "server/services/founderGoogleAccountService.ts",
+    "server/_core/founderGoogleIdentity.ts"
+  ],
+  "nativeMaterialisationRepeated": false,
+  "productionAccessThisCorrection": false,
+  "hostedCIStarted": false,
+  "pushed": false
+}
