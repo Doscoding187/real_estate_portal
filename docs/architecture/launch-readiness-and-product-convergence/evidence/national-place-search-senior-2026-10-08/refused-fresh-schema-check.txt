@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:authority:consumer-contract /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/databaseAuthorityConsumerContract.ts
+
+Fresh-schema consumer contract refused: the authorized disposable target already contains tables.
+ ELIFECYCLE  Command failed with exit code 1.

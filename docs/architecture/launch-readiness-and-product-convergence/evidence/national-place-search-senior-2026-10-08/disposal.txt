@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:dispose /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:dispose -- --ack\=CONFIRM_DATABASE_DISPOSE_6678d3d0240dfc8e
+
+{
+  "operation": "dispose",
+  "targetFingerprintHash": "6678d3d0240dfc8e08e089728d59fb4e8a3d5cb3be9b4b514b5e06cd88957f80",
+  "databaseName": "listify_wt_national_place_search_senior_2_fe7cb25bc50d",
+  "ownershipKey": "fe7cb25bc50dc060c297e5bd",
+  "changed": true
+}

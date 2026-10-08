@@ -1,0 +1,25 @@
+
+> real_estate_portal@1.0.0 db:schema:congruency /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts schema:check
+
+{
+  "targetFingerprintHash": "6678d3d0240dfc8e08e089728d59fb4e8a3d5cb3be9b4b514b5e06cd88957f80",
+  "targetClass": "disposable-worktree",
+  "congruent": true,
+  "desiredDigest": "a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97",
+  "actualDigest": "a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97",
+  "differences": [],
+  "checkConstraintEnforcement": {
+    "applicable": false,
+    "variable": "tidb_enable_check_constraint",
+    "value": null,
+    "enabled": null,
+    "physical": {
+      "total": 39,
+      "enforced": 39,
+      "allEnforced": true,
+      "unenforced": []
+    }
+  },
+  "omittedDifferenceCount": 0
+}

@@ -1,0 +1,78 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+
+stdout | server/__tests__/contract.place-consumer-geography.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  enable debug logging with { debug: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/propertySearchApprovedProjection.test.ts (26 tests) 144ms
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publicSearchService.contract.test.ts (19 tests) 81ms
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/canonicalPlaceSearchService.test.ts (15 tests) 38ms
+stdout | server/__tests__/contract.place-consumer-geography.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/__tests__/contract.place-consumer-geography.test.ts (34 tests) 8378ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Gauteng' preserves every executable identity 1095ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Western Cape' preserves every executable identity 997ms
+   ✓ All admitted provinces support exact consumer scope projection > 'KwaZulu-Natal' preserves every executable identity 1095ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Eastern Cape' preserves every executable identity 2071ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Free State' preserves every executable identity 570ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Mpumalanga' preserves every executable identity 458ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Limpopo' preserves every executable identity 751ms
+   ✓ All admitted provinces support exact consumer scope projection > 'North West' preserves every executable identity 476ms
+   ✓ All admitted provinces support exact consumer scope projection > 'Northern Cape' preserves every executable identity 832ms
+
+ Test Files  4 passed (4)
+      Tests  94 passed (94)
+   Start at  17:40:21
+   Duration  12.54s (transform 3.67s, setup 757ms, collect 12.34s, tests 8.64s, environment 2ms, prepare 785ms)
+

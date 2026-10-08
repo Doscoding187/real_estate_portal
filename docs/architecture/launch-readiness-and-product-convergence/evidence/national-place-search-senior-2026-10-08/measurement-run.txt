@@ -1,0 +1,1019 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project\=server scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+
+[test:authority] target 6678d3d0240dfc8e (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_senior_2_fe7cb25bc50d
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T15:45:40.584Z
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[Database] Authorized runtime-connect target 6678d3d0240dfc8e is connected.
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[AuditLog] agency.update by user 990004
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-0'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-1'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-2'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-3'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-4'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-5'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-6'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-7'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-8'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-9'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-10'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-11'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-12'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-13'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-14'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-15'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-16'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-17'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-18'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-19'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-20'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-21'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-22'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-23'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-24'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-25'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-26'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-27'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-28'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-29'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-30'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-31'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-32'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-33'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-34'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-35'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-36'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-37'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-38'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-39'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-40'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-41'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-42'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-43'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-44'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-45'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-46'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-47'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-48'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-49'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-50'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-51'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-52'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-53'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-54'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-55'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-56'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-57'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-58'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-59'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-60'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-61'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-62'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-63'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-64'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-65'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-66'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-67'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-68'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-69'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-70'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-71'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-72'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-73'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-74'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-75'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-76'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-77'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-78'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-79'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-80'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-81'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-82'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-83'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-84'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-85'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-86'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-87'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-88'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-89'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-90'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-91'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-92'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-93'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-94'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-95'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-96'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-97'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-98'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-99'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-100'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-101'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-102'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-103'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-104'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-105'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-106'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-107'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-108'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-109'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-110'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-111'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-112'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-113'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-114'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-115'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-116'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-117'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-118'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[db.createListing] Inserting listing: {
+  ownerId: 990002,
+  agentId: 990001,
+  agencyId: 990001,
+  slug: 'national-search-measurement-119'
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":1,"requests":60,"durationMs":2589.57,"requestsPerSecond":23.17}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":5,"requests":60,"durationMs":1535.99,"requestsPerSecond":39.06}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":20,"requests":60,"durationMs":1566.65,"requestsPerSecond":38.3}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+NATIONAL_SEARCH_MEASUREMENT [{"concurrency":1,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":41.28,"p95":123.67,"p99":139.92,"max":139.92},"graphMs":{"count":45,"p50":8.26,"p95":14.64,"p99":19.9,"max":19.9},"inventoryMs":{"count":45,"p50":29.32,"p95":50.38,"p99":62.66,"max":62.66},"acquisitionMs":{"count":879,"p50":0.02,"p95":0.21,"p99":0.51,"max":1.05},"rssBytes":{"count":60,"p50":426733568,"p95":433373184,"p99":433418240,"max":433418240},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}},{"concurrency":5,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":144.07,"p95":195.27,"p99":204.96,"max":204.96},"graphMs":{"count":45,"p50":35.83,"p95":55.31,"p99":58.57,"max":58.57},"inventoryMs":{"count":45,"p50":112.9,"p95":145.45,"p99":155.99,"max":155.99},"acquisitionMs":{"count":879,"p50":0.02,"p95":0.22,"p99":0.76,"max":31.86},"rssBytes":{"count":60,"p50":449363968,"p95":459849728,"p99":460767232,"max":460767232},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}},{"concurrency":20,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":542.1,"p95":733.33,"p99":765.96,"max":765.96},"graphMs":{"count":45,"p50":167.08,"p95":232.5,"p99":267.08,"max":267.08},"inventoryMs":{"count":45,"p50":434,"p95":542.86,"p99":551.84,"max":551.84},"acquisitionMs":{"count":879,"p50":11.55,"p95":27.22,"p99":35.67,"max":47.1},"rssBytes":{"count":60,"p50":480428032,"p95":492093440,"p99":492093440,"max":492093440},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}}]
+
+ ✓ |server| scripts/__tests__/nationalPlaceSearch.measurement.test.ts (1 test) 25716ms
+   ✓ national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory 25714ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  17:45:34
+   Duration  32.76s (transform 3.71s, setup 137ms, collect 6.46s, tests 25.72s, environment 0ms, prepare 96ms)
+
