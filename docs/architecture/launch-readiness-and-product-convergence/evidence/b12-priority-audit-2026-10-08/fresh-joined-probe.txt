@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 launch:probe /home/edwardspc/Desktop/Dev/worktrees/property-listify-b12-priority-20261008
+> tsx scripts/launchRuntimeProbe.ts
+
+{"kind":"launch-runtime-probe","checkedAt":"2026-10-08T16:07:57.121Z","frontendOrigin":"https://www.propertylistifysa.co.za","apiOrigin":"https://api.propertylistifysa.co.za","ok":true,"issues":[]}

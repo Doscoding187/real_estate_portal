@@ -1,0 +1,68 @@
+9c28b3aa852daac33eb269cec8876e6ebbc14a24 2026-10-08T17:52:26+02:00 docs(search): record senior performance proof and bounded release handoff
+6be9ef01d7a93ea5943b2310082a8d257978f4d1 2026-10-08T17:41:53+02:00 perf(search): bound province projection to inventory and batch discovery ancestry
+5de5f05c0ce9e75f0d003486d3dc3f03805e155b 2026-10-08T17:05:05+02:00 perf(search): stop province traversal below locality scope
+7f7eb72e08a872492472b32f2b5b8cd44417db35 2026-10-08T16:58:01+02:00 fix(search): scope fresh Place graph reads to requested authority
+a2cb287f53c6bf2758f22c09518f3f6aedbddaf9 2026-10-08T16:39:59+02:00 test(geography): measure governed national public search and record missed budgets
+52a3877b049476321c6feb6ce40327c61db5e58c 2026-10-08T16:42:01+02:00 docs(geography): prepare protected release packet and hold on measured search limits
+991425af075fd58a31e60f0c089eaeab880de5c0 2026-10-08T16:39:59+02:00 test(geography): measure governed national public search and record missed budgets
+0bf33b2ca99a2563c8208bb09773b4128d8769ea 2026-10-08T16:39:59+02:00 test(geography): measure governed national public search and record missed budgets
+c0da61d69d0aacae87a2c210544f88a35afe9179 2026-10-08T13:20:09+02:00 docs(geography): record accepted source merge and release handoff
+04821fe7ae6401e781925adce099a93ead08490a 2026-10-08T13:16:36+02:00 Merge pull request #594 from Doscoding187/feat/place-authority-slice0-decision
+956e18b06fb2ed8e69a6326de12db4cc08d116af 2026-10-08T12:58:06+02:00 docs(geography): reconcile completed hosted search CI
+0760bbf412eb7b0773949ca069160b0ddcfaa86e 2026-10-08T12:25:56+02:00 fix(search): reject erased Place authority and restore result navigation
+dae3963a8b468af9ac2ba574212149c8d7729d72 2026-10-08T12:10:04+02:00 docs(geography): bind hosted repair and local search outcome evidence
+b3fad5cfb1dde7c514425b56f199565da72c2507 2026-10-08T12:06:35+02:00 feat(search): execute canonical Place inventory scopes and labels
+499cab892902ba1bd4fd6ff7524b8e0e042d17d5 2026-10-08T11:09:32+02:00 test(geography): repair admitted Place CI fixtures and isolate command contracts
+f68e84b1277d8335d4d6189904c1ec4da573c1b8 2026-10-08T09:58:47+02:00 chore(repo): retire unresolved prototype Git links
+74edaeb91ce8a44df51cd476a0ab85d0ba45efbd 2026-10-08T04:46:54+02:00 test(geography): align readiness fixture with canonical Place contract
+e0164dd41b18de2ef15b322389776fafd67c6408 2026-10-08T04:13:18+02:00 fix(geography): preserve Place release outcomes through command cleanup
+5f2c6e94b49ccc2a5fa590fcfd160261ad244967 2026-10-08T04:04:29+02:00 fix(geography): govern coverage signals and bound Place release batches
+66c0dd84a2715f2a7432e5d591252f9a38f5f464 2026-10-08T02:09:21+02:00 feat(geography): integrate governed national Place release candidate
+88377eef70b8b2057c664d6202da6b518fa209a0 2026-10-08T01:40:01+02:00 Merge remote-tracking branch 'origin/main' into feat/place-authority-slice0-decision
+0a8fc9fe0ab40a4fe90ebf278fc74ae1851b85d0 2026-10-08T01:33:44+02:00 fix(geography): enable governed North Riding house authoring
+7756376c9ec604b352595b4e4ba8ced73f18562b 2026-10-08T00:14:38+02:00 Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007
+71c997a1be28cbb654cf4a297f4aa3dfa5418934 2026-10-07T23:46:08+02:00 fix(developer): align registration with canonical organisation fields
+3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99 2026-10-07T21:15:09+02:00 Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007
+39db4c33e9b04729e181293356d612c4e4ec28d8 2026-10-07T20:20:42+02:00 diagnostics(auth): correlate Railway request IDs before disconnect
+4a5a376c05b3f6027578dcb355e7d88282f04188 2026-10-07T20:00:07+02:00 diagnostics(auth): prepare bounded account-information timing
+51cfb989aec18bc8051d76dbec86e570fad559cd 2026-10-07T18:47:50+02:00 Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007
+cab3d5d3043d1c7c7f462d68466a833f0d16ad0d 2026-10-07T17:50:14+02:00 fix(auth): revoke browser sessions before logout success
+cd8e50ce6f1d019c381d32d4e2090def828a0e4c 2026-10-07T12:27:05+02:00 Merge accepted founder authority and serialize geography migrations
+a4ded17bd66f702df117965941256673cd73f6a9 2026-10-07T12:15:41+02:00 feat(geography): add listing Place references and approved launch scope policy
+c1a1b813a44bf033426e026b2253f896cfc6c3b5 2026-10-07T12:13:34+02:00 Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007
+0f8200c59f6a8f894ed5e3e28cd78fbe7f928f31 2026-10-07T11:51:10+02:00 feat(geography): prepare canonical listing assignment validation
+011573fce3b16cc3bef99f64da709b924ec2719a 2026-10-07T11:10:31+02:00 fix(geography): align national discovery name indexes
+b0cb48f676bfe470ce29c49c9679fd65d1766c7b 2026-10-07T11:09:19+02:00 fix(auth): complete canonical Google founder sign-in
+8546386dc2e190b6b60dc13492468122da646774 2026-10-07T10:24:14+02:00 Merge remote-tracking branch 'origin/main' into feat/place-authority-slice0-decision
+cc6a03da4f303e2c1affcb75f31390f7955d5dc8 2026-10-07T09:56:48+02:00 fix(place-authority): preserve source identity and atomic refusals
+4214634190ac86274cc02b3ec3560f4be2fca563 2026-10-07T09:30:36+02:00 fix(auth): prepare nonprivileged Google founder identity proof
+b0bebc343a710f7e5713efc1d36cd5d3bca68455 2026-10-06T21:21:40+02:00 Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006
+7440ab901d48d453606b72ab00d3376fe048a730 2026-10-06T20:46:03+02:00 Reduce static readiness verification round trips
+90620e2790029f5b1e9dd71be6db932d9ddbc48a 2026-10-06T20:17:11+02:00 Merge pull request #587 from Doscoding187/fix/readiness-refresh-cadence-20261006
+6a234902e66179d33db9f898c4f5ba0bee75a796 2026-10-06T19:29:37+02:00 Fix readiness refresh cadence after slow strict verification
+b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60 2026-10-02T18:11:37+02:00 Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002
+154f9aaa29e4bc3de681d27efe083b493b1d35c9 2026-10-02T17:15:30+02:00 fix(vercel): apply security headers before terminal routes
+0cf4022c3a2225766e08186b362543db8809f0ed 2026-10-02T17:00:34+02:00 docs(place-authority): record integration and invariant closure
+6dcd1d03341d1860beba640621916e8c33cb1952 2026-10-02T16:39:21+02:00 test(place-authority): failure-path tests, and corrected mission-state text
+0e6897902519cd5efe90d6d48af8fafd034c0f50 2026-10-02T16:12:59+02:00 Merge origin/main 51802b7d3 into Place Authority, and record what integration invalidates
+7f6c65c6190c4230c8b1026ca144ce3ccb46e44d 2026-10-02T16:09:07+02:00 Merge pull request #585 from Doscoding187/feat/controlled-production-cutover-20261002
+4886bdbd2ffe7545ed87cafacf6649c62fb7b7b7 2026-10-02T15:55:18+02:00 fix(place-authority): close five invariant gaps found in review
+3160bced9b433e70ad232299682ef3836517b9c0 2026-10-02T15:39:22+02:00 fix: recover Redis readiness without resetting error telemetry
+aa9519b4d7a22deb8355866c957fe7e882aefa92 2026-10-02T15:21:44+02:00 fix: bound hosted readiness and use reviewed Redis connection
+c883801942f3b98559ac15e47d5c84bbd7103c34 2026-10-02T14:14:52+02:00 docs(place-authority): record integration readiness and the reconciled-schema proof
+51802b7d324c61e5ff79cc3515510b29f76022d5 2026-10-02T14:05:14+02:00 Merge pull request #584 from Doscoding187/feat/mvp1-aws-storage-hardening-20261001
+15977ab079b29d837297a9adcda05c20353776f7 2026-10-02T13:59:35+02:00 test(place-authority): repeatable national storage proof against the reconciled schema
+719630dd8abb5cd50af5b252770d96d486d45a83 2026-10-02T13:23:20+02:00 fix(place-admission): never re-mint Place identities on a false-negative stat
+fbdfb5f68eb935964b9add487576d094772fb72e 2026-10-02T13:19:42+02:00 Verify media proof-read denial against an existing canary
+f9f917038ee842482d489152d614044eb01114ad 2026-10-02T13:11:11+02:00 fix(tsconfig): declare the ES2022 target and add a repeatable typecheck
+7a249f3e4e7009c5be624b4ba037880701b6a938 2026-10-02T13:10:51+02:00 feat(migrations): reconcile Place Authority onto pinned origin/main cbc18c8fd
+abfa798169ca84ff185dca70f2276117b4983561 2026-10-02T12:50:03+02:00 Reconcile recorded archive custody with disconnected USB readback
+a7194909446a2f4cfcd8e3004277cdcdc8f48374 2026-10-02T12:43:17+02:00 Record verified media hardening and prepare paused production bindings
+3d1254e378d46c4ef2fb75d5ae1c4e22208bd107 2026-10-02T11:46:53+02:00 docs(geography): investigate Gauteng's boundary provenance without re-acquiring
+2ab6a2ef1de74d946e4acccae15f68757eb58004 2026-10-02T11:41:14+02:00 feat(geography): national provenance report; ledger parity gap recorded, not hidden
+8b6e3a11419124a2c5fb3dc56b7e38a2e52d1bcc 2026-10-02T11:35:04+02:00 feat(geography): prove national storage, and repair a committed authority that pointed at /tmp
+967a7afd6f3416e83b47d87c7dca194ecf6c7253 2026-10-02T11:29:56+02:00 Remove completed provisioning and release steps from current execution sequence
+543db1ff13b15d37ba2dcb232a6b517457f58640 2026-10-02T11:25:35+02:00 Reconcile Azure media dependencies and prepare guarded media hardening
+ddb6f8f7ded6156558afe7b7b6dda828c7c04b73 2026-10-02T10:48:05+02:00 fix(geography): make the collision tool a gate, and stop the currency check implying certification
+3016af854b8b5693d9c66af933da6a79d895611c 2026-10-02T10:30:03+02:00 docs(geography): write the national coverage decision surface, and measure it
+260d528c60fd6f8c1e4fae21475626a7b5b97cef 2026-10-02T10:13:00+02:00 test(geography): make boundary currency an executable gate, and record Gauteng's gap

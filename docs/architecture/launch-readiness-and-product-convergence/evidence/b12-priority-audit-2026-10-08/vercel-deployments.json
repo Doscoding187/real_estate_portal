@@ -1,0 +1,552 @@
+{
+  "pagination": {
+    "count": 32,
+    "prev": 1791474961198
+  },
+  "deployments": [
+    {
+      "id": "dpl_9nuoSyUgbjN6vsgFHqseu1oZMMYC",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-4mj0kio6j-edwards-projects-29c395d1.vercel.app",
+      "created": 1791474961198,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/national-place-search-senior-20261008",
+        "githubCommitSha": "9c28b3aa852daac33eb269cec8876e6ebbc14a24",
+        "githubCommitMessage": "docs(search): record senior performance proof and bounded release handoff",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9nuoSyUgbjN6vsgFHqseu1oZMMYC",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_GpxmFpB6YUXNz2NnBN99qqwWZbZY",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-cccr29by2-edwards-projects-29c395d1.vercel.app",
+      "created": 1791455167473,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/place-authority-slice0-decision",
+        "githubCommitSha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e",
+        "githubCommitMessage": "fix(search): reject erased Place authority and restore result navigation",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/GpxmFpB6YUXNz2NnBN99qqwWZbZY",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_9UVMEjgATaa1WMndsB3SdKdGfZ1C",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-bp0uae73x-edwards-projects-29c395d1.vercel.app",
+      "created": 1791451227815,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/place-authority-slice0-decision",
+        "githubCommitSha": "499cab892902ba1bd4fd6ff7524b8e0e042d17d5",
+        "githubCommitMessage": "test(geography): repair admitted Place CI fixtures and isolate command contracts",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9UVMEjgATaa1WMndsB3SdKdGfZ1C",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_J3Xm6vX9JwGxqnMpAjUUvzjk3pkc",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-ro2ir1bdi-edwards-projects-29c395d1.vercel.app",
+      "created": 1791427650734,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/place-authority-slice0-decision",
+        "githubCommitSha": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+        "githubCommitMessage": "test(geography): align readiness fixture with canonical Place contract",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/J3Xm6vX9JwGxqnMpAjUUvzjk3pkc",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_BUnv73VSQpd2Ab8rPKRopjm7r1N2",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-ko0blsq4w-edwards-projects-29c395d1.vercel.app",
+      "created": 1791425853390,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/place-authority-slice0-decision",
+        "githubCommitSha": "e0164dd41b18de2ef15b322389776fafd67c6408",
+        "githubCommitMessage": "fix(geography): preserve Place release outcomes through command cleanup",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/BUnv73VSQpd2Ab8rPKRopjm7r1N2",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_9voWXeyGQw63Un2cb6HgztUgKCyD",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-3qhdry378-edwards-projects-29c395d1.vercel.app",
+      "created": 1791412043777,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+        "githubCommitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+        "githubCommitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9voWXeyGQw63Un2cb6HgztUgKCyD",
+      "isRollbackCandidate": true
+    },
+    {
+      "id": "dpl_8YMMzqnZTYa27uq9jrvQi695sZzm",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-jage1xnlh-edwards-projects-29c395d1.vercel.app",
+      "created": 1791409906362,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/developer-registration-canonical-fields-20261007",
+        "githubCommitSha": "71c997a1be28cbb654cf4a297f4aa3dfa5418934",
+        "githubCommitMessage": "fix(developer): align registration with canonical organisation fields",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/8YMMzqnZTYa27uq9jrvQi695sZzm",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_Ha9wvymftfQKE1UxdsBkpvyc4i22",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-75zr7ykez-edwards-projects-29c395d1.vercel.app",
+      "created": 1791401792295,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+        "githubCommitSha": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+        "githubCommitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/Ha9wvymftfQKE1UxdsBkpvyc4i22",
+      "isRollbackCandidate": true
+    },
+    {
+      "id": "dpl_EBrboRVU12jBzv5ArWKqEhiSspy4",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-9nhj38rex-edwards-projects-29c395d1.vercel.app",
+      "created": 1791397633305,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "diagnose/auth-me-latency-20261007",
+        "githubCommitSha": "39db4c33e9b04729e181293356d612c4e4ec28d8",
+        "githubCommitMessage": "diagnostics(auth): correlate Railway request IDs before disconnect",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/EBrboRVU12jBzv5ArWKqEhiSspy4",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_DjfcY3sQp2F72fg2biCMCfm8ZA5G",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-lsyvehlip-edwards-projects-29c395d1.vercel.app",
+      "created": 1791392887276,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+        "githubCommitSha": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+        "githubCommitMessage": "Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007\n\nFix browser logout session revocation",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/DjfcY3sQp2F72fg2biCMCfm8ZA5G",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_3TjN33CFiDecNQkyFknZH3V52yXk",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-1uu9b6xl7-edwards-projects-29c395d1.vercel.app",
+      "created": 1791388224132,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/browser-logout-session-revocation-20261007",
+        "githubCommitSha": "cab3d5d3043d1c7c7f462d68466a833f0d16ad0d",
+        "githubCommitMessage": "fix(auth): revoke browser sessions before logout success",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/3TjN33CFiDecNQkyFknZH3V52yXk",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_44zMyxLRt9GLPxW5Aatce51Y2DiV",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-bp5j9z5wf-edwards-projects-29c395d1.vercel.app",
+      "created": 1791378423270,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+        "githubCommitSha": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+        "githubCommitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/44zMyxLRt9GLPxW5Aatce51Y2DiV",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_GY9jYdv32iHxsPgkdVkNvrdCtoeC",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-izp6rx55i-edwards-projects-29c395d1.vercel.app",
+      "created": 1791364171157,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/founder-google-identity-authority-20261007",
+        "githubCommitSha": "b0cb48f676bfe470ce29c49c9679fd65d1766c7b",
+        "githubCommitMessage": "fix(auth): complete canonical Google founder sign-in",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/GY9jYdv32iHxsPgkdVkNvrdCtoeC",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_H4uAs5gB4AEnDDAQBR6Siavfujy8",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-nmd0rczkr-edwards-projects-29c395d1.vercel.app",
+      "created": 1791358288405,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/founder-google-auth-entry-20261006",
+        "githubCommitSha": "4214634190ac86274cc02b3ec3560f4be2fca563",
+        "githubCommitMessage": "fix(auth): prepare nonprivileged Google founder identity proof",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/H4uAs5gB4AEnDDAQBR6Siavfujy8",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_b5rPVYhSc1FR8EUYi1AfWH2BGNh7",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-9biwiixbi-edwards-projects-29c395d1.vercel.app",
+      "created": 1791316098346,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "main",
+        "githubCommitSha": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+        "githubCommitMessage": "Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006\n\nReduce readiness verification round trips",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/b5rPVYhSc1FR8EUYi1AfWH2BGNh7",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_DSvJacyvYjMuuv1VS4hWroseQ3hE",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-lsk06n8gz-edwards-projects-29c395d1.vercel.app",
+      "created": 1791315762792,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "githubCommitSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "githubCommitMessage": "Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002\n\nFix deployed frontend security header ordering",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/DSvJacyvYjMuuv1VS4hWroseQ3hE",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_Gzb7m27cTjj1agHEHgbQJfeagi24",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-2icc1e1nw-edwards-projects-29c395d1.vercel.app",
+      "created": 1791312391196,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/readiness-query-roundtrips-20261006",
+        "githubCommitSha": "7440ab901d48d453606b72ab00d3376fe048a730",
+        "githubCommitMessage": "Reduce static readiness verification round trips",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/Gzb7m27cTjj1agHEHgbQJfeagi24",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_5nTseXCtAip3TRjMfcEwh9J72gmM",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-oowpkhb3k-edwards-projects-29c395d1.vercel.app",
+      "created": 1791307783006,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/readiness-refresh-cadence-20261006",
+        "githubCommitSha": "6a234902e66179d33db9f898c4f5ba0bee75a796",
+        "githubCommitMessage": "Fix readiness refresh cadence after slow strict verification",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/5nTseXCtAip3TRjMfcEwh9J72gmM",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_9h2A4GiPTtKmJqGCWh5eCm1A6gDq",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-lga7qqeds-edwards-projects-29c395d1.vercel.app",
+      "created": 1790958562827,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "githubCommitSha": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+        "githubCommitMessage": "Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002\n\nFix deployed frontend security header ordering",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9h2A4GiPTtKmJqGCWh5eCm1A6gDq",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_9rfPdHCKPPjRcsNoQ6X9wPBd1PXq",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-gvk58k824-edwards-projects-29c395d1.vercel.app",
+      "created": 1790954150763,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "fix/vercel-security-header-order-20261002",
+        "githubCommitSha": "154f9aaa29e4bc3de681d27efe083b493b1d35c9",
+        "githubCommitMessage": "fix(vercel): apply security headers before terminal routes",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9rfPdHCKPPjRcsNoQ6X9wPBd1PXq",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_71XuCNhzTawfbV3PtGJnyhYGEGCh",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-gh4jng5vn-edwards-projects-29c395d1.vercel.app",
+      "created": 1790953272151,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+        "githubCommitSha": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+        "githubCommitMessage": "Merge pull request #585 from Doscoding187/feat/controlled-production-cutover-20261002\n\nFix hosted readiness latency and reviewed Redis connection",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/71XuCNhzTawfbV3PtGJnyhYGEGCh",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_u4ePN4GbTgMvmy7Sk9Y3GnwSxm9n",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-e1ydwgxyk-edwards-projects-29c395d1.vercel.app",
+      "created": 1790948367763,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/controlled-production-cutover-20261002",
+        "githubCommitSha": "3160bced9b433e70ad232299682ef3836517b9c0",
+        "githubCommitMessage": "fix: recover Redis readiness without resetting error telemetry",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/u4ePN4GbTgMvmy7Sk9Y3GnwSxm9n",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_VR28ZDeHCMNN8jdSHPZsmjYBhnvY",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-3oxktda08-edwards-projects-29c395d1.vercel.app",
+      "created": 1790947337965,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/controlled-production-cutover-20261002",
+        "githubCommitSha": "aa9519b4d7a22deb8355866c957fe7e882aefa92",
+        "githubCommitMessage": "fix: bound hosted readiness and use reviewed Redis connection",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/VR28ZDeHCMNN8jdSHPZsmjYBhnvY",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_4WGk2Y8qbEzQvQipciMaxp5uH9Gr",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-lt059mtrh-edwards-projects-29c395d1.vercel.app",
+      "created": 1790947227250,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "main",
+        "githubCommitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+        "githubCommitMessage": "Merge pull request #577 from Doscoding187/feat/database-transition-stage-1-fresh-establishment\n\nDB Stage 1: hosted MySQL 8.4 admission evidence",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/4WGk2Y8qbEzQvQipciMaxp5uH9Gr",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_AcaCivwV83kBEuFr4G1BBWPXSQYj",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-3p4ugvwk6-edwards-projects-29c395d1.vercel.app",
+      "created": 1790945766047,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "main",
+        "githubCommitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+        "githubCommitMessage": "Merge pull request #577 from Doscoding187/feat/database-transition-stage-1-fresh-establishment\n\nDB Stage 1: hosted MySQL 8.4 admission evidence",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/AcaCivwV83kBEuFr4G1BBWPXSQYj",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_FPVfX7FmiSjdr4qE8Wyw98PntRYp",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-6xg44oh6n-edwards-projects-29c395d1.vercel.app",
+      "created": 1790943098834,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "main",
+        "githubCommitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+        "githubCommitMessage": "Merge pull request #577 from Doscoding187/feat/database-transition-stage-1-fresh-establishment\n\nDB Stage 1: hosted MySQL 8.4 admission evidence",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/FPVfX7FmiSjdr4qE8Wyw98PntRYp",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_DA9C2fWwgr26p1PUV537HJSEPQ98",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-jhzmn2lzr-edwards-projects-29c395d1.vercel.app",
+      "created": 1790939987413,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/mvp1-aws-storage-hardening-20261001",
+        "githubCommitSha": "fbdfb5f68eb935964b9add487576d094772fb72e",
+        "githubCommitMessage": "Verify media proof-read denial against an existing canary",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/DA9C2fWwgr26p1PUV537HJSEPQ98",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_CEQSim16MSdGmbzhX1ho6rbWjYnW",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-obhgloyhc-edwards-projects-29c395d1.vercel.app",
+      "created": 1790938208717,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/mvp1-aws-storage-hardening-20261001",
+        "githubCommitSha": "abfa798169ca84ff185dca70f2276117b4983561",
+        "githubCommitMessage": "Reconcile recorded archive custody with disconnected USB readback",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/CEQSim16MSdGmbzhX1ho6rbWjYnW",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_6YZwL6KKUhF3CWBE5vST3Ydz3XcS",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-x544vhbd6-edwards-projects-29c395d1.vercel.app",
+      "created": 1790937801902,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/mvp1-aws-storage-hardening-20261001",
+        "githubCommitSha": "a7194909446a2f4cfcd8e3004277cdcdc8f48374",
+        "githubCommitMessage": "Record verified media hardening and prepare paused production bindings",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/6YZwL6KKUhF3CWBE5vST3Ydz3XcS",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_24RZeNZtFZ7WUcrPMLu1qG9XQZX7",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-9ehdt2uth-edwards-projects-29c395d1.vercel.app",
+      "created": 1790933401121,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/mvp1-aws-storage-hardening-20261001",
+        "githubCommitSha": "967a7afd6f3416e83b47d87c7dca194ecf6c7253",
+        "githubCommitMessage": "Remove completed provisioning and release steps from current execution sequence",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/24RZeNZtFZ7WUcrPMLu1qG9XQZX7",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_5SZJCMZiKNSikChf22njPmkgJmYm",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-f186hf550-edwards-projects-29c395d1.vercel.app",
+      "created": 1790933147052,
+      "state": "ERROR",
+      "target": null,
+      "meta": {
+        "githubCommitRef": "feat/mvp1-aws-storage-hardening-20261001",
+        "githubCommitSha": "543db1ff13b15d37ba2dcb232a6b517457f58640",
+        "githubCommitMessage": "Reconcile Azure media dependencies and prepare guarded media hardening",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/5SZJCMZiKNSikChf22njPmkgJmYm",
+      "isRollbackCandidate": false
+    },
+    {
+      "id": "dpl_3vESWZymAuWqEKvGrYTWumWj5QeV",
+      "name": "real-estate-portal",
+      "url": "real-estate-portal-2ix8wfq20-edwards-projects-29c395d1.vercel.app",
+      "created": 1790892585318,
+      "state": "READY",
+      "target": "production",
+      "meta": {
+        "githubCommitRef": "main",
+        "githubCommitSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+        "githubCommitMessage": "Merge pull request #577 from Doscoding187/feat/database-transition-stage-1-fresh-establishment\n\nDB Stage 1: hosted MySQL 8.4 admission evidence",
+        "githubRepo": "real_estate_portal",
+        "githubOrg": "Doscoding187"
+      },
+      "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/3vESWZymAuWqEKvGrYTWumWj5QeV",
+      "isRollbackCandidate": false
+    }
+  ]
+}

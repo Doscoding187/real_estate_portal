@@ -1,0 +1,861 @@
+[
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T22:15:55.066Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "495723b6-d09b-46c3-bec0-24902f289a06",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "commitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "6eb3d7e3-8f41-46dd-9746-c439b34e7c22",
+    "status": "SUCCESS",
+    "updatedAt": "2026-10-07T22:17:41.807Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "developer-593-final-containment-223115060281-verified.json",
+      "developer-593-api-provider-221840547168.json",
+      "developer-593-final-containment-222639049550-verified.json",
+      "developer-593-api-provider-221747897022.json",
+      "developer-593-joined-release-checkpoint-20261008.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T19:50:12.573Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "05f9fd70-cc26-458f-bbbb-95c0bba3e27f",
+    "meta": {
+      "branch": "main",
+      "commitHash": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+      "commitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "82db4811-84cb-4adb-8b7f-2213f29d7dde",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T22:17:55.764Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "auth-me-592-controlled-diagnostic-checkpoint-20261007.json",
+      "auth-me-592-cleanup-final-containment-195507457380-verified.json",
+      "developer-593-preflight-containment-221257649208-verified.json",
+      "auth-me-592-cleanup-api-provider-195259664538.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T19:18:17.824Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "21c29dd2-d3e4-41e3-81fa-e33aa045e867",
+    "meta": {
+      "branch": "main",
+      "commitHash": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+      "commitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "cce3d8b6-2328-43d8-ade1-908870ee13ef",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T19:52:26.020Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "auth-me-592-controlled-diagnostic-checkpoint-20261007.json",
+      "auth-me-592-final-containment-193959992459-verified.json",
+      "auth-me-592-api-provider-192140478125.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T16:50:29.868Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "c01aee96-4f85-4375-8495-50843c2cbb79",
+    "meta": {
+      "branch": "main",
+      "commitHash": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+      "commitMessage": "Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007\n\nFix browser logout session revocation",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "6bc443ac-63f6-41e1-afff-c7721b4f8c65",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T19:20:34.784Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "logout-591-retired-writer-state-readback.json",
+      "logout-591-controlled-release-checkpoint-20261007.json",
+      "logout-591-api-provider-165606079542.json",
+      "logout-591-final-containment-171038736719-verified.json",
+      "auth-me-592-preflight-verified.json",
+      "logout-591-final-containment-171605122358-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T13:37:11.929Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "bf4b8ae8-df41-424e-92a3-2b286a63a70a",
+    "meta": {
+      "branch": "main",
+      "commitHash": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+      "commitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "ca572573-b293-4da2-83ce-333831b9aa6f",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T16:52:52.598Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "activation-590-final-containment-and-artifacts.json",
+      "logout-591-retired-writer-state-readback.json",
+      "activation-590-api-provider-133939676081.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T12:45:57.779Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "61194cc8-c7cb-4571-870c-e7a7ed82289f",
+    "meta": {
+      "branch": "main",
+      "commitHash": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+      "commitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "bcfc233a-484c-455b-a3d4-fe02fd020e12",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T13:39:27.742Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "founder-590-api-provider-status-20261007T124908Z.json",
+      "founder-590-owner-activation-held-20261007T132917Z.json",
+      "logout-591-retired-writer-state-readback.json",
+      "founder-590-owner-activation-preflight-containment.json",
+      "founder-590-owner-binding-checkpoint-20261007T131658Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-06T19:23:06.662Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "2be7f03e-7abf-4878-827a-61cc4ad0a3b2",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+      "commitMessage": "Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006\n\nReduce readiness verification round trips",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "9c050507-aa37-4f46-938b-2e13d248377c",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T12:48:31.092Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "founder-590-merged-planning-blocked-20261007T101912Z.json",
+      "query-release-api-provider-success.json",
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "logout-591-retired-writer-state-readback.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T202146Z.json",
+      "query-release-backend-reconciled-195236821734.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-06T18:18:07.635Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "072491d6-0eeb-44ae-a5d1-c664134a86e9",
+    "meta": {
+      "branch": "main",
+      "commitHash": "90620e2790029f5b1e9dd71be6db932d9ddbc48a",
+      "commitMessage": "Merge pull request #587 from Doscoding187/fix/readiness-refresh-cadence-20261006\n\nFix readiness refresh scheduling after slow database verification",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "36364727-e8e4-40c9-9e47-8701ad0a2054",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-06T19:25:14.852Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "logout-591-retired-writer-state-readback.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T202146Z.json",
+      "query-release-backend-reconciled-195236821734.json",
+      "cadence-release-api-provider-status-182109776205.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T203829Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-02T16:14:50.381Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "89ffe531-1194-43cd-83ad-8872b1d14bc3",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "commitMessage": "Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002\n\nFix deployed frontend security header ordering",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "e3f8f3d0-62f2-4d39-b296-afe1a5f238b5",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-06T18:21:01.871Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "logout-591-retired-writer-state-readback.json",
+      "unpaid-resume-containment-20261006171136.json",
+      "header-release-backend-reconciled.json",
+      "header-release-api-provider-status-161811599645.json",
+      "header-release-api-provider-success.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T14:11:38.174Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "41e1710e-7f88-4795-9462-be086d83c418",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+      "commitMessage": "Merge pull request #585 from Doscoding187/feat/controlled-production-cutover-20261002\n\nFix hosted readiness latency and reviewed Redis connection",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "86ea3038-c72e-4526-b700-7a8ff14688e1",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-02T16:16:56.933Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "replacement-api-provider-status-141330677324.json",
+      "joined-release-senior-checkpoint-draft-7f6c65c6.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "replacement-api-provider-success.json",
+      "header-release-backend-reconciled.json",
+      "replacement-api-artifact-verified.json",
+      "joined-review-containment-verified-20261002T153805135969Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:47:59.275Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "995e3337-bb38-4545-8e7a-92ad1daed971",
+    "meta": {
+      "branch": "main",
+      "commitHash": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "commitMessage": "Merge pull request #583: integrated Paid MVP controlled release\n\nIntegrate accepted paid-product and Azure/database/geography work with reviewed owner admission. Production intake remains closed; deployment and protected database release follow the attended controlled checklist.",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "4b8d475b-b1bd-432b-8919-97dece597675",
+    "status": "FAILED",
+    "updatedAt": "2026-10-02T12:53:41.850Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "backend-continuation-source-acceptance-packet-3160bced9.json",
+      "checkpoint-live-summary-131605243714.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "backend-continuation-readback-140155894595.json",
+      "replacement-final-containment-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:37:38.458Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "c35c0e4c-64eb-4044-9a57-5a1e561a13ab",
+    "meta": {
+      "branch": "main",
+      "commitHash": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "commitMessage": "Merge pull request #583: integrated Paid MVP controlled release\n\nIntegrate accepted paid-product and Azure/database/geography work with reviewed owner admission. Production intake remains closed; deployment and protected database release follow the attended controlled checklist.",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+    "snapshotId": "e342f445-214c-4cb4-a8d7-7d2e4656491f",
+    "status": "FAILED",
+    "updatedAt": "2026-10-02T12:44:02.412Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "backend-continuation-source-acceptance-packet-3160bced9.json",
+      "checkpoint-live-summary-131605243714.json",
+      "backend-continuation-readback-140155894595.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T22:20:36.724Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "commitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "f0dd8100-ef23-4fe9-a19c-80a8f87199aa",
+    "status": "SUCCESS",
+    "updatedAt": "2026-10-07T22:21:50.534Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "developer-593-email-worker-health-observation-222234411121.json",
+      "developer-593-final-containment-223115060281-verified.json",
+      "developer-593-final-containment-222639049550-verified.json",
+      "developer-593-email-worker-provider-222200698616.json",
+      "developer-593-joined-release-checkpoint-20261008.json",
+      "developer-593-email-worker-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T19:25:33.511Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "408b324f-f688-41c6-9adf-9d2285729ef2",
+    "meta": {
+      "branch": "main",
+      "commitHash": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+      "commitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "8c4d5127-eff3-4a30-a131-c44b44fdc559",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T22:22:11.492Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "auth-me-592-email-worker-health-observation-192817627001.json",
+      "auth-me-592-controlled-diagnostic-checkpoint-20261007.json",
+      "auth-me-592-cleanup-final-containment-195507457380-verified.json",
+      "developer-593-preflight-containment-221257649208-verified.json",
+      "auth-me-592-email-worker-health-observation-195620816558.json",
+      "auth-me-592-email-worker-provider-192740043321.json",
+      "auth-me-592-final-containment-193959992459-verified.json",
+      "auth-me-592-email-worker-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T16:58:46.995Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "286a9173-0764-43aa-a226-81f9f36d0ea2",
+    "meta": {
+      "branch": "main",
+      "commitHash": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+      "commitMessage": "Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007\n\nFix browser logout session revocation",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "ab728f1f-e009-4cf4-b12c-1fa72f908559",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T19:27:03.563Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "logout-591-retired-writer-state-readback.json",
+      "logout-591-controlled-release-checkpoint-20261007.json",
+      "logout-591-final-containment-171038736719-verified.json",
+      "logout-591-email-worker-provider-170026998252.json",
+      "auth-me-592-preflight-verified.json",
+      "logout-591-email-worker-health-observation-170038247769.json",
+      "logout-591-final-containment-171605122358-verified.json",
+      "logout-591-email-worker-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T12:53:25.892Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "c1656fdf-db87-45d2-b0d7-96d227b63ad3",
+    "meta": {
+      "branch": "main",
+      "commitHash": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+      "commitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "eab3d3ba-81b5-45c6-8f2a-b101bd6c546c",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T17:00:08.970Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "founder-590-release-email-worker-verified.json",
+      "activation-590-final-containment-and-artifacts.json",
+      "logout-591-retired-writer-state-readback.json",
+      "founder-590-release-email-worker-health-observation-130928167143.json",
+      "founder-590-release-email-worker-health-observation-130007883446.json",
+      "founder-590-owner-binding-checkpoint-20261007T131658Z.json",
+      "founder-590-release-email-worker-provider-20261007T125603Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-06T19:30:34.732Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "58fc8a6e-ad1e-4f0a-b425-3d1379b57deb",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+      "commitMessage": "Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006\n\nReduce readiness verification round trips",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "40c5c5d4-c3fd-401b-91bd-c89776d2a493",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T12:55:50.935Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "founder-590-merged-planning-blocked-20261007T101912Z.json",
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "logout-591-retired-writer-state-readback.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T202146Z.json",
+      "query-release-backend-reconciled-195236821734.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T203829Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-02T16:19:28.816Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "b5aac779-1ad5-407f-b67c-373b72343e4a",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "commitMessage": "Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002\n\nFix deployed frontend security header ordering",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "23777ac4-a867-491e-9379-9bf28fe1d92f",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-06T19:32:31.748Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "header-release-email-worker-provider-status-162134261465.json",
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "header-release-email-worker-health-observation-162246986577.json",
+      "header-release-email-worker-health-observation-171051128372.json",
+      "logout-591-retired-writer-state-readback.json",
+      "joined-release-senior-checkpoint-b0bebc34-20261006T202146Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T14:15:22.580Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "969ac24a-80f8-418d-bcf0-430e4e73f809",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+      "commitMessage": "Merge pull request #585 from Doscoding187/feat/controlled-production-cutover-20261002\n\nFix hosted readiness latency and reviewed Redis connection",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "aab65b28-3485-4a0a-9eee-cf4ab6a40aa2",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-02T16:21:03.966Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "replacement-email-worker-health-observation-141942995096.json",
+      "joined-release-senior-checkpoint-draft-7f6c65c6.json",
+      "replacement-email-worker-health-observation-152011200333.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "header-release-backend-reconciled.json",
+      "joined-review-containment-verified-20261002T153805135969Z.json",
+      "joined-release-checkpoint-security-held-20261002T153852Z.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:37:55.946Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "7c377d5a-6e42-41c9-9bf7-9fd5342b522b",
+    "meta": {
+      "branch": "main",
+      "commitHash": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "commitMessage": "Merge pull request #583: integrated Paid MVP controlled release\n\nIntegrate accepted paid-product and Azure/database/geography work with reviewed owner admission. Production intake remains closed; deployment and protected database release follow the attended controlled checklist.",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+    "snapshotId": "9617ffb2-8988-479e-a990-146fe1bcf82f",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-02T14:17:02.116Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "backend-continuation-source-acceptance-packet-3160bced9.json",
+      "checkpoint-live-summary-131605243714.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "backend-continuation-readback-140155894595.json",
+      "replacement-final-containment-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T22:23:01.516Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "19a8fac1-b750-4a8f-8f5d-1d94e725f460",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "commitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "a2d4a402-01ba-4f5d-b679-6226fe302e62",
+    "status": "SUCCESS",
+    "updatedAt": "2026-10-08T16:01:03.281Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "developer-593-lead-job-provider-222554022696.json",
+      "developer-593-final-containment-223115060281-verified.json",
+      "developer-593-lead-job-health-observation-222621623020.json",
+      "developer-593-final-containment-222639049550-verified.json",
+      "developer-593-lead-job-verified.json",
+      "developer-593-lead-job-provider-222430853994.json",
+      "developer-593-joined-release-checkpoint-20261008.json",
+      "developer-593-lead-job-provider-222505561207.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T19:29:59.029Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "4fb40b84-c2f9-4cae-afc8-21b8042036d1",
+    "meta": {
+      "branch": "main",
+      "commitHash": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+      "commitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "fb30c835-ecd0-4fc1-a0d2-6a896952fdca",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T22:24:32.676Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "auth-me-592-lead-first-execution-pending.json",
+      "auth-me-592-lead-job-health-observation-193545899013.json",
+      "auth-me-592-lead-job-health-observation-195620815133.json",
+      "auth-me-592-controlled-diagnostic-checkpoint-20261007.json",
+      "auth-me-592-cleanup-final-containment-195507457380-verified.json",
+      "auth-me-592-lead-job-provider-193524523020.json",
+      "developer-593-preflight-containment-221257649208-verified.json",
+      "auth-me-592-lead-job-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T17:00:55.305Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "bf2e3336-8842-4791-8a7f-7a445cf91eee",
+    "meta": {
+      "branch": "main",
+      "commitHash": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+      "commitMessage": "Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007\n\nFix browser logout session revocation",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "39d1191c-a1a4-463a-94a9-279f202e2481",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T19:31:46.904Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "logout-591-lead-job-provider-170242187040.json",
+      "logout-591-lead-job-provider-170715387222.json",
+      "logout-591-lead-job-health-observation-170731393251.json",
+      "logout-591-lead-job-verified.json",
+      "logout-591-retired-writer-state-readback.json",
+      "logout-591-controlled-release-checkpoint-20261007.json",
+      "logout-591-final-containment-171038736719-verified.json",
+      "auth-me-592-preflight-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-07T13:00:45.276Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "46c33adc-24b0-4d37-9858-864c31c1860e",
+    "meta": {
+      "branch": "main",
+      "commitHash": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+      "commitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "850c8d9b-7762-4861-94e0-e0bdb1911137",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T17:02:34.391Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "activation-590-final-containment-and-artifacts.json",
+      "founder-590-release-lead-job-provider-20261007T130303Z.json",
+      "logout-591-retired-writer-state-readback.json",
+      "founder-590-release-lead-job-provider-20261007T130359Z.json",
+      "founder-590-release-lead-job-provider-20261007T130503Z.json",
+      "founder-590-release-lead-job-provider-20261007T130610Z.json",
+      "founder-590-release-lead-job-provider-20261007T130529Z.json",
+      "founder-590-release-lead-job-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-06T19:33:05.282Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "53a98f77-c113-4c4c-8625-c25c4a7ce1db",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+      "commitMessage": "Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006\n\nReduce readiness verification round trips",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "35603ba9-5ef3-4f7b-bae3-c5fa6454e8e9",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-07T13:03:02.044Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "founder-590-merged-planning-blocked-20261007T101912Z.json",
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-lead-job-verified.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "query-release-lead-job-health-observation-193547577702.json",
+      "query-release-lead-job-provider-success.json",
+      "logout-591-retired-writer-state-readback.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": true,
+    "createdAt": "2026-10-02T16:23:17.304Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "64838822-59cd-4354-8547-2f92e16b8bf8",
+    "meta": {
+      "branch": "main",
+      "commitHash": "b34b6a0eeadf46e5b855fa3d3c92b6c277c09e60",
+      "commitMessage": "Merge pull request #586 from Doscoding187/fix/vercel-security-header-order-20261002\n\nFix deployed frontend security header ordering",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "a208f152-6525-4de6-a67f-4945f776b8ae",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-06T19:35:00.836Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "header-release-lead-job-provider-status-162626450300.json",
+      "header-release-lead-job-provider-success.json",
+      "query-release-backend-reconciled-201414167861.json",
+      "query-release-backend-reconciled.json",
+      "query-release-backend-senior-checkpoint-b0bebc34.json",
+      "logout-591-retired-writer-state-readback.json",
+      "header-release-lead-job-health-observation-171051142085.json",
+      "header-release-lead-job-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T14:17:43.697Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "9b583e76-8c12-4495-928d-417cdbd926ba",
+    "meta": {
+      "branch": "main",
+      "commitHash": "7f6c65c6190c4230c8b1026ca144ce3ccb46e44d",
+      "commitMessage": "Merge pull request #585 from Doscoding187/feat/controlled-production-cutover-20261002\n\nFix hosted readiness latency and reviewed Redis connection",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "a4471a84-57e5-4d55-9dca-14ccc7bd63b6",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-02T16:24:37.948Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "joined-release-senior-checkpoint-draft-7f6c65c6.json",
+      "replacement-lead-job-health-observation-142128827448.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "replacement-lead-job-health-observation-152011203427.json",
+      "replacement-lead-job-provider-status-141941814842.json",
+      "replacement-lead-job-provider-success.json",
+      "replacement-lead-job-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": true,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:38:18.162Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "4d073103-9389-4499-846a-a425d95f219f",
+    "meta": {
+      "branch": "main",
+      "commitHash": "cbc18c8fdfb0a900c7255ca695da56bd9a7660c3",
+      "commitMessage": "Merge pull request #583: integrated Paid MVP controlled release\n\nIntegrate accepted paid-product and Azure/database/geography work with reviewed owner admission. Production intake remains closed; deployment and protected database release follow the attended controlled checklist.",
+      "reason": "deploy"
+    },
+    "regions": [
+      "asia-southeast1-eqsg3a"
+    ],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": "f942b30e-9283-4e5b-8369-896d4564ff63",
+    "status": "REMOVED",
+    "updatedAt": "2026-10-02T14:19:19.138Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": [
+      "backend-continuation-source-acceptance-packet-3160bced9.json",
+      "checkpoint-live-summary-131605243714.json",
+      "backend-readiness-checkpoint-7f6c65c6.json",
+      "logout-591-retired-writer-state-readback.json",
+      "backend-continuation-readback-140155894595.json",
+      "replacement-final-containment-verified.json"
+    ]
+  },
+  {
+    "canRedeploy": false,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:37:45.791Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "cb7e8116-00df-4392-afd7-8cde8582349e",
+    "meta": null,
+    "regions": [],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": null,
+    "status": "SKIPPED",
+    "updatedAt": "2026-10-02T12:37:45.791Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": []
+  },
+  {
+    "canRedeploy": false,
+    "canRollback": false,
+    "createdAt": "2026-10-02T12:32:33.229Z",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "id": "97b5939a-d3ad-4c85-9390-f8147cf65531",
+    "meta": null,
+    "regions": [],
+    "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+    "snapshotId": null,
+    "status": "SKIPPED",
+    "updatedAt": "2026-10-02T12:32:33.229Z",
+    "url": null,
+    "historicalSuccessEvidenceCandidates": []
+  }
+]
