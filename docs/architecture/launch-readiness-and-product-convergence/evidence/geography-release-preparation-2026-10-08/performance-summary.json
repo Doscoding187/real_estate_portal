@@ -1,0 +1,236 @@
+{
+  "source": "04821fe7ae6401e781925adce099a93ead08490a",
+  "sourceTree": "9839a1d085edd6fcdc4786125cba54e4c29fd4ef",
+  "target": {
+    "class": "disposable-worktree",
+    "fingerprint": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b"
+  },
+  "startedAt": "2026-10-08T14:30:01.814Z",
+  "completedAt": "2026-10-08T14:31:25.944Z",
+  "cardinalities": {
+    "place": 16944,
+    "placeName": 25618,
+    "placeRelationship": 16935,
+    "placeEvidence": 79189,
+    "placeExternalMapping": 19042
+  },
+  "inventoryCardinalities": {
+    "synthetic": 120,
+    "sale": 72,
+    "rent": 48,
+    "perPlace": {
+      "pl-place-01-6a145c6d642ba208a2c12de7": 42,
+      "pl-place-01-f175328139bb845a4645b9d4": 18,
+      "pl-place-01-21f154cd5d0954c29ec7525f": 12,
+      "pl-place-01-001b1eea75044e5f0697796f": 6,
+      "pl-place-01-003a91e8425512e2c9e416f2": 6,
+      "pl-place-01-00a5071b3470f996c7856dd5": 6,
+      "pl-place-01-001ed8e08633779c9cf30db0": 5,
+      "pl-place-01-001b523f4a4fec3cfc8fbbb6": 5,
+      "pl-place-01-0072305c69317ef61bbaf94c": 5,
+      "pl-place-01-00147ee313884ebc70bc12c8": 5,
+      "pl-place-01-000a3018e782cab5449038b0": 5,
+      "pl-place-01-00097ed4372b9e2ce7cabf53": 5
+    }
+  },
+  "host": {
+    "node": "v22.22.3",
+    "os": "linux",
+    "cpu": "AMD Ryzen 3 3200G with Radeon Vega Graphics",
+    "cpuCount": 4,
+    "totalMemoryBytes": 14576717824,
+    "freeMemoryBytesAtEnd": 4369383424,
+    "memoryAtEnd": {
+      "rss": 1988567040,
+      "heapTotal": 1843728384,
+      "heapUsed": 1706726648,
+      "external": 8005497,
+      "arrayBuffers": 4142988
+    },
+    "sqlVersion": "8.0.46-0ubuntu0.24.04.3",
+    "poolLimit": 10,
+    "maxQueuedAcquisitions": 78
+  },
+  "windows": [
+    {
+      "concurrency": 1,
+      "requests": 60,
+      "durationMs": 28718.68,
+      "requestsPerSecond": 2.09
+    },
+    {
+      "concurrency": 5,
+      "requests": 60,
+      "durationMs": 16759.76,
+      "requestsPerSecond": 3.58
+    },
+    {
+      "concurrency": 20,
+      "requests": 60,
+      "durationMs": 18767.76,
+      "requestsPerSecond": 3.2
+    }
+  ],
+  "summaries": [
+    {
+      "concurrency": 1,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 604.91,
+        "p95": 703.04,
+        "p99": 828.45,
+        "max": 828.45
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 553.83,
+        "p95": 590.91,
+        "p99": 759.93,
+        "max": 759.93
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 48.13,
+        "p95": 141.55,
+        "p99": 147.72,
+        "max": 147.72
+      },
+      "acquisitionMs": {
+        "count": 1284,
+        "p50": 0.03,
+        "p95": 12.51,
+        "p99": 14.14,
+        "max": 18.37
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 1229381632,
+        "p95": 1388298240,
+        "p99": 1408716800,
+        "max": 1408716800
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": true,
+        "readP99Within2000ms": true,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 5,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 1606.09,
+        "p95": 2545.79,
+        "p99": 2893.74,
+        "max": 2893.74
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 1008.74,
+        "p95": 1593.57,
+        "p99": 2006.42,
+        "max": 2006.42
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 505.64,
+        "p95": 1523.36,
+        "p99": 1812.23,
+        "max": 1812.23
+      },
+      "acquisitionMs": {
+        "count": 1284,
+        "p50": 0.04,
+        "p95": 179.31,
+        "p99": 215.79,
+        "max": 221.71
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 1584828416,
+        "p95": 1752748032,
+        "p99": 1768693760,
+        "max": 1768693760
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": false,
+        "readP99Within2000ms": false,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 20,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 7440.53,
+        "p95": 10355.47,
+        "p99": 10449.13,
+        "max": 10449.13
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 2173.17,
+        "p95": 4194.43,
+        "p99": 5531.98,
+        "max": 5531.98
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 4402.27,
+        "p95": 6022.95,
+        "p99": 6664.46,
+        "max": 6664.46
+      },
+      "acquisitionMs": {
+        "count": 1284,
+        "p50": 244.08,
+        "p95": 1134.44,
+        "p99": 1293.92,
+        "max": 1340.54
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 1923833856,
+        "p95": 1986101248,
+        "p99": 1988435968,
+        "max": 1988435968
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": false,
+        "readP99Within2000ms": false,
+        "acquisitionP95Within250ms": false
+      }
+    }
+  ],
+  "limits": {
+    "readP95Ms": 750,
+    "readP99Ms": 2000,
+    "acquisitionP95Ms": 250,
+    "unexpectedErrorsPercentLessThan": 0.1,
+    "reference": "docs/architecture/launch-readiness-and-product-convergence/24-paid-mvp-launch-closure-execution-plan.md B17 baseline",
+    "discovery200msProposalIsNotAgreedGate": true
+  },
+  "limitations": [
+    "Local diagnostic on 120 synthetic listings; not B17 10,000-listing/24-hour capacity acceptance.",
+    "First observations occur after fixture preparation; InnoDB and OS caches are not reset.",
+    "Query durations include driver acquisition/execution/transfer; queryRowsReturned is measured, physical rows examined is not.",
+    "Serialization is an additional superjson stringify estimate; HTTP latency includes actual transport serialization and parsing.",
+    "RSS observations are process samples; no production memory/CPU-credit/storage capacity acceptance.",
+    "Homepage EnhancedHero still hands off legacy location IDs; this benchmark does not certify customer homepage discovery.",
+    "Development inventory cannot use canonical Place assignment.",
+    "Scope policy is approved exact locality/exact city/evidenced province; no new city descendant membership."
+  ],
+  "reportSha256": "c598903571ad38ff89a509c51d27cb5fadb45cace10176dd6e2825a892438131",
+  "fullEvidence": "../national-place-search-measurement-2026-10-08/report.json",
+  "productionReleaseRecommendation": "hold",
+  "reason": "Concurrency 5 and 20 fail established read latency limits; concurrency20 also fails connection-acquisition limit. No budget waiver or runtime optimization."
+}

@@ -1,0 +1,21 @@
+import pathlib,subprocess,os,json,hashlib,base64
+profile=pathlib.Path('/home/edwardspc/.config/property-listify/b08-inspector.env');assert profile.stat().st_mode&0o777==0o600
+v={}
+for l in profile.read_text().splitlines():
+ if l and not l.startswith('#'):
+  k,x=l.split('=',1);v[k]=x.strip().strip(chr(34)).strip(chr(39))
+v.update(NODE_ENV='production',APP_ENV='production',DATABASE_CREDENTIAL_CLASS='read-only',DATABASE_AUTHORITY_APPROVAL_REFERENCE='GEOGRAPHY-POSTMERGE-READONLY-PLANNING-2026-10-08-Edward',DATABASE_AUTHORITY_APPROVAL_ACTOR='Edward',DATABASE_AUTHORITY_APPROVED_FINGERPRINT='b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced',DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS='read-only')
+b=pathlib.Path('/tmp/geography-04821fe7-release-required.tar.gz').read_bytes()
+payload={'sourceSha':'04821fe7ae6401e781925adce099a93ead08490a','archiveSha256':hashlib.sha256(b).hexdigest(),'archive':base64.b64encode(b).decode(),'env':v,'operations':[{'name':'inspect','args':['release-reference:inspect','--adapter=places']},{'name':'schema-plan','args':['release:plan','--accepted-old-head=0096_user_founder_authority_unique.sql','--expected-new-head=0111_properties_canonical_place_reference_fk.sql']},{'name':'reference-plan','args':['release-reference:plan','--adapter=places']}]}
+encoded=base64.b64encode(pathlib.Path('/tmp/geography-remote-readonly-runner.cjs').read_bytes()).decode()
+cmd=['railway','ssh','-p','8cdd7515-ddd2-4252-bbee-df5a5c209d4b','-e','63070d99-357a-40ba-99c3-6d1368f61652','-s','db88a720-2d1f-4afc-a3a8-6228b6b08d3e','--','node','-e','eval(Buffer.from("'+encoded+'","base64").toString())']
+env=os.environ.copy();env.update(RAILWAY_CALLER='skill:use-railway@1.6.1',RAILWAY_AGENT_SESSION='geography-release-prep-20261008')
+with open('/tmp/geography-fresh-remote-planning.json','w') as o,open('/tmp/geography-fresh-remote-planning-transport.txt','w') as e:
+ r=subprocess.run(cmd,input=json.dumps(payload),text=True,stdout=o,stderr=e,env=env)
+print('Reviewed remote read-only planning exit:',r.returncode)
+try:
+ j=json.loads(pathlib.Path('/tmp/geography-fresh-remote-planning.json').read_text())
+ print(json.dumps({k:v for k,v in j.items() if k!='operations'}))
+ for item in j.get('operations',[]): print(json.dumps({'operation':item['name'],'exit':item['exit'],'stdoutBytes':len(item['stdout']),'stderrBytes':len(item['stderr'])}))
+except Exception: print('Transport did not return a complete JSON record; inspect preserved bounded transport evidence.')
+raise SystemExit(r.returncode)

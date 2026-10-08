@@ -1,0 +1,42 @@
+{
+  "sourceSha": "04821fe7ae6401e781925adce099a93ead08490a",
+  "sourceTree": "9839a1d085edd6fcdc4786125cba54e4c29fd4ef",
+  "acceptedCandidateSha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e",
+  "targetClass": "production",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "schemaPlanId": "d8dfd9120ee8499e4da0c19f",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "schemaPlanApplicable": true,
+  "acceptedOldHead": "0096_user_founder_authority_unique.sql",
+  "expectedNewHead": "0111_properties_canonical_place_reference_fk.sql",
+  "pendingMigrationCount": 15,
+  "referencePolicy": "admitted-national-non-osm-only-v1",
+  "referenceAdapterDigest": "d8d2725fd93a6c4d2de9fb95b59c07e4dbe826f53f8faaf449b3e579ade9943a",
+  "referenceDesiredDigest": "3c8f2e80908b8d6d7d565e83f7c1cafe6b10fea7a53fc757ec01650b02be2728",
+  "referenceRegistrySha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433",
+  "referenceDesiredRows": {
+    "place": 16944,
+    "place_name": 25618,
+    "place_relationship": 16935,
+    "place_evidence": 79189,
+    "place_external_mapping": 19042
+  },
+  "referenceHeldRows": {
+    "place": 720,
+    "place_name": 807,
+    "place_relationship": 720,
+    "place_evidence": 736,
+    "place_external_mapping": 750
+  },
+  "referencePlanApplicable": false,
+  "referencePlanDigest": null,
+  "performanceMeasured": true,
+  "applyApproved": false,
+  "deploymentApproved": false,
+  "paymentsOpen": false,
+  "preparedAt": "2026-10-08T14:17:10.405255+00:00",
+  "performanceLimitsMet": false,
+  "productionReleaseRecommendation": "hold",
+  "benchmarkSourceSha": "04821fe7ae6401e781925adce099a93ead08490a",
+  "benchmarkReportSha256": "c598903571ad38ff89a509c51d27cb5fadb45cace10176dd6e2825a892438131"
+}

@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-10-08T14:17:10.444Z",
+  "sources": {
+    "api": {
+      "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "repo": "Doscoding187/real_estate_portal"
+    },
+    "paid-mvp-email-worker": {
+      "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "repo": "Doscoding187/real_estate_portal"
+    },
+    "paid-mvp-lead-job": {
+      "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+      "repo": "Doscoding187/real_estate_portal"
+    }
+  },
+  "staged": {
+    "api": null,
+    "paid-mvp-email-worker": null,
+    "paid-mvp-lead-job": null
+  },
+  "providerConfigurationMutation": false,
+  "productionDeploymentPerformed": false,
+  "vercelAutomaticMainHold": "vercel.ts git.deploymentEnabled.main=false; unchanged accepted merged source"
+}

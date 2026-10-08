@@ -245,4 +245,3 @@ NATIONAL_SEARCH_MEASUREMENT [{"concurrency":1,"count":60,"readCount":54,"latency
       Tests  1 passed (1)
    Start at  16:29:49
    Duration  96.55s (transform 3.64s, setup 143ms, collect 6.33s, tests 89.49s, environment 0ms, prepare 105ms)
-

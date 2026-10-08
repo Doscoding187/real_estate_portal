@@ -1,0 +1,20 @@
+const fs = require('fs'), cp = require('child_process'), os = require('os'), path = require('path'), crypto = require('crypto');
+const input = JSON.parse(fs.readFileSync(0, 'utf8'));
+const archive=Buffer.from(input.archive,'base64');
+if(crypto.createHash('sha256').update(archive).digest('hex')!==input.archiveSha256)throw Error('Source archive checksum mismatch');
+if(input.sourceSha!=='04821fe7ae6401e781925adce099a93ead08490a')throw Error('Unexpected source');
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'geography-readonly-04821fe7-'));
+const report={sourceSha:input.sourceSha,archiveSha256:input.archiveSha256,temporarySourceOnly:true,deployedFilesChanged:false,credentialClass:'read-only',operations:[],startedAt:new Date().toISOString()};
+try {
+ const tar=cp.spawnSync('tar',['-xz','-C',tmp],{input:archive});if(tar.status!==0)throw Error('Reviewed archive extraction failed');
+ if(crypto.createHash('sha256').update(fs.readFileSync(path.join(tmp,'pnpm-lock.yaml'))).digest('hex')!==crypto.createHash('sha256').update(fs.readFileSync('/app/pnpm-lock.yaml')).digest('hex'))throw Error('Dependency lock differs');
+ fs.symlinkSync('/app/node_modules',path.join(tmp,'node_modules'),'dir');
+ const env={...process.env,...input.env};
+ for(const item of input.operations){
+   const r=cp.spawnSync('/app/node_modules/.bin/tsx',[path.join(tmp,'scripts/databaseAuthorityCli.ts'),...item.args],{cwd:tmp,env,encoding:'utf8',maxBuffer:8*1024*1024});
+   report.operations.push({name:item.name,exit:r.status,stdout:r.stdout||'',stderr:r.stderr||''});
+   if(r.status!==0){report.stopped=true;break;}
+ }
+} catch(e) {report.setupFailure=true;report.setupErrorCode=String(e.code||'SOURCE_PREPARATION_FAILED');}
+finally {if(!tmp.startsWith(path.join(os.tmpdir(),'geography-readonly-04821fe7-')))throw Error('Invalid cleanup target');fs.rmSync(tmp,{recursive:true,force:true});report.temporarySourceRemoved=true;report.completedAt=new Date().toISOString();}
+process.stdout.write(JSON.stringify(report));if(report.setupFailure||report.stopped)process.exitCode=1;
