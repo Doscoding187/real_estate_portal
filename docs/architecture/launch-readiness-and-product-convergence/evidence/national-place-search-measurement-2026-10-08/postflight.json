@@ -1,0 +1,133 @@
+{
+  "targetFingerprint": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b",
+  "approvedProjectionCount": 120,
+  "allListingCount": 333,
+  "allPropertyCount": 333,
+  "syntheticSourceCounts": [
+    {
+      "status": "archived",
+      "count": 205
+    },
+    {
+      "status": "published",
+      "count": 120
+    }
+  ],
+  "syntheticProjectionCounts": [
+    {
+      "status": "available",
+      "count": 120
+    },
+    {
+      "status": "archived",
+      "count": 204
+    }
+  ],
+  "allNineProvinceRentProof": [
+    {
+      "provinceId": "pl-place-01-131e3e75ad70424e0f9c869a",
+      "province": "Gauteng",
+      "total": 27,
+      "propertyIds": [
+        990328,
+        990319,
+        990310,
+        990259,
+        990250,
+        990253,
+        990256,
+        990241,
+        990244,
+        990247,
+        990232,
+        990235,
+        990238,
+        990226,
+        990229,
+        990217,
+        990220,
+        990223,
+        990208,
+        990211
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-9892b872a77f27e90c5cf091",
+      "province": "Eastern Cape",
+      "total": 3,
+      "propertyIds": [
+        990298,
+        990280,
+        990262
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-a5e69690b90509167e54a142",
+      "province": "Free State",
+      "total": 3,
+      "propertyIds": [
+        990333,
+        990324,
+        990315
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-153d9daaed02608619c762aa",
+      "province": "KwaZulu-Natal",
+      "total": 2,
+      "propertyIds": [
+        990292,
+        990274
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-191d11b42d5b13319fa7fca2",
+      "province": "Limpopo",
+      "total": 3,
+      "propertyIds": [
+        990330,
+        990321,
+        990312
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-c987af17ca8c4427cb59abf5",
+      "province": "Mpumalanga",
+      "total": 2,
+      "propertyIds": [
+        990325,
+        990316
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+      "province": "Noord-Kaap",
+      "total": 3,
+      "propertyIds": [
+        990304,
+        990286,
+        990268
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-ee7ac2ac3ad791ae7a83a4e9",
+      "province": "North-West",
+      "total": 2,
+      "propertyIds": [
+        990327,
+        990318
+      ]
+    },
+    {
+      "provinceId": "pl-place-01-203f5f71cb3565521db4718f",
+      "province": "Western Cape",
+      "total": 3,
+      "propertyIds": [
+        990331,
+        990322,
+        990313
+      ]
+    }
+  ],
+  "protectedTargetAccessed": false
+}

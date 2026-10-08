@@ -1,0 +1,76 @@
+
+> real_estate_portal@1.0.0 db:foundation:verify /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008
+> tsx scripts/databaseAuthorityCli.ts foundation:verify
+
+{
+  "adapter": "canonical-foundation",
+  "version": "canonical-launch-foundation-v1",
+  "digest": "aaac24d45d655d2702348aa948ff53742358d9c6af95f8dfcbf7da3ab758a780",
+  "targetFingerprintHash": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b",
+  "databaseName": "listify_wt_national_place_search_measurem_4c206eab78b5",
+  "ownershipKey": "4c206eab78b53f9d97d21123",
+  "expected": {
+    "productKey": "developer_launch_access",
+    "segment": "developer",
+    "termKind": "paid_launch_access",
+    "durationDays": 90,
+    "priceConfigured": true,
+    "launchFeeMinor": 149900,
+    "entitlementKeys": [
+      "unlimited_development_portfolio"
+    ]
+  },
+  "verified": {
+    "planId": 3,
+    "productKey": "developer_launch_access",
+    "active": true,
+    "pricingMode": "fixed",
+    "priceConfigured": true,
+    "launchFeeMinor": 149900,
+    "entitlementKeys": [
+      "unlimited_development_portfolio"
+    ],
+    "products": [
+      {
+        "planId": 1,
+        "productKey": "agent_launch_access",
+        "segment": "agent",
+        "price": 49900,
+        "durationDays": 90,
+        "entitlementKeys": [
+          "has_commission_tracking",
+          "has_revenue_dashboard",
+          "max_active_listings"
+        ],
+        "entitlementSource": "explicit_launch_capabilities"
+      },
+      {
+        "planId": 2,
+        "productKey": "agency_launch_access",
+        "segment": "agency",
+        "price": 99900,
+        "durationDays": 90,
+        "entitlementKeys": [
+          "has_commission_tracking",
+          "has_lead_routing",
+          "has_revenue_dashboard",
+          "has_team_dashboard",
+          "max_active_listings"
+        ],
+        "entitlementSource": "explicit_launch_capabilities"
+      },
+      {
+        "planId": 3,
+        "productKey": "developer_launch_access",
+        "segment": "developer",
+        "price": 149900,
+        "durationDays": 90,
+        "entitlementKeys": [
+          "unlimited_development_portfolio"
+        ],
+        "entitlementSource": "explicit"
+      }
+    ]
+  },
+  "migrationHead": "0111_properties_canonical_place_reference_fk.sql"
+}
