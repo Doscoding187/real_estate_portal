@@ -117,27 +117,39 @@ describe('saved-search notification public search authority', () => {
     });
   });
 
-  it('retains canonical Place identity and refuses malformed or mixed criteria without fallback', async () => {
-    const engine: any = new SavedSearchNotificationEngine();
-    const canonicalPlaceId = 'pl-place-01-6a145c6d642ba208a2c12de7';
-    await engine.evaluateSearch(
-      savedSearch({ listingType: 'sale', canonicalPlaceId, propertyType: 'house' }),
-    );
-    expect(mockSearchInventory).toHaveBeenCalledWith(expect.objectContaining({ canonicalPlaceId }));
-    mockSearchInventory.mockClear();
-    for (const criteria of [
-      { canonicalPlaceId, city: 'johannesburg' },
-      { canonicalPlaceId: 'invalid' },
-      { canonicalPlaceId, petFriendly: true },
-    ]) {
-      expect(
-        await engine.evaluateSearch(savedSearch({ listingType: 'sale', ...criteria })),
-      ).toBeNull();
-    }
-    expect(mockSearchInventory).not.toHaveBeenCalled();
-    expect(mockSearchProperties).not.toHaveBeenCalled();
-    expect(mockSearchListings).not.toHaveBeenCalled();
-  });
+  it.each(['sale', 'rent'])(
+    'retains canonical Place identity and refuses malformed or mixed %s criteria without fallback',
+    async listingType => {
+      const engine: any = new SavedSearchNotificationEngine();
+      const canonicalPlaceId = 'pl-place-01-6a145c6d642ba208a2c12de7';
+      await engine.evaluateSearch(
+        savedSearch({ listingType, canonicalPlaceId, propertyType: 'house' }),
+      );
+      expect(mockSearchInventory).toHaveBeenCalledWith(
+        expect.objectContaining({ canonicalPlaceId }),
+      );
+      mockSearchInventory.mockClear();
+      for (const criteria of [
+        { canonicalPlaceId, city: 'johannesburg' },
+        { canonicalPlaceId: 'invalid' },
+        { canonicalPlaceId, petFriendly: true },
+        { canonicalPlaceId: '' },
+        { canonicalPlaceId: '   ' },
+        { canonicalPlaceId: null },
+        { canonicalPlaceId: undefined },
+        { canonicalPlaceId: 123 },
+        { canonicalPlaceId: [canonicalPlaceId] },
+        { canonicalPlaceId, factualLocationId: 'competing' },
+        { canonicalPlaceId, city: 123 },
+        { canonicalPlaceId, locationId: null },
+      ]) {
+        expect(await engine.evaluateSearch(savedSearch({ listingType, ...criteria }))).toBeNull();
+      }
+      expect(mockSearchInventory).not.toHaveBeenCalled();
+      expect(mockSearchProperties).not.toHaveBeenCalled();
+      expect(mockSearchListings).not.toHaveBeenCalled();
+    },
+  );
 
   it('keeps legacy predicates on the compatibility path instead of silently dropping them', async () => {
     mockSearchProperties.mockResolvedValue({ properties: [], total: 0 });

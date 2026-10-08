@@ -1,0 +1,50 @@
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const { chromium, expect } = require(path.join(process.cwd(), 'node_modules/@playwright/test'));
+(async () => {
+  const root = path.resolve('dist/public');
+  const server = http.createServer((req, res) => {
+    let file = path.join(root, new URL(req.url, 'http://localhost').pathname);
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) file = path.join(root, 'index.html');
+    res.setHeader('Content-Type', ({ '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[path.extname(file)] || 'application/octet-stream');
+    fs.createReadStream(file).pipe(res);
+  });
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const origin = 'http://127.0.0.1:' + server.address().port;
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+    for (const signedIn of [false, true]) for (const width of [375, 1280]) {
+      const context = await browser.newContext({ viewport: { width, height: 900 } });
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await page.route('**/*', async route => {
+        const u = new URL(route.request().url());
+        if (u.pathname.includes('/api/trpc/')) {
+          const names = decodeURIComponent(u.pathname.split('/api/trpc/')[1]).split(',');
+          const replies = names.map(name => ({ result: { data: { json: name === 'auth.me' ? (signedIn ? { id: 7, role: 'user', name: 'Test Customer' } : null) : name === 'properties.searchPublicInventory' ? { cards: [], total: 0, page: 0, pageSize: 12, hasMore: false, locationState: 'not_requested' } : [] } } }));
+          return route.fulfill({ contentType: 'application/json', body: JSON.stringify(replies) });
+        }
+        return u.origin === origin ? route.continue() : route.abort();
+      });
+      try {
+        await page.goto(origin + '/property-for-sale?propertyType=house');
+        for (const [label, href] of [['Advertise / List Property', '/advertise'], [signedIn ? 'Account' : 'Sign In', signedIn ? '/dashboard' : '/login']]) {
+          const link = page.getByRole('link', { name: label, exact: true });
+          await expect(link).toBeVisible();
+          await expect(link).toHaveAttribute('href', href);
+          const box = await link.boundingBox();
+          if (!box || box.x < 0 || box.x + box.width > width) throw new Error('Navigation outside viewport: ' + label);
+        }
+        await page.screenshot({ path: '/tmp/geography-nav-' + width + '-' + signedIn + '.png' });
+        if (errors.length) throw new Error(errors.join('\n'));
+        console.log(JSON.stringify({ width, signedIn, accountAndAdvertising: 'visible-and-correct', api: 'intercepted-local-fixtures' }));
+      } catch (e) {
+        console.error(JSON.stringify({ errors, body: (await page.locator('body').innerText()).slice(0, 1500) }));
+        throw e;
+      } finally { await context.close(); }
+    }
+  } finally { if (browser) await browser.close(); await new Promise(r => server.close(r)); }
+})().catch(e => { console.error(e.message); process.exitCode = 1; });

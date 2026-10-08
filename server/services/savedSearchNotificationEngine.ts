@@ -1,5 +1,10 @@
 import { and, desc, eq, inArray, lte, or } from 'drizzle-orm';
-import { notifications, savedSearchDeliveryHistory, savedSearches, users } from '../../drizzle/schema';
+import {
+  notifications,
+  savedSearchDeliveryHistory,
+  savedSearches,
+  users,
+} from '../../drizzle/schema';
 import type {
   DevelopmentDerivedListing,
   Property,
@@ -10,6 +15,7 @@ import type {
 import { PUBLIC_SEARCH_MAX_PAGE_SIZE } from '../../shared/publicSearchPagination';
 import { publicSearchService, type PublicSearchInventoryInput } from './publicSearchService';
 import { validatePublicSearchInput } from '../../shared/publicSearchValidation';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 import { ENV } from '../_core/env';
 import { EmailService } from '../_core/emailService';
 import { getDb } from '../db-connection';
@@ -47,9 +53,7 @@ type DevelopmentNotificationMatch = Pick<
   image: string | null;
 };
 
-export type SavedSearchNotificationMatch =
-  | ManualNotificationMatch
-  | DevelopmentNotificationMatch;
+export type SavedSearchNotificationMatch = ManualNotificationMatch | DevelopmentNotificationMatch;
 
 export interface SavedSearchNotificationPayload {
   savedSearchId: number;
@@ -111,7 +115,12 @@ interface SavedSearchDeliveryLinks {
 }
 
 type SavedSearchDeliveryStatus = 'delivered' | 'partial' | 'skipped' | 'failed';
-type SavedSearchDeliveryRetryState = 'not_needed' | 'pending' | 'retrying' | 'succeeded' | 'abandoned';
+type SavedSearchDeliveryRetryState =
+  | 'not_needed'
+  | 'pending'
+  | 'retrying'
+  | 'succeeded'
+  | 'abandoned';
 
 interface SavedSearchEmailDeliveryAttempt {
   delivered: boolean;
@@ -264,8 +273,12 @@ function normalizeSavedSearchCriteria(
   const publicSearchInput = (() => {
     // Place-authoritative Buy and Rent notifications share public inventory.
     // Existing non-Place Buy predicates stay outside this consumer change.
-    if ((listingType !== 'rent' && !(listingType === 'sale' && criteria.canonicalPlaceId !== undefined)) ||
-      (propertyType?.length || 0) > 1) return undefined;
+    if (
+      (listingType !== 'rent' &&
+        !(listingType === 'sale' && criteria.canonicalPlaceId !== undefined)) ||
+      (propertyType?.length || 0) > 1
+    )
+      return undefined;
 
     // These legacy predicates are not part of the current public search
     // contract. Keep their historical compatibility path rather than
@@ -378,7 +391,10 @@ function buildAbsoluteUrl(path: string): string {
   return `${baseUrl}${normalizedPath}`;
 }
 
-function formatPrice(price: number | null | undefined, listingType: SavedSearchNotificationMatch['listingType']): string {
+function formatPrice(
+  price: number | null | undefined,
+  listingType: SavedSearchNotificationMatch['listingType'],
+): string {
   if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
     return 'Price on request';
   }
@@ -566,7 +582,9 @@ function buildSavedSearchSummaryCardsHtml(payload: SavedSearchNotificationPayloa
   `;
 }
 
-function buildSavedSearchDeliveryLinks(payload: SavedSearchNotificationPayload): SavedSearchDeliveryLinks {
+function buildSavedSearchDeliveryLinks(
+  payload: SavedSearchNotificationPayload,
+): SavedSearchDeliveryLinks {
   const buildManagementUrl = (action: SavedSearchDeliveryAction) => {
     const token = createSavedSearchDeliveryActionToken({
       action,
@@ -594,12 +612,10 @@ function formatSavedSearchEmailText(
   );
 
   return (
-    base
-      .replace(
-    payload.content,
-    `${payload.title}\n\n${payload.content}\n\n${getSavedSearchPreviewSummary(payload)}:`,
-      )
-      + `\n\nPause alerts: ${links.pauseUrl}\nTurn off email alerts: ${links.unsubscribeEmailUrl}`
+    base.replace(
+      payload.content,
+      `${payload.title}\n\n${payload.content}\n\n${getSavedSearchPreviewSummary(payload)}:`,
+    ) + `\n\nPause alerts: ${links.pauseUrl}\nTurn off email alerts: ${links.unsubscribeEmailUrl}`
   );
 }
 
@@ -818,10 +834,7 @@ export class SavedSearchNotificationEngine {
       };
     }
 
-    const query = db
-      .select()
-      .from(savedSearches)
-      .orderBy(desc(savedSearches.createdAt)) as any;
+    const query = db.select().from(savedSearches).orderBy(desc(savedSearches.createdAt)) as any;
 
     const rows =
       typeof options.userId === 'number'
@@ -834,10 +847,9 @@ export class SavedSearchNotificationEngine {
       .filter(search => search.notificationFrequency !== 'never')
       .slice(0, limit);
     const recipientsByUserId = await this.loadRecipients(db, normalizedSearches);
-    const retryResult =
-      options.dryRun
-        ? { retriedEmailDeliveries: 0, failedEmailRetries: 0, abandonedEmailRetries: 0 }
-        : await this.retryPendingEmailDeliveries(db, recipientsByUserId, now);
+    const retryResult = options.dryRun
+      ? { retriedEmailDeliveries: 0, failedEmailRetries: 0, abandonedEmailRetries: 0 }
+      : await this.retryPendingEmailDeliveries(db, recipientsByUserId, now);
 
     const notificationsToEmit: SavedSearchNotificationPayload[] = [];
     let dueSearches = 0;
@@ -1009,6 +1021,23 @@ export class SavedSearchNotificationEngine {
   }
 
   private async evaluateSearch(search: SavedSearch): Promise<SearchEvaluationResult | null> {
+    // Inspect the original criteria before coercion can erase an invalid identity
+    // or a competing geography authority. Never widen a saved Place search.
+    if (Object.prototype.hasOwnProperty.call(search.criteria, 'canonicalPlaceId')) {
+      if (!isCanonicalPlaceId(search.criteria.canonicalPlaceId)) return null;
+      const competingGeography = [
+        'province',
+        'city',
+        'suburb',
+        'locations',
+        'locationId',
+        'locationIds',
+        'factualLocationId',
+        'searchAreaId',
+        'searchAreaIds',
+      ];
+      if (competingGeography.some(key => search.criteria[key] !== undefined)) return null;
+    }
     const { listingSource, propertyFilters, publicSearchInput } = normalizeSavedSearchCriteria(
       search.criteria,
     );
@@ -1043,7 +1072,12 @@ export class SavedSearchNotificationEngine {
           ),
       listingSource === 'manual'
         ? Promise.resolve(null)
-        : developmentDerivedListingService.searchListings(propertyFilters, 'date_desc', 1, PREVIEW_QUERY_LIMIT),
+        : developmentDerivedListingService.searchListings(
+            propertyFilters,
+            'date_desc',
+            1,
+            PREVIEW_QUERY_LIMIT,
+          ),
     ]);
 
     const manualMatches = manualResults?.properties?.map(buildManualMatch) ?? [];
@@ -1128,7 +1162,9 @@ export class SavedSearchNotificationEngine {
       ...new Set(
         (rows as Array<Record<string, unknown>>)
           .map(row => toNumber(row.userId))
-          .filter((userId): userId is number => typeof userId === 'number' && Number.isFinite(userId)),
+          .filter(
+            (userId): userId is number => typeof userId === 'number' && Number.isFinite(userId),
+          ),
       ),
     ];
     const missingUserIds = retryUserIds.filter(userId => !recipientsByUserId.has(userId));
@@ -1357,8 +1393,7 @@ export class SavedSearchNotificationEngine {
       emailDelivered: input.emailDelivered,
       emailRetryEligible: input.emailRetryEligible,
     });
-    const nextRetryAt =
-      retryState === 'pending' ? getNextRetryAt(input.processedAt, 0) : null;
+    const nextRetryAt = retryState === 'pending' ? getNextRetryAt(input.processedAt, 0) : null;
 
     await db.insert(savedSearchDeliveryHistory).values({
       savedSearchId: payload.savedSearchId,

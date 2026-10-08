@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CanonicalPlaceSearchBar } from '../CanonicalPlaceSearchBar';
 import {
   buildCanonicalSavedSearchCriteria,
@@ -8,7 +8,11 @@ import {
 } from '@/lib/searchIntent';
 import { validatePublicSearchInput } from '@shared/publicSearchValidation';
 
-const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+const { navigate, auth } = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  auth: { isAuthenticated: false },
+}));
+vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => auth }));
 vi.mock('wouter', () => ({ useLocation: () => ['/property-for-sale', navigate] }));
 const id = 'pl-place-01-6a145c6d642ba208a2c12de7';
 vi.mock('@/lib/trpc', () => ({
@@ -43,8 +47,29 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 afterEach(cleanup);
+beforeEach(() => {
+  auth.isAuthenticated = false;
+});
 
 describe('canonical Place public search selection', () => {
+  it.each([false, true])(
+    'preserves account and advertising navigation when authenticated=%s',
+    authenticated => {
+      auth.isAuthenticated = authenticated;
+      const intent = resolveSearchIntent('/property-for-sale', {}, new URLSearchParams());
+      render(<CanonicalPlaceSearchBar intent={intent} />);
+      expect(screen.getByRole('link', { name: 'Advertise / List Property' })).toHaveAttribute(
+        'href',
+        '/advertise',
+      );
+      expect(
+        screen.getByRole('link', { name: authenticated ? 'Account' : 'Sign In' }),
+      ).toHaveAttribute('href', authenticated ? '/dashboard' : '/login');
+      expect(
+        screen.getByRole('combobox', { name: 'City, town, suburb or locality' }),
+      ).toBeVisible();
+    },
+  );
   it('selects identity, preserves refinements, resets pagination and carries it through reload', async () => {
     const intent = resolveSearchIntent(
       '/property-for-sale',

@@ -6,6 +6,7 @@ import {
 } from '../location/CanonicalPlaceSelector';
 import { generateIntentUrl, type SearchIntent } from '@/lib/searchIntent';
 import type { CanonicalPlaceSearchLabel } from '@shared/canonicalPlaceSearch';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 export function CanonicalPlaceSearchBar({
   intent,
@@ -15,6 +16,7 @@ export function CanonicalPlaceSearchBar({
   context?: CanonicalPlaceSearchLabel;
 }) {
   const [, navigate] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [selection, setSelection] = useState<CanonicalPlaceSelection | null>(null);
   const [transaction, setTransaction] = useState<'for-sale' | 'to-rent'>(
     intent.transactionType === 'to-rent' ? 'to-rent' : 'for-sale',
@@ -84,6 +86,20 @@ export function CanonicalPlaceSearchBar({
         >
           Search
         </button>
+        <nav
+          aria-label="Account and advertising"
+          className="flex flex-wrap items-center gap-4 py-2 sm:mt-7"
+        >
+          <a href="/advertise" className="font-medium text-blue-800 hover:underline">
+            Advertise / List Property
+          </a>
+          <a
+            href={isAuthenticated ? '/dashboard' : '/login'}
+            className="font-medium text-blue-800 hover:underline"
+          >
+            {isAuthenticated ? 'Account' : 'Sign In'}
+          </a>
+        </nav>
       </div>
     </header>
   );
