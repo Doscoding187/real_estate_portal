@@ -56,3 +56,5 @@ NATIONAL_PLACE_POSTFLIGHT=1 SKIP_DB_INIT=1 pnpm test:authority -- --project=serv
 Both opt-in suites pass. Touched-file lint has zero errors (10 warnings). Production typecheck passed once; test harnesses are excluded from its existing configuration. No unchanged broad local suite was repeated. Reverify the release subset, resolve the exact final owned context, emit its disposal acknowledgement and dispose that target only. The already-running shared MySQL service was preserved and remains available. All 112 canonical migrations were applied exactly once in this owned lifecycle; there was no failed migration, ledger repair or retry.
 
 The report engine-version field was normalized from the observed mysql2 row/metadata tuple into its version string after measurement; `engine-version-observation.json` preserves that raw driver observation and pre-normalization report digest. No timing, count or error value changed. Evidence hashes in `SHA256SUMS` cover this complete packet.
+
+Integration formatting removed trailing blank lines from four console captures; substantive command output, observations and report values are unchanged.

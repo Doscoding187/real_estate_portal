@@ -1,4 +1,4 @@
-/** Opt-in diagnostic only. Runtime modules remain the exact accepted merge. */
+/** Opt-in diagnostic, bound to an exact clean committed runtime candidate. */
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash, randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -38,8 +38,10 @@ import { propertySearchService } from '../../server/services/propertySearchServi
 import { isOperationalPlaceCoverageSignal } from '../../shared/placeCoverageSignal';
 import type { PublicSearchInventoryInput } from '../../server/services/publicSearchService';
 
-const SOURCE = '04821fe7ae6401e781925adce099a93ead08490a';
+const SOURCE =
+  process.env.NATIONAL_PLACE_BENCHMARK_SOURCE ?? '04821fe7ae6401e781925adce099a93ead08490a';
 const OUTPUT =
+  process.env.NATIONAL_PLACE_BENCHMARK_OUTPUT ??
   'docs/architecture/launch-readiness-and-product-convergence/evidence/national-place-search-measurement-2026-10-08';
 const NORTH = 'pl-place-01-6a145c6d642ba208a2c12de7';
 const BRYANSTON = 'pl-place-01-f175328139bb845a4645b9d4';
@@ -152,6 +154,17 @@ const enabled = process.env.NATIONAL_PLACE_BENCHMARK === '1';
       .filter(label => label.scope === 'province')
       .sort((a, b) => a.label.localeCompare(b.label));
     expect(provinces).toHaveLength(9);
+    // Requested reads must agree with the complete authority across all released provinces.
+    for (const province of provinces) {
+      const requested = await projectionModule.loadCanonicalPlaceSearchProjection(database, {
+        placeIds: [province.canonicalPlaceId],
+        includeProvinceMembers: true,
+      });
+      const execution = projected.executions.get(province.canonicalPlaceId)!;
+      const expected = projectionModule.canonicalPlaceSearchMembers(execution, projected);
+      expect(projectionModule.canonicalPlaceSearchMembers(execution, requested)).toEqual(expected);
+      for (const id of expected) expect(requested.labels.get(id)).toEqual(projected.labels.get(id));
+    }
     const localityPerProvince = provinces.map(province => {
       const candidate = [...projected.executions.values()].find(
         entry =>

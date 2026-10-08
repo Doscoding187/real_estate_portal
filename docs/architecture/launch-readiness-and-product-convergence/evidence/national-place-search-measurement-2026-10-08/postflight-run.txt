@@ -41,4 +41,3 @@ stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts > national sea
       Tests  1 passed (1)
    Start at  16:33:01
    Duration  13.65s (transform 3.74s, setup 109ms, collect 6.42s, tests 6.59s, environment 0ms, prepare 101ms)
-

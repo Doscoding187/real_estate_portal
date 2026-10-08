@@ -9,6 +9,7 @@ import { resolveDatabaseAuthority } from '../../server/_core/databaseAuthority/c
 import { authorizeDatabaseOperation } from '../../server/_core/databaseAuthority/authorization';
 
 const OUTPUT =
+  process.env.NATIONAL_PLACE_BENCHMARK_OUTPUT ??
   'docs/architecture/launch-readiness-and-product-convergence/evidence/national-place-search-measurement-2026-10-08';
 const enabled = process.env.NATIONAL_PLACE_POSTFLIGHT === '1';
 (enabled ? describe : describe.skip)('national search postflight', () => {

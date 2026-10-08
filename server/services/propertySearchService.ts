@@ -590,8 +590,14 @@ export class PropertySearchService {
         .where(and(...publicConditions))
         .orderBy(...buildManualPropertySortOrder(sortOption));
       if (candidateRows.some(row => row.canonicalPlaceId)) {
-        placeLabels = (options.placeProjection ?? (await loadCanonicalPlaceSearchProjection()))
-          .labels;
+        placeLabels = (
+          options.placeProjection ??
+          (await loadCanonicalPlaceSearchProjection(undefined, {
+            placeIds: candidateRows.flatMap(row =>
+              row.canonicalPlaceId ? [row.canonicalPlaceId] : [],
+            ),
+          }))
+        ).labels;
       }
       publicResolutionById = await resolvePublicPropertyEligibilities(
         candidateRows.map(row => Number(row.id)),

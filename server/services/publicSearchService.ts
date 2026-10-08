@@ -488,7 +488,10 @@ export class PublicSearchService {
     let locationMessage: string | undefined;
 
     if (input.canonicalPlaceId) {
-      const projection = await loadCanonicalPlaceSearchProjection();
+      const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+        placeIds: [input.canonicalPlaceId],
+        includeProvinceMembers: true,
+      });
       placeProjection = projection;
       const execution = projection.executions.get(input.canonicalPlaceId);
       const labels = projection.labels.get(input.canonicalPlaceId);
