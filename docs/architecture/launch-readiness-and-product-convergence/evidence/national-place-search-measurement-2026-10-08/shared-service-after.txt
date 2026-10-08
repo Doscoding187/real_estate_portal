@@ -1,0 +1,10 @@
+
+> real_estate_portal@1.0.0 db:authority:service:status /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008
+> bash scripts/local-db.sh status
+
+Service host: 127.0.0.1
+Service port: 3307
+Service UID directory: /var/tmp/property-listify-1000
+Service directory: /var/tmp/property-listify-1000/mysql-3307
+Service fingerprint: 2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2
+Service state: available
