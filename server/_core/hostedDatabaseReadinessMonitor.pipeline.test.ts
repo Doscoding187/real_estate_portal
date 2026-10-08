@@ -14,11 +14,6 @@ type Assess = (input: { probe?: Probe }) => Promise<unknown>;
 
 const hooks = vi.hoisted(() => ({ assess: null as Assess | null }));
 
-vi.mock('./databaseAuthority/context', () => ({
-  resolveDatabaseAuthority: () => {
-    throw new Error('authority unavailable in this fixture');
-  },
-}));
 vi.mock('./databaseAuthority/readiness', () => ({
   assessRuntimeDatabaseReadiness: (input: { probe?: Probe }) => {
     if (!hooks.assess) throw new Error('no scripted assessment');

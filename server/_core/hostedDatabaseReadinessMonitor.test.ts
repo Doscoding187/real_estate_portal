@@ -18,7 +18,6 @@ vi.mock('./readinessSnapshotMonitor', async importOriginal => ({
     }
   },
 }));
-vi.mock('./databaseAuthority/context', () => ({ resolveDatabaseAuthority: vi.fn() }));
 vi.mock('./databaseAuthority/readiness', () => ({
   assessRuntimeDatabaseReadiness: vi.fn(),
   unavailableReadiness: vi.fn(),
