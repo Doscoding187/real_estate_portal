@@ -413,6 +413,7 @@ const appRouterConfig = {
       .input(
         z
           .object({
+            canonicalPlaceId: z.string().trim().max(40).optional(),
             province: z.string().trim().max(120).optional(),
             city: z.string().trim().max(120).optional(),
             suburb: z.array(z.string().trim().max(120)).max(10).optional(),

@@ -47,6 +47,8 @@ export function CanonicalPlaceSelectorView({
   pending,
   error,
   label = 'Location',
+  purpose = 'authoring',
+  inputId: suppliedInputId,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -56,8 +58,11 @@ export function CanonicalPlaceSelectorView({
   pending: boolean;
   error: boolean;
   label?: string;
+  purpose?: 'authoring' | 'search';
+  inputId?: string;
 }) {
-  const inputId = useId();
+  const generatedId = useId();
+  const inputId = suppliedInputId ?? generatedId;
   const resultsId = useId();
   const statusId = useId();
   const [open, setOpen] = useState(false);
@@ -91,11 +96,15 @@ export function CanonicalPlaceSelectorView({
   const status = value
     ? `${value.label} selected.`
     : error
-      ? 'Location search is unavailable. Try again; your address details are preserved.'
+      ? purpose === 'search'
+        ? 'Location search is unavailable. Try again.'
+        : 'Location search is unavailable. Try again; your address details are preserved.'
       : pending && normalized
         ? 'Searching locations…'
         : current && !options.length
-          ? 'No approved location found. Try another name. You can save an unfinished draft.'
+          ? purpose === 'search'
+            ? 'No approved location found. Try another name.'
+            : 'No approved location found. Try another name. You can save an unfinished draft.'
           : current && discovery?.outcome === 'ambiguous'
             ? 'Several locations match. Select the one you mean.'
             : options.length
@@ -212,10 +221,14 @@ export function CanonicalPlaceSelector({
   value,
   onChange,
   label,
+  purpose,
+  inputId,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
   label?: string;
+  purpose?: 'authoring' | 'search';
+  inputId?: string;
 }) {
   const [query, setQuery] = useState(value?.label ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -238,6 +251,8 @@ export function CanonicalPlaceSelector({
       value={value}
       onChange={onChange}
       label={label}
+      purpose={purpose}
+      inputId={inputId}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}

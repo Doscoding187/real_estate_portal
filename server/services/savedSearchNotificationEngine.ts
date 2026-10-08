@@ -262,10 +262,10 @@ function normalizeSavedSearchCriteria(
   };
 
   const publicSearchInput = (() => {
-    // Rent is the journey being converged here. Leave the completed Buy
-    // notification contract on its existing compatibility path until Buy has
-    // an independently approved authority migration.
-    if (listingType !== 'rent' || (propertyType?.length || 0) > 1) return undefined;
+    // Place-authoritative Buy and Rent notifications share public inventory.
+    // Existing non-Place Buy predicates stay outside this consumer change.
+    if ((listingType !== 'rent' && !(listingType === 'sale' && criteria.canonicalPlaceId !== undefined)) ||
+      (propertyType?.length || 0) > 1) return undefined;
 
     // These legacy predicates are not part of the current public search
     // contract. Keep their historical compatibility path rather than
@@ -290,6 +290,7 @@ function normalizeSavedSearchCriteria(
     const searchAreaIds = toStringArray(criteria.searchAreaIds);
     const searchAreaId = toString(criteria.searchAreaId);
     const input: PublicSearchInventoryInput = {
+      canonicalPlaceId: toString(criteria.canonicalPlaceId),
       province: propertyFilters.province,
       city: propertyFilters.city,
       suburb: propertyFilters.suburb,
@@ -1026,6 +1027,8 @@ export class SavedSearchNotificationEngine {
         search.lastNotifiedAt,
       );
     }
+
+    if (search.criteria.canonicalPlaceId !== undefined) return null;
 
     const [manualResults, developmentResults] = await Promise.all([
       listingSource === 'development'

@@ -117,6 +117,28 @@ describe('saved-search notification public search authority', () => {
     });
   });
 
+  it('retains canonical Place identity and refuses malformed or mixed criteria without fallback', async () => {
+    const engine: any = new SavedSearchNotificationEngine();
+    const canonicalPlaceId = 'pl-place-01-6a145c6d642ba208a2c12de7';
+    await engine.evaluateSearch(
+      savedSearch({ listingType: 'sale', canonicalPlaceId, propertyType: 'house' }),
+    );
+    expect(mockSearchInventory).toHaveBeenCalledWith(expect.objectContaining({ canonicalPlaceId }));
+    mockSearchInventory.mockClear();
+    for (const criteria of [
+      { canonicalPlaceId, city: 'johannesburg' },
+      { canonicalPlaceId: 'invalid' },
+      { canonicalPlaceId, petFriendly: true },
+    ]) {
+      expect(
+        await engine.evaluateSearch(savedSearch({ listingType: 'sale', ...criteria })),
+      ).toBeNull();
+    }
+    expect(mockSearchInventory).not.toHaveBeenCalled();
+    expect(mockSearchProperties).not.toHaveBeenCalled();
+    expect(mockSearchListings).not.toHaveBeenCalled();
+  });
+
   it('keeps legacy predicates on the compatibility path instead of silently dropping them', async () => {
     mockSearchProperties.mockResolvedValue({ properties: [], total: 0 });
     mockSearchListings.mockResolvedValue({ items: [], total: 0 });
