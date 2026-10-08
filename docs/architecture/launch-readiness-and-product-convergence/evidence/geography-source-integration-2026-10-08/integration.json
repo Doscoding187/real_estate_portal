@@ -1,0 +1,25 @@
+{
+  "acceptedSha": "0760bbf412eb7b0773949ca069160b0ddcfaa86e",
+  "acceptedBy": "Edward; explicit exact-source integration acceptance in this session",
+  "mergeSha": "04821fe7ae6401e781925adce099a93ead08490a",
+  "mergeAt": "2026-10-08T11:16:36Z",
+  "pr": "https://github.com/Doscoding187/real_estate_portal/pull/594",
+  "mergeParents": [
+    "7756376c9ec604b352595b4e4ba8ced73f18562b",
+    "0760bbf412eb7b0773949ca069160b0ddcfaa86e"
+  ],
+  "acceptedAndMergeTree": "9839a1d085edd6fcdc4786125cba54e4c29fd4ef",
+  "treeMatches": true,
+  "draftHoldRemoved": true,
+  "premergeCiRun": 37763446694,
+  "premergeCiAttempt": 1,
+  "localTestsRepeated": false,
+  "productionDatabaseConnected": false,
+  "productionSchemaApplied": false,
+  "productionReferenceApplied": false,
+  "deploymentPerformed": false,
+  "paymentsOpened": false,
+  "nationalSearchPerformanceMeasured": false,
+  "freshProtectedPlansProduced": false,
+  "readbackAt": "2026-10-08T11:18:33.960718+00:00"
+}
