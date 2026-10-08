@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MySqlDialect } from 'drizzle-orm/mysql-core';
 
 const {
+  mockLoadPlaceProjection,
   mockSelect,
   mockRedisGet,
   mockRedisSet,
@@ -9,12 +10,18 @@ const {
   mockResolvePublicPropertyEligibilities,
   mockResolvePublicPropertyEligibilityIds,
 } = vi.hoisted(() => ({
+  mockLoadPlaceProjection: vi.fn(),
   mockSelect: vi.fn(),
   mockRedisGet: vi.fn(),
   mockRedisSet: vi.fn(),
   mockResolveLocation: vi.fn(),
   mockResolvePublicPropertyEligibilities: vi.fn(),
   mockResolvePublicPropertyEligibilityIds: vi.fn(),
+}));
+
+vi.mock('../canonicalPlaceSearchService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../canonicalPlaceSearchService')>()),
+  loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
 }));
 
 vi.mock('../../db', () => ({
@@ -542,4 +549,109 @@ describe('manual property Search approved projection authority', () => {
     expect(result.properties[0]).toMatchObject({ internalAreaM2: 96, yardSize: undefined });
     expect(result.cards[0]).toMatchObject({ area: 96, yardSize: undefined });
   });
+});
+
+describe('province inventory membership before public eligibility and pagination', () => {
+  const scope = (placeId: string, provincePlaceId: string, kind = 'locality') => ({
+    placeId,
+    provincePlaceId,
+    scope: kind,
+    cityPlaceId: null,
+    localityPlaceId: kind === 'locality' ? placeId : null,
+    contextAncestorPlaceIds: [],
+  });
+  const label = (id: string) => ({
+    canonicalPlaceId: id,
+    label: id,
+    province: 'Gauteng',
+    city: '',
+    locality: id,
+    scope: 'locality',
+    placeType: 'locality',
+  });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockRedisGet.mockResolvedValue(null);
+    mockRedisSet.mockResolvedValue(undefined);
+  });
+
+  it('uses fresh candidate ancestry, excludes outside/invalid/unassigned rows, and counts only eligible members', async () => {
+    mockSelect
+      .mockReturnValueOnce(
+        candidateQuery([
+          { id: 1, canonicalPlaceId: 'outside' },
+          { id: 2, canonicalPlaceId: 'inside' },
+          { id: 3, canonicalPlaceId: 'invalid' },
+          { id: 4, canonicalPlaceId: null },
+          { id: 5, canonicalPlaceId: 'inside' },
+          { id: 6, canonicalPlaceId: 'inside' },
+        ]),
+      )
+      .mockReturnValueOnce(
+        pagedQuery([{ ...publicCoordinateRow(-26, 28), id: 6, canonicalPlaceId: 'inside' }]),
+      );
+    mockLoadPlaceProjection.mockResolvedValue({
+      executions: new Map([
+        ['province', scope('province', 'province', 'province')],
+        ['inside', scope('inside', 'province')],
+        ['outside', scope('outside', 'another-province')],
+      ]),
+      labels: new Map(['province', 'inside', 'outside'].map(id => [id, label(id)])),
+    });
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(
+      new Map([2, 6].map(id => [id, { property: { id }, images: [] }])),
+    );
+    const result = await new PropertySearchService().searchProperties(
+      {},
+      'date_desc',
+      2,
+      1,
+      undefined,
+      {
+        publicOnly: true,
+        provincePlaceId: 'province',
+        placeProjection: { executions: new Map(), labels: new Map() },
+      },
+    );
+    expect(mockLoadPlaceProjection).toHaveBeenCalledTimes(1);
+    expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, {
+      placeIds: ['province', 'outside', 'inside', 'invalid'],
+    });
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledTimes(1);
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([2, 5, 6]);
+    expect(result).toMatchObject({ total: 2, hasMore: false });
+    expect(result.properties.map(p => p.id)).toEqual(['6']);
+    expect(result.properties[0].suburb).toBe('inside');
+  });
+
+  it('does not widen when the selected province is no longer executable', async () => {
+    mockSelect
+      .mockReturnValueOnce(candidateQuery([{ id: 1, canonicalPlaceId: 'inside' }]))
+      .mockReturnValueOnce(pagedQuery([]));
+    mockLoadPlaceProjection.mockResolvedValue({ executions: new Map(), labels: new Map() });
+    mockResolvePublicPropertyEligibilities.mockResolvedValue(new Map());
+    const result = await new PropertySearchService().searchProperties(
+      {},
+      'date_desc',
+      1,
+      12,
+      undefined,
+      { publicOnly: true, provincePlaceId: 'province' },
+    );
+    expect(mockResolvePublicPropertyEligibilities).toHaveBeenCalledWith([]);
+    expect(result.total).toBe(0);
+  });
+
+  it.each([{ province: 'Gauteng' }, { canonicalPlaceIds: ['inside'] }])(
+    'rejects competing geography before reading inventory: %j',
+    async filters => {
+      await expect(
+        new PropertySearchService().searchProperties(filters, 'date_desc', 1, 12, undefined, {
+          publicOnly: true,
+          provincePlaceId: 'province',
+        }),
+      ).rejects.toThrow();
+      expect(mockSelect).not.toHaveBeenCalled();
+    },
+  );
 });

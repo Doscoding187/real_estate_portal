@@ -1,4 +1,5 @@
 import {
+  canonicalPlaceSearchMembers,
   loadCanonicalPlaceSearchProjection,
   type CanonicalPlaceSearchProjection,
 } from './canonicalPlaceSearchService';
@@ -66,6 +67,8 @@ export interface PropertySearchOptions {
   publicOnly?: boolean;
   /** One request uses the same validated graph for scope membership and labels. */
   placeProjection?: CanonicalPlaceSearchProjection;
+  /** Fresh province membership is checked against filtered inventory assignments. */
+  provincePlaceId?: string;
 }
 
 /**
@@ -410,7 +413,7 @@ export class PropertySearchService {
     options: PropertySearchOptions = {},
   ): Promise<SearchResults> {
     if (
-      filters.canonicalPlaceIds !== undefined &&
+      (filters.canonicalPlaceIds !== undefined || options.provincePlaceId) &&
       (queryBoundary ||
         filters.canonicalLocation ||
         filters.province ||
@@ -419,6 +422,12 @@ export class PropertySearchService {
         filters.locations?.length)
     ) {
       throw new Error('Canonical Place search cannot combine geography authorities.');
+    }
+    if (
+      options.provincePlaceId &&
+      (!options.publicOnly || filters.canonicalPlaceIds !== undefined)
+    ) {
+      throw new Error('Province inventory scope requires the exclusive public Place boundary.');
     }
     if (queryBoundary && queryLocationIdsFromBoundary(queryBoundary).length === 0) {
       return {
@@ -582,22 +591,40 @@ export class PropertySearchService {
       import('./canonicalPlaceSearchService').CanonicalPlaceSearchLabel
     >();
     if (options.publicOnly) {
-      const candidateRows = await db
+      let candidateRows = await db
         .select({ id: properties.id, canonicalPlaceId: properties.canonicalPlaceId })
         .from(properties)
         .leftJoin(developments, eq(properties.developmentId, developments.id))
         .leftJoin(suburbs, eq(properties.suburbId, suburbs.id))
         .where(and(...publicConditions))
         .orderBy(...buildManualPropertySortOrder(sortOption));
+      if (options.provincePlaceId) {
+        // Legacy/unassigned rows cannot enter a canonical province search.
+        candidateRows = candidateRows.filter(row => Boolean(row.canonicalPlaceId));
+      }
       if (candidateRows.some(row => row.canonicalPlaceId)) {
-        placeLabels = (
-          options.placeProjection ??
+        const projection =
+          (!options.provincePlaceId && options.placeProjection) ||
           (await loadCanonicalPlaceSearchProjection(undefined, {
-            placeIds: candidateRows.flatMap(row =>
-              row.canonicalPlaceId ? [row.canonicalPlaceId] : [],
-            ),
-          }))
-        ).labels;
+            placeIds: [
+              ...(options.provincePlaceId ? [options.provincePlaceId] : []),
+              ...new Set<string>(
+                candidateRows.flatMap(row => (row.canonicalPlaceId ? [row.canonicalPlaceId] : [])),
+              ),
+            ],
+          }));
+        placeLabels = projection.labels;
+        if (options.provincePlaceId) {
+          const selected = projection.executions.get(options.provincePlaceId);
+          const members = new Set(
+            selected?.scope === 'province' && projection.labels.has(selected.placeId)
+              ? canonicalPlaceSearchMembers(selected, projection)
+              : [],
+          );
+          candidateRows = candidateRows.filter(
+            row => row.canonicalPlaceId && members.has(row.canonicalPlaceId),
+          );
+        }
       }
       publicResolutionById = await resolvePublicPropertyEligibilities(
         candidateRows.map(row => Number(row.id)),

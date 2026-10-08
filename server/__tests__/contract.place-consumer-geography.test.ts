@@ -5,7 +5,11 @@ import { loadCanonicalPlacePackage } from '../_core/databaseAuthority/dataAdapte
 
 const { select } = vi.hoisted(() => ({ select: vi.fn() }));
 vi.mock('../db', () => ({ getDb: async () => ({ select }) }));
-import { discoverPlaces, executePlace } from '../services/placeDiscoveryService';
+import {
+  discoverPlaces,
+  executePlace,
+  loadDiscoveryContainmentAncestries,
+} from '../services/placeDiscoveryService';
 
 const selected = {
   placeId: 'pl-place-01-000000000000000000000001',
@@ -20,7 +24,7 @@ const contextId = 'pl-place-01-000000000000000000000003';
 // projector decide whether a graph is executable; there is no database setup.
 function queryRows(rows: unknown[]) {
   const query: any = {};
-  for (const method of ['from', 'innerJoin', 'where']) query[method] = () => query;
+  for (const method of ['from', 'innerJoin', 'leftJoin', 'where']) query[method] = () => query;
   query.limit = () => Promise.resolve(rows);
   query.then = (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve);
   select.mockReturnValueOnce(query);
@@ -128,10 +132,22 @@ describe('National Place disambiguation', () => {
         nameRole: 'preferred_public',
       },
     ]);
-    queryRows([{ toPlaceId: contextId }]);
-    queryRows([{ scope: null, lifecycleStatus: 'active' }]);
-    queryRows([{ toPlaceId: provinceId }]);
-    queryRows([{ scope: 'province', lifecycleStatus: 'active' }]);
+    queryRows([
+      {
+        fromPlaceId: selected.placeId,
+        toPlaceId: contextId,
+        scope: null,
+        lifecycleStatus: 'active',
+      },
+    ]);
+    queryRows([
+      {
+        fromPlaceId: contextId,
+        toPlaceId: provinceId,
+        scope: 'province',
+        lifecycleStatus: 'active',
+      },
+    ]);
     queryRows([]);
     queryRows([
       { placeId: provinceId, name: 'Province A' },
@@ -232,5 +248,61 @@ describe('All admitted provinces support exact consumer scope projection', () =>
         expect(resolution.execution.cityPlaceId).toBe(city?.placeId ?? null);
       }
     }
+  });
+});
+
+describe('batched discovery ancestry preserves containment authority', () => {
+  const edge = (
+    fromPlaceId: string,
+    toPlaceId: string,
+    scope: string | null = null,
+    lifecycleStatus: string | null = 'active',
+  ) => ({ fromPlaceId, toPlaceId, scope, lifecycleStatus });
+  const read = (ids: string[]) => loadDiscoveryContainmentAncestries(ids, { select } as any);
+
+  it('reads shared parents once and preserves input order including duplicate identities', async () => {
+    queryRows([edge('a', 'municipality'), edge('b', 'municipality')]);
+    queryRows([edge('municipality', 'province', 'province')]);
+    queryRows([]);
+    const chain = [
+      { placeId: 'municipality', scope: null },
+      { placeId: 'province', scope: 'province' },
+    ];
+    expect(await read(['b', 'a', 'b'])).toEqual([chain, chain, chain]);
+    expect(select).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects competing parents', async () => {
+    queryRows([edge('a', 'p1', 'province'), edge('a', 'p2', 'province')]);
+    queryRows([]);
+    await expect(read(['a'])).rejects.toThrow('unresolved_parent');
+  });
+
+  it.each([
+    ['province', null],
+    ['province', 'retired'],
+    ['unsupported', 'active'],
+  ])('rejects invalid parent scope/status %s/%s', async (scope, status) => {
+    queryRows([edge('a', 'p', scope, status)]);
+    queryRows([]);
+    await expect(read(['a'])).rejects.toThrow('unresolved_parent');
+  });
+
+  it('rejects a cycle after an apparently valid province', async () => {
+    queryRows([edge('a', 'p', 'province')]);
+    queryRows([edge('p', 'a', 'locality')]);
+    await expect(read(['a'])).rejects.toThrow('containment_cycle');
+  });
+
+  it('rejects exhausted ancestry without returning partial authority', async () => {
+    for (let i = 0; i < 8; i++) queryRows([edge(String(i), String(i + 1))]);
+    await expect(read(['0'])).rejects.toThrow('unresolved_parent');
+  });
+
+  it('propagates a database failure', async () => {
+    select.mockImplementationOnce(() => {
+      throw new Error('transport unavailable');
+    });
+    await expect(read(['a'])).rejects.toThrow('transport unavailable');
   });
 });

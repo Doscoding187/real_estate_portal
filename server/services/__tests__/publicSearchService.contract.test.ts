@@ -1,9 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockResolvePublicLocation, mockSearchProperties, mockSearchListings } = vi.hoisted(() => ({
+const {
+  mockLoadPlaceProjection,
+  mockResolvePublicLocation,
+  mockSearchProperties,
+  mockSearchListings,
+} = vi.hoisted(() => ({
+  mockLoadPlaceProjection: vi.fn(),
   mockResolvePublicLocation: vi.fn(),
   mockSearchProperties: vi.fn(),
   mockSearchListings: vi.fn(),
+}));
+
+vi.mock('../canonicalPlaceSearchService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../canonicalPlaceSearchService')>()),
+  loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
 }));
 
 vi.mock('../locationResolverService', () => ({
@@ -93,6 +104,50 @@ describe('publicSearchService contract', () => {
       total: 2,
     });
   });
+
+  it.each(['province', 'metro_city', 'locality'] as const)(
+    'routes approved %s inventory without expanding empty geography',
+    async scope => {
+      const id = 'pl-place-01-000000000000000000000001';
+      const projection = {
+        executions: new Map([
+          [
+            id,
+            {
+              placeId: id,
+              scope,
+              provincePlaceId: scope === 'province' ? id : 'province',
+              cityPlaceId: scope === 'metro_city' ? id : null,
+              localityPlaceId: scope === 'locality' ? id : null,
+              contextAncestorPlaceIds: [],
+            },
+          ],
+        ]),
+        labels: new Map([
+          [
+            id,
+            {
+              canonicalPlaceId: id,
+              label: 'Approved Place',
+              scope,
+              province: 'Gauteng',
+              city: '',
+              locality: '',
+            },
+          ],
+        ]),
+      };
+      mockLoadPlaceProjection.mockResolvedValue(projection);
+      await publicSearchService.searchInventory({ canonicalPlaceId: id, listingType: 'sale' });
+      expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, { placeIds: [id] });
+      const [filters, , , , , options] = mockSearchProperties.mock.calls[0];
+      expect(filters.canonicalPlaceIds).toEqual(scope === 'province' ? undefined : [id]);
+      expect(options.provincePlaceId).toBe(scope === 'province' ? id : undefined);
+      expect(options.publicOnly).toBe(true);
+      expect(mockResolvePublicLocation).not.toHaveBeenCalled();
+      expect(mockSearchListings).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not widen an unresolved public location into a different search', async () => {
     mockResolvePublicLocation.mockResolvedValueOnce({

@@ -479,6 +479,7 @@ export class PublicSearchService {
     let placeProjection: CanonicalPlaceSearchProjection | undefined;
     let placeContext: PublicSearchInventoryResult['canonicalPlaceContext'];
     let placeMemberIds: string[] | undefined;
+    let provincePlaceId: string | undefined;
     let location: ResolvedLocation | null = null;
     let queryBoundary: PublicSearchQueryBoundary | undefined;
     let searchAreaContext: PublicSearchInventoryResult['searchAreaContext'];
@@ -490,7 +491,6 @@ export class PublicSearchService {
     if (input.canonicalPlaceId) {
       const projection = await loadCanonicalPlaceSearchProjection(undefined, {
         placeIds: [input.canonicalPlaceId],
-        includeProvinceMembers: true,
       });
       placeProjection = projection;
       const execution = projection.executions.get(input.canonicalPlaceId);
@@ -501,7 +501,13 @@ export class PublicSearchService {
           'unavailable',
           'The selected location cannot currently be searched. Choose another approved location.',
         );
-      placeMemberIds = canonicalPlaceSearchMembers(execution, projection);
+      if (execution.scope === 'province') {
+        // Validate membership only for identities used by matching inventory.
+        // Empty Places cannot contribute a search result or its count.
+        provincePlaceId = execution.placeId;
+      } else {
+        placeMemberIds = canonicalPlaceSearchMembers(execution, projection);
+      }
       placeContext = { ...labels, scopePolicy: PLACE_INVENTORY_SCOPE_POLICY };
       locationState = 'resolved';
     } else if (input.searchAreaId) {
@@ -723,7 +729,11 @@ export class PublicSearchService {
                 sourcePage,
                 sourcePageSize,
                 queryBoundary,
-                { publicOnly: true, ...(placeProjection ? { placeProjection } : {}) },
+                {
+                  publicOnly: true,
+                  ...(placeProjection ? { placeProjection } : {}),
+                  provincePlaceId,
+                },
               )
             : propertySearchService.searchProperties(
                 filters,
@@ -731,7 +741,11 @@ export class PublicSearchService {
                 sourcePage,
                 sourcePageSize,
                 undefined,
-                { publicOnly: true, ...(placeProjection ? { placeProjection } : {}) },
+                {
+                  publicOnly: true,
+                  ...(placeProjection ? { placeProjection } : {}),
+                  provincePlaceId,
+                },
               )
           : null,
         developmentEnabled
