@@ -11,6 +11,23 @@ import { ReadinessSnapshotMonitor } from './readinessSnapshotMonitor';
 // Age includes the verification itself. Slow/failed/expired verification fails closed.
 const monitor = new ReadinessSnapshotMonitor<LayeredDatabaseReadiness>({
   read: () => assessRuntimeDatabaseReadiness(),
+  classify: value => (value.applicationReady ? 'ready' : 'not-ready'),
+  observe: (event, value) => {
+    // Never serialize environment context, layer detail or thrown exceptions.
+    const source = process.env.BUILD_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA;
+    const sourceSha = source && /^[a-f0-9]{40}$/i.test(source) ? source : null;
+    const fingerprint = value?.targetFingerprintHash;
+    const targetFingerprintHash =
+      fingerprint && /^[a-f0-9]{64}$/i.test(fingerprint) ? fingerprint : null;
+    console.info(
+      JSON.stringify({
+        component: 'hosted-database-readiness',
+        ...event,
+        sourceSha,
+        targetFingerprintHash,
+      }),
+    );
+  },
   contextKey: () =>
     createHash('sha256')
       .update(
