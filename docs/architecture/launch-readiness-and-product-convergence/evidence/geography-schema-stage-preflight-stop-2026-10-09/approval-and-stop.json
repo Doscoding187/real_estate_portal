@@ -1,0 +1,27 @@
+{
+  "actor": "Edward",
+  "operator": "Codex",
+  "approvalSource": "Current conversation: explicit schema-stage approval, 9 October 18:00–20:00 SAST, including disclosed maintenance risk",
+  "approvedPacketCommit": "377b6e4a8e91cce4a400164bad27c1685ca20575",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "targetFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "window": {
+    "start": "2026-10-09T16:00:00Z",
+    "end": "2026-10-09T18:00:00Z",
+    "timezone": "Africa/Johannesburg"
+  },
+  "preflightStartedAt": "2026-10-09T15:19:21Z",
+  "decision": "STOP_BEFORE_PRODUCTION_CHANGES",
+  "stopReason": "Graceful API/email containment is not established for the existing deployment artifacts. Both current configurations and deployment manifests have null drainingSeconds; documented default is zero. Do not remove deployments and discover forced termination after maintenance has begun.",
+  "attendance": "Requested for window opening; no attendance confirmation received during preflight at decision time",
+  "excluded": [
+    "reference-data writes",
+    "grants",
+    "application deployment",
+    "service reopening",
+    "payments"
+  ],
+  "productionMutationsPerformed": [],
+  "localPreparation": "Verified accepted immutable archive and extracted a private runner bundle plus reviewed envelope. No upload, runner creation or deployment."
+}

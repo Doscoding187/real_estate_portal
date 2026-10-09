@@ -1,0 +1,39 @@
+{
+  "readOnly": true,
+  "source": "Railway GraphQL deployment(id) meta.serviceManifest.deploy; field-only extraction, no variable values",
+  "api": {
+    "deploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+    "deploymentStopped": false,
+    "drainingSeconds": null,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10,
+    "startCommand": "pnpm start:hosted:api"
+  },
+  "email": {
+    "deploymentId": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+    "deploymentStopped": false,
+    "drainingSeconds": null,
+    "restartPolicyType": "ALWAYS",
+    "startCommand": "pnpm email:supervisor"
+  },
+  "documentation": {
+    "defaultGrace": "0 seconds before SIGKILL",
+    "url": "https://docs.railway.com/deployments/reference",
+    "scope": "Documented deployment teardown default; an effective graceful stop/remove contract for these exact running artifacts has not been established"
+  },
+  "directMutationsInspected": {
+    "deploymentStop": {
+      "args": [
+        "id:String!"
+      ],
+      "additionalGraceArgument": false
+    },
+    "deploymentRemove": {
+      "args": [
+        "id:String!"
+      ],
+      "additionalGraceArgument": false
+    }
+  },
+  "providerWritesPerformed": false
+}
