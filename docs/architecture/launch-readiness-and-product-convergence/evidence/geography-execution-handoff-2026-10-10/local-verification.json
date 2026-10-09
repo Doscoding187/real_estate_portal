@@ -1,0 +1,357 @@
+{
+  "kind": "local execution-handoff verification; no production execution",
+  "verifiedAt": "2026-10-09T17:14:48.090716+00:00",
+  "worktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008",
+  "branch": "docs/geography-protected-release-plans-20261009",
+  "preparationBase": "e29bff52f0d42577f4350c0bff7094922c0dd85b",
+  "approvedContainmentCommit": "87a16b324dabd095f6659f88d53a3676623d8b7b",
+  "approvalRecordSHA256": "c1cc60b892c92d7b8ac57be2889b2d87da5d3418ecb27d087d025f8d5f15e50e",
+  "applicationSource": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "packetChecksums": {
+    "geography-containment-amendment-2026-10-09": {
+      "manifestSHA256": "6f23baec7cb4a44512cbca067d75f0a1066ea07436dada700ac424b44120d98c",
+      "entries": [
+        {
+          "path": "README.md",
+          "sha256": "876999fd4092e21ba7664bf603dfbafce89d11c8910f0832d67bd78ade7feba1",
+          "verified": true
+        },
+        {
+          "path": "SENIOR-REVIEW.md",
+          "sha256": "6be507e926631cf6e994218d0030be63fa8fe241c8ae6cc02f14ea86279523e8",
+          "verified": true
+        },
+        {
+          "path": "current-process-bindings.json",
+          "sha256": "9aa5b5d85865e21b3347bb4b248b321b722d641b5b53dbb71e44ab70f709090f",
+          "verified": true
+        },
+        {
+          "path": "drain-session.cjs",
+          "sha256": "e483eed8b9c14100850177aaefedef60812e7b0ecc414752131e9c3cfd9bba62",
+          "verified": true
+        },
+        {
+          "path": "drain-session.test.cjs",
+          "sha256": "b2e510946aead869ad1b0ef1da8fdbb782d7b1c5f4cb1d1d5c93c14230552c1d",
+          "verified": true
+        },
+        {
+          "path": "method-fixture-result.json",
+          "sha256": "b327faa9f8b7120fe9b257e1c5d97872f75d32db142596f520acdf95ab8656c9",
+          "verified": true
+        },
+        {
+          "path": "method-fixture.cjs",
+          "sha256": "b9b66cb41f6d8d0502fa25c54e822541efe8f240733192b9c6ed439d90938aa9",
+          "verified": true
+        },
+        {
+          "path": "method-proof-provenance.json",
+          "sha256": "434ceda348abf5fb032e1e5144ef76028c03f98cd3e40fd497852e4533a42161",
+          "verified": true
+        },
+        {
+          "path": "probe-cleanup-readback.json",
+          "sha256": "474c453ab55c0423914c585f71d7fc140ed7cc52c51733dba3e41939b9c6b751",
+          "verified": true
+        },
+        {
+          "path": "production-status-after-investigation.json",
+          "sha256": "cde610a1cdaecff5e3b3d82b88efe55011cae4c0f8d7ac1e85009dda001c872c",
+          "verified": true
+        },
+        {
+          "path": "provider-fixture/Dockerfile",
+          "sha256": "7cd9f0d65448a9e9731fcbc4d0b213976dcc253ef05b77e2c51003be4d7ebad2",
+          "verified": true
+        },
+        {
+          "path": "provider-fixture/package.json",
+          "sha256": "0d6b8bf29aefbb31ca3c09802c68447967d306f40296165f45d9f481f8f2d6b9",
+          "verified": true
+        },
+        {
+          "path": "provider-fixture/probe.cjs",
+          "sha256": "a713faca7ce3963b1bd2d5cce1d60b8fec664626ab77c6109c69922c183831e4",
+          "verified": true
+        },
+        {
+          "path": "provider-fixture/railway.json",
+          "sha256": "4d1f7a068575818ae7c766d702da848e441e1c2e75f9f38a51634c22ea8e2c71",
+          "verified": true
+        },
+        {
+          "path": "provider-probe.json",
+          "sha256": "d63f2604fde333afd37aaf386cc60aa1def3ed94adad8f9ae2ab303777ecd3c7",
+          "verified": true
+        },
+        {
+          "path": "provider-removal-logs.json",
+          "sha256": "5f0461579d198d2695dc24b38efa48574aa99f08b6fc1674647ed62d0bb8fb04",
+          "verified": true
+        },
+        {
+          "path": "senior-method-result.json",
+          "sha256": "fb29b2c5c173cf9f4144c116939f2fbcb2df1fd3e59eabb1ee24bad8796810f9",
+          "verified": true
+        },
+        {
+          "path": "senior-test-result.txt",
+          "sha256": "f3d4883777ea19d42b4b2389dd7cbe028bd1304b16da8f8e8a001b4024902bba",
+          "verified": true
+        },
+        {
+          "path": "wrapper-fixture-result.json",
+          "sha256": "ff897f6889c6a067bfac40eb403cd5a6d436e1f003c8be902eb4854519bcef96",
+          "verified": true
+        },
+        {
+          "path": "wrapper-fixture.cjs",
+          "sha256": "ed829968f6d57f61135e1a903223ae5aba4f1ec4cd098a435b0c74fa0cf983fe",
+          "verified": true
+        }
+      ]
+    },
+    "geography-attended-execution-2026-10-09": {
+      "manifestSHA256": "200430a8a0c7ff6ea848bb6baa5eda0bf74751584365eb1c8de1ebd33e782343",
+      "entries": [
+        {
+          "path": "README.md",
+          "sha256": "e142fbd763f5555e9200a3d86440613866009abb220436b9d43f8f5c74296e8a",
+          "verified": true
+        },
+        {
+          "path": "compatible-deployment.json",
+          "sha256": "3f38643b533a30b808a61f6bf7bb7c070e3c6e0c6f7e76afa488a557c973075a",
+          "verified": true
+        },
+        {
+          "path": "current-frontend.json",
+          "sha256": "ef6e6228ac14dfde0eba9cc153ec29124e5be87ba45f98ae37d594476505a880",
+          "verified": true
+        },
+        {
+          "path": "current-hosting.json",
+          "sha256": "9b92983a7808e3c3bd9c6ca9a98e5696d4d9b65608f8e4aaff887dc61b762b1c",
+          "verified": true
+        },
+        {
+          "path": "current-preservation.json",
+          "sha256": "2e0d24718c7a3b7d52b4de3924949417b6d323204b5b199d8da02b30bd2fcbb2",
+          "verified": true
+        },
+        {
+          "path": "edge-and-trigger-readback.json",
+          "sha256": "3a6de13365f433f414bc54a4b522b01479cc6e6bb6bce72c356dbfda80c35db0",
+          "verified": true
+        },
+        {
+          "path": "independent-runner-access.json",
+          "sha256": "f229211dcc06c86f6621c240e8a31e493728ffea48b518fd1366db2c1c9e0ff2",
+          "verified": true
+        },
+        {
+          "path": "maintenance-edge-rules.json",
+          "sha256": "c01c9e23e1dee90999a57d43273ae271e06f6f2e28407b0484d89294a10174c4",
+          "verified": true
+        },
+        {
+          "path": "prepared-artifacts.json",
+          "sha256": "2402a8e180c50dd6af51c2b7663e1e5e410b2ffa26736f3fdef789bd41f5f6ed",
+          "verified": true
+        },
+        {
+          "path": "release-runner.railway.json",
+          "sha256": "415cd94135d005603bd41cb0237efebfb88d6287c84567e118aa23a102426134",
+          "verified": true
+        }
+      ]
+    },
+    "geography-schema-stage-preflight-stop-2026-10-09": {
+      "manifestSHA256": "1b7c93ced4695db15a7713b8e74f8c94db68b97d2ecd7afb6f3bdac165405f08",
+      "entries": [
+        {
+          "path": "README.md",
+          "sha256": "bf088812742812bef6d9d2dd2074c1ecb265e43df66c870cb3ac92ed9edaa43b",
+          "verified": true
+        },
+        {
+          "path": "approval-and-stop.json",
+          "sha256": "bfd44f32d1fabbeea63b7f67570dfffb79fab9214f1c709f2486864fd73f4e34",
+          "verified": true
+        },
+        {
+          "path": "existing-deployment-drain-evidence.json",
+          "sha256": "b6594ccb6d6930fe97ebec6304abe119258653b18542d8ba9b9039dbdb2f95fe",
+          "verified": true
+        },
+        {
+          "path": "protected-inspect.json",
+          "sha256": "e39ae003b9d4e7e834afc25cab01ef33d00a71444ab84e95c02f9bacf67922cf",
+          "verified": true
+        },
+        {
+          "path": "protected-schema-plan.json",
+          "sha256": "cef17f5cc6df300da2b20d9285e63c5c1743b488e5681fd78ab2255daf6114d2",
+          "verified": true
+        },
+        {
+          "path": "read-only-preflight.json",
+          "sha256": "b361ac2d7acd54e09b25e79cc1d4b2b0c354065c73cedfe047c0f99dc0c4591e",
+          "verified": true
+        },
+        {
+          "path": "read-only-provenance.json",
+          "sha256": "bbde8cb5de8139d8c9d7db2c6a508959ce68513f05bedddfd1eb157e2a3a7c43",
+          "verified": true
+        },
+        {
+          "path": "source-archive-inventory.json",
+          "sha256": "f0027f0a15c15cb05aed722e1b834bd13f6b187a8f618a854dfdd061c1205041",
+          "verified": true
+        }
+      ]
+    },
+    "geography-protected-release-plans-2026-10-09": {
+      "manifestSHA256": "6babec10888fd72d87f39bfc522cf3fb8f5ed63f4ae8a10d961a0ff2e3bf681b",
+      "entries": [
+        {
+          "path": "README.md",
+          "sha256": "b602cb4961cdcc540eaae59963e0fee6818e14249cd20bc38696f9f883856053",
+          "verified": true
+        },
+        {
+          "path": "hosting-holds-readback.json",
+          "sha256": "0c0893fed9b6e04d6facb9679a1824a86b52dbcfe549901731f824249b2ce56b",
+          "verified": true
+        },
+        {
+          "path": "migration-inventory.md",
+          "sha256": "6437d61fb28f886c645e5a84b4938bfcb66d09e5ccd3e8fd697593036fa9ac7e",
+          "verified": true
+        },
+        {
+          "path": "plan-reconciliation.json",
+          "sha256": "1d5384c7c20e295858a23dad1612a3bd1aaf923e74dccca6b70812d87ebf867c",
+          "verified": true
+        },
+        {
+          "path": "protected-inspect.json",
+          "sha256": "54a74533a7e786a69734e3baa0e9d28e03d899291a83dea8387567672879c831",
+          "verified": true
+        },
+        {
+          "path": "protected-reference-plan.json",
+          "sha256": "12b26c662864f4b4c81a08776c9598f6473323fa5180a90a66b2e1039030d301",
+          "verified": true
+        },
+        {
+          "path": "protected-schema-plan.json",
+          "sha256": "cef17f5cc6df300da2b20d9285e63c5c1743b488e5681fd78ab2255daf6114d2",
+          "verified": true
+        },
+        {
+          "path": "read-only-provenance.json",
+          "sha256": "12f231c9261d2642537352b0a426f81b7b23afedce9bf60744669abf85c7ba90",
+          "verified": true
+        },
+        {
+          "path": "read-only-transport.source.txt",
+          "sha256": "590f8a41a46f41a387f35dd126de5769845322b7617ad244ba0530a8b6ea3bc3",
+          "verified": true
+        },
+        {
+          "path": "source-archive-inventory.json",
+          "sha256": "f0027f0a15c15cb05aed722e1b834bd13f6b187a8f618a854dfdd061c1205041",
+          "verified": true
+        },
+        {
+          "path": "source-integration.json",
+          "sha256": "751ddbf7ca7d0a771a1c8540b384b8d40b2e4c0d32a6f0b9a8cddf8726ca498a",
+          "verified": true
+        },
+        {
+          "path": "source-preparation-failure.json",
+          "sha256": "95d6e493e5ce9e3a78d1c8a2c27291a9e8f6cdb30c478ffc1339501f8f5dee8b",
+          "verified": true
+        }
+      ]
+    }
+  },
+  "verifiedEntryCount": 50,
+  "approvedScripts": [
+    {
+      "path": "geography-containment-amendment-2026-10-09/drain-session.cjs",
+      "sha256": "e483eed8b9c14100850177aaefedef60812e7b0ecc414752131e9c3cfd9bba62",
+      "approvedBlobMatches": true,
+      "staticSyntaxCheck": "passed; node --check previously run in this preparation; body not executed"
+    },
+    {
+      "path": "geography-containment-amendment-2026-10-09/drain-session.test.cjs",
+      "sha256": "b2e510946aead869ad1b0ef1da8fdbb782d7b1c5f4cb1d1d5c93c14230552c1d",
+      "approvedBlobMatches": true,
+      "staticSyntaxCheck": "passed; node --check previously run in this preparation; body not executed"
+    },
+    {
+      "path": "geography-containment-amendment-2026-10-09/method-fixture.cjs",
+      "sha256": "b9b66cb41f6d8d0502fa25c54e822541efe8f240733192b9c6ed439d90938aa9",
+      "approvedBlobMatches": true,
+      "staticSyntaxCheck": "passed; node --check previously run in this preparation; body not executed"
+    },
+    {
+      "path": "geography-containment-amendment-2026-10-09/provider-fixture/probe.cjs",
+      "sha256": "a713faca7ce3963b1bd2d5cce1d60b8fec664626ab77c6109c69922c183831e4",
+      "approvedBlobMatches": true,
+      "staticSyntaxCheck": "passed; node --check previously run in this preparation; body not executed"
+    },
+    {
+      "path": "geography-containment-amendment-2026-10-09/wrapper-fixture.cjs",
+      "sha256": "ed829968f6d57f61135e1a903223ae5aba4f1ec4cd098a435b0c74fa0cf983fe",
+      "approvedBlobMatches": true,
+      "staticSyntaxCheck": "passed; node --check previously run in this preparation; body not executed"
+    }
+  ],
+  "custodyArchives": {
+    "sourceBundle": {
+      "sha256": "8b021bc11b4266f72a14c7e64d059a2964538e1f65a1e50f72628226a8a244cd",
+      "mode": "0600",
+      "verified": true,
+      "productionArtifact": "accepted source only"
+    },
+    "existingBuildArtifact": {
+      "sha256": "083e215ec96dd665432945444c63599667c6a20ee1bf1bc2761448de275a5a8b",
+      "mode": "0600",
+      "verified": true,
+      "productionArtifact": false
+    }
+  },
+  "referenceInputs": {
+    "registrySHA256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433",
+    "territoryPinCount": 9,
+    "desiredRows": {
+      "place": 16944,
+      "place_name": 25618,
+      "place_relationship": 16935,
+      "place_evidence": 79189,
+      "place_external_mapping": 19042
+    },
+    "heldPlaceCount": 720,
+    "existingPlanDigest": null,
+    "readyForDataRelease": false
+  },
+  "localAuthorityStatus": {
+    "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+    "manifestHead": "0111_properties_canonical_place_reference_fk.sql",
+    "localService": "disposed/unreachable",
+    "databaseInitialized": false,
+    "productionHeadInspected": false
+  },
+  "unchangedTestsRepeated": false,
+  "operationalScriptsExecuted": false,
+  "productionCommandsExecuted": false,
+  "configurationChanged": false,
+  "protectedTargetAccessed": false,
+  "managementReportSubmitted": false
+}
