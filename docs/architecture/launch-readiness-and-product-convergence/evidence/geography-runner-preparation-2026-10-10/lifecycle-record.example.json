@@ -16,6 +16,18 @@
   "attendanceConfirmed": false,
   "operationState": "unknown",
   "lastEvidenceAt": null,
+  "lastEvidenceBinding": {
+    "projectId": null,
+    "environmentId": null,
+    "serviceId": null,
+    "deploymentId": null,
+    "instanceId": null,
+    "operationState": "unknown"
+  },
+  "budgetsMinutes": {
+    "containment": 105,
+    "schema": 65
+  },
   "migrationAttemptIds": [],
   "providerRemovalConfirmedAt": null
 }

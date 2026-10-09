@@ -3,6 +3,18 @@
   "baseCommit": "ca0303a758aa43a906237b0f875326f86ae20fd7",
   "observerCommit": "2b7ecaae6c68426615ece4a1742b183d53b94179",
   "schemaSource": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "boundedCorrection": {
+    "reviewBaseCommit": "17fd106129b63ca32bbe30f554ad67bb55979a7b",
+    "priorPreparationTests": { "passed": 11, "failed": 0 },
+    "changes": [
+      "Require <=60-second evidence bound to exact project/environment/service/deployment/instance and operation state; stale or absent evidence returns unknown—inspect first",
+      "Require validated schema/containment budget inputs >=65/105 minutes; larger schema budgets also raise containment by reserving preceding 40 minutes"
+    ],
+    "providerInvestigationRepeated": false,
+    "providerScopeDiscrepancy": "Unresolved; senior retains resolution and production execution",
+    "newValidationScope": "Local DB/provider-free gate regressions and packet checks only; authority status on unreachable disposable local target",
+    "newRegressionTests": 7
+  },
   "authorityStatus": {
     "command": "pnpm db:authority:status",
     "exitCode": 0,
@@ -16,7 +28,7 @@
     "initialNewWorktreeAttempt": "tsx missing; used ignored local node_modules symlink to senior checkpoint dependencies; no install or dependency changes"
   },
   "focusedValidation": [
-    { "command": "node --test runner-gates.test.cjs", "exitCode": 0, "passed": 11, "failed": 0 },
+    { "command": "node --test runner-gates.test.cjs", "exitCode": 0, "passed": 18, "failed": 0 },
     { "command": "node --check runner-gates.cjs", "exitCode": 0 },
     { "command": "node --check runner-gates.test.cjs", "exitCode": 0 },
     { "command": "pnpm exec prettier --check <new-packet-directory>", "exitCode": 0 },

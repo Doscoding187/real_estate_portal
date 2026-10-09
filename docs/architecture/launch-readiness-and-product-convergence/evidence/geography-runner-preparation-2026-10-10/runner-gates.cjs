@@ -6,6 +6,8 @@ const { isIPv4 } = require('node:net');
 
 const PROJECT = '8cdd7515-ddd2-4252-bbee-df5a5c209d4b';
 const ENVIRONMENT = '63070d99-357a-40ba-99c3-6d1368f61652';
+const UUID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
+const EVIDENCE_MAX_AGE_MS = 60000;
 const SERVER =
   '/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql';
 const ORIGINAL_SERVICES = [
@@ -31,10 +33,7 @@ function requireProof(condition, reason) {
 }
 
 function runnerId(id) {
-  requireProof(
-    typeof id === 'string' && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(id),
-    'Missing or malformed runner service ID',
-  );
+  requireProof(typeof id === 'string' && UUID.test(id), 'Missing or malformed runner service ID');
   requireProof(
     !ORIGINAL_SERVICES.includes(id),
     'Original service or retired runner is not a replacement runner',
@@ -105,6 +104,48 @@ function utc(value) {
   return parsed;
 }
 
+function freshInstanceEvidence(record, now, created) {
+  let captured;
+  try {
+    captured = utc(record.lastEvidenceAt);
+  } catch {
+    return false;
+  }
+  if (captured < created || captured > now || now - captured > EVIDENCE_MAX_AGE_MS) return false;
+  for (const key of ['deploymentId', 'instanceId']) {
+    if (typeof record[key] !== 'string' || !UUID.test(record[key])) return false;
+  }
+  const binding = record.lastEvidenceBinding;
+  return (
+    binding !== null &&
+    typeof binding === 'object' &&
+    [
+      'projectId',
+      'environmentId',
+      'serviceId',
+      'deploymentId',
+      'instanceId',
+      'operationState',
+    ].every(key => binding[key] === record[key])
+  );
+}
+
+function requiredBudgetMinutes(action, budgets) {
+  for (const [phase, minimum] of [
+    ['schema', 65],
+    ['containment', 105],
+  ]) {
+    requireProof(
+      Number.isSafeInteger(budgets?.[phase]) && budgets[phase] >= minimum,
+      'Explicit whole-minute budgets required; schema >= 65 and containment >= 105',
+    );
+  }
+  // A larger schema/recovery estimate also reserves the preceding 40 minutes.
+  const containment = Math.max(budgets.containment, budgets.schema + 40);
+  requireProof(Number.isSafeInteger(containment), 'Budget exceeds safe integer range');
+  return action === 'schema' ? budgets.schema : containment;
+}
+
 function lifecycleGate(action, record, now = Date.now()) {
   requireProof(['containment', 'schema', 'cleanup'].includes(action), 'Unknown lifecycle action');
   runnerId(record.serviceId);
@@ -137,6 +178,14 @@ function lifecycleGate(action, record, now = Date.now()) {
     ['idle', 'active', 'unknown', 'complete'].includes(record.operationState),
     'Missing critical-operation state',
   );
+  if (!freshInstanceEvidence(record, now, created)) {
+    return {
+      eligible: false,
+      operationState: 'unknown',
+      expired: now >= expires,
+      next: 'unknown—inspect first; KEEP runner; refresh exact instance evidence; never timer-kill or retry migration',
+    };
+  }
   // Check active/unknown before any clock-driven cleanup decision.
   if (record.operationState === 'active' || record.operationState === 'unknown') {
     return {
@@ -162,7 +211,7 @@ function lifecycleGate(action, record, now = Date.now()) {
     record.attendanceConfirmed === true && record.freshWindowApproval === true,
     'Fresh window approval and current attendance required',
   );
-  const requiredMinutes = action === 'schema' ? 65 : 105;
+  const requiredMinutes = requiredBudgetMinutes(action, record.budgetsMinutes);
   const remainingMinutes = (Math.min(expires, end) - now) / 60000;
   return {
     eligible: now >= start && remainingMinutes >= requiredMinutes,

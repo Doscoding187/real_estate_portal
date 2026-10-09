@@ -77,8 +77,13 @@ address or certify the MySQL route.
       30 recovery, 5 cleanup). Immediately before apply run `lifecycle schema`;
       require **65 minutes** (15 apply, 15 verify, 30 recovery, 5 cleanup). These are
       conservative preparation gates, not duration guarantees. If the senior's
-      refreshed estimate is larger, require the larger budget. Insufficient time
-      refuses new execution; it never cancels work already running.
+      refreshed estimate is larger, record it in `budgetsMinutes.schema` and/or
+      `budgetsMinutes.containment` before running the gate. Both inputs are required
+      safe whole-minute numbers, at least 65 and 105 respectively; missing,
+      fractional, nonnumeric or reduced budgets refuse admission. The effective
+      containment budget is the greater of its input and the schema budget plus
+      40 minutes for preceding work. Larger estimates are therefore enforced.
+      Insufficient time refuses new execution; it never cancels work already running.
 - [ ] **LOCAL:** record `active` and custodian acknowledgement **before** issuing
       apply, with source/digest/command correlation and protected shell binding.
       Keep active until terminal command outcome, closed migration connection,
@@ -90,6 +95,16 @@ address or certify the MySQL route.
 The local gate reads records only. It grants no production authority, verifies
 no human attendance itself, and neither launches nor wraps a migration.
 Records must be refreshed immediately before each use; stale state is unknown.
+Every lifecycle admission, including cleanup, requires `lastEvidenceAt` no more
+than **60 seconds** old, no earlier than creation and no later than the current
+clock. `lastEvidenceBinding` must match the record's exact project, environment,
+service, deployment, instance and operation state; deployment and instance IDs
+must be valid, nonempty UUIDs. Missing, malformed, future, stale or mismatched
+evidence returns `eligible:false`, `operationState:"unknown"` and
+**unknown—inspect first**. Refresh these fields together from the governed
+provider/process/session/attempt/lock observations; changing a timestamp alone
+cannot establish fresh evidence. The offline gate validates the supplied
+record's age and binding, not the authenticity or completeness of observations.
 
 ## Executable checklist
 
