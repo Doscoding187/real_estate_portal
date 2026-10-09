@@ -1,0 +1,187 @@
+{
+  "observedAt": "2026-10-09T14:36:29.047762+00:00",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "services": [
+    {
+      "name": "Redis",
+      "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+      "cronSchedule": null,
+      "activeDeployments": [
+        {
+          "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+          "status": "SUCCESS",
+          "sourceSha": null,
+          "imageDigest": "sha256:7d1e4ce8b9395088377ab382d1f6cfdbd13b3690795198a0399ab8d683064d6d",
+          "instances": [
+            {
+              "id": "b3cbb3c3-f7f8-4986-92db-9d8fb764388d",
+              "status": "RUNNING"
+            }
+          ],
+          "deploy": {
+            "cronSchedule": null,
+            "drainingSeconds": null,
+            "healthcheckPath": null,
+            "healthcheckTimeout": null,
+            "ipv6EgressEnabled": false,
+            "limitOverride": null,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "numReplicas": 1,
+            "overlapSeconds": null,
+            "preDeployCommand": null,
+            "preDeployTimeoutSeconds": null,
+            "region": null,
+            "registryCredentials": null,
+            "requiredMountPath": null,
+            "restartPolicyMaxRetries": 10,
+            "restartPolicyType": "ON_FAILURE",
+            "runtime": "V2",
+            "sleepApplication": false,
+            "startCommand": "/bin/sh -c \"rm -rf $RAILWAY_VOLUME_MOUNT_PATH/lost+found/ && exec docker-entrypoint.sh redis-server --requirepass $REDIS_PASSWORD --save 60 1 --dir $RAILWAY_VOLUME_MOUNT_PATH\"",
+            "useLegacyStacker": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "real_estate_portal",
+      "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "cronSchedule": null,
+      "activeDeployments": [
+        {
+          "id": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+          "status": "SUCCESS",
+          "sourceSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+          "imageDigest": "sha256:6f0cd24b808d859e57bbc75db776c2e39f4dbc6d72a5727ea7af98e3e94f174f",
+          "instances": [
+            {
+              "id": "41e46a78-215c-4feb-9c7a-b0aa7d5faf50",
+              "status": "RUNNING"
+            }
+          ],
+          "deploy": {
+            "cronSchedule": null,
+            "drainingSeconds": null,
+            "healthcheckPath": "/api/readiness",
+            "healthcheckTimeout": 300,
+            "ipv6EgressEnabled": false,
+            "limitOverride": null,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "numReplicas": 1,
+            "overlapSeconds": null,
+            "preDeployCommand": null,
+            "preDeployTimeoutSeconds": null,
+            "region": null,
+            "registryCredentials": null,
+            "requiredMountPath": null,
+            "restartPolicyMaxRetries": 10,
+            "restartPolicyType": "ON_FAILURE",
+            "runtime": "V2",
+            "sleepApplication": false,
+            "startCommand": "pnpm start:hosted:api",
+            "useLegacyStacker": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "paid-mvp-lead-job",
+      "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+      "cronSchedule": "*/5 * * * *",
+      "activeDeployments": [
+        {
+          "id": "19a8fac1-b750-4a8f-8f5d-1d94e725f460",
+          "status": "SUCCESS",
+          "sourceSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "imageDigest": "sha256:4c5a0bbf54fa0ba0d40e08ee99f60b7e1eb5f43ab7927634e929d9efd064b4b0",
+          "instances": [
+            {
+              "id": "edb93ed8-4f46-4916-b4a9-24b94d0e7bbe",
+              "status": "EXITED"
+            }
+          ],
+          "deploy": {
+            "cronSchedule": "*/5 * * * *",
+            "drainingSeconds": null,
+            "healthcheckPath": null,
+            "healthcheckTimeout": null,
+            "ipv6EgressEnabled": false,
+            "limitOverride": null,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "numReplicas": 1,
+            "overlapSeconds": null,
+            "preDeployCommand": null,
+            "preDeployTimeoutSeconds": null,
+            "region": null,
+            "registryCredentials": null,
+            "requiredMountPath": null,
+            "restartPolicyMaxRetries": null,
+            "restartPolicyType": "NEVER",
+            "runtime": "V2",
+            "sleepApplication": false,
+            "startCommand": "pnpm lead-delivery:worker",
+            "useLegacyStacker": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "paid-mvp-email-worker",
+      "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+      "cronSchedule": null,
+      "activeDeployments": [
+        {
+          "id": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+          "status": "SUCCESS",
+          "sourceSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "imageDigest": "sha256:091d222d5f86f5081b9d52663e6a11ee988e7a98fac5377575d3d16e4945b792",
+          "instances": [
+            {
+              "id": "247f1dd2-351f-4eca-9e9d-848aad046f9e",
+              "status": "RUNNING"
+            }
+          ],
+          "deploy": {
+            "cronSchedule": null,
+            "drainingSeconds": null,
+            "healthcheckPath": null,
+            "healthcheckTimeout": null,
+            "ipv6EgressEnabled": false,
+            "limitOverride": null,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "numReplicas": 1,
+            "overlapSeconds": null,
+            "preDeployCommand": null,
+            "preDeployTimeoutSeconds": null,
+            "region": null,
+            "registryCredentials": null,
+            "requiredMountPath": null,
+            "restartPolicyMaxRetries": null,
+            "restartPolicyType": "ALWAYS",
+            "runtime": "V2",
+            "sleepApplication": false,
+            "startCommand": "pnpm email:supervisor",
+            "useLegacyStacker": false
+          }
+        }
+      ]
+    }
+  ]
+}

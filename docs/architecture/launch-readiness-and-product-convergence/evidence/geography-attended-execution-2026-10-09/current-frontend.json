@@ -1,0 +1,120 @@
+{
+  "observedAt": "2026-10-09 14:57:01 UTC",
+  "readOnly": true,
+  "project": {
+    "id": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+    "name": "real-estate-portal",
+    "framework": "vite",
+    "accountId": "team_wGNClVbXptfEtznBC5p1YfO2",
+    "createdAt": 1762493894715,
+    "updatedAt": 1791412115255,
+    "nodeVersion": "22.x",
+    "live": false,
+    "latestDeployment": {
+      "id": "dpl_EqEfnVDYgdk7pEddNWDJA7nWd6x4",
+      "url": "real-estate-portal-g8bvfwsda-edwards-projects-29c395d1.vercel.app",
+      "createdAt": 1791550329782,
+      "readyState": "ERROR",
+      "target": null
+    },
+    "domains": [
+      "www.propertylistifysa.co.za",
+      "real-estate-portal-xi.vercel.app",
+      "propertylistifysa.co.za",
+      "real-estate-portal-edwards-projects-29c395d1.vercel.app",
+      "real-estate-portal-git-7756376-6de0f1-edwards-projects-29c395d1.vercel.app"
+    ],
+    "passwordProtection": {
+      "enabled": false,
+      "deploymentType": null
+    },
+    "ssoProtection": {
+      "enabled": true,
+      "deploymentType": "all_except_custom_domains"
+    },
+    "trustedIps": {
+      "enabled": false,
+      "deploymentType": null,
+      "addresses": [],
+      "protectionMode": null
+    }
+  },
+  "latestReadyProductionList": {
+    "deployments": {
+      "pagination": {
+        "count": 1,
+        "next": 1791412043777,
+        "prev": 1791412043777
+      },
+      "deployments": [
+        {
+          "id": "dpl_9voWXeyGQw63Un2cb6HgztUgKCyD",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-3qhdry378-edwards-projects-29c395d1.vercel.app",
+          "created": 1791412043777,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "githubCommitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "githubCommitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9voWXeyGQw63Un2cb6HgztUgKCyD",
+          "isRollbackCandidate": true
+        }
+      ]
+    },
+    "limit": 1,
+    "scope": "latest READY production deployment only; does not independently certify current domain traffic"
+  },
+  "productionDomains": {
+    "domains": [
+      {
+        "name": "propertylistifysa.co.za",
+        "apexName": "propertylistifysa.co.za",
+        "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+        "redirect": "www.propertylistifysa.co.za",
+        "redirectStatusCode": null,
+        "gitBranch": null,
+        "customEnvironmentId": null,
+        "updatedAt": 1791238578609,
+        "createdAt": 1765468545100,
+        "verified": true
+      },
+      {
+        "name": "www.propertylistifysa.co.za",
+        "apexName": "propertylistifysa.co.za",
+        "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+        "redirect": null,
+        "redirectStatusCode": null,
+        "gitBranch": null,
+        "customEnvironmentId": null,
+        "updatedAt": 1766020105558,
+        "createdAt": 1765468544645,
+        "verified": true
+      },
+      {
+        "name": "real-estate-portal-xi.vercel.app",
+        "apexName": "vercel.app",
+        "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+        "redirect": null,
+        "gitBranch": null,
+        "customEnvironmentId": null,
+        "updatedAt": 1762493894700,
+        "createdAt": 1762493894700,
+        "verified": true
+      }
+    ],
+    "pagination": {
+      "count": 3,
+      "next": null,
+      "prev": 1765468545100
+    }
+  }
+}

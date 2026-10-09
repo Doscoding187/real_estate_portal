@@ -1,0 +1,79 @@
+{
+  "observedAt": "2026-10-09T14:46:26.617933+00:00",
+  "result": {
+    "project": {
+      "services": {
+        "edges": [
+          {
+            "node": {
+              "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+              "name": "paid-mvp-email-worker",
+              "repoTriggers": {
+                "edges": []
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+              "name": "Redis",
+              "repoTriggers": {
+                "edges": []
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+              "name": "real_estate_portal",
+              "repoTriggers": {
+                "edges": [
+                  {
+                    "node": {
+                      "branch": "post-baseline-work",
+                      "environmentId": "a4c65b8e-77bc-4924-abc8-8a91ce62d800"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "node": {
+              "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+              "name": "paid-mvp-lead-job",
+              "repoTriggers": {
+                "edges": []
+              }
+            }
+          }
+        ]
+      }
+    },
+    "serviceInstance": {
+      "clearance": null,
+      "clearanceEffective": false,
+      "domains": {
+        "customDomains": [
+          {
+            "domain": "api.propertylistifysa.co.za",
+            "id": "208e0e80-1a3c-4e02-9160-2710e2c3db59"
+          }
+        ],
+        "serviceDomains": [
+          {
+            "domain": "realestateportal-production-9bb8.up.railway.app",
+            "id": "54f6ee80-d0ef-42eb-87cc-f2994055c780"
+          }
+        ]
+      },
+      "edgeConfig": {
+        "edgeRules": null,
+        "enabled": true,
+        "id": "c7256db6-2afa-4a0c-8acb-a479f85c0a51"
+      },
+      "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e"
+    }
+  },
+  "mutations": false
+}

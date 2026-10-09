@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm install --frozen-lockfile"
+  },
+  "deploy": {
+    "startCommand": "node -e 'setInterval(() => {}, 60000)'",
+    "numReplicas": 1,
+    "restartPolicyType": "NEVER"
+  }
+}

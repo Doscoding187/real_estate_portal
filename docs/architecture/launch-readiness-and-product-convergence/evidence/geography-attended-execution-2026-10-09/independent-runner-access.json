@@ -1,0 +1,14 @@
+{
+  "startedAt": "2026-10-09T14:36:25.287637+00:00",
+  "completedAt": "2026-10-09T14:36:37.763495+00:00",
+  "operation": "release-plan",
+  "credentialClass": "read-only",
+  "targetFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "host": "operator workstation, independent of API/workers",
+  "runnerGitHead": "77961d2c7ab1dba90a71fa2676183dcb560c7b07",
+  "runtimeMatchesMergedSource": true,
+  "exitCode": 1,
+  "stdout": "\n> real_estate_portal@1.0.0 db:release:plan /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008\n> tsx scripts/databaseAuthorityCli.ts release:plan -- --accepted-old-head\\=0096_user_founder_authority_unique.sql --expected-new-head\\=0111_properties_canonical_place_reference_fk.sql\n\n\u2009ELIFECYCLE\u2009 Command failed with exit code 1.\n",
+  "stderr": "Database connection failed for authorized fingerprint b23d640cdf242812.\n",
+  "mutations": false
+}
