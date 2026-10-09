@@ -1,5 +1,6 @@
 {
   "authorityVersion": 3,
+  "releaseSessionInspectionCommand": "db:release:sessions:inspect",
   "canonicalMigrationPath": "server/migrations/0000_canonical_launch_baseline.sql",
   "activeMigrationDirectory": "server/migrations",
   "archivedMigrationDirectory": "server/migrations/_archived/pre-canonical-baseline",

@@ -316,6 +316,11 @@ export function authorizeDatabaseOperation(
   ) {
     throw new Error('Database operation refused: exact B08 Azure behavior approval is required.');
   }
+  if (context.operation === 'release-session-inspect' &&
+      (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+       context.provider !== 'mysql' || context.credentialClass !== 'bootstrap-admin')) {
+    throw new Error('Session inspection refused: exact Azure operator scope required.');
+  }
   assertOwnership(context, rule.ownership);
   if (
     rule.approval === 'protected-target' &&

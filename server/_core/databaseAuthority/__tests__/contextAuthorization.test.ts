@@ -1138,3 +1138,21 @@ describe('exact pre-upgrade recovery validation target', () => {
     );
   });
 });
+
+describe('protected release session observer', () => {
+  it('requires exact target, operator credential and operation approval', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'release-session-inspect', cwd: identity.worktreePath, gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin', processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = { reference: 'ATTENDED-RELEASE', actor: 'Edward', operation: 'release-session-inspect' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash, credentialClass: 'bootstrap-admin' as const };
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow('approval');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).not.toThrow();
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval: { ...approval, targetFingerprintHash: 'wrong' } })).toThrow('approval');
+    expect(() => authorizeDatabaseOperation({ ...authority, context: { ...authority.context, credentialClass: 'runtime' } }, { root: process.cwd(), approval })).toThrow('credential class');
+    expect(() => authorizeDatabaseOperation({ ...authority, context: { ...authority.context, targetFingerprintHash: 'wrong' } }, { root: process.cwd(), approval })).toThrow('exact Azure');
+  });
+});

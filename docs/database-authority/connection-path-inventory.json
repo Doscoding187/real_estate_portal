@@ -2,6 +2,7 @@
   "inventoryVersion": 1,
   "canonicalRawConnectionCreator": "server/_core/databaseAuthority/connectionAuthority.ts",
   "activeBoundedConsumers": [
+    "scripts/inspectReleaseSessions.ts",
     "server/db-connection.ts",
     "server/migrations/runSqlMigrations.ts",
     "server/_core/databaseAuthority/lifecycle.ts",

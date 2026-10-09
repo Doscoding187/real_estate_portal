@@ -2,6 +2,7 @@ export const DATABASE_OPERATIONS = [
   'runtime-connect',
   'worker-connect',
   'read-only-connect',
+  'release-session-inspect',
   'ci-identity-bootstrap',
   'inspection-identity-provision',
   'tidb-source-reader-provision',

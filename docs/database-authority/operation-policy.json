@@ -3,6 +3,18 @@
   "denyTargetClasses": ["unknown", "shared-remote"],
   "protectedTargetClasses": ["staging", "production", "disposable-rehearsal"],
   "operations": {
+    "release-session-inspect": {
+      "allowedTargetClasses": [
+        "production"
+      ],
+      "credentialClasses": [
+        "bootstrap-admin"
+      ],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "exact-azure-read-only-session-and-transaction-inventory-no-query-text"
+    },
     "runtime-connect": {
       "allowedTargetClasses": ["disposable-worktree", "disposable-test", "staging", "production"],
       "credentialClasses": ["runtime", "local-owner", "test-owner"],

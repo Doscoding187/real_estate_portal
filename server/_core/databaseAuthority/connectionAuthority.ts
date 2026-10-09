@@ -1,3 +1,4 @@
+import { restrictSessionInspection } from './releaseSessionInspection';
 import { randomUUID } from 'node:crypto';
 import * as canonicalSchema from '../../../drizzle/schema';
 import { loadAndValidateMigrationManifest } from '../../migrations/migrationManifest';
@@ -66,6 +67,7 @@ const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'runtime-ledger-read-grant',
   'b08-behavior-verify',
   'read-only-connect',
+  'release-session-inspect',
   'migration-plan',
   'migration-apply',
   'reference-seed',
@@ -157,7 +159,7 @@ export async function createAuthoritySqlConnection(
       await wrapped.end();
       throw error;
     }
-    return wrapped;
+    return authority.context.operation === 'release-session-inspect' ? restrictSessionInspection(wrapped) : wrapped;
   } catch (error) {
     if (error instanceof DatabaseTargetMismatchError) {
       throw error;
