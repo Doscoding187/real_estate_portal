@@ -4,7 +4,9 @@ on:
   pull_request:
     branches: [main, develop]
   push:
-    branches: [main]
+    # Validate the isolated B12 release tree as well as the PR integration tree.
+    # This does not deploy or change main's branch-protection requirements.
+    branches: [main, fix/b12-readiness-correction-20261008]
 
 jobs:
   db-contract-verification:

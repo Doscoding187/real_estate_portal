@@ -620,6 +620,69 @@ export async function assessAuthorizedDatabaseReadiness(input: {
   };
 }
 
+/** Diagnostic-only stage names; they describe which boundary ran, never its inputs. */
+export type ReadinessAssessmentStage = 'authorize' | 'connect' | 'verify' | 'cleanup';
+
+/** Bounded, non-sensitive summary of a finished assessment (no detail text). */
+export type ReadinessAssessmentVerdict = {
+  applicationReady: boolean;
+  notReadyLayers: Array<{ layer: string; code: string }>;
+};
+
+/**
+ * Read-only observation hook. Calls are guarded: a probe failure never changes the
+ * report, the thrown error, or the connection cleanup outcome.
+ */
+export type ReadinessAssessmentProbe = {
+  target(targetFingerprintHash: string | null): void;
+  begin(stage: ReadinessAssessmentStage): void;
+  end(stage: ReadinessAssessmentStage, outcome: 'ok' | 'threw'): void;
+  verdict(verdict: ReadinessAssessmentVerdict): void;
+};
+
+function observeProbe(
+  probe: ReadinessAssessmentProbe | undefined,
+  action: (observer: ReadinessAssessmentProbe) => void,
+): void {
+  if (!probe) return;
+  try {
+    action(probe);
+  } catch {
+    /* Diagnostics must never affect readiness. */
+  }
+}
+
+async function timedStage<R>(
+  probe: ReadinessAssessmentProbe | undefined,
+  stage: ReadinessAssessmentStage,
+  run: () => Promise<R>,
+): Promise<R> {
+  observeProbe(probe, observer => observer.begin(stage));
+  let result: R;
+  try {
+    result = await run();
+  } catch (error) {
+    observeProbe(probe, observer => observer.end(stage, 'threw'));
+    throw error;
+  }
+  observeProbe(probe, observer => observer.end(stage, 'ok'));
+  return result;
+}
+
+function reportVerdict(
+  probe: ReadinessAssessmentProbe | undefined,
+  report: LayeredDatabaseReadiness,
+): void {
+  observeProbe(probe, observer =>
+    observer.verdict({
+      applicationReady: report.applicationReady,
+      notReadyLayers: Object.entries(report.layers)
+        .filter(([, value]) => value.state === 'not-ready')
+        .map(([layer, value]) => ({ layer, code: value.code })),
+    }),
+  );
+}
+
 export async function assessRuntimeDatabaseReadiness(
   input: {
     authority?: ResolvedDatabaseAuthority;
@@ -631,6 +694,7 @@ export async function assessRuntimeDatabaseReadiness(
     ) => Promise<AuthoritySqlConnection>;
     purpose?: RuntimeReadinessPurpose;
     now?: Date;
+    probe?: ReadinessAssessmentProbe;
   } = {},
 ): Promise<LayeredDatabaseReadiness> {
   let authority: ResolvedDatabaseAuthority;
@@ -643,7 +707,7 @@ export async function assessRuntimeDatabaseReadiness(
         credentialClass: (process.env.DATABASE_CREDENTIAL_CLASS as any) ?? undefined,
       });
   } catch {
-    return unavailableReadiness({
+    const unresolved = unavailableReadiness({
       checkedAt: input.now ?? new Date(),
       targetFingerprintHash: 'unresolved',
       targetClass: 'unknown',
@@ -651,30 +715,42 @@ export async function assessRuntimeDatabaseReadiness(
       connectivityCode: 'authority-unresolved',
       connectivityDetail: 'Database target authority could not be resolved.',
     });
+    observeProbe(input.probe, observer => observer.target(null));
+    reportVerdict(input.probe, unresolved);
+    return unresolved;
   }
+  observeProbe(input.probe, observer => observer.target(authority.context.targetFingerprintHash));
   let connection: AuthoritySqlConnection | null = null;
   let stage: 'authorization' | 'connection' | 'assessment' = 'authorization';
   try {
-    const authorization =
-      input.authorization ??
-      authorizeDatabaseOperation(authority, {
-        root: input.root,
-        approval: protectedDatabaseApprovalFromEnvironment(authority),
-      });
-    stage = 'connection';
-    connection = await (input.connectionFactory ?? createAuthoritySqlConnection)(
-      authority,
-      authorization,
+    const authorization = await timedStage(
+      input.probe,
+      'authorize',
+      async () =>
+        input.authorization ??
+        authorizeDatabaseOperation(authority, {
+          root: input.root,
+          approval: protectedDatabaseApprovalFromEnvironment(authority),
+        }),
     );
+    stage = 'connection';
+    const opened = await timedStage(input.probe, 'connect', () =>
+      (input.connectionFactory ?? createAuthoritySqlConnection)(authority, authorization),
+    );
+    connection = opened;
     stage = 'assessment';
-    return await assessAuthorizedDatabaseReadiness({
-      authority,
-      connection,
-      authorization,
-      root: input.root,
-      purpose: input.purpose,
-      now: input.now,
-    });
+    const report = await timedStage(input.probe, 'verify', () =>
+      assessAuthorizedDatabaseReadiness({
+        authority,
+        connection: opened,
+        authorization,
+        root: input.root,
+        purpose: input.purpose,
+        now: input.now,
+      }),
+    );
+    reportVerdict(input.probe, report);
+    return report;
   } catch (error) {
     const context = authority.context;
     const mismatch = error instanceof DatabaseTargetMismatchError;
@@ -692,7 +768,7 @@ export async function assessRuntimeDatabaseReadiness(
         : stage === 'connection'
           ? `Authorized target ${context.targetFingerprintHash.slice(0, 16)} is unreachable.`
           : `Readiness verification failed for authorized target ${context.targetFingerprintHash.slice(0, 16)}.`;
-    return unavailableReadiness({
+    const unavailable = unavailableReadiness({
       checkedAt: input.now ?? new Date(),
       targetFingerprintHash: context.targetFingerprintHash,
       targetClass: context.targetClass,
@@ -700,8 +776,12 @@ export async function assessRuntimeDatabaseReadiness(
       connectivityCode,
       connectivityDetail,
     });
+    reportVerdict(input.probe, unavailable);
+    return unavailable;
   } finally {
-    await connection?.end();
+    // Cleanup behavior is intentionally unchanged: an end() failure still propagates.
+    const open = connection;
+    if (open) await timedStage(input.probe, 'cleanup', () => open.end());
   }
 }
 
