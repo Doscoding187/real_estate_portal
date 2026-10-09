@@ -1,0 +1,35 @@
+{
+  "reason": "New Railway services reject config-as-code; use equivalent explicit service settings, not project-wide IaC migration",
+  "serviceId": "3160d05c-44f0-4d5f-af9c-7bfe5f5ce37e",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "applicationSchemaAndReferenceFilesChanged": false,
+  "removedDeploymentMetadataInOwnedUploadCopy": [
+    {
+      "path": "railway.json",
+      "sha256": "1ba4e9875a1d569315d3eb24c26d09838c30bfaaca14ed8372129fa40302c4d7"
+    },
+    {
+      "path": "railway.email-worker.json",
+      "sha256": "8b90f66d112693c7d5cee2c48ebc9e128d0c38efd55daf24b9f9e1a834b111ba"
+    },
+    {
+      "path": "railway.lead-job.json",
+      "sha256": "905244ab75eef081aa991423fc85f4acf8ab05bbd3855bc85477f16a3e127b39"
+    },
+    {
+      "path": "release-runner.railway.json",
+      "sha256": "415cd94135d005603bd41cb0237efebfb88d6287c84567e118aa23a102426134"
+    }
+  ],
+  "startCommand": "node -e 'setInterval(() => {}, 60000)'",
+  "buildCommand": "pnpm install --frozen-lockfile",
+  "restart": "NEVER",
+  "limits": {
+    "vCPU": 1,
+    "memoryGiB": 1
+  },
+  "region": "asia-southeast1-eqsg3a",
+  "publicDomains": false,
+  "persistentCredentials": false,
+  "seniorDecision": "Within approved idle runner scope; equivalent service settings, no production app redeployment"
+}

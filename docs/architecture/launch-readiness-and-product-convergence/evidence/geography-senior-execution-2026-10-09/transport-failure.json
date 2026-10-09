@@ -1,0 +1,6 @@
+{
+  "startedAt": "2026-10-09T17:37:10.233751+00:00",
+  "exitCode": 1,
+  "stderr": "Failed to fetch: error sending request for url (https://backboard.railway.com/graphql/v2)\n\nCaused by:\n    0: error sending request for url (https://backboard.railway.com/graphql/v2)\n    1: client error (Connect)\n    2: dns error\n    3: failed to lookup address information: Try again\n",
+  "stdout": ""
+}

@@ -1,0 +1,120 @@
+{
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "observedAt": "2026-10-09T17:39:41.494Z",
+  "identity": {
+    "identity": "pladmin@%",
+    "connectionId": 40630,
+    "databaseName": "propertylistify_database"
+  },
+  "globalProcessPrivilegeVerified": true,
+  "sessions": [
+    {
+      "id": 9,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 3
+    },
+    {
+      "id": 11,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 14
+    },
+    {
+      "id": 12,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 5
+    },
+    {
+      "id": 13,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 3
+    },
+    {
+      "id": 29313,
+      "user": "propertylistify_job_worker",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 8
+    },
+    {
+      "id": 38103,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38104,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38105,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 399
+    },
+    {
+      "id": 38106,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38108,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38110,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38111,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 38112,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 6408
+    },
+    {
+      "id": 40629,
+      "user": "propertylistify_app_runtime",
+      "databaseName": "propertylistify_database",
+      "command": "Sleep",
+      "seconds": 0
+    },
+    {
+      "id": 40630,
+      "user": "pladmin",
+      "databaseName": "propertylistify_database",
+      "command": "Query",
+      "seconds": 0
+    }
+  ],
+  "transactions": [],
+  "snapshotOnly": true,
+  "frozen": false
+}

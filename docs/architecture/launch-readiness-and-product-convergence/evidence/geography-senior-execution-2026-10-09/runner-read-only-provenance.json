@@ -1,0 +1,31 @@
+{
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "archiveSha256": "a131ce4d8896d9c64624cd14760d964cc0d97c443c0f840985c8ab592161e9b6",
+  "dependencyLockVerified": true,
+  "hostingDeploymentId": "4d280d07-010e-4a47-950c-c2186f3afa66",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalReference": "GEOGRAPHY-SENIOR-ATTENDED-PREFLIGHT-2026-10-09-Edward",
+  "credentialClass": "read-only",
+  "credential": "dedicated SELECT-only inspector",
+  "databaseMutations": false,
+  "deployedFilesChanged": false,
+  "temporarySourceOnly": true,
+  "startedAt": "2026-10-09T17:46:36.507Z",
+  "commands": [
+    {
+      "label": "protected-inspect",
+      "command": [
+        "pnpm",
+        "db:release:reference:inspect",
+        "--",
+        "--adapter=places"
+      ],
+      "exitCode": 1,
+      "stderr": "{\n  \"reportVersion\": 1,\n  \"status\": \"failure\",\n  \"adapter\": \"places\",\n  \"command\": \"release-reference:inspect\",\n  \"transactionOutcome\": \"not-started\",\n  \"primaryFailure\": \"operation\",\n  \"failures\": {\n    \"operation\": true,\n    \"rollback\": false,\n    \"lockCleanup\": false,\n    \"connectionClose\": false\n  },\n  \"nextAction\": \"stop-and-inspect\",\n  \"automaticRetryAllowed\": false\n}\n"
+    }
+  ],
+  "completed": false,
+  "failure": "Named read-only command stopped: protected-inspect",
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-09T17:46:54.019Z"
+}
