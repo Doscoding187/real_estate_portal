@@ -1,0 +1,82 @@
+TAP version 13
+# Subtest: throwing log preserves original pool success
+ok 1 - throwing log preserves original pool success
+  ---
+  duration_ms: 6.74367
+  type: 'test'
+  ...
+# Subtest: throwing log preserves original pool error
+ok 2 - throwing log preserves original pool error
+  ---
+  duration_ms: 3.118211
+  type: 'test'
+  ...
+# Subtest: HTTP-close logging failure cannot interrupt pre-drain
+ok 3 - HTTP-close logging failure cannot interrupt pre-drain
+  ---
+  duration_ms: 2.897377
+  type: 'test'
+  ...
+# Subtest: state rejects missing state and wrong token, role, PID and start ticks
+ok 4 - state rejects missing state and wrong token, role, PID and start ticks
+  ---
+  duration_ms: 3.998264
+  type: 'test'
+  ...
+# Subtest: interrupted arming is observable and cannot be armed again
+ok 5 - interrupted arming is observable and cannot be armed again
+  ---
+  duration_ms: 2.776275
+  type: 'test'
+  ...
+# Subtest: observer terminates wait: never-open
+ok 6 - observer terminates wait: never-open
+  ---
+  duration_ms: 22.386477
+  type: 'test'
+  ...
+# Subtest: observer terminates wait: no-response
+ok 7 - observer terminates wait: no-response
+  ---
+  duration_ms: 21.0415
+  type: 'test'
+  ...
+# Subtest: observer terminates wait: lost
+ok 8 - observer terminates wait: lost
+  ---
+  duration_ms: 0.546427
+  type: 'test'
+  ...
+# Subtest: unresponsive close reports failure within deadline
+ok 9 - unresponsive close reports failure within deadline
+  ---
+  duration_ms: 45.830958
+  type: 'test'
+  ...
+# Subtest: normal close disconnects and rejects further commands
+ok 10 - normal close disconnects and rejects further commands
+  ---
+  duration_ms: 1.249016
+  type: 'test'
+  ...
+# Subtest: reject non-loopback and credential-bearing endpoints
+ok 11 - reject non-loopback and credential-bearing endpoints
+  ---
+  duration_ms: 0.420645
+  type: 'test'
+  ...
+# Subtest: disconnect failure preserves primary uncertain operation error
+ok 12 - disconnect failure preserves primary uncertain operation error
+  ---
+  duration_ms: 0.698748
+  type: 'test'
+  ...
+1..12
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 186.539679

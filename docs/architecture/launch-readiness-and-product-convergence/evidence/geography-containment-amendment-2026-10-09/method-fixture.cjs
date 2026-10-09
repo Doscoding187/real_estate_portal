@@ -7,8 +7,10 @@ const { setTimeout: delay } = require('node:timers/promises');
 const controllerSource = fs.readFileSync(process.argv[2], 'utf8');
 const dir = fs.mkdtempSync('/tmp/pl-contained-method-');
 fs.chmodSync(dir, 0o700);
-const installed = JSON.parse(fs.readFileSync('/app/package.json', 'utf8'));
-fs.symlinkSync('/app/node_modules', path.join(dir, 'node_modules'));
+const appRoot = process.argv[3] || '/app';
+const installed = JSON.parse(fs.readFileSync(path.join(appRoot, 'package.json'), 'utf8'));
+const nativeTimeout = setTimeout(() => { console.error('Fixture exceeded 30 seconds'); for (const pid of children) { try { process.kill(-pid, 'SIGKILL'); } catch {} } process.exit(1); }, 30000);
+fs.symlinkSync(path.join(appRoot, 'node_modules'), path.join(dir, 'node_modules'));
 fs.mkdirSync(path.join(dir, 'server/_core'), { recursive: true });
 fs.mkdirSync(path.join(dir, 'scripts'));
 fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({
@@ -78,18 +80,19 @@ const children = [];
       }
       if (!boot) throw Error('Fixture boot failed: ' + stderr);
       const client = await tool.connect(boot.endpoint);
+      const startTicks = tool.processStartTicks(boot.pid);
       const token = 'synthetic-method-proof-' + role;
-      const inspection = await tool.prepare(client, role, boot.pid, token, false);
-      const prepared = await tool.prepare(client, role, boot.pid, token, true);
+      const inspection = await tool.prepare(client, role, boot.pid, token, false, startTicks);
+      const prepared = await tool.prepare(client, role, boot.pid, token, true, startTicks);
       if (role === 'api') {
         let idle = false;
         for (let n = 0; n < 160 && !idle; n++) {
-          const state = await tool.state(client, role);
+          const state = await tool.state(client, role, boot.pid, token, startTicks);
           idle = state.httpClosed && !state.httpCloseFailed && state.savedStopCompleted && !state.saved.running && !state.saved.timerActive &&
             !state.commercial.running && !state.commercial.timerActive;
           if (!idle) await delay(50);
         }
-        if (!idle) throw Error('Synthetic pre-drain incomplete: ' + JSON.stringify({state:await tool.state(client,role),stdout}));
+        if (!idle) throw Error('Synthetic pre-drain incomplete: ' + JSON.stringify({state:await tool.state(client,role,boot.pid,token,startTicks),stdout}));
       }
       const held = [];
       let parent = boot.ppid;
@@ -117,19 +120,20 @@ const children = [];
       if (!complete.poolEndCompleted || complete.poolEndFailed || (role === 'api' && !complete.httpClosed)) {
         throw Error('Completion gate failed');
       }
-      client.close();
+      await client.close();
       await delay(250);
       const stat = fs.readFileSync('/proc/' + boot.pid + '/stat', 'utf8');
       const fields = stat.slice(stat.lastIndexOf(')') + 2).trim().split(/\s+/);
       if (fields[0] !== 'Z' || fields[49] !== '0') throw Error('No clean child exit');
       const outerState=fs.readFileSync('/proc/'+child.pid+'/status','utf8').match(/^State:\s+(.+)$/m)[1];
       if(outerState.startsWith('Z') || outerState.startsWith('T')) throw Error('Outer launcher did not remain running');
-      runs.push({ role, inspection, prepared, complete, heldAncestors: stopped.length, outerLauncherState:outerState,
+      runs.push({ role, startTicks, inspection, prepared, complete, heldAncestors: stopped.length, outerLauncherState:outerState,
         childState: fields[0], rawExitCode: fields[49], stdout, stderr });
       process.kill(-child.pid, 'SIGKILL'); // only the harness-owned, drained fixture group
     }
   } finally {
     for (const pid of children) { try { process.kill(-pid, 'SIGKILL'); } catch {} }
+    clearTimeout(nativeTimeout);
     fs.rmSync(dir, { recursive: true, force: true });
   }
   console.log('METHOD_FIXTURE_RESULT ' + JSON.stringify({
