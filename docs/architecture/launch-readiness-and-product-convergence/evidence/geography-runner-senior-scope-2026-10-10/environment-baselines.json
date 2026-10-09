@@ -1,0 +1,303 @@
+{
+  "recordedAt": "2026-10-09T23:04:26Z",
+  "environments": [
+    {
+      "buckets": [],
+      "environment": {
+        "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+        "isEphemeral": false,
+        "name": "production"
+      },
+      "project": {
+        "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+        "name": "successful-tranquility",
+        "workspaceName": "doscoding187's Projects"
+      },
+      "region": null,
+      "services": [
+        {
+          "cronSchedule": null,
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "latestDeployment": {
+            "createdAt": "2026-09-05T12:50:33.234Z",
+            "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "Redis",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": "redis:8.2.9",
+            "repo": null
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": [
+            {
+              "mountPath": "/data",
+              "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+              "volumeName": "redis-volume"
+            }
+          ]
+        },
+        {
+          "cronSchedule": null,
+          "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+          "latestDeployment": {
+            "createdAt": "2026-10-07T22:20:36.724Z",
+            "id": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "paid-mvp-email-worker",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": []
+        },
+        {
+          "cronSchedule": "*/5 * * * *",
+          "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+          "latestDeployment": {
+            "createdAt": "2026-10-07T22:23:01.516Z",
+            "id": "19a8fac1-b750-4a8f-8f5d-1d94e725f460",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "paid-mvp-lead-job",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": []
+        },
+        {
+          "cronSchedule": null,
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "latestDeployment": {
+            "createdAt": "2026-10-09T08:01:00.073Z",
+            "id": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "real_estate_portal",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": []
+        }
+      ],
+      "sharedVariableNames": [],
+      "staged": null,
+      "volumes": [
+        {
+          "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+          "mountedOn": {
+            "mountPath": "/data",
+            "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+            "serviceName": "Redis"
+          },
+          "name": "redis-volume",
+          "region": "asia-southeast1-eqsg3a",
+          "sizeMB": 500,
+          "stagedChangeCount": 0,
+          "state": "live"
+        }
+      ]
+    },
+    {
+      "buckets": [],
+      "environment": {
+        "id": "2ced17ce-4ada-4aa1-9caf-393fe83a6e31",
+        "isEphemeral": false,
+        "name": "Testing"
+      },
+      "project": {
+        "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+        "name": "successful-tranquility",
+        "workspaceName": "doscoding187's Projects"
+      },
+      "region": null,
+      "services": [
+        {
+          "cronSchedule": null,
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "latestDeployment": null,
+          "name": "Redis",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": "redis:8.2.1",
+            "repo": null
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": [
+            {
+              "mountPath": "/data",
+              "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+              "volumeName": "redis-volume"
+            }
+          ]
+        },
+        {
+          "cronSchedule": null,
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "latestDeployment": {
+            "createdAt": "2026-09-13T01:33:53.831Z",
+            "id": "d20126bc-8585-4beb-ae60-943e05a3e2f0",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "real_estate_portal",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": "main",
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 1,
+          "state": "live-with-staged-changes",
+          "volumeMounts": []
+        }
+      ],
+      "sharedVariableNames": [],
+      "staged": {
+        "changeCount": 1,
+        "createdAt": "2026-03-04T02:44:43.345Z",
+        "message": null,
+        "patchId": "9f607fbe-adf1-4322-b11f-302802fc9bc3",
+        "status": "STAGED",
+        "updatedAt": "2026-03-04T02:44:43.345Z"
+      },
+      "volumes": [
+        {
+          "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+          "mountedOn": {
+            "mountPath": "/data",
+            "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+            "serviceName": "Redis"
+          },
+          "name": "redis-volume",
+          "region": "asia-southeast1-eqsg3a",
+          "sizeMB": 5000,
+          "stagedChangeCount": 0,
+          "state": "live"
+        }
+      ]
+    },
+    {
+      "buckets": [],
+      "environment": {
+        "id": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+        "isEphemeral": false,
+        "name": "Staging"
+      },
+      "project": {
+        "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+        "name": "successful-tranquility",
+        "workspaceName": "doscoding187's Projects"
+      },
+      "region": null,
+      "services": [
+        {
+          "cronSchedule": null,
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "latestDeployment": null,
+          "name": "Redis",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": null,
+            "image": "redis:8.2.1",
+            "repo": null
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": [
+            {
+              "mountPath": "/data",
+              "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+              "volumeName": "redis-volume"
+            }
+          ]
+        },
+        {
+          "cronSchedule": null,
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "latestDeployment": {
+            "createdAt": "2026-04-10T18:39:43.777Z",
+            "id": "1ceef66b-ce55-4336-8d1e-90ed19ba1348",
+            "status": "FAILED",
+            "url": null
+          },
+          "name": "real_estate_portal",
+          "numReplicas": 1,
+          "regions": [
+            "asia-southeast1-eqsg3a"
+          ],
+          "source": {
+            "branch": "post-baseline-work",
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": []
+        }
+      ],
+      "sharedVariableNames": [],
+      "staged": null,
+      "volumes": [
+        {
+          "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+          "mountedOn": {
+            "mountPath": "/data",
+            "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+            "serviceName": "Redis"
+          },
+          "name": "redis-volume",
+          "region": "asia-southeast1-eqsg3a",
+          "sizeMB": 5000,
+          "stagedChangeCount": 0,
+          "state": "live"
+        }
+      ]
+    }
+  ]
+}
