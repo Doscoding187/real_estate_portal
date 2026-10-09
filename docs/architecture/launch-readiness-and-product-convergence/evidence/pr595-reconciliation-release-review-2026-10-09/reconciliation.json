@@ -1,0 +1,380 @@
+{
+  "classification": "consumer-source reconciliation and release review; no database application",
+  "phase": "review",
+  "pr": 595,
+  "passingCandidateSha": "9c28b3aa852daac33eb269cec8876e6ebbc14a24",
+  "passingCandidateCiRun": 37804796498,
+  "currentMainSha": "1ead53cd5857fc84b846d3d5e4f420f77f824936",
+  "reconciledRuntimeSha": "b36fcfbb8acd6f5e4ce53b8ebc6904e19dbab847",
+  "reconciledRuntimeTree": "7beb7ba094e569463558a26606f2bea73593943b",
+  "parents": [
+    "9c28b3aa852daac33eb269cec8876e6ebbc14a24",
+    "1ead53cd5857fc84b846d3d5e4f420f77f824936"
+  ],
+  "mergeStrategy": "ort; no conflict or manual resolution",
+  "conflicts": [],
+  "changedPathIntersection": [],
+  "b12ChangedPaths": [
+    ".github/workflows/ci.yml",
+    "server/_core/databaseAuthority/__tests__/readiness.test.ts",
+    "server/_core/databaseAuthority/readiness.ts",
+    "server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts",
+    "server/_core/hostedDatabaseReadinessMonitor.test.ts",
+    "server/_core/hostedDatabaseReadinessMonitor.ts",
+    "server/_core/readinessSnapshotMonitor.test.ts",
+    "server/_core/readinessSnapshotMonitor.ts"
+  ],
+  "unchangedFromPassingCandidate": [
+    "server/migrations",
+    "drizzle",
+    "data",
+    "server/_core/databaseAuthority/dataAdapters",
+    "server/_core/databaseAuthority/placeReferenceRelease.ts",
+    "railway.json",
+    "vercel.ts",
+    "package.json",
+    "pnpm-lock.yaml",
+    "server/listingRouter.ts",
+    "server/db.ts",
+    "client",
+    "shared"
+  ],
+  "existingPerformanceProof": [
+    {
+      "path": "docs/architecture/launch-readiness-and-product-convergence/evidence/national-place-search-senior-2026-10-08/report.json",
+      "reportSha256": "ff9346efb875981c1edca2707e335525a6135c328382d606c323a78b6de8bd16",
+      "source": "6be9ef01d7a93ea5943b2310082a8d257978f4d1",
+      "sourceHashes": {
+        "server/services/canonicalPlaceSearchService.ts": "7f872b85055d56cda9dfa9806a9609e59da9cf3fc0115423ae5e656630532f61",
+        "server/services/publicSearchService.ts": "620ec51152fba4ce41e293e8eb9694b40b2817b7f5a41011bfdf4f164b53f016",
+        "server/services/propertySearchService.ts": "69bddedd16bfb213c03072e6b841eac0cbfb020a69b7ea38698ac3be37a92623",
+        "server/services/placeDiscoveryService.ts": "61ddc7d98891f992591c7585bcd1c447573e344ded1bf1e30cb6fd7bd31740f3",
+        "server/services/approvedPublicPropertyService.ts": "1387e26c843db9dccce2087fc809101adbd01fd51e81734751d66f6361c4609e",
+        "server/routers.ts": "d22971314d6bf30bd641b3b868119e8c036929cbf2efda89ffd407a635e011be",
+        "shared/publicSearchValidation.ts": "4f73d988fab01f38c1581803626211756df6d925bdee759a09688eaafb59c16f"
+      },
+      "reconciledSourceHashesMatch": {
+        "server/services/canonicalPlaceSearchService.ts": true,
+        "server/services/publicSearchService.ts": true,
+        "server/services/propertySearchService.ts": true,
+        "server/services/placeDiscoveryService.ts": true,
+        "server/services/approvedPublicPropertyService.ts": true,
+        "server/routers.ts": true,
+        "shared/publicSearchValidation.ts": true
+      },
+      "summaries": [
+        {
+          "concurrency": 1,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 41.28,
+            "p95": 123.67,
+            "p99": 139.92,
+            "max": 139.92
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 8.26,
+            "p95": 14.64,
+            "p99": 19.9,
+            "max": 19.9
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 29.32,
+            "p95": 50.38,
+            "p99": 62.66,
+            "max": 62.66
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 0.02,
+            "p95": 0.21,
+            "p99": 0.51,
+            "max": 1.05
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 426733568,
+            "p95": 433373184,
+            "p99": 433418240,
+            "max": 433418240
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        },
+        {
+          "concurrency": 5,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 144.07,
+            "p95": 195.27,
+            "p99": 204.96,
+            "max": 204.96
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 35.83,
+            "p95": 55.31,
+            "p99": 58.57,
+            "max": 58.57
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 112.9,
+            "p95": 145.45,
+            "p99": 155.99,
+            "max": 155.99
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 0.02,
+            "p95": 0.22,
+            "p99": 0.76,
+            "max": 31.86
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 449363968,
+            "p95": 459849728,
+            "p99": 460767232,
+            "max": 460767232
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        },
+        {
+          "concurrency": 20,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 542.1,
+            "p95": 733.33,
+            "p99": 765.96,
+            "max": 765.96
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 167.08,
+            "p95": 232.5,
+            "p99": 267.08,
+            "max": 267.08
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 434,
+            "p95": 542.86,
+            "p99": 551.84,
+            "max": 551.84
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 11.55,
+            "p95": 27.22,
+            "p99": 35.67,
+            "max": 47.1
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 480428032,
+            "p95": 492093440,
+            "p99": 492093440,
+            "max": 492093440
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        }
+      ]
+    },
+    {
+      "path": "docs/architecture/launch-readiness-and-product-convergence/evidence/national-place-search-senior-2026-10-08/repeat/report.json",
+      "reportSha256": "25641a659cdfe8813c15d595b5021313e4ebb52d10b79a07aef09d69711b1cee",
+      "source": "6be9ef01d7a93ea5943b2310082a8d257978f4d1",
+      "sourceHashes": {
+        "server/services/canonicalPlaceSearchService.ts": "7f872b85055d56cda9dfa9806a9609e59da9cf3fc0115423ae5e656630532f61",
+        "server/services/publicSearchService.ts": "620ec51152fba4ce41e293e8eb9694b40b2817b7f5a41011bfdf4f164b53f016",
+        "server/services/propertySearchService.ts": "69bddedd16bfb213c03072e6b841eac0cbfb020a69b7ea38698ac3be37a92623",
+        "server/services/placeDiscoveryService.ts": "61ddc7d98891f992591c7585bcd1c447573e344ded1bf1e30cb6fd7bd31740f3",
+        "server/services/approvedPublicPropertyService.ts": "1387e26c843db9dccce2087fc809101adbd01fd51e81734751d66f6361c4609e",
+        "server/routers.ts": "d22971314d6bf30bd641b3b868119e8c036929cbf2efda89ffd407a635e011be",
+        "shared/publicSearchValidation.ts": "4f73d988fab01f38c1581803626211756df6d925bdee759a09688eaafb59c16f"
+      },
+      "reconciledSourceHashesMatch": {
+        "server/services/canonicalPlaceSearchService.ts": true,
+        "server/services/publicSearchService.ts": true,
+        "server/services/propertySearchService.ts": true,
+        "server/services/placeDiscoveryService.ts": true,
+        "server/services/approvedPublicPropertyService.ts": true,
+        "server/routers.ts": true,
+        "shared/publicSearchValidation.ts": true
+      },
+      "summaries": [
+        {
+          "concurrency": 1,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 37.77,
+            "p95": 120,
+            "p99": 135.2,
+            "max": 135.2
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 8.18,
+            "p95": 11.99,
+            "p99": 19.93,
+            "max": 19.93
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 28.01,
+            "p95": 52.19,
+            "p99": 84.72,
+            "max": 84.72
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 0.02,
+            "p95": 0.21,
+            "p99": 0.32,
+            "max": 2.26
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 322379776,
+            "p95": 338108416,
+            "p99": 338763776,
+            "max": 338763776
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        },
+        {
+          "concurrency": 5,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 126.38,
+            "p95": 193.45,
+            "p99": 199.98,
+            "max": 199.98
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 30.1,
+            "p95": 54.36,
+            "p99": 59.35,
+            "max": 59.35
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 92.39,
+            "p95": 121.35,
+            "p99": 147.43,
+            "max": 147.43
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 0.02,
+            "p95": 0.22,
+            "p99": 0.71,
+            "max": 25.77
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 354492416,
+            "p95": 364060672,
+            "p99": 364978176,
+            "max": 364978176
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        },
+        {
+          "concurrency": 20,
+          "count": 60,
+          "readCount": 54,
+          "latencyMs": {
+            "count": 54,
+            "p50": 519.99,
+            "p95": 738.69,
+            "p99": 767.43,
+            "max": 767.43
+          },
+          "graphMs": {
+            "count": 45,
+            "p50": 145.29,
+            "p95": 200.23,
+            "p99": 231.43,
+            "max": 231.43
+          },
+          "inventoryMs": {
+            "count": 45,
+            "p50": 396.89,
+            "p95": 541.77,
+            "p99": 558.7,
+            "max": 558.7
+          },
+          "acquisitionMs": {
+            "count": 879,
+            "p50": 10.2,
+            "p95": 27.87,
+            "p99": 35.59,
+            "max": 63.46
+          },
+          "rssBytes": {
+            "count": 60,
+            "p50": 385294336,
+            "p95": 397746176,
+            "p99": 397746176,
+            "max": 397746176
+          },
+          "errors": 0,
+          "budgetComparison": {
+            "readP95Within750ms": true,
+            "readP99Within2000ms": true,
+            "acquisitionP95Within250ms": true
+          }
+        }
+      ]
+    }
+  ],
+  "localTestsRepeated": false,
+  "performanceRepeated": false,
+  "combinedSourceHostedCi": "pending publication; earlier green results do not cover combined source",
+  "sourceMergeApproved": false,
+  "protectedApplyApproved": false,
+  "deploymentApproved": false,
+  "paymentsOpen": false,
+  "remoteDatabaseAccessPerformed": false,
+  "taskDisposableFingerprint": "6678d3d0240dfc8e08e089728d59fb4e8a3d5cb3be9b4b514b5e06cd88957f80",
+  "taskDisposableDatabase": "previously disposed; not recreated"
+}

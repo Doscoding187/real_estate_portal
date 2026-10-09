@@ -1,0 +1,20 @@
+{
+  "sourceSha": "04821fe7ae6401e781925adce099a93ead08490a",
+  "archiveSha256": "257ae726faf24e141f0d9f777aaa8058586d7a84a547a3eb53c0db7673940480",
+  "temporarySourceOnly": true,
+  "deployedFilesChanged": false,
+  "credentialClass": "read-only",
+  "startedAt": "2026-10-08T14:10:58.899Z",
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-08T14:11:31.267Z",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalScope": "Edward current session: fresh read-only protected release preparation; no application",
+  "approvalReference": "GEOGRAPHY-POSTMERGE-READONLY-PLANNING-2026-10-08-Edward",
+  "credential": "dedicated SELECT-only inspector",
+  "sourceTree": "9839a1d085edd6fcdc4786125cba54e4c29fd4ef",
+  "dependencyLockUnchanged": true,
+  "databaseMutations": false,
+  "sourceSource": "git archive of exact merged commit; required national release inputs and named runner dependencies",
+  "firstRemotePreparationFailure": "Missing import-only legacy catalog asset; stopped before database connection, temporary source removed. Required catalog inputs added from same exact Git source; named read-only runners then passed.",
+  "initialWorkstationConnectionFailure": "Named inspector refused before starting any transaction; direct inspector connectivity unavailable. Changed to established approved SSH transport."
+}

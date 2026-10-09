@@ -1,0 +1,16 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008/scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+  191:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  333:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  364:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  478:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  492:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  515:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008/scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+   3:10  warning  'and' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  76:33  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+  77:20  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+
+✖ 10 problems (0 errors, 10 warnings)

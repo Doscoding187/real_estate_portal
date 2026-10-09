@@ -1,0 +1,44 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project\=server scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+
+[test:authority] target 6678d3d0240dfc8e (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_senior_2_fe7cb25bc50d
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T15:47:17.446Z
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | scripts/__tests__/nationalPlaceSearch.postflight.test.ts > national search postflight > audits approved projections, physical cardinalities and all province rentals
+[Database] Authorized runtime-connect target 6678d3d0240dfc8e is connected.
+
+ ✓ |server| scripts/__tests__/nationalPlaceSearch.postflight.test.ts (1 test) 1084ms
+   ✓ national search postflight > audits approved projections, physical cardinalities and all province rentals 1082ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  17:47:11
+   Duration  7.73s (transform 3.56s, setup 126ms, collect 6.11s, tests 1.08s, environment 0ms, prepare 88ms)
+

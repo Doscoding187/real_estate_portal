@@ -64,27 +64,117 @@ export interface CanonicalPlaceSearchProjection {
   labels: Map<string, CanonicalPlaceSearchLabel>;
 }
 
-/** A request reads the complete authoritative graph, never display-text membership. */
+export interface PlaceSearchProjectionOptions {
+  /** Explicit identities whose complete ancestry must be checked. */
+  placeIds: readonly string[];
+  /** Only inventory scope resolution expands a selected province's descendants. */
+  includeProvinceMembers?: boolean;
+}
+
+const PLACE_READ_BATCH_SIZE = 500;
+const nodeSelection = {
+  placeId: place.placeId,
+  placeType: place.placeType,
+  lifecycleStatus: place.lifecycleStatus,
+  searchEligible: place.searchEligible,
+  searchScope: place.searchScope,
+};
+
+/** Read fresh indexed facts for the requested identities, including every parent edge. */
+async function loadRequestedGraph(
+  database: PlaceReadDatabase,
+  options: PlaceSearchProjectionOptions,
+): Promise<{ nodes: SearchPlaceNode[]; edges: { from: string; to: string }[] }> {
+  const nodes = new Map<string, SearchPlaceNode>();
+  const parents = new Map<string, string[]>();
+  const attempted = new Set<string>();
+  const readNodes = async (ids: readonly string[]) => {
+    const pending = [...new Set(ids)].filter(id => !attempted.has(id));
+    for (let offset = 0; offset < pending.length; offset += PLACE_READ_BATCH_SIZE) {
+      const batch = pending.slice(offset, offset + PLACE_READ_BATCH_SIZE);
+      batch.forEach(id => attempted.add(id));
+      const rows = await database
+        .select({ ...nodeSelection, parentId: placeRelationship.toPlaceId })
+        .from(place)
+        .leftJoin(
+          placeRelationship,
+          and(
+            eq(placeRelationship.fromPlaceId, place.placeId),
+            eq(placeRelationship.relationshipType, 'administratively_contains'),
+          ),
+        )
+        .where(inArray(place.placeId, batch));
+      for (const { parentId, ...node } of rows) {
+        nodes.set(node.placeId, node);
+        if (parentId) parents.set(node.placeId, [...(parents.get(node.placeId) ?? []), parentId]);
+      }
+    }
+  };
+  const readAncestry = async (ids: readonly string[]) => {
+    let frontier = [...ids];
+    // Match projectSearchPlace's bounded chain; a deeper chain still refuses.
+    for (let depth = 0; frontier.length && depth <= 8; depth++) {
+      await readNodes(frontier);
+      frontier = [...new Set(frontier.flatMap(id => parents.get(id) ?? []))].filter(
+        id => !attempted.has(id),
+      );
+    }
+  };
+  await readAncestry(options.placeIds);
+  if (options.includeProvinceMembers) {
+    let frontier = [...new Set(options.placeIds)].filter(id => {
+      const resolution = projectSearchPlace(id, nodes, parents);
+      return resolution.ok && resolution.execution.scope === 'province';
+    });
+    const visited = new Set(frontier);
+    // Traverse factual containment through context-only nodes, never market edges.
+    for (let depth = 0; frontier.length && depth < 8; depth++) {
+      const children = new Set<string>();
+      for (let offset = 0; offset < frontier.length; offset += PLACE_READ_BATCH_SIZE) {
+        const rows = await database
+          .select({ placeId: placeRelationship.fromPlaceId })
+          .from(placeRelationship)
+          .where(
+            and(
+              inArray(
+                placeRelationship.toPlaceId,
+                frontier.slice(offset, offset + PLACE_READ_BATCH_SIZE),
+              ),
+              eq(placeRelationship.relationshipType, 'administratively_contains'),
+            ),
+          );
+        for (const row of rows) if (!visited.has(row.placeId)) children.add(row.placeId);
+      }
+      frontier = [...children];
+      frontier.forEach(id => visited.add(id));
+      // Includes competing/outside parents so partial graph reads cannot admit bad chains.
+      await readAncestry(frontier);
+      // No executable scope is finer than locality. A descendant beneath that
+      // scoped ancestor would fail projectPlaceScope, even through context nodes.
+      frontier = frontier.filter(id => nodes.get(id)?.searchScope !== 'locality');
+    }
+  }
+  return {
+    nodes: [...nodes.values()],
+    edges: [...parents].flatMap(([from, ids]) => ids.map(to => ({ from, to }))),
+  };
+}
+
+/** Fresh authority projection; omitted options are reserved for full-graph diagnostics. */
 export async function loadCanonicalPlaceSearchProjection(
   database?: PlaceReadDatabase,
+  options?: PlaceSearchProjectionOptions,
 ): Promise<CanonicalPlaceSearchProjection> {
   const databaseReader = database ?? (await getDb());
-  const nodes: SearchPlaceNode[] = await databaseReader
-    .select({
-      placeId: place.placeId,
-      placeType: place.placeType,
-      lifecycleStatus: place.lifecycleStatus,
-      searchEligible: place.searchEligible,
-      searchScope: place.searchScope,
-    })
-    .from(place);
-  const edges: { from: string; to: string }[] = await databaseReader
-    .select({
-      from: placeRelationship.fromPlaceId,
-      to: placeRelationship.toPlaceId,
-    })
-    .from(placeRelationship)
-    .where(eq(placeRelationship.relationshipType, 'administratively_contains'));
+  const { nodes, edges } = options
+    ? await loadRequestedGraph(databaseReader, options)
+    : {
+        nodes: await databaseReader.select(nodeSelection).from(place),
+        edges: await databaseReader
+          .select({ from: placeRelationship.fromPlaceId, to: placeRelationship.toPlaceId })
+          .from(placeRelationship)
+          .where(eq(placeRelationship.relationshipType, 'administratively_contains')),
+      };
   const nodeMap = new Map<string, SearchPlaceNode>(nodes.map(node => [node.placeId, node]));
   const parents = new Map<string, string[]>();
   for (const edge of edges) parents.set(edge.from, [...(parents.get(edge.from) ?? []), edge.to]);
@@ -102,8 +192,10 @@ export async function loadCanonicalPlaceSearchProjection(
       ),
     ),
   );
-  const names = ids.length
-    ? await databaseReader
+  const names: { placeId: string; name: string }[] = [];
+  for (let offset = 0; offset < ids.length; offset += PLACE_READ_BATCH_SIZE) {
+    names.push(
+      ...(await databaseReader
         .select({
           placeId: placeName.placeId,
           name: placeName.name,
@@ -111,12 +203,13 @@ export async function loadCanonicalPlaceSearchProjection(
         .from(placeName)
         .where(
           and(
-            inArray(placeName.placeId, ids),
+            inArray(placeName.placeId, ids.slice(offset, offset + PLACE_READ_BATCH_SIZE)),
             eq(placeName.nameRole, PLACE_PREFERRED_ROLE),
             eq(placeName.nameState, 'active'),
           ),
-        )
-    : [];
+        )),
+    );
+  }
   const preferred = new Map<string, string>();
   const invalid = new Set<string>();
   for (const name of names) {

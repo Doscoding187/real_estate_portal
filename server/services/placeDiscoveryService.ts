@@ -254,7 +254,7 @@ export async function discoverPlaces(
 /** Load the disambiguating administrative context for candidate Places. */
 async function loadPlaceContexts(placeIds: string[]) {
   const db = await getDb();
-  const chains = await Promise.all(placeIds.map(id => loadContainmentAncestry(id)));
+  const chains = await loadDiscoveryContainmentAncestries(placeIds, db);
   const contexts = new Map<
     string,
     {
@@ -406,6 +406,71 @@ class PlaceContainmentError extends Error {
   constructor(readonly reason: 'containment_cycle' | 'unresolved_parent') {
     super(`Invalid Place containment: ${reason}`);
   }
+}
+
+/** Batch shared ancestors for autocomplete; authoring's locking reader is unchanged. */
+export async function loadDiscoveryContainmentAncestries(
+  placeIds: readonly string[],
+  database: PlaceReadDatabase,
+): Promise<{ placeId: string; scope: PlaceSearchScope | null }[][]> {
+  type Edge = {
+    fromPlaceId: string;
+    toPlaceId: string;
+    scope: string | null;
+    lifecycleStatus: string | null;
+  };
+  const parents = new Map<string, Edge[]>();
+  let frontier = [...new Set(placeIds)];
+  for (let depth = 0; frontier.length && depth < 8; depth++) {
+    const next = new Set<string>();
+    for (let offset = 0; offset < frontier.length; offset += 500) {
+      const batch = frontier.slice(offset, offset + 500);
+      const rows = await database
+        .select({
+          fromPlaceId: placeRelationship.fromPlaceId,
+          toPlaceId: placeRelationship.toPlaceId,
+          scope: place.searchScope,
+          lifecycleStatus: place.lifecycleStatus,
+        })
+        .from(placeRelationship)
+        .leftJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
+        .where(
+          and(
+            inArray(placeRelationship.fromPlaceId, batch),
+            eq(placeRelationship.relationshipType, 'administratively_contains'),
+          ),
+        );
+      for (const id of batch) parents.set(id, []);
+      for (const row of rows) {
+        parents.get(row.fromPlaceId)!.push(row);
+        next.add(row.toPlaceId);
+      }
+    }
+    frontier = [...next].filter(id => !parents.has(id));
+  }
+  return placeIds.map(placeId => {
+    const ancestry: { placeId: string; scope: PlaceSearchScope | null }[] = [];
+    const seen = new Set([placeId]);
+    let cursor = placeId;
+    for (let depth = 0; depth < 8; depth++) {
+      const edges = parents.get(cursor);
+      if (!edges) throw new PlaceContainmentError('unresolved_parent');
+      if (!edges.length) return ancestry;
+      if (edges.length !== 1) throw new PlaceContainmentError('unresolved_parent');
+      const parent = edges[0];
+      if (seen.has(parent.toPlaceId)) throw new PlaceContainmentError('containment_cycle');
+      if (
+        parent.lifecycleStatus !== 'active' ||
+        (parent.scope !== null && !['province', 'metro_city', 'locality'].includes(parent.scope))
+      ) {
+        throw new PlaceContainmentError('unresolved_parent');
+      }
+      seen.add(parent.toPlaceId);
+      ancestry.push({ placeId: parent.toPlaceId, scope: parent.scope as PlaceSearchScope | null });
+      cursor = parent.toPlaceId;
+    }
+    throw new PlaceContainmentError('unresolved_parent');
+  });
 }
 
 async function loadContainmentAncestry(

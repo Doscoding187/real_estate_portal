@@ -1,0 +1,56 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project\=server scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+
+[test:authority] target 6678d3d0240dfc8e (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_senior_2_fe7cb25bc50d
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[DEV ROUTER LOADED] build stamp 2026-10-08T15:47:38.874Z
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+[Database] Authorized runtime-connect target 6678d3d0240dfc8e is connected.
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":1,"requests":60,"durationMs":2464.42,"requestsPerSecond":24.35}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":5,"requests":60,"durationMs":1385.32,"requestsPerSecond":43.31}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+MEASUREMENT_WINDOW_COMPLETE {"concurrency":20,"requests":60,"durationMs":1442.19,"requestsPerSecond":41.6}
+
+stdout | scripts/__tests__/nationalPlaceSearch.measurement.test.ts > national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory
+NATIONAL_SEARCH_MEASUREMENT [{"concurrency":1,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":37.77,"p95":120,"p99":135.2,"max":135.2},"graphMs":{"count":45,"p50":8.18,"p95":11.99,"p99":19.93,"max":19.93},"inventoryMs":{"count":45,"p50":28.01,"p95":52.19,"p99":84.72,"max":84.72},"acquisitionMs":{"count":879,"p50":0.02,"p95":0.21,"p99":0.32,"max":2.26},"rssBytes":{"count":60,"p50":322379776,"p95":338108416,"p99":338763776,"max":338763776},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}},{"concurrency":5,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":126.38,"p95":193.45,"p99":199.98,"max":199.98},"graphMs":{"count":45,"p50":30.1,"p95":54.36,"p99":59.35,"max":59.35},"inventoryMs":{"count":45,"p50":92.39,"p95":121.35,"p99":147.43,"max":147.43},"acquisitionMs":{"count":879,"p50":0.02,"p95":0.22,"p99":0.71,"max":25.77},"rssBytes":{"count":60,"p50":354492416,"p95":364060672,"p99":364978176,"max":364978176},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}},{"concurrency":20,"count":60,"readCount":54,"latencyMs":{"count":54,"p50":519.99,"p95":738.69,"p99":767.43,"max":767.43},"graphMs":{"count":45,"p50":145.29,"p95":200.23,"p99":231.43,"max":231.43},"inventoryMs":{"count":45,"p50":396.89,"p95":541.77,"p99":558.7,"max":558.7},"acquisitionMs":{"count":879,"p50":10.2,"p95":27.87,"p99":35.59,"max":63.46},"rssBytes":{"count":60,"p50":385294336,"p95":397746176,"p99":397746176,"max":397746176},"errors":0,"budgetComparison":{"readP95Within750ms":true,"readP99Within2000ms":true,"acquisitionP95Within250ms":true}}]
+
+ ✓ |server| scripts/__tests__/nationalPlaceSearch.measurement.test.ts (1 test) 10147ms
+   ✓ national governed Place search diagnostic > measures the accepted runtime with published canonical synthetic inventory 10144ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  17:47:32
+   Duration  17.35s (transform 3.72s, setup 151ms, collect 6.54s, tests 10.15s, environment 0ms, prepare 100ms)
+

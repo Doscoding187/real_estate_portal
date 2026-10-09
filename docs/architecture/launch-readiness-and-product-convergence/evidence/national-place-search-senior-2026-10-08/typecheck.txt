@@ -1,0 +1,4 @@
+
+> real_estate_portal@1.0.0 check /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> tsc -p tsconfig.check.json --noEmit
+

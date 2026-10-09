@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:migrate:plan /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008
+> tsx scripts/databaseAuthorityCli.ts migration:plan
+
+Migration planning blocked: incomplete or failed attempt 28387f1d861c6d1514b2d661-0013 for 0013_catalogue_publisher_leads.sql requires reviewed recovery.
+ ELIFECYCLE  Command failed with exit code 1.

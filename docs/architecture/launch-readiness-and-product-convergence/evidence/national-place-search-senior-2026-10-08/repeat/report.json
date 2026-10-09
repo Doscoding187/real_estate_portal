@@ -1,0 +1,4110 @@
+{
+  "source": "6be9ef01d7a93ea5943b2310082a8d257978f4d1",
+  "sourceTree": "f3ffde066cb889fc7a98abc0d884a7cdb7df2006",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "sourceHashes": {
+    "server/services/canonicalPlaceSearchService.ts": "7f872b85055d56cda9dfa9806a9609e59da9cf3fc0115423ae5e656630532f61",
+    "server/services/publicSearchService.ts": "620ec51152fba4ce41e293e8eb9694b40b2817b7f5a41011bfdf4f164b53f016",
+    "server/services/propertySearchService.ts": "69bddedd16bfb213c03072e6b841eac0cbfb020a69b7ea38698ac3be37a92623",
+    "server/services/placeDiscoveryService.ts": "61ddc7d98891f992591c7585bcd1c447573e344ded1bf1e30cb6fd7bd31740f3",
+    "server/services/approvedPublicPropertyService.ts": "1387e26c843db9dccce2087fc809101adbd01fd51e81734751d66f6361c4609e",
+    "server/routers.ts": "d22971314d6bf30bd641b3b868119e8c036929cbf2efda89ffd407a635e011be",
+    "shared/publicSearchValidation.ts": "4f73d988fab01f38c1581803626211756df6d925bdee759a09688eaafb59c16f"
+  },
+  "target": {
+    "class": "disposable-worktree",
+    "fingerprint": "6678d3d0240dfc8e08e089728d59fb4e8a3d5cb3be9b4b514b5e06cd88957f80"
+  },
+  "startedAt": "2026-10-08T15:47:42.871Z",
+  "releaseSubset": {
+    "adapterDigest": "d8d2725fd93a6c4d2de9fb95b59c07e4dbe826f53f8faaf449b3e579ade9943a",
+    "registrySha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433",
+    "packagePins": [
+      {
+        "territoryId": "za-gp",
+        "admissionVersion": "gauteng-place-admission-v0.1",
+        "verifiedDigest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f"
+      },
+      {
+        "territoryId": "za-wc",
+        "admissionVersion": "za-wc-place-admission-v0.1",
+        "verifiedDigest": "a93d1cf16be522023be9a9a4bc730705bf31b3299d6b6659117066a3cfe6dd62"
+      },
+      {
+        "territoryId": "za-kzn",
+        "admissionVersion": "za-kzn-place-admission-v0.1",
+        "verifiedDigest": "6610e49a5775b019c0160924ff0319b0a969bc76b5ce2ea57f7b8234cadd6cf5"
+      },
+      {
+        "territoryId": "za-ec",
+        "admissionVersion": "za-ec-place-admission-v0.1",
+        "verifiedDigest": "cb1ad152c63ad1e38d37824d8e1d21c4569192a7ea9374ad3f6dadeda3be1f41"
+      },
+      {
+        "territoryId": "za-fs",
+        "admissionVersion": "za-fs-place-admission-v0.1",
+        "verifiedDigest": "4b27674742d69abac7cc9b8a458179558117d8274704c72cfd2f2bb0168598b3"
+      },
+      {
+        "territoryId": "za-mp",
+        "admissionVersion": "za-mp-place-admission-v0.1",
+        "verifiedDigest": "9fbaa16b8ebf7b84bc1542a14d22b939e8eabf694ac2133e1a54cd6f362757aa"
+      },
+      {
+        "territoryId": "za-li",
+        "admissionVersion": "za-li-place-admission-v0.1",
+        "verifiedDigest": "96a2151f65019623dde06ab96920d24b7a357d929944527fd3d7f0b1c943cb5e"
+      },
+      {
+        "territoryId": "za-nw",
+        "admissionVersion": "za-nw-place-admission-v0.1",
+        "verifiedDigest": "043200f53d4a3d191666b4ceda88666a10ea8a9f711c44958be20b2e4959a5b0"
+      },
+      {
+        "territoryId": "za-nc",
+        "admissionVersion": "za-nc-place-admission-v0.1",
+        "verifiedDigest": "396c94fdc6879a2f16ada91857f755eb2b5f83c4feda9899b6da1c447cf5fc59"
+      }
+    ],
+    "heldDigest": "d9fa78e371be33ada65362b3b1ce8b848fb4212a9518e4bc06da4f18ff5dc5e2",
+    "heldRows": {
+      "place": 720,
+      "place_name": 807,
+      "place_relationship": 720,
+      "place_evidence": 736,
+      "place_external_mapping": 750
+    },
+    "excludedPlaceCount": 720
+  },
+  "completedAt": "2026-10-08T15:47:50.110Z",
+  "cardinalities": {
+    "place": 16944,
+    "placeName": 25618,
+    "placeRelationship": 16935,
+    "placeEvidence": 79189,
+    "placeExternalMapping": 19042
+  },
+  "operationalCoverageSignalsBefore": 2,
+  "inventoryCardinalities": {
+    "synthetic": 120,
+    "sale": 72,
+    "rent": 48,
+    "perPlace": {
+      "pl-place-01-6a145c6d642ba208a2c12de7": 42,
+      "pl-place-01-f175328139bb845a4645b9d4": 18,
+      "pl-place-01-21f154cd5d0954c29ec7525f": 12,
+      "pl-place-01-001b1eea75044e5f0697796f": 6,
+      "pl-place-01-003a91e8425512e2c9e416f2": 6,
+      "pl-place-01-00a5071b3470f996c7856dd5": 6,
+      "pl-place-01-001ed8e08633779c9cf30db0": 5,
+      "pl-place-01-001b523f4a4fec3cfc8fbbb6": 5,
+      "pl-place-01-0072305c69317ef61bbaf94c": 5,
+      "pl-place-01-00147ee313884ebc70bc12c8": 5,
+      "pl-place-01-000a3018e782cab5449038b0": 5,
+      "pl-place-01-00097ed4372b9e2ce7cabf53": 5
+    }
+  },
+  "fixtureSetupMs": 276.32,
+  "host": {
+    "node": "v22.22.3",
+    "os": "linux",
+    "cpu": "AMD Ryzen 3 3200G with Radeon Vega Graphics",
+    "cpuCount": 4,
+    "totalMemoryBytes": 14576717824,
+    "freeMemoryBytesAtEnd": 6519570432,
+    "memoryAtEnd": {
+      "rss": 398401536,
+      "heapTotal": 294260736,
+      "heapUsed": 265661248,
+      "external": 6810196,
+      "arrayBuffers": 2938382
+    },
+    "sqlVersion": "8.0.46-0ubuntu0.24.04.3",
+    "poolLimit": 10,
+    "maxQueuedAcquisitions": 13
+  },
+  "windows": [
+    {
+      "concurrency": 1,
+      "requests": 60,
+      "durationMs": 2464.42,
+      "requestsPerSecond": 24.35
+    },
+    {
+      "concurrency": 5,
+      "requests": 60,
+      "durationMs": 1385.32,
+      "requestsPerSecond": 43.31
+    },
+    {
+      "concurrency": 20,
+      "requests": 60,
+      "durationMs": 1442.19,
+      "requestsPerSecond": 41.6
+    }
+  ],
+  "summaries": [
+    {
+      "concurrency": 1,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 37.77,
+        "p95": 120,
+        "p99": 135.2,
+        "max": 135.2
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 8.18,
+        "p95": 11.99,
+        "p99": 19.93,
+        "max": 19.93
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 28.01,
+        "p95": 52.19,
+        "p99": 84.72,
+        "max": 84.72
+      },
+      "acquisitionMs": {
+        "count": 879,
+        "p50": 0.02,
+        "p95": 0.21,
+        "p99": 0.32,
+        "max": 2.26
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 322379776,
+        "p95": 338108416,
+        "p99": 338763776,
+        "max": 338763776
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": true,
+        "readP99Within2000ms": true,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 5,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 126.38,
+        "p95": 193.45,
+        "p99": 199.98,
+        "max": 199.98
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 30.1,
+        "p95": 54.36,
+        "p99": 59.35,
+        "max": 59.35
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 92.39,
+        "p95": 121.35,
+        "p99": 147.43,
+        "max": 147.43
+      },
+      "acquisitionMs": {
+        "count": 879,
+        "p50": 0.02,
+        "p95": 0.22,
+        "p99": 0.71,
+        "max": 25.77
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 354492416,
+        "p95": 364060672,
+        "p99": 364978176,
+        "max": 364978176
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": true,
+        "readP99Within2000ms": true,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 20,
+      "count": 60,
+      "readCount": 54,
+      "latencyMs": {
+        "count": 54,
+        "p50": 519.99,
+        "p95": 738.69,
+        "p99": 767.43,
+        "max": 767.43
+      },
+      "graphMs": {
+        "count": 45,
+        "p50": 145.29,
+        "p95": 200.23,
+        "p99": 231.43,
+        "max": 231.43
+      },
+      "inventoryMs": {
+        "count": 45,
+        "p50": 396.89,
+        "p95": 541.77,
+        "p99": 558.7,
+        "max": 558.7
+      },
+      "acquisitionMs": {
+        "count": 879,
+        "p50": 10.2,
+        "p95": 27.87,
+        "p99": 35.59,
+        "max": 63.46
+      },
+      "rssBytes": {
+        "count": 60,
+        "p50": 385294336,
+        "p95": 397746176,
+        "p99": 397746176,
+        "max": 397746176
+      },
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": true,
+        "readP99Within2000ms": true,
+        "acquisitionP95Within250ms": true
+      }
+    }
+  ],
+  "grouped": {
+    "first-observation:c1:discovery-north-riding": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 73.81,
+        "p95": 73.81,
+        "p99": 73.81,
+        "max": 73.81
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "errors": 0
+    },
+    "first-observation:c1:discovery-prefix": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 61.03,
+        "p95": 61.03,
+        "p99": 61.03,
+        "max": 61.03
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8,
+        "max": 8
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 407,
+        "p95": 407,
+        "p99": 407,
+        "max": 407
+      },
+      "errors": 0
+    },
+    "first-observation:c1:discovery-empty": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 133.49,
+        "p95": 133.49,
+        "p99": 133.49,
+        "max": 133.49
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 3,
+        "p95": 3,
+        "p99": 3,
+        "max": 3
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "errors": 0
+    },
+    "first-observation:c1:north-riding-buy": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 124.35,
+        "p95": 124.35,
+        "p99": 124.35,
+        "max": 124.35
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 8.21,
+        "p95": 8.21,
+        "p99": 8.21,
+        "max": 8.21
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 94.93,
+        "p95": 94.93,
+        "p99": 94.93,
+        "max": 94.93
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 423,
+        "p95": 423,
+        "p99": 423,
+        "max": 423
+      },
+      "errors": 0
+    },
+    "first-observation:c1:north-riding-rent": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 76.21,
+        "p95": 76.21,
+        "p99": 76.21,
+        "max": 76.21
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 17.28,
+        "p95": 17.28,
+        "p99": 17.28,
+        "max": 17.28
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 39.76,
+        "p95": 39.76,
+        "p99": 39.76,
+        "max": 39.76
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 221,
+        "p95": 221,
+        "p99": 221,
+        "max": 221
+      },
+      "errors": 0
+    },
+    "first-observation:c1:north-riding-pagination": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 67.55,
+        "p95": 67.55,
+        "p99": 67.55,
+        "max": 67.55
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 10.69,
+        "p95": 10.69,
+        "p99": 10.69,
+        "max": 10.69
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 46.62,
+        "p95": 46.62,
+        "p99": 46.62,
+        "max": 46.62
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 408,
+        "p95": 408,
+        "p99": 408,
+        "max": 408
+      },
+      "errors": 0
+    },
+    "first-observation:c1:bryanston-buy": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 46.69,
+        "p95": 46.69,
+        "p99": 46.69,
+        "max": 46.69
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 6.53,
+        "p95": 6.53,
+        "p99": 6.53,
+        "max": 6.53
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 32.9,
+        "p95": 32.9,
+        "p99": 32.9,
+        "max": 32.9
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "errors": 0
+    },
+    "first-observation:c1:johannesburg-exact-city": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 41.47,
+        "p95": 41.47,
+        "p99": 41.47,
+        "max": 41.47
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 5.16,
+        "p95": 5.16,
+        "p99": 5.16,
+        "max": 5.16
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 29.14,
+        "p95": 29.14,
+        "p99": 29.14,
+        "max": 29.14
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 131,
+        "p95": 131,
+        "p99": 131,
+        "max": 131
+      },
+      "errors": 0
+    },
+    "first-observation:c1:north-riding-empty": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 17.24,
+        "p95": 17.24,
+        "p99": 17.24,
+        "max": 17.24
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 4.66,
+        "p95": 4.66,
+        "p99": 4.66,
+        "max": 4.66
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 4.66,
+        "p95": 4.66,
+        "p99": 4.66,
+        "max": 4.66
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 5,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Eastern Cape": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 45.35,
+        "p95": 45.35,
+        "p99": 45.35,
+        "max": 45.35
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.96,
+        "p95": 9.96,
+        "p99": 9.96,
+        "max": 9.96
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 36.87,
+        "p95": 36.87,
+        "p99": 36.87,
+        "max": 36.87
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Free State": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 50.19,
+        "p95": 50.19,
+        "p99": 50.19,
+        "max": 50.19
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 19.76,
+        "p95": 19.76,
+        "p99": 19.76,
+        "max": 19.76
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 30.6,
+        "p95": 30.6,
+        "p99": 30.6,
+        "max": 30.6
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Gauteng": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 68.95,
+        "p95": 68.95,
+        "p99": 68.95,
+        "max": 68.95
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 10.55,
+        "p95": 10.55,
+        "p99": 10.55,
+        "max": 10.55
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 52.9,
+        "p95": 52.9,
+        "p99": 52.9,
+        "max": 52.9
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 819,
+        "p95": 819,
+        "p99": 819,
+        "max": 819
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-KwaZulu-Natal": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 35.07,
+        "p95": 35.07,
+        "p99": 35.07,
+        "max": 35.07
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.01,
+        "p95": 9.01,
+        "p99": 9.01,
+        "max": 9.01
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 28.71,
+        "p95": 28.71,
+        "p99": 28.71,
+        "max": 28.71
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Limpopo": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 37.71,
+        "p95": 37.71,
+        "p99": 37.71,
+        "max": 37.71
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.41,
+        "p95": 9.41,
+        "p99": 9.41,
+        "max": 9.41
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 31.93,
+        "p95": 31.93,
+        "p99": 31.93,
+        "max": 31.93
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Mpumalanga": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 38.91,
+        "p95": 38.91,
+        "p99": 38.91,
+        "max": 38.91
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.97,
+        "p95": 9.97,
+        "p99": 9.97,
+        "max": 9.97
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 31.45,
+        "p95": 31.45,
+        "p99": 31.45,
+        "max": 31.45
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Noord-Kaap": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 35.54,
+        "p95": 35.54,
+        "p99": 35.54,
+        "max": 35.54
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.54,
+        "p95": 9.54,
+        "p99": 9.54,
+        "max": 9.54
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 28.45,
+        "p95": 28.45,
+        "p99": 28.45,
+        "max": 28.45
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-North-West": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 45.8,
+        "p95": 45.8,
+        "p99": 45.8,
+        "max": 45.8
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 12.87,
+        "p95": 12.87,
+        "p99": 12.87,
+        "max": 12.87
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 39.32,
+        "p95": 39.32,
+        "p99": 39.32,
+        "max": 39.32
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "first-observation:c1:province-Western Cape": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 34.95,
+        "p95": 34.95,
+        "p99": 34.95,
+        "max": 34.95
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 11.56,
+        "p95": 11.56,
+        "p99": 11.56,
+        "max": 11.56
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 27.83,
+        "p95": 27.83,
+        "p99": 27.83,
+        "max": 27.83
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "first-observation:c1:mixed-authority-rejection": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 14.47,
+        "p95": 14.47,
+        "p99": 14.47,
+        "max": 14.47
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "first-observation:c1:development-place-unavailable": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 3.12,
+        "p95": 3.12,
+        "p99": 3.12,
+        "max": 3.12
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warmup:c1:discovery-north-riding": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 33.19,
+        "p95": 33.19,
+        "p99": 33.19,
+        "max": 33.19
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "errors": 0
+    },
+    "warmup:c1:discovery-prefix": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 45.34,
+        "p95": 45.34,
+        "p99": 45.34,
+        "max": 45.34
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8,
+        "max": 8
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 407,
+        "p95": 407,
+        "p99": 407,
+        "max": 407
+      },
+      "errors": 0
+    },
+    "warmup:c1:discovery-empty": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 122.29,
+        "p95": 122.29,
+        "p99": 122.29,
+        "max": 122.29
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 3,
+        "p95": 3,
+        "p99": 3,
+        "max": 3
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "errors": 0
+    },
+    "warmup:c1:north-riding-buy": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 55.16,
+        "p95": 55.16,
+        "p99": 55.16,
+        "max": 55.16
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 4.09,
+        "p95": 4.09,
+        "p99": 4.09,
+        "max": 4.09
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 40.91,
+        "p95": 40.91,
+        "p99": 40.91,
+        "max": 40.91
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 423,
+        "p95": 423,
+        "p99": 423,
+        "max": 423
+      },
+      "errors": 0
+    },
+    "warmup:c1:north-riding-rent": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 39.31,
+        "p95": 39.31,
+        "p99": 39.31,
+        "max": 39.31
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 4.33,
+        "p95": 4.33,
+        "p99": 4.33,
+        "max": 4.33
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 26.92,
+        "p95": 26.92,
+        "p99": 26.92,
+        "max": 26.92
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 221,
+        "p95": 221,
+        "p99": 221,
+        "max": 221
+      },
+      "errors": 0
+    },
+    "warmup:c1:north-riding-pagination": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 43.28,
+        "p95": 43.28,
+        "p99": 43.28,
+        "max": 43.28
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 5.81,
+        "p95": 5.81,
+        "p99": 5.81,
+        "max": 5.81
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 33.16,
+        "p95": 33.16,
+        "p99": 33.16,
+        "max": 33.16
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 408,
+        "p95": 408,
+        "p99": 408,
+        "max": 408
+      },
+      "errors": 0
+    },
+    "warmup:c1:bryanston-buy": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 37.13,
+        "p95": 37.13,
+        "p99": 37.13,
+        "max": 37.13
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 4.76,
+        "p95": 4.76,
+        "p99": 4.76,
+        "max": 4.76
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 26.39,
+        "p95": 26.39,
+        "p99": 26.39,
+        "max": 26.39
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "errors": 0
+    },
+    "warmup:c1:johannesburg-exact-city": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 35.98,
+        "p95": 35.98,
+        "p99": 35.98,
+        "max": 35.98
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 5.04,
+        "p95": 5.04,
+        "p99": 5.04,
+        "max": 5.04
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 26.58,
+        "p95": 26.58,
+        "p99": 26.58,
+        "max": 26.58
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 131,
+        "p95": 131,
+        "p99": 131,
+        "max": 131
+      },
+      "errors": 0
+    },
+    "warmup:c1:north-riding-empty": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 12.28,
+        "p95": 12.28,
+        "p99": 12.28,
+        "max": 12.28
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 5.06,
+        "p95": 5.06,
+        "p99": 5.06,
+        "max": 5.06
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 4,
+        "p95": 4,
+        "p99": 4,
+        "max": 4
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 5,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Eastern Cape": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 37.03,
+        "p95": 37.03,
+        "p99": 37.03,
+        "max": 37.03
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.76,
+        "p95": 9.76,
+        "p99": 9.76,
+        "max": 9.76
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 28.97,
+        "p95": 28.97,
+        "p99": 28.97,
+        "max": 28.97
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Free State": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 36.16,
+        "p95": 36.16,
+        "p99": 36.16,
+        "max": 36.16
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.51,
+        "p95": 9.51,
+        "p99": 9.51,
+        "max": 9.51
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 29.48,
+        "p95": 29.48,
+        "p99": 29.48,
+        "max": 29.48
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Gauteng": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 57.19,
+        "p95": 57.19,
+        "p99": 57.19,
+        "max": 57.19
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 8.99,
+        "p95": 8.99,
+        "p99": 8.99,
+        "max": 8.99
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 48.34,
+        "p95": 48.34,
+        "p99": 48.34,
+        "max": 48.34
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 819,
+        "p95": 819,
+        "p99": 819,
+        "max": 819
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-KwaZulu-Natal": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 33.67,
+        "p95": 33.67,
+        "p99": 33.67,
+        "max": 33.67
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 8.63,
+        "p95": 8.63,
+        "p99": 8.63,
+        "max": 8.63
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 26.93,
+        "p95": 26.93,
+        "p99": 26.93,
+        "max": 26.93
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Limpopo": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 33.09,
+        "p95": 33.09,
+        "p99": 33.09,
+        "max": 33.09
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.97,
+        "p95": 9.97,
+        "p99": 9.97,
+        "max": 9.97
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 26.98,
+        "p95": 26.98,
+        "p99": 26.98,
+        "max": 26.98
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Mpumalanga": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 35.1,
+        "p95": 35.1,
+        "p99": 35.1,
+        "max": 35.1
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 9.56,
+        "p95": 9.56,
+        "p99": 9.56,
+        "max": 9.56
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 28.75,
+        "p95": 28.75,
+        "p99": 28.75,
+        "max": 28.75
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Noord-Kaap": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 34.47,
+        "p95": 34.47,
+        "p99": 34.47,
+        "max": 34.47
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 10.44,
+        "p95": 10.44,
+        "p99": 10.44,
+        "max": 10.44
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 27.93,
+        "p95": 27.93,
+        "p99": 27.93,
+        "max": 27.93
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-North-West": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 34.9,
+        "p95": 34.9,
+        "p99": 34.9,
+        "max": 34.9
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 8.8,
+        "p95": 8.8,
+        "p99": 8.8,
+        "max": 8.8
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 29.3,
+        "p95": 29.3,
+        "p99": 29.3,
+        "max": 29.3
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warmup:c1:province-Western Cape": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 37.1,
+        "p95": 37.1,
+        "p99": 37.1,
+        "max": 37.1
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 11.99,
+        "p95": 11.99,
+        "p99": 11.99,
+        "max": 11.99
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 28.52,
+        "p95": 28.52,
+        "p99": 28.52,
+        "max": 28.52
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warmup:c1:mixed-authority-rejection": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 6.05,
+        "p95": 6.05,
+        "p99": 6.05,
+        "max": 6.05
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warmup:c1:development-place-unavailable": {
+      "latencyMs": {
+        "count": 1,
+        "p50": 3.27,
+        "p95": 3.27,
+        "p99": 3.27,
+        "max": 3.27
+      },
+      "graphMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 1,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:discovery-north-riding": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 31.18,
+        "p95": 33.08,
+        "p99": 33.08,
+        "max": 33.08
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:discovery-prefix": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 40.77,
+        "p95": 48.32,
+        "p99": 48.32,
+        "max": 48.32
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8,
+        "max": 8
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 407,
+        "p95": 407,
+        "p99": 407,
+        "max": 407
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:discovery-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 123,
+        "p95": 135.2,
+        "p99": 135.2,
+        "max": 135.2
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 3,
+        "p95": 3,
+        "p99": 3,
+        "max": 3
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:north-riding-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 45.66,
+        "p95": 49.84,
+        "p99": 49.84,
+        "max": 49.84
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 4.77,
+        "p95": 4.89,
+        "p99": 4.89,
+        "max": 4.89
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 32.93,
+        "p95": 39.41,
+        "p99": 39.41,
+        "max": 39.41
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 423,
+        "p95": 423,
+        "p99": 423,
+        "max": 423
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:north-riding-rent": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 40.13,
+        "p95": 40.95,
+        "p99": 40.95,
+        "max": 40.95
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 5.55,
+        "p95": 5.58,
+        "p99": 5.58,
+        "max": 5.58
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 27.13,
+        "p95": 30.06,
+        "p99": 30.06,
+        "max": 30.06
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 221,
+        "p95": 221,
+        "p99": 221,
+        "max": 221
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:north-riding-pagination": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 39.02,
+        "p95": 43.48,
+        "p99": 43.48,
+        "max": 43.48
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 4.66,
+        "p95": 5.08,
+        "p99": 5.08,
+        "max": 5.08
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 29.89,
+        "p95": 35.51,
+        "p99": 35.51,
+        "max": 35.51
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 408,
+        "p95": 408,
+        "p99": 408,
+        "max": 408
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:bryanston-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 37.77,
+        "p95": 38.06,
+        "p99": 38.06,
+        "max": 38.06
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 5.24,
+        "p95": 5.24,
+        "p99": 5.24,
+        "max": 5.24
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 27.2,
+        "p95": 27.62,
+        "p99": 27.62,
+        "max": 27.62
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:johannesburg-exact-city": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 35.41,
+        "p95": 39.15,
+        "p99": 39.15,
+        "max": 39.15
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 4.33,
+        "p95": 7.97,
+        "p99": 7.97,
+        "max": 7.97
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 25.43,
+        "p95": 26.24,
+        "p99": 26.24,
+        "max": 26.24
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 131,
+        "p95": 131,
+        "p99": 131,
+        "max": 131
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:north-riding-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 11.73,
+        "p95": 12.64,
+        "p99": 12.64,
+        "max": 12.64
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 4.4,
+        "p95": 4.62,
+        "p99": 4.62,
+        "max": 4.62
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 4.22,
+        "p95": 4.89,
+        "p99": 4.89,
+        "max": 4.89
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 5,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Eastern Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 33.39,
+        "p95": 37.46,
+        "p99": 37.46,
+        "max": 37.46
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 8.15,
+        "p95": 9.37,
+        "p99": 9.37,
+        "max": 9.37
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 25.82,
+        "p95": 28.82,
+        "p99": 28.82,
+        "max": 28.82
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Free State": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 35.18,
+        "p95": 36.41,
+        "p99": 36.41,
+        "max": 36.41
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.93,
+        "p95": 10.39,
+        "p99": 10.39,
+        "max": 10.39
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 28.75,
+        "p95": 30.67,
+        "p99": 30.67,
+        "max": 30.67
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Gauteng": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 60.78,
+        "p95": 95.79,
+        "p99": 95.79,
+        "max": 95.79
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.94,
+        "p95": 10.44,
+        "p99": 10.44,
+        "max": 10.44
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 52.19,
+        "p95": 84.72,
+        "p99": 84.72,
+        "max": 84.72
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 819,
+        "p95": 819,
+        "p99": 819,
+        "max": 819
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-KwaZulu-Natal": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 48.96,
+        "p95": 79.31,
+        "p99": 79.31,
+        "max": 79.31
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 12.38,
+        "p95": 19.93,
+        "p99": 19.93,
+        "max": 19.93
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 42.52,
+        "p95": 70.48,
+        "p99": 70.48,
+        "max": 70.48
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Limpopo": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 32.92,
+        "p95": 43.23,
+        "p99": 43.23,
+        "max": 43.23
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.21,
+        "p95": 11.99,
+        "p99": 11.99,
+        "max": 11.99
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 26.86,
+        "p95": 35.07,
+        "p99": 35.07,
+        "max": 35.07
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Mpumalanga": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 34.14,
+        "p95": 39.6,
+        "p99": 39.6,
+        "max": 39.6
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 8.55,
+        "p95": 8.89,
+        "p99": 8.89,
+        "max": 8.89
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 27.78,
+        "p95": 32.57,
+        "p99": 32.57,
+        "max": 32.57
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Noord-Kaap": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 34.83,
+        "p95": 37.58,
+        "p99": 37.58,
+        "max": 37.58
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.06,
+        "p95": 10.77,
+        "p99": 10.77,
+        "max": 10.77
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 28.01,
+        "p95": 31.77,
+        "p99": 31.77,
+        "max": 31.77
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-North-West": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 37.72,
+        "p95": 37.82,
+        "p99": 37.82,
+        "max": 37.82
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.33,
+        "p95": 11.82,
+        "p99": 11.82,
+        "max": 11.82
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 31.46,
+        "p95": 32.03,
+        "p99": 32.03,
+        "max": 32.03
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:province-Western Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 34.65,
+        "p95": 38.3,
+        "p99": 38.3,
+        "max": 38.3
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 9.09,
+        "p95": 10.22,
+        "p99": 10.22,
+        "max": 10.22
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 26.58,
+        "p95": 31.62,
+        "p99": 31.62,
+        "max": 31.62
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:mixed-authority-rejection": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 3.74,
+        "p95": 4.56,
+        "p99": 4.56,
+        "max": 4.56
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c1:development-place-unavailable": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 3.01,
+        "p95": 3.04,
+        "p99": 3.04,
+        "max": 3.04
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:discovery-north-riding": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 71.24,
+        "p95": 101.9,
+        "p99": 101.9,
+        "max": 101.9
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:north-riding-rent": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 125.87,
+        "p95": 131.04,
+        "p99": 131.04,
+        "max": 131.04
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 18.31,
+        "p95": 21.7,
+        "p99": 21.7,
+        "max": 21.7
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 85.26,
+        "p95": 95.53,
+        "p99": 95.53,
+        "max": 95.53
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 221,
+        "p95": 221,
+        "p99": 221,
+        "max": 221
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:discovery-prefix": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 117.62,
+        "p95": 132.04,
+        "p99": 132.04,
+        "max": 132.04
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8,
+        "max": 8
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 407,
+        "p95": 407,
+        "p99": 407,
+        "max": 407
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:north-riding-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 120.11,
+        "p95": 136.38,
+        "p99": 136.38,
+        "max": 136.38
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 17.42,
+        "p95": 26.17,
+        "p99": 26.17,
+        "max": 26.17
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 84.78,
+        "p95": 89.84,
+        "p99": 89.84,
+        "max": 89.84
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 423,
+        "p95": 423,
+        "p99": 423,
+        "max": 423
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:north-riding-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 46.4,
+        "p95": 49.59,
+        "p99": 49.59,
+        "max": 49.59
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 23.28,
+        "p95": 23.69,
+        "p99": 23.69,
+        "max": 23.69
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 11.24,
+        "p95": 11.54,
+        "p99": 11.54,
+        "max": 11.54
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 5,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:discovery-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 194.91,
+        "p95": 199.98,
+        "p99": 199.98,
+        "max": 199.98
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 3,
+        "p95": 3,
+        "p99": 3,
+        "max": 3
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:bryanston-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 131.24,
+        "p95": 139.28,
+        "p99": 139.28,
+        "max": 139.28
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 34.47,
+        "p95": 38.08,
+        "p99": 38.08,
+        "max": 38.08
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 76.46,
+        "p95": 83.88,
+        "p99": 83.88,
+        "max": 83.88
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:north-riding-pagination": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 126.89,
+        "p95": 141.2,
+        "p99": 141.2,
+        "max": 141.2
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 17.15,
+        "p95": 37.51,
+        "p99": 37.51,
+        "max": 37.51
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 87.33,
+        "p95": 100.78,
+        "p99": 100.78,
+        "max": 100.78
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 408,
+        "p95": 408,
+        "p99": 408,
+        "max": 408
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:johannesburg-exact-city": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 137.53,
+        "p95": 141.23,
+        "p99": 141.23,
+        "max": 141.23
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 24.33,
+        "p95": 27.68,
+        "p99": 27.68,
+        "max": 27.68
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 91.12,
+        "p95": 105.12,
+        "p99": 105.12,
+        "max": 105.12
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 131,
+        "p95": 131,
+        "p99": 131,
+        "max": 131
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Eastern Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 132.32,
+        "p95": 142.14,
+        "p99": 142.14,
+        "max": 142.14
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 30.1,
+        "p95": 42.85,
+        "p99": 42.85,
+        "max": 42.85
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 107.63,
+        "p95": 108.92,
+        "p99": 108.92,
+        "max": 108.92
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Gauteng": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 150.5,
+        "p95": 156.22,
+        "p99": 156.22,
+        "max": 156.22
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 31.86,
+        "p95": 38.97,
+        "p99": 38.97,
+        "max": 38.97
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 121.11,
+        "p95": 121.34,
+        "p99": 121.34,
+        "max": 121.34
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 819,
+        "p95": 819,
+        "p99": 819,
+        "max": 819
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-KwaZulu-Natal": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 134.78,
+        "p95": 142.36,
+        "p99": 142.36,
+        "max": 142.36
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 41.17,
+        "p95": 47.12,
+        "p99": 47.12,
+        "max": 47.12
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 105.24,
+        "p95": 117.2,
+        "p99": 117.2,
+        "max": 117.2
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Free State": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 130.6,
+        "p95": 181.16,
+        "p99": 181.16,
+        "max": 181.16
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 38.81,
+        "p95": 44.7,
+        "p99": 44.7,
+        "max": 44.7
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 107.78,
+        "p95": 147.43,
+        "p99": 147.43,
+        "max": 147.43
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Mpumalanga": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 127.5,
+        "p95": 153.52,
+        "p99": 153.52,
+        "max": 153.52
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 45.71,
+        "p95": 59.35,
+        "p99": 59.35,
+        "max": 59.35
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 102.59,
+        "p95": 123.91,
+        "p99": 123.91,
+        "max": 123.91
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Limpopo": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 148.51,
+        "p95": 155.23,
+        "p99": 155.23,
+        "max": 155.23
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 54.36,
+        "p95": 56.42,
+        "p99": 56.42,
+        "max": 56.42
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 116.81,
+        "p95": 121.35,
+        "p99": 121.35,
+        "max": 121.35
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:mixed-authority-rejection": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 10.48,
+        "p95": 11.87,
+        "p99": 11.87,
+        "max": 11.87
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:development-place-unavailable": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 10.85,
+        "p95": 13.5,
+        "p99": 13.5,
+        "max": 13.5
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Noord-Kaap": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 118.94,
+        "p95": 141.74,
+        "p99": 141.74,
+        "max": 141.74
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 33.62,
+        "p95": 35.8,
+        "p99": 35.8,
+        "max": 35.8
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 103.81,
+        "p95": 118.46,
+        "p99": 118.46,
+        "max": 118.46
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-North-West": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 107.77,
+        "p95": 122.29,
+        "p99": 122.29,
+        "max": 122.29
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 40.6,
+        "p95": 48.08,
+        "p99": 48.08,
+        "max": 48.08
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 82.64,
+        "p95": 101.64,
+        "p99": 101.64,
+        "max": 101.64
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c5:province-Western Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 105.59,
+        "p95": 115.27,
+        "p99": 115.27,
+        "max": 115.27
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 34.6,
+        "p95": 39.55,
+        "p99": 39.55,
+        "max": 39.55
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 76.66,
+        "p95": 92.33,
+        "p99": 92.33,
+        "max": 92.33
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:mixed-authority-rejection": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 30.2,
+        "p95": 179.11,
+        "p99": 179.11,
+        "max": 179.11
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:discovery-north-riding": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 270.15,
+        "p95": 279.4,
+        "p99": 279.4,
+        "max": 279.4
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:development-place-unavailable": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 35.3,
+        "p95": 194.58,
+        "p99": 194.58,
+        "max": 194.58
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:discovery-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 281.46,
+        "p95": 326.78,
+        "p99": 326.78,
+        "max": 326.78
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 3,
+        "p95": 3,
+        "p99": 3,
+        "max": 3
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 1,
+        "p95": 1,
+        "p99": 1,
+        "max": 1
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:discovery-prefix": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 368.56,
+        "p95": 372.2,
+        "p99": 372.2,
+        "max": 372.2
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 8,
+        "p95": 8,
+        "p99": 8,
+        "max": 8
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 407,
+        "p95": 407,
+        "p99": 407,
+        "max": 407
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:north-riding-empty": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 235.61,
+        "p95": 262.22,
+        "p99": 262.22,
+        "max": 262.22
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 145.29,
+        "p95": 166.41,
+        "p99": 166.41,
+        "max": 166.41
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 53.12,
+        "p95": 58.81,
+        "p99": 58.81,
+        "max": 58.81
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 6,
+        "p95": 6,
+        "p99": 6,
+        "max": 6
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 5,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:north-riding-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 568,
+        "p95": 597.86,
+        "p99": 597.86,
+        "max": 597.86
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 116.45,
+        "p95": 231.43,
+        "p99": 231.43,
+        "max": 231.43
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 315.46,
+        "p95": 415.53,
+        "p99": 415.53,
+        "max": 415.53
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 423,
+        "p95": 423,
+        "p99": 423,
+        "max": 423
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:north-riding-pagination": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 529.06,
+        "p95": 637.96,
+        "p99": 637.96,
+        "max": 637.96
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 141.72,
+        "p95": 153.57,
+        "p99": 153.57,
+        "max": 153.57
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 332.42,
+        "p95": 440.12,
+        "p99": 440.12,
+        "max": 440.12
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 408,
+        "p95": 408,
+        "p99": 408,
+        "max": 408
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:bryanston-buy": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 519.99,
+        "p95": 620.14,
+        "p99": 620.14,
+        "max": 620.14
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 146.36,
+        "p95": 171.87,
+        "p99": 171.87,
+        "max": 171.87
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 324.76,
+        "p95": 396.89,
+        "p99": 396.89,
+        "max": 396.89
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 191,
+        "p95": 191,
+        "p99": 191,
+        "max": 191
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:north-riding-rent": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 541.47,
+        "p95": 601.99,
+        "p99": 601.99,
+        "max": 601.99
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 144.98,
+        "p95": 152.04,
+        "p99": 152.04,
+        "max": 152.04
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 339.56,
+        "p95": 419.55,
+        "p99": 419.55,
+        "max": 419.55
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 221,
+        "p95": 221,
+        "p99": 221,
+        "max": 221
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:johannesburg-exact-city": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 581.51,
+        "p95": 616.03,
+        "p99": 616.03,
+        "max": 616.03
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 139.31,
+        "p95": 145.73,
+        "p99": 145.73,
+        "max": 145.73
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 395.18,
+        "p95": 421.94,
+        "p99": 421.94,
+        "max": 421.94
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 18,
+        "p95": 18,
+        "p99": 18,
+        "max": 18
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 131,
+        "p95": 131,
+        "p99": 131,
+        "max": 131
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Free State": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 632.36,
+        "p95": 642.19,
+        "p99": 642.19,
+        "max": 642.19
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 149.99,
+        "p95": 194.13,
+        "p99": 194.13,
+        "max": 194.13
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 520.99,
+        "p95": 523.85,
+        "p99": 523.85,
+        "max": 523.85
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Gauteng": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 609.81,
+        "p95": 645.13,
+        "p99": 645.13,
+        "max": 645.13
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 150.83,
+        "p95": 171.59,
+        "p99": 171.59,
+        "max": 171.59
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 514.57,
+        "p95": 531.08,
+        "p99": 531.08,
+        "max": 531.08
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 819,
+        "p95": 819,
+        "p99": 819,
+        "max": 819
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-KwaZulu-Natal": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 603.95,
+        "p95": 679.15,
+        "p99": 679.15,
+        "max": 679.15
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 162.77,
+        "p95": 163.37,
+        "p99": 163.37,
+        "max": 163.37
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 520.04,
+        "p95": 531.9,
+        "p99": 531.9,
+        "max": 531.9
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Limpopo": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 610.48,
+        "p95": 689.87,
+        "p99": 689.87,
+        "max": 689.87
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 136.05,
+        "p95": 170.13,
+        "p99": 170.13,
+        "max": 170.13
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 518.05,
+        "p95": 527.9,
+        "p99": 527.9,
+        "max": 527.9
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Eastern Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 646.88,
+        "p95": 704.91,
+        "p99": 704.91,
+        "max": 704.91
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 186.18,
+        "p95": 200.23,
+        "p99": 200.23,
+        "max": 200.23
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 511.73,
+        "p95": 543.87,
+        "p99": 543.87,
+        "max": 543.87
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Noord-Kaap": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 598.84,
+        "p95": 736.74,
+        "p99": 736.74,
+        "max": 736.74
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 133.62,
+        "p95": 181.44,
+        "p99": 181.44,
+        "max": 181.44
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 507.39,
+        "p95": 532.1,
+        "p99": 532.1,
+        "max": 532.1
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-North-West": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 591.33,
+        "p95": 738.69,
+        "p99": 738.69,
+        "max": 738.69
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 135.18,
+        "p95": 198.08,
+        "p99": 198.08,
+        "max": 198.08
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 504.14,
+        "p95": 527.7,
+        "p99": 527.7,
+        "max": 527.7
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Mpumalanga": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 602,
+        "p95": 750.99,
+        "p99": 750.99,
+        "max": 750.99
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 156.01,
+        "p95": 191.43,
+        "p99": 191.43,
+        "max": 191.43
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 508.34,
+        "p95": 558.7,
+        "p99": 558.7,
+        "max": 558.7
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 178,
+        "p95": 178,
+        "p99": 178,
+        "max": 178
+      },
+      "errors": 0
+    },
+    "warm-measured:c20:province-Western Cape": {
+      "latencyMs": {
+        "count": 3,
+        "p50": 589.36,
+        "p95": 767.43,
+        "p99": 767.43,
+        "max": 767.43
+      },
+      "graphMs": {
+        "count": 3,
+        "p50": 141.8,
+        "p95": 225.95,
+        "p99": 225.95,
+        "max": 225.95
+      },
+      "inventoryMs": {
+        "count": 3,
+        "p50": 499.75,
+        "p95": 541.77,
+        "p99": 541.77,
+        "max": 541.77
+      },
+      "queryCount": {
+        "count": 3,
+        "p50": 20,
+        "p95": 20,
+        "p99": 20,
+        "max": 20
+      },
+      "queryRowsReturned": {
+        "count": 3,
+        "p50": 164,
+        "p95": 164,
+        "p99": 164,
+        "max": 164
+      },
+      "errors": 0
+    }
+  },
+  "detailProof": {
+    "propertyId": 990011,
+    "label": "Controlled Diagnostic Road, North Riding, Gauteng"
+  },
+  "limits": {
+    "readP95Ms": 750,
+    "readP99Ms": 2000,
+    "acquisitionP95Ms": 250,
+    "unexpectedErrorsPercentLessThan": 0.1,
+    "reference": "docs/architecture/launch-readiness-and-product-convergence/24-paid-mvp-launch-closure-execution-plan.md B17 baseline",
+    "discovery200msProposalIsNotAgreedGate": true
+  },
+  "limitations": [
+    "Local diagnostic on 120 synthetic listings; not B17 10,000-listing/24-hour capacity acceptance.",
+    "First observations occur after fixture preparation; InnoDB and OS caches are not reset.",
+    "Query durations include driver acquisition/execution/transfer; queryRowsReturned is measured, physical rows examined is not.",
+    "Serialization is an additional superjson stringify estimate; HTTP latency includes actual transport serialization and parsing.",
+    "RSS observations are process samples; no production memory/CPU-credit/storage capacity acceptance.",
+    "Homepage EnhancedHero still hands off legacy location IDs; this benchmark does not certify customer homepage discovery.",
+    "Development inventory cannot use canonical Place assignment.",
+    "Scope policy is approved exact locality/exact city/evidenced province; no new city descendant membership."
+  ]
+}

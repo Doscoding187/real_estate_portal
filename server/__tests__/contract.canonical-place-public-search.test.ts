@@ -20,6 +20,9 @@ describe('prepared canonical Place inventory authority', () => {
       if (!established.ok) throw new Error(`Required admitted Place unavailable: ${id}`);
       expect(projection.executions.get(id)).toEqual(established.execution);
       expect(projection.labels.has(id)).toBe(true);
+      const requested = await loadCanonicalPlaceSearchProjection(undefined, { placeIds: [id] });
+      expect(requested.executions.get(id)).toEqual(established.execution);
+      expect(requested.labels.get(id)).toEqual(projection.labels.get(id));
     }
     const north = projection.labels.get('pl-place-01-6a145c6d642ba208a2c12de7')!;
     expect(north).toMatchObject({
@@ -30,6 +33,11 @@ describe('prepared canonical Place inventory authority', () => {
     });
     const gp = projection.executions.get('pl-place-01-131e3e75ad70424e0f9c869a')!;
     const members = canonicalPlaceSearchMembers(gp, projection);
+    const provinceProjection = await loadCanonicalPlaceSearchProjection(undefined, {
+      placeIds: [gp.placeId],
+      includeProvinceMembers: true,
+    });
+    expect(canonicalPlaceSearchMembers(gp, provinceProjection)).toEqual(members);
     expect(members).toContain(north.canonicalPlaceId);
     expect(members.every(id => projection.executions.get(id)?.provincePlaceId === gp.placeId)).toBe(
       true,

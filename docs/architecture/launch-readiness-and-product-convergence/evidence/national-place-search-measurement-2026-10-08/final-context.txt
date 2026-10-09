@@ -1,0 +1,58 @@
+
+> real_estate_portal@1.0.0 db:authority:context /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008
+> tsx scripts/databaseAuthorityCli.ts context
+
+{
+  "contextVersion": 1,
+  "contextId": "836625bf-3432-4f8c-990c-cb36fb47ce52",
+  "correlationId": "ad132e67-8175-4c64-9c3a-3e276f8acdf3",
+  "resolvedAt": "2026-10-08T14:33:53.466Z",
+  "operation": "read-only-connect",
+  "runtimeMode": "development",
+  "environmentSource": "worktree-profile",
+  "environmentFiles": [
+    "/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008/.env.local",
+    "/home/edwardspc/.config/property-listify/local.env"
+  ],
+  "targetFingerprint": "mysql://127.0.0.1:3307/listify_wt_national_place_search_measurem_4c206eab78b5",
+  "targetFingerprintHash": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_national_place_search_measurem_4c206eab78b5",
+  "host": "127.0.0.1",
+  "port": "3307",
+  "provider": "mysql",
+  "dialect": "mysql",
+  "local": true,
+  "tls": {
+    "required": false,
+    "certificateVerificationRequired": false
+  },
+  "credentialClass": "local-owner",
+  "credentialSource": "database-url",
+  "repository": {
+    "root": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008",
+    "gitCommonDirectoryFingerprint": "93fc65e6eeca51305b9e499eb130579e323d5501ceaa87cb76c4b5665185d04f",
+    "head": "04821fe7ae6401e781925adce099a93ead08490a"
+  },
+  "worktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-measurement-20261008",
+    "branch": "measure/national-place-search-20261008",
+    "upstream": null,
+    "registered": true,
+    "clean": false,
+    "ownershipKey": "4c206eab78b53f9d97d21123",
+    "expectedDatabase": "listify_wt_national_place_search_measurem_4c206eab78b5",
+    "ownershipMatches": true,
+    "cleanMainOwnershipMatches": false
+  },
+  "localService": {
+    "applicability": "local",
+    "host": "127.0.0.1",
+    "port": "3307",
+    "directory": "/var/tmp/property-listify-1000/mysql-3307",
+    "dataDirectory": "/var/tmp/property-listify-1000/mysql-3307/data",
+    "fingerprint": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "legacyHomeDirectory": "/home/edwardspc/.config/property-listify/mysql-3307",
+    "legacyPathPolicy": "inactive-residue-only; never adopted or deleted automatically"
+  }
+}
