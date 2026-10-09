@@ -1,0 +1,68 @@
+{
+  "status": "passed-prerequisites-product-cutover-incomplete",
+  "source_parent": "0f8200c59",
+  "target_class": "disposable-worktree",
+  "target_fingerprint": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "expected_head": "0109_properties_canonical_place_reference_fk.sql",
+  "plan_digest": "73b3981b609513bc9b9b19d7671b31ba8f33d114b810d5c2da7214c346d9e792",
+  "accepted_old_head": null,
+  "applied_migrations": 110,
+  "schema_congruent": true,
+  "desired_schema_digest": "a1c08ce864a31d5c0adee16faf1f3d255d7bf528985e039ff50c5ab180649f98",
+  "actual_schema_digest": "a1c08ce864a31d5c0adee16faf1f3d255d7bf528985e039ff50c5ab180649f98",
+  "physical_checks_enforced": 39,
+  "static_authority_tests": 617,
+  "static_authority_files": 56,
+  "utility_surfaces": 121,
+  "schema_inventory": "passed",
+  "lifecycle": "passed",
+  "production_typecheck": "passed",
+  "broad_typecheck_errors": 263,
+  "changed_file_typecheck_errors": 0,
+  "build": "passed",
+  "selector_interaction_tests": 16,
+  "focused_selector_and_reference_lint": "passed without warnings",
+  "founder_pr": {
+    "number": 590,
+    "state": "OPEN",
+    "head": "b0cb48f676bfe470ce29c49c9679fd65d1766c7b"
+  },
+  "accepted_main": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+  "migration_numbering": "provisional task-owned candidate; founder collision must be serialized before integration",
+  "scope_policy": {
+    "approval": "Edward / 2026-10-07 / Approve that launch scope policy",
+    "contract_version": "0.6",
+    "province": "admitted assignment with evidenced province containment",
+    "city_town": "explicitly reviewed membership only",
+    "implementation": "remaining"
+  },
+  "inflight_observation": {
+    "schema_comparison_before_apply_completion": "incomplete, superseded by congruent final verification",
+    "plan_while_apply_live": "blocked by running baseline attempt; same live process completed successfully, no retry"
+  },
+  "runtime_mutations": "owned schema expansion and canonical national reference preparation only; no Listing authored/published",
+  "protected_access": false,
+  "push_merge_deployment": false,
+  "physical_proof_source_sha256": "02b05c96cf3d5f2cbcd03abb25261e7b2dcdd9b31837dd54e42b1d9881882fab",
+  "manifest_sha256": "bc6b80292c43aafc38433fb5593636fa823c1d12c0444cd9ea2a4fd3a1b85259",
+  "sql_sha256": {
+    "0104_listings_canonical_place_reference.sql": "d116f8010581c5c24152e2ff10817cea4c6ad3156623bae268bc2b4fe80b15e0",
+    "0105_listings_canonical_place_reference_index.sql": "d65369ef2a759231540d70367945a74baee5e2ed5f00d6ed7d88ae0185e9c0b9",
+    "0106_listings_canonical_place_reference_fk.sql": "c2c14940fc7a15681adafaee85a426a5ad4d32a0e245a5ea1f0d2bdbd9f845f6",
+    "0107_properties_canonical_place_reference.sql": "05fff766bd53e77252497d54cd253e60ea56b3ad0ba11c91027da27c2edf2d2e",
+    "0108_properties_canonical_place_reference_index.sql": "4b5750bb9ef30a64fd27e6acae3f436504f7e0719d148dadf3131e4b21b4fa3f",
+    "0109_properties_canonical_place_reference_fk.sql": "2ce21151b1793e94436d3018da62aa730a950409b25dbab9cb68893ec530926b"
+  },
+  "remaining": [
+    "founder manifest serialization",
+    "wizard and API canonical cutover",
+    "Listing create/edit/revision persistence",
+    "transactional publication and retirement protection",
+    "province/city Listing search membership",
+    "Land parcel/query convergence",
+    "customer author-publication-search browser proof",
+    "source activation/licensing and release packet"
+  ],
+  "target_disposed": true,
+  "shared_native_service": "left available for parallel work"
+}

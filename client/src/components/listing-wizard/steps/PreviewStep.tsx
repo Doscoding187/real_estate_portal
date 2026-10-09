@@ -36,6 +36,7 @@ import { readCorePropertyInformation } from '@shared/core-property-information';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
+  const selectedAreaLabel = [state.location?.canonicalPlace?.label, state.location?.canonicalPlace?.administrativeContext].filter(Boolean).join(', ');
   const { user } = useAuth();
 
   // Format currency
@@ -157,7 +158,7 @@ const PreviewStep: React.FC = () => {
           id="preview"
           title={state.title || 'Untitled Property'}
           price={getPrice()}
-          location={`${state.location?.address || ''}, ${state.location?.city || ''}`}
+          location={[state.location?.address, selectedAreaLabel].filter(Boolean).join(', ')}
           image={primaryMedia?.url || '/assets/placeholder.jpg'}
           description={state.description}
           bedrooms={knownNumericValue(corePropertyInformation.bedrooms)}
@@ -190,7 +191,7 @@ const PreviewStep: React.FC = () => {
             <p className="text-slate-600">
               {state.location?.address}
               <br />
-              {state.location?.city}, {state.location?.province}
+              {selectedAreaLabel}
               <br />
               {state.location?.postalCode}
             </p>

@@ -1,0 +1,35 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/savedSearchNotificationEngine.public-search.test.ts (3 tests) 164ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  11:41:27
+   Duration  2.29s (transform 728ms, setup 119ms, collect 1.68s, tests 164ms, environment 0ms, prepare 93ms)
+

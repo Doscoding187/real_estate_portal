@@ -1,3 +1,4 @@
+import { isCanonicalPlaceId } from './placeAuthority';
 import { isFactualGeographyId } from './factualRuntimeGeographyBridge';
 import { parseCanonicalLocationId } from './locationAuthority';
 import { BUY_PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
@@ -9,6 +10,7 @@ export interface PublicSearchInputValidationIssue {
 }
 
 interface PublicSearchInputLike {
+  canonicalPlaceId?: string;
   province?: string;
   city?: string;
   /** Developments accept a single suburb string or a list at the boundary. */
@@ -138,6 +140,29 @@ export function validatePublicSearchInput(
         message: 'Map bounds must be complete and ordered within geographic limits.',
       };
     }
+  }
+
+  if (input.canonicalPlaceId !== undefined) {
+    if (!isCanonicalPlaceId(input.canonicalPlaceId))
+      return {
+        path: 'canonicalPlaceId',
+        message: 'Choose a valid canonical Place identity.',
+      };
+    if (
+      input.locationId ||
+      input.factualLocationId ||
+      input.locationIds?.length ||
+      input.searchAreaId ||
+      input.searchAreaIds?.length ||
+      input.province ||
+      input.city ||
+      input.suburb?.length ||
+      input.locations?.length
+    )
+      return {
+        path: 'canonicalPlaceId',
+        message: 'Canonical Place search cannot combine geography authorities.',
+      };
   }
 
   const canonicalLocation = input.locationId

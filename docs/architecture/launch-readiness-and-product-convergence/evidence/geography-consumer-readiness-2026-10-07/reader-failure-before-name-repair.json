@@ -1,0 +1,24 @@
+{
+  "status": "failed",
+  "claim": "Real admitted preferred-name discovery before the canonical name-index repair",
+  "sourceCommit": "8546386dc2e190b6b60dc13492468122da646774",
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "probes": [
+    {
+      "probe": "za-nc",
+      "scope": "province",
+      "label": "Noord-Kaap",
+      "discovery": {
+        "outcome": "no_result",
+        "query": "noord kaap",
+        "results": [],
+        "coverageSignal": {
+          "kind": "unresolved_query",
+          "subject": "noord kaap"
+        }
+      }
+    }
+  ],
+  "cause": "Admission lowercased the name while query normalization replaced punctuation with spaces; Noord-Kaap was indexed as noord-kaap but queried as noord kaap",
+  "initialProbeCorrection": "The first temporary runner also assumed every province name was unique. Gauteng has distinct admitted province and locality referents; the corrected runner accepts explicit ambiguity and checks the selected identity."
+}

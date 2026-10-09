@@ -36,6 +36,17 @@ const baseState: ListingWizardSubmitState = {
     },
   },
   location: {
+    canonicalPlace: {
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      label: 'Selected Locality',
+      scope: 'locality' as const,
+      placeType: 'suburb',
+      administrativeContext: 'Gauteng',
+    },
+    coordinateSource: 'map',
+    locationConfirmationState: 'confirmed',
+    publicLocationPrecision: 'approximate',
+    privateAddress: { streetName: 'Main Road' },
     address: '1 Main Road',
     latitude: -26.1076,
     longitude: 28.0567,
@@ -93,11 +104,13 @@ const buildPreviousInlinePayload = (state: ListingWizardSubmitState) => {
     propertyDetails.leviesHoaOperatingCosts = levies;
   }
 
-  const rates = pricing.ratesAndTaxes ?? propertyDetails.ratesAndTaxes ?? propertyDetails.ratesTaxes;
+  const rates =
+    pricing.ratesAndTaxes ?? propertyDetails.ratesAndTaxes ?? propertyDetails.ratesTaxes;
   if (propertyDetails.ratesAndTaxes === undefined && rates !== undefined) {
     propertyDetails.ratesAndTaxes = rates;
   }
-  if (propertyDetails.ratesTaxes === undefined && rates !== undefined) propertyDetails.ratesTaxes = rates;
+  if (propertyDetails.ratesTaxes === undefined && rates !== undefined)
+    propertyDetails.ratesTaxes = rates;
 
   const parking = propertyDetails.parkingCount ?? propertyDetails.parkingBays;
   if (propertyDetails.parkingCount === undefined && parking !== undefined) {
@@ -108,13 +121,15 @@ const buildPreviousInlinePayload = (state: ListingWizardSubmitState) => {
   }
 
   const security = propertyDetails.security ?? propertyDetails.securityLevel;
-  if (propertyDetails.security === undefined && security !== undefined) propertyDetails.security = security;
+  if (propertyDetails.security === undefined && security !== undefined)
+    propertyDetails.security = security;
   if (propertyDetails.securityLevel === undefined && security !== undefined) {
     propertyDetails.securityLevel = security;
   }
 
   const flooring = propertyDetails.flooring ?? propertyDetails.flooringType;
-  if (propertyDetails.flooring === undefined && flooring !== undefined) propertyDetails.flooring = flooring;
+  if (propertyDetails.flooring === undefined && flooring !== undefined)
+    propertyDetails.flooring = flooring;
   if (propertyDetails.flooringType === undefined && flooring !== undefined) {
     propertyDetails.flooringType = flooring;
   }
@@ -140,7 +155,16 @@ const buildPreviousInlinePayload = (state: ListingWizardSubmitState) => {
     description: state.description,
     pricing,
     propertyDetails,
-    location: state.location!,
+    location: {
+      version: 2,
+      canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+      privateAddress: state.location!.privateAddress ?? null,
+      coordinates: { latitude: state.location!.latitude!, longitude: state.location!.longitude! },
+      coordinateSource: 'map',
+      locationConfirmationState: 'confirmed',
+      publicLocationPrecision: 'approximate',
+      providerObservation: null,
+    },
     mediaIds: state.media.map(media => media.id?.toString() || ''),
     mainMediaId:
       state.mainMediaId?.toString() ||
@@ -179,7 +203,16 @@ describe('buildListingWizardSubmitPayload', () => {
         negotiable: true,
         transferCostEstimate: 125000,
       },
-      location: baseState.location,
+      location: {
+        version: 2,
+        canonicalPlaceId: baseState.location!.canonicalPlace!.canonicalPlaceId,
+        privateAddress: { streetName: 'Main Road' },
+        coordinates: { latitude: -26.1076, longitude: 28.0567 },
+        coordinateSource: 'map',
+        locationConfirmationState: 'confirmed',
+        publicLocationPrecision: 'approximate',
+        providerObservation: null,
+      },
       mediaIds: ['uploads/listing/front.jpg', 'uploads/listing/kitchen.jpg'],
       mainMediaId: 'uploads/listing/kitchen.jpg',
       media: [

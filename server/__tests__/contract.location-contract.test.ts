@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { buildCanonicalListingLocationPayload } from '../../shared/canonicalListingLocation';
 import {
-  buildListingLocationAuthoringPayload,
   listingLocationSchema,
   locationProviderMappingSchema,
   normalizeCoordinatePair,
@@ -91,37 +91,15 @@ describe('PLE-6B location contract', () => {
     ).toBe(true);
   });
 
-  it('allow-lists browser location payload keys', () => {
-    const payload = buildListingLocationAuthoringPayload({
-      ...baseLocation,
-      address: '10 Alice Lane',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      unexpectedUiState: 'must not cross the boundary',
-    } as any);
-
-    expect(payload).toMatchObject({
-      address: '10 Alice Lane',
-      city: 'Johannesburg',
-      province: 'Gauteng',
-    });
-    expect(payload).not.toHaveProperty('unexpectedUiState');
+  it('allow-lists browser evidence without elevating labels or numeric handles to identity', () => {
+    const payload = buildCanonicalListingLocationPayload({ address: '10 Alice Lane', latitude: null, longitude: null, city: 'Johannesburg', province: 'Gauteng', provinceId: 1, cityId: 2, suburbId: 3, unexpectedUiState: 'must not cross the boundary' } as any);
+    expect(payload).toMatchObject({ version: 2, canonicalPlaceId: null, coordinates: null });
+    for (const key of ['unexpectedUiState', 'address', 'city', 'province', 'provinceId', 'cityId', 'suburbId']) expect(payload).not.toHaveProperty(key);
   });
 
   it('preserves absent coordinates as null rather than creating a zero pair', () => {
-    const payload = buildListingLocationAuthoringPayload({
-      address: 'Katherine Street',
-      latitude: null,
-      longitude: null,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      privateAddress: { streetName: 'Katherine Street' },
-    });
-
-    expect(payload?.latitude).toBeNull();
-    expect(payload?.longitude).toBeNull();
+    const payload = buildCanonicalListingLocationPayload({ address: 'Katherine Street', latitude: null, longitude: null, city: 'Johannesburg', province: 'Gauteng', privateAddress: { streetName: 'Katherine Street' } });
+    expect(payload.coordinates).toBeNull();
   });
 
   it('normalizes only complete valid public coordinate pairs', () => {

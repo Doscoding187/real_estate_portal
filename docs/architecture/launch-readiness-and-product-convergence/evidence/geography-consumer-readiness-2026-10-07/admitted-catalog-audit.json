@@ -1,0 +1,153 @@
+{
+  "territories": [
+    {
+      "territory": "za-gp",
+      "places": 1466,
+      "searchable": 1436,
+      "scopes": {
+        "locality": 1096,
+        "metro_city": 339,
+        "context_only": 30,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 720
+    },
+    {
+      "territory": "za-wc",
+      "places": 1862,
+      "searchable": 1832,
+      "scopes": {
+        "locality": 1766,
+        "context_only": 30,
+        "metro_city": 65,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-kzn",
+      "places": 2090,
+      "searchable": 2028,
+      "scopes": {
+        "locality": 1956,
+        "context_only": 62,
+        "metro_city": 71,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-ec",
+      "places": 5084,
+      "searchable": 5037,
+      "scopes": {
+        "locality": 4971,
+        "metro_city": 65,
+        "context_only": 47,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-fs",
+      "places": 1544,
+      "searchable": 1519,
+      "scopes": {
+        "locality": 1466,
+        "context_only": 25,
+        "metro_city": 52,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-mp",
+      "places": 1045,
+      "searchable": 1024,
+      "scopes": {
+        "locality": 959,
+        "context_only": 21,
+        "metro_city": 64,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-li",
+      "places": 1669,
+      "searchable": 1639,
+      "scopes": {
+        "locality": 1599,
+        "metro_city": 39,
+        "context_only": 30,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-nw",
+      "places": 1352,
+      "searchable": 1329,
+      "scopes": {
+        "locality": 1290,
+        "context_only": 23,
+        "metro_city": 38,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    },
+    {
+      "territory": "za-nc",
+      "places": 1552,
+      "searchable": 1520,
+      "scopes": {
+        "locality": 1493,
+        "metro_city": 26,
+        "context_only": 32,
+        "province": 1
+      },
+      "authorized_search_edges": 0,
+      "osm_only": 0
+    }
+  ],
+  "locality_ancestry": {
+    "localities": 16596,
+    "without_city_scope_ancestor": 16596,
+    "without_province_scope_ancestor": 0
+  },
+  "malformed_chains": [],
+  "total_places": 17664,
+  "scope": "All nine provinces with approved locations, selected by Edward on 2026-10-07",
+  "sourceCommit": "8546386dc2e190b6b60dc13492468122da646774",
+  "integrationBase": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+  "evidenceBoundary": "Committed admission packages only; no deployed consumer or protected database claim",
+  "registrySha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433",
+  "inputDigests": {
+    "data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl": "61b11af2d54ba2e41e5f229a400b3085acbd09bf2d96507427026e9fb74e6adf",
+    "data/gauteng-place-admission-v0.1/gauteng_place_relationships_v0.1.jsonl": "8c7d934fde1d5b41e1937741c21dfddd1714771099cdd9306fc6e774d6979836",
+    "data/za-wc-place-admission-v0.1/za_wc_place_admission_v0.1.jsonl": "792f2495d7c668e3598974a250543bbc3b3f0a85261fe04dbe0899b2315c90f6",
+    "data/za-wc-place-admission-v0.1/za_wc_place_relationships_v0.1.jsonl": "0b1734d5eb52715ecffad92cb5b9ec06754a6c3e0968a9a687d6baea072c2a00",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_admission_v0.1.jsonl": "d586699c05289b5dbf659eeb852c0594cdc7558c7c99d54a1ddae959a39e7ea1",
+    "data/za-kzn-place-admission-v0.1/za_kzn_place_relationships_v0.1.jsonl": "fe4d8b63ae5622bc897bd44dc94475bf9acbc5c39af0c2979c4919cf30fe5902",
+    "data/za-ec-place-admission-v0.1/za_ec_place_admission_v0.1.jsonl": "b8a44f294c26d7f78e1a8a5ac0d4d27f17c46c6076cce83c6fcd1db24498c417",
+    "data/za-ec-place-admission-v0.1/za_ec_place_relationships_v0.1.jsonl": "1f5cccc1ed9b505dfac1b304822787618dfd587cc01e52e6cbbdf0c78459c141",
+    "data/za-fs-place-admission-v0.1/za_fs_place_admission_v0.1.jsonl": "8afb4d27bd9e6ed9f94c8dfebc3607d174ce7808e1916ecfc3eedfea7dff042e",
+    "data/za-fs-place-admission-v0.1/za_fs_place_relationships_v0.1.jsonl": "de8658e5668f502bbb6c8beb07fa2156eaa73d67815d657010229c97b1e0a626",
+    "data/za-mp-place-admission-v0.1/za_mp_place_admission_v0.1.jsonl": "35a5ef3d78d5fb1f2c1d97867e8935b8e769c000e41306d627b1fc0fa34df209",
+    "data/za-mp-place-admission-v0.1/za_mp_place_relationships_v0.1.jsonl": "5660f7102067370a2c19aed23e2b8d0c67c846b76a0fd2294836d08d98a27a16",
+    "data/za-li-place-admission-v0.1/za_li_place_admission_v0.1.jsonl": "193bdc99bc05757f66068516d68f1652e9a392496421ae161c783080dad18b7b",
+    "data/za-li-place-admission-v0.1/za_li_place_relationships_v0.1.jsonl": "e2b7f1b48534231bea524f4abbfd2dccb05a8b57d5c57af03abdbed91ef971b6",
+    "data/za-nw-place-admission-v0.1/za_nw_place_admission_v0.1.jsonl": "3566068ac9f95dbd4b2d30c6d7636d851e1f06a6d587bc59499e855ea2b09561",
+    "data/za-nw-place-admission-v0.1/za_nw_place_relationships_v0.1.jsonl": "68398d70e971f73eaed4e8deefbb2fd0d1b647526aff7107f761ae8484a942f0",
+    "data/za-nc-place-admission-v0.1/za_nc_place_admission_v0.1.jsonl": "5185c948ff53a6ae53e2143a7c9313d63f4a35cb3d43f769056f43d0af788186",
+    "data/za-nc-place-admission-v0.1/za_nc_place_relationships_v0.1.jsonl": "0a4e6830799ef9e44c71ed5eeb12d5181d1ad824738dbd2b303df1837be51ac7"
+  }
+}

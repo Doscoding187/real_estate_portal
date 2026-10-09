@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "proof": "Old national name index refused before replay; all five physical tables unchanged",
+  "targetFingerprintHash": "0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d",
+  "before": {
+    "place": {
+      "count": 17664,
+      "sha256": "1e43c01b774738c0755d01db21a8b86ed9f2d3f638e507dc5f1098e22bc24314"
+    },
+    "place_name": {
+      "count": 26425,
+      "sha256": "341c808c7c87da6b775c80871d3a01689b2ec085a05e2a9258fe76d9fdc0ad9c"
+    },
+    "place_relationship": {
+      "count": 17655,
+      "sha256": "acf67b9d19387278d463f6be29cd05c6474e3a049525b12c2e6c20bc9b01ae5b"
+    },
+    "place_evidence": {
+      "count": 79925,
+      "sha256": "f117099ac7e7fcec7d59f3edcc0c856eb0aa740bc280da89e2b74c5bb5cb35ec"
+    },
+    "place_external_mapping": {
+      "count": 19792,
+      "sha256": "c1f59c11f947e554aa5828c3e84827daea28c25e1b19a7b5c447c4ef0cb5af45"
+    }
+  },
+  "after": {
+    "place": {
+      "count": 17664,
+      "sha256": "1e43c01b774738c0755d01db21a8b86ed9f2d3f638e507dc5f1098e22bc24314"
+    },
+    "place_name": {
+      "count": 26425,
+      "sha256": "341c808c7c87da6b775c80871d3a01689b2ec085a05e2a9258fe76d9fdc0ad9c"
+    },
+    "place_relationship": {
+      "count": 17655,
+      "sha256": "acf67b9d19387278d463f6be29cd05c6474e3a049525b12c2e6c20bc9b01ae5b"
+    },
+    "place_evidence": {
+      "count": 79925,
+      "sha256": "f117099ac7e7fcec7d59f3edcc0c856eb0aa740bc280da89e2b74c5bb5cb35ec"
+    },
+    "place_external_mapping": {
+      "count": 19792,
+      "sha256": "c1f59c11f947e554aa5828c3e84827daea28c25e1b19a7b5c447c4ef0cb5af45"
+    }
+  },
+  "proofScriptSha256": "a8d540da3ad9831c0dd63f504f2d0de49605307138a034e8e96cf3699a7a13a1"
+}

@@ -1,0 +1,35 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 --no-file-parallelism server/__tests__/integration.founder-google-identity.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/__tests__/integration.founder-google-identity.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/__tests__/integration.founder-google-identity.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/integration.founder-google-identity.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/__tests__/integration.founder-google-identity.test.ts > unseeded disposable founder identity authority (real SQL, simulated Google)
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+
+ ✓ |server| server/__tests__/integration.founder-google-identity.test.ts (10 tests) 1182ms
+   ✓ unseeded disposable founder identity authority (real SQL, simulated Google) > completes the browser callback, authenticates the owner, denies ordinary roles and revokes the session 462ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  10:17:24
+   Duration  6.14s (transform 1.66s, setup 179ms, collect 4.37s, tests 1.18s, environment 0ms, prepare 109ms)
+

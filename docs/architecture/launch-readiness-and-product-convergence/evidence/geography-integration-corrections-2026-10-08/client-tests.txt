@@ -1,0 +1,20 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |client| client/src/lib/workflows/listing/__tests__/listingDraftPayload.test.ts (18 tests) 185ms
+ ✓ |client| client/src/lib/__tests__/listingWizardSubmitMapper.test.ts (9 tests) 241ms
+ ✓ |client| client/src/components/location/__tests__/CanonicalPlaceSelector.test.tsx (16 tests) 3393ms
+   ✓ Canonical Place customer selection > requires explicit selection for same-name Places and carries the chosen identity 1982ms
+ ✓ |client| client/src/components/listing-wizard/steps/LocationStep.canonical.test.tsx (3 tests) 4541ms
+   ✓ North Riding private house authoring > requires explicit locality selection and preserves street/postal evidence without inventing a city 2516ms
+   ✓ North Riding private house authoring > keeps house confirmation unavailable without street evidence 940ms
+   ✓ provider enrichment preserves North Riding identity and resets confirmation 1075ms
+ ✓ |client| client/src/components/developer/__tests__/DeveloperSetupWizardEnhanced.registration.test.tsx (2 tests) 12315ms
+   ✓ Developer registration canonical save and reload > collects and submits supported organisation details without asking for unsaved counts 7610ms
+   ✓ Developer registration canonical save and reload > resumes an older owned draft with an explicit count notice and saves only supported fields 4700ms
+
+ Test Files  5 passed (5)
+      Tests  48 passed (48)
+   Start at  02:20:55
+   Duration  40.08s (transform 5.22s, setup 4.31s, collect 23.95s, tests 20.68s, environment 21.64s, prepare 2.02s)
+

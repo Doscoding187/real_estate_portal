@@ -24,6 +24,7 @@ import { agents, agencies } from './agencies';
 import { locations, cities, provinces, suburbs } from './locations';
 import { developments, developerBrandProfiles } from './developments';
 import { cataloguePublishers } from './developerIdentity';
+import { place } from './placeAuthority';
 
 export const listings = mysqlTable(
   'listings',
@@ -122,6 +123,11 @@ export const listings = mysqlTable(
     publicLocationPrecision: mysqlEnum('public_location_precision', ['approximate', 'exact'])
       .default('approximate')
       .notNull(),
+    /** One resolved geographic assignment. Provider placeId is independent evidence. */
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
   },
   table => [
     index('idx_listings_place_id').on(table.placeId),
@@ -130,6 +136,7 @@ export const listings = mysqlTable(
     index('idx_listings_province_id').on(table.provinceId),
     index('idx_listings_city_id').on(table.cityId),
     index('idx_listings_suburb_id').on(table.suburbId),
+    index('idx_listings_canonical_place_id').on(table.canonicalPlaceId),
   ],
 );
 
@@ -367,6 +374,11 @@ export const properties = mysqlTable(
       () => cataloguePublishers.id,
       { onDelete: 'set null' },
     ),
+    /** Copies the authored Listing identity at canonical publication. */
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
   },
   table => [
     index('price_idx').on(table.price),
@@ -386,6 +398,7 @@ export const properties = mysqlTable(
     index('idx_properties_land_area_m2').on(table.landAreaM2),
     index('idx_properties_location_id').on(table.locationId),
     index('idx_properties_sourceListingId').on(table.sourceListingId),
+    index('idx_properties_canonical_place_id').on(table.canonicalPlaceId),
   ],
 );
 

@@ -349,6 +349,18 @@ jobs:
       - name: Verify canonical disposable reference data
         run: pnpm db:reference:verify
 
+      # Gauteng's existing admitted package is the dependent test dataset.
+      # OSM-only assertions remain disposable-only; this is not a production release.
+      # Use the territory command: the national npm wrapper forces development.
+      - name: Prepare admitted Place integration fixtures
+        run: pnpm db:places:prepare -- --territory=za-gp
+
+      - name: Verify admitted Place integration fixtures
+        run: pnpm db:places:verify -- --territory=za-gp
+
+      - name: Require dependent admitted Place identities
+        run: pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 server/__tests__/contract.place-executable-foundation.test.ts -t 'requires the admitted Place fixture identities'
+
       - name: Prepare canonical disposable foundation data
         run: pnpm db:foundation:prepare
 
@@ -367,6 +379,7 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=12288
         run: |
+          pnpm vitest run --project place-command --minWorkers=1 --maxWorkers=1
           mapfile -t CLIENT_TESTS < <(
             find client/src -type f \
               \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.spec.ts' -o -name '*.spec.tsx' \) \

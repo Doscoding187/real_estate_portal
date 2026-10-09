@@ -1,0 +1,8 @@
+
+/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0/server/services/placeDiscoveryService.ts
+   30:3  warning  'isAliasMatch' is defined but never used. Allowed unused vars must match /^_/u    @typescript-eslint/no-unused-vars
+   47:7  warning  'rowOf' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  256:9  warning  'db' is assigned a value but never used. Allowed unused vars must match /^_/u     @typescript-eslint/no-unused-vars
+
+✖ 3 problems (0 errors, 3 warnings)
+

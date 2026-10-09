@@ -1,5 +1,8 @@
 import { getPrimaryPrice } from '../../shared/pricing-contract';
-import { validateManualLocationEvidence } from '../../shared/location-contract';
+import {
+  canonicalListingLocationFromRecord,
+  canonicalListingLocationSchema,
+} from '../../shared/canonicalListingLocation';
 import { getCompletedListingImages } from '../../shared/listing-media';
 
 export type ReadinessResult = {
@@ -21,42 +24,24 @@ export const calculateListingReadiness = (listing: any): ReadinessResult => {
   let score = 0;
 
   // 1. Location (20%)
-  const authoredLocation = listing.location || listing;
-  const hasCoordinates =
-    authoredLocation.latitude != null &&
-    authoredLocation.longitude != null &&
-    Number.isFinite(Number(authoredLocation.latitude)) &&
-    Number.isFinite(Number(authoredLocation.longitude)) &&
-    !(Number(authoredLocation.latitude) === 0 && Number(authoredLocation.longitude) === 0);
-  const locationIssues = validateManualLocationEvidence({
-    propertyType: listing.propertyType,
-    discovery: {
-      provinceId: authoredLocation.provinceId,
-      cityId: authoredLocation.cityId,
-      suburbId: authoredLocation.suburbId ?? null,
-    },
-    privateAddress: authoredLocation.privateAddress || null,
-  });
-  const hasCanonicalLocation =
-    locationIssues.length === 0 && authoredLocation.locationConfirmationState === 'confirmed';
-  const hasLegacyLocation = Boolean(authoredLocation.address) && hasCoordinates;
-  if (hasCanonicalLocation || hasLegacyLocation) {
+  const parsedLocation = canonicalListingLocationSchema.safeParse(
+    listing.location ?? canonicalListingLocationFromRecord(listing),
+  );
+  if (
+    parsedLocation.success &&
+    parsedLocation.data.canonicalPlaceId &&
+    parsedLocation.data.locationConfirmationState === 'confirmed'
+  ) {
+    // This measures input completeness. Submission and publication separately
+    // validate actual Place scope and evidence on the caller transaction.
     score += 20;
   } else {
-    if (locationIssues.some(issue => /province|city|suburb|locality/i.test(issue))) {
-      missing.location.push('Area');
-    }
-    if (locationIssues.some(issue => /street|farm|holding|portion/i.test(issue))) {
-      missing.location.push('Street or rural reference');
-    }
-    if (authoredLocation.locationConfirmationState !== 'confirmed') {
+    if (!parsedLocation.success)
+      missing.location.push(...parsedLocation.error.issues.map(issue => issue.message));
+    if (!parsedLocation.success || !parsedLocation.data.canonicalPlaceId)
+      missing.location.push('Select an approved location');
+    if (!parsedLocation.success || parsedLocation.data.locationConfirmationState !== 'confirmed')
       missing.location.push('Confirm Location');
-    }
-    const onlyOneCoordinate =
-      (authoredLocation.latitude == null) !== (authoredLocation.longitude == null);
-    if (onlyOneCoordinate || (hasCoordinates && locationIssues.length > 0)) {
-      missing.location.push('Map coordinates');
-    }
   }
 
   // 2. Pricing (20%)

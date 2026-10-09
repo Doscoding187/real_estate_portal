@@ -31,23 +31,39 @@ const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   arm: vi.fn(),
   dirty: false,
+  currentManifest: false,
   sqlVersion: '8.4.8-azure',
   selected: 'propertylistify_database',
   tls: 'TLS_AES_256_GCM_SHA384',
   queries: [] as string[],
 }));
-vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.create } }));
-vi.mock('../rehearsalAuthority', async importOriginal => {
-  const actual = await importOriginal<any>();
-  const { loadAndValidateMigrationManifest } = await import('../../../migrations/migrationManifest');
-  const manifest = loadAndValidateMigrationManifest();
-  // Current-contract simulated admission only; the real revoked registration stays untouched.
+// Exercise transport against the historical approved manifest in memory only.
+// The real registration remains revoked; the integrated manifest must be refused.
+vi.mock('../../../migrations/migrationManifest', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../migrations/migrationManifest')>();
   return {
     ...actual,
-    REHEARSAL: { ...actual.REHEARSAL, expectedHead: manifest.expectedHead.filename, manifestDigest: manifest.manifestDigest },
-    verifyRehearsalResource: mocks.arm,
+    loadAndValidateMigrationManifest: (
+      ...args: Parameters<typeof actual.loadAndValidateMigrationManifest>
+    ) => {
+      const current = actual.loadAndValidateMigrationManifest(...args);
+      if (mocks.currentManifest) return current;
+      return {
+        ...current,
+        manifestDigest: '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+        orderedMigrations: current.orderedMigrations.filter(
+          m => Number(m.filename.slice(0, 4)) <= 94,
+        ),
+        document: { ...current.document, expectedHead: '0094_content_topics_primary_key.sql' },
+      };
+    },
   };
 });
+vi.mock('mysql2/promise', () => ({ default: { createConnection: mocks.create } }));
+vi.mock('../rehearsalAuthority', async importOriginal => ({
+  ...(await importOriginal<any>()),
+  verifyRehearsalResource: mocks.arm,
+}));
 vi.mock('../schemaCongruency', () => ({
   normalizedDesiredSchema: () => ({
     digest: 'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
@@ -86,6 +102,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
   mocks.dirty = false;
+  mocks.currentManifest = false;
   mocks.sqlVersion = '8.4.8-azure';
   mocks.selected = REHEARSAL.database;
   mocks.tls = 'TLS_AES_256_GCM_SHA384';
@@ -119,7 +136,17 @@ afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
 });
-describe('rehearsal connection boundary (mock transport, no live DB)', () => {
+describe('historical rehearsal connection boundary (mock transport, no live DB)', () => {
+  it('refuses the integrated manifest before any fixture mutation', async () => {
+    mocks.currentManifest = true;
+    const { a, d } = authority();
+    await expect(createAuthorityRehearsalSession(a, d)).rejects.toThrow(
+      'Rehearsal manifest authority mismatch',
+    );
+    expect(mocks.queries.some(q => /^(INSERT|UPDATE|DELETE|START|COMMIT|ROLLBACK)/.test(q))).toBe(
+      false,
+    );
+  });
   it('verifies ARM before connection, forces TLS, runs bounded probes and cleans up', async () => {
     const { a, d } = authority();
     const session = await createAuthorityRehearsalSession(a, d);
@@ -153,7 +180,7 @@ describe('rehearsal connection boundary (mock transport, no live DB)', () => {
   it('preflight proves identity and closes without DML or transaction controls', async () => {
     const { a, d } = authority();
     const session = await createAuthorityRehearsalSession(a, d, 'preflight');
-    expect(session.evidence.migrationCount).toBe(97);
+    expect(session.evidence.migrationCount).toBe(95);
     await session.run(0, 'read.identity');
     for (const probe of ['user.insert', 'transaction.begin', 'transaction.commit'] as const)
       await expect(session.run(0, probe, probe === 'user.insert' ? [0] : [])).rejects.toThrow(

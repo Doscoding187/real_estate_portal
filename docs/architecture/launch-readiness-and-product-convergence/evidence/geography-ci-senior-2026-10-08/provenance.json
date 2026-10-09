@@ -1,0 +1,32 @@
+{
+  "baseHead": "74edaeb91ce8a44df51cd476a0ab85d0ba45efbd",
+  "branch": "fix/geography-ci-senior-20261008",
+  "worktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008",
+  "handoffWorktree": "/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0",
+  "handoffPatchSha256": "8369c8b94bb75b77f1b98076d47973169f46a9b44a062edd81b9ddac97ee5511",
+  "sourcePreservedAtCopy": true,
+  "schemaAuthorityChanged": false,
+  "targetClass": "disposable-worktree",
+  "targetFingerprintHash": "d6a578f82a01027cf0878262274a095803a13da294b396abada9b8f098167c89",
+  "protectedOrRemoteDatabaseAccess": false,
+  "sourceHashes": {
+    ".github/workflows/ci.yml": "aff07383c2a84aaadcf318b00b1a17269baae4c17c625e7c5a4d53bd4c02aaf9",
+    "server/__tests__/contract.place-executable-foundation.test.ts": "5cef2becb595c29067488f217101275b168f02371f704a9053404e1bb597476f",
+    "server/__tests__/integration.agency-canvassing-mvp.test.ts": "69e1bfb57936811f91b9cbe5980d75e7ae36601fdb8030778eb37259b5ee282a",
+    "server/__tests__/integration.agency-listing-attribution.test.ts": "7ff0a5308c6a73cb1b240c4183f1b6e0198b0464efbbf3cf58b813aa8e874584",
+    "server/__tests__/integration.agency-listing-performance-mvp.test.ts": "d8b1df409b9597002ead094db39bf6fa51255dae05c5a89892d987f069ad4354",
+    "server/__tests__/integration.agency-listing-preparation.test.ts": "cf5ec6e4b657be90ed5d0eb8fd65485fb052e48adb107ac3729eeda161e5402a",
+    "server/__tests__/integration.agency-listing-publication-lifecycle.test.ts": "7719e85cff5a9fcbb7366a8528ec18e42e5f0c4134a2beb228bde56b649cbbf5",
+    "server/__tests__/integration.agency-membership-authority.test.ts": "d87eca9cd0a7f0e00630e6d13d038530e3630eb38f88cc108bc9eaa56322251e",
+    "server/__tests__/integration.agent-launch-journey.test.ts": "de5bcd7b6cd1720bd3ccd8416cac2acebd675f69f767e7e43ead1fd5b1bb34f2",
+    "server/__tests__/integration.listing-media-reconciliation.test.ts": "a5c72a7fef3de7c480ae3810808ac9748029c7a8cbb60e82125733b6686db0dd",
+    "server/__tests__/integration.listing-media-tenant-boundary.test.ts": "2167190ed9bafa5fb51fe3bddbb90d26e862e927dc6ff4ed8c7905b870d6e8c5",
+    "server/__tests__/location-manual-correction.test.ts": "95c4dfecbbe3128abb1453abbda4d282ac7d5555a0231a46fc730eb2317d7a7d",
+    "server/_core/databaseAuthority/__tests__/isolatedCiCredentials.test.ts": "9d3d1ffa526842fc894173a90a94db0aaff7ee8542add8de58f41e77338efb6d",
+    "vitest.server.config.ts": "4d582f569f23cec139d8f4275b9c22346e2668331e3602c306afaa77068a1203",
+    "vitest.workspace.ts": "8b07dc1fa9b25a09d7692fa8633a9d1befa5c472c209b5255103f7eb9edfb6ec",
+    "server/__tests__/helpers/canonicalPlaceFixture.ts": "41ab94e609aaead3cbea4eca000142b3d41a313e09a24091c6423ceabaa62579",
+    "vitest.place-command.config.ts": "75f6e4f7e3362abe3c16f5700666f0695613fd2da4454eefcf7d601ca886c127"
+  },
+  "finalVerificationStartedAt": "2026-10-08T08:45:29.026131+00:00"
+}

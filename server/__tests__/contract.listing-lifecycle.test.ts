@@ -83,12 +83,6 @@ vi.mock('../services/inventoryLinkResolver', () => ({
   ),
 }));
 
-vi.mock('../services/locationPagesServiceEnhanced', () => ({
-  locationPagesServiceEnhanced: {
-    resolveLocation: vi.fn(() => Promise.resolve({ id: 999, name: 'Test City' })),
-  },
-}));
-
 import { appRouter } from '../routers';
 import { ListingPublicationEntitlementError } from '../services/listingPublicationEntitlementService';
 import { createListingMediaUploadToken } from '../services/listingMediaAuthority';
@@ -130,6 +124,11 @@ const mockListing = (overrides: Record<string, any> = {}) => ({
   propertyType: 'house' as const,
   status: 'draft' as const,
   approvalStatus: 'pending' as const,
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+  coordinateSource: 'map',
+  locationConfirmationState: 'confirmed',
+  publicLocationPrecision: 'approximate',
+  privateAddress: { streetName: 'Oak Ave' },
   address: '42 Oak Ave',
   city: 'Johannesburg',
   province: 'Gauteng',
@@ -402,11 +401,14 @@ describe('listing lifecycle — canonical identity contract', () => {
       pricing: { askingPrice: 1000000 },
       propertyDetails: {},
       location: {
-        address: '1 Test St',
-        latitude: -26.0,
-        longitude: 28.0,
-        city: 'Test City',
-        province: 'Gauteng',
+        version: 2,
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+        privateAddress: { streetName: 'Test St' },
+        coordinates: { latitude: -26, longitude: 28 },
+        coordinateSource: 'map',
+        locationConfirmationState: 'confirmed',
+        publicLocationPrecision: 'approximate',
+        providerObservation: null,
       },
       mediaIds: [],
     });
@@ -429,11 +431,14 @@ describe('listing lifecycle — canonical identity contract', () => {
         pricing: { monthlyRent: 100000 },
         propertyDetails: {},
         location: {
-          address: '1 Commercial Way',
-          latitude: -26.0,
-          longitude: 28.0,
-          city: 'Test City',
-          province: 'Gauteng',
+          version: 2,
+          canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+          privateAddress: { streetName: 'Oak Ave' },
+          coordinates: { latitude: -26.2041, longitude: 28.0473 },
+          coordinateSource: 'map',
+          locationConfirmationState: 'confirmed',
+          publicLocationPrecision: 'approximate',
+          providerObservation: null,
         },
         mediaIds: [],
       }),

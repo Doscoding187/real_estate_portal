@@ -1,0 +1,35 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 server/__tests__/contract.place-executable-foundation.test.ts -t 'requires the admitted Place fixture identities'
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/__tests__/contract.place-executable-foundation.test.ts (37 tests | 36 skipped) 203ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 36 skipped (37)
+   Start at  10:18:01
+   Duration  2.90s (transform 1.19s, setup 137ms, collect 2.22s, tests 203ms, environment 0ms, prepare 106ms)
+

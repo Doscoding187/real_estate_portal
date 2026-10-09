@@ -1,0 +1,18 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0
+
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeReleaseInspection.test.ts (4 tests) 336ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/dataRoleManifest.test.ts (2 tests) 11ms
+ ✓ |database-authority-static| server/_core/databaseAuthority/__tests__/placeRelease.test.ts (9 tests) 5070ms
+   ✓ governed national production Place reference release > plans only reads, atomically applies and verifies, then repeats with zero inserts 1722ms
+   ✓ governed national production Place reference release > returns a prerequisite plan without an applicable digest when production lacks Place schema 485ms
+   ✓ governed national production Place reference release > refuses forged authority, other protected targets and physical constraint drift before writing 341ms
+   ✓ governed national production Place reference release > binds source pins and observed state; changed plans and lost lock ownership refuse before insertion 906ms
+   ✓ governed national production Place reference release > rolls back insert failure before commit 604ms
+   ✓ governed national production Place reference release > rolls back post-write failure before commit 606ms
+   ✓ governed national production Place reference release > refuses same-count identity/value drift and foreign evidence; verify refuses partial data 304ms
+
+ Test Files  3 passed (3)
+      Tests  15 passed (15)
+   Start at  02:02:46
+   Duration  7.28s (transform 1.40s, setup 0ms, collect 5.78s, tests 5.42s, environment 2ms, prepare 453ms)

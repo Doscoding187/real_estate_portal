@@ -26,6 +26,8 @@ export default defineConfig({
       // Known-red orphan pending triage; excluding keeps it visible here
       // instead of silently failing CI. Triaged in the scripts contracts PR.
       'scripts/__tests__/localServiceRecovery.test.ts',
+      // Explicit database-free project executes the mocked Place CLI boundary.
+      'server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts',
     ],
     globals: true,
     restoreMocks: true,

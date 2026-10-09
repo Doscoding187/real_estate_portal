@@ -1,3 +1,5 @@
+import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
+import { validatePublicSearchInput } from '../../../shared/publicSearchValidation';
 import { PROVINCE_SLUGS } from './locationUtils';
 import { isFactualGeographyId } from '../../../shared/factualRuntimeGeographyBridge';
 import {
@@ -32,6 +34,7 @@ import {
 
 export type TransactionType = 'for-sale' | 'to-rent' | 'developments';
 export type GeographyLevel =
+  | 'canonical_place'
   | 'province'
   | 'city'
   | 'search_area'
@@ -42,6 +45,7 @@ export type GeographyLevel =
 export type SearchRouteMode = 'seo' | 'results';
 
 export type SearchIntentValidationCode =
+  | 'invalid-place-authority'
   | 'canonical-location-required'
   | 'invalid-location-id'
   | 'invalid-factual-location-id'
@@ -59,6 +63,7 @@ export interface SearchIntentValidation {
 }
 
 export interface GeographyIntent {
+  canonicalPlaceId?: string;
   level: GeographyLevel;
   province?: string;
   city?: string;
@@ -100,6 +105,7 @@ export interface SearchIntent {
 export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<string, unknown> {
   const criteria: Record<string, unknown> = { ...intent.filters };
 
+  delete criteria.canonicalPlaceId;
   delete criteria.province;
   delete criteria.city;
   delete criteria.suburb;
@@ -118,6 +124,15 @@ export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<
   }
 
   const { geography } = intent;
+  if (geography.canonicalPlaceId) {
+    const issue = validatePublicSearchInput({
+      ...geography,
+      suburb: geography.suburb ? [geography.suburb] : undefined,
+    });
+    if (issue) throw new Error(issue.message);
+    criteria.canonicalPlaceId = geography.canonicalPlaceId;
+    return criteria;
+  }
 
   if (geography.factualLocationId && isFactualGeographyId(geography.factualLocationId)) {
     criteria.factualLocationId = geography.factualLocationId;
@@ -184,10 +199,12 @@ export function buildCanonicalSavedSearchCriteria(intent: SearchIntent): Record<
 }
 
 const SEARCH_VALIDATION_MESSAGES: Record<SearchIntentValidationCode, string> = {
+  'invalid-place-authority': 'Choose one approved location without combining geography selections.',
   'canonical-location-required':
     'Choose a canonical province, city, or suburb suggestion before searching.',
   'invalid-location-id': 'The selected location does not match its canonical identity.',
-  'invalid-factual-location-id': 'The selected factual location does not match its durable identity.',
+  'invalid-factual-location-id':
+    'The selected factual location does not match its durable identity.',
   'location-identity-mismatch': 'The selected location does not match its canonical hierarchy.',
   'multiple-locations-unsupported':
     'Choose one canonical province, city, or suburb before searching.',
@@ -594,6 +611,7 @@ export function resolveSearchIntent(
 
     searchParams.forEach((value, key) => {
       if (
+        key === 'canonicalPlaceId' ||
         key === 'province' ||
         key === 'city' ||
         key === 'suburb' ||
@@ -629,6 +647,41 @@ export function resolveSearchIntent(
 
       filters[key] = value;
     });
+  }
+
+  const placeIds = searchParams.getAll('canonicalPlaceId');
+  if (placeIds.length) {
+    geography.canonicalPlaceId = placeIds[0].trim();
+    geography.level = 'canonical_place';
+    const competing =
+      ['province', 'city', 'suburb', 'locationId', 'location', 'slug'].some(key =>
+        Boolean(pathParams[key]),
+      ) ||
+      [
+        'province',
+        'city',
+        'suburb',
+        'locations',
+        'locations[]',
+        'locationId',
+        'locationIds',
+        'factualLocationId',
+        'searchAreaId',
+        'searchAreaIds',
+      ].some(key => searchParams.has(key));
+    const issue = validatePublicSearchInput({
+      ...geography,
+      suburb: querySuburbs,
+      locations,
+    });
+    if (
+      placeIds.length !== 1 ||
+      !isCanonicalPlaceId(geography.canonicalPlaceId) ||
+      issue ||
+      competing
+    ) {
+      validation = createSearchIntentValidation('invalid-place-authority');
+    }
   }
 
   if (transactionType === 'for-sale') filters.listingType = 'sale';
@@ -752,6 +805,16 @@ export function generateIntentUrl(intent: SearchIntent): string {
   });
 
   appendTransactionalResultState(queryParams, intent.resultState);
+
+  if (geography.canonicalPlaceId !== undefined) {
+    const issue = validatePublicSearchInput({
+      ...geography,
+      suburb: geography.suburb ? [geography.suburb] : undefined,
+    });
+    if (issue) throw new Error(issue.message);
+    queryParams.set('canonicalPlaceId', geography.canonicalPlaceId);
+    return `${basePath}?${queryParams.toString()}`;
+  }
 
   const canonicalLocationId = geography.locationId;
   const parsedCanonicalLocationId = parseCanonicalLocationId(canonicalLocationId);

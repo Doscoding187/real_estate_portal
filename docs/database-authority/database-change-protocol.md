@@ -217,6 +217,38 @@ Use expand-and-contract:
 Destructive contraction is protected work and requires a separate approval
 packet before the operation, even if its code can be prepared independently.
 
+## Pre-adoption migration correction
+
+**Approval reference:** `PLACE-S1-PREADOPTION-MIGRATION-AMENDMENT-2026-09-25-Edward`
+(Place Authority Slice 1 closure review).
+
+A migration may be **amended in place before adoption** only when all of the
+following are true, and every condition must be demonstrable:
+
+1. it exists only on an unmerged task branch;
+2. no persistent, shared, or protected environment has adopted it;
+3. every target that applied it was explicitly disposable and has since been
+   destroyed;
+4. the branch is still establishing the initial canonical migration series for
+   its authority; and
+5. the amendment is a correctness repair, not a behavioural change, and is
+   recorded in the owning authority contract.
+
+This is not a licence to rewrite history. It defines when history begins.
+
+**Once a migration is merged, or adopted by any persistent or shared
+environment, it is immutable.** Every subsequent correction requires a new
+governed migration and any approval reference that migration kind demands under
+this protocol.
+
+Applied at Place Authority migrations 0091–0097: the series was unmerged and
+unadopted, the only target that applied it was a disposable worktree database
+that was destroyed, and the corrections removed a column that duplicated typed
+relationship authority, removed two relationship types that duplicated
+authority held elsewhere, added the invariant that makes search scope derived
+rather than independent, and corrected a column width that could not store a
+compliant governed identity.
+
 ## Exceptional repair/backfill contract
 
 No generic repair runner exists. A bounded repair, recovery, import, export,

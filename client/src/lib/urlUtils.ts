@@ -83,6 +83,7 @@ export function buildPropertyUrl(id: string | number, title?: string | null): st
 
 // Search filters type
 export interface SearchFilters {
+  canonicalPlaceId?: string;
   listingType?: 'sale' | 'rent' | 'rent_to_buy' | 'auction';
   listingSource?: 'manual' | 'development';
   propertyType?: string;

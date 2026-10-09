@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.check.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "scripts/placeReleaseCommand.ts",
+    "server/types/**/*.d.ts"
+  ]
+}

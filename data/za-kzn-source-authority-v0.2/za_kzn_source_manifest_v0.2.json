@@ -1,0 +1,141 @@
+{
+  "acquisition_limitations": [
+    "Source-native observations only; no canonical identity, factual type or parent has been adjudicated.",
+    "ADM2/ADM3 layers are national; KwaZulu-Natal spatial selection and current-boundary review are pending.",
+    "GeoNames filtering preserves source admin1 assertions; border/conflicting/00 records require review.",
+    "No OSM data acquired; ODbL founder production gate remains unchanged.",
+    "This is not a complete province catalogue or the v0.2 source-authority manifest expected by admission."
+  ],
+  "authority_version": "za-kzn-source-authority-v0.2",
+  "build_summary": {
+    "path": "data/za-kzn-source-authority-v0.2/za_kzn_source_build_summary_v0.2.json",
+    "sha256": "569a4e2874202a252d7e0315c5697b92f89e7b4fad9689a7a5032bf25de71cd4"
+  },
+  "catalogue_version": "0.2",
+  "compact_artifacts": [
+    {
+      "kind": "candidate_dispositions",
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_candidate_dispositions_v0.2.jsonl",
+      "sha256": "2917c4c6b7117cb0f338493e302e1b3b096e46d7602f1c512b1962a0cb066364",
+      "size_bytes": 12439999
+    },
+    {
+      "kind": "geography",
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_geography_v0.2.jsonl",
+      "sha256": "4fc3b1e0233d235c55540b27265ffe56b4ee724e70441e4cfc21891182d0e432",
+      "size_bytes": 7031272
+    },
+    {
+      "kind": "names",
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_names_v0.2.jsonl",
+      "sha256": "f90b018c822a4b6b4cdc7a6b302616f73ccd5bec3ff5abd48f9631d2789f6ee1",
+      "size_bytes": 4434931
+    },
+    {
+      "kind": "source_links",
+      "path": "data/za-kzn-source-authority-v0.2/za_kzn_factual_canonical_source_links_v0.2.jsonl",
+      "sha256": "7320a80a65af2378dd5d3634db7fef02ce5f61eeb8c3af391f7dd3bf2143117c",
+      "size_bytes": 2305931
+    }
+  ],
+  "country": "ZA",
+  "geometry_backend": {
+    "name": "shapely",
+    "note": "shapely with buffer(0) repair of invalid geometry, true polygon covers/intersects predicates, and representative_point().",
+    "polygon_validity_repair": true,
+    "supports_holes": true,
+    "supports_multipart": true,
+    "version": "2.1.2"
+  },
+  "license_observations": {
+    "geoboundaries_gbopen": {
+      "class": "CC BY 4.0 distribution",
+      "gbAuthoritative_substituted": false,
+      "gbHumanitarian_substituted": false,
+      "upstream_attribution": "OCHA ROSEA, South African Municipal Demarcation Board",
+      "upstream_class": "Creative Commons Attribution 3.0 Intergovernmental Organisations (CC BY 3.0 IGO)"
+    },
+    "geonames": {
+      "attribution_required": true,
+      "class": "CC BY 4.0",
+      "evidence": "https://download.geonames.org/export/dump/readme.txt"
+    }
+  },
+  "manifest_version": "0.2",
+  "pipeline_version": "0.2",
+  "province": "KwaZulu-Natal",
+  "raw_materialization": {
+    "acquisition_bundle_manifest_sha256": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff",
+    "raw_artifacts": [
+      {
+        "artifact_id": "geoboundaries:metadata:ADM1",
+        "download_sha256": "8274642880064eb7c93c1000b05bd45db3f32a738991462e9f3e85605bb21a1b",
+        "path": "raw/geoboundaries/ADM1-metadata.json"
+      },
+      {
+        "artifact_id": "geoboundaries:geometry:ADM1",
+        "download_sha256": "5d82ed95b034f50d69d96c9b7136e9b5868a5fb4ef2d8905a6a6ac3715fef452",
+        "path": "raw/geoboundaries/ADM1.geojson.gz"
+      },
+      {
+        "artifact_id": "geoboundaries:metadata:ADM2",
+        "download_sha256": "4cdc4b311fe3429d3370d1505eb4f92bfd35a89b182988783f50744980c2d388",
+        "path": "raw/geoboundaries/ADM2-metadata.json"
+      },
+      {
+        "artifact_id": "geoboundaries:geometry:ADM2",
+        "download_sha256": "6cc504ad835b37823da687a3fd3f0cab63608a6c8a5ad906e1011f1554bbbbdd",
+        "path": "raw/geoboundaries/ADM2.geojson.gz"
+      },
+      {
+        "artifact_id": "geoboundaries:metadata:ADM3",
+        "download_sha256": "91f601e788aca5a4e9bde8d307710e0d05c12e1fc6abb3fc941e96baf55e48c4",
+        "path": "raw/geoboundaries/ADM3-metadata.json"
+      },
+      {
+        "artifact_id": "geoboundaries:geometry:ADM3",
+        "download_sha256": "74e489fd4370972403950719026a317abba443668cea7d49f4b36c61637958f1",
+        "path": "raw/geoboundaries/ADM3.geojson.gz"
+      },
+      {
+        "artifact_id": "geonames:country",
+        "download_sha256": "21a76cfa2512ba8596128679decd0cb15981d785ffd5b3d7cda6445790c19a09",
+        "path": "raw/geonames/ZA.zip"
+      },
+      {
+        "artifact_id": "geonames:admin1-codes",
+        "download_sha256": "1da92a6323a5fec3176f3f743bf4cf4040fd56a876da55e46fbca23c863aa60a",
+        "path": "raw/geonames/admin1CodesASCII.txt"
+      },
+      {
+        "artifact_id": "geonames:admin2-codes",
+        "download_sha256": "63a82be925b8704abae683a89e32f40b22f618a93efc4e676e912873f8a3be20",
+        "path": "raw/geonames/admin2Codes.txt"
+      },
+      {
+        "artifact_id": "geonames:alternate-names",
+        "download_sha256": "d8ca6d8b771f20f874401cb19a6d888e56d3f37ec573a2accc7f3bf13dd5eacc",
+        "path": "raw/geonames/alternateNames-ZA.zip"
+      },
+      {
+        "artifact_id": "geonames:feature-codes",
+        "download_sha256": "d44f129c1cffdeabf759c99fe7ea5b84f615c7f3e7366fb76ccf990f408f6af7",
+        "path": "raw/geonames/featureCodes_en.txt"
+      },
+      {
+        "artifact_id": "geonames:language-codes",
+        "download_sha256": "cb0d34f492775deec8ec5713da6efa4463dad99b5e7ba2172bd094cfdcb76571",
+        "path": "raw/geonames/iso-languagecodes.txt"
+      },
+      {
+        "artifact_id": "geonames:licence-readme",
+        "download_sha256": "b1957379b6c1242c700c98ac9a8aa0a09f56c3c0a50ee72175527005f48ef2c5",
+        "path": "raw/geonames/readme.txt"
+      }
+    ]
+  },
+  "scope": "canonical factual geography source authority; not an admitted Place package",
+  "source_snapshot_id": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff",
+  "supersedes": null,
+  "territory_id": "za-kzn"
+}

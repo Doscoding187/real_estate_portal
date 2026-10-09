@@ -1,0 +1,28 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 --silent server/__tests__/contract.place-executable-foundation.test.ts server/__tests__/integration.agency-canvassing-mvp.test.ts server/__tests__/integration.agency-membership-authority.test.ts server/services/__tests__/publicDevelopmentEligibility.test.ts server/__tests__/integration.agent-lead-transitions.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+ ✓ |server| server/__tests__/integration.agency-membership-authority.test.ts (32 tests) 12579ms
+   ✓ canonical membership maintenance (atomic unique-pair authority) > closes the window on suspension, stamps first closure only, and reopens freshly on reactivate 1196ms
+   ✓ canonical membership maintenance (atomic unique-pair authority) > delivers a public Commercial enquiry to a current unbadged agency member through the agency term 332ms
+   ✓ team operations on canonical membership > denies every generic private-listing entry after membership becomes suspended 729ms
+   ✓ team operations on canonical membership > denies every generic private-listing entry after membership becomes left 673ms
+   ✓ team operations on canonical membership > keeps an unaffiliated former member draft private from their former agency 361ms
+   ✓ team operations on canonical membership > does not let a suspended member retain Agent Home inventory, commission, or property-work authority 327ms
+ ✓ |server| server/__tests__/contract.place-executable-foundation.test.ts (37 tests) 9884ms
+   ✓ Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place 536ms
+   ✓ Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically 8720ms
+ ✓ |server| server/__tests__/integration.agency-canvassing-mvp.test.ts (1 test) 1297ms
+   ✓ agency canvassing MVP integration > keeps seller acquisition private, scoped, actionable, and traceably convertible 1113ms
+ ✓ |server| server/services/__tests__/publicDevelopmentEligibility.test.ts (16 tests) 170ms
+ ✓ |server| server/__tests__/integration.agent-lead-transitions.test.ts (4 tests) 803ms
+
+ Test Files  5 passed (5)
+      Tests  90 passed (90)
+   Start at  10:44:02
+   Duration  35.38s (transform 4.08s, setup 458ms, collect 8.86s, tests 24.73s, environment 1ms, prepare 395ms)
+

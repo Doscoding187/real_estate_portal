@@ -1,0 +1,90 @@
+{
+  "adapter": "canonical-places-national",
+  "scope": "national-storage",
+  "consumerActivated": false,
+  "provinces": 9,
+  "completeProvinces": 9,
+  "provinceRoots": 9,
+  "totals": {
+    "expected": {
+      "places": 17664,
+      "names": 26425,
+      "relationships": 17655,
+      "evidence": 79925,
+      "externalMappings": 19792
+    },
+    "stored": {
+      "places": 17664,
+      "names": 26425,
+      "relationships": 17655,
+      "evidence": 79925,
+      "externalMappings": 19792
+    }
+  },
+  "perProvince": [
+    {
+      "territoryId": "za-gp",
+      "admittedPlaces": 1466,
+      "presentPlaces": 1466,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-wc",
+      "admittedPlaces": 1862,
+      "presentPlaces": 1862,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-kzn",
+      "admittedPlaces": 2090,
+      "presentPlaces": 2090,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-ec",
+      "admittedPlaces": 5084,
+      "presentPlaces": 5084,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-fs",
+      "admittedPlaces": 1544,
+      "presentPlaces": 1544,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-mp",
+      "admittedPlaces": 1045,
+      "presentPlaces": 1045,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-li",
+      "admittedPlaces": 1669,
+      "presentPlaces": 1669,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-nw",
+      "admittedPlaces": 1352,
+      "presentPlaces": 1352,
+      "complete": true,
+      "identityDrift": 0
+    },
+    {
+      "territoryId": "za-nc",
+      "admittedPlaces": 1552,
+      "presentPlaces": 1552,
+      "complete": true,
+      "identityDrift": 0
+    }
+  ],
+  "containmentEdges": 17655
+}

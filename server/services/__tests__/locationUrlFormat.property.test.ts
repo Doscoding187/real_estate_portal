@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { generateSlug } from '../locationPagesServiceEnhanced';
+import { generateSlug } from '../locationSeoContent';
 
 /**
  * Generate a URL path for a province

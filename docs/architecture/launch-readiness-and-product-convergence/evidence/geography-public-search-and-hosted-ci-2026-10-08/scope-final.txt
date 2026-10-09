@@ -1,0 +1,60 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project server --minWorkers\=1 --maxWorkers\=1 server/__tests__/contract.canonical-place-public-search.test.ts server/services/__tests__/publicSearchService.contract.test.ts
+
+[test:authority] target d6a578f82a01027c (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-ci-senior-20261008
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/publicSearchService.contract.test.ts (16 tests) 341ms
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_geography_ci_senior_20261008_415473525d2a
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[Test Setup] SQL migrations ensured for test DB
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[Database] Authorized runtime-connect target d6a578f82a01027c is connected.
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/__tests__/contract.canonical-place-public-search.test.ts (3 tests) 846ms
+   ✓ prepared canonical Place inventory authority > agrees with the established execution reader for the required admitted identities 336ms
+
+ Test Files  2 passed (2)
+      Tests  19 passed (19)
+   Start at  12:04:10
+   Duration  9.31s (transform 2.57s, setup 431ms, collect 6.58s, tests 1.19s, environment 2ms, prepare 314ms)
+

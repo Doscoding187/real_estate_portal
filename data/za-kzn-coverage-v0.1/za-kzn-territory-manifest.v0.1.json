@@ -1,0 +1,12 @@
+{
+  "territory_id": "za-kzn",
+  "province": "KwaZulu-Natal",
+  "manifest_version": "0.1",
+  "note": "KwaZulu-Natal has no v0.1 coverage baseline. This territory was never projected through the three-level runtime pipeline, so there is no parent-evidence research queue, no natural-key collision audit and no runtime row count to compare against. The empty researched_parent_edges list is a true statement, not a missing input.",
+  "inputs": {
+    "researched_parent_edges": []
+  },
+  "acquisition": {
+    "bundle_manifest_sha256": "8700a40784ae3cb208e8f9320c93b241f715c80d20eae56a78fe67545cad99ff"
+  }
+}

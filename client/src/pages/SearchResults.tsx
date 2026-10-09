@@ -1,3 +1,4 @@
+import { CanonicalPlaceSearchBar } from '@/components/search/CanonicalPlaceSearchBar';
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useLocation, useSearch } from 'wouter';
 import {
@@ -172,6 +173,9 @@ export default function SearchResults({
       ...(searchIntent.geography.province && { province: searchIntent.geography.province }),
       ...(searchIntent.geography.city && { city: searchIntent.geography.city }),
       ...(searchIntent.geography.suburb && { suburb: searchIntent.geography.suburb }),
+      ...(searchIntent.geography.canonicalPlaceId && {
+        canonicalPlaceId: searchIntent.geography.canonicalPlaceId,
+      }),
       ...(searchIntent.geography.locationId && { locationId: searchIntent.geography.locationId }),
       ...(searchIntent.transactionType
         ? { listingType: searchIntent.transactionType === 'to-rent' ? 'rent' : 'sale' }
@@ -341,6 +345,7 @@ export default function SearchResults({
           : isBuySearch
             ? undefined
             : normalizedLocationSlugs,
+      canonicalPlaceId: searchIntent.geography.canonicalPlaceId,
       locationId: filters.locationId,
       factualLocationId: searchIntent.geography.factualLocationId,
       locationIds: searchIntent.geography.locationIds,
@@ -381,6 +386,7 @@ export default function SearchResults({
     normalizedLocationSlugs,
     page,
     searchIntent.geography.level,
+    searchIntent.geography.canonicalPlaceId,
     searchIntent.geography.locationIds,
     searchIntent.geography.factualLocationId,
     searchIntent.geography.searchAreaIds,
@@ -465,12 +471,13 @@ export default function SearchResults({
 
     return buildZeroResultDescription({
       transactionType: searchIntent.transactionType,
-      locationName: locationContext?.name,
+      locationName: publicSearchResults?.canonicalPlaceContext?.label || locationContext?.name,
       locationNames: multiLocationContext?.locations.map(location => location.name),
       searchAreaName:
         searchAreaContext?.label || searchAreaContexts?.map(context => context.label).join(' and '),
     });
   }, [
+    publicSearchResults?.canonicalPlaceContext?.label,
     locationContext?.name,
     multiLocationContext?.locations,
     searchAreaContext?.label,
@@ -546,7 +553,7 @@ export default function SearchResults({
         ? sanitizeBuySearchFilters(mergedFilters)
         : searchIntent.transactionType === 'to-rent'
           ? sanitizeRentSearchFilters(mergedFilters)
-        : mergedFilters;
+          : mergedFilters;
 
     const updatedIntent: SearchIntent = {
       ...searchIntent,
@@ -793,10 +800,17 @@ export default function SearchResults({
   );
 
   const resultCount = resultTotal;
-  const canonicalUrl = useMemo(() => generateIntentUrl(searchIntent), [searchIntent]);
+  const canonicalUrl = useMemo(
+    () =>
+      searchIntent.validation
+        ? `${location}${search ? `?${search}` : ''}`
+        : generateIntentUrl(searchIntent),
+    [searchIntent, location, search],
+  );
   const pageTitle = useMemo(() => generatePageTitle(filters), [filters]);
   const pageDescription = useMemo(() => generateMetaDescription(filters), [filters]);
   const discoveryLocationLabel =
+    publicSearchResults?.canonicalPlaceContext?.label ||
     searchAreaContext?.label ||
     (multiLocationContext
       ? multiLocationContext.locations.map(item => item.name).join(' and ')
@@ -867,12 +881,22 @@ export default function SearchResults({
   return (
     <div className="min-h-screen bg-[#f7f8fa]">
       <MetaControl canonicalUrl={canonicalUrl} title={pageTitle} description={pageDescription} />
-      <ListingNavbar
-        defaultLocations={navbarLocations}
-        defaultSearchArea={searchAreaContext}
-        onClearSearchArea={searchAreaContext ? handleClearSearchArea : undefined}
-        showMobileLocationSearch
-      />
+      {!searchIntent.geography.searchAreaId &&
+      !searchIntent.geography.searchAreaIds?.length &&
+      !searchIntent.geography.locationIds?.length &&
+      (isBuySearch || isRentSearch) ? (
+        <CanonicalPlaceSearchBar
+          intent={searchIntent}
+          context={publicSearchResults?.canonicalPlaceContext}
+        />
+      ) : (
+        <ListingNavbar
+          defaultLocations={navbarLocations}
+          defaultSearchArea={searchAreaContext}
+          onClearSearchArea={searchAreaContext ? handleClearSearchArea : undefined}
+          showMobileLocationSearch
+        />
+      )}
 
       {/* prettier-ignore */}
       <main id="main-content" tabIndex={-1} className="outline-none">
@@ -944,7 +968,7 @@ export default function SearchResults({
                   // Rent control that would be accepted by the URL but
                   // ignored by the public query.
                   showAmenities={false}
-                  showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
+                  showLocationRefinement={!searchIntent.geography.canonicalPlaceId && searchIntent.transactionType !== 'for-sale'}
                 />
               </div>
             </div>
@@ -1164,7 +1188,9 @@ export default function SearchResults({
         // Keep unsupported amenities out of the public Rent contract until
         // the same predicate can feed both result and count queries.
         showAmenities={false}
-        showLocationRefinement={searchIntent.transactionType !== 'for-sale'}
+        showLocationRefinement={
+          !searchIntent.geography.canonicalPlaceId && searchIntent.transactionType !== 'for-sale'
+        }
       />
 
       {/* Save Search Dialog */}

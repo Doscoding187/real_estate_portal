@@ -1,3 +1,4 @@
+import { canonicalPlaceFixtureLocation } from './helpers/canonicalPlaceFixture';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
@@ -11,7 +12,6 @@ import {
   listingAnalytics,
   listingMedia,
   listings,
-  locations,
   sellerProspectActivities,
   sellerMandateComparables,
   sellerMandateOperations,
@@ -20,25 +20,13 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { appRouter } from '../routers';
+import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
+import { authorizeDatabaseOperation } from '../_core/databaseAuthority/authorization';
 import { maintainAgencyAgentMembership } from '../services/agencyMembershipService';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.test'), override: true });
 
-function isIsolatedTestDatabase(databaseUrl?: string) {
-  if (!databaseUrl) return false;
-  try {
-    const parsed = new URL(databaseUrl);
-    return parsed.pathname.replace(/^\//, '') === 'listify_test';
-  } catch {
-    return false;
-  }
-}
-
-const hasIsolatedTestDb = isIsolatedTestDatabase(process.env.DATABASE_URL);
-const describeWithTestDb: typeof describe = hasIsolatedTestDb
-  ? describe
-  : (((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL for listify_test)`, fn)) as typeof describe);
+const describeWithTestDb = process.env.DATABASE_URL ? describe : describe.skip;
 
 const created = {
   agencyIds: [] as number[],
@@ -46,7 +34,6 @@ const created = {
   userIds: [] as number[],
   sellerProspectIds: [] as number[],
   listingIds: [] as number[],
-  locationIds: [] as number[],
 };
 
 function insertId(result: any) {
@@ -86,7 +73,12 @@ async function createUser(input: {
   return id;
 }
 
-async function createAgent(input: { agencyId: number; userId: number; name: string; email: string }) {
+async function createAgent(input: {
+  agencyId: number;
+  userId: number;
+  name: string;
+  email: string;
+}) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   const [result] = await db.insert(agents).values({
@@ -114,15 +106,26 @@ async function createAgent(input: { agencyId: number; userId: number; name: stri
 }
 
 afterEach(async () => {
-  if (!hasIsolatedTestDb) return;
+  if (!process.env.DATABASE_URL) return;
+  authorizeDatabaseOperation(resolveDatabaseAuthority({ operation: 'test-fixture' }));
   const db = await getDb();
   if (!db) return;
 
   for (const sellerProspectId of created.sellerProspectIds) {
-    const [operation] = await db.select({ id: sellerMandateOperations.id }).from(sellerMandateOperations).where(eq(sellerMandateOperations.sellerProspectId, sellerProspectId));
-    if (operation) await db.delete(sellerMandateComparables).where(eq(sellerMandateComparables.mandateOperationId, operation.id));
-    await db.delete(sellerMandateOperations).where(eq(sellerMandateOperations.sellerProspectId, sellerProspectId));
-    await db.delete(sellerProspectActivities).where(eq(sellerProspectActivities.sellerProspectId, sellerProspectId));
+    const [operation] = await db
+      .select({ id: sellerMandateOperations.id })
+      .from(sellerMandateOperations)
+      .where(eq(sellerMandateOperations.sellerProspectId, sellerProspectId));
+    if (operation)
+      await db
+        .delete(sellerMandateComparables)
+        .where(eq(sellerMandateComparables.mandateOperationId, operation.id));
+    await db
+      .delete(sellerMandateOperations)
+      .where(eq(sellerMandateOperations.sellerProspectId, sellerProspectId));
+    await db
+      .delete(sellerProspectActivities)
+      .where(eq(sellerProspectActivities.sellerProspectId, sellerProspectId));
     await db.delete(sellerProspects).where(eq(sellerProspects.id, sellerProspectId));
   }
   for (const listingId of created.listingIds) {
@@ -130,9 +133,7 @@ afterEach(async () => {
     await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId));
     await db.delete(listings).where(eq(listings.id, listingId));
   }
-  for (const locationId of created.locationIds) {
-    await db.delete(locations).where(eq(locations.id, locationId));
-  }
+
   for (const agentId of created.agentIds) {
     await db.delete(agencyAgentMemberships).where(eq(agencyAgentMemberships.agentId, agentId));
     await db.delete(agents).where(eq(agents.id, agentId));
@@ -149,12 +150,14 @@ afterEach(async () => {
     userIds: [],
     sellerProspectIds: [],
     listingIds: [],
-    locationIds: [],
   });
 });
 
 describeWithTestDb('agency canvassing MVP integration', () => {
   it('keeps seller acquisition private, scoped, actionable, and traceably convertible', async () => {
+    const authority = resolveDatabaseAuthority({ operation: 'test-fixture' });
+    expect(['disposable-worktree', 'disposable-test']).toContain(authority.context.targetClass);
+    authorizeDatabaseOperation(authority);
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
@@ -184,17 +187,6 @@ describeWithTestDb('agency canvassing MVP integration', () => {
     } as any);
     const outsideAgencyId = insertId(outsideAgencyResult);
     created.agencyIds.push(outsideAgencyId);
-
-    const [locationResult] = await db.insert(locations).values({
-      name: `Canvassing Test Area ${suffix}`,
-      slug: `canvassing-test-area-${suffix}`.replace(/[^a-z0-9-]/g, '-'),
-      type: 'suburb',
-      latitude: '-26.1342',
-      longitude: '28.0401',
-      propertyCount: 0,
-    } as any);
-    const locationId = insertId(locationResult);
-    created.locationIds.push(locationId);
 
     const managerUserId = await createUser({
       agencyId,
@@ -324,7 +316,9 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       sellerProspectId: createdProspect.sellerProspectId,
       stage: 'qualified',
     });
-    await expect(agent.canvassing.getListingPrefill({ sellerProspectId: createdProspect.sellerProspectId })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      agent.canvassing.getListingPrefill({ sellerProspectId: createdProspect.sellerProspectId }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     const signedAt = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 90 * 86_400_000).toISOString();
     const mandateInput = {
@@ -338,7 +332,8 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       recommendedPriceMin: 2_650_000,
       recommendedPriceMax: 2_800_000,
       agreedListingPrice: 2_750_000,
-      pricingRationale: 'Private agent assessment from manually entered, unverified comparable references.',
+      pricingRationale:
+        'Private agent assessment from manually entered, unverified comparable references.',
       pricingDiscussedAt: signedAt,
       priceReviewAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
       sellerObjections: 'Seller wants to review activity after the first month.',
@@ -347,36 +342,126 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       privateStorageReference: `private/agency-${agencyId}/mandates/private-mandate.pdf`,
       documentDate: signedAt,
       requirements: {
-        sellerIdentityRecorded: true, propertyAddressConfirmed: true, contactDetailsConfirmed: true,
-        mandateTypeSelected: true, pricingDiscussionCompleted: true, agreedPriceRecorded: true,
-        mandateDocumentRecorded: true, disclosureStatusRecorded: true, mediaPlanRecorded: true,
-        accessArrangementsRecorded: true, responsibleAgentConfirmed: true, nextActionRecorded: true,
+        sellerIdentityRecorded: true,
+        propertyAddressConfirmed: true,
+        contactDetailsConfirmed: true,
+        mandateTypeSelected: true,
+        pricingDiscussionCompleted: true,
+        agreedPriceRecorded: true,
+        mandateDocumentRecorded: true,
+        disclosureStatusRecorded: true,
+        mediaPlanRecorded: true,
+        accessArrangementsRecorded: true,
+        responsibleAgentConfirmed: true,
+        nextActionRecorded: true,
       },
       nextAction: 'Create and complete listing draft',
     };
-    await expect(unassignedAgent.canvassing.saveMandateOperations(mandateInput)).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    await expect(outsideManager.canvassing.saveMandateOperations(mandateInput)).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    await expect(manager.canvassing.saveMandateOperations({ ...mandateInput, privateStorageReference: 'https://public.example/mandate.pdf' })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(manager.canvassing.saveMandateOperations({ ...mandateInput, privateStorageReference: `private/agency-${agencyId}/mandates/../other-agency/mandate.pdf` })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(manager.canvassing.saveMandateOperations({ ...mandateInput, recommendedPriceMin: 2_900_000, recommendedPriceMax: 2_800_000 })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(manager.canvassing.saveMandateOperations({ ...mandateInput, status: 'listing_ready', requirements: { ...mandateInput.requirements, mandateDocumentRecorded: false } })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(manager.canvassing.saveMandateOperations({ ...mandateInput, expiresAt: new Date(Date.now() - 86_400_000).toISOString() })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      unassignedAgent.canvassing.saveMandateOperations(mandateInput),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      outsideManager.canvassing.saveMandateOperations(mandateInput),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await expect(
+      manager.canvassing.saveMandateOperations({
+        ...mandateInput,
+        privateStorageReference: 'https://public.example/mandate.pdf',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      manager.canvassing.saveMandateOperations({
+        ...mandateInput,
+        privateStorageReference: `private/agency-${agencyId}/mandates/../other-agency/mandate.pdf`,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      manager.canvassing.saveMandateOperations({
+        ...mandateInput,
+        recommendedPriceMin: 2_900_000,
+        recommendedPriceMax: 2_800_000,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      manager.canvassing.saveMandateOperations({
+        ...mandateInput,
+        status: 'listing_ready',
+        requirements: { ...mandateInput.requirements, mandateDocumentRecorded: false },
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      manager.canvassing.saveMandateOperations({
+        ...mandateInput,
+        expiresAt: new Date(Date.now() - 86_400_000).toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await manager.canvassing.saveMandateOperations(mandateInput);
-    await manager.canvassing.saveMandateOperations({ ...mandateInput, nextAction: 'Open canonical listing draft' });
-    const mandateState = await agent.canvassing.getMandateOperations({ sellerProspectId: createdProspect.sellerProspectId });
+    await manager.canvassing.saveMandateOperations({
+      ...mandateInput,
+      nextAction: 'Open canonical listing draft',
+    });
+    const mandateState = await agent.canvassing.getMandateOperations({
+      sellerProspectId: createdProspect.sellerProspectId,
+    });
     expect(mandateState.readiness).toEqual({ ready: true, missing: [] });
-    expect(mandateState.operation).toMatchObject({ status: 'listing_ready', sellerRequestedPrice: '2900000.00', agreedListingPrice: '2750000.00', privateStorageReference: `private/agency-${agencyId}/mandates/private-mandate.pdf` });
-    await agent.canvassing.addMandateComparable({ sellerProspectId: createdProspect.sellerProspectId, reference: 'Private Parkhurst comparable', propertyType: 'house', area: 'Parkhurst', price: 2_720_000, priceKind: 'asking', notes: 'Manual, unverified comparable evidence.' });
-    const persistedMandateState = await agent.canvassing.getMandateOperations({ sellerProspectId: createdProspect.sellerProspectId });
-    expect(persistedMandateState.comparables).toEqual(expect.arrayContaining([expect.objectContaining({ reference: 'Private Parkhurst comparable', notes: 'Manual, unverified comparable evidence.' })]));
+    expect(mandateState.operation).toMatchObject({
+      status: 'listing_ready',
+      sellerRequestedPrice: '2900000.00',
+      agreedListingPrice: '2750000.00',
+      privateStorageReference: `private/agency-${agencyId}/mandates/private-mandate.pdf`,
+    });
+    await agent.canvassing.addMandateComparable({
+      sellerProspectId: createdProspect.sellerProspectId,
+      reference: 'Private Parkhurst comparable',
+      propertyType: 'house',
+      area: 'Parkhurst',
+      price: 2_720_000,
+      priceKind: 'asking',
+      notes: 'Manual, unverified comparable evidence.',
+    });
+    const persistedMandateState = await agent.canvassing.getMandateOperations({
+      sellerProspectId: createdProspect.sellerProspectId,
+    });
+    expect(persistedMandateState.comparables).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reference: 'Private Parkhurst comparable',
+          notes: 'Manual, unverified comparable evidence.',
+        }),
+      ]),
+    );
     const comparableId = persistedMandateState.comparables[0].id;
-    await expect(outsideManager.canvassing.removeMandateComparable({ sellerProspectId: createdProspect.sellerProspectId, comparableId })).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    await agent.canvassing.removeMandateComparable({ sellerProspectId: createdProspect.sellerProspectId, comparableId });
-    expect((await agent.canvassing.getMandateOperations({ sellerProspectId: createdProspect.sellerProspectId })).comparables).toHaveLength(0);
-    const mandateOperations = await db.select().from(sellerMandateOperations).where(eq(sellerMandateOperations.sellerProspectId, createdProspect.sellerProspectId));
+    await expect(
+      outsideManager.canvassing.removeMandateComparable({
+        sellerProspectId: createdProspect.sellerProspectId,
+        comparableId,
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    await agent.canvassing.removeMandateComparable({
+      sellerProspectId: createdProspect.sellerProspectId,
+      comparableId,
+    });
+    expect(
+      (
+        await agent.canvassing.getMandateOperations({
+          sellerProspectId: createdProspect.sellerProspectId,
+        })
+      ).comparables,
+    ).toHaveLength(0);
+    const mandateOperations = await db
+      .select()
+      .from(sellerMandateOperations)
+      .where(eq(sellerMandateOperations.sellerProspectId, createdProspect.sellerProspectId));
     expect(mandateOperations).toHaveLength(1);
     const myDay = await agent.agency.getMyDay({ limit: 20 });
-    expect(myDay.mandateWork).toEqual(expect.arrayContaining([expect.objectContaining({ sellerProspectId: createdProspect.sellerProspectId, type: 'listing_ready_not_started' })]));
+    expect(myDay.mandateWork).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sellerProspectId: createdProspect.sellerProspectId,
+          type: 'listing_ready_not_started',
+        }),
+      ]),
+    );
 
     const mandateProspect = await agent.canvassing.getById({
       sellerProspectId: createdProspect.sellerProspectId,
@@ -416,20 +501,14 @@ describeWithTestDb('agency canvassing MVP integration', () => {
         'A carefully prepared public property description with verified home features and location context.',
       pricing: { askingPrice: 2_750_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2 },
-      location: {
-        address: '18 Mandate Avenue',
-        latitude: -26.1342,
-        longitude: 28.0401,
-        city: 'Johannesburg',
-        suburb: 'Parkhurst',
-        province: 'Gauteng',
-        locationId,
-      },
+      location: await canonicalPlaceFixtureLocation('18 Mandate Avenue'),
       mediaIds: [],
       media: [],
     });
     created.listingIds.push(listing.id);
-    await expect(agent.canvassing.getListingPrefill({ sellerProspectId: createdProspect.sellerProspectId })).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      agent.canvassing.getListingPrefill({ sellerProspectId: createdProspect.sellerProspectId }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
     const [convertedProspect] = await db
       .select()

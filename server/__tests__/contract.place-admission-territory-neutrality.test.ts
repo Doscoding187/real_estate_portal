@@ -1,0 +1,292 @@
+/**
+ * Phase 3 gate: the Place admission pipeline is territory-neutral.
+ *
+ * The gate has two halves. First, the committed registry must be the single
+ * authority for a territory's paths, versions and expected counts, and it must
+ * fail closed rather than guess. Second, a non-Gauteng territory must be
+ * admissible through the *same* builder and the *same* materializer, with no new
+ * application architecture and without any fictional row entering the real
+ * registry or the real projection catalog.
+ *
+ * The synthetic territory is generated into a throwaway directory and removed
+ * afterwards, so nothing fictional is committed and the real catalog is never
+ * polluted.
+ */
+import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+import {
+  PLACE_ADMISSION_TERRITORY_REGISTRY_PATH,
+  assertPlaceAdmissionTerritoryRegistry,
+  loadPlaceAdmissionTerritoryRegistry,
+  resolvePlaceAdmissionPackagePaths,
+  selectPlaceAdmissionTerritory,
+} from '../../shared/placeAdmissionTerritories';
+import { loadCanonicalPlacePackage } from '../_core/databaseAuthority/dataAdapters/canonicalPlaces';
+
+const repositoryRoot = process.cwd();
+
+const loadRawRegistry = () =>
+  JSON.parse(
+    execFileSync('node', ['-e', `process.stdout.write(require('fs').readFileSync('${PLACE_ADMISSION_TERRITORY_REGISTRY_PATH}','utf8'))`], {
+      encoding: 'utf8',
+    }),
+  );
+
+describe('Place admission territory registry: single authority', () => {
+  it('loads and validates the committed registry', () => {
+    const { registry, registrySha256 } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    expect(registry.registryId).toBe('property-listify-place-admission-territories-v0.1');
+    expect(registry.territories.length).toBeGreaterThan(0);
+    expect(registrySha256).toMatch(/^[a-f0-9]{64}$/);
+    // The default must actually be registered, or selection would fall through
+    // to an unregistered territory.
+    expect(
+      registry.territories.some(territory => territory.territoryId === registry.defaultTerritoryId),
+    ).toBe(true);
+  });
+
+  it('names the admission version and artifact set for every territory', () => {
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    for (const territory of registry.territories) {
+      expect(territory.admissionVersion).toMatch(/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/);
+      const paths = resolvePlaceAdmissionPackagePaths(territory);
+      for (const artifact of Object.values(paths.artifacts)) {
+        expect(artifact.startsWith(`${territory.admissionPackage.directory}/`)).toBe(true);
+      }
+      expect(paths.manifest).toBe(
+        `${territory.admissionPackage.directory}/${territory.admissionPackage.manifest}`,
+      );
+    }
+  });
+
+  it('refuses an unregistered territory instead of guessing one', () => {
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    expect(() => selectPlaceAdmissionTerritory(registry, 'not-a-territory')).toThrow(
+      /is not registered/,
+    );
+  });
+
+  it('rejects a registry whose default territory is not registered', () => {
+    const raw = loadRawRegistry();
+    raw.default_territory_id = 'absent-territory';
+    expect(() => assertPlaceAdmissionTerritoryRegistry(raw)).toThrow(
+      /is not a registered territory/,
+    );
+  });
+
+  it('rejects a duplicate territory id', () => {
+    const raw = loadRawRegistry();
+    raw.territories.push({ ...raw.territories[0] });
+    expect(() => assertPlaceAdmissionTerritoryRegistry(raw)).toThrow(/Duplicate place admission/);
+  });
+
+  it('rejects an artifact path that escapes the repository', () => {
+    const raw = loadRawRegistry();
+    raw.territories[0].admission_package.artifacts.places = '../outside.jsonl';
+    expect(() => assertPlaceAdmissionTerritoryRegistry(raw)).toThrow(
+      /must be a bare filename/,
+    );
+  });
+
+  it('rejects an artifact that reuses another territory filename', () => {
+    const raw = loadRawRegistry();
+    const first = raw.territories[0];
+    // Everything about the second territory is distinct except one source
+    // artifact filename, which is what the registry must refuse.
+    raw.territories.push({
+      ...first,
+      territory_id: 'second-territory',
+      admission_version: 'second-place-admission-v0.1',
+      source_authority: {
+        ...first.source_authority,
+        authority_version: 'second-source-authority-v0.1',
+        directory: 'data/second-source',
+        manifest: {
+          path: 'data/second-source/second_source_manifest_v0.1.json',
+          sha256: first.source_authority.manifest.sha256,
+        },
+        artifacts: {
+          ...first.source_authority.artifacts,
+          geography: first.source_authority.artifacts.geography,
+        },
+      },
+      admission_package: {
+        ...first.admission_package,
+        directory: 'data/second-package',
+        manifest: 'second_place_admission_manifest.v0.1.json',
+        place_id_registry: 'second_place_id_registry.v0.1.json',
+        artifacts: {
+          places: 'second_place_admission_v0.1.jsonl',
+          names: 'second_place_names_v0.1.jsonl',
+          relationships: 'second_place_relationships_v0.1.jsonl',
+          evidence: 'second_place_evidence_v0.1.jsonl',
+          external_mappings: 'second_place_external_mappings_v0.1.jsonl',
+          disposition_ledger: 'second_place_disposition_ledger_v0.1.jsonl',
+          parent_evidence_classification: 'second_parent_evidence_classification_v0.1.json',
+        },
+      },
+    });
+    expect(() => assertPlaceAdmissionTerritoryRegistry(raw)).toThrow(/reuses filename/);
+  });
+
+  it('rejects a territory that does not declare every expected count', () => {
+    const raw = loadRawRegistry();
+    delete raw.territories[0].expected_counts.executable_places;
+    expect(() => assertPlaceAdmissionTerritoryRegistry(raw)).toThrow(
+      /must contain exactly/,
+    );
+  });
+
+  it('keeps the real registry free of synthetic territories', () => {
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    expect(registry.territories.map(territory => territory.territoryId)).not.toContain(
+      'synthetic-01',
+    );
+  });
+});
+
+describe('Place admission territory registry: a second territory needs no new engine', () => {
+  it('admits a synthetic non-Gauteng territory through the same builder and materializer', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'listify-neutrality-contract-'));
+    try {
+      const output = execFileSync(
+        'npx',
+        ['tsx', 'tools/place-admission/prove-territory-neutrality.mjs'],
+        { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+      );
+      expect(output).toContain('territory-neutrality: OK');
+      expect(output).not.toContain('FAIL');
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }, 300_000);
+});
+
+describe('Place admission: national verification across registered provinces', () => {
+  it('keeps province identities distinct and reports national homonyms', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/verify-cross-province.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    expect(output).toContain('cross-province: OK');
+    expect(output).not.toContain('FAIL');
+    // A bare name is never a unique Place in South Africa. The probe must
+    // actually find shared names, or it is not testing the national case.
+    expect(output).toMatch(/names preferred in more than one province/);
+  }, 300_000);
+});
+
+describe('Place admission territory registry: materializer is driven by the registry', () => {
+  it('pins the registered territory source authority by digest', () => {
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    const territory = selectPlaceAdmissionTerritory(registry);
+    expect(territory.sourceAuthority.manifest.sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(territory.expectedCounts.admitted_places).toBeGreaterThan(0);
+  });
+
+  it('refuses to load a package whose manifest disagrees with the registry', () => {
+    expect(() =>
+      loadCanonicalPlacePackage(repositoryRoot, { territoryId: 'synthetic-01' }),
+    ).toThrow(/is not registered/);
+  });
+});
+describe('Place admission: national identity is enforced, not merely reported', () => {
+  it('fails when two provinces claim the same Place identity', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/measure-national-collision-surface.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // place_id is the identity, so its uniqueness is the one property a national
+    // load cannot compromise.
+    expect(output).toContain('place id collisions            0');
+    expect(output).toContain('cross-province (parent, name)  0');
+    expect(output).toContain('national-collision-surface: OK');
+  }, 300_000);
+
+  it('shows UNIQUE(parent, name) is unenforceable, and that adding type does not fix it', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/measure-national-collision-surface.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // A town and the municipality containing it share a parent and a name. These
+    // are correct admitted Places, so a uniqueness constraint would reject real data.
+    expect(output).toMatch(/pairs enumerated in full\s+614/);
+    // Every pair close enough to merge differs in place type, so none is a merge miss.
+    expect(output).toMatch(/under bound AND same type\s+0/);
+    // And widening the key with place_type does not rescue it either.
+    expect(output).toMatch(/UNIQUE\(parent, name, type\)\s+would still be violated by 500/);
+  }, 300_000);
+});
+
+describe('Place admission: national provenance closes for every source identity', () => {
+  it('traces every source identity to a Place or a disposition, per province and nationally', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/national-provenance.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    // Nine provinces, and the national view must cover all nine or its totals mean
+    // less than the per-province ones they are built from.
+    expect(output).toContain(`national-provenance: ${registry.territories.length} provinces`);
+    // Every identity resolves and every province closes its own accounting.
+    expect(output).toContain('national-provenance: OK');
+    expect(output).not.toContain('FAIL');
+    // The ledgers are preserved, so their row count must be reported, not summarised
+    // away. 87,930 rows across nine provinces.
+    expect(output).toMatch(/87930 ledger rows preserved/);
+  }, 300_000);
+
+  it('states that the eight disposition-only ledgers are not self-contained', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/place-admission/national-provenance.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    // Only Gauteng's ledger carries admitted identities. A report that quietly
+    // presented all nine ledgers as equivalent would let a reader audit provenance
+    // from a ledger that contains none of it.
+    expect(output).toContain('DISPOSITION-ONLY');
+    expect(output).toContain('not self-contained');
+  }, 300_000);
+});
+
+describe('Place admission: boundary currency is a gate, not a claim', () => {
+  it('refuses to let any province claim currency it cannot evidence', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/geography-source-evidence/boundary-currency.mjs', '--check'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    expect(output).toContain('boundary-currency: NO UNSUPPORTED CLAIMS');
+    expect(output).not.toContain('FAIL');
+    // The check proves only that nobody overclaimed. It cannot compare against a
+    // current demarcation, so the run must say so, or a reader will treat a passing
+    // gate as a currency certification. That word "OK" was the problem.
+    expect(output).toMatch(/does NOT certify/);
+  }, 300_000);
+
+  it('covers every registered province and certifies none of them', () => {
+    const output = execFileSync(
+      'npx',
+      ['tsx', 'tools/geography-source-evidence/boundary-currency.mjs'],
+      { cwd: repositoryRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    const { registry } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
+    // Nine provinces are admitted. A ledger that quietly covers fewer would let a
+    // province publish on currency nobody ever checked.
+    expect(output).toMatch(new RegExp(`boundary-currency: ${registry.territories.length} provinces`));
+    expect(output).not.toContain('certified=true');
+    // Boundaries represent 2020 and are not a current certification. If this ever
+    // stops being true the gate has been satisfied by a real currency review, which
+    // is an owner decision and must be visible here rather than pass silently.
+    expect(output).toContain('none certified');
+  }, 300_000);
+});

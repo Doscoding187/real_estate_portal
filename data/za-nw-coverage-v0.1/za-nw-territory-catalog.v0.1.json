@@ -1,0 +1,6 @@
+{
+  "schema_version": "0.1",
+  "catalog_id": "property-listify-za-nw-coverage-catalog-v0.1",
+  "note": "North West coverage comparison baseline. It contains no geography rows and cannot override a source artifact. The source of record is the digest-pinned source authority under data/za-nw-source-authority-v0.2.",
+  "sources": []
+}

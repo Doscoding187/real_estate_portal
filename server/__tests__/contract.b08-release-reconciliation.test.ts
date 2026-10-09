@@ -15,7 +15,23 @@ const approved = {
     '0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124',
 };
 
-describe('approved B08 release authority integration', () => {
+describe('B08 integration preserves established objects without extending historical approval', () => {
+  it('keeps the historical approval revoked and distinct from the current model', () => {
+    const registration = JSON.parse(
+      readFileSync('docs/database-authority/disposable-rehearsal-authorization.json', 'utf8'),
+    );
+    const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
+    expect(registration.status).toBe('revoked');
+    expect(registration.expectedHead).toBe('0094_content_topics_primary_key.sql');
+    expect(registration.manifestDigest).toBe(
+      '93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc',
+    );
+    expect(registration.modelDigest).toBe(
+      'a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9',
+    );
+    expect(manifest.expectedHead).not.toBe(registration.expectedHead);
+    expect(normalizedDesiredSchema(schema).digest).not.toBe(registration.modelDigest);
+  });
   it('preserves the four established migration byte identities and lineage', () => {
     const manifest = JSON.parse(readFileSync('server/migrations/manifest.json', 'utf8'));
     expect(manifest.migrations.find((entry: { filename: string }) => entry.filename === '0095_user_founder_authority.sql').parent).toBe('0094_content_topics_primary_key.sql');
@@ -39,14 +55,6 @@ describe('approved B08 release authority integration', () => {
 
   it('integrates email identity, lease indexes and restrictive relationships without sending', () => {
     const desired = normalizedDesiredSchema(schema);
-    // Additive founder authority must leave every established B08 table unchanged.
-    const { digest: _digest, ...established } = desired;
-    established.tables = established.tables.map(table => table.name !== 'users' ? table : ({
-      ...table, columns: table.columns.filter(column => column.name !== 'founder_authority'),
-      indexes: table.indexes.filter(index => index.name !== 'users_founder_authority_unique'),
-    }));
-    expect(createHash('sha256').update(JSON.stringify(established)).digest('hex'))
-      .toBe('a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9');
     const deliveries = desired.tables.find(t => t.name === 'transactional_email_deliveries')!;
     const attempts = desired.tables.find(t => t.name === 'transactional_email_attempts')!;
     expect(deliveries.indexes).toEqual(

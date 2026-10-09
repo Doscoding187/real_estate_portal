@@ -73,10 +73,7 @@ const ListingWizard: React.FC = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const appliedSellerProspectId = useRef<number | null>(null);
   const isDraftIdentityCurrent =
-    !authLoading &&
-    user?.id != null &&
-    draftIdentityReady &&
-    store.persistedOwnerId === user.id;
+    !authLoading && user?.id != null && draftIdentityReady && store.persistedOwnerId === user.id;
 
   // Auto-save hook - saves draft to localStorage automatically
   const {
@@ -279,6 +276,10 @@ const ListingWizard: React.FC = () => {
         city: listing.city,
         suburb: listing.suburb || '',
         province: listing.province,
+        canonicalPlace: listing.canonicalPlace ?? null,
+        canonicalLocationRefusal: listing.canonicalLocationRefusal ?? null,
+        provider: listing.placeId ? 'google' : undefined,
+        providerLocationPlaceId: listing.placeId ?? undefined,
         postalCode: listing.postalCode || '',
         placeId: listing.placeId || '',
         provinceId: listing.provinceId ?? null,
@@ -286,7 +287,10 @@ const ListingWizard: React.FC = () => {
         suburbId: listing.suburbId ?? null,
         privateAddress: listing.privateAddress || null,
         coordinateSource: listing.coordinateSource || null,
-        locationConfirmationState: listing.locationConfirmationState || 'needs_confirmation',
+        locationConfirmationState:
+          listing.canonicalLocationRefusal || !listing.canonicalPlace
+            ? 'needs_confirmation'
+            : listing.locationConfirmationState || 'needs_confirmation',
         publicLocationPrecision: listing.publicLocationPrecision || 'approximate',
       });
 

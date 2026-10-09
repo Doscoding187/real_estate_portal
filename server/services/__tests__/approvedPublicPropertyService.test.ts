@@ -198,6 +198,19 @@ function batchDataSource(
 }
 
 describe('ApprovedPublicProperty authority', () => {
+  it('refuses a stale Place projection and competing numeric handles', async () => {
+    const id = 'pl-place-01-6a145c6d642ba208a2c12de7';
+    const fixture: any = canonicalFixture();
+    fixture.sourceListing.canonicalPlaceId = id;
+    fixture.property.canonicalPlaceId = 'pl-place-01-f175328139bb845a4645b9d4';
+    expect(await resolveApprovedPublicProperty(501, dataSource(fixture))).toBeNull();
+    fixture.property.canonicalPlaceId = id;
+    fixture.property.suburbId = 42;
+    expect(await resolveApprovedPublicProperty(501, dataSource(fixture))).toBeNull();
+    delete fixture.property.suburbId;
+    expect(await resolveApprovedPublicProperty(501, dataSource(fixture))).not.toBeNull();
+  });
+
   it('resolves one stable public identity from the coherent approved source aggregate', async () => {
     const source = dataSource();
 

@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+
+const root = '/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-place-authority-slice0';
+const moduleAt = (path: string) => import(`${root}/${path}`);
+const { resolveDatabaseAuthority } = await moduleAt('server/_core/databaseAuthority/context.ts');
+const { authorizeDatabaseOperation } = await moduleAt('server/_core/databaseAuthority/authorization.ts');
+const { createAuthoritySqlConnection } = await moduleAt('server/_core/databaseAuthority/connectionAuthority.ts');
+const { requireAcceptedMigrationHead, requireExactAdapterTarget, queryRows } = await moduleAt('server/_core/databaseAuthority/dataAdapters/common.ts');
+const { prepareNationalCanonicalPlaces, verifyNationalCanonicalPlaces } = await moduleAt('server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts');
+const authority = resolveDatabaseAuthority({ operation: 'reference-seed', credentialClass: 'local-owner', cwd: root });
+assert.equal(authority.context.targetClass, 'disposable-worktree');
+assert.equal(authority.context.targetFingerprintHash, '0c822b50ba97506e19b3dcbe822b90a05e8bd3ae13346366b8796de7de4a856d');
+requireExactAdapterTarget(authority);
+const decision = authorizeDatabaseOperation(authority);
+const connection = await createAuthoritySqlConnection(authority, decision);
+async function snapshot() {
+  const result: Record<string, { count: number; sha256: string }> = {};
+  for (const table of ['place', 'place_name', 'place_relationship', 'place_evidence', 'place_external_mapping']) {
+    const rows = await queryRows(connection, `SELECT * FROM \`${table}\``);
+    const records = rows.map((row: unknown) => JSON.stringify(row)).sort();
+    result[table] = { count: rows.length, sha256: createHash('sha256').update(JSON.stringify(records)).digest('hex') };
+  }
+  return result;
+}
+try {
+  await requireAcceptedMigrationHead({ authority, connection });
+  const before = await snapshot();
+  assert.equal(before.place.count, 17664);
+  await assert.rejects(prepareNationalCanonicalPlaces({ authority, decision, connection, root }), /name index/);
+  await assert.rejects(verifyNationalCanonicalPlaces({ authority, decision, connection, root }), /name index/);
+  const after = await snapshot();
+  assert.deepEqual(after, before);
+  const evidence = { status: 'passed', proof: 'Old national name index refused before replay; all five physical tables unchanged', targetFingerprintHash: authority.context.targetFingerprintHash, before, after };
+  writeFileSync('/tmp/geography-goal-name-refusal-evidence.json', JSON.stringify(evidence, null, 2) + '\n');
+  console.log(JSON.stringify({ status: evidence.status, proof: evidence.proof }));
+} finally {
+  await connection.end();
+}

@@ -468,8 +468,23 @@ describe('migration execution authority', () => {
       '0094_content_topics_primary_key.sql',
       '0095_user_founder_authority.sql',
       '0096_user_founder_authority_unique.sql',
+      '0097_place_authority_place.sql',
+      '0098_place_authority_place_name.sql',
+      '0099_place_authority_place_relationship.sql',
+      '0100_place_authority_place_evidence.sql',
+      '0101_place_authority_place_external_mapping.sql',
+      '0102_place_authority_search_area.sql',
+      '0103_place_authority_search_area_member.sql',
+      '0104_saved_searches_canonical_place_reference.sql',
+      '0105_saved_searches_canonical_place_reference_fk.sql',
+      '0106_listings_canonical_place_reference.sql',
+      '0107_listings_canonical_place_reference_index.sql',
+      '0108_listings_canonical_place_reference_fk.sql',
+      '0109_properties_canonical_place_reference.sql',
+      '0110_properties_canonical_place_reference_index.sql',
+      '0111_properties_canonical_place_reference_fk.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0096_user_founder_authority_unique.sql');
+    expect(executionManifest.expectedHead).toBe('0111_properties_canonical_place_reference_fk.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

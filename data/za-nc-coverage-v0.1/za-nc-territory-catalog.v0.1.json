@@ -1,0 +1,6 @@
+{
+  "schema_version": "0.1",
+  "catalog_id": "property-listify-za-nc-coverage-catalog-v0.1",
+  "note": "Northern Cape coverage comparison baseline. It contains no geography rows and cannot override a source artifact. The source of record is the digest-pinned source authority under data/za-nc-source-authority-v0.2.",
+  "sources": []
+}

@@ -1,4 +1,11 @@
 import {
+  canonicalPlaceSearchMembers,
+  loadCanonicalPlaceSearchProjection,
+  PLACE_INVENTORY_SCOPE_POLICY,
+  type CanonicalPlaceSearchLabel,
+  type CanonicalPlaceSearchProjection,
+} from './canonicalPlaceSearchService';
+import {
   blendPublicSearchResults,
   type PublicSearchBlendSortOption,
 } from '../../shared/publicSearchBlend';
@@ -46,6 +53,7 @@ import {
 import { searchDiscoveryService } from './searchDiscoveryService';
 
 export interface PublicSearchInventoryInput {
+  canonicalPlaceId?: string;
   province?: string;
   city?: string;
   suburb?: string[];
@@ -87,6 +95,7 @@ export interface PublicSearchInventoryResult {
   page: number;
   pageSize: number;
   hasMore: boolean;
+  canonicalPlaceContext?: CanonicalPlaceSearchLabel & { scopePolicy: string };
   locationContext?: {
     type: 'province' | 'city' | 'suburb';
     name: string;
@@ -129,6 +138,7 @@ export interface PublicSearchInventoryResult {
 
 function hasLocationIntent(input: PublicSearchInventoryInput): boolean {
   return Boolean(
+    input.canonicalPlaceId ||
     input.locationId ||
     input.factualLocationId ||
     input.locationIds?.length ||
@@ -414,6 +424,14 @@ export class PublicSearchService {
       );
     }
 
+    if (input.canonicalPlaceId && input.listingSource === 'development') {
+      return emptyLocationResult(
+        input,
+        'unavailable',
+        'Development inventory does not currently support this location selection. Search property listings instead.',
+      );
+    }
+
     const page = normalizePublicSearchPageIndex(input.page);
     const pageSize = normalizePublicSearchPageSize(input.pageSize);
     const sortOption: PublicSearchBlendSortOption = isSearchResultSortOption(input.sortOption)
@@ -458,6 +476,9 @@ export class PublicSearchService {
       effectiveLocationId = resolvedLocationId;
     }
 
+    let placeProjection: CanonicalPlaceSearchProjection | undefined;
+    let placeContext: PublicSearchInventoryResult['canonicalPlaceContext'];
+    let placeMemberIds: string[] | undefined;
     let location: ResolvedLocation | null = null;
     let queryBoundary: PublicSearchQueryBoundary | undefined;
     let searchAreaContext: PublicSearchInventoryResult['searchAreaContext'];
@@ -466,7 +487,21 @@ export class PublicSearchService {
     let locationState: PublicSearchInventoryResult['locationState'] = 'not_requested';
     let locationMessage: string | undefined;
 
-    if (input.searchAreaId) {
+    if (input.canonicalPlaceId) {
+      const projection = await loadCanonicalPlaceSearchProjection();
+      placeProjection = projection;
+      const execution = projection.executions.get(input.canonicalPlaceId);
+      const labels = projection.labels.get(input.canonicalPlaceId);
+      if (!execution || !labels)
+        return emptyLocationResult(
+          input,
+          'unavailable',
+          'The selected location cannot currently be searched. Choose another approved location.',
+        );
+      placeMemberIds = canonicalPlaceSearchMembers(execution, projection);
+      placeContext = { ...labels, scopePolicy: PLACE_INVENTORY_SCOPE_POLICY };
+      locationState = 'resolved';
+    } else if (input.searchAreaId) {
       if (!input.listingType) {
         return emptyLocationResult(
           input,
@@ -665,9 +700,12 @@ export class PublicSearchService {
     }
 
     const filters = buildPublicFilters(input, location);
+    filters.canonicalPlaceIds = placeMemberIds;
     const developmentFilters = buildDevelopmentFilters(input, location);
     const manualEnabled = input.listingSource !== 'development';
-    const developmentEnabled = input.listingSource !== 'manual';
+    // Development inventory has no canonical Place assignment. It cannot join
+    // this boundary through names or unrelated numeric geography.
+    const developmentEnabled = input.listingSource !== 'manual' && !input.canonicalPlaceId;
     const fetchSourceResults = async (requestedPage: number) => {
       const sourcePageSize =
         manualEnabled && developmentEnabled ? (requestedPage + 1) * pageSize : pageSize;
@@ -682,7 +720,7 @@ export class PublicSearchService {
                 sourcePage,
                 sourcePageSize,
                 queryBoundary,
-                { publicOnly: true },
+                { publicOnly: true, ...(placeProjection ? { placeProjection } : {}) },
               )
             : propertySearchService.searchProperties(
                 filters,
@@ -690,7 +728,7 @@ export class PublicSearchService {
                 sourcePage,
                 sourcePageSize,
                 undefined,
-                { publicOnly: true },
+                { publicOnly: true, ...(placeProjection ? { placeProjection } : {}) },
               )
           : null,
         developmentEnabled
@@ -755,6 +793,7 @@ export class PublicSearchService {
       pageSize,
       hasMore: canAdvancePublicSearchPage(page, total, pageSize),
       locationContext,
+      canonicalPlaceContext: placeContext,
       searchAreaContext,
       searchAreaContexts,
       multiLocationContext,

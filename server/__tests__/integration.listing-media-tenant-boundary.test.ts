@@ -1,3 +1,4 @@
+import { canonicalPlaceFixtureLocation } from './helpers/canonicalPlaceFixture';
 import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -80,15 +81,9 @@ describeDatabase('listing media tenant boundary', () => {
       description: 'Listing used for physical media custody proof.',
       pricing: { askingPrice: 1_500_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 140 },
-      address: '1 Tenant Boundary Street',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      postalCode: '2001',
-      placeId: null,
       slug: `tenant-boundary-${suffix}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('1 Tenant Boundary Street'),
     });
 
     const outsider = appRouter.createCaller({
@@ -154,15 +149,9 @@ describeDatabase('listing media tenant boundary', () => {
       description: 'Listing used for token invalidation proof.',
       pricing: { askingPrice: 1_500_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 140 },
-      address: '2 Deleted Listing Street',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      postalCode: '2001',
-      placeId: null,
       slug: `deleted-listing-${suffix}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('2 Deleted Listing Street'),
     });
 
     const token = createListingMediaUploadToken({
@@ -231,15 +220,9 @@ describeDatabase('listing media tenant boundary', () => {
       description: 'Listing used for reassignment token invalidation proof.',
       pricing: { askingPrice: 1_500_000 },
       propertyDetails: { bedrooms: 3, bathrooms: 2, houseAreaM2: 140 },
-      address: '3 Reassigned Listing Street',
-      latitude: -26.1076,
-      longitude: 28.0567,
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      postalCode: '2001',
-      placeId: null,
       slug: `reassigned-listing-${suffix}`,
       media: [],
+      location: await canonicalPlaceFixtureLocation('3 Reassigned Listing Street'),
     });
 
     const token = createListingMediaUploadToken({

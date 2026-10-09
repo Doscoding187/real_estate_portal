@@ -1,0 +1,32 @@
+server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts [ server/_core/databaseAuthority/__tests__/placeReleaseCommand.test.ts ]
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > resolves an exact preferred name to exactly one canonical Place
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > resolves an alias to the same canonical identity as the preferred name
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > finds a Place by a searchable historical or common name form
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical metro-city Place to its exact evidenced scope
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical locality Place with only a province context
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > records the municipality on the path as context, never as a search level
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > admits many locality-scoped Places, because scope is a category
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > does not expand a selected Place into other Places
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > refuses every admitted Place that carries no executable scope
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes the province-scoped Place, which needs no ancestor
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor
+server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically
+server/__tests__/integration.agency-canvassing-mvp.test.ts > agency canvassing MVP integration > keeps seller acquisition private, scoped, actionable, and traceably convertible
+server/__tests__/integration.agency-listing-attribution.test.ts > agency principal listing attribution > preserves agency ownership from draft creation through public lead capture
+server/__tests__/integration.agency-listing-performance-mvp.test.ts > agency listing performance MVP persisted integration > keeps canonical performance, review, revision, access, and publication contracts intact
+server/__tests__/integration.agency-listing-preparation.test.ts > agency listing preparation acceptance > keeps private preparation available to an established agency member while publication is inactive
+server/__tests__/integration.agency-listing-publication-lifecycle.test.ts > agency full operating journey acceptance > runs verified agency onboarding through controlled activation, publication, enquiry, and continued custody
+server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > denies every generic private-listing entry after membership becomes suspended
+server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > denies every generic private-listing entry after membership becomes left
+server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > keeps an unaffiliated former member draft private from their former agency
+server/__tests__/integration.agency-membership-authority.test.ts > team operations on canonical membership > does not let a suspended member retain agency performance, commission, or daily-work access
+server/__tests__/integration.agency-membership-authority.test.ts > invitation acceptance (production path) > accepting an agent invitation creates consistent identity, profile, and canonical membership
+server/__tests__/integration.agent-launch-journey.test.ts > independent agent launch journey (publish → receive) > lets an approved, paid, badge-less solo agent publish inventory and receive the enquiry
+server/__tests__/integration.listing-media-reconciliation.test.ts > listing media reconciliation > retains explicit media, removes omitted media, and preserves video type and primary order
+server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > denies an unrelated user before issuing a listing media reservation
+server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > rejects confirmation when the listing is deleted after token issuance
+server/__tests__/integration.listing-media-tenant-boundary.test.ts > listing media tenant boundary > rejects confirmation when listing custody is reassigned after token issuance
+server/__tests__/location-manual-correction.test.ts > PLE-6C manual location correction > does not report Map Location for a valid confirmed manual listing
+
+Client loop completed including fixed readiness 30/30. Server suite executed and failed: absent admitted Place fixtures, legacy flat listing-location test inputs, manual readiness stale fixture and command-boundary mocked authorization colliding with global database setup.
