@@ -1,0 +1,35 @@
+{
+  "purpose": "Reviewed desired settings for only the new runner; not Config as Code and not an apply payload",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": null,
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "targetFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm install --frozen-lockfile"
+  },
+  "deploy": {
+    "startCommand": "node -e 'setInterval(() => {}, 60000)'",
+    "preDeployCommand": [],
+    "cronSchedule": null,
+    "healthcheckPath": null,
+    "restartPolicyType": "NEVER",
+    "numReplicas": 1,
+    "multiRegionConfig": { "asia-southeast1-eqsg3a": { "numReplicas": 1 } },
+    "ipv6EgressEnabled": false
+  },
+  "limits": { "vCPUs": 1, "memoryGB": 1 },
+  "staticOutboundEnabledBeforeDeployment": true,
+  "configFile": null,
+  "repoSource": null,
+  "imageSource": null,
+  "automaticDeploymentTriggers": false,
+  "publicDomains": [],
+  "tcpProxies": [],
+  "volumes": [],
+  "persistentDatabaseCredentials": false,
+  "maximumLifetimeMinutes": 120,
+  "incrementalCostCeilingUSD": 1
+}

@@ -1,0 +1,21 @@
+{
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": null,
+  "deploymentId": null,
+  "instanceId": null,
+  "createdAt": null,
+  "expiresAt": null,
+  "windowStartsAt": null,
+  "windowEndsAt": null,
+  "windowApprovalReference": null,
+  "cleanupOwner": "senior production operator",
+  "recoveryCustodian": null,
+  "custodianAcknowledged": false,
+  "freshWindowApproval": false,
+  "attendanceConfirmed": false,
+  "operationState": "unknown",
+  "lastEvidenceAt": null,
+  "migrationAttemptIds": [],
+  "providerRemovalConfirmedAt": null
+}

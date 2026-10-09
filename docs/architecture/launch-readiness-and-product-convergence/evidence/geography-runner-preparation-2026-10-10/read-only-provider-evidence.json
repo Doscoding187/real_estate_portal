@@ -1,0 +1,116 @@
+{
+  "recordedAt": "2026-10-09 22:48:23 UTC",
+  "scope": "Read-only provider configuration investigation; no protected database connection or provider mutation.",
+  "railwayCliVersion": "5.64.2",
+  "azureCliVersion": "2.90.0",
+  "azureFirewallRules": [
+    {
+      "endIpAddress": "208.77.246.240",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-240",
+      "name": "PropertyListify-Railway-Production-240",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.240",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "192.143.7.18",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/ClientIPAddress_2026-9-12_1-51-50",
+      "name": "ClientIPAddress_2026-9-12_1-51-50",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "192.143.7.18",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "208.77.246.242",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-242",
+      "name": "PropertyListify-Railway-Production-242",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.242",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "208.77.246.241",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-241",
+      "name": "PropertyListify-Railway-Production-241",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.241",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    }
+  ],
+  "apiStaticOutbound": {
+    "service": {
+      "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "name": "real_estate_portal"
+    },
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production"
+    },
+    "staticIp": {
+      "enabled": true,
+      "highAvailability": true,
+      "ips": [
+        {
+          "ipv4": "208.77.246.240",
+          "region": "sin",
+          "zone": "eqsg3a"
+        },
+        {
+          "ipv4": "208.77.246.241",
+          "region": "sin",
+          "zone": "eqsg3a"
+        },
+        {
+          "ipv4": "208.77.246.242",
+          "region": "sin",
+          "zone": "eqsg3a"
+        }
+      ]
+    }
+  },
+  "apiConfig": {
+    "build": {
+      "buildCommand": "pnpm build:railway",
+      "buildEnvironment": "V3",
+      "builder": "RAILPACK"
+    },
+    "configFile": "railway.json",
+    "deploy": {
+      "healthcheckPath": "/api/readiness",
+      "healthcheckTimeout": 300,
+      "ipv6EgressEnabled": false,
+      "multiRegionConfig": {
+        "asia-southeast1-eqsg3a": {
+          "numReplicas": 1
+        }
+      },
+      "runtime": "V2",
+      "startCommand": "pnpm start:hosted:api",
+      "useLegacyStacker": false
+    },
+    "networking": {
+      "customDomains": {
+        "api.propertylistifysa.co.za": {
+          "port": 3000
+        }
+      },
+      "privateNetworkEndpoint": "realestateportal",
+      "serviceDomains": {
+        "realestateportal-production-9bb8.up.railway.app": {
+          "port": 3000
+        }
+      }
+    },
+    "source": {
+      "commitSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+      "repo": "Doscoding187/real_estate_portal"
+    }
+  },
+  "replacementRunner": null,
+  "networkBlockerResolved": false,
+  "externalMutations": false
+}
