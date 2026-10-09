@@ -1,0 +1,80 @@
+{
+  "node": "v22.23.3",
+  "packageType": "module",
+  "packageManager": "pnpm@10.4.1+sha512.c753b6c3ad7afa13af388fa6d808035a008e30ea9993f58c6663e2bc5ff21679aa834db094987129aa4d488b86df57f7b634981b2f827cdcacc698cc0cfb88af",
+  "syntheticOnly": true,
+  "realDatabase": false,
+  "productionSignals": false,
+  "temporaryFilesRemoved": true,
+  "runs": [
+    {
+      "role": "api",
+      "inspection": {
+        "role": "api",
+        "identity": {
+          "pid": 1951,
+          "node": "v22.23.3"
+        },
+        "references": [
+          "runtimePool",
+          "activeServer",
+          "savedSearchDeliveryScheduler",
+          "commercialTermNoticeScheduler"
+        ],
+        "armed": false
+      },
+      "prepared": {
+        "role": "api",
+        "identity": {
+          "pid": 1951,
+          "node": "v22.23.3"
+        },
+        "armed": true
+      },
+      "complete": {
+        "poolEndCompleted": true,
+        "poolEndFailed": false,
+        "httpClosed": true
+      },
+      "heldAncestors": 3,
+      "outerLauncherState": "S (sleeping)",
+      "childState": "Z",
+      "rawExitCode": "0",
+      "stdout": "\n> @ start:hosted:api /tmp/pl-contained-method-2sE4Dm\n> tsx server/_core/start.ts\n\n{\"event\":\"BOOT\",\"pid\":1951,\"ppid\":1935,\"endpoint\":\"ws://127.0.0.1:34661/d33b4d02-16ae-4d00-9589-286f0fdfa9e2\"}\nMOCK_REQUEST_FINISHED\n{\"kind\":\"attended-drain\",\"token\":\"synthetic-method-proof-api\",\"event\":\"HTTP_CLOSED\"}\n{\"kind\":\"attended-drain\",\"token\":\"synthetic-method-proof-api\",\"event\":\"POOL_END_STARTED\"}\nMOCK_DB_CLOSED\n{\"kind\":\"attended-drain\",\"token\":\"synthetic-method-proof-api\",\"event\":\"POOL_END_COMPLETED\"}\n",
+      "stderr": "Debugger listening on ws://127.0.0.1:34661/d33b4d02-16ae-4d00-9589-286f0fdfa9e2\nFor help, see: https://nodejs.org/learn/getting-started/debugging\nDebugger attached.\nWaiting for the debugger to disconnect...\n"
+    },
+    {
+      "role": "email",
+      "inspection": {
+        "role": "email",
+        "identity": {
+          "pid": 2022,
+          "node": "v22.23.3"
+        },
+        "references": [
+          "runtimePool"
+        ],
+        "armed": false
+      },
+      "prepared": {
+        "role": "email",
+        "identity": {
+          "pid": 2022,
+          "node": "v22.23.3"
+        },
+        "armed": true
+      },
+      "complete": {
+        "poolEndCompleted": true,
+        "poolEndFailed": false,
+        "httpClosed": false
+      },
+      "heldAncestors": 3,
+      "outerLauncherState": "S (sleeping)",
+      "childState": "Z",
+      "rawExitCode": "0",
+      "stdout": "\n> @ email:supervisor /tmp/pl-contained-method-2sE4Dm\n> tsx scripts/runTransactionalEmailSupervisor.ts\n\n{\"event\":\"BOOT\",\"pid\":2022,\"ppid\":2006,\"endpoint\":\"ws://127.0.0.1:35757/cb9d1c98-d774-4052-96cf-ebef620fcc02\"}\nMOCK_BATCH_FINISHED\n{\"kind\":\"attended-drain\",\"token\":\"synthetic-method-proof-email\",\"event\":\"POOL_END_STARTED\"}\nMOCK_DB_CLOSED\n{\"kind\":\"attended-drain\",\"token\":\"synthetic-method-proof-email\",\"event\":\"POOL_END_COMPLETED\"}\n",
+      "stderr": "Debugger listening on ws://127.0.0.1:35757/cb9d1c98-d774-4052-96cf-ebef620fcc02\nFor help, see: https://nodejs.org/learn/getting-started/debugging\nDebugger attached.\nWaiting for the debugger to disconnect...\n"
+    }
+  ]
+}

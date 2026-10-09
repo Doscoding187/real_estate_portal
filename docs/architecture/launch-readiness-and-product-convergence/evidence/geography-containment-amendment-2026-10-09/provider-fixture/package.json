@@ -1,0 +1,11 @@
+{
+  "name": "property-listify-owned-containment-probe",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "22.23.3"
+  },
+  "scripts": {
+    "start": "node probe.cjs"
+  }
+}

@@ -1,0 +1,299 @@
+{
+  "deploy": [
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:21.742Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:21.743854797Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:23.744Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:23.763561272Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:25.746Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:25.748620247Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:27.748Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:27.750373907Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:29.750Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:29.754923976Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"ALIVE\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:31.752Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:31.771242467Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"SIGTERM_RECEIVED\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:31.899Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:32.016990930Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"HTTP_CLOSED\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:31.899Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:32.016997486Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "event",
+          "value": "\"DRAIN_5_SECONDS\""
+        },
+        {
+          "key": "at",
+          "value": "\"2026-10-09T16:07:36.900Z\""
+        },
+        {
+          "key": "runId",
+          "value": "\"ca704ced-9eba-4b93-adc1-6992ec8ee870\""
+        },
+        {
+          "key": "pid",
+          "value": "1"
+        },
+        {
+          "key": "deployment",
+          "value": "\"5962c977-af9c-4603-a456-48b4448953bd\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:37.045816431Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        }
+      ],
+      "message": "Stopping Container",
+      "severity": "info",
+      "timestamp": "2026-10-09T16:07:42.567082977Z"
+    }
+  ],
+  "deploymentId": "5962c977-af9c-4603-a456-48b4448953bd",
+  "environmentId": "5c1a1f42-8199-4df7-8e83-385e077a9a4b",
+  "scope": "deployment",
+  "serviceId": "5334a4d4-0961-43a8-a4df-c05d13894417",
+  "status": "REMOVED"
+}

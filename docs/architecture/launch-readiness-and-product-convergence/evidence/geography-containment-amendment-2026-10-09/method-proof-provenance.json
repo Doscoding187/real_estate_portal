@@ -1,0 +1,15 @@
+{
+  "recordedAt": "2026-10-09T16:41:46.615478+00:00",
+  "acceptedSchemaSource": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "approvedSchemaDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "productionDrainExecuted": false,
+  "productionSchemaApplied": false,
+  "methodProof": "Synthetic ESM work/HTTP/pool handle; actual installed toolchain; no real database/provider operation or application signal.",
+  "hashes": {
+    "drain-session.cjs": "1cbe495d0df94883216519ec1b68cffece702cdd0616d7167d032f9a0dfb1a50",
+    "method-fixture.cjs": "763a57fb86ccc95839664e5a666a6b8ff4b5ccfb4b2ab3651d17b0fb9fe8b0aa",
+    "method-fixture-result.json": "b327faa9f8b7120fe9b257e1c5d97872f75d32db142596f520acdf95ab8656c9",
+    "wrapper-fixture.cjs": "ed829968f6d57f61135e1a903223ae5aba4f1ec4cd098a435b0c74fa0cf983fe",
+    "wrapper-fixture-result.json": "ff897f6889c6a067bfac40eb403cd5a6d436e1f003c8be902eb4854519bcef96"
+  }
+}

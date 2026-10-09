@@ -1,0 +1,26 @@
+{
+  "deployedSource": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+  "deployment": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "node": "v22.23.3",
+  "fixture": true,
+  "packageType": "module",
+  "realDatabase": false,
+  "signalsToLiveApplication": false,
+  "runs": [
+    {
+      "role": "start:hosted:api",
+      "sentToOuterPnpmPid": true,
+      "stdout": "\n> @ start:hosted:api /tmp/pl-signal-probe-3IRrm5\n> tsx server/_core/start.ts\n\n{\"event\":\"BOOT\",\"pid\":1594,\"ppid\":1578}\n",
+      "stderr": "",
+      "exit": null
+    },
+    {
+      "role": "email:supervisor",
+      "sentToOuterPnpmPid": true,
+      "stdout": "\n> @ email:supervisor /tmp/pl-signal-probe-3IRrm5\n> tsx scripts/runTransactionalEmailSupervisor.ts\n\n{\"event\":\"BOOT\",\"pid\":1658,\"ppid\":1642}\n",
+      "stderr": "",
+      "exit": null
+    }
+  ],
+  "temporaryFilesRemoved": true
+}
