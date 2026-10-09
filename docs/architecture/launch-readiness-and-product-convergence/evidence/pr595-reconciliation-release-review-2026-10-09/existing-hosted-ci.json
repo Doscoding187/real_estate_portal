@@ -1,0 +1,110 @@
+[
+  {
+    "id": 37804796498,
+    "sourceSha": "9c28b3aa852daac33eb269cec8876e6ebbc14a24",
+    "event": "pull_request",
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498",
+    "jobs": [
+      {
+        "name": "Location Authority",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498/job/113406133171"
+      },
+      {
+        "name": "DB Contract Verification",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498/job/113406134108"
+      },
+      {
+        "name": "Unit & Integration Tests",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498/job/113407643698"
+      },
+      {
+        "name": "Lint & TypeCheck",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498/job/113407643900"
+      },
+      {
+        "name": "Build Application",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37804796498/job/113409113125"
+      }
+    ]
+  },
+  {
+    "id": 37898566119,
+    "sourceSha": "7b046961d87f29b360da224a40d119ceae736a53",
+    "event": "pull_request",
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119",
+    "jobs": [
+      {
+        "name": "DB Contract Verification",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119/job/113715513906"
+      },
+      {
+        "name": "Location Authority",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119/job/113715514122"
+      },
+      {
+        "name": "Lint & TypeCheck",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119/job/113716815734"
+      },
+      {
+        "name": "Unit & Integration Tests",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119/job/113716815905"
+      },
+      {
+        "name": "Build Application",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898566119/job/113717925674"
+      }
+    ]
+  },
+  {
+    "id": 37898563026,
+    "sourceSha": "7b046961d87f29b360da224a40d119ceae736a53",
+    "event": "push",
+    "attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026",
+    "jobs": [
+      {
+        "name": "DB Contract Verification",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026/job/113715504004"
+      },
+      {
+        "name": "Location Authority",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026/job/113715504284"
+      },
+      {
+        "name": "Lint & TypeCheck",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026/job/113716650154"
+      },
+      {
+        "name": "Unit & Integration Tests",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026/job/113716650166"
+      },
+      {
+        "name": "Build Application",
+        "conclusion": "success",
+        "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37898563026/job/113717725125"
+      }
+    ]
+  }
+]
