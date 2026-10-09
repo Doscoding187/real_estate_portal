@@ -1,0 +1,49 @@
+{
+  "observedAt": "2026-10-09T14:18:46.420906+00:00",
+  "acceptedSourceSha": "fcf17987b2ce3b2eefded0e3a7e729c041785e5a",
+  "mergeSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "acceptedTree": "f0db8b4f4b964346f28282f9616d0e59d3e673e0",
+  "mergeTree": "f0db8b4f4b964346f28282f9616d0e59d3e673e0",
+  "treeMatchesAcceptedCandidate": true,
+  "mergeParents": [
+    "1ead53cd5857fc84b846d3d5e4f420f77f824936",
+    "fcf17987b2ce3b2eefded0e3a7e729c041785e5a"
+  ],
+  "mergedAt": "2026-10-09T14:12:01Z",
+  "pr": "https://github.com/Doscoding187/real_estate_portal/pull/595",
+  "method": "normal GitHub merge; no admin bypass; exact head guard",
+  "approval": "Edward explicitly accepted exact fcf17987 candidate and instructed normal protected merge in this session",
+  "hostedCI": {
+    "runId": 37932882443,
+    "attempt": 1,
+    "headSha": "fcf17987b2ce3b2eefded0e3a7e729c041785e5a",
+    "conclusion": "success",
+    "url": "https://github.com/Doscoding187/real_estate_portal/actions/runs/37932882443",
+    "jobs": [
+      {
+        "name": "DB Contract Verification",
+        "conclusion": "success"
+      },
+      {
+        "name": "Location Authority",
+        "conclusion": "success"
+      },
+      {
+        "name": "Unit & Integration Tests",
+        "conclusion": "success"
+      },
+      {
+        "name": "Lint & TypeCheck",
+        "conclusion": "success"
+      },
+      {
+        "name": "Build Application",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "unchangedTestsRepeated": false,
+  "productionApplication": false,
+  "deploymentPerformed": false,
+  "paymentsOpened": false
+}

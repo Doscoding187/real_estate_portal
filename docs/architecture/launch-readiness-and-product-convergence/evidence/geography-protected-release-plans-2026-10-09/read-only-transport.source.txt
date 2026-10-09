@@ -1,0 +1,96 @@
+import subprocess, json, hashlib, pathlib, os, datetime, urllib.parse
+
+root = pathlib.Path('/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-senior-20261008')
+source = '49a48572c24d1b122fcf17b025a76e5ab77f03a8'
+packet = root / 'docs/architecture/launch-readiness-and-product-convergence/evidence/geography-protected-release-plans-2026-10-09'
+packet.mkdir(parents=True, exist_ok=True)
+assert subprocess.check_output(['git','rev-parse','HEAD'], cwd=root,text=True).strip() == source
+tracked = set(subprocess.check_output(['git','ls-tree','-r','--name-only',source],cwd=root,text=True).splitlines())
+paths = {p for p in tracked if p.startswith(('server/','shared/','drizzle/','scripts/','docs/database-authority/'))}
+paths.update(['package.json','pnpm-lock.yaml','tsconfig.json','scripts/databaseAuthorityCli.ts','scripts/placeReleaseCommand.ts'])
+registry_path = 'data/place-admission-territories.v0.1/territory-registry.v0.1.json'
+paths.add(registry_path)
+registry = json.loads((root/registry_path).read_text())
+for territory in registry['territories']:
+    prefix = territory['admission_package']['directory']+'/'
+    paths.update(p for p in tracked if p.startswith(prefix))
+    paths.add(territory['source_authority']['manifest']['path'])
+    manifest_path = prefix+territory['admission_package']['manifest']
+    if manifest_path not in tracked:
+        manifest_path = territory['admission_package']['manifest']
+    manifest = json.loads((root/manifest_path).read_text())
+    paths.update(x['path'] for x in manifest['generated_from']['compact_artifacts'])
+paths.update(p for p in tracked if p.startswith('data/geography-coverage-v0.1/'))
+assert paths <= tracked
+archive = subprocess.check_output(['git','archive','--format=tar.gz',source,*sorted(paths)],cwd=root)
+archive_hash = hashlib.sha256(archive).hexdigest()
+lock_hash = hashlib.sha256((root/'pnpm-lock.yaml').read_bytes()).hexdigest()
+inspector_file = pathlib.Path('/home/edwardspc/.config/property-listify/b08-inspector.env')
+assert inspector_file.stat().st_mode & 0o777 == 0o600
+value = next(line.partition('=')[2].strip() for line in inspector_file.read_text().splitlines() if line.startswith('DATABASE_URL='))
+if value[0] in '\"\'':
+    assert value[-1] == value[0]
+    value = value[1:-1]
+url = urllib.parse.urlparse(value)
+assert urllib.parse.unquote(url.username) == 'propertylistify_b08_inspector'
+fingerprint = hashlib.sha256(f'mysql://{url.hostname}:{url.port or 3306}/{url.path.lstrip("/")}'.encode()).hexdigest()
+assert fingerprint == 'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced'
+config = {'archiveSha256':archive_hash,'sourceSha':source,'databaseUrl':value,'lockSha256':lock_hash,'fingerprint':fingerprint}
+remote = r'''
+const fs=require('fs'),cp=require('child_process'),crypto=require('crypto'),path=require('path');
+const payload=fs.readFileSync(0),cut=payload.indexOf(10),cfg=JSON.parse(payload.subarray(0,cut).toString()),archive=payload.subarray(cut+1);
+const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
+if(hash(archive)!==cfg.archiveSha256)throw Error('Source archive checksum differs');
+if(hash(fs.readFileSync('/app/pnpm-lock.yaml'))!==cfg.lockSha256)throw Error('Installed dependency lock differs from accepted source');
+const dir=fs.mkdtempSync('/tmp/pr595-readonly-');fs.chmodSync(dir,0o700);
+const result={sourceSha:cfg.sourceSha,archiveSha256:cfg.archiveSha256,dependencyLockVerified:true,hostingSourceSha:process.env.RAILWAY_GIT_COMMIT_SHA,hostingDeploymentId:process.env.RAILWAY_DEPLOYMENT_ID,protectedFingerprint:cfg.fingerprint,approvalReference:'GEOGRAPHY-PR595-POSTMERGE-READONLY-PLANNING-2026-10-09-Edward',credentialClass:'read-only',credential:'dedicated SELECT-only inspector',databaseMutations:false,deployedFilesChanged:false,temporarySourceOnly:true,startedAt:new Date().toISOString(),commands:[]};
+function safeText(s){return String(s).split(cfg.databaseUrl).join('[REDACTED_URL]').replace(/mysql:\/\/[^\s"']+/g,'[REDACTED_URL]');}
+try{
+ const t=cp.spawnSync('tar',['-xz','-C',dir],{input:archive,maxBuffer:1024*1024});if(t.status!==0)throw Error('Source extraction failed');
+ fs.symlinkSync('/app/node_modules',path.join(dir,'node_modules'),'dir');
+ const env={...process.env};
+ for(const key of Object.keys(env))if(key.startsWith('DATABASE_')||key==='LISTIFY_E2E_DATABASE_URL'||key==='GITHUB_ACTIONS')delete env[key];
+ Object.assign(env,{DATABASE_URL:cfg.databaseUrl,DATABASE_CREDENTIAL_CLASS:'read-only',DATABASE_AUTHORITY_APPROVAL_REFERENCE:result.approvalReference,DATABASE_AUTHORITY_APPROVAL_ACTOR:'Edward',DATABASE_AUTHORITY_APPROVED_FINGERPRINT:cfg.fingerprint,DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS:'read-only',APP_ENV:'production',NODE_ENV:'production'});
+ function run(label,args){
+  const r=cp.spawnSync('pnpm',args,{cwd:dir,env,encoding:'utf8',maxBuffer:16*1024*1024,timeout:180000});
+  const out=safeText(r.stdout||''),err=safeText(r.stderr||'');
+  const record={label,command:['pnpm',...args],exitCode:r.status,stdout:out,stderr:err};result.commands.push(record);
+  if(r.status!==0)throw Error('Named read-only command stopped: '+label);
+  const start=out.indexOf('{');if(start<0)throw Error('Missing named JSON result: '+label);
+  return JSON.parse(out.slice(start));
+ }
+ const inspected=run('protected-inspect',['db:release:reference:inspect','--','--adapter=places']);
+ if(inspected.targetFingerprintHash!==cfg.fingerprint||!inspected.selectOnlyGrantsVerified||inspected.incompleteAttempts.length)throw Error('Fresh inspector identity, target or attempt state differs');
+ if(inspected.migrationHistory.at(-1)?.filename!=='0096_user_founder_authority_unique.sql')throw Error('Protected head differs from reviewed 0096; audit required');
+ run('protected-schema-plan',['db:release:plan','--','--accepted-old-head=0096_user_founder_authority_unique.sql','--expected-new-head=0111_properties_canonical_place_reference_fk.sql']);
+ run('protected-reference-plan',['db:release:reference:plan','--','--adapter=places']);
+ result.completed=true;
+}catch(e){result.completed=false;result.failure=safeText(e.message)}finally{
+ fs.rmSync(dir,{recursive:true,force:true});result.temporarySourceRemoved=!fs.existsSync(dir);result.completedAt=new Date().toISOString();
+ console.log('PR595_READONLY_RESULT '+JSON.stringify(result));
+}
+if(!result.completed)process.exitCode=1;
+'''
+started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+command = ['railway','ssh','--project','8cdd7515-ddd2-4252-bbee-df5a5c209d4b','--environment','63070d99-357a-40ba-99c3-6d1368f61652','--service','db88a720-2d1f-4afc-a3a8-6228b6b08d3e','node','-e',remote]
+print(json.dumps({'phase':'source-only SSH preparation','source':source,'archiveBytes':len(archive),'archiveSha256':archive_hash,'protectedFingerprint':fingerprint}),flush=True)
+run = subprocess.run(command,input=json.dumps(config).encode()+b'\n'+archive,stdout=subprocess.PIPE,stderr=subprocess.PIPE,cwd=root)
+stdout = run.stdout.decode(errors='replace').replace(value,'[REDACTED_URL]')
+stderr = run.stderr.decode(errors='replace').replace(value,'[REDACTED_URL]')
+marker = 'PR595_READONLY_RESULT '
+lines = [x[len(marker):] for x in stdout.splitlines() if x.startswith(marker)]
+if not lines:
+    (packet/'transport-failure.json').write_text(json.dumps({'startedAt':started,'exitCode':run.returncode,'stderr':stderr,'stdout':stdout},indent=2)+'\n')
+    print('No remote result. Sanitized transport failure preserved.');raise SystemExit(1)
+result = json.loads(lines[-1])
+for item in result['commands']:
+    text = item['stdout']; start = text.find('{')
+    if item['exitCode']==0 and start>=0:
+        report = json.loads(text[start:])
+        (packet/(item['label']+'.json')).write_text(json.dumps(report,indent=2)+'\n')
+    item.pop('stdout',None)
+    if not item['stderr']:item.pop('stderr',None)
+(packet/'read-only-provenance.json').write_text(json.dumps(result,indent=2)+'\n')
+(packet/'source-archive-inventory.json').write_text(json.dumps({'sourceSha':source,'archiveSha256':archive_hash,'archiveBytes':len(archive),'fileCount':len(paths),'files':sorted(paths)},indent=2)+'\n')
+print(json.dumps({k:result.get(k) for k in ['completed','failure','temporarySourceRemoved','startedAt','completedAt','hostingSourceSha','hostingDeploymentId']},indent=2))
+raise SystemExit(0 if result['completed'] else 1)

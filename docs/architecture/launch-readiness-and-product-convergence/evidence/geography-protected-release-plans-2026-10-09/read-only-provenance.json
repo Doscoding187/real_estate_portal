@@ -1,0 +1,51 @@
+{
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "archiveSha256": "a131ce4d8896d9c64624cd14760d964cc0d97c443c0f840985c8ab592161e9b6",
+  "dependencyLockVerified": true,
+  "hostingSourceSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+  "hostingDeploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalReference": "GEOGRAPHY-PR595-POSTMERGE-READONLY-PLANNING-2026-10-09-Edward",
+  "credentialClass": "read-only",
+  "credential": "dedicated SELECT-only inspector",
+  "databaseMutations": false,
+  "deployedFilesChanged": false,
+  "temporarySourceOnly": true,
+  "startedAt": "2026-10-09T14:20:56.331Z",
+  "commands": [
+    {
+      "label": "protected-inspect",
+      "command": [
+        "pnpm",
+        "db:release:reference:inspect",
+        "--",
+        "--adapter=places"
+      ],
+      "exitCode": 0
+    },
+    {
+      "label": "protected-schema-plan",
+      "command": [
+        "pnpm",
+        "db:release:plan",
+        "--",
+        "--accepted-old-head=0096_user_founder_authority_unique.sql",
+        "--expected-new-head=0111_properties_canonical_place_reference_fk.sql"
+      ],
+      "exitCode": 0
+    },
+    {
+      "label": "protected-reference-plan",
+      "command": [
+        "pnpm",
+        "db:release:reference:plan",
+        "--",
+        "--adapter=places"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "completed": true,
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-09T14:21:26.114Z"
+}

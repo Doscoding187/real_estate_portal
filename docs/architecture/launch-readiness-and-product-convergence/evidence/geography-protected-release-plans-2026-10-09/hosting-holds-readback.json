@@ -1,0 +1,95 @@
+{
+  "observedAt": "2026-10-09T14:18:51.745594+00:00",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceTriggers": [
+    {
+      "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+      "name": "paid-mvp-email-worker",
+      "repoTriggers": {
+        "edges": []
+      }
+    },
+    {
+      "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+      "name": "Redis",
+      "repoTriggers": {
+        "edges": []
+      }
+    },
+    {
+      "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "name": "real_estate_portal",
+      "repoTriggers": {
+        "edges": [
+          {
+            "node": {
+              "branch": "post-baseline-work",
+              "environmentId": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+              "id": "b14d5e50-ccd4-4bc4-9c15-78342a7c1d51",
+              "repository": "Doscoding187/real_estate_portal",
+              "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+      "name": "paid-mvp-lead-job",
+      "repoTriggers": {
+        "edges": []
+      }
+    }
+  ],
+  "productionDeployments": [
+    {
+      "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+      "serviceName": "Redis",
+      "active": [
+        {
+          "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+          "status": "SUCCESS",
+          "sourceSha": null
+        }
+      ]
+    },
+    {
+      "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "serviceName": "real_estate_portal",
+      "active": [
+        {
+          "id": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+          "status": "SUCCESS",
+          "sourceSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa"
+        }
+      ]
+    },
+    {
+      "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+      "serviceName": "paid-mvp-lead-job",
+      "active": [
+        {
+          "id": "19a8fac1-b750-4a8f-8f5d-1d94e725f460",
+          "status": "SUCCESS",
+          "sourceSha": "7756376c9ec604b352595b4e4ba8ced73f18562b"
+        }
+      ]
+    },
+    {
+      "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+      "serviceName": "paid-mvp-email-worker",
+      "active": [
+        {
+          "id": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+          "status": "SUCCESS",
+          "sourceSha": "7756376c9ec604b352595b4e4ba8ced73f18562b"
+        }
+      ]
+    }
+  ],
+  "vercelMainGitDeploymentEnabled": false,
+  "vercelAuthority": "accepted source vercel.ts git.deploymentEnabled.main=false",
+  "settingsMutated": false,
+  "payments": "No commercial/payment settings read or changed; closed state remains instructed hold"
+}

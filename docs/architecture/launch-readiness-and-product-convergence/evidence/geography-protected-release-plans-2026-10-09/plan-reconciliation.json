@@ -1,0 +1,32 @@
+{
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "freshInspectedAt": "2026-10-09T14:21:08.469Z",
+  "releasedPrefixEntries": 97,
+  "releasedPrefixChecksumsMatchMergedManifest": true,
+  "incompleteAttempts": 0,
+  "existingCheckConstraints": 23,
+  "existingChecksEnforced": true,
+  "pendingMigrations": 15,
+  "pendingStatements": 15,
+  "schemaDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "sameSchemaDigestAsHistoricalComparison": true,
+  "referenceInvariantKeysCompared": [
+    "manifestDigest",
+    "registrySha256",
+    "packagePins",
+    "desiredDigest",
+    "desiredRows",
+    "heldPlaceIds",
+    "heldDigest",
+    "heldRows",
+    "adapterDigest",
+    "policy",
+    "batchLimits"
+  ],
+  "referencePinsAndDesiredHeldAssertionsMatchAcceptedEvidence": true,
+  "referenceReadyForDataRelease": false,
+  "referenceApplyDigest": null,
+  "referencePendingRows": null,
+  "note": "New named-runner plans against live protected metadata; comparison assertions only, no unchanged test suite/performance rerun."
+}

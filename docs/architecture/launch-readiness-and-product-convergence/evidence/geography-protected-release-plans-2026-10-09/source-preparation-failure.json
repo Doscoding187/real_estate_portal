@@ -1,0 +1,32 @@
+{
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "archiveSha256": "78fc8bd39416c4b927029942c5fe9a1eec0f767989ea7d593d049642ad39f6d0",
+  "dependencyLockVerified": true,
+  "hostingSourceSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+  "hostingDeploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalReference": "GEOGRAPHY-PR595-POSTMERGE-READONLY-PLANNING-2026-10-09-Edward",
+  "credentialClass": "read-only",
+  "credential": "dedicated SELECT-only inspector",
+  "databaseMutations": false,
+  "deployedFilesChanged": false,
+  "temporarySourceOnly": true,
+  "startedAt": "2026-10-09T14:18:46.984Z",
+  "commands": [
+    {
+      "label": "protected-inspect",
+      "command": [
+        "pnpm",
+        "db:release:reference:inspect",
+        "--",
+        "--adapter=places"
+      ],
+      "exitCode": 1,
+      "stderr": "\nnode:internal/modules/run_main:123\n    triggerUncaughtException(\n    ^\nError [ERR_MODULE_NOT_FOUND]: Cannot find module '/tmp/pr595-readonly-quCeHT/scripts/localEnvironmentAuthority' imported from /tmp/pr595-readonly-quCeHT/server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts\n    at finalizeResolution (node:internal/modules/esm/resolve:275:11)\n    at moduleResolve (node:internal/modules/esm/resolve:865:10)\n    at defaultResolve (node:internal/modules/esm/resolve:989:11)\n    at nextResolve (node:internal/modules/esm/hooks:748:28)\n    at resolveBase (file:///app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1791555530050:2:3744)\n    at async resolveDirectory (file:///app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1791555530050:2:4237)\n    at async resolve (file:///app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/esm/index.mjs?1791555530050:2:5355)\n    at async nextResolve (node:internal/modules/esm/hooks:748:22)\n    at async Hooks.resolve (node:internal/modules/esm/hooks:240:24)\n    at async handleMessage (node:internal/modules/esm/worker:199:18) {\n  code: 'ERR_MODULE_NOT_FOUND',\n  url: 'file:///tmp/pr595-readonly-quCeHT/scripts/localEnvironmentAuthority'\n}\n\nNode.js v22.23.3\n"
+    }
+  ],
+  "completed": false,
+  "failure": "Named read-only command stopped: protected-inspect",
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-09T14:18:50.454Z"
+}
