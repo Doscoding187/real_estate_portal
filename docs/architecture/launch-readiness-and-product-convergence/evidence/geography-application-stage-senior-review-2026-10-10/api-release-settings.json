@@ -1,0 +1,37 @@
+{
+  "binding": {
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e"
+  },
+  "commandEvidence": "Pinned-source API shutdown regressions use process.execPath --import tsx. Local Node v22.22.3 resolved tsx@4.21.0. App startup/process tree still requires hosted proof.",
+  "controlledDeliveryScope": "API can write normal scheduler notices/events; email and lead execution remain held.",
+  "existingConfigFileRemovedDeliberately": "Provider deploy settings own this reviewed command; repository railway.json would otherwise restore the pnpm launcher. Source code remains pinned and unchanged.",
+  "settings": {
+    "build": {
+      "buildCommand": "pnpm build:railway",
+      "builder": "RAILPACK"
+    },
+    "configFile": null,
+    "deploy": {
+      "cronSchedule": null,
+      "healthcheckPath": "/api/readiness",
+      "healthcheckTimeout": 300,
+      "preDeployCommand": null,
+      "restartPolicyMaxRetries": 10,
+      "restartPolicyType": "ON_FAILURE",
+      "startCommand": "node --import tsx server/_core/start.ts"
+    },
+    "preserveNetworkingAndRegions": true,
+    "preserveOtherVariables": true,
+    "source": {
+      "commitSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+      "repo": "Doscoding187/real_estate_portal"
+    },
+    "variables": {
+      "BUILD_SHA": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b"
+    }
+  },
+  "signalAssumption": "Removes known pnpm/tsx launchers; does not claim verified provider PID1/signal delivery.",
+  "state": "PLANNED_NOT_APPLIED"
+}

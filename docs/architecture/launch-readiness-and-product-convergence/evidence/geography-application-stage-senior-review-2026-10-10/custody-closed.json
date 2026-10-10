@@ -1,0 +1,26 @@
+{
+  "archiveChecksumsIndependentlyVerified": 32,
+  "archiveReceiptPath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/completed-window-archive/archive-receipt.json",
+  "archiveReceiptSha256": "4a8815628d4cbebe1be30e2e8bef6620c10b11bc28932adefd38725793f3eac3",
+  "archivedAtUtc": "2026-10-10T15:13:15.550469+00:00",
+  "correlation": "reference-20261010-cfacb630-80c5-4fe1-b8cf-b3955af8033e",
+  "ownUnitFinalStates": {
+    "pl-junior-custody-expiry-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-test-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-test-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-status-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-status-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-test-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-test-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead"
+  },
+  "providerMutationsPerformed": false,
+  "state": "COMPLETED_CUSTODY_ARCHIVED",
+  "timerStoppedAtUtc": {
+    "pl-junior-custody-expiry-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00",
+    "pl-junior-custody-status-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00",
+    "pl-junior-custody-warning-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00"
+  }
+}

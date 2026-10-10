@@ -1,0 +1,10 @@
+{
+  "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+  "teamId": "team_wGNClVbXptfEtznBC5p1YfO2",
+  "operation": "GET firewall config active",
+  "observedAtUtc": "2026-10-10T16:02:31Z",
+  "status": 404,
+  "code": "not_found",
+  "message": "Seawall Config not found.",
+  "conclusion": "No effective firewall policy was returned. Not interpreted as proof of access restriction or lack of access. No mutation/fallback bypass performed."
+}

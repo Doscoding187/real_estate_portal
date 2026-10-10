@@ -1,0 +1,39 @@
+{
+  "arguments": {
+    "requestBody": {
+      "gitSource": {
+        "ref": "main",
+        "repoId": 1090889528,
+        "type": "github",
+        "sha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b"
+      },
+      "meta": {
+        "geographyApplicationStage": "controlled-unpaid-proof-20261010",
+        "seniorReviewedSourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b"
+      },
+      "name": "real-estate-portal",
+      "project": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+      "projectSettings": {
+        "buildCommand": "BUILD_SHA=57ea5f5e98ff031a4d0f0814998e60fe27a82b2b VITE_DEPLOY_ENV=production VITE_APP_URL=https://www.propertylistifysa.co.za VITE_API_URL=https://api.propertylistifysa.co.za VITE_API_BASE_URL=https://api.propertylistifysa.co.za VITE_USE_MOCK_EMAILS=false pnpm build",
+        "framework": "vite",
+        "installCommand": "pnpm install --frozen-lockfile --prod=false",
+        "nodeVersion": "22.x",
+        "outputDirectory": "dist/public",
+        "rootDirectory": null
+      },
+      "target": "production",
+      "withLatestCommit": false
+    },
+    "teamId": "team_wGNClVbXptfEtznBC5p1YfO2"
+  },
+  "automaticDomainAssignment": "A production create may update aliases. Maintenance must cover all aliases before dispatch and remain effective afterward. No CLI skip-domain claim is made for this MCP operation.",
+  "finalArtifactAcceptance": "After build: actual Git commit, version.json, deployment/configuration/environment metadata, browser behavior, routes and safety headers. Any mismatch stays contained.",
+  "offlineJuniorArtifactAcceptedForDeployment": false,
+  "operation": "mcp__vercel__create_deployment",
+  "projectEnvironmentValues": "Preserve sealed production project inputs; no decryption or replacement of journey/CDN/Maps/analytics/title/logo values. The reviewed build command overrides only declared public origin/version/mock settings.",
+  "providerSettingLimit": "MCP projection omits effective build/install/output and automatic Git-deploy configuration. Apply explicit reviewed build settings only within authorized release scope, verify their actual effect and preserve existing automatic deployment holds.",
+  "state": "PLANNED_NOT_DISPATCHED",
+  "projectSettingPersistence": "Explicit projectSettings may persist to following deployments. Record their effective result; any future release must rebind exact source/BUILD_SHA. No claim of deployment-only settings is made.",
+  "apiSchemaReference": "https://vercel.com/docs/rest-api/deployments/create-a-new-deployment",
+  "githubSourceSchemaVerified": "Provider OpenAPI admits numeric/string repoId plus ref and sha for GitHub. Use explicit sha with main branch context; withLatestCommit=false."
+}

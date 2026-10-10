@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-10T15:52:12.747107+00:00",
+  "mockedCasesPassed": 3,
+  "cases": [
+    {
+      "case": "http-failure",
+      "exitCode": 2,
+      "dispatchedJobs": 1,
+      "skippedJobs": 14,
+      "issues": [
+        "request-or-semantic-failure",
+        "http-read-latency-budget-failed"
+      ]
+    },
+    {
+      "case": "semantic-failure",
+      "exitCode": 2,
+      "dispatchedJobs": 1,
+      "skippedJobs": 14,
+      "issues": [
+        "request-or-semantic-failure"
+      ]
+    },
+    {
+      "case": "healthy",
+      "exitCode": 0,
+      "dispatchedJobs": 15,
+      "skippedJobs": 0,
+      "issues": []
+    }
+  ],
+  "databaseConnectionsOpened": 0,
+  "providerRequests": 0,
+  "hostedSearchMeasured": false
+}

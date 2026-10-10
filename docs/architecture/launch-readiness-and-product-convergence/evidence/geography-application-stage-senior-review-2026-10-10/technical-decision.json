@@ -1,0 +1,43 @@
+{
+  "allWorkerRuntimeVersionAgreementCertified": false,
+  "decision": "ACCEPT_SOURCE_AND_REVISED_CONTROLLED_APPLICATION_RELEASE_PLAN",
+  "environmentValuesDecrypted": false,
+  "freshApplicationWindowRequired": true,
+  "initialRuntimeScope": [
+    "API at pinned source",
+    "Frontend at pinned source/explicit production build settings",
+    "One authorised private North Riding house draft/media proof",
+    "Query-only bounded hosted search if readiness/semantics admit it"
+  ],
+  "juniorOfflineChecksIndependentlyPassed": 108,
+  "juniorPreparationCommit": "948c50bfbbed4e1a8ff718ac8cfac7c1e4662f90",
+  "leadCronActivationApproved": false,
+  "nationalSearchCapacityCertified": false,
+  "newRunnerRequired": false,
+  "operatorCorrection": "Stop new search dispatch after first request/semantic failure; retain provider request IDs and drain existing reads. Three mocked pipeline cases pass.",
+  "paymentsApproved": false,
+  "productionExecutionApproved": false,
+  "productionStateChanged": false,
+  "protectedSchemaAndReferenceStagesRetained": true,
+  "publicReopeningApproved": false,
+  "referenceCustodyFullyClosed": true,
+  "reviewedAtUtc": "2026-10-10T16:06:28.081428+00:00",
+  "reviewer": "Codex, senior product architect",
+  "sourceCI": {
+    "attempt": 1,
+    "conclusion": "success",
+    "event": "push",
+    "head_sha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+    "independentlyReadBack": true,
+    "run": 38040419705
+  },
+  "sourceCodeChangesRequiredForThisPlan": false,
+  "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "sourceTree": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "workerExecutionApproved": false,
+  "ingressReview": "API origins show expected maintenance response; old frontend remains reachable. Actual all-route/method restriction and attended access require fresh admission. No frontend blanket-maintenance claim.",
+  "frontendProjectSettingsCanPersist": true,
+  "hostedNaturalExitObservedThisReview": false,
+  "productionDatabaseConnectionsOpenedThisReview": 0
+}

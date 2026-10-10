@@ -1,0 +1,45 @@
+{
+  "reads": [
+    {
+      "origin": "https://api.propertylistifysa.co.za",
+      "observedAtUtc": "2026-10-10T16:02:56.917629+00:00",
+      "responseReceived": true,
+      "status": 403,
+      "bodyBytes": 645,
+      "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+      "title": "Access denied",
+      "maintenanceTextPresent": true,
+      "contentType": null,
+      "server": null,
+      "requestId": null
+    },
+    {
+      "origin": "https://realestateportal-production-9bb8.up.railway.app",
+      "observedAtUtc": "2026-10-10T16:02:57.272441+00:00",
+      "responseReceived": true,
+      "status": 403,
+      "bodyBytes": 645,
+      "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+      "title": "Access denied",
+      "maintenanceTextPresent": true,
+      "contentType": null,
+      "server": null,
+      "requestId": null
+    },
+    {
+      "origin": "https://www.propertylistifysa.co.za",
+      "observedAtUtc": "2026-10-10T16:02:58.034106+00:00",
+      "responseReceived": true,
+      "status": 200,
+      "bodyBytes": 3376,
+      "bodySha256": "9dc396797eb6e819e0f5d8699c9bc268a417b55f6251c5719fc8b70193a89ef3",
+      "title": "PropertyListify SA - South Africa's Fastest Growing Real Estate Platform",
+      "maintenanceTextPresent": false,
+      "contentType": "text/html; charset=utf-8",
+      "server": "Vercel",
+      "requestId": null
+    }
+  ],
+  "allAliasContainmentProved": false,
+  "interpretation": "Status/body observations alone do not establish all route/method ingress policy. Frontend is reachable. Must refresh governing containment and reviewed operator access before deployment."
+}

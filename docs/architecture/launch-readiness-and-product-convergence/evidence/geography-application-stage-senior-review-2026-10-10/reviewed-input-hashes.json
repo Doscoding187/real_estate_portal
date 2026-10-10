@@ -1,0 +1,31 @@
+{
+  "commit": "948c50bfbbed4e1a8ff718ac8cfac7c1e4662f90",
+  "files": {
+    "README.md": "b04cddaad44d2ccefdea250853336653627cac7a754973cd8d4010f87c9a8a2e",
+    "SHA256SUMS": "e006ffd12098a8431f2d9bc000520a1dba87fbae2aff405b5f3c85abd423f255",
+    "accepted-target.json": "d4e81eb43a0806ce99918bd645afebf620f29c5a8d04864e5334fb3a32b2d3cf",
+    "attended-checklist.md": "0931f0fe96866f8effd401fe766eceaf73222ba96624e3be749f5b005e661574",
+    "configuration-diff.md": "f29b8c08ed5d7fd5cc7b78e88e06ad8ea21588197c6ea3b700d695e399d6107c",
+    "configuration-value-digests.json": "4fd68f80d06aaabef680c9d57dfe6f7a21e493429efa23c48397a65df167873a",
+    "custody-closeout.json": "148f08b7c175b5514e4449ec1dd379e28c6b14bf2f4cfdce3c8fee89f0f83d3a",
+    "customer-proof-inputs.json": "8f879cbebf057e37e6a21f31230d3226bef145845269526dac25487296d120c7",
+    "customer-proof-plan.md": "f756a933a445fdd86ce42126741dd4ba67ece5b1c54e9c20bb9095d14b2033dc",
+    "database-authority-status.json": "357b17b7fa9e9816b213c1bff083ef9dae1d8047da42b5cecccc902d7bb91062",
+    "environment-status.json": "2bd736239669c65c12d9c929a4e1b9fdd37fe2fe32aaabeaca00bca9004d563b",
+    "exact-source-ci.json": "32c1899792d51a573b2f34c3ff0055dc2ecd0b0513221e501c56ce6fb12f2863",
+    "existing-evidence-index.json": "aefeb340579f80e290813e06e990a0e8989324d3b2f84fd4d0175aa95b1da390",
+    "frontend-artifact.json": "d323f6c2b09aabdc60b8407c561b01c83c83e97231d61688b81335a6363815c1",
+    "hosted-probe-guard-check.json": "73767323ed746599e077e5610f6bca1489c6872b9c6882d4549ac272feb15fb6",
+    "hosted-search-probe.mjs": "b6f171bae2492c27bd07dfa1f04148ca97e4c6169aa5dcd779fcc59dcbb7f922",
+    "maintenance-readback.json": "3410cd84329ee09ac4c15bc7457cd56c4627ea82b2620faf3d5c923371492b35",
+    "packet-validation.json": "a96b88ca045216122d32cc75f9bbc3ead44edd3608606018790c9a8c0f02e428",
+    "performance-evidence-status.json": "6c480111c9748da3e86ea1ccec35144a974fcba1752c4ef7512ca249628289f2",
+    "provider-config-readback.json": "8c2dc8426f9cee14a48d7bce2576deb03c8bfad3f8886c35fd1bc2a665c0c2f9",
+    "recovery.md": "bb960d7847a1f6bf41b14f6bd2aabede6ee30db0457d599dc497d5e1332d9100",
+    "search-performance-plan.md": "266b8cb58f7b7fe9f3ba71c966ca6f622e28e7faf5159f0345b06983d39adf3e",
+    "source-artifact.json": "59c0f9481c8a391eebcdb1fbfc10bcd290bc54208d6a03c8e12fc39802f7a73a",
+    "validate-packet.py": "794a1e4f9955593d5f55bbdd96a59969457c26b884bc11edd9cf5f126ee12840"
+  },
+  "packetPath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-compatible-application-20261010/docs/architecture/launch-readiness-and-product-convergence/evidence/geography-application-stage-preparation-2026-10-10",
+  "worktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-compatible-application-20261010"
+}

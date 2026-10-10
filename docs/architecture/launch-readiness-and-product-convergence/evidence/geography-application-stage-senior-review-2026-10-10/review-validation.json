@@ -1,0 +1,23 @@
+{
+  "checkedAtUtc": "2026-10-10T16:08:06.242787+00:00",
+  "checks": {
+    "source_tree": true,
+    "accepted_data_source_ancestor": true,
+    "no_app_overlay": true,
+    "reviewed_junior_input_hashes": 24,
+    "junior_commit": true,
+    "junior_worktree_clean": true,
+    "valid_json_documents": 10,
+    "operator_syntax": true,
+    "existing_three_mocked_pipeline_outcomes": true,
+    "existing_relative_links": 10,
+    "api_full_source_binding": true,
+    "frontend_full_source_binding": true,
+    "execution_still_held": true
+  },
+  "unchangedApplicationTestsOrBuildsRepeated": false,
+  "productionMutations": 0,
+  "productionDatabaseConnections": 0,
+  "newRunner": false,
+  "note": "Offline evidence/configuration review; source CI, loader checks and three mocked operator outcomes remain their separately recorded actual runs. Not hosted application proof. Initial validation stopped on an incorrect senior evidence-index worktree path; corrected the index before this run."
+}
