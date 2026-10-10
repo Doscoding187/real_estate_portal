@@ -1,0 +1,9 @@
+{
+  "reviewedAt": "2026-10-10T12:14:39.237203+00:00",
+  "reviewer": "Codex senior operator",
+  "sourceHash": "4d91890aafbd38979367744274caf23fe501c1f0f27905530778d911135f35ae",
+  "scope": "One fixed manifest-lock owner SELECT through existing diagnostics/read-only connection authority; no lock acquisition, grants or DDL; emit success only after connection closure",
+  "schemaSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "approvedForBoundReadOnlyExecution": true,
+  "rawErrorsOrCredentialsLogged": false
+}

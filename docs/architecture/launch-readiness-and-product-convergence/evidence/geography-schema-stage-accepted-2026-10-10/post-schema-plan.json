@@ -1,0 +1,12 @@
+{
+  "mode": "plan",
+  "planId": "e0d3509abc253e20ab9b55b6",
+  "planDigest": "e0d3509abc253e20ab9b55b6adb850dec3746336869b2300bd31b2c195bc33b1",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "acceptedOldHead": "0111_properties_canonical_place_reference_fk.sql",
+  "pending": [],
+  "expectedNewHead": "0111_properties_canonical_place_reference_fk.sql",
+  "lock": null,
+  "applied": [],
+  "freshSessionEvidence": null
+}

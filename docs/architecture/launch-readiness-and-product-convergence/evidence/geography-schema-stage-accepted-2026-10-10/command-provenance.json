@@ -1,0 +1,172 @@
+[
+  {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+    "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+    "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+    "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+    "observerSourceSha": null,
+    "archiveSha256": "4dd9d7a4b4377164f93a236ed44149dba6387b16dbbe42cf2f3c7d8b749cdfd1",
+    "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "migration",
+    "approvalReference": "GEOGRAPHY-SENIOR-DELEGATED-SCHEMA-RESUME-2026-10-10-Edward",
+    "databaseMutation": true,
+    "startedAt": "2026-10-10T12:39:39.009Z",
+    "commands": [
+      {
+        "label": "protected-schema-apply",
+        "command": [
+          "pnpm",
+          "db:release:apply",
+          "--",
+          "--accepted-old-head=0096_user_founder_authority_unique.sql",
+          "--expected-new-head=0111_properties_canonical_place_reference_fk.sql",
+          "--plan-digest=d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+          "--ack=CONFIRM_RELEASE_APPLY_b23d640cdf242812"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      }
+    ],
+    "completed": true,
+    "temporarySourceRemoved": true,
+    "completedAt": "2026-10-10T12:40:23.463Z"
+  },
+  {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+    "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+    "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+    "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+    "observerSourceSha": null,
+    "archiveSha256": "4dd9d7a4b4377164f93a236ed44149dba6387b16dbbe42cf2f3c7d8b749cdfd1",
+    "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "read-only",
+    "approvalReference": "GEOGRAPHY-SENIOR-DELEGATED-SCHEMA-RESUME-2026-10-10-Edward",
+    "databaseMutation": false,
+    "startedAt": "2026-10-10T12:42:22.739Z",
+    "commands": [
+      {
+        "label": "protected-inspect",
+        "command": [
+          "pnpm",
+          "db:release:reference:inspect",
+          "--",
+          "--adapter=places"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      {
+        "label": "protected-schema-plan",
+        "command": [
+          "pnpm",
+          "db:release:plan",
+          "--",
+          "--accepted-old-head=0111_properties_canonical_place_reference_fk.sql",
+          "--expected-new-head=0111_properties_canonical_place_reference_fk.sql"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      {
+        "label": "physical-congruency",
+        "command": [
+          "pnpm",
+          "db:schema:congruency"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      {
+        "label": "manifest-lock",
+        "command": [
+          "pnpm",
+          "exec",
+          "tsx",
+          "-e",
+          "<checksum-bound static manifest-lock-inspect.ts>"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      },
+      {
+        "label": "protected-reference-plan",
+        "command": [
+          "pnpm",
+          "db:release:reference:plan",
+          "--",
+          "--adapter=places"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      }
+    ],
+    "completed": true,
+    "temporarySourceRemoved": true,
+    "completedAt": "2026-10-10T12:43:20.862Z"
+  },
+  {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+    "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+    "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+    "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+    "observerSourceSha": null,
+    "archiveSha256": "4dd9d7a4b4377164f93a236ed44149dba6387b16dbbe42cf2f3c7d8b749cdfd1",
+    "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "read-only",
+    "approvalReference": "GEOGRAPHY-SENIOR-DELEGATED-SCHEMA-RESUME-2026-10-10-Edward",
+    "databaseMutation": false,
+    "startedAt": "2026-10-10T12:51:37.873Z",
+    "commands": [
+      {
+        "label": "manifest-lock",
+        "command": [
+          "pnpm",
+          "exec",
+          "tsx",
+          "-e",
+          "<checksum-bound static manifest-lock-inspect.ts>"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      }
+    ],
+    "completed": true,
+    "temporarySourceRemoved": true,
+    "completedAt": "2026-10-10T12:51:45.190Z"
+  },
+  {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+    "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+    "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+    "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+    "observerSourceSha": "2b7ecaae6c68426615ece4a1742b183d53b94179",
+    "archiveSha256": "b4bef0cae668c48c2eb5ede1ae9493b311ba6fa0459d1b5cc9811f62c5bbd78d",
+    "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+    "credentialClass": "bootstrap-admin",
+    "approvalReference": "GEOGRAPHY-SENIOR-DELEGATED-SCHEMA-RESUME-2026-10-10-Edward",
+    "databaseMutation": false,
+    "startedAt": "2026-10-10T12:52:10.590Z",
+    "commands": [
+      {
+        "label": "session-inventory",
+        "command": [
+          "pnpm",
+          "db:release:sessions:inspect"
+        ],
+        "exitCode": 0,
+        "stderr": ""
+      }
+    ],
+    "completed": true,
+    "temporarySourceRemoved": true,
+    "completedAt": "2026-10-10T12:52:20.807Z"
+  }
+]

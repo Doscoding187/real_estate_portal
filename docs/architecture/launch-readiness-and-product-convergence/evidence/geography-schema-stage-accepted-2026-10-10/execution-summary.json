@@ -1,0 +1,69 @@
+{
+  "recordedAt": "2026-10-10T13:01:00.286573+00:00",
+  "status": "SCHEMA STAGE ACCEPTED; REFERENCE/APPLICATION STAGES HELD",
+  "schemaSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "futureApplicationSourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "referencePlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "windowStartsAt": "2026-10-10T12:07:48Z",
+  "windowEndsAt": "2026-10-10T14:04:06Z",
+  "windowClockClarification": {
+    "recordedAt": "2026-10-10T12:26:50.101311+00:00",
+    "priorCheckpointWindowStart": "2026-10-10T12:04:06Z",
+    "firstVerifiedClockAfterAvailabilityReply": "2026-10-10T12:07:48Z",
+    "unchangedConservativeExpiry": "2026-10-10T14:04:06Z",
+    "firstReplacementMutationAt": "2026-10-10T12:19:06.896Z",
+    "decision": "Record confirmed attendance conservatively after reply; all replacement mutations occur after confirmation; alarms and expiry unchanged"
+  },
+  "schemaApplyIntentAt": "2026-10-10T12:39:14.125371+00:00",
+  "schemaCommandStartedAt": "2026-10-10T12:39:39.009Z",
+  "schemaCommandCompletedAt": "2026-10-10T12:40:23.463Z",
+  "independentVerificationCompletedAt": "2026-10-10T12:43:20.862Z",
+  "runner": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+    "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+    "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+    "createdAt": "2026-10-10T12:19:06Z",
+    "expiresAt": "2026-10-10T14:04:06Z",
+    "providerRemovalConfirmedAt": "2026-10-10T12:57:53.588935+00:00"
+  },
+  "firstRunnerRemoved": {
+    "recordedAt": "2026-10-10T12:18:14.025764+00:00",
+    "serviceId": "b621c520-852c-4ef7-bd68-8d2a7b59ebd7",
+    "deploymentId": "2049eb79-912a-441a-869a-121138470272",
+    "serviceAbsentFromProduction": true,
+    "deploymentStatus": "REMOVED",
+    "noOtherProductionResourcesRemoved": true,
+    "backupPreserved": true,
+    "schemaApplyIntentAbsent": true
+  },
+  "oldDeploymentRemovalIds": [
+    "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+    "4d18e7ce-084c-486a-87b1-39dca207bdde",
+    "19a8fac1-b750-4a8f-8f5d-1d94e725f460"
+  ],
+  "historyPrefixUnchanged": 97,
+  "newHistoryEntries": 15,
+  "finalHistoryEntries": 112,
+  "incompleteAttempts": 0,
+  "enforcedChecks": 39,
+  "referenceRowsWritten": 0,
+  "dataExistingRows": 0,
+  "admittedPlaces": 16944,
+  "pendingAssertionRows": 157728,
+  "excludedPlaces": 720,
+  "applicationDeployments": 0,
+  "newHostedCiRuns": 0,
+  "privateEvidenceDirectory": "/home/edwardspc/.local/state/property-listify/geography-release-resume-20261010T120406Z",
+  "previousPrivateEvidenceDirectory": "/home/edwardspc/.local/state/property-listify/geography-release-resume-20261010T110404Z",
+  "stopCorrections": [
+    "First runner below unchanged65-minute schema reserve: safely cleaned up, no DDL; new window/custody/runner obtained",
+    "An admission check rejected stale provider metadata before apply; collection order corrected without weakening freshness or retrying DDL"
+  ],
+  "hostedStatusLimitation": "Local authority status was completed. Hosted status refused UID0/local-service paths; no weakening. Named protected inspection, planning, apply and verification passed through the approved authority.",
+  "carrierCorrection": "First-window oversized carrier upload returned413 before any deployment; replaced with the closed1792-file source carrier. Final command bundle adds only frozen .env.local.example,1793files. All source hashes and frozen dependency lock matched.",
+  "nextStageApprovalRequired": "Fresh target-specific reference apply; deployment and reopening remain separate held scopes."
+}

@@ -1,0 +1,16 @@
+{
+  "validatedAt": "2026-10-10T13:07:52.317646+00:00",
+  "validationScope": "Local evidence consistency, links, JSON, credential-pattern scan and checksums; no production command or product-test rerun",
+  "originalMigrationChecksumPrefixPreserved": 97,
+  "appliedMigrations": 15,
+  "finalMigrationEntries": 112,
+  "physicalCongruency": true,
+  "enforcedChecks": 39,
+  "referencePlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "pendingAssertionRows": 157728,
+  "heldPlaces": 720,
+  "bothRunnerServicesAbsent": true,
+  "migrationLockReleased": true,
+  "result": "PASS",
+  "localLinksChecked": 14
+}

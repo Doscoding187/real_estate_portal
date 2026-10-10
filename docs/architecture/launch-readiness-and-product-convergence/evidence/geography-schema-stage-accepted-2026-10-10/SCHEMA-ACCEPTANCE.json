@@ -1,0 +1,19 @@
+{
+  "acceptedAt": "2026-10-10T12:49:21.600702+00:00",
+  "reviewer": "Codex senior product architect",
+  "scope": "Completed schema stage only; data plan reviewed for separate reference release; no data-apply authorization",
+  "head": "0111_properties_canonical_place_reference_fk.sql",
+  "historyPrefixUnchanged": 97,
+  "newMigrationsAppliedExactlyOnce": 15,
+  "physicalCongruent": true,
+  "checksEnforced": 39,
+  "incompleteAttempts": 0,
+  "referencePlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "admittedPlaces": 16944,
+  "provinces": 9,
+  "excludedPlaces": 720,
+  "pendingAssertionRows": 157728,
+  "referenceRowsWritten": 0,
+  "applicationDeployments": 0,
+  "maintenanceAndPaymentHoldsPreserved": true
+}

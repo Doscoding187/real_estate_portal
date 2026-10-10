@@ -1,0 +1,45 @@
+{
+  "checkedAt": "2026-10-10T12:13:04.281Z",
+  "liveQueryExecuted": false,
+  "sourceSha256": "4d91890aafbd38979367744274caf23fe501c1f0f27905530778d911135f35ae",
+  "syntaxValidation": {
+    "typescriptVersion": "5.9.3",
+    "typescriptDiagnostics": 0,
+    "esbuildAccepted": true
+  },
+  "focusedTypeValidation": {
+    "diagnostics": 0,
+    "actualFrozenApiModulesLoaded": 4
+  },
+  "apiSources": [
+    {
+      "path": "server/_core/databaseAuthority/context.ts",
+      "sha256": "1c73abea101dfbd81bf5e37f5a3fda4f9abb3c492552bfe2ea8628ec7f1c74bb"
+    },
+    {
+      "path": "server/_core/databaseAuthority/authorization.ts",
+      "sha256": "c82e7e9810b7ed73c99193eb66e71815469639807c3a796662a66b2a94577890"
+    },
+    {
+      "path": "server/_core/databaseAuthority/connectionAuthority.ts",
+      "sha256": "8ba4a0ada911d314693d701425cea7f3ac421037cee43f5a5ba091f86f2fe82c"
+    },
+    {
+      "path": "server/migrations/migrationManifest.ts",
+      "sha256": "477da6e9d023f612528dbacc2119f1dd28a78be4dc6106aabb4e20bea238c46d"
+    }
+  ],
+  "mockedBehaviorChecks": [
+    "literal-null succeeds only after awaited closure",
+    "held owner fails closed and closes once",
+    "zero rows fails closed and closes once",
+    "multiple rows fails closed and closes once",
+    "missing field fails closed and closes once",
+    "undefined field fails closed and closes once",
+    "malformed result fails closed and closes once",
+    "query failure closes connection",
+    "query primary failure survives cleanup failure",
+    "cleanup-only failure prevents success",
+    "migration credential refused before authorization or connection"
+  ]
+}

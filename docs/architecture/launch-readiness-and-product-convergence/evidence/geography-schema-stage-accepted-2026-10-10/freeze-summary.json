@@ -1,0 +1,87 @@
+{
+  "startedAt": "2026-10-10T11:46:14.510432+00:00",
+  "samples": [
+    {
+      "tag": "freeze-0",
+      "recordedAt": "2026-10-10T11:46:14.510432+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:46:13.096Z",
+      "providerRetrievedAt": "2026-10-10T11:45:48.919Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-1",
+      "recordedAt": "2026-10-10T11:48:34.774046+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:48:32.684Z",
+      "providerRetrievedAt": "2026-10-10T11:48:06.709Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-2",
+      "recordedAt": "2026-10-10T11:49:22.108491+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:49:20.796Z",
+      "providerRetrievedAt": "2026-10-10T11:48:55.222Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-3",
+      "recordedAt": "2026-10-10T11:50:15.594486+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:50:14.035Z",
+      "providerRetrievedAt": "2026-10-10T11:49:42.551Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-4",
+      "recordedAt": "2026-10-10T11:51:02.399740+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:51:01.002Z",
+      "providerRetrievedAt": "2026-10-10T11:50:36.100Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-5",
+      "recordedAt": "2026-10-10T11:51:51.131981+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:51:49.778Z",
+      "providerRetrievedAt": "2026-10-10T11:51:22.903Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    },
+    {
+      "tag": "freeze-6",
+      "recordedAt": "2026-10-10T11:52:43.040153+00:00",
+      "globalSessionObservedAt": "2026-10-10T11:52:41.646Z",
+      "providerRetrievedAt": "2026-10-10T11:52:11.618Z",
+      "noWriters": true,
+      "noRestarts": true,
+      "maintenance": true,
+      "cronPaused": true,
+      "observerConnectionClosed": true
+    }
+  ],
+  "invalidated": false,
+  "latestAt": "2026-10-10T11:52:43.040153+00:00",
+  "elapsedSeconds": 388.529721,
+  "gatePassed": true,
+  "frozenAt": "2026-10-10T11:52:43.040153+00:00"
+}
