@@ -1,0 +1,23 @@
+{
+  "planVersion": 1,
+  "operation": "runtime-place-grant",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "database": "propertylistify_database",
+  "identity": "propertylistify_app_runtime",
+  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedMigrationCount": 112,
+  "expectedModelDigest": "a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97",
+  "previousGrantDigest": "90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9",
+  "resultingGrantDigest": "cc6956ba9ba51dad7ceb3678f70658d46623adf66eedcc70a951aae602ae181d",
+  "statements": [
+    "GRANT SELECT ON `propertylistify_database`.`place` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT, INSERT, UPDATE ON `propertylistify_database`.`place_evidence` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`place_external_mapping` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`place_name` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`place_relationship` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`search_area` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`search_area_member` TO 'propertylistify_app_runtime'@'%'"
+  ],
+  "planDigest": "8a99133a0e23a21e1a38aee5f6d5507779628c0b7b0a5434b9e64bf8c5f9dead",
+  "requiredAcknowledgement": "CONFIRM_RUNTIME_PLACE_GRANT_b23d640cdf242812"
+}

@@ -6,6 +6,8 @@
     "server/migrations/runSqlMigrations.ts",
     "server/_core/databaseAuthority/lifecycle.ts",
     "server/_core/databaseAuthority/readiness.ts",
+    "server/_core/databaseAuthority/canonicalPlaceRuntimeGrants.ts",
+    "scripts/canonicalPlaceRuntimeGrantCli.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",

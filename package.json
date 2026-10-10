@@ -185,6 +185,8 @@
     "db:b08:migrator:provision": "tsx scripts/databaseAuthorityCli.ts b08:migrator:provision",
     "db:b08:migrator:verify": "tsx scripts/databaseAuthorityCli.ts b08:migrator:verify",
     "db:b08:runtime:grant-ledger-read": "tsx scripts/databaseAuthorityCli.ts b08:runtime:grant-ledger-read",
+    "db:runtime-place:plan": "tsx scripts/canonicalPlaceRuntimeGrantCli.ts plan",
+    "db:runtime-place:apply": "tsx scripts/canonicalPlaceRuntimeGrantCli.ts apply",
     "db:b08:runtime:provision": "tsx scripts/databaseAuthorityCli.ts b08:runtime:provision",
     "db:b08:runtime:verify": "tsx scripts/databaseAuthorityCli.ts b08:runtime:verify",
     "db:b08:tidb-reader:provision": "tsx scripts/databaseAuthorityCli.ts b08:tidb-reader:provision",

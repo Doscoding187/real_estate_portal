@@ -5,7 +5,8 @@
     "buildCommand": "pnpm build:railway"
   },
   "deploy": {
-    "startCommand": "pnpm start:hosted:api",
+    "startCommand": "node --import tsx server/_core/start.ts",
+    "drainingSeconds": 30,
     "healthcheckPath": "/api/readiness",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",

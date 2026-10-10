@@ -1,0 +1,169 @@
+{
+  "correction-candidate-focused": {
+    "args": [
+      "pnpm",
+      "exec",
+      "vitest",
+      "run",
+      "server/_core/databaseAuthority/__tests__/canonicalPlaceRuntimeGrants.test.ts",
+      "server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts",
+      "server/__tests__/contract.migration-execution-authority.test.ts",
+      "server/__tests__/launch-safety.contract.test.ts"
+    ],
+    "exitCode": 0,
+    "startedAtUtc": "2026-10-10T18:07:34.824632+00:00",
+    "finishedAtUtc": "2026-10-10T18:07:45.897497+00:00",
+    "testTotals": [
+      56
+    ]
+  },
+  "correction-candidate-types": {
+    "args": [
+      "pnpm",
+      "check"
+    ],
+    "exitCode": 0,
+    "startedAtUtc": "2026-10-10T18:07:34.825030+00:00",
+    "finishedAtUtc": "2026-10-10T18:09:57.437914+00:00"
+  },
+  "correction-candidate-test-types": {
+    "args": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "-p",
+      "tsconfig.runtime-place-tests.temporary.json"
+    ],
+    "exitCode": 0,
+    "startedAtUtc": "2026-10-10T18:07:34.826080+00:00",
+    "finishedAtUtc": "2026-10-10T18:07:54.099597+00:00"
+  },
+  "correction-candidate-authority": {
+    "args": [
+      "pnpm",
+      "db:authority:check"
+    ],
+    "exitCode": 0,
+    "startedAtUtc": "2026-10-10T18:07:34.826734+00:00",
+    "finishedAtUtc": "2026-10-10T18:09:19.155875+00:00",
+    "testTotals": [
+      718
+    ]
+  },
+  "correction-candidate-lint": {
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 114,
+    "finishedAtUtc": "2026-10-10T18:11:44.410288+00:00",
+    "files": [
+      {
+        "file": "scripts/canonicalPlaceRuntimeGrantCli.ts",
+        "errors": 0,
+        "warnings": 0
+      },
+      {
+        "file": "server/__tests__/contract.migration-execution-authority.test.ts",
+        "errors": 0,
+        "warnings": 1
+      },
+      {
+        "file": "server/__tests__/launch-safety.contract.test.ts",
+        "errors": 0,
+        "warnings": 0
+      },
+      {
+        "file": "server/_core/databaseAuthority/__tests__/canonicalPlaceRuntimeGrants.test.ts",
+        "errors": 0,
+        "warnings": 0
+      },
+      {
+        "file": "server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts",
+        "errors": 0,
+        "warnings": 95
+      },
+      {
+        "file": "server/_core/databaseAuthority/authorization.ts",
+        "errors": 0,
+        "warnings": 11
+      },
+      {
+        "file": "server/_core/databaseAuthority/canonicalPlaceRuntimeGrants.ts",
+        "errors": 0,
+        "warnings": 0
+      },
+      {
+        "file": "server/_core/databaseAuthority/connectionAuthority.ts",
+        "errors": 0,
+        "warnings": 7
+      },
+      {
+        "file": "server/_core/databaseAuthority/types.ts",
+        "errors": 0,
+        "warnings": 0
+      }
+    ]
+  },
+  "correction-cli-redaction": {
+    "finishedAtUtc": "2026-10-10T17:55:19.250257+00:00",
+    "cases": [
+      {
+        "command": "invalid-command",
+        "exitCode": 1,
+        "secretMarkerAbsent": true,
+        "event": {
+          "event": "place-runtime-grant-failed",
+          "failureStage": "validation-or-connect",
+          "safeToReplay": false,
+          "progress": null,
+          "cleanupFailureCount": 0
+        }
+      },
+      {
+        "command": "apply",
+        "exitCode": 1,
+        "secretMarkerAbsent": true,
+        "event": {
+          "event": "place-runtime-grant-failed",
+          "failureStage": "validation-or-connect",
+          "safeToReplay": false,
+          "progress": null,
+          "cleanupFailureCount": 0
+        }
+      }
+    ]
+  },
+  "databaseStatus": {
+    "command": "pnpm db:authority:status",
+    "exitCode": 0,
+    "targetClass": "disposable-worktree",
+    "availability": "database-unreachable",
+    "databaseInitialized": false,
+    "protectedDatabaseConnected": false
+  },
+  "earlierFailures": [
+    "Initial authority check: stale expectations for pnpm start:hosted:api in two startup contract tests; updated required literal while retaining all other assertions.",
+    "Initial scoped test type check: duplicate failureStage assertion key; corrected; final scoped type check passes.",
+    "An interrupted validation left incomplete local receipts; completed candidate receipts supersede those files."
+  ],
+  "finalCliOutputTypecheck": {
+    "exitCode": 0,
+    "args": [
+      "pnpm",
+      "check"
+    ],
+    "finishedAtUtc": "2026-10-10T18:13:55.386809+00:00"
+  },
+  "finalCliAndTestTypecheck": {
+    "args": [
+      "pnpm",
+      "exec",
+      "tsc",
+      "--noEmit",
+      "-p",
+      "tsconfig.runtime-place-cli-tests.temporary.json"
+    ],
+    "exitCode": 0,
+    "finishedAtUtc": "2026-10-10T18:14:41.446195+00:00"
+  }
+}

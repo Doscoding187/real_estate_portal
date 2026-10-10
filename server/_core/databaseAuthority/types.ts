@@ -8,6 +8,7 @@ export const DATABASE_OPERATIONS = [
   'migration-identity-provision',
   'runtime-identities-provision',
   'runtime-ledger-read-grant',
+  'runtime-place-grant',
   'b08-behavior-verify',
   'migration-plan',
   'migration-apply',

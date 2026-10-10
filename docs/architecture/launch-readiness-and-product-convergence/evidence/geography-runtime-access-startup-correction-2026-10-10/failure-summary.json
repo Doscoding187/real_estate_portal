@@ -1,0 +1,214 @@
+{
+  "recordedAtUtc": "2026-10-10T18:12:25.709684+00:00",
+  "deploymentId": "04359c62-714d-4478-ba6d-48991879893b",
+  "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "providerStatus": "FAILED",
+  "capturedLogCount": 149,
+  "capturedCompletedAssessments": 9,
+  "assessmentDurationMs": {
+    "min": 6399,
+    "max": 10404
+  },
+  "assessmentExamples": [
+    {
+      "timestamp": "2026-10-10T16:26:22.331240776Z",
+      "component": "hosted-database-readiness",
+      "event": "assessment-completed",
+      "reason": "not-ready",
+      "assessmentId": "7220ffe1-920d-450b-802d-b914a56d0ee2",
+      "durationMs": 6966,
+      "targetIdentity": "resolved",
+      "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "activeStage": null,
+      "verdict": {
+        "applicationReady": false,
+        "notReadyLayers": [
+          {
+            "layer": "schemaCongruent",
+            "code": "schema-not-congruent"
+          },
+          {
+            "layer": "commercialReferenceData",
+            "code": "foundation-blocked-by-schema"
+          },
+          {
+            "layer": "application",
+            "code": "application-not-ready-for-requested-runtime"
+          },
+          {
+            "layer": "structuralSchema",
+            "code": "required-schema-missing"
+          }
+        ]
+      },
+      "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b"
+    },
+    {
+      "timestamp": "2026-10-10T16:27:54.197815070Z",
+      "component": "hosted-database-readiness",
+      "event": "assessment-completed",
+      "reason": "not-ready",
+      "assessmentId": "1cb67d88-0454-47af-9ffc-01807f75e380",
+      "durationMs": 6958,
+      "targetIdentity": "resolved",
+      "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "activeStage": null,
+      "verdict": {
+        "applicationReady": false,
+        "notReadyLayers": [
+          {
+            "layer": "schemaCongruent",
+            "code": "schema-not-congruent"
+          },
+          {
+            "layer": "commercialReferenceData",
+            "code": "foundation-blocked-by-schema"
+          },
+          {
+            "layer": "application",
+            "code": "application-not-ready-for-requested-runtime"
+          },
+          {
+            "layer": "structuralSchema",
+            "code": "required-schema-missing"
+          }
+        ]
+      },
+      "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b"
+    }
+  ],
+  "startupMessages": [
+    {
+      "timestamp": "2026-10-10T16:25:48.601019445Z",
+      "message": "> real_estate_portal@1.0.0 start:hosted:api /app"
+    },
+    {
+      "timestamp": "2026-10-10T16:25:48.601026050Z",
+      "message": "> tsx server/_core/start.ts"
+    }
+  ],
+  "resumeProviderState": {
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production"
+    },
+    "pendingWork": [],
+    "services": [
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": true,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 1
+        },
+        "recentFailedDeployments": [
+          {
+            "createdAt": "2026-10-10T16:23:46.806Z",
+            "id": "04359c62-714d-4478-ba6d-48991879893b",
+            "status": "FAILED"
+          }
+        ],
+        "recentFailures": 1,
+        "replicaStatus": null,
+        "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "serviceName": "real_estate_portal",
+        "state": "offline",
+        "statusText": "Offline"
+      },
+      {
+        "activeDeployments": [
+          {
+            "createdAt": "2026-09-05T12:50:33.234Z",
+            "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+            "status": "SUCCESS",
+            "statusUpdatedAt": "2026-09-05T12:50:42.659Z"
+          }
+        ],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": true,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": {
+          "crashed": 0,
+          "running": 1,
+          "total": 1
+        },
+        "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "serviceName": "Redis",
+        "state": "online",
+        "statusText": "Online"
+      },
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": null,
+        "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "serviceName": "paid-mvp-lead-job",
+        "state": "offline",
+        "statusText": "Offline"
+      },
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": null,
+        "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "serviceName": "paid-mvp-email-worker",
+        "state": "offline",
+        "statusText": "Offline"
+      }
+    ],
+    "summary": {
+      "servicesWithIssues": 1,
+      "totalFailures": 1,
+      "totalServices": 4
+    }
+  },
+  "maintenanceReadback": {
+    "collectedAtUtc": "2026-10-10T18:08:57.860355+00:00",
+    "results": [
+      {
+        "url": "https://api.propertylistifysa.co.za/api/readiness",
+        "status": 403,
+        "bodyLength": 645,
+        "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63"
+      },
+      {
+        "url": "https://realestateportal-production-9bb8.up.railway.app/api/readiness",
+        "status": 403,
+        "bodyLength": 645,
+        "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63"
+      }
+    ]
+  },
+  "nativeRuntimeGrantsRetrieved": false,
+  "permissionsConclusion": "Supported hypothesis: seven admitted schema tables are absent from reviewed prior runtime grant plan. Native actual identity/grants still require read-only verification.",
+  "frontendDeploymentAttempted": false,
+  "diagnosticSourceFileSha256": "b7cf48cd3d3119afde6df062da5b8b14fd5e4b059b77735778db2bd4870e46db"
+}
