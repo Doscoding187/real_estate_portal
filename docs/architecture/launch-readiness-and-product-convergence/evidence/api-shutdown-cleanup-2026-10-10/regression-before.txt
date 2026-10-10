@@ -1,0 +1,1105 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010
+
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ❯ |server| server/_core/__tests__/apiShutdown.test.ts (4 tests | 4 failed) 30367ms
+   × API natural process exit > releases real startup resources after SIGTERM 7300ms
+     → API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:25:50.288Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:25:50.376Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache connection not configured, skipping Redis initialization
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:25:50.428Z',
+  lastRunStartedAt: '2026-10-10T07:25:50.428Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+   × API natural process exit > releases real startup resources after SIGINT 7666ms
+     → API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:25:57.966Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:25:58.049Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache connection not configured, skipping Redis initialization
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:25:58.102Z',
+  lastRunStartedAt: '2026-10-10T07:25:58.102Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGINT received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+   × API natural process exit > cancels connection retries when Redis is unavailable during startup 7624ms
+     → API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:26:05.546Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:26:05.640Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+Redis: Connection error: Error: connect ECONNREFUSED 127.0.0.1
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1'
+}
+Redis cache unavailable, switching to fallback mode: connect ECONNREFUSED 127.0.0.1
+Redis: Connection closed
+Redis: Reconnecting in 50ms (attempt undefined)
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:26:05.727Z',
+  lastRunStartedAt: '2026-10-10T07:26:05.728Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+Redis: Connection error: Error: connect ECONNREFUSED 127.0.0.1
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1'
+}
+Redis cache unavailable, switching to fallback mode: connect ECONNREFUSED 127.0.0.1
+Redis: Connection closed
+Redis: Reconnecting in 100ms (attempt undefined)
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+
+   × API natural process exit > releases Google Places when a location request has loaded it 7775ms
+     → API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:26:13.271Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:26:13.407Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache services initialized
+Redis cache connection not configured, skipping Redis initialization
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:26:13.500Z',
+  lastRunStartedAt: '2026-10-10T07:26:13.500Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGTERM
+Error: API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:25:50.288Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:25:50.376Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache connection not configured, skipping Redis initialization
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:25:50.428Z',
+  lastRunStartedAt: '2026-10-10T07:25:50.428Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+ ❯ tableExists server/services/runtimeSchemaCapabilities.ts:307:27
+ ❯ readRequirement server/services/runtimeSchemaCapabilities.ts:507:9
+ ❯ <anonymous> server/services/runtimeSchemaCapabilities.ts:519:39
+ ❯ getDistributionSchemaReadinessSnapshot server/services/runtimeSchemaCapabilities.ts:512:28
+ ❯ startServer server/_core/index.ts:111:40
+ ❯ Object.where server/db-connection.ts:207:41
+    205|               // Try to extract the column name and value from the con…
+    206|               // Drizzle's eq() creates an object with column and valu…
+    207|               const conditionStr = JSON.stringify(condition);
+       |                                         ^
+    208|
+    209|               // Simple heuristic: if condition has 'value' property, …
+ ❯ SavedSearchDeliveryScheduler.hydratePersistedHistory server/services/savedSearchDeliveryScheduler.ts:283:10
+ ❯ SavedSearchDeliveryScheduler.start server/services/savedSearchDeliveryScheduler.ts:158:5
+ ❯ startServer server/_core/index.ts:274:38
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchNotificationEngine.retryPendingEmailDeliveries server/services/savedSearchNotificationEngine.ts:1150:78
+ ❯ SavedSearchNotificationEngine.processDueNotifications server/services/savedSearchNotificationEngine.ts:852:20
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:224:24
+ ❯ selectDueRows server/services/commercialTermNoticeScheduler.ts:72:27
+ ❯ queueDueNotices server/services/commercialTermNoticeScheduler.ts:154:16
+ ❯ CommercialTermNoticeScheduler.tick server/services/commercialTermNoticeScheduler.ts:237:17
+ ❯ CommercialTermNoticeScheduler.start server/services/commercialTermNoticeScheduler.ts:218:5
+ ❯ startServer server/_core/index.ts:275:3
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchDeliveryScheduler.persistHistory server/services/savedSearchDeliveryScheduler.ts:314:10
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:261:9
+ ❯ fail server/_core/__tests__/apiShutdown.test.ts:37:16
+ ❯ Timeout.<anonymous> server/_core/__tests__/apiShutdown.test.ts:55:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL |server|  server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGINT
+Error: API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:25:57.966Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:25:58.049Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache connection not configured, skipping Redis initialization
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:25:58.102Z',
+  lastRunStartedAt: '2026-10-10T07:25:58.102Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGINT received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+ ❯ tableExists server/services/runtimeSchemaCapabilities.ts:307:27
+ ❯ readRequirement server/services/runtimeSchemaCapabilities.ts:507:9
+ ❯ <anonymous> server/services/runtimeSchemaCapabilities.ts:519:39
+ ❯ getDistributionSchemaReadinessSnapshot server/services/runtimeSchemaCapabilities.ts:512:28
+ ❯ startServer server/_core/index.ts:111:40
+ ❯ Object.where server/db-connection.ts:207:41
+    205|               // Try to extract the column name and value from the con…
+    206|               // Drizzle's eq() creates an object with column and valu…
+    207|               const conditionStr = JSON.stringify(condition);
+       |                                         ^
+    208|
+    209|               // Simple heuristic: if condition has 'value' property, …
+ ❯ SavedSearchDeliveryScheduler.hydratePersistedHistory server/services/savedSearchDeliveryScheduler.ts:283:10
+ ❯ SavedSearchDeliveryScheduler.start server/services/savedSearchDeliveryScheduler.ts:158:5
+ ❯ startServer server/_core/index.ts:274:38
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchNotificationEngine.retryPendingEmailDeliveries server/services/savedSearchNotificationEngine.ts:1150:78
+ ❯ SavedSearchNotificationEngine.processDueNotifications server/services/savedSearchNotificationEngine.ts:852:20
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:224:24
+ ❯ selectDueRows server/services/commercialTermNoticeScheduler.ts:72:27
+ ❯ queueDueNotices server/services/commercialTermNoticeScheduler.ts:154:16
+ ❯ CommercialTermNoticeScheduler.tick server/services/commercialTermNoticeScheduler.ts:237:17
+ ❯ CommercialTermNoticeScheduler.start server/services/commercialTermNoticeScheduler.ts:218:5
+ ❯ startServer server/_core/index.ts:275:3
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchDeliveryScheduler.persistHistory server/services/savedSearchDeliveryScheduler.ts:314:10
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:261:9
+ ❯ fail server/_core/__tests__/apiShutdown.test.ts:37:16
+ ❯ Timeout.<anonymous> server/_core/__tests__/apiShutdown.test.ts:55:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL |server|  server/_core/__tests__/apiShutdown.test.ts > API natural process exit > cancels connection retries when Redis is unavailable during startup
+Error: API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:26:05.546Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:26:05.640Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache services initialized
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+Redis: Connection error: Error: connect ECONNREFUSED 127.0.0.1
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1'
+}
+Redis cache unavailable, switching to fallback mode: connect ECONNREFUSED 127.0.0.1
+Redis: Connection closed
+Redis: Reconnecting in 50ms (attempt undefined)
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:26:05.727Z',
+  lastRunStartedAt: '2026-10-10T07:26:05.728Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+Redis: Connection error: Error: connect ECONNREFUSED 127.0.0.1
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1'
+}
+Redis cache unavailable, switching to fallback mode: connect ECONNREFUSED 127.0.0.1
+Redis: Connection closed
+Redis: Reconnecting in 100ms (attempt undefined)
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+[Redis] Reconnecting...
+[Redis] Connection error: connect ECONNREFUSED 127.0.0.1
+
+ ❯ tableExists server/services/runtimeSchemaCapabilities.ts:307:27
+ ❯ readRequirement server/services/runtimeSchemaCapabilities.ts:507:9
+ ❯ <anonymous> server/services/runtimeSchemaCapabilities.ts:519:39
+ ❯ getDistributionSchemaReadinessSnapshot server/services/runtimeSchemaCapabilities.ts:512:28
+ ❯ startServer server/_core/index.ts:111:40
+ ❯ Object.where server/db-connection.ts:207:41
+    205|               // Try to extract the column name and value from the con…
+    206|               // Drizzle's eq() creates an object with column and valu…
+    207|               const conditionStr = JSON.stringify(condition);
+       |                                         ^
+    208|
+    209|               // Simple heuristic: if condition has 'value' property, …
+ ❯ SavedSearchDeliveryScheduler.hydratePersistedHistory server/services/savedSearchDeliveryScheduler.ts:283:10
+ ❯ SavedSearchDeliveryScheduler.start server/services/savedSearchDeliveryScheduler.ts:158:5
+ ❯ startServer server/_core/index.ts:274:38
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchNotificationEngine.retryPendingEmailDeliveries server/services/savedSearchNotificationEngine.ts:1150:78
+ ❯ SavedSearchNotificationEngine.processDueNotifications server/services/savedSearchNotificationEngine.ts:852:20
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:224:24
+ ❯ selectDueRows server/services/commercialTermNoticeScheduler.ts:72:27
+ ❯ queueDueNotices server/services/commercialTermNoticeScheduler.ts:154:16
+ ❯ CommercialTermNoticeScheduler.tick server/services/commercialTermNoticeScheduler.ts:237:17
+ ❯ CommercialTermNoticeScheduler.start server/services/commercialTermNoticeScheduler.ts:218:5
+ ❯ startServer server/_core/index.ts:275:3
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchDeliveryScheduler.persistHistory server/services/savedSearchDeliveryScheduler.ts:314:10
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:261:9
+ ❯ fail server/_core/__tests__/apiShutdown.test.ts:37:16
+ ❯ Timeout.<anonymous> server/_core/__tests__/apiShutdown.test.ts:55:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL |server|  server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases Google Places when a location request has loaded it
+Error: API did not exit naturally within 4 seconds of shutdown
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+[Redis] No REDIS_URL configured, using in-memory fallback
+ℹ️  Local listing media adapter selected; legacy image uploads use the storage proxy.
+[DEV ROUTER LOADED] build stamp 2026-10-10T07:26:13.271Z
+[Server] startServer() called
+[BUILD_MARKER][SERVER] {
+  commit: 'local-dev',
+  env: 'test',
+  startedAt: '2026-10-10T07:26:13.407Z'
+}
+[CommercialActivation] Resolved release configuration {
+  status: 'preparation_only',
+  enabled: false,
+  enabledProductKeys: [],
+  releaseId: null,
+  approvalRef: null,
+  salesPaused: false,
+  salesOpenUntil: null,
+  buildSha: 'unknown'
+}
+[Server] Initializing cache...
+Redis cache services initialized
+Redis cache connection not configured, skipping Redis initialization
+[Server] Cache initialized
+[Server] Probing distribution schema readiness...
+[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access. TypeError: db.execute is not a function
+    at tableExists (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:307:27)
+    at async readRequirement (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:507:9)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:519:39)
+    at async Promise.all (index 0)
+    at async getDistributionSchemaReadinessSnapshot (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/runtimeSchemaCapabilities.ts:512:28)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:111:40)
+[Server] Loading optional routers...
+[Routes] ✅ Mounted /api/analytics <- ../routes/analytics
+[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount
+[Routes] ✅ Mounted /api/content <- ../contentRouter
+[Routes] ✅ Mounted /api/topics <- ../topicsRouter
+[Routes] ✅ Mounted /api/explore <- ../routes/exploreShorts
+[Routes] ✅ Mounted /api/explore/video <- ../routes/exploreVideoUpload
+[Server] Optional routers loaded
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.hydratePersistedHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:283:10)
+    at async SavedSearchDeliveryScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:158:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:274:38)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchNotificationEngine.retryPendingEmailDeliveries (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:1150:78)
+    at SavedSearchNotificationEngine.processDueNotifications (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchNotificationEngine.ts:852:20)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:224:24)
+[commercialTermNoticeScheduler] tick failed TypeError: db.execute is not a function
+    at selectDueRows (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:72:27)
+    at async queueDueNotices (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:154:16)
+    at async CommercialTermNoticeScheduler.tick (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:237:17)
+    at async CommercialTermNoticeScheduler.start (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts:218:5)
+    at async startServer (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts:275:3)
+[SavedSearchScheduler] Startup status {
+  enabled: true,
+  running: true,
+  timerActive: true,
+  intervalMs: 300000,
+  startedAt: '2026-10-10T07:26:13.500Z',
+  lastRunStartedAt: '2026-10-10T07:26:13.500Z',
+  lastRunCompletedAt: null,
+  lastRunFailedAt: null,
+  lastError: null,
+  lastResult: null,
+  recentRuns: []
+}
+[Server] Skipping frontend static file serving (backend-only mode)
+----------------------------------------
+[Server] Starting on port 0
+----------------------------------------
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 0,
+  dueSearches: 0,
+  emittedNotifications: 0,
+  emailedNotifications: 0,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/db-connection.ts:207:41)
+    at SavedSearchDeliveryScheduler.persistHistory (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:314:10)
+    at async <anonymous> (/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts:261:9)
+Backend running on http://localhost:0
+tRPC endpoint: http://localhost:0/api/trpc
+Environment: test
+[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.
+Redis cache services shutdown
+
+ ❯ tableExists server/services/runtimeSchemaCapabilities.ts:307:27
+ ❯ readRequirement server/services/runtimeSchemaCapabilities.ts:507:9
+ ❯ <anonymous> server/services/runtimeSchemaCapabilities.ts:519:39
+ ❯ getDistributionSchemaReadinessSnapshot server/services/runtimeSchemaCapabilities.ts:512:28
+ ❯ startServer server/_core/index.ts:111:40
+ ❯ Object.where server/db-connection.ts:207:41
+    205|               // Try to extract the column name and value from the con…
+    206|               // Drizzle's eq() creates an object with column and valu…
+    207|               const conditionStr = JSON.stringify(condition);
+       |                                         ^
+    208|
+    209|               // Simple heuristic: if condition has 'value' property, …
+ ❯ SavedSearchDeliveryScheduler.hydratePersistedHistory server/services/savedSearchDeliveryScheduler.ts:283:10
+ ❯ SavedSearchDeliveryScheduler.start server/services/savedSearchDeliveryScheduler.ts:158:5
+ ❯ startServer server/_core/index.ts:274:38
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchNotificationEngine.retryPendingEmailDeliveries server/services/savedSearchNotificationEngine.ts:1150:78
+ ❯ SavedSearchNotificationEngine.processDueNotifications server/services/savedSearchNotificationEngine.ts:852:20
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:224:24
+ ❯ selectDueRows server/services/commercialTermNoticeScheduler.ts:72:27
+ ❯ queueDueNotices server/services/commercialTermNoticeScheduler.ts:154:16
+ ❯ CommercialTermNoticeScheduler.tick server/services/commercialTermNoticeScheduler.ts:237:17
+ ❯ CommercialTermNoticeScheduler.start server/services/commercialTermNoticeScheduler.ts:218:5
+ ❯ startServer server/_core/index.ts:275:3
+ ❯ Object.where server/db-connection.ts:207:41
+ ❯ SavedSearchDeliveryScheduler.persistHistory server/services/savedSearchDeliveryScheduler.ts:314:10
+ ❯ <anonymous> server/services/savedSearchDeliveryScheduler.ts:261:9
+ ❯ fail server/_core/__tests__/apiShutdown.test.ts:37:16
+ ❯ Timeout.<anonymous> server/_core/__tests__/apiShutdown.test.ts:55:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  09:25:46
+   Duration  30.93s (transform 109ms, setup 131ms, collect 38ms, tests 30.37s, environment 0ms, prepare 84ms)

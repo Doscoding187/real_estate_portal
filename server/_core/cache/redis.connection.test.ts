@@ -6,11 +6,13 @@ import type { AddressInfo } from 'node:net';
 const { constructed, client } = vi.hoisted(() => ({
   constructed: vi.fn(),
   client: {
+    status: 'ready',
     on: vi.fn(),
     ping: vi.fn(),
     info: vi.fn(),
     dbsize: vi.fn(),
     quit: vi.fn(),
+    disconnect: vi.fn(),
   },
 }));
 vi.mock('ioredis', () => ({
@@ -43,6 +45,7 @@ import { registerHealthEndpoint } from '../health';
 
 describe('hosted cache connection authority', () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
   beforeEach(() => {
@@ -81,6 +84,50 @@ describe('hosted cache connection authority', () => {
       metrics: { fallback_mode: true },
     });
     await shutdownCache();
+  });
+
+  it('cancels owned retry timers and rejects rearming after repeated close', async () => {
+    vi.useFakeTimers();
+    await initializeCache();
+    const manager = getRedisCacheManager();
+    const errorHandler = client.on.mock.calls.find(([event]) => event === 'error')![1];
+    errorHandler(new Error('Redis unavailable'));
+    expect(vi.getTimerCount()).toBe(1);
+    const closing = manager.close();
+    expect(manager.close()).toBe(closing);
+    await closing;
+    expect(vi.getTimerCount()).toBe(0);
+    errorHandler(new Error('Late connection failure'));
+    expect(vi.getTimerCount()).toBe(0);
+    expect(client.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not rearm a retry when an in-flight connection check fails after close', async () => {
+    vi.useFakeTimers();
+    await initializeCache();
+    let failPing!: (error: Error) => void;
+    client.ping.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        failPing = reject;
+      }),
+    );
+    const errorHandler = client.on.mock.calls.find(([event]) => event === 'error')![1];
+    errorHandler(new Error('Redis unavailable'));
+    await vi.advanceTimersByTimeAsync(5000);
+    await getRedisCacheManager().close();
+    failPing(new Error('Connection closed during ping'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('releases the client while preserving a graceful-close error', async () => {
+    await initializeCache();
+    const failure = new Error('QUIT failed');
+    client.quit.mockRejectedValueOnce(failure);
+    const manager = getRedisCacheManager();
+    await expect(manager.close()).rejects.toBe(failure);
+    await expect(manager.close()).rejects.toBe(failure);
+    expect(client.disconnect).toHaveBeenCalledTimes(1);
   });
 
   it('does not select a different hosted target from REDIS_HOST when URL is absent', async () => {

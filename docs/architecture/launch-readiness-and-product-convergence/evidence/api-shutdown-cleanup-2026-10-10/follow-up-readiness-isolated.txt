@@ -1,0 +1,20 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts (5 tests) 9184ms
+   ✓ hosted readiness logs for hung verification > a first assessment that hangs after resolving its target logs target and stage before completion 3070ms
+   ✓ hosted readiness logs for hung verification > a hang during recovery after a failed assessment logs the new target and stage, not the failed one 3008ms
+   ✓ hosted readiness logs for hung verification > a held snapshot that expires while verifying progresses into a hung cleanup, logged with its stage 2958ms
+
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  10:20:30
+   Duration  9.78s (transform 199ms, setup 105ms, collect 72ms, tests 9.18s, environment 0ms, prepare 87ms)

@@ -12,9 +12,38 @@ vi.mock('../../db', () => ({ getDb: mockGetDb }));
 import { commercialTermNoticeScheduler } from '../commercialTermNoticeScheduler';
 
 describe('commercial term notice scheduler', () => {
-  afterEach(() => {
-    commercialTermNoticeScheduler.stop();
+  afterEach(async () => {
+    await commercialTermNoticeScheduler.stop();
     vi.clearAllMocks();
+  });
+
+  it('waits for an in-flight notice run before completing repeated shutdown', async () => {
+    let finishQuery!: (rows: unknown[]) => void;
+    mockGetDb.mockResolvedValue({ execute: mockExecute, insert: mockInsert });
+    mockExecute
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          finishQuery = resolve;
+        }),
+      )
+      .mockResolvedValue([]);
+    const run = commercialTermNoticeScheduler.tick();
+    let stopped = false;
+    const stopping = commercialTermNoticeScheduler.stop().then(() => {
+      stopped = true;
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    expect(stopped).toBe(false);
+    expect(commercialTermNoticeScheduler.status()).toMatchObject({
+      running: true,
+      timerActive: false,
+    });
+    finishQuery([]);
+    await stopping;
+    await run;
+    await commercialTermNoticeScheduler.stop();
+    expect(commercialTermNoticeScheduler.status().running).toBe(false);
+    expect(mockExecute).toHaveBeenCalledTimes(3);
   });
 
   it('queues all three canonical expiry windows for a Developer organisation owner', async () => {
@@ -69,5 +98,26 @@ describe('commercial term notice scheduler', () => {
         providerDelivery: 'b10_notification_consumer',
       });
     }
+  });
+
+  it('does not install an interval when stopped during the first startup tick', async () => {
+    let finishQuery!: (rows: unknown[]) => void;
+    mockGetDb.mockResolvedValue({ execute: mockExecute, insert: mockInsert });
+    mockExecute
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          finishQuery = resolve;
+        }),
+      )
+      .mockResolvedValue([]);
+    const starting = commercialTermNoticeScheduler.start();
+    const stopping = commercialTermNoticeScheduler.stop();
+    await new Promise(resolve => setImmediate(resolve));
+    finishQuery([]);
+    await Promise.all([starting, stopping]);
+    expect(commercialTermNoticeScheduler.status()).toMatchObject({
+      running: false,
+      timerActive: false,
+    });
   });
 });

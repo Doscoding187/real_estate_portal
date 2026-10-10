@@ -218,4 +218,29 @@ describe('savedSearchDeliveryScheduler', () => {
 
     await scheduler.stop();
   });
+  it('waits for pending startup hydration and cancels its timer and startup job', async () => {
+    let finishHydration!: (rows: unknown[]) => void;
+    mockSelectLimit.mockReset().mockReturnValueOnce(
+      new Promise(resolve => {
+        finishHydration = resolve;
+      }),
+    );
+    const scheduler = new SavedSearchDeliveryScheduler();
+    const starting = scheduler.start();
+    let stopped = false;
+    const stopping = scheduler.stop().then(() => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    const stoppedBeforeHydrationFinished = stopped;
+    finishHydration([]);
+    await Promise.all([starting, stopping]);
+    const status = scheduler.getStatus();
+    // Always reap a timer from the prior implementation before asserting.
+    await scheduler.stop();
+    expect(stoppedBeforeHydrationFinished).toBe(false);
+    expect(status).toMatchObject({ running: false, timerActive: false });
+    expect(mockProcessDueNotifications).not.toHaveBeenCalled();
+  });
 });

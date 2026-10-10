@@ -1,0 +1,277 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010
+
+stdout | server/services/__tests__/googlePlacesService.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/readinessSnapshotMonitor.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  write to custom object with { processEnv: myObject }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/founderGoogleIdentity.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/readinessSnapshotMonitor.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/_core/readinessSnapshotMonitor.test.ts (27 tests) 55ms
+stdout | server/_core/founderGoogleIdentity.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/_core/founderGoogleIdentity.test.ts (43 tests) 336ms
+stdout | server/services/__tests__/googlePlacesService.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | server/_core/cache/redis.connection.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/googlePlacesService.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/googlePlacesService.test.ts (29 tests) 799ms
+stdout | server/_core/authRateLimitStore.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/authRateLimitStore.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/_core/authRateLimitStore.test.ts (10 tests) 526ms
+stdout | server/services/__tests__/savedSearchDeliveryScheduler.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/cache/redis.connection.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > uses the same REDIS_URL as the security stores and starts the connection
+Redis cache services initialized
+Redis cache services shutdown
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > reports disconnected fallback after an actual ping failure
+Redis cache services initialized
+Redis cache services shutdown
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > cancels owned retry timers and rejects rearming after repeated close
+Redis cache services initialized
+
+stderr | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > cancels owned retry timers and rejects rearming after repeated close
+Redis: Connection error: Error: Redis unavailable
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.connection.test.ts:94:18
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+Redis cache unavailable, switching to fallback mode: Redis unavailable
+Redis: Connection error: Error: Late connection failure
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.connection.test.ts:100:18
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > does not rearm a retry when an in-flight connection check fails after close
+Redis cache services initialized
+
+stderr | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > does not rearm a retry when an in-flight connection check fails after close
+Redis: Connection error: Error: Redis unavailable
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.connection.test.ts:111:18
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+Redis cache unavailable, switching to fallback mode: Redis unavailable
+
+stderr | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > does not rearm a retry when an in-flight connection check fails after close
+Redis: Reconnection failed: Connection closed during ping
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > releases the client while preserving a graceful-close error
+Redis cache services initialized
+
+stderr | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > releases the client while preserving a graceful-close error
+Redis: Close operation failed: Error: QUIT failed
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.connection.test.ts:121:21
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11
+    at withEnv (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:90:5)
+    at run (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:112:3)
+
+stderr | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > does not select a different hosted target from REDIS_HOST when URL is absent
+Redis cache connection not configured, skipping Redis initialization
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > does not select a different hosted target from REDIS_HOST when URL is absent
+Redis cache services initialized
+Redis cache services shutdown
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > recovers HTTP readiness after more than ten failed probes without restarting or clearing telemetry
+Redis cache services initialized
+
+stdout | server/_core/cache/redis.connection.test.ts > hosted cache connection authority > recovers HTTP readiness after more than ten failed probes without restarting or clearing telemetry
+Redis cache services shutdown
+
+ ✓ |server| server/_core/cache/redis.connection.test.ts (7 tests) 134ms
+stdout | server/services/__tests__/publicLeadRateLimitService.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/savedSearchDeliveryScheduler.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/services/__tests__/savedSearchDeliveryScheduler.test.ts > savedSearchDeliveryScheduler > runs on start and on interval, then exposes last-run status
+[SavedSearchScheduler] Run completed {
+  trigger: 'startup',
+  scannedSearches: 4,
+  dueSearches: 2,
+  emittedNotifications: 2,
+  emailedNotifications: 1,
+  retriedEmailDeliveries: 0,
+  failedEmailRetries: 1,
+  abandonedEmailRetries: 0
+}
+[SavedSearchScheduler] Run completed {
+  trigger: 'interval',
+  scannedSearches: 5,
+  dueSearches: 1,
+  emittedNotifications: 1,
+  emailedNotifications: 1,
+  retriedEmailDeliveries: 1,
+  failedEmailRetries: 0,
+  abandonedEmailRetries: 0
+}
+
+ ✓ |server| server/services/__tests__/savedSearchDeliveryScheduler.test.ts (3 tests) 32ms
+stdout | server/services/__tests__/publicLeadRateLimitService.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publicLeadRateLimitService.test.ts (4 tests) 47ms
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/services/__tests__/commercialTermNoticeScheduler.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/commercialTermNoticeScheduler.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/services/__tests__/commercialTermNoticeScheduler.test.ts > commercial term notice scheduler > waits for an in-flight notice run before completing repeated shutdown
+[commercialTermNoticeScheduler] tick completed { sent: 0, at: '2026-10-10T07:27:00.454Z' }
+
+stdout | server/services/__tests__/commercialTermNoticeScheduler.test.ts > commercial term notice scheduler > queues all three canonical expiry windows for a Developer organisation owner
+[commercialTermNoticeScheduler] tick completed { sent: 3, at: '2026-10-10T07:27:00.458Z' }
+
+ ✓ |server| server/services/__tests__/commercialTermNoticeScheduler.test.ts (2 tests) 12ms
+stdout | server/lib/redis.lifecycle.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/lib/redis.lifecycle.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stderr | server/lib/redis.lifecycle.test.ts > startup Redis singleton shutdown > cancels and awaits a connection that has never become ready
+[Redis] Failed to connect: Connection cancelled by shutdown
+
+ ✓ |server| server/lib/redis.lifecycle.test.ts (3 tests) 24ms
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGTERM
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'absent',
+  loadGooglePlaces: false,
+  startupMs: 4823,
+  shutdownMs: 34,
+  code: 0,
+  signal: null
+}
+
+ ✓ |server| server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts (5 tests) 12320ms
+   ✓ hosted readiness logs for hung verification > a first assessment that hangs after resolving its target logs target and stage before completion 4687ms
+   ✓ hosted readiness logs for hung verification > a hang during recovery after a failed assessment logs the new target and stage, not the failed one 4200ms
+   ✓ hosted readiness logs for hung verification > a held snapshot that expires while verifying progresses into a hung cleanup, logged with its stage 3208ms
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGINT
+API natural exit {
+  requestedSignal: 'SIGINT',
+  redis: 'absent',
+  loadGooglePlaces: false,
+  startupMs: 3577,
+  shutdownMs: 31,
+  code: 0,
+  signal: null
+}
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > cancels connection retries when Redis is unavailable during startup
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'unavailable',
+  loadGooglePlaces: false,
+  startupMs: 3217,
+  shutdownMs: 2055,
+  code: 0,
+  signal: null
+}
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases Google Places when a location request has loaded it
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'absent',
+  loadGooglePlaces: true,
+  startupMs: 3765,
+  shutdownMs: 29,
+  code: 0,
+  signal: null
+}
+
+ ✓ |server| server/_core/__tests__/apiShutdown.test.ts (4 tests) 17547ms
+   ✓ API natural process exit > releases real startup resources after SIGTERM 4862ms
+   ✓ API natural process exit > releases real startup resources after SIGINT 3610ms
+   ✓ API natural process exit > cancels connection retries when Redis is unavailable during startup 5275ms
+   ✓ API natural process exit > releases Google Places when a location request has loaded it 3798ms
+
+ Test Files  11 passed (11)
+      Tests  137 passed (137)
+   Start at  09:26:52
+   Duration  23.60s (transform 1.82s, setup 1.64s, collect 7.40s, tests 31.83s, environment 3ms, prepare 1.65s)

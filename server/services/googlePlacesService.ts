@@ -17,6 +17,7 @@
 import axios, { AxiosError } from 'axios';
 import { nanoid } from 'nanoid';
 import { redisCache, CacheTTL } from '../lib/redis';
+import { registerGooglePlacesServiceForShutdown } from './googlePlacesServiceLifecycle';
 
 // ============================================================================
 // Types and Interfaces
@@ -164,7 +165,8 @@ export class GooglePlacesService {
   private nearbySearchCache = new SimpleCache<any[]>(); // Cache for nearby searches
   private activeSessions = new Map<string, SessionToken>();
   private usageLogs: APIUsageLog[] = [];
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval: NodeJS.Timeout | null;
+  private sessionCleanupTimers = new Set<NodeJS.Timeout>();
 
   constructor() {
     // Validate API key
@@ -213,9 +215,11 @@ export class GooglePlacesService {
     if (session) {
       session.terminated = true;
       // Remove from active sessions after a short delay
-      setTimeout(() => {
+      const timer = setTimeout(() => {
+        this.sessionCleanupTimers.delete(timer);
         this.activeSessions.delete(token);
       }, 1000);
+      this.sessionCleanupTimers.add(timer);
     }
   }
 
@@ -811,7 +815,12 @@ export class GooglePlacesService {
    * Cleanup resources
    */
   destroy(): void {
-    clearInterval(this.cleanupInterval);
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    for (const timer of this.sessionCleanupTimers) clearTimeout(timer);
+    this.sessionCleanupTimers.clear();
     this.clearCaches();
     this.activeSessions.clear();
   }
@@ -951,3 +960,4 @@ export function validateSouthAfricaBoundaries(lat: number, lng: number): boolean
 // ============================================================================
 
 export const googlePlacesService = new GooglePlacesService();
+registerGooglePlacesServiceForShutdown(googlePlacesService);

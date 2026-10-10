@@ -43,10 +43,13 @@ class RedisCache {
   private client: RedisClientType | null = null;
   private isConnected = false;
   private connectionPromise: Promise<unknown> | null = null;
+  private closed = false;
+  private disconnectPromise: Promise<void> | null = null;
+  private initialization: Promise<void>;
   private fallbackCache: Map<string, { value: string; expiresAt: number }> = new Map();
 
   constructor() {
-    this.initializeConnection();
+    this.initialization = this.initializeConnection();
   }
 
   private async initializeConnection(): Promise<void> {
@@ -67,7 +70,7 @@ class RedisCache {
 
       this.client.on('connect', () => {
         console.log('[Redis] Connected successfully');
-        this.isConnected = true;
+        this.isConnected = !this.closed;
       });
 
       this.client.on('reconnecting', () => {
@@ -92,7 +95,7 @@ class RedisCache {
         // Connection failed, use fallback
       }
     }
-    return this.isConnected && this.client !== null;
+    return !this.closed && this.isConnected && this.client !== null;
   }
 
   /**
@@ -260,11 +263,27 @@ class RedisCache {
   /**
    * Graceful shutdown
    */
-  async disconnect(): Promise<void> {
-    if (this.client && this.isConnected) {
-      await this.client.quit();
-      this.isConnected = false;
-    }
+  disconnect(): Promise<void> {
+    if (this.disconnectPromise) return this.disconnectPromise;
+    this.closed = true;
+    this.isConnected = false;
+    const client = this.client;
+    this.disconnectPromise = (async () => {
+      try {
+        if (client?.isReady) await client.quit();
+      } finally {
+        // An opening/reconnecting client is still an owned resource. Cancel its
+        // connection attempts even if it has never reached the connect event.
+        if (client?.isOpen) client.destroy();
+        // The initializer owns connection-failure handling, including the
+        // expected rejection when shutdown cancels a pending connect().
+        await this.initialization;
+        this.client = null;
+        this.connectionPromise = null;
+        this.fallbackCache.clear();
+      }
+    })();
+    return this.disconnectPromise;
   }
 }
 

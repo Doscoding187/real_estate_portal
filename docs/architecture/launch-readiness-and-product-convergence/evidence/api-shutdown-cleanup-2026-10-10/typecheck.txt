@@ -1,0 +1,3 @@
+
+> real_estate_portal@1.0.0 check /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010
+> tsc -p tsconfig.check.json --noEmit

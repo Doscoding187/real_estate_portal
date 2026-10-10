@@ -1,0 +1,22 @@
+{
+  "command": "pnpm exec tsc -p tsconfig.shutdown-r2-check.tmp.json --noEmit",
+  "exitCode": 0,
+  "stdout": "",
+  "config": {
+    "extends": "./tsconfig.check.json",
+    "include": [
+      "server/_core/index.ts",
+      "server/_core/__tests__/apiShutdown.test.ts",
+      "server/_core/__tests__/fixtures/apiShutdownChild.ts",
+      "server/lib/redis.lifecycle.test.ts",
+      "server/_core/cache/redis.connection.test.ts",
+      "server/services/__tests__/commercialTermNoticeScheduler.test.ts",
+      "server/services/__tests__/savedSearchDeliveryScheduler.test.ts"
+    ],
+    "exclude": [],
+    "compilerOptions": {
+      "incremental": false
+    }
+  },
+  "temporaryConfigRemoved": true
+}

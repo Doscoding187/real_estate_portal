@@ -12,7 +12,7 @@ interface CacheEntry<T> {
 
 class SimpleCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval: NodeJS.Timeout | null;
 
   constructor() {
     // Clean up expired entries every minute
@@ -88,7 +88,10 @@ class SimpleCache {
    * Destroy cache and cleanup
    */
   destroy(): void {
-    clearInterval(this.cleanupInterval);
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
     this.cache.clear();
   }
 }

@@ -1,0 +1,53 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.ts
+  311:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  502:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  531:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  559:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  614:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  674:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts
+   41:9   warning  Replace `·assertHostedRuntimeConfiguration,·resolveHostedBuildSha·` with `⏎··assertHostedRuntimeConfiguration,⏎··resolveHostedBuildSha,⏎`  prettier/prettier
+   59:16  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+   79:17  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  104:16  warning  Insert `⏎····`                                                                                                                             prettier/prettier
+  148:20  warning  Insert `⏎···`                                                                                                                              prettier/prettier
+  170:13  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  245:30  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  323:31  warning  Replace `error·?·reject(error)·:·resolve(` with `(error·?·reject(error)·:·resolve()`                                                       prettier/prettier
+  347:30  warning  Replace `·void·shutdown('SIGTERM');·` with `⏎··void·shutdown('SIGTERM');⏎`                                                                 prettier/prettier
+  348:29  warning  Replace `·void·shutdown('SIGINT');·` with `⏎··void·shutdown('SIGINT');⏎`                                                                   prettier/prettier
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/lib/cache.ts
+  14:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/lib/redis.ts
+  194:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  213:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  253:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/__tests__/googlePlacesService.test.ts
+   13:3   warning  'validateCoordinatePrecision' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  225:13  warning  'mockAxios' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  242:28  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts
+   41:22  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  249:71  warning  Replace `·sent,·at:·this.lastSucceededAt` with `⏎········sent,⏎········at:·this.lastSucceededAt,⏎·····`  prettier/prettier
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/googlePlacesService.ts
+   19:22  warning  'CacheTTL' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  100:7   warning  'DEBOUNCE_DELAY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  165:47  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  287:91  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  360:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  435:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  502:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  611:50  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  731:14  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  738:48  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  771:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+
+✖ 36 problems (0 errors, 36 warnings)
+  0 errors and 7 warnings potentially fixable with the `--fix` option.

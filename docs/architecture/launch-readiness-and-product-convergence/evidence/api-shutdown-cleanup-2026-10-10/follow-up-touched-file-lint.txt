@@ -1,0 +1,139 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/cache/redis.ts
+  311:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  502:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  531:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  559:59  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  614:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  674:42  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/_core/index.ts
+   41:9   warning  Replace `·assertHostedRuntimeConfiguration,·resolveHostedBuildSha·` with `⏎··assertHostedRuntimeConfiguration,⏎··resolveHostedBuildSha,⏎`  prettier/prettier
+   59:16  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+   80:17  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  107:16  warning  Insert `⏎····`                                                                                                                             prettier/prettier
+  153:20  warning  Insert `⏎···`                                                                                                                              prettier/prettier
+  175:13  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  250:30  warning  Unexpected any. Specify a different type                                                                                                   @typescript-eslint/no-explicit-any
+  417:30  warning  Replace `·void·shutdown('SIGTERM');·` with `⏎··void·shutdown('SIGTERM');⏎`                                                                 prettier/prettier
+  418:29  warning  Replace `·void·shutdown('SIGINT');·` with `⏎··void·shutdown('SIGINT');⏎`                                                                   prettier/prettier
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/lib/cache.ts
+  14:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/lib/redis.ts
+  194:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  213:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  253:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/__tests__/googlePlacesService.test.ts
+   13:3   warning  'validateCoordinatePrecision' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  225:13  warning  'mockAxios' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  242:28  warning  Unexpected any. Specify a different type                                                       @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/__tests__/savedSearchDeliveryScheduler.test.ts
+   71:6   warning  Replace `⏎····'runs·on·start·and·on·interval,·then·exposes·last-run·status',⏎···` with `'runs·on·start·and·on·interval,·then·exposes·last-run·status',`  prettier/prettier
+   74:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   75:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+   76:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   77:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+   78:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+   79:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   80:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+   81:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   82:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   83:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+   84:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+   85:1   warning  Replace `········` with `······`                                                                                                                         prettier/prettier
+   86:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   87:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   88:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+   89:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   90:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+   91:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   92:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+   93:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+   94:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+   96:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+   98:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+   99:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  100:1   warning  Replace `······` with `····`                                                                                                                             prettier/prettier
+  102:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  104:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  105:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  106:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  107:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  108:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+  109:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+  110:1   warning  Replace `········` with `······`                                                                                                                         prettier/prettier
+  111:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+  112:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  113:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+  114:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+  115:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+  116:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  117:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+  118:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+  119:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  120:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  121:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  122:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  123:1   warning  Replace `········` with `······`                                                                                                                         prettier/prettier
+  124:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  125:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  126:11  warning  Delete `··`                                                                                                                                              prettier/prettier
+  127:13  warning  Delete `··`                                                                                                                                              prettier/prettier
+  128:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  129:13  warning  Delete `··`                                                                                                                                              prettier/prettier
+  130:11  warning  Delete `··`                                                                                                                                              prettier/prettier
+  131:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+  132:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  133:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  134:11  warning  Delete `··`                                                                                                                                              prettier/prettier
+  135:13  warning  Delete `··`                                                                                                                                              prettier/prettier
+  136:1   warning  Replace `··············` with `············`                                                                                                             prettier/prettier
+  137:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  138:11  warning  Delete `··`                                                                                                                                              prettier/prettier
+  139:1   warning  Replace `··········` with `········`                                                                                                                     prettier/prettier
+  140:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  141:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  142:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  143:5   warning  Delete `··`                                                                                                                                              prettier/prettier
+  144:1   warning  Replace `······` with `····`                                                                                                                             prettier/prettier
+  145:7   warning  Delete `··`                                                                                                                                              prettier/prettier
+  146:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  147:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+  148:9   warning  Delete `··`                                                                                                                                              prettier/prettier
+  149:1   warning  Replace `········` with `······`                                                                                                                         prettier/prettier
+  150:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  152:1   warning  Delete `··`                                                                                                                                              prettier/prettier
+  153:3   warning  Replace `··},⏎····10000,⏎··` with `},·10000`                                                                                                             prettier/prettier
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/commercialTermNoticeScheduler.ts
+   41:22  warning  Unexpected any. Specify a different type                                                                 @typescript-eslint/no-explicit-any
+  266:71  warning  Replace `·sent,·at:·this.lastSucceededAt` with `⏎········sent,⏎········at:·this.lastSucceededAt,⏎·····`  prettier/prettier
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/googlePlacesService.ts
+   19:22  warning  'CacheTTL' is defined but never used. Allowed unused vars must match /^_/u                 @typescript-eslint/no-unused-vars
+  100:7   warning  'DEBOUNCE_DELAY' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  165:47  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  287:91  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  360:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  435:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  502:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  611:50  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  731:14  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  738:48  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+  771:65  warning  Unexpected any. Specify a different type                                                   @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010/server/services/savedSearchDeliveryScheduler.ts
+   81:26  warning  Replace `process.env.SAVED_SEARCH_SCHEDULER_ENABLED,·process.env.NODE_ENV·!==·'test'` with `⏎····process.env.SAVED_SEARCH_SCHEDULER_ENABLED,⏎····process.env.NODE_ENV·!==·'test',⏎··`  prettier/prettier
+  114:73  warning  Replace `·?·candidate.completedAt` with `⏎········?·candidate.completedAt⏎·······`                                                                                                     prettier/prettier
+  115:14  warning  Insert `⏎·····`                                                                                                                                                                        prettier/prettier
+  132:18  warning  Replace `.map(coerceHistoryEntry).filter(Boolean)` with `⏎······.map(coerceHistoryEntry)⏎······.filter(Boolean)⏎······`                                                                prettier/prettier
+  218:57  warning  Replace `·...entry,·result:·entry.result·?·{·...entry.result·}·:·null` with `⏎········...entry,⏎········result:·entry.result·?·{·...entry.result·}·:·null,⏎·····`                      prettier/prettier
+  300:65  warning  Unexpected any. Specify a different type                                                                                                                                               @typescript-eslint/no-explicit-any
+  331:65  warning  Unexpected any. Specify a different type                                                                                                                                               @typescript-eslint/no-explicit-any
+
+✖ 118 problems (0 errors, 118 warnings)
+  0 errors and 87 warnings potentially fixable with the `--fix` option.
