@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-10-10T10:01:24.541271+00:00",
+  "reviewCommit": "191c0edfdd609f4b98557ea780ab8aefda4de7a6",
+  "wrapperSha256": "e84542520bf707fea0eba1939422120fa1c3f44c56d7234782d1c1e65f5e4544",
+  "artifactHashes": {
+    "drain-session.original.cjs": "e483eed8b9c14100850177aaefedef60812e7b0ecc414752131e9c3cfd9bba62",
+    "cache-drain-session.cjs": "9d6ed66dde0f2730f4c20c7a416d978aa51ccea4036a007f70ae5be19aa841e2"
+  },
+  "attendedWindow": {
+    "startsAt": "2026-10-10T09:43:01Z",
+    "endsAt": "2026-10-10T10:13:01Z"
+  },
+  "oneAttemptOnly": true,
+  "deploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "instanceId": "41e46a78-215c-4feb-9c7a-b0aa7d5faf50"
+}

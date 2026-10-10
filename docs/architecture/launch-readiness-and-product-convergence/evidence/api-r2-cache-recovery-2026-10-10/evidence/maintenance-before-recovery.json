@@ -1,0 +1,18 @@
+[
+  {
+    "at": "2026-10-10T10:00:18.218339+00:00",
+    "origin": "https://api.propertylistifysa.co.za",
+    "status": 403,
+    "durationMs": 11412,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+    "preparedMaintenanceMessage": true
+  },
+  {
+    "at": "2026-10-10T10:00:18.765702+00:00",
+    "origin": "https://realestateportal-production-9bb8.up.railway.app",
+    "status": 403,
+    "durationMs": 547,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+    "preparedMaintenanceMessage": true
+  }
+]

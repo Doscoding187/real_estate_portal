@@ -2,7 +2,7 @@
 
 The reviewed API shutdown fix is integrated as `57ea5f5e98ff031a4d0f0814998e60fe27a82b2b`. Its tree `d832836d40746d36401b6fb1a3603466e6660a00` matches candidate `60de638b8cf8326569f564a6612bfde3a2523d6a` and the successful first hosted CI attempt. That merge has not changed production.
 
-This packet prepares recovery of the already-drained old API. It contains operational observers and offline fixtures; application startup never imports them. Technical recovery is senior-owned under Edward's delegation. A fresh attended window is still required: the previous two-hour runner/execution window expired. A 30-minute recovery-only window was requested on October 10; this packet does not claim attendance or authorize a database release by itself.
+This packet prepares recovery of the already-drained old API. It contains operational observers and offline fixtures; application startup never imports them. Technical recovery is senior-owned under Edward's delegation. Edward confirmed attendance for a fresh 30-minute recovery-only window, October 10 09:43:01–10:13:01 UTC. The single recovery succeeded inside that window; see [the completion record](RECOVERY-RESULT.md). This does not authorize a database release.
 
 ## Confirmed live state and correction to the pause diagnosis
 
@@ -45,7 +45,7 @@ There are no target imports, new application resources, SQL, migrations, signals
 
 [Seven offline tests](cache-drain-session.test.cjs) passed. The fixture uses the pinned old cache/Redis implementations, real Node Inspector sessions and real Redis-client TCP/QUIT against a local RESP peer restricted to client metadata and QUIT. The positive case gracefully closes the Redis connection and releases the timer, then exits naturally with code zero. Negative cases cover absent approval, mismatched process start tick, failed pool drain, ambiguous route, an already-recorded attempt and a Redis cleanup failure. The failure leaves the timer/process alive and forbids retry. Local fixture cleanup may kill a deliberately refused child after the assertion; it is never counted as successful recovery. See [raw test output](evidence/offline-tests.txt).
 
-These tests prove the operational protocol and refusal behavior; they do not simulate production database-bearing jobs. The live pass is read-only. **No recovery mutation of the API has occurred at this packet checkpoint.** No new hosted CI cycle is needed for an observer-only evidence packet; application source already passed hosted CI.
+These tests prove the operational protocol and refusal behavior; they do not simulate production database-bearing jobs. The preparation pass was read-only at operations commit `191c0edfdd609f4b98557ea780ab8aefda4de7a6`. The later attended recovery and its natural-exit verification are recorded separately in [RECOVERY-RESULT.md](RECOVERY-RESULT.md). No new hosted CI cycle is needed for an observer-only evidence packet; application source already passed hosted CI.
 
 ## Subsequent release boundary
 
