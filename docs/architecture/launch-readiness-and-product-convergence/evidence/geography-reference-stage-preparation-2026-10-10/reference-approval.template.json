@@ -1,0 +1,93 @@
+{
+  "state": "UNAPPROVED_TEMPLATE",
+  "approved": false,
+  "approvalActor": null,
+  "approvalReference": null,
+  "approvedAt": null,
+  "operation": "release-reference-apply",
+  "targetClass": "production",
+  "credentialClass": "migration",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "planDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "policy": "admitted-national-non-osm-only-v1",
+  "desiredRows": {
+    "place": 16944,
+    "place_name": 25618,
+    "place_relationship": 16935,
+    "place_evidence": 79189,
+    "place_external_mapping": 19042
+  },
+  "heldRows": {
+    "place": 720,
+    "place_name": 807,
+    "place_relationship": 720,
+    "place_evidence": 736,
+    "place_external_mapping": 750
+  },
+  "packagePins": [
+    {
+      "territoryId": "za-gp",
+      "admissionVersion": "gauteng-place-admission-v0.1",
+      "verifiedDigest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f"
+    },
+    {
+      "territoryId": "za-wc",
+      "admissionVersion": "za-wc-place-admission-v0.1",
+      "verifiedDigest": "a93d1cf16be522023be9a9a4bc730705bf31b3299d6b6659117066a3cfe6dd62"
+    },
+    {
+      "territoryId": "za-kzn",
+      "admissionVersion": "za-kzn-place-admission-v0.1",
+      "verifiedDigest": "6610e49a5775b019c0160924ff0319b0a969bc76b5ce2ea57f7b8234cadd6cf5"
+    },
+    {
+      "territoryId": "za-ec",
+      "admissionVersion": "za-ec-place-admission-v0.1",
+      "verifiedDigest": "cb1ad152c63ad1e38d37824d8e1d21c4569192a7ea9374ad3f6dadeda3be1f41"
+    },
+    {
+      "territoryId": "za-fs",
+      "admissionVersion": "za-fs-place-admission-v0.1",
+      "verifiedDigest": "4b27674742d69abac7cc9b8a458179558117d8274704c72cfd2f2bb0168598b3"
+    },
+    {
+      "territoryId": "za-mp",
+      "admissionVersion": "za-mp-place-admission-v0.1",
+      "verifiedDigest": "9fbaa16b8ebf7b84bc1542a14d22b939e8eabf694ac2133e1a54cd6f362757aa"
+    },
+    {
+      "territoryId": "za-li",
+      "admissionVersion": "za-li-place-admission-v0.1",
+      "verifiedDigest": "96a2151f65019623dde06ab96920d24b7a357d929944527fd3d7f0b1c943cb5e"
+    },
+    {
+      "territoryId": "za-nw",
+      "admissionVersion": "za-nw-place-admission-v0.1",
+      "verifiedDigest": "043200f53d4a3d191666b4ceda88666a10ea8a9f711c44958be20b2e4959a5b0"
+    },
+    {
+      "territoryId": "za-nc",
+      "admissionVersion": "za-nc-place-admission-v0.1",
+      "verifiedDigest": "396c94fdc6879a2f16ada91857f755eb2b5f83c4feda9899b6da1c447cf5fc59"
+    }
+  ],
+  "acknowledgement": "CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812",
+  "maximumDispatchAttempts": 1,
+  "providerProvisioningApproved": false,
+  "referenceApplyApproved": false,
+  "applicationDeploymentApproved": false,
+  "reopeningApproved": false,
+  "paymentsApproved": false,
+  "dataBudgetAccepted": false,
+  "windowStartsAt": null,
+  "windowEndsAt": null,
+  "custodianAcknowledged": false,
+  "externalAlarmTested": false,
+  "operatorDispatchReviewed": false,
+  "referenceLockObservationAccepted": false,
+  "productionDurationEstimateMinutes": null,
+  "requiredDataReserveMinutes": 65,
+  "recoveryReserveMinutes": 30
+}

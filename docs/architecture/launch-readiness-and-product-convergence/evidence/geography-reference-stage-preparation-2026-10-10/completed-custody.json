@@ -1,0 +1,62 @@
+{
+  "custodyState": "BOTH_COMPLETED_WINDOWS_ARCHIVED",
+  "archiveReceipts": [
+    {
+      "archivedAt": "2026-10-10T13:11:41.948185+00:00",
+      "state": "COMPLETED_CUSTODY_ARCHIVED",
+      "recordedOperationState": "complete",
+      "serviceId": "b621c520-852c-4ef7-bd68-8d2a7b59ebd7",
+      "deploymentId": "2049eb79-912a-441a-869a-121138470272",
+      "instanceId": "4972510d-2b4b-4355-9f3a-041e9d90b46a",
+      "providerRemovalConfirmedAt": "2026-10-10T12:18:14.025764+00:00",
+      "finalProviderObservationAt": "2026-10-10T13:11:32.998795+00:00",
+      "runnerAbsent": true,
+      "timersStopped": true,
+      "observerNotRunning": true,
+      "providerMutationPerformedByCustodian": false,
+      "originalExpiryPreserved": "2026-10-10T13:04:04Z",
+      "units": [
+        "pl-junior-custody-test-20261010T110404Z.timer",
+        "pl-junior-custody-test-20261010T110404Z.service",
+        "pl-junior-custody-warning-20261010T110404Z.timer",
+        "pl-junior-custody-warning-20261010T110404Z.service",
+        "pl-junior-custody-expiry-20261010T110404Z.timer",
+        "pl-junior-custody-expiry-20261010T110404Z.service",
+        "pl-junior-custody-status-20261010T110404Z.timer",
+        "pl-junior-custody-status-20261010T110404Z.service"
+      ],
+      "privateArchivePath": "/home/edwardspc/.local/state/property-listify/junior-custody-20261010T110404Z/completed-window-archive",
+      "archiveManifestSha256": "4748c163059c3cadfdce9b432545ec4ecba17b4beabe1a3f9549008b167b6d6e",
+      "archiveManifestVerified": true
+    },
+    {
+      "archivedAt": "2026-10-10T13:11:41.998185+00:00",
+      "state": "COMPLETED_CUSTODY_ARCHIVED",
+      "recordedOperationState": "complete",
+      "serviceId": "edabcc1e-8fb0-41ff-b52c-43792130845b",
+      "deploymentId": "72167e7d-f9db-4454-94b3-163310920e7c",
+      "instanceId": "e7364b4f-3b03-4b81-9ddb-3a8a89446f3a",
+      "providerRemovalConfirmedAt": "2026-10-10T12:57:53.588935+00:00",
+      "finalProviderObservationAt": "2026-10-10T13:11:32.185149+00:00",
+      "runnerAbsent": true,
+      "timersStopped": true,
+      "observerNotRunning": true,
+      "providerMutationPerformedByCustodian": false,
+      "originalExpiryPreserved": "2026-10-10T14:04:06Z",
+      "units": [
+        "pl-junior-custody-test-20261010T120406Z.timer",
+        "pl-junior-custody-test-20261010T120406Z.service",
+        "pl-junior-custody-warning-20261010T120406Z.timer",
+        "pl-junior-custody-warning-20261010T120406Z.service",
+        "pl-junior-custody-expiry-20261010T120406Z.timer",
+        "pl-junior-custody-expiry-20261010T120406Z.service",
+        "pl-junior-custody-status-20261010T120406Z.timer",
+        "pl-junior-custody-status-20261010T120406Z.service"
+      ],
+      "privateArchivePath": "/home/edwardspc/.local/state/property-listify/junior-custody-20261010T120406Z/completed-window-archive",
+      "archiveManifestSha256": "63fb6f46784f46d04952ff9c3a766c4114584f52658a03d013689e8945e63609",
+      "archiveManifestVerified": true
+    }
+  ],
+  "futureCustody": "fresh record, actual window, exact IDs, acknowledgement and tested alarms required; old windows are closed"
+}

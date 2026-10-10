@@ -1,0 +1,21 @@
+{
+  "scope": "LOCAL_TEMPLATE_VALIDATION_ONLY",
+  "liveDatabaseCommands": 0,
+  "expectedRejection": true,
+  "results": {
+    "schema": {
+      "chunk_id": "976bac",
+      "wall_time_seconds": 0.000023188,
+      "exit_code": 1,
+      "original_token_count": 12,
+      "output": "STOP: Missing or malformed runner service ID.\n"
+    },
+    "cleanup": {
+      "chunk_id": "01e1a8",
+      "wall_time_seconds": 0.000015575,
+      "exit_code": 1,
+      "original_token_count": 12,
+      "output": "STOP: Missing or malformed runner service ID.\n"
+    }
+  }
+}

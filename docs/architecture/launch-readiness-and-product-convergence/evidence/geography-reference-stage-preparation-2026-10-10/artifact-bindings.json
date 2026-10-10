@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-10T13:14:51.392595+00:00",
+  "archives": [
+    {
+      "role": "reference-command-source",
+      "path": "/home/edwardspc/.local/state/property-listify/geography-release-resume-20261010T110404Z/schema-command-source-49a48572.tar.gz",
+      "sha256": "4dd9d7a4b4377164f93a236ed44149dba6387b16dbbe42cf2f3c7d8b749cdfd1",
+      "bytes": 19231322
+    },
+    {
+      "role": "full-source",
+      "path": "/home/edwardspc/.local/share/property-listify/releases/geography-49a48572-20261009/source-49a48572.tar.gz",
+      "sha256": "8b021bc11b4266f72a14c7e64d059a2964538e1f65a1e50f72628226a8a244cd",
+      "bytes": 293786414
+    },
+    {
+      "role": "session-observer",
+      "path": "/home/edwardspc/.local/share/property-listify/releases/geography-observer-rebound-20261010/observer-2b7ecaae.tar.gz",
+      "sha256": "b4bef0cae668c48c2eb5ede1ae9493b311ba6fa0459d1b5cc9811f62c5bbd78d",
+      "bytes": 19226097
+    }
+  ],
+  "sourceFileCount": 1793,
+  "allSourceInventoryHashesMatch": true,
+  "closedCarrierPath": "/home/edwardspc/.local/share/property-listify/releases/geography-49a48572-20261009/senior-runner-closed-1792-20261010",
+  "closedCarrierFileCount": 1792,
+  "closedCarrierAllHashesMatch": true,
+  "newSourceOverlay": false,
+  "correctedTransportPattern": "subprocess argv list; one remote command string: node -e + shlex.quote(remote); JSON configuration plus immutable archive through process stdin",
+  "historicalTransportReferences": [
+    {
+      "historicalPath": "/home/edwardspc/.local/state/property-listify/geography-release-resume-20261010T120406Z/runner-read.py",
+      "sha256": "282c4f264a7c1e147817d6ce9f6cc3a83d25ceb0af09ecca6159b3dc8ebdfdb2",
+      "reviewStatus": "QUOTING_PATTERN_REUSED_ONLY; deleted runner IDs, schema modes and schema approval must never be dispatched"
+    },
+    {
+      "historicalPath": "/home/edwardspc/.local/state/property-listify/geography-release-resume-20261010T120406Z/runner-apply.py",
+      "sha256": "a5c2beb127acf89400bb709179fd2339846558f18a0812428a58b303fbec7180",
+      "reviewStatus": "QUOTING_PATTERN_REUSED_ONLY; deleted runner IDs, schema modes and schema approval must never be dispatched"
+    }
+  ],
+  "newReferenceTransportNotExecuted": true
+}

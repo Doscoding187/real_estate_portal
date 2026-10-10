@@ -1,0 +1,105 @@
+{
+  "state": "PREPARATION_NOT_A_DISPATCH_SCRIPT",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "installedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "preApplyPlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "automaticRetryAllowed": false,
+  "clientOrQueryTimeoutForApply": false,
+  "persistCredentialsOnRunner": false,
+  "commands": [
+    {
+      "phase": "inspect",
+      "operation": "release-reference-plan",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:release:reference:inspect",
+        "--",
+        "--adapter=places"
+      ]
+    },
+    {
+      "phase": "schema-read-only-plan",
+      "operation": "release-plan",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:release:plan",
+        "--",
+        "--accepted-old-head=0111_properties_canonical_place_reference_fk.sql",
+        "--expected-new-head=0111_properties_canonical_place_reference_fk.sql"
+      ]
+    },
+    {
+      "phase": "congruency",
+      "operation": "diagnostics",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:schema:congruency"
+      ]
+    },
+    {
+      "phase": "reference-plan",
+      "operation": "release-reference-plan",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:release:reference:plan",
+        "--",
+        "--adapter=places"
+      ]
+    },
+    {
+      "phase": "global-sessions",
+      "operation": "release-session-inspect",
+      "credentialClass": "bootstrap-admin",
+      "sourceSha": "2b7ecaae6c68426615ece4a1742b183d53b94179",
+      "argv": [
+        "pnpm",
+        "db:release:sessions:inspect"
+      ]
+    },
+    {
+      "phase": "reference-apply-held",
+      "operation": "release-reference-apply",
+      "credentialClass": "migration",
+      "authorized": false,
+      "maximumDispatchAttempts": 1,
+      "argv": [
+        "pnpm",
+        "db:release:reference:apply",
+        "--",
+        "--adapter=places",
+        "--plan-digest=dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+        "--ack=CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812"
+      ]
+    },
+    {
+      "phase": "independent-reference-verify",
+      "operation": "release-reference-verify",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:release:reference:verify",
+        "--",
+        "--adapter=places"
+      ]
+    },
+    {
+      "phase": "post-apply-reference-plan",
+      "operation": "release-reference-plan",
+      "credentialClass": "read-only",
+      "argv": [
+        "pnpm",
+        "db:release:reference:plan",
+        "--",
+        "--adapter=places"
+      ]
+    }
+  ],
+  "manifestLockObservation": "accepted checksum-bound diagnostics artifact; independent global sessions also required; manifest observation is not reference-lock observation",
+  "referenceLockName": "property-listify:canonical-places:release",
+  "separateOperationApprovalsRequired": true
+}

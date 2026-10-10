@@ -1,0 +1,106 @@
+{
+  "adapter": "canonical-places-release",
+  "adapterDigest": "d8d2725fd93a6c4d2de9fb95b59c07e4dbe826f53f8faaf449b3e579ade9943a",
+  "disposablePreview": false,
+  "policy": "admitted-national-non-osm-only-v1",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "head": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "registrySha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433",
+  "packagePins": [
+    {
+      "territoryId": "za-gp",
+      "admissionVersion": "gauteng-place-admission-v0.1",
+      "verifiedDigest": "388c3a8f9c550463438cb89842a79e4c4f60d02c7b109850c7d99cbe6894978f"
+    },
+    {
+      "territoryId": "za-wc",
+      "admissionVersion": "za-wc-place-admission-v0.1",
+      "verifiedDigest": "a93d1cf16be522023be9a9a4bc730705bf31b3299d6b6659117066a3cfe6dd62"
+    },
+    {
+      "territoryId": "za-kzn",
+      "admissionVersion": "za-kzn-place-admission-v0.1",
+      "verifiedDigest": "6610e49a5775b019c0160924ff0319b0a969bc76b5ce2ea57f7b8234cadd6cf5"
+    },
+    {
+      "territoryId": "za-ec",
+      "admissionVersion": "za-ec-place-admission-v0.1",
+      "verifiedDigest": "cb1ad152c63ad1e38d37824d8e1d21c4569192a7ea9374ad3f6dadeda3be1f41"
+    },
+    {
+      "territoryId": "za-fs",
+      "admissionVersion": "za-fs-place-admission-v0.1",
+      "verifiedDigest": "4b27674742d69abac7cc9b8a458179558117d8274704c72cfd2f2bb0168598b3"
+    },
+    {
+      "territoryId": "za-mp",
+      "admissionVersion": "za-mp-place-admission-v0.1",
+      "verifiedDigest": "9fbaa16b8ebf7b84bc1542a14d22b939e8eabf694ac2133e1a54cd6f362757aa"
+    },
+    {
+      "territoryId": "za-li",
+      "admissionVersion": "za-li-place-admission-v0.1",
+      "verifiedDigest": "96a2151f65019623dde06ab96920d24b7a357d929944527fd3d7f0b1c943cb5e"
+    },
+    {
+      "territoryId": "za-nw",
+      "admissionVersion": "za-nw-place-admission-v0.1",
+      "verifiedDigest": "043200f53d4a3d191666b4ceda88666a10ea8a9f711c44958be20b2e4959a5b0"
+    },
+    {
+      "territoryId": "za-nc",
+      "admissionVersion": "za-nc-place-admission-v0.1",
+      "verifiedDigest": "396c94fdc6879a2f16ada91857f755eb2b5f83c4feda9899b6da1c447cf5fc59"
+    }
+  ],
+  "desiredDigest": "3c8f2e80908b8d6d7d565e83f7c1cafe6b10fea7a53fc757ec01650b02be2728",
+  "desiredRows": {
+    "place": 16944,
+    "place_name": 25618,
+    "place_relationship": 16935,
+    "place_evidence": 79189,
+    "place_external_mapping": 19042
+  },
+  "heldDigest": "d9fa78e371be33ada65362b3b1ce8b848fb4212a9518e4bc06da4f18ff5dc5e2",
+  "heldRows": {
+    "place": 720,
+    "place_name": 807,
+    "place_relationship": 720,
+    "place_evidence": 736,
+    "place_external_mapping": 750
+  },
+  "holdReason": "D3: founder production ODbL database-strategy gate remains uncleared",
+  "provinceIds": [
+    "pl-place-01-131e3e75ad70424e0f9c869a",
+    "pl-place-01-153d9daaed02608619c762aa",
+    "pl-place-01-191d11b42d5b13319fa7fca2",
+    "pl-place-01-203f5f71cb3565521db4718f",
+    "pl-place-01-9892b872a77f27e90c5cf091",
+    "pl-place-01-a5e69690b90509167e54a142",
+    "pl-place-01-c987af17ca8c4427cb59abf5",
+    "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+    "pl-place-01-ee7ac2ac3ad791ae7a83a4e9"
+  ],
+  "schemaMutation": false,
+  "providerWrites": false,
+  "batchLimits": {
+    "rows": 250,
+    "parameters": 4096,
+    "payloadBytes": 262144
+  },
+  "readyForDataRelease": true,
+  "planDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "pendingRows": 157728,
+  "existingRows": 0,
+  "operationalCoverageSignals": 0,
+  "connectionClosed": true,
+  "acceptedPlanFile": "../geography-schema-stage-accepted-2026-10-10/place-reference-plan.json",
+  "acceptedPlanFileSha256": "cbde8d82a2cd722a5f254619a5ce638d70aa20418f6e91e9fda3e058e184ef7e",
+  "heldPlaceIdsCount": 720,
+  "heldPlaceIdsSha256": "d9fa78e371be33ada65362b3b1ce8b848fb4212a9518e4bc06da4f18ff5dc5e2",
+  "referenceSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "futureApplicationSourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "approvalState": "PREPARATION_ONLY_SEPARATE_DATA_APPROVAL_REQUIRED"
+}

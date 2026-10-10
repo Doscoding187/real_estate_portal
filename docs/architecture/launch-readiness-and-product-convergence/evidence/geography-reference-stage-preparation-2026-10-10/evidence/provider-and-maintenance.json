@@ -1,0 +1,155 @@
+{
+  "recordedAt": "2026-10-10 13:14:58 UTC",
+  "classification": "READ_ONLY_PREPARATION_NOT_LIVE_ADMISSION",
+  "environment": {
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production"
+    },
+    "pendingWork": [],
+    "services": [
+      {
+        "activeDeployments": [
+          {
+            "createdAt": "2026-09-05T12:50:33.234Z",
+            "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+            "status": "SUCCESS",
+            "statusUpdatedAt": "2026-09-05T12:50:42.659Z"
+          }
+        ],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": true,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": {
+          "crashed": 0,
+          "running": 1,
+          "total": 1
+        },
+        "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "serviceName": "Redis",
+        "state": "online",
+        "statusText": "Online"
+      },
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": null,
+        "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "serviceName": "paid-mvp-lead-job",
+        "state": "offline",
+        "statusText": "Offline"
+      },
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": null,
+        "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "serviceName": "paid-mvp-email-worker",
+        "state": "offline",
+        "statusText": "Offline"
+      },
+      {
+        "activeDeployments": [],
+        "cronJob": null,
+        "hasIssues": false,
+        "hasVolume": false,
+        "isCronJob": false,
+        "issues": {
+          "criticalCount": 0,
+          "warningCount": 0
+        },
+        "recentFailedDeployments": [],
+        "recentFailures": 0,
+        "replicaStatus": null,
+        "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "serviceName": "real_estate_portal",
+        "state": "offline",
+        "statusText": "Offline"
+      }
+    ],
+    "summary": {
+      "servicesWithIssues": 0,
+      "totalFailures": 0,
+      "totalServices": 4
+    }
+  },
+  "leadConfig": {
+    "service": {
+      "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+      "name": "paid-mvp-lead-job"
+    },
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production"
+    },
+    "config": {
+      "build": {
+        "buildCommand": "pnpm build:backend",
+        "buildEnvironment": "V3",
+        "builder": "RAILPACK"
+      },
+      "deploy": {
+        "ipv6EgressEnabled": false,
+        "multiRegionConfig": {
+          "asia-southeast1-eqsg3a": {
+            "numReplicas": 1
+          }
+        },
+        "restartPolicyType": "NEVER",
+        "runtime": "V2",
+        "startCommand": "pnpm lead-delivery:worker",
+        "useLegacyStacker": false
+      },
+      "source": {
+        "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+        "repo": "Doscoding187/real_estate_portal"
+      }
+    },
+    "staged": null
+  },
+  "maintenance": [
+    {
+      "observedAt": "2026-10-10T13:13:28.393844+00:00",
+      "origin": "https://api.propertylistifysa.co.za",
+      "path": "/api/readiness",
+      "httpStatus": 403,
+      "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+      "maintenanceMessageVerified": true
+    },
+    {
+      "observedAt": "2026-10-10T13:13:28.732413+00:00",
+      "origin": "https://realestateportal-production-9bb8.up.railway.app",
+      "path": "/api/readiness",
+      "httpStatus": 403,
+      "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+      "maintenanceMessageVerified": true
+    }
+  ],
+  "productionDatabaseCommands": 0,
+  "providerMutations": 0
+}
