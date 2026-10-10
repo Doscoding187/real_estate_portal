@@ -1,0 +1,236 @@
+{
+  "recordedAt": "2026-10-10 10:59:01 UTC",
+  "state": "REVIEWED_STAGED_ROUTE_NOT_EXECUTED",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "directNonForkCreateRejected": true,
+  "route": [
+    {
+      "action": "create_service",
+      "staged": true,
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "image": null,
+      "source": null,
+      "variables": null
+    },
+    {
+      "action": "update_service",
+      "staged": true,
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "reviewSpecification": "accepted runner-service-settings.json; only new runner ID; no source or credential inheritance"
+    },
+    {
+      "action": "get_staged_changes",
+      "requirement": "production patch contains only new runner create/config, no existing service, volume, bucket, variable or unrelated changes"
+    },
+    {
+      "action": "environmentPatchCommitStaged",
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "skipDeploys": true,
+      "requirement": "reconfirm exact pending patch and affected resources immediately before commit"
+    },
+    {
+      "action": "read_back",
+      "requirement": "new instance/config only in production; original production and other environment baselines unchanged"
+    },
+    {
+      "action": "assign_static_network_then_read_assignment",
+      "requirement": "before the first manual upload/deployment; no out-of-scope network or firewall changes"
+    }
+  ],
+  "stagingTools": [
+    {
+      "name": "mcp__railway__create_service",
+      "description": "Use this MCP to deploy, manage, and debug applications on Railway. Call the direct tools for reads and routine operations — listing projects/services/variables/domains, inspecting config, status, logs, metrics, setting variables, updating service settings, creating services, and searching the Railway docs. Reach for the `railway-agent` tool when a task is genuinely complex or open-ended (multi-service debugging, incident investigation, operations that span many steps or need Railway-side reasoning). Fall back to the local Railway CLI when needed. Confirm with the user before destructive actions (e.g. `accept-deploy`).\n\nCreate a new service in a project from a Docker image, or an empty service to configure later (e.g. before setting variables and attaching a source). Public images only: credentials for a private registry are not accepted here — the user sets them on the service in the Railway dashboard. Pass staged: true to stage the service in one environment instead of applying it live — it then only becomes real when the staged changes are committed with accept-deploy. To create a service from a GitHub repository, use create-deployment instead.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__railway__create_service(args: {\n  // Environment ID to create the service in. If omitted, the service is created in all non-fork environments. Required when staged is true.\n  environmentId?: string;\n  // Docker image to deploy, e.g. 'redis' or 'ghcr.io/org/app:latest'. Omit to create an empty service.\n  image?: string;\n  // Name for the new service. If omitted, a name is derived from the image or generated.\n  name?: string;\n  // The project ID to create the service in\n  projectId: string;\n  // Stage the service in the environment's pending changes instead of applying it live. The service shows up on the canvas immediately but gets no instance until accept-deploy commits the staged changes (or the user applies them in the dashboard). Requires environmentId.\n  staged?: boolean;\n}): Promise<CallToolResult<{\n  environment: { id: string | null; scope: \"specific\" | \"all_non_fork\"; };\n  project: { id: string; name: string; };\n  service: { id: string; name: string; };\n  // Docker image source, or null for an empty service\n  source: { image: string; } | null;\n  // Present when the service was staged instead of applied. The service exists but has no instance until the staged changes are committed with accept-deploy.\n  staged: {\n  // Total changes now staged in the environment\n  changeCount: number;\n  // The environment patch holding the change\n  patchId: string;\n} | null;\n}>>; };\n```"
+    },
+    {
+      "name": "mcp__railway__update_service",
+      "description": "Use this MCP to deploy, manage, and debug applications on Railway. Call the direct tools for reads and routine operations — listing projects/services/variables/domains, inspecting config, status, logs, metrics, setting variables, updating service settings, creating services, and searching the Railway docs. Reach for the `railway-agent` tool when a task is genuinely complex or open-ended (multi-service debugging, incident investigation, operations that span many steps or need Railway-side reasoning). Fall back to the local Railway CLI when needed. Confirm with the user before destructive actions (e.g. `accept-deploy`).\n\nUpdate a service's configuration: build/start/pre-deploy commands and pre-deploy timeout, builder, healthcheck, sleep mode, root directory, cron schedule, Dockerfile path, restart policy, config file path, watch patterns, replicas per region, resource limits, deployment overlap/draining, outbound IPv6, and the private network endpoint name. Only the fields you pass are changed. Config changes apply on the service's next deployment (use redeploy to apply immediately); regions and limits scale the running deployment right away, and privateNetworkEndpoint is committed to the environment and redeploys the service. Pass staged: true to stage the update in one environment's pending changes instead of writing it to the service — it then applies when the staged changes are committed with accept-deploy. Source changes are not handled by this tool (use connect-service-source), and private registry credentials are set by the user in the Railway dashboard.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__railway__update_service(args: {\n  // Custom build command\n  buildCommand?: string;\n  // Build system for services without a Dockerfile. RAILPACK is the default; NIXPACKS is the legacy builder.\n  builder?: \"RAILPACK\" | \"NIXPACKS\";\n  // Cron schedule, e.g. '0 * * * *'. Minimum interval is 5 minutes. Pass null to remove the schedule and run the service continuously.\n  cronSchedule?: string | null;\n  // Path to a custom Dockerfile\n  dockerfilePath?: string;\n  // Seconds between the old deployment's containers receiving SIGTERM and SIGKILL. Pass null to reset to the default.\n  drainingSeconds?: number | null;\n  // Environment to update. If omitted, the service is updated in all environments. Required when staged is true.\n  environmentId?: string;\n  // HTTP healthcheck path, e.g. /health\n  healthcheckPath?: string;\n  // Healthcheck timeout in seconds (0-3600). Pass null to reset.\n  healthcheckTimeout?: number | null;\n  // Enable/disable outbound IPv6 internet access\n  ipv6EgressEnabled?: boolean;\n  // Resource limits per replica, capped by the workspace plan. Only the values you pass change.\n  limits?: { memoryGB?: number; vCPUs?: number; };\n  // Seconds the old deployment keeps serving after the new one is healthy. Pass null to reset to the default.\n  overlapSeconds?: number | null;\n  // Commands run before each deploy\n  preDeployCommand?: Array<string>;\n  // How long the pre-deploy command may run, in seconds (1-3600). Pass null to reset to the default.\n  preDeployTimeoutSeconds?: number | null;\n  // The service's private DNS label, reachable as <label>.railway.internal: lowercase letters, digits and hyphens.\n  privateNetworkEndpoint?: string;\n  // The project ID\n  projectId: string;\n  // Path to a railway config file, e.g. railway.toml\n  railwayConfigFile?: string;\n  // Replicas per region, e.g. { \"us-west2\": { \"numReplicas\": 2 } }. Replaces the whole region map: a region absent from it is removed. Services with a volume run in one region only.\n  regions?: { [key: string]: { numReplicas: number; }; };\n  // Max restart retries for ON_FAILURE policy\n  restartPolicyMaxRetries?: number;\n  // Restart policy for crashed deployments\n  restartPolicyType?: \"ALWAYS\" | \"NEVER\" | \"ON_FAILURE\";\n  // Root directory for builds, e.g. /packages/api. With staged: true this counts as a source change: committing it recreates the service's deployment triggers and re-resolves its GitHub authorization from whoever commits. Stage it on its own if that matters.\n  rootDirectory?: string;\n  // The service ID\n  serviceId: string;\n  // Enable/disable app sleeping (serverless mode)\n  sleepApplication?: boolean;\n  // Stage the change in the environment's pending changes instead of applying it live. It takes effect only when the staged changes are committed with accept-deploy (or the user applies them in the dashboard).\n  staged?: boolean;\n  // Custom start command\n  startCommand?: string;\n  // File patterns that trigger automatic redeploys\n  watchPatterns?: Array<string>;\n}): Promise<CallToolResult<{\n  // Environment updated, or null when all environments were\n  environmentId: string | null;\n  service: { id: string; name: string; };\n  // Present when the change was staged instead of applied. It takes effect only when the staged changes are committed with accept-deploy.\n  staged: {\n  // Total changes now staged in the environment\n  changeCount: number;\n  // The environment patch holding the change\n  patchId: string;\n} | null;\n  updatedFields: Array<string>;\n}>>; };\n```"
+    },
+    {
+      "name": "mcp__railway__get_staged_changes",
+      "description": "Use this MCP to deploy, manage, and debug applications on Railway. Call the direct tools for reads and routine operations — listing projects/services/variables/domains, inspecting config, status, logs, metrics, setting variables, updating service settings, creating services, and searching the Railway docs. Reach for the `railway-agent` tool when a task is genuinely complex or open-ended (multi-service debugging, incident investigation, operations that span many steps or need Railway-side reasoning). Fall back to the local Railway CLI when needed. Confirm with the user before destructive actions (e.g. `accept-deploy`).\n\nShow the changes staged in a Railway environment that accept-deploy would commit: per resource (service, volume, bucket, group) the action — create, delete, update — and each changed field with its live and staged value. Variable values and registry credentials are redacted to names. Also reports whether the patch is destructive and whether a commit is already applying. Review this before calling accept-deploy. If environmentId is omitted, the production environment is used.\n\nexec tool declaration:\n```ts\ndeclare const tools: { mcp__railway__get_staged_changes(args: {\n  // Environment to inspect. Defaults to `production` if present, otherwise the project's oldest environment.\n  environmentId?: string;\n  // The project ID\n  projectId: string;\n}): Promise<CallToolResult<{\n  // True when committing would delete a service, volume or bucket, or otherwise destroy data. accept-deploy may refuse such commits; the user can apply them from the dashboard.\n  destructive: boolean;\n  environment: { id: string; name: string; };\n  // Staged private-networking toggle, if any\n  privateNetworkDisabled: {\n  destructive: boolean;\n  displayName: string;\n  // Live value as displayed; empty when added\n  from: string;\n  // Config path, e.g. services.<id>.deploy.startCommand\n  path: string;\n  // Staged value as displayed; empty when removed\n  to: string;\n  type: \"added\" | \"removed\" | \"updated\";\n} | null;\n  project: { id: string; name: string; };\n  // Staged changes grouped by the service, volume, bucket or group they touch\n  resources: Array<{ action: \"create\" | \"delete\" | \"update\"; changes: Array<{\n  destructive: boolean;\n  displayName: string;\n  // Live value as displayed; empty when added\n  from: string;\n  // Config path, e.g. services.<id>.deploy.startCommand\n  path: string;\n  // Staged value as displayed; empty when removed\n  to: string;\n  type: \"added\" | \"removed\" | \"updated\";\n}>; id: string; kind: \"service\" | \"volume\" | \"bucket\" | \"group\"; name: string; }>;\n  // Staged shared-variable changes, names only\n  sharedVariables: Array<{\n  destructive: boolean;\n  displayName: string;\n  // Live value as displayed; empty when added\n  from: string;\n  // Config path, e.g. services.<id>.deploy.startCommand\n  path: string;\n  // Staged value as displayed; empty when removed\n  to: string;\n  type: \"added\" | \"removed\" | \"updated\";\n}>;\n  // The environment's pending patch, or null when nothing is staged\n  staged: {\n  changeCount: number;\n  createdAt: string;\n  message: string | null;\n  patchId: string;\n  // STAGED: pending, commit with accept-deploy. APPLYING: a commit is in progress; wait for it to settle before staging more.\n  status: \"STAGED\" | \"APPLYING\";\n  updatedAt: string;\n} | null;\n}>>; };\n```"
+    }
+  ],
+  "otherEnvironments": [
+    {
+      "buckets": [],
+      "environment": {
+        "id": "2ced17ce-4ada-4aa1-9caf-393fe83a6e31",
+        "isEphemeral": false,
+        "name": "Testing"
+      },
+      "project": {
+        "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+        "name": "successful-tranquility",
+        "workspaceName": "doscoding187's Projects"
+      },
+      "region": null,
+      "services": [
+        {
+          "cronSchedule": null,
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "latestDeployment": {
+            "createdAt": "2026-09-13T01:33:53.831Z",
+            "id": "d20126bc-8585-4beb-ae60-943e05a3e2f0",
+            "status": "SUCCESS",
+            "url": null
+          },
+          "name": "real_estate_portal",
+          "numReplicas": 1,
+          "regions": ["asia-southeast1-eqsg3a"],
+          "source": {
+            "branch": "main",
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 1,
+          "state": "live-with-staged-changes",
+          "volumeMounts": []
+        },
+        {
+          "cronSchedule": null,
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "latestDeployment": null,
+          "name": "Redis",
+          "numReplicas": 1,
+          "regions": ["asia-southeast1-eqsg3a"],
+          "source": {
+            "branch": null,
+            "image": "redis:8.2.1",
+            "repo": null
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": [
+            {
+              "mountPath": "/data",
+              "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+              "volumeName": "redis-volume"
+            }
+          ]
+        }
+      ],
+      "sharedVariableNames": [],
+      "staged": {
+        "changeCount": 1,
+        "createdAt": "2026-03-04T02:44:43.345Z",
+        "message": null,
+        "patchId": "9f607fbe-adf1-4322-b11f-302802fc9bc3",
+        "status": "STAGED",
+        "updatedAt": "2026-03-04T02:44:43.345Z"
+      },
+      "volumes": [
+        {
+          "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+          "mountedOn": {
+            "mountPath": "/data",
+            "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+            "serviceName": "Redis"
+          },
+          "name": "redis-volume",
+          "region": "asia-southeast1-eqsg3a",
+          "sizeMB": 5000,
+          "stagedChangeCount": 0,
+          "state": "live"
+        }
+      ]
+    },
+    {
+      "buckets": [],
+      "environment": {
+        "id": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+        "isEphemeral": false,
+        "name": "Staging"
+      },
+      "project": {
+        "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+        "name": "successful-tranquility",
+        "workspaceName": "doscoding187's Projects"
+      },
+      "region": null,
+      "services": [
+        {
+          "cronSchedule": null,
+          "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "latestDeployment": null,
+          "name": "Redis",
+          "numReplicas": 1,
+          "regions": ["asia-southeast1-eqsg3a"],
+          "source": {
+            "branch": null,
+            "image": "redis:8.2.1",
+            "repo": null
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": [
+            {
+              "mountPath": "/data",
+              "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+              "volumeName": "redis-volume"
+            }
+          ]
+        },
+        {
+          "cronSchedule": null,
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "latestDeployment": {
+            "createdAt": "2026-04-10T18:39:43.777Z",
+            "id": "1ceef66b-ce55-4336-8d1e-90ed19ba1348",
+            "status": "FAILED",
+            "url": null
+          },
+          "name": "real_estate_portal",
+          "numReplicas": 1,
+          "regions": ["asia-southeast1-eqsg3a"],
+          "source": {
+            "branch": "post-baseline-work",
+            "image": null,
+            "repo": "Doscoding187/real_estate_portal"
+          },
+          "stagedChangeCount": 0,
+          "state": "live",
+          "volumeMounts": []
+        }
+      ],
+      "sharedVariableNames": [],
+      "staged": null,
+      "volumes": [
+        {
+          "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+          "mountedOn": {
+            "mountPath": "/data",
+            "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+            "serviceName": "Redis"
+          },
+          "name": "redis-volume",
+          "region": "asia-southeast1-eqsg3a",
+          "sizeMB": 5000,
+          "stagedChangeCount": 0,
+          "state": "live"
+        }
+      ]
+    }
+  ],
+  "providerMutations": 0,
+  "liveBehaviorVerified": false,
+  "inspectionSources": [
+    "provider-scope-schema.json",
+    "provider-environment-mutations.json",
+    "current provider MCP create_service/update_service/get_staged_changes contracts"
+  ],
+  "stopConditions": [
+    "missing custody/window",
+    "production applying or nonempty unrelated staged patch",
+    "stage result not explicitly specific to production",
+    "non-runner changes in patch",
+    "unexpected cross-environment instance/config change",
+    "unknown commit outcome"
+  ],
+  "notes": [
+    "Service identity is a project-level registry object; service instances/configuration and deployments are environment scoped.",
+    "Testing already has an unrelated staged API change (patch 9f607fbe-adf1-4322-b11f-302802fc9bc3); preserve it and never commit it.",
+    "This staged path replaces the accepted checklist's staged:false creation/update operations only. It does not migrate existing services to IaC."
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "observedAt": "2026-10-10T10:38:57.694632+00:00",
+  "completedAt": "2026-10-10T10:39:02.701655+00:00",
+  "exitCode": 0,
+  "result": {
+    "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql",
+    "name": "propertylistify-mysql",
+    "state": "Ready",
+    "version": "8.4",
+    "location": "South Africa North",
+    "backup": {
+      "backupIntervalHours": 24,
+      "backupRetentionDays": 14,
+      "earliestRestoreDate": "2026-09-26T10:39:02.337157+00:00",
+      "geoRedundantBackup": "Disabled"
+    },
+    "highAvailability": {
+      "mode": "Disabled",
+      "replicationMode": "BinaryLog",
+      "standbyAvailabilityZone": "",
+      "state": "NotEnabled"
+    },
+    "storage": {
+      "autoGrow": "Enabled",
+      "autoIoScaling": "Disabled",
+      "iops": 360,
+      "logOnDisk": "Disabled",
+      "storageRedundancy": "LocalRedundancy",
+      "storageSizeGb": 20,
+      "storageSku": "Premium_LRS"
+    }
+  },
+  "stderr": ""
+}

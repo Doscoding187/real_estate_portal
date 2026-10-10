@@ -1,0 +1,143 @@
+{
+  "observedAt": "2026-10-10T10:38:57.694835+00:00",
+  "completedAt": "2026-10-10T10:39:03.407212+00:00",
+  "exitCode": 0,
+  "result": [
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/customer-20260929t101943-b1759c5b-c96f-4cc8-85fc-8d66ab21425f-pl-pre84-20260929t101940z",
+      "name": "pl-pre84-20260929t101940z",
+      "backupType": "FULL",
+      "completedTime": "2026-09-29T10:19:47.598852+00:00",
+      "source": "Customer",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20260926t140836-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20260926t140836-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-09-26T14:08:39.825549+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20260927t140841-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20260927t140841-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-09-27T14:08:45.009560+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20260928t140847-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20260928t140847-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-09-28T14:08:50.702691+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20260929t143302-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20260929t143302-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-09-29T14:33:05.317361+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20260930t140814-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20260930t140814-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-09-30T14:08:17.442336+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261001t140820-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261001t140820-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-01T14:08:23.372425+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261002t143324-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261002t143324-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-02T14:33:27.417882+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261003t143329-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261003t143329-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-03T14:33:32.757031+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261004t143335-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261004t143335-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-04T14:33:38.408269+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261005t143341-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261005t143341-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-05T14:33:44.174825+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261006t143346-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261006t143346-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-06T14:33:49.659912+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261007t143352-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261007t143352-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-07T14:33:55.948917+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261008t143358-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261008t143358-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-08T14:34:01.607695+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    },
+    {
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/daily-20261009t143404-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "name": "daily-20261009t143404-b1759c5b-c96f-4cc8-85fc-8d66ab21425f",
+      "backupType": "FULL",
+      "completedTime": "2026-10-09T14:34:07.268442+00:00",
+      "source": "Automatic",
+      "properties": null,
+      "systemData": null
+    }
+  ],
+  "stderr": ""
+}

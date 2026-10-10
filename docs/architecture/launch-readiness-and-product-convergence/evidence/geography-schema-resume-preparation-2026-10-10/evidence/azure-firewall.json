@@ -1,0 +1,44 @@
+{
+  "observedAt": "2026-10-10T10:38:57.695426+00:00",
+  "completedAt": "2026-10-10T10:39:03.129511+00:00",
+  "exitCode": 0,
+  "result": [
+    {
+      "endIpAddress": "208.77.246.240",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-240",
+      "name": "PropertyListify-Railway-Production-240",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.240",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "192.143.7.18",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/ClientIPAddress_2026-9-12_1-51-50",
+      "name": "ClientIPAddress_2026-9-12_1-51-50",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "192.143.7.18",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "208.77.246.242",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-242",
+      "name": "PropertyListify-Railway-Production-242",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.242",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    },
+    {
+      "endIpAddress": "208.77.246.241",
+      "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/firewallRules/PropertyListify-Railway-Production-241",
+      "name": "PropertyListify-Railway-Production-241",
+      "resourceGroup": "rg-property-listify",
+      "startIpAddress": "208.77.246.241",
+      "systemData": null,
+      "type": "Microsoft.DBforMySQL/flexibleServers/firewallRules"
+    }
+  ],
+  "stderr": ""
+}

@@ -1,0 +1,567 @@
+{
+  "recordedAt": "2026-10-10T10:56:21.994257+00:00",
+  "readOnly": true,
+  "mutations": [
+    {
+      "args": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "BaseEnvironmentOverrideInput"
+            }
+          }
+        }
+      ],
+      "description": "Sets the base environment override for a deployment trigger.",
+      "name": "baseEnvironmentOverride"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "CloudAgentTaskDispatchInput"
+            }
+          }
+        }
+      ],
+      "description": "Start a task and return its handle. Creates a fresh agent by default; replyToTaskId continues the original conversation.",
+      "name": "cloudAgentTaskDispatch"
+    },
+    {
+      "args": [
+        {
+          "name": "baseConfigEtag",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "commitMessage",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "JSON"
+            }
+          }
+        },
+        {
+          "name": "waitForCompletion",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Boolean",
+            "ofType": null
+          }
+        }
+      ],
+      "description": "Experimental: applies an intent-level RailwayChangeSet and returns operation results.",
+      "name": "environmentApplyChangeSet"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentClearanceDefaultUpdateInput"
+            }
+          }
+        }
+      ],
+      "description": "Sets whether Railway Authentication protects an environment's services that have no setting of their own, and pushes it to them. Requires a workspace admin; turning it on also requires the workspace's Railway Authentication entitlement. Services with edge caching on that it protects have their caching turned off.",
+      "name": "environmentClearanceDefaultUpdate"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentConfigPlanCommentUpsertInput"
+            }
+          }
+        }
+      ],
+      "description": "Posts or updates a `railway config plan` comment on a GitHub pull request under the Railway app identity. The caller proves it runs in the target repo with a GitHub Actions OIDC token; the comment body is composed server-side from the structured plan.",
+      "name": "environmentConfigPlanCommentUpsert"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentCreateInput"
+            }
+          }
+        }
+      ],
+      "description": "Creates a new environment.",
+      "name": "environmentCreate"
+    },
+    {
+      "args": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Deletes an environment.",
+      "name": "environmentDelete"
+    },
+    {
+      "args": [
+        {
+          "name": "baseConfigEtag",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "partial",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "resources",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "NON_NULL",
+              "name": null
+            }
+          }
+        }
+      ],
+      "description": "Release resources from a named IaC partial without deleting, redeploying, or changing them. Omit resources to release the entire partial. Whole-project management is possible once no named partials remain. A later named-partial apply can claim released resources again.",
+      "name": "environmentIacPartialRelease"
+    },
+    {
+      "args": [
+        {
+          "name": "baseConfigEtag",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "fromPartial",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "resources",
+          "type": {
+            "kind": "LIST",
+            "name": null,
+            "ofType": {
+              "kind": "NON_NULL",
+              "name": null
+            }
+          }
+        },
+        {
+          "name": "toPartial",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Transfer resources between named IaC partials without deleting, redeploying, or changing them. Omit resources to transfer the entire source partial. The destination may be a new or existing partial.",
+      "name": "environmentIacPartialTransfer"
+    },
+    {
+      "args": [
+        {
+          "name": "commitMessage",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "patch",
+          "type": {
+            "kind": "SCALAR",
+            "name": "EnvironmentConfig",
+            "ofType": null
+          }
+        },
+        {
+          "name": "skipDeploys",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Boolean",
+            "ofType": null
+          }
+        }
+      ],
+      "description": "Commit the provided patch to the environment.",
+      "name": "environmentPatchCommit"
+    },
+    {
+      "args": [
+        {
+          "name": "commitMessage",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "skipDeploys",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Boolean",
+            "ofType": null
+          }
+        }
+      ],
+      "description": "Commits the staged changes for a single environment.",
+      "name": "environmentPatchCommitStaged"
+    },
+    {
+      "args": [
+        {
+          "name": "patchId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Copy a FAILED patch's changes into the environment's staged patch (creating one if needed). The FAILED patch is left untouched.",
+      "name": "environmentPatchRestage"
+    },
+    {
+      "args": [
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "JSON"
+            }
+          }
+        }
+      ],
+      "description": "Experimental: previews an intent-level RailwayChangeSet without side effects.",
+      "name": "environmentPreviewChangeSet"
+    },
+    {
+      "args": [
+        {
+          "name": "id",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentRenameInput"
+            }
+          }
+        }
+      ],
+      "description": "Renames an environment.",
+      "name": "environmentRename"
+    },
+    {
+      "args": [
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "EnvironmentConfig"
+            }
+          }
+        },
+        {
+          "name": "merge",
+          "type": {
+            "kind": "SCALAR",
+            "name": "Boolean",
+            "ofType": null
+          }
+        }
+      ],
+      "description": "Sets the staged patch for a single environment.",
+      "name": "environmentStageChanges"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentTriggersDeployInput"
+            }
+          }
+        }
+      ],
+      "description": "Deploys all connected triggers for an environment.",
+      "name": "environmentTriggersDeploy"
+    },
+    {
+      "args": [
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "serviceId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Deploy a service that was skipped when its environment was created, along with its skipped transitive dependencies.",
+      "name": "environmentUnskipService"
+    },
+    {
+      "args": [
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        },
+        {
+          "name": "serviceId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Apply a pending database security update now (backup, then redeploy). Returns the new deployment id.",
+      "name": "serviceInstanceVulnRemediationPatchNow"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "SharedVariableConfigureInput"
+            }
+          }
+        }
+      ],
+      "description": "Configure a shared variable.",
+      "name": "sharedVariableConfigure"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "UpdateServiceEdgeConfigInput"
+            }
+          }
+        }
+      ],
+      "description": "Updates the edge config (caching settings) for a service.",
+      "name": "updateServiceEdgeConfig"
+    }
+  ],
+  "externalMutations": false
+}

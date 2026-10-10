@@ -1,0 +1,420 @@
+{
+  "recordedAt": "2026-10-10T10:55:32.765572+00:00",
+  "readOnly": true,
+  "create": {
+    "inputFields": [
+      {
+        "description": null,
+        "name": "branch",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": "Environment ID. If the specified environment is a fork, the service will only be created in it. Otherwise it will created in all environments that are not forks of other environments",
+        "name": "environmentId",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "icon",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "name",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "projectId",
+        "type": {
+          "kind": "NON_NULL",
+          "name": null,
+          "ofType": {
+            "kind": "SCALAR",
+            "name": "String"
+          }
+        }
+      },
+      {
+        "description": null,
+        "name": "registryCredentials",
+        "type": {
+          "kind": "INPUT_OBJECT",
+          "name": "RegistryCredentialsInput",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "source",
+        "type": {
+          "kind": "INPUT_OBJECT",
+          "name": "ServiceSourceInput",
+          "ofType": null
+        }
+      },
+      {
+        "description": "Template ID. Required when templateServiceId is provided.",
+        "name": "templateId",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": "Template service ID within the template's serializedConfig. Required when templateId is provided.",
+        "name": "templateServiceId",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "variables",
+        "type": {
+          "kind": "SCALAR",
+          "name": "EnvironmentVariables",
+          "ofType": null
+        }
+      }
+    ],
+    "name": "ServiceCreateInput"
+  },
+  "update": {
+    "inputFields": [
+      {
+        "description": "Instrument the service's processes with eBPF (OBI) while its tracing is on. Reaches running containers within about a minute, no redeploy needed.",
+        "name": "autoInstrumentationEnabled",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Boolean",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "buildCommand",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "builder",
+        "type": {
+          "kind": "ENUM",
+          "name": "Builder",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "cronSchedule",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "dockerfilePath",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "drainingSeconds",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "healthcheckPath",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "healthcheckTimeout",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "ipv6EgressEnabled",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Boolean",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "multiRegionConfig",
+        "type": {
+          "kind": "SCALAR",
+          "name": "JSON",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "nixpacksPlan",
+        "type": {
+          "kind": "SCALAR",
+          "name": "JSON",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "numReplicas",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "overlapSeconds",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "preDeployCommand",
+        "type": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null
+          }
+        }
+      },
+      {
+        "description": null,
+        "name": "preDeployTimeoutSeconds",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "railwayConfigFile",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "region",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "registryCredentials",
+        "type": {
+          "kind": "INPUT_OBJECT",
+          "name": "RegistryCredentialsInput",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "restartPolicyMaxRetries",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Int",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "restartPolicyType",
+        "type": {
+          "kind": "ENUM",
+          "name": "RestartPolicyType",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "rootDirectory",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "sleepApplication",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Boolean",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "source",
+        "type": {
+          "kind": "INPUT_OBJECT",
+          "name": "ServiceSourceInput",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "startCommand",
+        "type": {
+          "kind": "SCALAR",
+          "name": "String",
+          "ofType": null
+        }
+      },
+      {
+        "description": "Trace requests to the service in this environment. Takes effect at the edge within seconds and in the app on the next deploy.",
+        "name": "tracingEnabled",
+        "type": {
+          "kind": "SCALAR",
+          "name": "Boolean",
+          "ofType": null
+        }
+      },
+      {
+        "description": null,
+        "name": "watchPatterns",
+        "type": {
+          "kind": "LIST",
+          "name": null,
+          "ofType": {
+            "kind": "NON_NULL",
+            "name": null
+          }
+        }
+      }
+    ],
+    "name": "ServiceInstanceUpdateInput"
+  },
+  "relevantMutations": [
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "EnvironmentConfigPlanCommentUpsertInput"
+            }
+          }
+        }
+      ],
+      "description": "Posts or updates a `railway config plan` comment on a GitHub pull request under the Railway app identity. The caller proves it runs in the target repo with a GitHub Actions OIDC token; the comment body is composed server-side from the structured plan.",
+      "name": "environmentConfigPlanCommentUpsert"
+    },
+    {
+      "args": [
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "ServiceCreateInput"
+            }
+          }
+        }
+      ],
+      "description": "Creates a new service.",
+      "name": "serviceCreate"
+    },
+    {
+      "args": [
+        {
+          "name": "environmentId",
+          "type": {
+            "kind": "SCALAR",
+            "name": "String",
+            "ofType": null
+          }
+        },
+        {
+          "name": "input",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "INPUT_OBJECT",
+              "name": "ServiceInstanceUpdateInput"
+            }
+          }
+        },
+        {
+          "name": "serviceId",
+          "type": {
+            "kind": "NON_NULL",
+            "name": null,
+            "ofType": {
+              "kind": "SCALAR",
+              "name": "String"
+            }
+          }
+        }
+      ],
+      "description": "Update a service instance",
+      "name": "serviceInstanceUpdate"
+    }
+  ],
+  "externalMutation": false
+}

@@ -1,0 +1,76 @@
+{
+  "recordedAt": "2026-10-10T11:00:56.194672+00:00",
+  "classification": "protected release",
+  "phase": "local inspect/plan preparation",
+  "targetClass": "production",
+  "formattingExitCode": 0,
+  "jsonFilesParsed": 10,
+  "localLinksChecked": 13,
+  "links": [
+    {
+      "document": "README.md",
+      "target": "../api-r2-cache-recovery-2026-10-10/RECOVERY-RESULT.md"
+    },
+    {
+      "document": "README.md",
+      "target": "observer-rebound-inventory.json"
+    },
+    {
+      "document": "README.md",
+      "target": "source-authority-parity.json"
+    },
+    {
+      "document": "README.md",
+      "target": "compatible-deployment.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/provider-readbacks.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/azure-server.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/azure-backups.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/azure-firewall.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/provider-scope-schema.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/production-runner-route.json"
+    },
+    {
+      "document": "README.md",
+      "target": "evidence/provider-environment-mutations.json"
+    },
+    {
+      "document": "README.md",
+      "target": "CUSTODIAN-HANDOFF.md"
+    },
+    {
+      "document": "README.md",
+      "target": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-geography-runner-prep-20261010/docs/architecture/launch-readiness-and-product-convergence/evidence/geography-runner-preparation-2026-10-10/README.md"
+    }
+  ],
+  "observerArchiveSha256Verified": "b4bef0cae668c48c2eb5ede1ae9493b311ba6fa0459d1b5cc9811f62c5bbd78d",
+  "observerArchivePermissions": "0600",
+  "observerGitFileHashesVerifiedDuringRepack": 1791,
+  "schemaBundleFileHashesVerifiedByPreparationAgent": 1792,
+  "applicationTreeVerified": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "secretsInEvidence": false,
+  "newProductTestRuns": 0,
+  "hostedCIRuns": 0,
+  "providerMutations": 0,
+  "productionDatabaseCommands": 0,
+  "windowActivated": false,
+  "independentCustodianAcknowledgement": "PENDING; Edward will obtain it; subsequent ok acknowledges forwarding only",
+  "freshAttendance": "PENDING; no actual two-hour start/end recorded"
+}

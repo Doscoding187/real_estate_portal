@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-10-10T10:42:10.823337+00:00",
+  "classification": "protected release",
+  "phase": "inspect/plan",
+  "targetClass": "production",
+  "protectedTargetFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "applicationSourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "applicationSourceTree": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "reviewedCandidate": "60de638b8cf8326569f564a6612bfde3a2523d6a",
+  "schemaCommandSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "schemaPlanDigest": "d8dfd9120ee8499e4da0c19fcde9c503c4867453d3ddce2e8501f6cceef3989d",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "comparedAuthorityPaths": [
+    "server/migrations",
+    "drizzle",
+    "docs/database-authority/authority-manifest.json",
+    "docs/database-authority/operation-policy.json",
+    "server/_core/databaseAuthority",
+    "scripts/databaseAuthorityCli.ts"
+  ],
+  "changedAuthorityPaths": [],
+  "productTestReruns": 0,
+  "newHostedCI": false,
+  "newRunnerCreated": false,
+  "productionDatabaseCommands": 0,
+  "protectedApply": false,
+  "nonexistentPathsExcludedFromParityClaim": ["docs/database-authority/place-release-registry.json"]
+}
