@@ -1,0 +1,41 @@
+{
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": "e519b6e7-6c52-47ca-99ec-3a0cd7994f8e",
+  "deploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+  "instanceId": "036368c4-5267-4e1b-86cf-c1daf98580b5",
+  "createdAt": "2026-10-09T23:07:50Z",
+  "expiresAt": "2026-10-10T01:07:50Z",
+  "windowStartsAt": "2026-10-09T23:07:50Z",
+  "windowEndsAt": "2026-10-10T01:07:50Z",
+  "windowApprovalReference": "Edward: ok lets proceed; junior recovery custody acknowledgement relayed",
+  "cleanupOwner": "Codex senior /root",
+  "recoveryCustodian": "Edward-relayed junior agent: prep/geography-runner-network-lifecycle-20261010",
+  "custodianAcknowledged": true,
+  "freshWindowApproval": true,
+  "attendanceConfirmed": true,
+  "operationState": "idle",
+  "lastEvidenceAt": "2026-10-10T09:19:08Z",
+  "lastEvidenceBinding": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "e519b6e7-6c52-47ca-99ec-3a0cd7994f8e",
+    "deploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+    "instanceId": "036368c4-5267-4e1b-86cf-c1daf98580b5",
+    "operationState": "idle"
+  },
+  "budgetsMinutes": {
+    "schema": 65,
+    "containment": 105
+  },
+  "migrationAttemptIds": [],
+  "providerRemovalConfirmedAt": "2026-10-10T09:23:42Z",
+  "phase": "R2 STOP; overdue idle runner deleted; provider removal verified; application holds unchanged",
+  "evidenceReferences": [
+    "/home/edwardspc/.local/state/property-listify/api-r2-recovery-20261010/readback-091301Z/runner-cleanup-idle.json",
+    "/home/edwardspc/.local/state/property-listify/api-r2-recovery-20261010/readback-091301Z/protected-inspect.json",
+    "/home/edwardspc/.local/state/property-listify/api-r2-recovery-20261010/readback-091301Z/protected-schema-plan.json",
+    "/home/edwardspc/.local/state/property-listify/api-r2-recovery-20261010/readback-091301Z/session-inventory.json"
+  ],
+  "cleanupComplete": true
+}

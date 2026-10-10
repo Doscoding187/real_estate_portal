@@ -1,0 +1,27 @@
+{
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+  "deploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "instanceId": "41e46a78-215c-4feb-9c7a-b0aa7d5faf50",
+  "sourceSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+  "sourceHashes": {
+    "package.json": "0bebefd82a5644df10ca057edb61810fe41b617ae327f5291bf1f06252878328",
+    "pnpm-lock.yaml": "a565f7331ef0a76881c135ad39c965b99b0bd75827b3edea3b7fd70eb822b9f1",
+    "server/_core/start.ts": "706c47d931531181b822c402e4932c05100648fd73e5b3631789f58d92ab530b",
+    "server/_core/index.ts": "1e00dbc071222479ad374153b4529c8cd186db138c9c7149bb6e1b5fdf92e6ad",
+    "scripts/runTransactionalEmailSupervisor.ts": "bfcdc55ea5b818612dceba3c0b752a3d302a009644475afe953d9ecda393cfd4",
+    "scripts/emailWorkerSupervisor.ts": "6f4b2d6b9c38f0d7e1d70ac6fcfe40fcd0ec1f36fbfade5378cb37db3849eef3",
+    "server/db-connection.ts": "873f3a91c353d2bad721f474156be7500b9c519a9e1c77c612b877dad780cc19",
+    "server/lib/cache.ts": "e4ce7664623f61daf648a62c97706ddaf754e76735d6d63042991b43c9b4ca57",
+    "server/services/exploreFeedService.ts": "54a457e8efec63f32c9705e8551c50a9784c2ed3a47b76fd6f86a6510fb9cfd9",
+    "server/routes/exploreShorts.ts": "f2eae63f747b57eec0359c2bc1ce53d89020ad7f2431e00c1a28a5271581a372",
+    "server/lib/redis.ts": "a89f18df2905a5b748f2b6a26d3f97e04d3378080c519a4cc54f4340398b61a4",
+    "server/cacheRouter.ts": "981fb1518aa1e8c5a5b5346be0d2cd0f98bb54205cce9fbc42822a7ca5910b60"
+  },
+  "artifactHashes": {
+    "drain-session.original.cjs": "e483eed8b9c14100850177aaefedef60812e7b0ecc414752131e9c3cfd9bba62",
+    "cache-drain-session.cjs": "9d6ed66dde0f2730f4c20c7a416d978aa51ccea4036a007f70ae5be19aa841e2"
+  },
+  "observerWrapperSha256": "e84542520bf707fea0eba1939422120fa1c3f44c56d7234782d1c1e65f5e4544"
+}

@@ -1,0 +1,82 @@
+{
+  "deploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+  "serviceId": "e519b6e7-6c52-47ca-99ec-3a0cd7994f8e",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "observedAt": "2026-10-10T09:19:08.817Z",
+  "observerPid": 891,
+  "procs": [
+    {
+      "pid": 1,
+      "ppid": 0,
+      "state": "S",
+      "startTicks": "761596972",
+      "executable": "node",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 125,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "761602652",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 282,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "761621253",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 390,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "761634842",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 487,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "761651161",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 583,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "761774707",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 684,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "765216614",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 850,
+      "ppid": 1,
+      "state": "Z",
+      "startTicks": "765225457",
+      "executable": "esbuild",
+      "activeDatabaseCommand": false
+    },
+    {
+      "pid": 891,
+      "ppid": 0,
+      "state": "R",
+      "startTicks": "765246533",
+      "executable": "node",
+      "activeDatabaseCommand": true
+    }
+  ],
+  "activeDatabaseCommandCount": 0
+}

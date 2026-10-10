@@ -1,0 +1,52 @@
+TAP version 13
+# Subtest: releases the existing referenced timer after a completed drain and exits naturally
+ok 1 - releases the existing referenced timer after a completed drain and exits naturally
+  ---
+  duration_ms: 588.180019
+  type: 'test'
+  ...
+# Subtest: missing scope approval leaves the cache untouched
+ok 2 - missing scope approval leaves the cache untouched
+  ---
+  duration_ms: 492.514414
+  type: 'test'
+  ...
+# Subtest: a mismatched process start tick refuses recovery
+ok 3 - a mismatched process start tick refuses recovery
+  ---
+  duration_ms: 485.548534
+  type: 'test'
+  ...
+# Subtest: a failed pool drain refuses cache recovery
+ok 4 - a failed pool drain refuses cache recovery
+  ---
+  duration_ms: 419.62141
+  type: 'test'
+  ...
+# Subtest: an ambiguous route refuses singleton recovery
+ok 5 - an ambiguous route refuses singleton recovery
+  ---
+  duration_ms: 453.111366
+  type: 'test'
+  ...
+# Subtest: an already recorded recovery attempt refuses another mutation
+ok 6 - an already recorded recovery attempt refuses another mutation
+  ---
+  duration_ms: 492.943025
+  type: 'test'
+  ...
+# Subtest: a Redis close failure preserves the timer and prohibits retry
+ok 7 - a Redis close failure preserves the timer and prohibits retry
+  ---
+  duration_ms: 484.158466
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3483.996247

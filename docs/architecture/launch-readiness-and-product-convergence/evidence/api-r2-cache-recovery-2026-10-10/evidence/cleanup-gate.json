@@ -1,0 +1,5 @@
+{
+  "eligible": true,
+  "expired": true,
+  "next": "Verify no active/unknown command, lock or session; then exact provider deletion and readback"
+}

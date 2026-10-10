@@ -1,0 +1,9 @@
+{
+  "detachedVolumes": [],
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "service": {
+    "id": "e519b6e7-6c52-47ca-99ec-3a0cd7994f8e",
+    "name": "pl-geography-runner-20261010"
+  },
+  "staged": null
+}

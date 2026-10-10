@@ -1,0 +1,50 @@
+{
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "observedAt": "2026-10-10T09:15:42.936Z",
+  "identity": {
+    "identity": "pladmin@%",
+    "connectionId": 42139,
+    "databaseName": "propertylistify_database"
+  },
+  "globalProcessPrivilegeVerified": true,
+  "sessions": [
+    {
+      "id": 9,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 5
+    },
+    {
+      "id": 11,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 9
+    },
+    {
+      "id": 12,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 21
+    },
+    {
+      "id": 13,
+      "user": "azure_superuser",
+      "databaseName": null,
+      "command": "Sleep",
+      "seconds": 12
+    },
+    {
+      "id": 42139,
+      "user": "pladmin",
+      "databaseName": "propertylistify_database",
+      "command": "Query",
+      "seconds": 0
+    }
+  ],
+  "transactions": [],
+  "snapshotOnly": true,
+  "frozen": false
+}
