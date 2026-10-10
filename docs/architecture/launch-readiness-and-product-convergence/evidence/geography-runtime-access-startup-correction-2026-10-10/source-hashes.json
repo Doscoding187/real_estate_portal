@@ -1,0 +1,20 @@
+{
+  "railway.json": "448a7e58d7e0a0b905bbca964f58adbe7df95ba385c6eceea7d26759fdc2b3cd",
+  "package.json": "750013930697caf4f9b96a4da79069351b744b9a6626715bc85b92cf3774f3b0",
+  "docs/database-authority/operation-policy.json": "616d8f0ad9ea9efa61107cd628f55646a7f2a8cf02a6a3abd6cb3b7f166f30cf",
+  "docs/database-authority/connection-path-inventory.json": "d7ac6aaf70c793b6430f7fb68dbb6fd2c44268d72d7cccb5f4a43ade874b134d",
+  "server/_core/databaseAuthority/types.ts": "eebc5b92fc202532f2b0159ef07aa6d11291412d9cf1c7e1739b519e9e0f632a",
+  "server/_core/databaseAuthority/authorization.ts": "5ef9aaeac11c01c361f66c219074489521df8f0ddb501df83a711d847aa19a96",
+  "server/_core/databaseAuthority/connectionAuthority.ts": "9d202d292677e2bb23de9e80fdfe4e336d2bf9848935f649ef0fc31ef9b9699d",
+  "server/_core/databaseAuthority/canonicalPlaceRuntimeGrants.ts": "08cd303db5ca1f54dd69ee7364e607fce31202b8f9c71dadf0898e70d9ae2307",
+  "server/_core/databaseAuthority/__tests__/canonicalPlaceRuntimeGrants.test.ts": "4d0bc1dbd1bb9e118938789af2d5ea1a43496c847bc9e6f4e71f9f4ae31a9af2",
+  "server/_core/databaseAuthority/__tests__/contextAuthorization.test.ts": "9c2b9a603af9bd95218aa772fafb8e62170da7c6e2656afc1d6fc14cf050468d",
+  "scripts/canonicalPlaceRuntimeGrantCli.ts": "beb8304355277d4e60604c8242d26064cd5d3dd0acc7ef2872b5f264bb0a5a59",
+  "server/__tests__/contract.migration-execution-authority.test.ts": "a477873f30748944de6a8f2e3238b81f93c96ac48ba88829d387aff6099ef1ef",
+  "server/__tests__/launch-safety.contract.test.ts": "d620a95cc0905f052cf93ddd447642a709a954856c12df444bd4f73958cb94c9",
+  "server/migrations/manifest.json": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "drizzle/schema/canonical-model-inventory.json": "cd00444139a256bd9bdc164f4c980f9d10df9f22c47dd6c23665c045a54f97d0",
+  "server/_core/databaseAuthority/readiness.ts": "999ba3c9819417343e003d95ad8a7f17a4a05bd6a6517f24f872c207be777cfe",
+  "server/services/placeDiscoveryService.ts": "61ddc7d98891f992591c7585bcd1c447573e344ded1bf1e30cb6fd7bd31740f3",
+  "server/services/canonicalListingPlaceResolver.ts": "2d87cfc8cdc949fa35c5d7e1473a67ff4bef8890272a89d6039bba56f2205ddf"
+}

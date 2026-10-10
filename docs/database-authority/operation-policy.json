@@ -81,6 +81,14 @@
       "acknowledgement": "exact-target",
       "evidence": "exact-b08-runtime-ledger-select-only-grant"
     },
+    "runtime-place-grant": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-canonical-place-runtime-seven-table-grant-plan-and-before-after-proof"
+    },
     "b08-behavior-verify": {
       "allowedTargetClasses": ["production"],
       "credentialClasses": ["migration"],

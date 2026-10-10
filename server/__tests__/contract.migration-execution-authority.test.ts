@@ -280,7 +280,7 @@ describe('migration execution authority', () => {
       expect(source).not.toContain('db:migrate:test');
     }
 
-    expect(read('railway.json')).toContain('"startCommand": "pnpm start:hosted:api"');
+    expect(read('railway.json')).toContain('"startCommand": "node --import tsx server/_core/start.ts"');
     expect(read('railway.email-worker.json')).toContain('"startCommand": "pnpm email:supervisor"');
     expect(read('railway.lead-job.json')).toContain('"startCommand": "pnpm lead-delivery:worker"');
   });
