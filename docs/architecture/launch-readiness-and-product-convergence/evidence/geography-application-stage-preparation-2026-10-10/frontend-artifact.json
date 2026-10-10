@@ -1,0 +1,42 @@
+{
+  "state": "OFFLINE_FRONTEND_CANDIDATE_AWAITING_PUBLIC_INPUT_REVIEW",
+  "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "sourceTree": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "publicBuildEnvironment": {
+    "NODE_ENV": "production",
+    "VERCEL_ENV": "production",
+    "VITE_DEPLOY_ENV": "production",
+    "BUILD_SHA": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+    "VITE_APP_URL": "https://www.propertylistifysa.co.za",
+    "VITE_API_URL": "https://api.propertylistifysa.co.za",
+    "VITE_API_BASE_URL": "https://api.propertylistifysa.co.za",
+    "VITE_USE_MOCK_EMAILS": "false"
+  },
+  "buildExit": 0,
+  "version": {
+    "gitSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+    "buildTime": "2026-10-10T15:15:58.517Z",
+    "env": "production"
+  },
+  "artifactPath": "/home/edwardspc/.local/state/property-listify/junior-compatible-application-20261010/production-frontend.tar",
+  "artifactSha256": "ac958cda4d1ed631645d3722bad37d4e6cd5c491f76a748d7249905237c94528",
+  "artifactBytes": 13701120,
+  "fileCount": 269,
+  "fileDigestManifestPath": "/home/edwardspc/.local/state/property-listify/junior-compatible-application-20261010/frontend-file-sha256.json",
+  "fileDigestManifestSha256": "a8297839f464727ef87a91101e17bfc8e3477880851d54b7318e9d678b851ddb",
+  "logPath": "/home/edwardspc/.local/state/property-listify/junior-compatible-application-20261010/production-frontend-build.log",
+  "logSha256": "16316b4ae2c20c6729ee40f00450db778cb75ffb4f1db256a6f542b7919d6ac9",
+  "builtAtUtc": "2026-10-10T15:17:52.010335+00:00",
+  "providerDeploymentCreated": false,
+  "limitation": "Prepared public inputs; refresh project build settings and any additional public maps/analytics inputs at senior review. This is a static bundle, not a Vercel build-output-directory manifest.",
+  "readyForDeployment": false,
+  "unresolvedPublicInputs": [
+    "VITE_PUBLIC_JOURNEY_RELEASES",
+    "VITE_CLOUDFRONT_URL",
+    "VITE_GOOGLE_MAPS_API_KEY",
+    "VITE_ANALYTICS_ENDPOINT",
+    "VITE_ANALYTICS_WEBSITE_ID",
+    "VITE_APP_TITLE",
+    "VITE_APP_LOGO"
+  ]
+}

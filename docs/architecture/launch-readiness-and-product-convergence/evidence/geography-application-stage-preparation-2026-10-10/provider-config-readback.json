@@ -1,0 +1,857 @@
+{
+  "capturedAtUtc": "2026-10-10 15:15:57 UTC",
+  "railway": [
+    {
+      "role": "api",
+      "config": {
+        "build": {
+          "buildCommand": "pnpm build:railway",
+          "buildEnvironment": "V3",
+          "builder": "RAILPACK"
+        },
+        "configFile": "railway.json",
+        "deploy": {
+          "healthcheckPath": "/api/readiness",
+          "healthcheckTimeout": 300,
+          "ipv6EgressEnabled": false,
+          "multiRegionConfig": {
+            "asia-southeast1-eqsg3a": {
+              "numReplicas": 1
+            }
+          },
+          "runtime": "V2",
+          "startCommand": "pnpm start:hosted:api",
+          "useLegacyStacker": false
+        },
+        "networking": {
+          "customDomains": {
+            "api.propertylistifysa.co.za": {
+              "port": 3000
+            }
+          },
+          "privateNetworkEndpoint": "realestateportal",
+          "serviceDomains": {
+            "realestateportal-production-9bb8.up.railway.app": {
+              "port": 3000
+            }
+          }
+        },
+        "source": {
+          "commitSha": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+          "repo": "Doscoding187/real_estate_portal"
+        }
+      },
+      "environment": {
+        "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+        "name": "production"
+      },
+      "service": {
+        "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "name": "real_estate_portal"
+      },
+      "staged": null,
+      "variableNames": [
+        "API_URL",
+        "APP_ENV",
+        "APP_URL",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_REGION",
+        "AWS_S3_BUCKET",
+        "AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+        "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_S3_BUCKET",
+        "BILLING_PROOF_S3_PREFIX",
+        "BILLING_PROOF_S3_REGION",
+        "BILLING_PROOF_STORAGE_ADAPTER",
+        "BUILT_IN_FORGE_API_KEY",
+        "BUILT_IN_FORGE_API_URL",
+        "CLOUDFRONT_URL",
+        "CORS_ALLOWED_ORIGINS",
+        "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+        "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+        "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+        "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+        "DATABASE_CREDENTIAL_CLASS",
+        "DATABASE_URL",
+        "EMAIL_FROM",
+        "FOUNDER_GOOGLE_EMAIL",
+        "FOUNDER_GOOGLE_LOGIN_ENABLED",
+        "FOUNDER_GOOGLE_PROOF_ENABLED",
+        "FRONTEND_URL",
+        "GOOGLE_GEOCODING_API_KEY",
+        "GOOGLE_MAPS_API_KEY",
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+        "GOOGLE_OAUTH_REDIRECT_URI",
+        "GOOGLE_PLACES_API_KEY",
+        "GOOGLE_STREET_VIEW_API_KEY",
+        "JWT_SECRET",
+        "MAX_IMAGE_SIZE_MB",
+        "MEDIA_STORAGE_ADAPTER",
+        "MEDIA_UPLOAD_TOKEN_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NODE_ENV",
+        "OAUTH_SERVER_URL",
+        "OWNER_OPEN_ID",
+        "PAID_MVP_SALES_PAUSED",
+        "PORT",
+        "RAILWAY_CACHE_BUST",
+        "REDIS_URL",
+        "RESEND_API_KEY",
+        "S3_BUCKET_NAME",
+        "SAVED_SEARCH_SCHEDULER_ENABLED",
+        "SKIP_FRONTEND",
+        "STRIPE_PUBLISHABLE_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "TRUST_PROXY",
+        "VITE_ANALYTICS_ENDPOINT",
+        "VITE_ANALYTICS_WEBSITE_ID",
+        "VITE_API_URL",
+        "VITE_APP_ID",
+        "VITE_APP_LOGO",
+        "VITE_APP_TITLE",
+        "VITE_APP_URL"
+      ],
+      "listedVariables": {
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "sealedVariableNames": [],
+        "service": {
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "name": "real_estate_portal"
+        },
+        "valuesRedacted": true,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FOUNDER_GOOGLE_EMAIL",
+          "FOUNDER_GOOGLE_LOGIN_ENABLED",
+          "FOUNDER_GOOGLE_PROOF_ENABLED",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_OAUTH_CLIENT_ID",
+          "GOOGLE_OAUTH_CLIENT_SECRET",
+          "GOOGLE_OAUTH_REDIRECT_URI",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "PORT",
+          "RAILWAY_CACHE_BUST",
+          "RAILWAY_ENVIRONMENT",
+          "RAILWAY_ENVIRONMENT_ID",
+          "RAILWAY_ENVIRONMENT_NAME",
+          "RAILWAY_PRIVATE_DOMAIN",
+          "RAILWAY_PROJECT_ID",
+          "RAILWAY_PROJECT_NAME",
+          "RAILWAY_PUBLIC_DOMAIN",
+          "RAILWAY_SERVICE_ID",
+          "RAILWAY_SERVICE_NAME",
+          "RAILWAY_SERVICE_REAL_ESTATE_PORTAL_URL",
+          "RAILWAY_STATIC_URL",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      }
+    },
+    {
+      "role": "email",
+      "config": {
+        "build": {
+          "buildCommand": "pnpm build:backend",
+          "buildEnvironment": "V3",
+          "builder": "RAILPACK"
+        },
+        "deploy": {
+          "ipv6EgressEnabled": false,
+          "multiRegionConfig": {
+            "asia-southeast1-eqsg3a": {
+              "numReplicas": 1
+            }
+          },
+          "restartPolicyType": "ALWAYS",
+          "runtime": "V2",
+          "startCommand": "pnpm email:supervisor",
+          "useLegacyStacker": false
+        },
+        "source": {
+          "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "repo": "Doscoding187/real_estate_portal"
+        }
+      },
+      "environment": {
+        "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+        "name": "production"
+      },
+      "service": {
+        "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "name": "paid-mvp-email-worker"
+      },
+      "staged": null,
+      "variableNames": [
+        "API_URL",
+        "APP_ENV",
+        "APP_URL",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_REGION",
+        "AWS_S3_BUCKET",
+        "AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+        "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_S3_BUCKET",
+        "BILLING_PROOF_S3_PREFIX",
+        "BILLING_PROOF_S3_REGION",
+        "BILLING_PROOF_STORAGE_ADAPTER",
+        "BUILT_IN_FORGE_API_KEY",
+        "BUILT_IN_FORGE_API_URL",
+        "CLOUDFRONT_URL",
+        "CORS_ALLOWED_ORIGINS",
+        "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+        "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+        "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+        "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+        "DATABASE_CREDENTIAL_CLASS",
+        "DATABASE_URL",
+        "EMAIL_FROM",
+        "FRONTEND_URL",
+        "GOOGLE_GEOCODING_API_KEY",
+        "GOOGLE_MAPS_API_KEY",
+        "GOOGLE_PLACES_API_KEY",
+        "GOOGLE_STREET_VIEW_API_KEY",
+        "JWT_SECRET",
+        "MAX_IMAGE_SIZE_MB",
+        "MEDIA_STORAGE_ADAPTER",
+        "MEDIA_UPLOAD_TOKEN_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NODE_ENV",
+        "OAUTH_SERVER_URL",
+        "OWNER_OPEN_ID",
+        "PAID_MVP_SALES_PAUSED",
+        "REDIS_URL",
+        "RESEND_API_KEY",
+        "S3_BUCKET_NAME",
+        "SAVED_SEARCH_SCHEDULER_ENABLED",
+        "SKIP_FRONTEND",
+        "STRIPE_PUBLISHABLE_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "TRUST_PROXY",
+        "VITE_ANALYTICS_ENDPOINT",
+        "VITE_ANALYTICS_WEBSITE_ID",
+        "VITE_API_URL",
+        "VITE_APP_ID",
+        "VITE_APP_LOGO",
+        "VITE_APP_TITLE",
+        "VITE_APP_URL"
+      ],
+      "listedVariables": {
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "sealedVariableNames": [],
+        "service": {
+          "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+          "name": "paid-mvp-email-worker"
+        },
+        "valuesRedacted": true,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "RAILWAY_ENVIRONMENT",
+          "RAILWAY_ENVIRONMENT_ID",
+          "RAILWAY_ENVIRONMENT_NAME",
+          "RAILWAY_PRIVATE_DOMAIN",
+          "RAILWAY_PROJECT_ID",
+          "RAILWAY_PROJECT_NAME",
+          "RAILWAY_SERVICE_ID",
+          "RAILWAY_SERVICE_NAME",
+          "RAILWAY_SERVICE_REAL_ESTATE_PORTAL_URL",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      }
+    },
+    {
+      "role": "lead",
+      "config": {
+        "build": {
+          "buildCommand": "pnpm build:backend",
+          "buildEnvironment": "V3",
+          "builder": "RAILPACK"
+        },
+        "deploy": {
+          "ipv6EgressEnabled": false,
+          "multiRegionConfig": {
+            "asia-southeast1-eqsg3a": {
+              "numReplicas": 1
+            }
+          },
+          "restartPolicyType": "NEVER",
+          "runtime": "V2",
+          "startCommand": "pnpm lead-delivery:worker",
+          "useLegacyStacker": false
+        },
+        "source": {
+          "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "repo": "Doscoding187/real_estate_portal"
+        }
+      },
+      "environment": {
+        "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+        "name": "production"
+      },
+      "service": {
+        "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "name": "paid-mvp-lead-job"
+      },
+      "staged": null,
+      "variableNames": [
+        "API_URL",
+        "APP_ENV",
+        "APP_URL",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_REGION",
+        "AWS_S3_BUCKET",
+        "AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+        "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+        "BILLING_PROOF_S3_BUCKET",
+        "BILLING_PROOF_S3_PREFIX",
+        "BILLING_PROOF_S3_REGION",
+        "BILLING_PROOF_STORAGE_ADAPTER",
+        "BUILT_IN_FORGE_API_KEY",
+        "BUILT_IN_FORGE_API_URL",
+        "CLOUDFRONT_URL",
+        "CORS_ALLOWED_ORIGINS",
+        "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+        "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+        "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+        "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+        "DATABASE_CREDENTIAL_CLASS",
+        "DATABASE_URL",
+        "EMAIL_FROM",
+        "FRONTEND_URL",
+        "GOOGLE_GEOCODING_API_KEY",
+        "GOOGLE_MAPS_API_KEY",
+        "GOOGLE_PLACES_API_KEY",
+        "GOOGLE_STREET_VIEW_API_KEY",
+        "JWT_SECRET",
+        "MAX_IMAGE_SIZE_MB",
+        "MEDIA_STORAGE_ADAPTER",
+        "MEDIA_UPLOAD_TOKEN_SECRET",
+        "NEXT_PUBLIC_APP_URL",
+        "NODE_ENV",
+        "OAUTH_SERVER_URL",
+        "OWNER_OPEN_ID",
+        "PAID_MVP_SALES_PAUSED",
+        "REDIS_URL",
+        "RESEND_API_KEY",
+        "S3_BUCKET_NAME",
+        "SAVED_SEARCH_SCHEDULER_ENABLED",
+        "SKIP_FRONTEND",
+        "STRIPE_PUBLISHABLE_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "TRUST_PROXY",
+        "VITE_ANALYTICS_ENDPOINT",
+        "VITE_ANALYTICS_WEBSITE_ID",
+        "VITE_API_URL",
+        "VITE_APP_ID",
+        "VITE_APP_LOGO",
+        "VITE_APP_TITLE",
+        "VITE_APP_URL"
+      ],
+      "listedVariables": {
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "sealedVariableNames": [],
+        "service": {
+          "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+          "name": "paid-mvp-lead-job"
+        },
+        "valuesRedacted": true,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "RAILWAY_ENVIRONMENT",
+          "RAILWAY_ENVIRONMENT_ID",
+          "RAILWAY_ENVIRONMENT_NAME",
+          "RAILWAY_PRIVATE_DOMAIN",
+          "RAILWAY_PROJECT_ID",
+          "RAILWAY_PROJECT_NAME",
+          "RAILWAY_SERVICE_ID",
+          "RAILWAY_SERVICE_NAME",
+          "RAILWAY_SERVICE_REAL_ESTATE_PORTAL_URL",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      }
+    }
+  ],
+  "vercel": {
+    "project": {
+      "id": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+      "name": "real-estate-portal",
+      "framework": "vite",
+      "accountId": "team_wGNClVbXptfEtznBC5p1YfO2",
+      "createdAt": 1762493894715,
+      "updatedAt": 1791412115255,
+      "nodeVersion": "22.x",
+      "live": false,
+      "latestDeployment": {
+        "id": "dpl_FMUvoDNqD4T4SVGEDByHybxtCuXw",
+        "url": "real-estate-portal-al833la50-edwards-projects-29c395d1.vercel.app",
+        "createdAt": 1791621373119,
+        "readyState": "ERROR",
+        "target": null
+      },
+      "domains": [
+        "www.propertylistifysa.co.za",
+        "real-estate-portal-xi.vercel.app",
+        "propertylistifysa.co.za",
+        "real-estate-portal-edwards-projects-29c395d1.vercel.app",
+        "real-estate-portal-git-7756376-6de0f1-edwards-projects-29c395d1.vercel.app"
+      ],
+      "passwordProtection": {
+        "enabled": false,
+        "deploymentType": null
+      },
+      "ssoProtection": {
+        "enabled": true,
+        "deploymentType": "all_except_custom_domains"
+      },
+      "trustedIps": {
+        "enabled": false,
+        "deploymentType": null,
+        "addresses": [],
+        "protectionMode": null
+      }
+    },
+    "deployments": {
+      "pagination": {
+        "count": 5,
+        "next": 1791316098346,
+        "prev": 1791412043777
+      },
+      "deployments": [
+        {
+          "id": "dpl_9voWXeyGQw63Un2cb6HgztUgKCyD",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-3qhdry378-edwards-projects-29c395d1.vercel.app",
+          "created": 1791412043777,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "githubCommitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "githubCommitMessage": "Merge pull request #593 from Doscoding187/fix/developer-registration-canonical-fields-20261007\n\nStop silently discarding Developer registration project counts",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/9voWXeyGQw63Un2cb6HgztUgKCyD",
+          "isRollbackCandidate": true
+        },
+        {
+          "id": "dpl_Ha9wvymftfQKE1UxdsBkpvyc4i22",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-75zr7ykez-edwards-projects-29c395d1.vercel.app",
+          "created": 1791401792295,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+            "githubCommitSha": "3fb981cb0e08f45ff5c9a826f7ddba2ed87afd99",
+            "githubCommitMessage": "Merge pull request #592 from Doscoding187/diagnose/auth-me-latency-20261007\n\nMeasure authenticated account-information latency with correlated request IDs",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/Ha9wvymftfQKE1UxdsBkpvyc4i22",
+          "isRollbackCandidate": true
+        },
+        {
+          "id": "dpl_DjfcY3sQp2F72fg2biCMCfm8ZA5G",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-lsyvehlip-edwards-projects-29c395d1.vercel.app",
+          "created": 1791392887276,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+            "githubCommitSha": "51cfb989aec18bc8051d76dbec86e570fad559cd",
+            "githubCommitMessage": "Merge pull request #591 from Doscoding187/fix/browser-logout-session-revocation-20261007\n\nFix browser logout session revocation",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/DjfcY3sQp2F72fg2biCMCfm8ZA5G",
+          "isRollbackCandidate": false
+        },
+        {
+          "id": "dpl_44zMyxLRt9GLPxW5Aatce51Y2DiV",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-bp5j9z5wf-edwards-projects-29c395d1.vercel.app",
+          "created": 1791378423270,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+            "githubCommitSha": "c1a1b813a44bf033426e026b2253f896cfc6c3b5",
+            "githubCommitMessage": "Merge pull request #590 from Doscoding187/fix/founder-google-identity-authority-20261007\n\nfix(auth): complete canonical Google founder sign-in",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/44zMyxLRt9GLPxW5Aatce51Y2DiV",
+          "isRollbackCandidate": false
+        },
+        {
+          "id": "dpl_b5rPVYhSc1FR8EUYi1AfWH2BGNh7",
+          "name": "real-estate-portal",
+          "url": "real-estate-portal-9biwiixbi-edwards-projects-29c395d1.vercel.app",
+          "created": 1791316098346,
+          "state": "READY",
+          "target": "production",
+          "creator": {
+            "uid": "MTVqdjjxbdV4cKuUS7lsabT8",
+            "username": "doscoding187"
+          },
+          "meta": {
+            "githubCommitRef": "main",
+            "githubCommitSha": "b0bebc343a710f7e5713efc1d36cd5d3bca68455",
+            "githubCommitMessage": "Merge pull request #588 from Doscoding187/fix/readiness-query-roundtrips-20261006\n\nReduce readiness verification round trips",
+            "githubRepo": "real_estate_portal",
+            "githubOrg": "Doscoding187"
+          },
+          "inspectorUrl": "https://vercel.com/edwards-projects-29c395d1/real-estate-portal/b5rPVYhSc1FR8EUYi1AfWH2BGNh7",
+          "isRollbackCandidate": false
+        }
+      ]
+    },
+    "environmentNames": [
+      {
+        "key": "VITE_APP_URL",
+        "target": [
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_CLOUDFRONT_URL",
+        "target": [
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_PUBLIC_JOURNEY_RELEASES",
+        "target": [
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_API_URL",
+        "target": [
+          "development",
+          "preview"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_DEPLOY_ENV",
+        "target": [
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_API_URL",
+        "target": [
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_ANALYTICS_WEBSITE_ID",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_ANALYTICS_ENDPOINT",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "MAX_IMAGE_SIZE_MB",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "CLOUDFRONT_URL",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "S3_BUCKET_NAME",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "AWS_SECRET_ACCESS_KEY",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "AWS_ACCESS_KEY_ID",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "AWS_REGION",
+        "target": [
+          "development",
+          "preview",
+          "production"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_GOOGLE_MAPS_API_KEY",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_APP_TITLE",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      },
+      {
+        "key": "VITE_APP_LOGO",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "type": "encrypted",
+        "gitBranch": null
+      }
+    ]
+  }
+}

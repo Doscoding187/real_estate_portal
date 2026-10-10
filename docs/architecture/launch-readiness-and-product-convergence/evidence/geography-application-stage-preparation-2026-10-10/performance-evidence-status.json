@@ -1,0 +1,65 @@
+{
+  "state": "HOSTED_MEASUREMENT_NOT_RUN",
+  "historicalSource": "04821fe7ae6401e781925adce099a93ead08490a",
+  "historicalTarget": {
+    "class": "disposable-worktree",
+    "fingerprint": "03e11127da916a0ba379166a75d55d8f790991724a06312d43a6ea4ae9e1d64b"
+  },
+  "historicalLimits": {
+    "readP95Ms": 750,
+    "readP99Ms": 2000,
+    "acquisitionP95Ms": 250,
+    "unexpectedErrorsPercentLessThan": 0.1,
+    "reference": "docs/architecture/launch-readiness-and-product-convergence/24-paid-mvp-launch-closure-execution-plan.md B17 baseline",
+    "discovery200msProposalIsNotAgreedGate": true
+  },
+  "localReadLatencies": [
+    {
+      "concurrency": 1,
+      "p95Ms": 703.04,
+      "p99Ms": 828.45,
+      "acquisitionP95Ms": 12.51,
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": true,
+        "readP99Within2000ms": true,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 5,
+      "p95Ms": 2545.79,
+      "p99Ms": 2893.74,
+      "acquisitionP95Ms": 179.31,
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": false,
+        "readP99Within2000ms": false,
+        "acquisitionP95Within250ms": true
+      }
+    },
+    {
+      "concurrency": 20,
+      "p95Ms": 10355.47,
+      "p99Ms": 10449.13,
+      "acquisitionP95Ms": 1134.44,
+      "errors": 0,
+      "budgetComparison": {
+        "readP95Within750ms": false,
+        "readP99Within2000ms": false,
+        "acquisitionP95Within250ms": false
+      }
+    }
+  ],
+  "limitations": [
+    "Local diagnostic on 120 synthetic listings; not B17 10,000-listing/24-hour capacity acceptance.",
+    "First observations occur after fixture preparation; InnoDB and OS caches are not reset.",
+    "Query durations include driver acquisition/execution/transfer; queryRowsReturned is measured, physical rows examined is not.",
+    "Serialization is an additional superjson stringify estimate; HTTP latency includes actual transport serialization and parsing.",
+    "RSS observations are process samples; no production memory/CPU-credit/storage capacity acceptance.",
+    "Homepage EnhancedHero still hands off legacy location IDs; this benchmark does not certify customer homepage discovery.",
+    "Development inventory cannot use canonical Place assignment.",
+    "Scope policy is approved exact locality/exact city/evidenced province; no new city descendant membership."
+  ],
+  "liveResult": null
+}

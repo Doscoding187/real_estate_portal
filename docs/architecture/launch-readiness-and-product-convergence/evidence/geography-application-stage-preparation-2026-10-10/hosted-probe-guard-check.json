@@ -1,0 +1,7 @@
+{
+  "checkedAtUtc": "2026-10-10T15:27:58.084476+00:00",
+  "method": "Run prepared harness with missing required API origin; it refuses before endpoint fetches or client creation.",
+  "exit": 1,
+  "expectedGuardObserved": true,
+  "liveRequestsPerformed": false
+}

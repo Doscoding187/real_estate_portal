@@ -1,0 +1,11 @@
+{
+  "state": "SOURCE_PREPARED_NOT_DEPLOYED",
+  "sourceSha": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "sourceTree": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "protectedSchemaSource": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "bundlePath": "/home/edwardspc/.local/state/property-listify/junior-compatible-application-20261010/application-source.tar",
+  "bundleSha256": "505a0e780563bb95c769854f0c770f566ec977a38f3382f0c82ded1fe266991e",
+  "bundleBytes": 728391680,
+  "preparedAtUtc": "2026-10-10T15:15:27.548059+00:00",
+  "runtimeDifferenceFromPacketBase": []
+}

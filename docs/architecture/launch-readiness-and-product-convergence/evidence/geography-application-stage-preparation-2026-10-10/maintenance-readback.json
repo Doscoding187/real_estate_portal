@@ -1,0 +1,23 @@
+[
+  {
+    "origin": "https://api.propertylistifysa.co.za",
+    "observedAtUtc": "2026-10-10T15:19:22.001122+00:00",
+    "status": 403,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+    "bodyBytes": 645
+  },
+  {
+    "origin": "https://realestateportal-production-9bb8.up.railway.app",
+    "observedAtUtc": "2026-10-10T15:19:23.567617+00:00",
+    "status": 403,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63",
+    "bodyBytes": 645
+  },
+  {
+    "origin": "https://www.propertylistifysa.co.za",
+    "observedAtUtc": "2026-10-10T15:19:26.194723+00:00",
+    "status": 200,
+    "bodySha256": "9dc396797eb6e819e0f5d8699c9bc268a417b55f6251c5719fc8b70193a89ef3",
+    "bodyBytes": 3376
+  }
+]

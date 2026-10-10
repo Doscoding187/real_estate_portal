@@ -1,0 +1,15 @@
+{
+  "command": "pnpm db:authority:status",
+  "exit": 0,
+  "targetClass": "disposable-worktree",
+  "fingerprintHash": "202ec226f5a7ffb7f9faca61c52f354ca318be600d52f3e7b2c5263afeff792d",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "worktreeOwnership": "exact",
+  "serviceAvailability": "database-unreachable",
+  "ledgerAndAttempts": "not-evaluated",
+  "schemaAndData": "not-evaluated",
+  "databaseProvisioned": false,
+  "protectedDatabaseConnectionOpened": false,
+  "note": "Sanitized fields from the preparation startup status. Local authority resolution is not a production readiness check."
+}

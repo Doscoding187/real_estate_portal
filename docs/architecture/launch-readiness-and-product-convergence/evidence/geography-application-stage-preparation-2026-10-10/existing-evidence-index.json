@@ -1,0 +1,57 @@
+[
+  {
+    "path": "../geography-reference-stage-accepted-2026-10-10/README.md",
+    "sha256": "e7c720c057caec8ecc11ee5a3f81648366e086f95c307ce35156f47a28d1d191",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../geography-reference-stage-accepted-2026-10-10/NEXT-APPLICATION-STAGE.md",
+    "sha256": "b0faf2faea77e6abf314893fa043196f15ec95938593adda8baffff8eb6e823c",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../geography-reference-stage-accepted-2026-10-10/acceptance.json",
+    "sha256": "6b67fe3c150e5838348e0df41fa0971f23da57a0f3332591276df6b38e5b4b70",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../geography-reference-stage-accepted-2026-10-10/verify-report.json",
+    "sha256": "6ea81022bd910766ba81ff630c72fe7190e3c03db3eef4d1f2022bcb862da6b2",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../geography-reference-stage-accepted-2026-10-10/runner-deployment-readback.json",
+    "sha256": "1478bf0a7bb56c4d8708bb41f6b7435c15a717390b85b9438155f41d67351ae0",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../geography-schema-stage-accepted-2026-10-10/README.md",
+    "sha256": "2390c49d1a7db5347a98ae4b53cdd5b12a810631bf84234abd46716469812600",
+    "role": "accepted-stage"
+  },
+  {
+    "path": "../api-shutdown-cleanup-2026-10-10/follow-up-review.md",
+    "sha256": "e4abcc74e1a24b463021a77614e237ff9025cfb8abe2aac7fe471b1d0c400fa6",
+    "role": "historical-local-supporting-proof-not-production-acceptance"
+  },
+  {
+    "path": "../north-riding-authoring-2026-10-08/physical-draft-proof.json",
+    "sha256": "8cff9ac6abd2fc3b3be88ea8f3981b96802d9cfdb6c5d29f92927d365215a7db",
+    "role": "historical-local-supporting-proof-not-production-acceptance"
+  },
+  {
+    "path": "../geography-public-search-and-hosted-ci-2026-10-08/customer-proof.json",
+    "sha256": "444b60fe343646f0bfc5044e87cc9f5b0f80ce8eab7759a3a057f855f3771239",
+    "role": "historical-local-supporting-proof-not-production-acceptance"
+  },
+  {
+    "path": "../national-place-search-measurement-2026-10-08/report.json",
+    "sha256": "c598903571ad38ff89a509c51d27cb5fadb45cace10176dd6e2825a892438131",
+    "role": "historical-local-supporting-proof-not-production-acceptance"
+  },
+  {
+    "path": "../national-place-search-measurement-2026-10-08/postflight.json",
+    "sha256": "de8567b22ac5b15c0e8d0daafd5031ce8609e545c4a898e35e488eaf0123beea",
+    "role": "historical-local-supporting-proof-not-production-acceptance"
+  }
+]

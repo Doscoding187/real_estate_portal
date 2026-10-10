@@ -1,0 +1,46 @@
+{
+  "policy": "admitted-national-non-osm-only-v1",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "head": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "desiredDigest": "3c8f2e80908b8d6d7d565e83f7c1cafe6b10fea7a53fc757ec01650b02be2728",
+  "desiredRows": {
+    "place": 16944,
+    "place_name": 25618,
+    "place_relationship": 16935,
+    "place_evidence": 79189,
+    "place_external_mapping": 19042
+  },
+  "heldDigest": "d9fa78e371be33ada65362b3b1ce8b848fb4212a9518e4bc06da4f18ff5dc5e2",
+  "heldRows": {
+    "place": 720,
+    "place_name": 807,
+    "place_relationship": 720,
+    "place_evidence": 736,
+    "place_external_mapping": 750
+  },
+  "holdReason": "D3: founder production ODbL database-strategy gate remains uncleared",
+  "provinceIds": [
+    "pl-place-01-131e3e75ad70424e0f9c869a",
+    "pl-place-01-153d9daaed02608619c762aa",
+    "pl-place-01-191d11b42d5b13319fa7fca2",
+    "pl-place-01-203f5f71cb3565521db4718f",
+    "pl-place-01-9892b872a77f27e90c5cf091",
+    "pl-place-01-a5e69690b90509167e54a142",
+    "pl-place-01-c987af17ca8c4427cb59abf5",
+    "pl-place-01-e7be97ff5aaae9fa7ff7d28f",
+    "pl-place-01-ee7ac2ac3ad791ae7a83a4e9"
+  ],
+  "planDigest": "92f3a3bdc232f79f89a8a82f6c879c08e4ee85a3918ac3b3b96d485a8385b30c",
+  "pendingRows": 0,
+  "existingRows": 157728,
+  "connectionClosed": true,
+  "acceptedEvidenceCommit": "ae5f3e80332b154fde6af4ceb4d9f653e7619fcf",
+  "schemaSource": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "representativeHeldIds": [
+    "pl-place-01-00a8aa324ee0aabf33eb3c71",
+    "pl-place-01-00d00f0e192d834f1b3834c8",
+    "pl-place-01-014696d7d6b2aa080f2b8ac6"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "state": "COMPLETED_CUSTODY_ARCHIVED",
+  "archivedAtUtc": "2026-10-10T15:13:15.550469+00:00",
+  "correlation": "reference-20261010-cfacb630-80c5-4fe1-b8cf-b3955af8033e",
+  "runnerServiceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+  "archivePath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/completed-window-archive",
+  "ownTimersStoppedBeforeUtc": "2026-10-10T15:13:15.550469+00:00",
+  "observerCompletedNaturallyBeforeArchive": true,
+  "stopTimeEvidence": "unit-journal.txt",
+  "providerMutationsPerformed": false,
+  "activeOperationKilledOrDeleted": false,
+  "archiveReceiptPath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/completed-window-archive/archive-receipt.json",
+  "archiveReceiptSha256": "4a8815628d4cbebe1be30e2e8bef6620c10b11bc28932adefd38725793f3eac3",
+  "archiveChecksumPath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/completed-window-archive/SHA256SUMS",
+  "archiveChecksumSha256": "5b109019adaf22833cb245ff1217e07e956b0d9037db688e7f0fb3a54ca8e16c",
+  "archivedFileCount": 32,
+  "ownUnitFinalStates": {
+    "pl-junior-custody-warning-test-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-test-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-test-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-test-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-warning-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-expiry-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-status-reference-20261010T134601Z.timer": "ActiveState=inactive\nSubState=dead",
+    "pl-junior-custody-status-reference-20261010T134601Z.service": "ExecMainStatus=0\nActiveState=inactive\nSubState=dead"
+  },
+  "timerStoppedAtUtc": {
+    "pl-junior-custody-warning-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00",
+    "pl-junior-custody-expiry-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00",
+    "pl-junior-custody-status-reference-20261010T134601Z.timer": "2026-10-10T15:10:38+00:00"
+  }
+}
