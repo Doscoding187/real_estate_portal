@@ -62,6 +62,9 @@ export class RedisCacheManager {
   private redis: Redis | null = null;
   private isConnected = false;
   private fallbackMode = false;
+  private closed = false;
+  private closePromise: Promise<void> | null = null;
+  private retryTimers = new Set<NodeJS.Timeout>();
   private metrics: CacheMetrics = {
     hits: 0,
     misses: 0,
@@ -180,6 +183,7 @@ export class RedisCacheManager {
    * Handle Redis failure and switch to fallback mode
    */
   private handleRedisFailure(error: Error): void {
+    if (this.closed) return;
     this.metrics.connectionErrors++;
     this.fallbackMode = true;
     this.isConnected = false;
@@ -187,28 +191,34 @@ export class RedisCacheManager {
     console.error('Redis cache unavailable, switching to fallback mode:', error.message);
 
     // Attempt reconnection after delay
-    setTimeout(() => {
-      this.checkRedisConnection();
-    }, 5000);
+    this.scheduleConnectionCheck(5000);
+  }
+
+  private scheduleConnectionCheck(delayMs: number): void {
+    if (this.closed) return;
+    const timer = setTimeout(() => {
+      this.retryTimers.delete(timer);
+      void this.checkRedisConnection();
+    }, delayMs);
+    this.retryTimers.add(timer);
   }
 
   /**
    * Check Redis connection and attempt reconnection
    */
   private async checkRedisConnection(): Promise<void> {
-    if (!this.redis) return;
+    if (this.closed || !this.redis) return;
 
     try {
       await this.redis.ping();
+      if (this.closed) return;
       this.isConnected = true;
       this.fallbackMode = false;
       console.log('Redis: Connection restored');
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('Redis: Reconnection failed:', msg);
-      setTimeout(() => {
-        this.checkRedisConnection();
-      }, 10000);
+      this.scheduleConnectionCheck(10000);
     }
   }
 
@@ -414,15 +424,25 @@ export class RedisCacheManager {
   /**
    * Gracefully close Redis connection
    */
-  async close(): Promise<void> {
-    if (this.redis) {
+  close(): Promise<void> {
+    if (this.closePromise) return this.closePromise;
+    this.closed = true;
+    for (const timer of this.retryTimers) clearTimeout(timer);
+    this.retryTimers.clear();
+    this.closePromise = (async () => {
+      if (!this.redis) return;
       try {
-        await this.redis.quit();
+        if (this.redis.status === 'ready') await this.redis.quit();
+        else this.redis.disconnect();
       } catch (error) {
         console.error('Redis: Close operation failed:', error);
-        await this.redis.disconnect();
+        this.redis.disconnect();
+        throw error;
+      } finally {
+        this.isConnected = false;
       }
-    }
+    })();
+    return this.closePromise;
   }
 
   /**

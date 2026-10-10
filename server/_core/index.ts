@@ -13,6 +13,9 @@ import { createContext } from './context';
 import { serveStatic, setupVite } from './vite';
 import { domainRoutingMiddleware, customDomainMiddleware } from './domainRouter';
 import { initializeCache, shutdownCache } from './cache/redis';
+import { cache } from '../lib/cache';
+import { redisCache } from '../lib/redis';
+import { stopGooglePlacesService } from '../services/googlePlacesServiceLifecycle';
 import { registerHealthEndpoint, registerVersionEndpoint } from './health';
 import { stopHostedDatabaseReadinessMonitor } from './hostedDatabaseReadinessMonitor';
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
@@ -54,6 +57,7 @@ import {
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
   try {
     const mod: any = await import(importPath);
+    if (shuttingDown) return;
 
     const routerCandidate = mod?.default ?? mod?.router ?? mod?.routes ?? mod?.partnerRouter ?? mod;
 
@@ -85,6 +89,8 @@ let activeServer: ReturnType<typeof createServer> | null = null;
 let activeAuthStore: RedisAuthRateLimitStore | null = null;
 let stopFounderGoogleIdentityProof: (() => Promise<void>) | null = null;
 let shuttingDown = false;
+const listenerCancellation = new AbortController();
+let startupFailed = false;
 
 async function startServer() {
   const runtimeEnvironment = resolveAppRuntimeEnv();
@@ -104,6 +110,7 @@ async function startServer() {
 
   console.log('[Server] Initializing cache...');
   await initializeCache();
+  if (shuttingDown) return;
   console.log('[Server] Cache initialized');
 
   console.log('[Server] Probing distribution schema readiness...');
@@ -125,6 +132,7 @@ async function startServer() {
     );
   }
 
+  if (shuttingDown) return;
   const browserSecurityPolicy = resolveBrowserSecurityPolicy();
   assertBrowserSecurityPolicy(browserSecurityPolicy);
   assertDeployedTrustProxyConfiguration();
@@ -252,13 +260,16 @@ async function startServer() {
   console.log('[Server] Loading optional routers...');
 
   await mountOptionalRouter(app, '/api/analytics', '../routes/analytics');
+  if (shuttingDown) return;
 
   console.log('[Routes] ℹ️  /api/partners is handled by tRPC, skipping Express mount');
 
   // Legacy partner analytics routes are intentionally disabled. They expose
   // commercial analytics without canonical partner identity or ownership checks.
   await mountOptionalRouter(app, '/api/content', '../contentRouter');
+  if (shuttingDown) return;
   await mountOptionalRouter(app, '/api/topics', '../topicsRouter');
+  if (shuttingDown) return;
   // Legacy partner subscription routes are intentionally disabled.
   // They require canonical authentication, ownership, and entitlement controls before remounting.
   // Legacy boost campaign routes are intentionally disabled. They lack canonical
@@ -267,12 +278,16 @@ async function startServer() {
   // canonical public lead-capture consent, rate-limit, routing, and custody boundary.
 
   await mountOptionalRouter(app, '/api/explore', '../routes/exploreShorts');
+  if (shuttingDown) return;
   await mountOptionalRouter(app, '/api/explore/video', '../routes/exploreVideoUpload');
+  if (shuttingDown) return;
 
   console.log('[Server] Optional routers loaded');
 
   const savedSearchSchedulerStatus = await savedSearchDeliveryScheduler.start();
+  if (shuttingDown) return;
   await commercialTermNoticeScheduler.start();
+  if (shuttingDown) return;
   console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
@@ -285,19 +300,22 @@ async function startServer() {
     console.log('[Server] Skipping frontend static file serving (backend-only mode)');
   }
 
+  if (shuttingDown) return;
   const port = parseInt(process.env.PORT || '5000', 10);
   console.log('----------------------------------------');
   console.log(`[Server] Starting on port ${port}`);
   console.log('----------------------------------------');
 
-  server.listen(port, '0.0.0.0', () => {
+  server.listen({ port, host: '0.0.0.0', signal: listenerCancellation.signal }, () => {
+    if (shuttingDown) return;
     console.log(`Backend running on http://localhost:${port}`);
     console.log(`tRPC endpoint: http://localhost:${port}/api/trpc`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }
 
-startServer().catch(error => {
+const startup = startServer().catch(error => {
+  startupFailed = true;
   console.error('[Startup] Application initialization failed.', {
     message: error instanceof Error ? error.message : 'Unknown startup error.',
   });
@@ -313,27 +331,86 @@ async function shutdown(signal: string): Promise<void> {
     activeServer?.closeAllConnections();
     process.exit(1);
   }, 20_000);
-  try {
-    if (activeServer?.listening) {
-      const server = activeServer;
-      await new Promise<void>((resolve, reject) => {
-        server.close(error => error ? reject(error) : resolve());
-      });
+  const failures: { resource: string; error: unknown }[] = [];
+  const attempt = async (
+    resource: string,
+    close: () => void | Promise<unknown>,
+  ): Promise<boolean> => {
+    try {
+      await close();
+      return true;
+    } catch (error) {
+      failures.push({ resource, error });
+      process.exitCode = 1;
+      console.error(`[Shutdown] Failed to close ${resource}.`, error);
+      return false;
     }
-    savedSearchDeliveryScheduler.stop();
-    commercialTermNoticeScheduler.stop();
-    await stopHostedDatabaseReadinessMonitor();
-    await activeAuthStore?.shutdown();
-    await stopFounderGoogleIdentityProof?.();
-    await shutdownPublicLeadRateLimitStore();
-    await shutdownCache();
-    await shutdownDb();
-    process.exitCode = 0;
+  };
+  let consumersDrained = false;
+  try {
+    // Cancel scheduler startup immediately, before awaiting any other drain.
+    const savedDrain = attempt('saved-search scheduler', () => savedSearchDeliveryScheduler.stop());
+    const commercialDrain = attempt('commercial scheduler', () =>
+      commercialTermNoticeScheduler.stop(),
+    );
+    const server = activeServer;
+    const wasListening = Boolean(server?.listening);
+    const httpDrain = attempt('HTTP server', () => {
+      if (!wasListening || !server) return;
+      return new Promise<void>((resolve, reject) => {
+        server.close(error => (error ? reject(error) : resolve()));
+      });
+    });
+    // A pending listen must not bind after the shutdown signal. A listening
+    // server uses the awaited graceful close above to drain existing requests.
+    if (!wasListening) listenerCancellation.abort();
+    await startup;
+    const [httpStopped, savedStopped, commercialStopped] = await Promise.all([
+      httpDrain,
+      savedDrain,
+      commercialDrain,
+    ]);
+    const readinessStopped = await attempt('readiness monitor', stopHostedDatabaseReadinessMonitor);
+    consumersDrained = httpStopped && savedStopped && commercialStopped && readinessStopped;
+
+    await attempt('auth rate-limit store', async () => {
+      await activeAuthStore?.shutdown();
+    });
+    await attempt('founder Google state store', async () => {
+      await stopFounderGoogleIdentityProof?.();
+    });
+    await attempt('public lead rate-limit store', shutdownPublicLeadRateLimitStore);
+    await attempt('core Redis cache', shutdownCache);
+    await attempt('Google Places', stopGooglePlacesService);
+    await attempt('Explore Redis cache', () => redisCache.disconnect());
+    await attempt('in-memory cache', () => cache.destroy());
+    if (consumersDrained) {
+      await attempt('database', shutdownDb);
+    } else {
+      console.error('[Shutdown] Database closure deferred: consumers did not finish their drain.');
+    }
+    if (failures.length) {
+      // Keep the original failure object and log every failed resource above.
+      console.error('[Shutdown] Failed to close cleanly.', failures[0].error);
+      process.exitCode = 1;
+    } else if (startupFailed) {
+      process.exitCode = 1;
+    } else {
+      console.log('[Shutdown] Cleanup completed.');
+      process.exitCode = 0;
+    }
   } catch (error) {
+    failures.push({ resource: 'shutdown', error });
     console.error('[Shutdown] Failed to close cleanly.', error);
     process.exitCode = 1;
   } finally {
-    clearTimeout(deadline);
+    // A failed consumer drain must not close its database or disable the bound.
+    // After all attempts settle, failures may exit naturally with code 1. Keep
+    // the same watchdog for any failed resource that still holds the loop open.
+    if (consumersDrained) {
+      if (failures.length || startupFailed) deadline.unref();
+      else clearTimeout(deadline);
+    }
   }
 }
 

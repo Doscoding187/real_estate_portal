@@ -1,0 +1,65 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-api-shutdown-cache-cleanup-20261010
+
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 prevent building .env in docker: https://dotenvx.com/prebuild
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/_core/__tests__/apiShutdown.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGTERM
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'absent',
+  loadGooglePlaces: false,
+  startupMs: 5694,
+  shutdownMs: 38,
+  code: 0,
+  signal: null
+}
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases real startup resources after SIGINT
+API natural exit {
+  requestedSignal: 'SIGINT',
+  redis: 'absent',
+  loadGooglePlaces: false,
+  startupMs: 4228,
+  shutdownMs: 30,
+  code: 0,
+  signal: null
+}
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > cancels connection retries when Redis is unavailable during startup
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'unavailable',
+  loadGooglePlaces: false,
+  startupMs: 4597,
+  shutdownMs: 1661,
+  code: 0,
+  signal: null
+}
+
+stdout | server/_core/__tests__/apiShutdown.test.ts > API natural process exit > releases Google Places when a location request has loaded it
+API natural exit {
+  requestedSignal: 'SIGTERM',
+  redis: 'absent',
+  loadGooglePlaces: true,
+  startupMs: 4126,
+  shutdownMs: 34,
+  code: 0,
+  signal: null
+}
+
+ ✓ |server| server/_core/__tests__/apiShutdown.test.ts (4 tests) 20423ms
+   ✓ API natural process exit > releases real startup resources after SIGTERM 5736ms
+   ✓ API natural process exit > releases real startup resources after SIGINT 4260ms
+   ✓ API natural process exit > cancels connection retries when Redis is unavailable during startup 6262ms
+   ✓ API natural process exit > releases Google Places when a location request has loaded it 4162ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  09:28:17
+   Duration  20.99s (transform 104ms, setup 115ms, collect 42ms, tests 20.42s, environment 0ms, prepare 94ms)

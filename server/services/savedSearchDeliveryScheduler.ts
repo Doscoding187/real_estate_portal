@@ -138,6 +138,8 @@ function parsePersistedHistory(value: unknown): SavedSearchDeliverySchedulerRun[
 export class SavedSearchDeliveryScheduler {
   private timer: NodeJS.Timeout | null = null;
   private currentRun: Promise<void> | null = null;
+  private pendingStart: Promise<SavedSearchDeliverySchedulerStatus> | null = null;
+  private lifecycleGeneration = 0;
   private status: SavedSearchDeliverySchedulerStatus = {
     enabled: isSchedulerEnabled(),
     running: false,
@@ -152,13 +154,24 @@ export class SavedSearchDeliveryScheduler {
     recentRuns: [],
   };
 
-  async start(options?: { runOnStart?: boolean }) {
+  start(options?: { runOnStart?: boolean }): Promise<SavedSearchDeliverySchedulerStatus> {
+    if (this.pendingStart) return this.pendingStart;
+    const starting = this.startForGeneration(this.lifecycleGeneration, options).finally(() => {
+      if (this.pendingStart === starting) this.pendingStart = null;
+    });
+    this.pendingStart = starting;
+    return starting;
+  }
+
+  private async startForGeneration(generation: number, options?: { runOnStart?: boolean }) {
     this.status.enabled = isSchedulerEnabled();
     this.status.intervalMs = getSchedulerIntervalMs();
     await this.hydratePersistedHistory();
+    if (generation !== this.lifecycleGeneration) return this.getStatus();
 
     if (!this.status.enabled) {
-      await this.stop();
+      this.cancelTimer();
+      await this.currentRun;
       return this.getStatus();
     }
 
@@ -181,16 +194,21 @@ export class SavedSearchDeliveryScheduler {
   }
 
   async stop() {
+    this.lifecycleGeneration += 1;
+    this.cancelTimer();
+    const results = await Promise.allSettled([this.pendingStart, this.currentRun]);
+    for (const result of results) {
+      if (result.status === 'rejected') throw result.reason;
+    }
+  }
+
+  private cancelTimer(): void {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
 
     this.status.timerActive = false;
-
-    if (this.currentRun) {
-      await this.currentRun;
-    }
   }
 
   getStatus(): SavedSearchDeliverySchedulerStatus {

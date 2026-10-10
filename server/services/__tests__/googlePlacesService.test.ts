@@ -27,6 +27,21 @@ describe('GooglePlacesService', () => {
     service.destroy();
   });
 
+  it('cancels housekeeping and session-removal timers during repeated cleanup', () => {
+    vi.useFakeTimers();
+    const ownedService = new GooglePlacesService();
+    try {
+      ownedService.terminateSessionToken(ownedService.createSessionToken());
+      expect(vi.getTimerCount()).toBe(2);
+      ownedService.destroy();
+      ownedService.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      ownedService.destroy();
+      vi.useRealTimers();
+    }
+  });
+
   describe('Session Token Management', () => {
     /**
      * Property 15: Session token termination

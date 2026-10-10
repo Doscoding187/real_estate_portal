@@ -200,6 +200,9 @@ async function queueDueNotices(window: NoticeWindow): Promise<number> {
 class CommercialTermNoticeScheduler {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
+  private currentRun: Promise<{ sent: number }> | null = null;
+  private pendingStart: Promise<void> | null = null;
+  private lifecycleGeneration = 0;
   private lastSucceededAt: string | null = null;
   private lastFailedAt: string | null = null;
 
@@ -213,23 +216,46 @@ class CommercialTermNoticeScheduler {
     };
   }
 
-  async start(): Promise<void> {
+  start(): Promise<void> {
+    if (this.pendingStart) return this.pendingStart;
+    const starting = this.startForGeneration(this.lifecycleGeneration).finally(() => {
+      if (this.pendingStart === starting) this.pendingStart = null;
+    });
+    this.pendingStart = starting;
+    return starting;
+  }
+
+  private async startForGeneration(generation: number): Promise<void> {
     if (this.timer) return;
     await this.tick();
+    if (generation !== this.lifecycleGeneration) return;
     this.timer = setInterval(() => {
       void this.tick();
     }, intervalFromEnv());
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
+    this.lifecycleGeneration += 1;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
+    // Wait for both startup and its job to settle before their database can close.
+    const results = await Promise.allSettled([this.pendingStart, this.currentRun]);
+    for (const result of results) {
+      if (result.status === 'rejected') throw result.reason;
+    }
   }
 
-  async tick(): Promise<{ sent: number }> {
-    if (this.running) return { sent: 0 };
+  tick(): Promise<{ sent: number }> {
+    if (this.currentRun) return Promise.resolve({ sent: 0 });
+    this.currentRun = this.runTick().finally(() => {
+      this.currentRun = null;
+    });
+    return this.currentRun;
+  }
+
+  private async runTick(): Promise<{ sent: number }> {
     this.running = true;
     let sent = 0;
     try {
