@@ -1,0 +1,13 @@
+{
+  "queriedDeploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+  "retrievedAt": "2026-10-10T14:45:28.377663+00:00",
+  "exitCode": 0,
+  "response": {
+    "data": {
+      "deployment": {
+        "id": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+        "status": "REMOVED"
+      }
+    }
+  }
+}

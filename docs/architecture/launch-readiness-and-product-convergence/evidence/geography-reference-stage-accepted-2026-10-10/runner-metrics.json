@@ -1,0 +1,38 @@
+{
+  "environment": {
+    "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "name": "production"
+  },
+  "metrics": [
+    {
+      "average": 0.05112299283746557,
+      "current": 0,
+      "max": 0.6379383000000001,
+      "measurement": "CPU_USAGE",
+      "min": 0,
+      "sampleCount": 121
+    },
+    {
+      "average": 0.12583301289256202,
+      "current": 0.737357824,
+      "max": 0.994697216,
+      "measurement": "MEMORY_USAGE_GB",
+      "min": 0,
+      "sampleCount": 121
+    },
+    {
+      "average": 0.46280873256198385,
+      "current": 0.99999744,
+      "max": 0.99999744,
+      "measurement": "MEMORY_LIMIT_GB",
+      "min": 0,
+      "sampleCount": 121
+    }
+  ],
+  "service": {
+    "id": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+    "name": "pl-geography-reference-20261010-134601"
+  },
+  "retrievedAt": "2026-10-10T14:29:54Z",
+  "limitation": "Provider resource summary, not operation phase instrumentation"
+}

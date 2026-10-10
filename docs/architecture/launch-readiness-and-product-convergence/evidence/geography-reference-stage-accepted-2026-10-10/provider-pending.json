@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-10-10 14:45:47 UTC",
+  "captureClockBasis": "Clock when preserving the completed provider read; provider operation/read completed earlier in this session.",
+  "result": {
+    "destructive": false,
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "name": "production"
+    },
+    "privateNetworkDisabled": null,
+    "project": {
+      "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "name": "successful-tranquility"
+    },
+    "resources": [],
+    "sharedVariables": [],
+    "staged": null
+  }
+}

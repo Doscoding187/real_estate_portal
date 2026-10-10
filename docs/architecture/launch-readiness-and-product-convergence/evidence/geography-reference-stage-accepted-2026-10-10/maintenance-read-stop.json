@@ -1,0 +1,8 @@
+{
+  "recordedAt": "2026-10-10T14:21:44.454622+00:00",
+  "failure": "Final maintenance observation failed in provider-read batch; details not retained by orchestration",
+  "dataDispatchStarted": false,
+  "dispatchMarkerExists": false,
+  "operation": "read-only maintenance GET",
+  "next": "Re-observe maintenance; keep same reserved intent and refresh operational records; never retry apply"
+}

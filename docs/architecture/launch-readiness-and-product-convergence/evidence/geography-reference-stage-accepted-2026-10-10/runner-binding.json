@@ -1,0 +1,17 @@
+{
+  "completed": true,
+  "observedAt": "2026-10-10T14:03:56.890Z",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+  "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+  "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "sourceFileCount": 1792,
+  "allInventoryHashesMatch": true,
+  "dependencyLockSha256": "a565f7331ef0a76881c135ad39c965b99b0bd75827b3edea3b7fd70eb822b9f1",
+  "effectiveHttpsEgress": "208.77.246.242",
+  "idleNodePid": 1,
+  "memoryLimit": "999997440",
+  "persistentSecretNames": []
+}

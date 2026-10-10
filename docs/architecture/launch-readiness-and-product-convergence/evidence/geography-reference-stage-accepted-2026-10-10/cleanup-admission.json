@@ -1,0 +1,35 @@
+{
+  "recordedAt": "2026-10-10T14:39:21.756731+00:00",
+  "binding": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+    "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+    "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea"
+  },
+  "cleanupEligible": true,
+  "referenceApplyExactlyOnce": true,
+  "transactionOutcome": "committed",
+  "acceptedPlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "postApplyPlanDigest": "92f3a3bdc232f79f89a8a82f6c879c08e4ee85a3918ac3b3b96d485a8385b30c",
+  "admittedPlaces": 16944,
+  "assertionRows": 157728,
+  "heldPlaces": 720,
+  "independentVerificationPassed": true,
+  "schemaHeadUnchanged": "0111_properties_canonical_place_reference_fk.sql",
+  "globalNoApplicationSessionsOrTransactions": true,
+  "referenceLockReleasedByCanonicalSuccess": true,
+  "manifestLockReleased": true,
+  "readConnectionsClosed": true,
+  "actualIdleCommandVerified": true,
+  "gate": {
+    "eligible": true,
+    "expired": false,
+    "next": "Verify no active/unknown command, lock or session; then exact provider deletion and readback"
+  },
+  "localOperationDurationMs": 291325,
+  "insertStatements": 633,
+  "applicationDeploymentApproved": false,
+  "reopeningApproved": false,
+  "paymentsApproved": false
+}

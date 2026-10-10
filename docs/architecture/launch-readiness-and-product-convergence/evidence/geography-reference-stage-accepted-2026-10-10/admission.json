@@ -1,0 +1,37 @@
+{
+  "recordedAt": "2026-10-10T14:24:14.883476+00:00",
+  "binding": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+    "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+    "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea"
+  },
+  "approved": true,
+  "planDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "schemaHead": "0111_properties_canonical_place_reference_fk.sql",
+  "pendingAssertions": 157728,
+  "initialExistingAssertions": 0,
+  "heldPlaces": 720,
+  "globalNoWriters": true,
+  "referenceLockForeignHolderExcluded": true,
+  "sourceConnectionsClosed": true,
+  "maintenanceAndApplicationHolds": true,
+  "backupId": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/customer-20261010t115408-b1759c5b-c96f-4cc8-85fc-8d66ab21425f-pl-geog-pre0111-20261009",
+  "backupIsPre0111": true,
+  "noNewContainmentOrSchemaMutation": true,
+  "gate": {
+    "eligible": true,
+    "remainingMinutes": 81.76860873333334,
+    "requiredMinutes": 65,
+    "next": "This is a time gate only; all release evidence and exact operation approvals remain mandatory",
+    "timeRecheckedAt": "2026-10-10T14:24:14.883476+00:00",
+    "sameActiveReservationConfirmed": true,
+    "dispatchAttempts": 0
+  },
+  "minimumRemainingMinutes": 65,
+  "reservedIntent": true,
+  "dispatchAttempts": 0
+}

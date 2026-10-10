@@ -1,0 +1,14 @@
+[
+  {
+    "host": "api.propertylistifysa.co.za",
+    "observedAt": "2026-10-10T14:40:43.838305+00:00",
+    "status": 403,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63"
+  },
+  {
+    "host": "realestateportal-production-9bb8.up.railway.app",
+    "observedAt": "2026-10-10T14:40:42.899230+00:00",
+    "status": 403,
+    "bodySha256": "68e63408d6a0906b221b424d528d5ef30f000f969d08efdb97f5d4652427ef63"
+  }
+]

@@ -1,0 +1,185 @@
+{
+  "transportExitCode": 0,
+  "at": "2026-10-10T14:39:21.679251+00:00",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+  "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+  "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea",
+  "observedAt": "2026-10-10T14:39:21.004Z",
+  "idlePid": 1,
+  "inspectionPid": 2508,
+  "idleCommandVerified": true,
+  "noOtherApplicationCommands": true,
+  "noLiveDatabaseSocket": true,
+  "processes": [
+    {
+      "pid": 1,
+      "name": "node",
+      "state": "S",
+      "parentPid": 0
+    },
+    {
+      "pid": 1072,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1167,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1235,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 125,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1258,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1365,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1500,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1614,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1753,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1867,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 1969,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2153,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2176,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2371,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2394,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2486,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 2508,
+      "name": "node",
+      "state": "R",
+      "parentPid": 0
+    },
+    {
+      "pid": 310,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 333,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 485,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 554,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 577,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 670,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 781,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 880,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 946,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    },
+    {
+      "pid": 969,
+      "name": "esbuild",
+      "state": "Z",
+      "parentPid": 1
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+Reference release completion — recovery custody closeout
+
+Correlation: reference-20261010-cfacb630-80c5-4fe1-b8cf-b3955af8033e
+The one authorized reference apply committed; independent verification passed.
+Connection closed; reference lock released; no active or unknown operation.
+Exact service 7dade655-e2d3-49c6-885f-f3ac0e8a8e2e was deleted.
+Exact deployment d4115bdc-7293-41a0-b468-e5cdb78cf2bb reports REMOVED.
+Removal verified 2026-10-10T14:45:28.377663+00:00, before the unchanged expiry.
+
+Copy privately and checksum:
+/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/lifecycle-record.json
+/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-removal-confirmation.json
+/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-deployment-removal-query.json
+
+Archive only the custody window reference-20261010T134601Z. Stop its own warning, expiry and status timers/services:
+pl-junior-custody-warning-reference-20261010T134601Z
+pl-junior-custody-expiry-reference-20261010T134601Z
+pl-junior-custody-status-reference-20261010T134601Z
+Preserve custody receipt, active-intent receipt, alarm tests and all observations.
+Read back these units as inactive. Return private archive receipt path with checksums and stopping time.
+Do not stop unrelated units. Do not change provider resources, credentials, database or application runtime.
+Application deployment, reopening and payments remain held. Senior alone submits management records.

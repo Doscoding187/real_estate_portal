@@ -1,0 +1,212 @@
+{
+  "admission-inspection.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-protected-inspect.json",
+    "sha256": "6a6fe69c48b908c5314fb7cf13c0f5b43c4b6b5703b3ac0657e85afa2983d89e"
+  },
+  "admission-lock.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-manifest-lock.json",
+    "sha256": "beaf03052feb27e89f097bf08e65cc801d3540bd4f9bb15ded39f55d22574b21"
+  },
+  "admission-maintenance.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-maintenance.json",
+    "sha256": "ece2ebcb4f1a791d45f56449d1fa8b1dbc6fa77e72be73e50d18e4539bf8ffc9"
+  },
+  "admission-runtime.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-environment.json",
+    "sha256": "b782b3832e4bc9a5e757c63c2ffc81dd82819a881e7201471e2606f51db2342a"
+  },
+  "admission-sessions.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-sessions-session-inventory.json",
+    "sha256": "a43f09f701841240f40605afbc2439c64a42a1a4b1c4f3a6b3122cadafb1631e"
+  },
+  "admission.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-admission.json",
+    "sha256": "9af510c6ad0e0aac0ae96b0e128a0ea62c3d0560fe4aa0f789c002ce6252e942"
+  },
+  "apply-provenance.json": {
+    "derivation": "Only embedded diagnostic script replaced by its SHA256; IDs, timings, outcomes and closure unchanged.",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-apply-provenance.json",
+    "privateSourceSha256": "b7c4d84e2fec6b090a2c87d2c8ee8686fef85a40e7d613335f947ceee3f5f0d4"
+  },
+  "apply-report.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-apply-protected-reference-apply.json",
+    "sha256": "2f3fe505fed8baf84bf6590a239288cfe0621f4e0a4a1b146482b4b8b981b812"
+  },
+  "approval.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-approval.json",
+    "sha256": "614c33cbd1a1441b8ceb6c1ceb5ae371ff8620f4a467c9f97a29af5c7cd4caca"
+  },
+  "backup-readback.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-final-backup.json",
+    "sha256": "f7dadb6ea52c9c618905997774b8161ed035b90be923f17933a7536b8708b75b"
+  },
+  "cleanup-admission.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-cleanup-admission.json",
+    "sha256": "dac83a5f47f3b8984dd4457992deca41c1c759729979e651a48c0b5c8edb4cd2"
+  },
+  "dispatch-marker.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-dispatch-sent.json",
+    "sha256": "45bfe1d32fbfe6ce5e9115ae36c87ca9d09f2fe7b0e90e3edf596cc2ea756490"
+  },
+  "freshness-stop.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-freshness-stop.json",
+    "sha256": "6079ca37bd72f48b636a3434ca1b1931d418d1a72f86b690af3d11771e7cc277"
+  },
+  "global-session-inventory.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-cleanup-sessions-session-inventory.json",
+    "sha256": "4e87539c0adc576b95988b9806d695c43dce88893312a46ab574bd5d498ff496"
+  },
+  "initial-inspection.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-preflight-protected-inspect.json",
+    "sha256": "05a54538f40722fc538957c1fdd9113a7285e0fc84458b2b7abe15efefea68c1"
+  },
+  "initial-plan.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-preflight-protected-reference-plan.json",
+    "sha256": "cbde8d82a2cd722a5f254619a5ce638d70aa20418f6e91e9fda3e058e184ef7e"
+  },
+  "lifecycle-final.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/lifecycle-record.json",
+    "sha256": "f5b6dd77aa53ee5da4cd4476513d93d6872d856b094bb0e23774858659ad8ff7"
+  },
+  "lock-provenance.json": {
+    "derivation": "Only embedded diagnostic script replaced by its SHA256; IDs, timings, outcomes and closure unchanged.",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-cleanup-lock-provenance.json",
+    "privateSourceSha256": "0985d62d53e08e48f010ae1124fd5173c1498c70aded31eaeed74e590a58356c"
+  },
+  "maintenance-read-stop.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-maintenance-read-stop.json",
+    "sha256": "946c4d8bbea9e1e1a043d967454c1474cf4f37a84a3121891c52803915c28117"
+  },
+  "maintenance-readback.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-closeout-maintenance.json",
+    "sha256": "2f730ca98efd6a16680bb55ab794916d7e1fa57a859cd1e49b1f97890ec4b4e3"
+  },
+  "manifest-lock-clear.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-cleanup-lock-manifest-lock.json",
+    "sha256": "7c2380d9a99bb9e21fc1cc54a94896ac71168012edd0b30cebbee75bd22640f2"
+  },
+  "physical-congruency.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-physical-congruency.json",
+    "sha256": "117caacbfd826c6e7d2fdfbae869fa3431a567579c80e580dde787db20651eaf"
+  },
+  "post-apply-inspection.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-protected-inspect.json",
+    "sha256": "099d60cb95a270d9f4e9d763baa1e79a29408588230bd621ea4c448e9ba80512"
+  },
+  "post-apply-plan.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-protected-reference-plan.json",
+    "sha256": "6ea81022bd910766ba81ff630c72fe7190e3c03db3eef4d1f2022bcb862da6b2"
+  },
+  "provider-baseline.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/provider-baseline-production.json",
+    "sha256": "b149f61ac1f8c117654bcd963bbbef1a0e781db65dc0a356667785a7dada13b5"
+  },
+  "provider-delete-response.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-delete-response.json",
+    "sha256": "831201bfb85dee41e57246dc9af20475f99f9eaffa591c7318c6509cca129cd1"
+  },
+  "provider-pending.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-staged-changes.json",
+    "sha256": "949d84d1fc3325da1f8927086fba7c71816f7987fc74d9a707ca13c2f80508e3"
+  },
+  "provider-production.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-production-config.json",
+    "sha256": "d2fef8f6e1d46a6c1b56ce7bdb919a77698b8c244bc734c1c7f05364fd6510bc"
+  },
+  "provider-runtime.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-environment-status.json",
+    "sha256": "ae37527e16c7ad4e35ad81317c70d8d9a7330c996636ac067a062a2e84f6954e"
+  },
+  "provider-services.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-service-registry.json",
+    "sha256": "ff30f434ca77c122507ff098264d3bd9eefdde7c82ad7e0c08e55d5996ec4ce6"
+  },
+  "provider-staging.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-staging-config.json",
+    "sha256": "0a7f32b2b43c13860383f197c51eae309572ecc2a827d78d890ffad2ddea4a8b"
+  },
+  "provider-testing.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-closeout-testing-config.json",
+    "sha256": "cfc88ca75576572d77f6e8254b368af788a112dc7dd6517400ca539a38a5881b"
+  },
+  "read-only-carrier-amendment.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/read-only-carrier-amendment.json",
+    "sha256": "ba8fa11a02f074800edcd484933af4acb4f5de0c31829f826f2553f8f2e057a0"
+  },
+  "runner-binding.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-effective-binding.json",
+    "sha256": "f1bcdc2e504380a076ec60c29cc497dceea88e07ad78d1dbd81b29a4cb6f318e"
+  },
+  "runner-deployment-readback.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-deployment-removal-query.json",
+    "sha256": "1478bf0a7bb56c4d8708bb41f6b7435c15a717390b85b9438155f41d67351ae0"
+  },
+  "runner-idle.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-idle-inspection.json",
+    "sha256": "61eacfd321af02f35ed24e3b1eb3cf50cd033a8437d8a89ba147edbad8186076"
+  },
+  "runner-metrics.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-metrics-during-apply.json",
+    "sha256": "24429add8946bee339ed9aeda80bb7c7abd0f36a104166ceaed437d69f3c67ac"
+  },
+  "runner-removal.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/runner-removal-confirmation.json",
+    "sha256": "a58f5560fcb5f8c55dc0d9a83ccc3e2d4027ce6af73c4878de60706e67da600b"
+  },
+  "sessions-provenance.json": {
+    "derivation": "Only embedded diagnostic script replaced by its SHA256; IDs, timings, outcomes and closure unchanged.",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-cleanup-sessions-provenance.json",
+    "privateSourceSha256": "3908ae8c0025d2fbedc2e17c6808c732dbcbafc442491a6ecc1b70ed040f8e7a"
+  },
+  "verification-provenance.json": {
+    "derivation": "Only embedded diagnostic script replaced by its SHA256; IDs, timings, outcomes and closure unchanged.",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-provenance.json",
+    "privateSourceSha256": "117091e2b0b25ba2db0c0c15ede7341b7af7c77e7064d72ca57ce2be3c74af53"
+  },
+  "verify-report.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-protected-reference-verify.json",
+    "sha256": "6ea81022bd910766ba81ff630c72fe7190e3c03db3eef4d1f2022bcb862da6b2"
+  },
+  "zero-pending-schema-plan.json": {
+    "derivation": "exact non-secret evidence copy",
+    "privateSource": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/reference-verified-protected-schema-plan.json",
+    "sha256": "71a253670604940e95bb25c1a27e21cff8c9ae5be8433d36feed44e4e90e453c"
+  }
+}

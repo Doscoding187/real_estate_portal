@@ -1,0 +1,8 @@
+{
+  "recordedAt": "2026-10-10T14:13:39.582181+00:00",
+  "reason": "Session observation older than 60 seconds at final admission",
+  "dispatchAttempts": 0,
+  "databaseMutation": false,
+  "referenceApplyIntentExists": false,
+  "correction": "Already verified frozen source for read-only admission; no freshness limit change"
+}

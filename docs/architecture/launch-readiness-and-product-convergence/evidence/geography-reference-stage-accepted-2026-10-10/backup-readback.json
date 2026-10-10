@@ -1,0 +1,16 @@
+{
+  "observedAt": "2026-10-10T14:24:14.715024+00:00",
+  "exitCode": 0,
+  "backup": {
+    "backupNameV2": null,
+    "backupType": "FULL",
+    "completedTime": "2026-10-10T11:54:12.732790+00:00",
+    "id": "/subscriptions/384dc69e-9e22-419f-9e3d-83fbac4f58d0/resourceGroups/rg-property-listify/providers/Microsoft.DBforMySQL/flexibleServers/propertylistify-mysql/backupsv2/customer-20261010t115408-b1759c5b-c96f-4cc8-85fc-8d66ab21425f-pl-geog-pre0111-20261009",
+    "name": "pl-geog-pre0111-20261009",
+    "provisioningState": "Ready",
+    "resourceGroup": "rg-property-listify",
+    "source": "Customer",
+    "systemData": null,
+    "type": "Microsoft.DBforMySQL/flexibleServers/backups"
+  }
+}

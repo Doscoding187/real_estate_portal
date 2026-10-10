@@ -1,0 +1,15 @@
+{
+  "reviewer": "Codex senior operator",
+  "reason": "Actual earlier session observation expired while a duplicate 19MB source archive transfer completed; freshness threshold unchanged",
+  "scope": "Read-only final admission executes already verified frozen /app carrier only after checking all 1792 file hashes and dependency lock again; sessions retain separately pinned observer archive; reference apply retains approved full archive and all guards",
+  "approved": true,
+  "newSQL": false,
+  "migrationApplyChanged": false,
+  "authorityOrCredentialsChanged": false,
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "hashes": {
+    "reference-command.py": "31b6d17a5265c37aeebaa00bc4460248c3de8a2d0c7cbb91267070501c4a88fc",
+    "reference-admission.py": "428985ee89ae0487a12f6bf876051c090a3ef1b4b02cd380a62df230fc60cf3b",
+    "reference-command-remote.cjs": "ed06f43654115da3ef890397e4eeafcd60f1a8fa2aa85ed15612cf72975aeb09"
+  }
+}

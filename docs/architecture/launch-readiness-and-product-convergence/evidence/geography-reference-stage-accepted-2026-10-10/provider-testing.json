@@ -1,0 +1,90 @@
+{
+  "capturedAt": "2026-10-10 14:45:47 UTC",
+  "result": {
+    "buckets": [],
+    "environment": {
+      "id": "2ced17ce-4ada-4aa1-9caf-393fe83a6e31",
+      "isEphemeral": false,
+      "name": "Testing"
+    },
+    "project": {
+      "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "name": "successful-tranquility",
+      "workspaceName": "doscoding187's Projects"
+    },
+    "region": null,
+    "services": [
+      {
+        "cronSchedule": null,
+        "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "latestDeployment": null,
+        "name": "Redis",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": null,
+          "image": "redis:8.2.1",
+          "repo": null
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": [
+          {
+            "mountPath": "/data",
+            "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+            "volumeName": "redis-volume"
+          }
+        ]
+      },
+      {
+        "cronSchedule": null,
+        "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "latestDeployment": {
+          "createdAt": "2026-09-13T01:33:53.831Z",
+          "id": "d20126bc-8585-4beb-ae60-943e05a3e2f0",
+          "status": "SUCCESS",
+          "url": null
+        },
+        "name": "real_estate_portal",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": "main",
+          "image": null,
+          "repo": "Doscoding187/real_estate_portal"
+        },
+        "stagedChangeCount": 1,
+        "state": "live-with-staged-changes",
+        "volumeMounts": []
+      }
+    ],
+    "sharedVariableNames": [],
+    "staged": {
+      "changeCount": 1,
+      "createdAt": "2026-03-04T02:44:43.345Z",
+      "message": null,
+      "patchId": "9f607fbe-adf1-4322-b11f-302802fc9bc3",
+      "status": "STAGED",
+      "updatedAt": "2026-03-04T02:44:43.345Z"
+    },
+    "volumes": [
+      {
+        "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+        "mountedOn": {
+          "mountPath": "/data",
+          "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "serviceName": "Redis"
+        },
+        "name": "redis-volume",
+        "region": "asia-southeast1-eqsg3a",
+        "sizeMB": 5000,
+        "stagedChangeCount": 0,
+        "state": "live"
+      }
+    ]
+  }
+}

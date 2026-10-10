@@ -1,0 +1,20 @@
+{
+  "acknowledgedAtUtc": "2026-10-10T14:18:12.066816+00:00",
+  "activeIntentCorrelation": "reference-20261010-cfacb630-80c5-4fe1-b8cf-b3955af8033e",
+  "activeReceiptPath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/reference-20261010-cfacb630-80c5-4fe1-b8cf-b3955af8033e/active-intent-receipt.json",
+  "activeReceiptSha256": "1ffc53e7a12199b4fa17f05f9deea0a03d6650186002a905e9b93ce4a9dc5b7f",
+  "alarmTestsUtc": [
+    "2026-10-10T13:52:59.416570+00:00",
+    "2026-10-10T13:53:00.584115+00:00"
+  ],
+  "automaticProviderAction": false,
+  "baseReceiptPath": "/home/edwardspc/.local/state/property-listify/junior-custody-reference-20261010T134601Z/custody-receipt.json",
+  "baseReceiptSha256": "2badb4cee2fa92aa8d348e1fe57ea10594c2c69330cdeccfac9f639d3d747ca6",
+  "closeoutArchiveReceipt": "pending independent junior acknowledgement; runner removal already verified",
+  "closeoutDirectiveProvidedToEdward": true,
+  "expiryAtUtc": "2026-10-10T15:46:01Z",
+  "independentMechanism": "systemd user notification and read-only observation timers; independent of turns while host and provider access are available",
+  "privateCloseoutDirective": "/home/edwardspc/.local/state/property-listify/geography-reference-release-20261010T134601Z/CUSTODIAN-CLOSEOUT.txt",
+  "seniorVerifiedBinding": true,
+  "warningAtUtc": "2026-10-10T15:41:01Z"
+}

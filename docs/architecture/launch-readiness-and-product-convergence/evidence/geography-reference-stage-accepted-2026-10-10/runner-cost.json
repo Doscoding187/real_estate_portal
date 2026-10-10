@@ -1,0 +1,17 @@
+{
+  "currency": "USD",
+  "incrementalCostCeilingDollars": 1,
+  "limitation": "Provider accumulated-usage estimate for this runner; not a settled bill. Other workstreams excluded.",
+  "retrievedAt": "2026-10-10T14:45:09.291125+00:00",
+  "service": {
+    "backupDollars": -0.0,
+    "cpuDollars": 0.002141315108024691,
+    "egressDollars": 0.0016029357000000002,
+    "id": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+    "memoryDollars": 0.0025599600197530863,
+    "name": "deleted service",
+    "totalDollars": 0.006304210827777778,
+    "volumeDollars": -0.0
+  },
+  "underCeilingAtRead": true
+}

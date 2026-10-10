@@ -1,0 +1,13 @@
+{
+  "capturedAt": "2026-10-10 14:45:47 UTC",
+  "captureClockBasis": "Clock when preserving the completed provider read; provider operation/read completed earlier in this session.",
+  "result": {
+    "detachedVolumes": [],
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "service": {
+      "id": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+      "name": "pl-geography-reference-20261010-134601"
+    },
+    "staged": null
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-10-10 14:45:47 UTC",
+  "captureClockBasis": "Clock when preserving the completed provider read; provider operation/read completed earlier in this session.",
+  "result": {
+    "environments": [
+      {
+        "id": "2ced17ce-4ada-4aa1-9caf-393fe83a6e31",
+        "name": "Testing"
+      },
+      {
+        "id": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+        "name": "Staging"
+      },
+      {
+        "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+        "name": "production"
+      }
+    ],
+    "project": {
+      "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "name": "successful-tranquility"
+    },
+    "services": [
+      {
+        "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "name": "paid-mvp-lead-job"
+      },
+      {
+        "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "name": "paid-mvp-email-worker"
+      },
+      {
+        "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "name": "Redis"
+      },
+      {
+        "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "name": "real_estate_portal"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "recordedAt": "2026-10-10T14:46:31.394417+00:00",
+  "providerRemovalConfirmedAt": "2026-10-10T14:45:28.377663+00:00",
+  "binding": {
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+    "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+    "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea"
+  },
+  "operationState": "complete",
+  "transactionOutcome": "committed",
+  "connectionClosed": true,
+  "deletionResponse": "success",
+  "deploymentStatus": "REMOVED",
+  "serviceAbsentFromProjectRegistry": true,
+  "serviceAbsentFromProductionRuntime": true,
+  "productionPendingWork": false,
+  "detachedVolumes": [],
+  "absoluteExpiryUnchanged": "2026-10-10T15:46:01Z",
+  "confirmedBeforeExpiry": true
+}

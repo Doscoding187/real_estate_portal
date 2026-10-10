@@ -1,0 +1,33 @@
+{
+  "approvalReference": "EDWARD-GEOGRAPHY-REFERENCE-RELEASE-20261010T134601Z",
+  "archiveSha256": "4dd9d7a4b4377164f93a236ed44149dba6387b16dbbe42cf2f3c7d8b749cdfd1",
+  "commands": [
+    {
+      "command": [
+        "pnpm",
+        "db:release:reference:apply",
+        "--",
+        "--adapter=places",
+        "--plan-digest=dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+        "--ack=CONFIRM_RELEASE_REFERENCE_APPLY_b23d640cdf242812"
+      ],
+      "exitCode": 0,
+      "label": "protected-reference-apply",
+      "stderr": ""
+    }
+  ],
+  "completed": true,
+  "completedAt": "2026-10-10T14:29:54.709Z",
+  "credentialClass": "migration",
+  "databaseMutation": true,
+  "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea",
+  "observerSourceSha": null,
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e",
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "startedAt": "2026-10-10T14:24:32.359Z",
+  "temporarySourceRemoved": true
+}

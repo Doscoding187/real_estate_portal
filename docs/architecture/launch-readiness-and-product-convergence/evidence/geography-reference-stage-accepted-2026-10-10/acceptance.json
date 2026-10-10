@@ -1,0 +1,50 @@
+{
+  "acceptedPlanDigest": "dd5d117ff786b57d6d26699558ff038e61c9128e0352ec9464f2bd34b2e38089",
+  "admittedPlaces": 16944,
+  "approvalActor": "Edward",
+  "approvalReference": "EDWARD-GEOGRAPHY-REFERENCE-RELEASE-20261010T134601Z",
+  "binding": {
+    "deploymentId": "d4115bdc-7293-41a0-b468-e5cdb78cf2bb",
+    "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+    "instanceId": "f2bc0db7-d98c-4d59-9194-2ab2f86c6eea",
+    "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+    "serviceId": "7dade655-e2d3-49c6-885f-f3ac0e8a8e2e"
+  },
+  "compatibleApplicationDeployed": false,
+  "compatibleApplicationReleaseSource": "57ea5f5e98ff031a4d0f0814998e60fe27a82b2b",
+  "compatibleApplicationReleaseTree": "d832836d40746d36401b6fb1a3603466e6660a00",
+  "connectionClosed": true,
+  "decision": "ACCEPT_PRODUCTION_CANONICAL_PLACE_REFERENCE_STAGE",
+  "deploymentApproved": false,
+  "dispatchAttempts": 1,
+  "enforcedPhysicalChecks": 39,
+  "governedAssertions": 157728,
+  "heldPlaces": 720,
+  "independentVerificationPassed": true,
+  "nationalPublicLaunchCertified": false,
+  "paymentsApproved": false,
+  "pendingRows": 0,
+  "postApplyPlanDigest": "92f3a3bdc232f79f89a8a82f6c879c08e4ee85a3918ac3b3b96d485a8385b30c",
+  "provinces": 9,
+  "recordedAt": "2026-10-10T14:50:46.871329+00:00",
+  "reopeningApproved": false,
+  "reviewer": "Codex, senior product architect",
+  "runnerRemovalConfirmed": true,
+  "runnerRemovalVerifiedAt": "2026-10-10T14:45:28.377663+00:00",
+  "schemaHead": "0111_properties_canonical_place_reference_fk.sql",
+  "schemaLedgerEntries": 112,
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "timing": {
+    "canonicalLocalOperationDurationMs": 291325,
+    "remoteApplyCompletedAt": "2026-10-10T14:29:54.709Z",
+    "remoteApplyStartedAt": "2026-10-10T14:24:32.359Z",
+    "remoteVerificationCompletedAt": "2026-10-10T14:35:39.420Z",
+    "remoteVerificationStartedAt": "2026-10-10T14:31:07.993Z"
+  },
+  "transactionOutcome": "committed",
+  "windowUtc": {
+    "end": "2026-10-10T15:46:01Z",
+    "start": "2026-10-10T13:46:01Z"
+  }
+}

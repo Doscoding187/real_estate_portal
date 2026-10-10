@@ -1,0 +1,15 @@
+{
+  "reportVersion": 1,
+  "status": "verified",
+  "operation": "diagnostics",
+  "credentialClass": "read-only",
+  "schemaSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "manifestDigest": "600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "lockName": "property_listify_manifest_migrations",
+  "lockOwnerConnectionId": null,
+  "lockReleased": true,
+  "observedAt": "2026-10-10T14:38:33.430Z",
+  "connectionClosed": true,
+  "closedAt": "2026-10-10T14:38:33.433Z"
+}

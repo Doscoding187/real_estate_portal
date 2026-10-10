@@ -1,0 +1,83 @@
+{
+  "capturedAt": "2026-10-10 14:45:47 UTC",
+  "result": {
+    "buckets": [],
+    "environment": {
+      "id": "a4c65b8e-77bc-4924-abc8-8a91ce62d800",
+      "isEphemeral": false,
+      "name": "Staging"
+    },
+    "project": {
+      "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "name": "successful-tranquility",
+      "workspaceName": "doscoding187's Projects"
+    },
+    "region": null,
+    "services": [
+      {
+        "cronSchedule": null,
+        "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "latestDeployment": {
+          "createdAt": "2026-04-10T18:39:43.777Z",
+          "id": "1ceef66b-ce55-4336-8d1e-90ed19ba1348",
+          "status": "FAILED",
+          "url": null
+        },
+        "name": "real_estate_portal",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": "post-baseline-work",
+          "image": null,
+          "repo": "Doscoding187/real_estate_portal"
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": []
+      },
+      {
+        "cronSchedule": null,
+        "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "latestDeployment": null,
+        "name": "Redis",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": null,
+          "image": "redis:8.2.1",
+          "repo": null
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": [
+          {
+            "mountPath": "/data",
+            "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+            "volumeName": "redis-volume"
+          }
+        ]
+      }
+    ],
+    "sharedVariableNames": [],
+    "staged": null,
+    "volumes": [
+      {
+        "id": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+        "mountedOn": {
+          "mountPath": "/data",
+          "serviceId": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+          "serviceName": "Redis"
+        },
+        "name": "redis-volume",
+        "region": "asia-southeast1-eqsg3a",
+        "sizeMB": 5000,
+        "stagedChangeCount": 0,
+        "state": "live"
+      }
+    ]
+  }
+}
