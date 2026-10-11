@@ -1,0 +1,6 @@
+197a852440bbd215dc3de5d9c773bed76799e5a3ae2d66ff7b737f79a6a80d4e  client/src/components/listing-wizard/ListingWizard.tsx
+504578d2dcd5f4cfc0382586fba5e14f599ea155eadf2dcd1377651c3759f33c  client/src/components/listing-wizard/ListingWizard.persistence.test.tsx
+bdeb5f0b59049bc585d732a51beeb48ce31684e7daffd119b29e50ad3f8ff614  vite.config.ts
+238063e77531818ab802f92e18bd79660e71fbf6050330fe8016194327755542  scripts/__tests__/hostedFrontendBuild.test.ts
+3e112193ed36a237f874ab9418f967c7b73629a0154b17e95594c65c782cd75b  docs/architecture/launch-readiness-and-product-convergence/evidence/private-draft-restoration-and-preview-2026-10-11/README.md
+5a6fec1a0bdf84b6eb058dfb86380e89c3dd1074d3cca2c31ec51b72064bdeaf  docs/architecture/launch-readiness-and-product-convergence/evidence/private-draft-restoration-and-preview-2026-10-11/validation.json

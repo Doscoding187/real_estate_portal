@@ -34,8 +34,9 @@ import { authService } from '../_core/auth';
 import { createContext } from '../_core/context';
 import { ENV } from '../_core/env';
 import { registerLocalMediaRoutes } from '../_core/localMediaRoutes';
-import { db } from '../db';
+import { db, getDb } from '../db';
 import { appRouter } from '../routers';
+import * as agentEvents from '../services/agentOsEventService';
 
 const describeWithDb: typeof describe = process.env.DATABASE_URL
   ? describe
@@ -60,6 +61,7 @@ const created = {
   outsiderId: 0,
   agentId: 0,
   listingId: 0,
+  ambiguousListingId: 0,
 };
 
 let mediaRoot = '';
@@ -172,14 +174,12 @@ async function insertUser(label: string, role: 'visitor' | 'agency_admin'): Prom
 async function cleanup() {
   if (!process.env.DATABASE_URL) return;
 
-  if (created.listingId) {
-    await db.delete(listingMedia).where(eq(listingMedia.listingId, created.listingId));
-    await db
-      .delete(listingApprovalQueue)
-      .where(eq(listingApprovalQueue.listingId, created.listingId));
-    await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, created.listingId));
-    await db.delete(properties).where(eq(properties.sourceListingId, created.listingId));
-    await db.delete(listings).where(eq(listings.id, created.listingId));
+  for (const listingId of [created.listingId, created.ambiguousListingId].filter(Boolean)) {
+    await db.delete(listingMedia).where(eq(listingMedia.listingId, listingId));
+    await db.delete(listingApprovalQueue).where(eq(listingApprovalQueue.listingId, listingId));
+    await db.delete(listingAnalytics).where(eq(listingAnalytics.listingId, listingId));
+    await db.delete(properties).where(eq(properties.sourceListingId, listingId));
+    await db.delete(listings).where(eq(listings.id, listingId));
   }
   if (created.agentId) {
     await db
@@ -205,6 +205,7 @@ async function cleanup() {
 
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  await getDb(); // Connect through authority; schema setup is owned by the governed test runner.
 
   mediaRoot = await mkdtemp(`${tmpdir()}/property-listify-agency-media-`);
   vi.stubEnv('MEDIA_STORAGE_ADAPTER', 'local');
@@ -339,42 +340,6 @@ describeWithDb('agency listing preparation acceptance', () => {
     created.outsiderId = outsider.id;
     const outsiderApi = trpcClient(await sessionCookie(outsider.id));
 
-    const mediaManifest: Array<{
-      id: string;
-      mediaType: 'image';
-      uploadToken: string;
-      fileName: string;
-      fileSize: number;
-    }> = [];
-
-    for (let index = 0; index < 5; index += 1) {
-      const fileName = `agency-home-${index + 1}.png`;
-      const reservation = await memberApi.listing.uploadMedia.mutate({
-        type: 'image',
-        filename: fileName,
-        contentType: 'image/png',
-      });
-      const body = Buffer.from(`agency-listing-media-${index + 1}-${suffix}`);
-      const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
-        method: 'PUT',
-        headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
-        body,
-      });
-      expect(uploadResponse.status).toBe(200);
-
-      const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
-        uploadToken: reservation.uploadToken,
-      });
-      expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
-      mediaManifest.push({
-        id: reservation.mediaId,
-        mediaType: 'image',
-        uploadToken: confirmed.uploadToken,
-        fileName,
-        fileSize: body.length,
-      });
-    }
-
     const description =
       'A carefully prepared family home in North Riding with verified private address details, clear pricing, and enough context for a reviewer to assess the private inventory before commercial activation resumes.';
     const propertyDetails = {
@@ -394,14 +359,102 @@ describeWithDb('agency listing preparation acceptance', () => {
       pricing: { askingPrice: 2_450_000, negotiability: 'not_negotiable' as const },
       propertyDetails,
       location: await canonicalPlaceFixtureLocation('18 Example Avenue'),
-      mediaIds: mediaManifest.map(item => item.id),
-      mainMediaId: mediaManifest[0].id,
-      media: mediaManifest,
+      mediaIds: [] as string[],
+      media: [] as Array<{
+        id: string;
+        mediaType: 'image';
+        uploadToken: string;
+        fileName: string;
+        fileSize: number;
+      }>,
     };
 
     const createdListing = await memberApi.listing.create.mutate(listingInput);
     created.listingId = Number(createdListing.id);
     expect(createdListing).toMatchObject({ id: created.listingId, status: 'draft' });
+    const initialReload = await trpcClient(await sessionCookie(member.id)).listing.getById.query({
+      id: created.listingId,
+    });
+    expect(initialReload?.property).toMatchObject({
+      id: created.listingId,
+      title: listingInput.title,
+      status: 'draft',
+    });
+    expect(initialReload?.media).toHaveLength(0);
+
+    const mediaManifest: Array<{
+      id: string;
+      mediaType: 'image';
+      uploadToken: string;
+      fileName: string;
+      fileSize: number;
+    }> = [];
+
+    for (let index = 0; index < 5; index += 1) {
+      const fileName = `agency-home-${index + 1}.png`;
+      const reservation = await memberApi.listing.uploadMedia.mutate({
+        listingId: created.listingId,
+        type: 'image',
+        filename: fileName,
+        contentType: 'image/png',
+      });
+      // A real 1x1 PNG travels through the actual local HTTP PUT/confirmation path.
+      const body = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lX8AAAAASUVORK5CYII=',
+        'base64',
+      );
+      const uploadResponse = await fetch(`${baseUrl}${reservation.uploadUrl}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'image/png', 'content-length': String(body.length) },
+        body,
+      });
+      expect(uploadResponse.status).toBe(200);
+
+      const confirmed = await memberApi.listing.confirmMediaUpload.mutate({
+        uploadToken: reservation.uploadToken,
+      });
+      expect(confirmed).toMatchObject({ mediaId: reservation.mediaId, fileSize: body.length });
+      mediaManifest.push({
+        id: reservation.mediaId,
+        mediaType: 'image',
+        uploadToken: confirmed.uploadToken,
+        fileName,
+        fileSize: body.length,
+      });
+      if (index === 0) {
+        await memberApi.listing.update.mutate({
+          id: created.listingId,
+          ...listingInput,
+          mediaIds: [reservation.mediaId],
+          mainMediaId: reservation.mediaId,
+          media: [...mediaManifest],
+        });
+        const oneImageReload = await trpcClient(
+          await sessionCookie(member.id),
+        ).listing.getById.query({ id: created.listingId });
+        expect(oneImageReload?.property).toMatchObject({ id: created.listingId, status: 'draft' });
+        expect(oneImageReload?.media).toHaveLength(1);
+        expect(oneImageReload?.media[0]).toMatchObject({
+          mediaType: 'image',
+          processingStatus: 'completed',
+        });
+      }
+    }
+
+    const manifestInput = {
+      ...listingInput,
+      mediaIds: mediaManifest.map(item => item.id),
+      mainMediaId: mediaManifest[0].id,
+      media: mediaManifest,
+    };
+    await memberApi.listing.update.mutate({ id: created.listingId, ...manifestInput });
+    await memberApi.listing.update.mutate({ id: created.listingId, ...manifestInput });
+    expect(
+      await db
+        .select({ id: listings.id })
+        .from(listings)
+        .where(and(eq(listings.ownerId, member.id), eq(listings.title, listingInput.title))),
+    ).toEqual([{ id: created.listingId }]);
 
     const [stored] = await db
       .select({
@@ -450,9 +503,16 @@ describeWithDb('agency listing preparation acceptance', () => {
       `${baseUrl}/api/local-media/object?key=${encodeURIComponent(mediaManifest[0].id)}`,
     );
     expect(delivered.status).toBe(200);
-    expect(await delivered.text()).toContain(`agency-listing-media-1-${suffix}`);
+    expect(Buffer.from(await delivered.arrayBuffer())).toEqual(
+      Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lX8AAAAASUVORK5CYII=',
+        'base64',
+      ),
+    );
 
-    const reopened = await memberApi.listing.getById.query({ id: created.listingId });
+    const reopened = await trpcClient(await sessionCookie(member.id)).listing.getById.query({
+      id: created.listingId,
+    });
     expect(reopened?.property).toMatchObject({
       id: created.listingId,
       title: listingInput.title,
@@ -466,7 +526,9 @@ describeWithDb('agency listing preparation acceptance', () => {
       title: `Updated private North Riding family home ${suffix}`,
       description,
     });
-    const reopenedAfterEdit = await memberApi.listing.getById.query({ id: created.listingId });
+    const reopenedAfterEdit = await trpcClient(
+      await sessionCookie(member.id),
+    ).listing.getById.query({ id: created.listingId });
     expect(reopenedAfterEdit?.property.title).toBe(
       `Updated private North Riding family home ${suffix}`,
     );
@@ -476,6 +538,12 @@ describeWithDb('agency listing preparation acceptance', () => {
     ).rejects.toMatchObject({
       data: { code: 'FORBIDDEN' },
     });
+    await expect(
+      outsiderApi.listing.update.mutate({
+        id: created.listingId,
+        title: 'Foreign attempt must be refused',
+      }),
+    ).rejects.toMatchObject({ data: { code: 'FORBIDDEN' } });
     await expect(
       outsiderApi.listing.uploadMedia.mutate({
         listingId: created.listingId,
@@ -510,4 +578,54 @@ describeWithDb('agency listing preparation acceptance', () => {
       property: { id: created.listingId },
     });
   }, 60_000);
+  it('shows that a reported create failure can follow a durable insert and can be reconciled by a fresh owned read', async () => {
+    const api = trpcClient(await sessionCookie(created.memberId));
+    const title = `Ambiguous private draft fixture ${randomUUID()}`;
+    const eventFailure = vi
+      .spyOn(agentEvents, 'recordAgentOsEvent')
+      .mockRejectedValueOnce(new Error('Fixture event failure after durable insert'));
+    try {
+      await expect(
+        api.listing.create.mutate({
+          action: 'sell',
+          propertyType: 'house',
+          title,
+          description:
+            'An isolated private draft fixture exercises a post-insert error without losing the durable owned record.',
+          pricing: { askingPrice: 1000000 },
+          propertyDetails: {},
+          location: await canonicalPlaceFixtureLocation(),
+          mediaIds: [],
+          media: [],
+        }),
+      ).rejects.toMatchObject({ data: { code: 'INTERNAL_SERVER_ERROR' } });
+      const rows = await db
+        .select({ id: listings.id })
+        .from(listings)
+        .where(and(eq(listings.ownerId, created.memberId), eq(listings.title, title)));
+      expect(rows).toHaveLength(1);
+      created.ambiguousListingId = Number(rows[0].id);
+      const recovered = await trpcClient(
+        await sessionCookie(created.memberId),
+      ).listing.getById.query({ id: created.ambiguousListingId });
+      expect(recovered?.property).toMatchObject({
+        id: created.ambiguousListingId,
+        title,
+        status: 'draft',
+      });
+      expect(recovered?.media).toHaveLength(0);
+      await api.listing.update.mutate({
+        id: created.ambiguousListingId,
+        title: `${title} recovered`,
+      });
+      expect(
+        await db
+          .select({ id: listings.id })
+          .from(listings)
+          .where(eq(listings.id, created.ambiguousListingId)),
+      ).toHaveLength(1);
+    } finally {
+      eventFailure.mockRestore();
+    }
+  }, 30_000);
 });
