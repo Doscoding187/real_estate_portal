@@ -153,6 +153,133 @@ beforeEach(async () => {
 });
 
 describe('private draft wizard orchestration (mocked APIs)', () => {
+  it('starting fresh during a saved-draft lookup cannot restore its old listing ID', async () => {
+    await hydrateListingWizardForUser(101);
+    seed();
+    localStorage.setItem('listing-wizard-server-draft:101', '88');
+    let resolve!: (value: ReturnType<typeof serverRecord>) => void;
+    harness.read.mockImplementationOnce(
+      () =>
+        new Promise(r => {
+          resolve = r;
+        }),
+    );
+    render(<ListingWizard />);
+    await screen.findByRole('button', { name: 'Discard device copy' });
+    fireEvent.click(screen.getByRole('button', { name: 'Discard device copy' }));
+    await screen.findByRole('button', { name: 'Save private draft' });
+    act(seed);
+    await act(async () => {
+      resolve(serverRecord());
+    });
+    save();
+    await screen.findByText('Private draft saved to your account');
+    expect(harness.create).toHaveBeenCalledOnce();
+    expect(harness.update).not.toHaveBeenCalled();
+  });
+
+  it('does not replace another owned draft with a late create response after query navigation', async () => {
+    let resolve!: (value: any) => void;
+    harness.create.mockImplementation(
+      () =>
+        new Promise(r => {
+          resolve = r;
+        }),
+    );
+    await open();
+    save();
+    const other = serverRecord(99);
+    other.property.title = 'Another owned private family home';
+    harness.read.mockResolvedValue(other);
+    await act(async () => {
+      window.history.pushState({}, '', '/listings/create?id=99&edit=true');
+    });
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(other.property.title));
+    await act(async () => {
+      resolve({ id: 88, status: 'draft' });
+    });
+    expect(useListingWizardStore.getState().title).toBe(other.property.title);
+    expect(localStorage.getItem('listing-wizard-server-draft:101')).not.toBe('88');
+    save();
+    await waitFor(() =>
+      expect(harness.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 99, title: other.property.title }),
+      ),
+    );
+    expect(harness.create).toHaveBeenCalledOnce();
+  });
+
+  it('does not submit the previous draft after navigation while its update is pending', async () => {
+    window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
+    let resolve!: (value: any) => void;
+    harness.update.mockImplementation(
+      () =>
+        new Promise(r => {
+          resolve = r;
+        }),
+    );
+    render(<ListingWizard />);
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(title));
+    act(() => useListingWizardStore.setState({ currentStep: 8, validate: () => true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit Listing' }));
+    expect(harness.update).toHaveBeenCalledOnce();
+    const other = serverRecord(99);
+    other.property.title = 'Another owned private family home';
+    harness.read.mockResolvedValue(other);
+    await act(async () => {
+      window.history.pushState({}, '', '/listings/create?id=99&edit=true');
+    });
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(other.property.title));
+    await act(async () => {
+      resolve({ success: true, status: 'draft' });
+    });
+    expect(harness.review).not.toHaveBeenCalled();
+    expect(useListingWizardStore.getState().title).toBe(other.property.title);
+    expect(window.location.search).toBe('?id=99&edit=true');
+  });
+
+  it('allows the newly opened draft to save without a stale completion releasing its pending guard', async () => {
+    window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
+    let finishOld!: (value: any) => void;
+    let finishNew!: (value: any) => void;
+    harness.update
+      .mockImplementationOnce(
+        () =>
+          new Promise(r => {
+            finishOld = r;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise(r => {
+            finishNew = r;
+          }),
+      );
+    render(<ListingWizard />);
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(title));
+    save();
+    expect(harness.update).toHaveBeenCalledOnce();
+    const other = serverRecord(99);
+    other.property.title = 'Another owned private family home';
+    harness.read.mockResolvedValue(other);
+    await act(async () => {
+      window.history.pushState({}, '', '/listings/create?id=99&edit=true');
+    });
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(other.property.title));
+    save();
+    expect(harness.update).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      finishOld({ success: true });
+    });
+    expect(screen.getByRole('button', { name: 'Saving private draft...' })).toBeDisabled();
+    expect(screen.queryByText('Private draft saved to your account')).not.toBeInTheDocument();
+    await act(async () => {
+      finishNew({ success: true });
+    });
+    await screen.findByText('Private draft saved to your account');
+    expect(harness.update.mock.calls[1][0]).toMatchObject({ id: 99, title: other.property.title });
+  });
+
   it('creates with zero media while commercial activation is held, then updates the same ID without review', async () => {
     await open();
     save();

@@ -32,8 +32,23 @@ const PRESENTATION_CATEGORIES: Array<{
   { id: 'documents', label: 'Documents', description: 'Public brochures and information sheets' },
 ];
 
-const MediaUploadStep: React.FC<{ listingId?: number }> = ({ listingId }) => {
+const MediaUploadStep: React.FC<{ listingId?: number; draftContextKey?: string }> = ({
+  listingId,
+  draftContextKey,
+}) => {
   const store = useListingWizardStore();
+  const binding = draftContextKey ?? `listing:${listingId ?? 'new'}`;
+  const activeContext = useRef({ ownerId: store.persistedOwnerId, binding, epoch: 0 });
+  if (
+    activeContext.current.ownerId !== store.persistedOwnerId ||
+    activeContext.current.binding !== binding
+  ) {
+    activeContext.current = {
+      ownerId: store.persistedOwnerId,
+      binding,
+      epoch: activeContext.current.epoch + 1,
+    };
+  }
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [activeCategory, setActiveCategory] = useState<PresentationUploadCategory>('photos');
@@ -76,8 +91,11 @@ const MediaUploadStep: React.FC<{ listingId?: number }> = ({ listingId }) => {
       if (!files || files.length === 0) return;
       const existingCount = store.media.length;
       const ownerId = store.persistedOwnerId;
+      const epoch = activeContext.current.epoch;
       const stillOwned = () =>
-        mounted.current && useListingWizardStore.getState().persistedOwnerId === ownerId;
+        mounted.current &&
+        activeContext.current.epoch === epoch &&
+        useListingWizardStore.getState().persistedOwnerId === ownerId;
       if (ownerId == null || !stillOwned()) return;
 
       // Create upload progress entries

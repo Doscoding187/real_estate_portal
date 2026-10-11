@@ -59,6 +59,11 @@ const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const searchParams = new URLSearchParams(useSearch());
+  const editId = searchParams.get('id');
+  const isEditMode = searchParams.get('edit') === 'true';
+  const sellerProspectId = Number(searchParams.get('sellerProspectId') || 0);
+  const hasSellerProspectHandoff = Number.isInteger(sellerProspectId) && sellerProspectId > 0;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showResumeDraftDialog, setShowResumeDraftDialog] = useState(false);
@@ -82,13 +87,31 @@ const ListingWizard: React.FC = () => {
   const [existingListing, setExistingListing] = useState<any>(null);
   const [isLoadingExisting, setIsLoadingExisting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const inFlight = useRef(false);
+  const inFlight = useRef<number | null>(null);
   const lastIntent = useRef<'save' | 'submit'>('save');
   const activeOwner = useRef<number | null>(null);
+  const activeDraftContext = useRef<string | null>(null);
   const sessionEpoch = useRef(0);
   const ownerNow = authLoading ? null : (user?.id ?? null);
-  if (activeOwner.current !== ownerNow) sessionEpoch.current += 1;
+  // The owner can open a different draft without unmounting this route.
+  // First save keeps the same context; navigation and starting fresh invalidate it.
+  const draftContextKey = `${ownerNow}:${isEditMode}:${editId ?? ''}:${sellerProspectId}:${wizardKey}`;
+  if (activeOwner.current !== ownerNow || activeDraftContext.current !== draftContextKey)
+    sessionEpoch.current += 1;
   activeOwner.current = ownerNow;
+  activeDraftContext.current = draftContextKey;
+  const hasPendingOperation = () => inFlight.current === sessionEpoch.current;
+  useEffect(() => {
+    setIsSavingDraft(false);
+    setIsSubmitting(false);
+    setDraftSaved(false);
+    setSubmitError(null);
+    setApiError(null);
+    setValidationErrors(null);
+    setReconcileId('');
+    setInventoryChecked(false);
+    setReconciliationDrafts(null);
+  }, [draftContextKey]);
   useEffect(
     () => () => {
       activeOwner.current = null;
@@ -152,12 +175,6 @@ const ListingWizard: React.FC = () => {
   // TRPC mutation for updating listing
   const updateListingMutation = trpc.listing.update.useMutation();
 
-  // Parse query params
-  const searchParams = new URLSearchParams(useSearch());
-  const editId = searchParams.get('id');
-  const isEditMode = searchParams.get('edit') === 'true';
-  const sellerProspectId = Number(searchParams.get('sellerProspectId') || 0);
-  const hasSellerProspectHandoff = Number.isInteger(sellerProspectId) && sellerProspectId > 0;
   const workspaceReturn =
     user?.role === 'agent'
       ? { href: '/agent/dashboard', label: 'Back to agent workspace' }
@@ -211,6 +228,7 @@ const ListingWizard: React.FC = () => {
   useEffect(() => {
     if (!isDraftIdentityCurrent) return;
     let cancelled = false;
+    const epoch = sessionEpoch.current;
     const storedId = serverDraftStorageKey
       ? Number(localStorage.getItem(serverDraftStorageKey))
       : 0;
@@ -228,26 +246,30 @@ const ListingWizard: React.FC = () => {
     void utils.client.listing.getById
       .query({ id })
       .then(result => {
-        if (cancelled) return;
+        if (cancelled || sessionEpoch.current !== epoch) return;
         const record = result.property;
         if (!record || Number(record.id) !== id) throw new Error('Listing could not be verified.');
         setExistingListing(result);
         setServerDraftId(id);
+        // This verified listing can be updated without creating another draft.
+        // Keep any other pending-create marker in storage until it is reconciled.
+        setCreateUncertain(false);
       })
       .catch(() => {
-        if (!cancelled)
+        if (!cancelled && sessionEpoch.current === epoch)
           setLoadError(
             'Saved listing access could not be verified. Open your listings workspace and try again.',
           );
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingExisting(false);
+        if (!cancelled && sessionEpoch.current === epoch) setIsLoadingExisting(false);
       });
     return () => {
       cancelled = true;
     };
   }, [
     isDraftIdentityCurrent,
+    draftContextKey,
     user?.id,
     isEditMode,
     editId,
@@ -516,7 +538,7 @@ const ListingWizard: React.FC = () => {
   };
 
   const handleStartFresh = () => {
-    if (inFlight.current || createUncertain) {
+    if (hasPendingOperation() || createUncertain) {
       setShowResumeDraftDialog(false);
       return;
     }
@@ -558,8 +580,10 @@ const ListingWizard: React.FC = () => {
     if (!Number.isSafeInteger(result.id) || result.id <= 0) {
       throw new Error('The saved draft ID could not be confirmed. Check your owned listings.');
     }
-    // Retain the result for its captured owner even if the account changed in flight.
-    localStorage.setItem(key, String(result.id));
+    // Retain another account's confirmed result, but never replace this account's
+    // pointer after it navigates to a different draft while the request is pending.
+    if (activeOwner.current !== ownerId || sessionEpoch.current === epoch)
+      localStorage.setItem(key, String(result.id));
     localStorage.removeItem(unknownKey);
     if (activeOwner.current === ownerId && sessionEpoch.current === epoch) {
       setServerDraftId(result.id);
@@ -586,7 +610,7 @@ const ListingWizard: React.FC = () => {
 
   const handleSaveDraft = async () => {
     if (
-      inFlight.current ||
+      hasPendingOperation() ||
       !isDraftIdentityCurrent ||
       !canSavePrivateDraft ||
       isLoadingExisting ||
@@ -594,7 +618,7 @@ const ListingWizard: React.FC = () => {
       !preflight?.canPrepareDraft
     )
       return;
-    inFlight.current = true;
+    inFlight.current = sessionEpoch.current;
     lastIntent.current = 'save';
     const ownerId = user.id;
     const epoch = sessionEpoch.current;
@@ -627,15 +651,15 @@ const ListingWizard: React.FC = () => {
       setSubmitError(message);
       toast.error('Private draft save could not be confirmed.', { description: message });
     } finally {
-      inFlight.current = false;
+      if (inFlight.current === epoch) inFlight.current = null;
       if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
         setIsSavingDraft(false);
     }
   };
 
   const checkOwnedInventory = async () => {
-    if (inFlight.current || !isDraftIdentityCurrent) return;
-    inFlight.current = true;
+    if (hasPendingOperation() || !isDraftIdentityCurrent) return;
+    inFlight.current = sessionEpoch.current;
     const ownerId = user.id;
     const epoch = sessionEpoch.current;
     setInventoryChecked(false);
@@ -653,18 +677,18 @@ const ListingWizard: React.FC = () => {
       if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
         setSubmitError('Your saved drafts could not be checked. Keep this form and try again.');
     } finally {
-      inFlight.current = false;
+      if (inFlight.current === epoch) inFlight.current = null;
     }
   };
 
   const reconcileOwnedDraft = async () => {
-    if (inFlight.current || !isDraftIdentityCurrent) return;
+    if (hasPendingOperation() || !isDraftIdentityCurrent) return;
     const id = Number(reconcileId);
     if (!Number.isSafeInteger(id) || id <= 0) {
       setSubmitError('Enter the draft ID shown in your owned listings.');
       return;
     }
-    inFlight.current = true;
+    inFlight.current = sessionEpoch.current;
     const ownerId = user.id;
     const epoch = sessionEpoch.current;
     try {
@@ -683,7 +707,7 @@ const ListingWizard: React.FC = () => {
       if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
         setSubmitError('This owned private draft could not be verified. No new draft was created.');
     } finally {
-      inFlight.current = false;
+      if (inFlight.current === epoch) inFlight.current = null;
     }
   };
 
@@ -697,7 +721,7 @@ const ListingWizard: React.FC = () => {
   // Handle form submission with error recovery
   const handleSubmit = async () => {
     if (
-      inFlight.current ||
+      hasPendingOperation() ||
       !isDraftIdentityCurrent ||
       isLoadingExisting ||
       loadError ||
@@ -708,7 +732,7 @@ const ListingWizard: React.FC = () => {
       return;
     }
 
-    inFlight.current = true;
+    inFlight.current = sessionEpoch.current;
     lastIntent.current = 'submit';
     const ownerId = user.id;
     const epoch = sessionEpoch.current;
@@ -825,7 +849,7 @@ const ListingWizard: React.FC = () => {
         }
       }
     } finally {
-      inFlight.current = false;
+      if (inFlight.current === epoch) inFlight.current = null;
       if (activeOwner.current === ownerId && sessionEpoch.current === epoch) setIsSubmitting(false);
     }
   };
@@ -874,7 +898,12 @@ const ListingWizard: React.FC = () => {
           <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />
         );
       case 7:
-        return <MediaUploadStep listingId={serverDraftId ?? undefined} />;
+        return (
+          <MediaUploadStep
+            listingId={serverDraftId ?? undefined}
+            draftContextKey={draftContextKey}
+          />
+        );
       case 8:
         return <PreviewStep />;
       default:
@@ -1154,7 +1183,7 @@ const ListingWizard: React.FC = () => {
 
             {/* Step Content */}
             <div
-              key={`${user.id}:${wizardKey}`}
+              key={draftContextKey}
               className="mb-8 rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] sm:p-8"
             >
               {getCurrentStep()}
@@ -1264,7 +1293,7 @@ const ListingWizard: React.FC = () => {
                   }
                   onClick={() => {
                     if (
-                      inFlight.current ||
+                      hasPendingOperation() ||
                       !inventoryChecked ||
                       !reconciliationDrafts ||
                       reconciliationDrafts.length === 100
