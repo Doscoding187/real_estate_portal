@@ -153,6 +153,77 @@ beforeEach(async () => {
 });
 
 describe('private draft wizard orchestration (mocked APIs)', () => {
+  it.each(['missing', 'stale'] as const)(
+    'restores a stored server draft before enabling save with %s device data, including another reload',
+    async deviceCopy => {
+      await hydrateListingWizardForUser(101);
+      if (deviceCopy === 'stale') {
+        seed();
+        useListingWizardStore.getState().setTitle('Stale device-only family home');
+        useListingWizardStore.getState().addMedia({
+          id: 'existing:99',
+          file: null as any,
+          url: '/api/media/stale.png',
+          type: 'image',
+          displayOrder: 0,
+          isPrimary: true,
+          processingStatus: 'completed',
+        });
+      }
+      localStorage.setItem('listing-wizard-server-draft:101', '88');
+      let resolve!: (value: ReturnType<typeof serverRecord>) => void;
+      harness.read.mockImplementationOnce(
+        () =>
+          new Promise(r => {
+            resolve = r;
+          }),
+      );
+      const view = render(<ListingWizard />);
+      await waitFor(() => expect(harness.read).toHaveBeenCalledWith({ id: 88 }));
+      expect(screen.queryByRole('button', { name: 'Save private draft' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Submit Listing' })).not.toBeInTheDocument();
+      expect(harness.update).not.toHaveBeenCalled();
+      await act(async () => {
+        resolve(serverRecord());
+      });
+
+      await waitFor(() => expect(useListingWizardStore.getState().title).toBe(title));
+      await screen.findByRole('button', { name: 'Save private draft' });
+      expect(useListingWizardStore.getState()).toMatchObject({
+        description,
+        pricing: { askingPrice: 1000000 },
+        location: { canonicalPlace: place, privateAddress: { streetName: 'Example Street' } },
+        media: [{ id: 'existing:45', url: '/api/media/fixture.png' }],
+        mainMediaId: 'existing:45',
+      });
+      save();
+      await screen.findByText('Private draft saved to your account');
+      expect(harness.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 88, title, description, mediaIds: ['existing:45'] }),
+      );
+
+      view.unmount();
+      // Keep the account's draft pointer, but discard all device form content.
+      await hydrateListingWizardForUser(null);
+      localStorage.removeItem('listing-wizard-storage');
+      render(<ListingWizard />);
+      await screen.findByRole('button', { name: 'Save private draft' });
+      expect(harness.read).toHaveBeenCalledTimes(2);
+      expect(useListingWizardStore.getState().title).toBe(title);
+      expect(useListingWizardStore.getState().media.map(m => m.id)).toEqual(['existing:45']);
+      save();
+      await waitFor(() => expect(harness.update).toHaveBeenCalledTimes(2));
+      expect(harness.update.mock.calls[1][0]).toMatchObject({
+        id: 88,
+        title,
+        mediaIds: ['existing:45'],
+      });
+      expect(localStorage.getItem('listing-wizard-server-draft:101')).toBe('88');
+      expect(harness.create).not.toHaveBeenCalled();
+      expect(harness.review).not.toHaveBeenCalled();
+    },
+  );
+
   it('starting fresh during a saved-draft lookup cannot restore its old listing ID', async () => {
     await hydrateListingWizardForUser(101);
     seed();
@@ -428,14 +499,19 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     expect(screen.queryByText('Private draft saved to your account')).not.toBeInTheDocument();
     expect(harness.review).not.toHaveBeenCalled();
   });
-  it('fails closed on a wrong-owner server read', async () => {
-    window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
-    harness.read.mockRejectedValue(new Error('FORBIDDEN'));
-    render(<ListingWizard />);
-    await screen.findByText(/Saved listing access could not be verified/);
-    expect(screen.queryByRole('button', { name: 'Save private draft' })).not.toBeInTheDocument();
-    expect(useListingWizardStore.getState().title).toBe('');
-  });
+  it.each(['edit route', 'stored pointer'])(
+    'fails closed on a wrong-owner server read from the %s',
+    async source => {
+      if (source === 'edit route')
+        window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
+      else localStorage.setItem('listing-wizard-server-draft:101', '88');
+      harness.read.mockRejectedValue(new Error('FORBIDDEN'));
+      render(<ListingWizard />);
+      await screen.findByText(/Saved listing access could not be verified/);
+      expect(screen.queryByRole('button', { name: 'Save private draft' })).not.toBeInTheDocument();
+      expect(useListingWizardStore.getState().title).toBe('');
+    },
+  );
   it('never labels a pending-review edit as a private draft save', async () => {
     window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
     harness.read.mockResolvedValue(serverRecord(88, 'pending_review'));

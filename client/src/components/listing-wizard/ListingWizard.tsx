@@ -92,6 +92,7 @@ const ListingWizard: React.FC = () => {
   const activeOwner = useRef<number | null>(null);
   const activeDraftContext = useRef<string | null>(null);
   const sessionEpoch = useRef(0);
+  const verifiedServerRead = useRef<{ epoch: number; id: number } | null>(null);
   const ownerNow = authLoading ? null : (user?.id ?? null);
   // The owner can open a different draft without unmounting this route.
   // First save keeps the same context; navigation and starting fresh invalidate it.
@@ -233,6 +234,7 @@ const ListingWizard: React.FC = () => {
       ? Number(localStorage.getItem(serverDraftStorageKey))
       : 0;
     const id = isEditMode ? Number(editId) : storedId;
+    verifiedServerRead.current = null;
     setCreateUncertain(Boolean(uncertainStorageKey && localStorage.getItem(uncertainStorageKey)));
     setExistingListing(null);
     setServerDraftId(null);
@@ -249,20 +251,18 @@ const ListingWizard: React.FC = () => {
         if (cancelled || sessionEpoch.current !== epoch) return;
         const record = result.property;
         if (!record || Number(record.id) !== id) throw new Error('Listing could not be verified.');
+        verifiedServerRead.current = { epoch, id };
         setExistingListing(result);
-        setServerDraftId(id);
-        // This verified listing can be updated without creating another draft.
-        // Keep any other pending-create marker in storage until it is reconciled.
-        setCreateUncertain(false);
+        // Keep saving blocked until this full server record has hydrated the form.
+        // A stored pointer must never make device fields authoritative for that ID.
       })
       .catch(() => {
-        if (!cancelled && sessionEpoch.current === epoch)
+        if (!cancelled && sessionEpoch.current === epoch) {
           setLoadError(
             'Saved listing access could not be verified. Open your listings workspace and try again.',
           );
-      })
-      .finally(() => {
-        if (!cancelled && sessionEpoch.current === epoch) setIsLoadingExisting(false);
+          setIsLoadingExisting(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -289,9 +289,16 @@ const ListingWizard: React.FC = () => {
       refetchOnWindowFocus: true,
     });
 
-  // Populate store with existing listing data
+  // Restore fresh server reads for both edit routes and stored draft pointers.
+  // Sparse create acknowledgements are not reads and must not reset the form.
   useEffect(() => {
-    if (isDraftIdentityCurrent && existingListing && isEditMode) {
+    const verified = verifiedServerRead.current;
+    if (
+      isDraftIdentityCurrent &&
+      existingListing &&
+      verified?.epoch === sessionEpoch.current &&
+      Number(existingListing.property?.id) === verified.id
+    ) {
       const listing = (existingListing as any).property || existingListing;
       const listingMedia = (
         Array.isArray((existingListing as any).media) && (existingListing as any).media.length > 0
@@ -454,8 +461,14 @@ const ListingWizard: React.FC = () => {
 
       // Disable resume draft dialog
       setShowResumeDraftDialog(false);
+      verifiedServerRead.current = null;
+      setServerDraftId(verified.id);
+      // The hydrated record can be updated without creating another draft.
+      // Keep any other pending-create marker until it has been reconciled.
+      setCreateUncertain(false);
+      setIsLoadingExisting(false);
     }
-  }, [isDraftIdentityCurrent, existingListing, isEditMode]);
+  }, [isDraftIdentityCurrent, existingListing, draftContextKey]);
 
   useEffect(() => {
     if (

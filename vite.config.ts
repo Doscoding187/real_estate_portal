@@ -1,6 +1,5 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import {
@@ -49,7 +48,7 @@ const buildGitSha =
   'local-dev';
 const buildTime = new Date().toISOString();
 
-function hostedFrontendBuild(): Plugin {
+export function hostedFrontendBuild(metadata = { gitSha: buildGitSha, buildTime }): Plugin {
   return {
     name: 'property-listify-hosted-frontend-contract',
     buildStart() {
@@ -61,41 +60,59 @@ function hostedFrontendBuild(): Plugin {
       if (vercelEnv === 'preview' && !['staging', 'preview'].includes(deployEnv)) {
         throw new Error('Vercel preview requires explicit VITE_DEPLOY_ENV=staging or preview.');
       }
-      if (vercelEnv === 'preview' && deployEnv === 'preview' &&
-          process.env.VITE_API_URL !== 'https://api-staging.propertylistifysa.co.za') {
+      if (
+        vercelEnv === 'preview' &&
+        deployEnv === 'preview' &&
+        process.env.VITE_API_URL !== 'https://api-staging.propertylistifysa.co.za'
+      ) {
         throw new Error('Unauthenticated previews may call only the staging API origin.');
       }
       if (deployEnv !== 'production' && deployEnv !== 'staging') return;
       if (process.env.VITE_USE_MOCK_EMAILS === 'true') {
         throw new Error('Hosted frontend must not enable mock email.');
       }
-      const app = deployEnv === 'production'
-        ? 'https://www.propertylistifysa.co.za'
-        : 'https://staging.propertylistifysa.co.za';
-      const api = deployEnv === 'production'
-        ? 'https://api.propertylistifysa.co.za'
-        : 'https://api-staging.propertylistifysa.co.za';
+      const app =
+        deployEnv === 'production'
+          ? 'https://www.propertylistifysa.co.za'
+          : 'https://staging.propertylistifysa.co.za';
+      const api =
+        deployEnv === 'production'
+          ? 'https://api.propertylistifysa.co.za'
+          : 'https://api-staging.propertylistifysa.co.za';
       if (process.env.VITE_APP_URL !== app || process.env.VITE_API_URL !== api) {
-        throw new Error(`${deployEnv} frontend requires exact HTTPS VITE_APP_URL and VITE_API_URL.`);
+        throw new Error(
+          `${deployEnv} frontend requires exact HTTPS VITE_APP_URL and VITE_API_URL.`,
+        );
       }
       if (process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL !== api) {
         throw new Error('VITE_API_BASE_URL must equal VITE_API_URL.');
       }
-      if (!/^[a-f\d]{40}$/i.test(buildGitSha)) {
+      if (!/^[a-f\d]{40}$/i.test(metadata.gitSha)) {
         throw new Error('Hosted frontend requires a full 40-character build SHA.');
       }
     },
-    closeBundle() {
-      const outDir = path.resolve(import.meta.dirname, 'dist/public');
-      fs.writeFileSync(path.join(outDir, 'version.json'), JSON.stringify({
-        gitSha: buildGitSha,
-        buildTime,
-        env: process.env.VITE_DEPLOY_ENV || 'development',
-      }) + '\n');
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source:
+          JSON.stringify({
+            ...metadata,
+            env: process.env.VITE_DEPLOY_ENV || 'development',
+          }) + '\n',
+      });
       if (process.env.VITE_DEPLOY_ENV !== 'production') {
-        fs.writeFileSync(path.join(outDir, 'robots-staging.txt'), 'User-agent: *\nDisallow: /\n');
-        fs.writeFileSync(path.join(outDir, 'sitemap-staging.xml'),
-          '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>\n');
+        this.emitFile({
+          type: 'asset',
+          fileName: 'robots-staging.txt',
+          source: 'User-agent: *\nDisallow: /\n',
+        });
+        this.emitFile({
+          type: 'asset',
+          fileName: 'sitemap-staging.xml',
+          source:
+            '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"/>\n',
+        });
       }
     },
   };

@@ -1,0 +1,54 @@
+{
+  "reviewer": "senior Codex through Edward",
+  "startingSource": "48b4d6511e194b2655f0cf8d6795f1cb96387a20",
+  "integrationBase": "c927351b2a0db4972b8cbc244102c795e2588d3c",
+  "checks": {
+    "restorationBefore": {
+      "failed": 2,
+      "skipped": 17
+    },
+    "focusedClientFinal": {
+      "passed": 39,
+      "files": 5
+    },
+    "buildContract": {
+      "passed": 9,
+      "realMinimalViteBuilds": true
+    },
+    "applicationTypecheck": {
+      "exit": 0
+    },
+    "touchedTestsAndViteTypecheck": {
+      "exit": 0,
+      "initialFixtureErrorPreserved": true
+    },
+    "clientAndTestLint": {
+      "exit": 0,
+      "errors": 0,
+      "warnings": 33
+    },
+    "viteConfigLintUsingExistingScriptRules": {
+      "exit": 0,
+      "errors": 0,
+      "warnings": 0
+    },
+    "frontendBuild": {
+      "exit": 0,
+      "environment": "preview",
+      "sampleMetadataSource": "48b4d6511e194b2655f0cf8d6795f1cb96387a20",
+      "releaseArtifact": false
+    }
+  },
+  "hostedResults": "pending for revised source",
+  "externalMutation": {
+    "provider": "Vercel",
+    "scope": "two public variables, preview only, exact feature branch",
+    "createdIds": [
+      "65osO6DAVdgUGbfN",
+      "JhjMJMrhPV9wAlGy"
+    ],
+    "readbackVerified": true
+  },
+  "productionChanged": false,
+  "databaseOperations": false
+}
