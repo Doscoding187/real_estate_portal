@@ -1,0 +1,84 @@
+{
+  "kind": "private-draft-hosted-verification",
+  "status": "NOT_RUN",
+  "operator": null,
+  "scopeReference": null,
+  "startedAt": null,
+  "completedAt": null,
+  "sources": {
+    "api": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+    "frontend": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+    "tree": "db97cbe05ad4fa4a0d69905dd489b4b074c26f20"
+  },
+  "deployments": {
+    "api": null,
+    "frontend": null
+  },
+  "readinessAndIdentity": {
+    "status": "NOT_RUN",
+    "evidence": null
+  },
+  "ownerEvidencePrivatePath": null,
+  "organisationIdentityUnchanged": "NOT_RUN",
+  "canonicalPlaceId": "pl-place-01-6a145c6d642ba208a2c12de7",
+  "draftId": null,
+  "mediaId": null,
+  "checks": {
+    "privateCreate": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "sameIdUpdate": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "imageReservationPutConfirmation": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "freshMediaReadback": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "missingDeviceCreateRouteRestore": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "secondReloadSameIdSave": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "staleDeviceCreateRouteRestore": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "noSecondCreate": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "noSubmission": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "readRefusalBlocksWrites": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "ownerIsolation": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    },
+    "logoutPrivateAccessRefused": {
+      "status": "NOT_RUN",
+      "requestEvidence": null
+    }
+  },
+  "actualWrites": [],
+  "imageProvenanceVerified": "NOT_RUN",
+  "sessionCloseout": "NOT_RUN",
+  "publicReopening": "HELD",
+  "workers": "HELD",
+  "payments": "HELD",
+  "unknownOperations": [],
+  "failure": null
+}

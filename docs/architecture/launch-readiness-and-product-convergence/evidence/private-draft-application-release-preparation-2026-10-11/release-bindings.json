@@ -1,0 +1,264 @@
+{
+  "kind": "private-draft-application-release-preparation",
+  "status": "PREPARED_FOR_SENIOR_REVIEW_NOT_EXECUTED",
+  "phase": "plan",
+  "source": {
+    "sha": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+    "tree": "db97cbe05ad4fa4a0d69905dd489b4b074c26f20",
+    "acceptedCandidate": "53ced9efb149273fa09b33d3a8d8d3265dcf42a9",
+    "acceptedCi": {
+      "run": 38168216251,
+      "attempt": 1,
+      "requiredJobsPassed": 5,
+      "allPrChecksPassed": 9,
+      "evidence": "/home/edwardspc/.local/state/property-listify/private-draft-restoration-599-20261011/source-integration-acceptance.json"
+    },
+    "ciRepeated": false
+  },
+  "targets": {
+    "railway": {
+      "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e"
+    },
+    "vercel": {
+      "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+      "teamId": "team_wGNClVbXptfEtznBC5p1YfO2",
+      "projectName": "real-estate-portal"
+    },
+    "protectedDatabase": {
+      "fingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+      "acceptedHead": "0111_properties_canonical_place_reference_fk.sql",
+      "actions": "NONE; existing accepted schema/reference/grants retained"
+    }
+  },
+  "artifacts": {
+    "privateRoot": "/home/edwardspc/.local/state/property-listify/private-draft-release-packet-20261011",
+    "applicationSource": {
+      "file": "application-source-f6d2e9c532b8110770777e8b20889d2b8b7f9058.tar",
+      "sha256": "e60f69d776f98f0e857e4db0cb50a3c60c076d516c37fb0c2ee5f1a859e93471",
+      "gitTarCommit": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+      "sourceFiles": 5072,
+      "role": "exact Git source artifact for API and hosted frontend build; not a static frontend or Vercel build-output artifact"
+    },
+    "rollbackSource": {
+      "file": "rollback-source-c927351b2a0db4972b8cbc244102c795e2588d3c.tar",
+      "sha256": "73daad3f4d3ce45439b28d084db4f9378a377e5af162a57ab0556b1f2dd62659",
+      "gitTarCommit": "c927351b2a0db4972b8cbc244102c795e2588d3c"
+    },
+    "newHostedApiDeployment": null,
+    "newHostedFrontendDeployment": null,
+    "frontendLocalBuild": "not run; use existing encrypted production inputs in a frozen-source provider build at senior execution; no guessed local bundle promoted"
+  },
+  "api": {
+    "before": {
+      "source": "c927351b2a0db4972b8cbc244102c795e2588d3c",
+      "deploymentId": "e947ec0d-6464-4f15-9371-f10e33b52e03",
+      "status": "SUCCESS",
+      "snapshotId": "68872c82-f9d7-4406-849d-8c5a1373426d",
+      "canRollback": true
+    },
+    "desired": {
+      "source": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+      "BUILD_SHA": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+      "builder": "RAILPACK",
+      "buildCommand": "pnpm build:railway",
+      "startCommand": "node --import tsx server/_core/start.ts",
+      "drainingSeconds": 30,
+      "healthcheckPath": "/api/readiness",
+      "healthcheckTimeout": 300,
+      "preDeployCommand": [],
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10
+    },
+    "unchanged": [
+      "database credentials/target/grants",
+      "Redis credentials/identity",
+      "origins/CORS/security/session/media configuration",
+      "regions/networking",
+      "worker and lead-cron holds",
+      "automatic Git deployment hold"
+    ],
+    "transportGate": "Senior must bind an existing-service, exact-SHA, API-only operation; environment-wide accept-deploy cannot isolate the unrelated destructive pending patch. Do not use create-deployment, which creates another service; do not deploy moving main."
+  },
+  "frontend": {
+    "before": {
+      "source": "c927351b2a0db4972b8cbc244102c795e2588d3c",
+      "deploymentId": "dpl_Dv23xoKFYsaYJ3HVWvYUVeXTNAXx",
+      "url": "real-estate-portal-hvh1bx1g7-edwards-projects-29c395d1.vercel.app",
+      "state": "READY",
+      "rollbackCandidate": true,
+      "canonicalAlias": "www.propertylistifysa.co.za"
+    },
+    "desired": {
+      "source": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+      "target": "production",
+      "buildCommand": "pnpm build:frontend",
+      "outputDirectory": "dist/public",
+      "VITE_DEPLOY_ENV": "production",
+      "VITE_APP_URL": "https://www.propertylistifysa.co.za",
+      "VITE_API_URL": "https://api.propertylistifysa.co.za",
+      "sourceMetadata": "Full frozen SHA from VERCEL_GIT_COMMIT_SHA; no production BUILD_SHA/COMMIT_SHA/GITHUB_SHA override name was observed. Reject any newly conflicting override.",
+      "gitDeploymentEnabledMain": false
+    },
+    "productionInputBindings": [
+      {
+        "name": "VITE_APP_URL",
+        "id": "WLk4GB6kxGlm761w",
+        "type": "encrypted",
+        "target": [
+          "production"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_CLOUDFRONT_URL",
+        "id": "fVBQfAUgTvYjTp9q",
+        "type": "encrypted",
+        "target": [
+          "production"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_PUBLIC_JOURNEY_RELEASES",
+        "id": "46e3iegnLPBM1t4w",
+        "type": "encrypted",
+        "target": [
+          "production"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_DEPLOY_ENV",
+        "id": "INJ6CZdom0HC3g54",
+        "type": "encrypted",
+        "target": [
+          "production"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_API_URL",
+        "id": "R4qklCnYPO3aUz4E",
+        "type": "encrypted",
+        "target": [
+          "production"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_ANALYTICS_WEBSITE_ID",
+        "id": "7ZggtuPzIloaljK5",
+        "type": "encrypted",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_ANALYTICS_ENDPOINT",
+        "id": "aAPDF06r1M0EWl4F",
+        "type": "encrypted",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_GOOGLE_MAPS_API_KEY",
+        "id": "YtmUFY8XxmYk0pTQ",
+        "type": "encrypted",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_APP_TITLE",
+        "id": "jG83TUFlSKyO8tAA",
+        "type": "encrypted",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "gitBranch": null
+      },
+      {
+        "name": "VITE_APP_LOGO",
+        "id": "XqAf4h7VCPSIwH1d",
+        "type": "encrypted",
+        "target": [
+          "production",
+          "preview",
+          "development"
+        ],
+        "gitBranch": null
+      }
+    ],
+    "encryptedValuesDecrypted": false,
+    "additionalInputs": "Retain existing CloudFront, public journey releases, Maps, analytics, title and logo inputs. Plaintext values not independently certified in preparation.",
+    "previewPromotionAllowed": false
+  },
+  "pendingPatch": {
+    "id": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+    "status": "STAGED",
+    "destructive": true,
+    "resourceId": "aa916378-feb3-40e7-b9e5-4f790d77ea1a",
+    "action": "delete",
+    "applicationAction": "EXCLUDED",
+    "dashboardTwoFactorRequired": true,
+    "acceptDeployAllowed": false
+  },
+  "verification": {
+    "status": "NOT_RUN_IN_PRODUCTION",
+    "canonicalPlaceId": "pl-place-01-6a145c6d642ba208a2c12de7",
+    "houseDraftOnly": true,
+    "formStorageKey": "listing-wizard-storage",
+    "pointerKeyPattern": "listing-wizard-server-draft:<ownerId>",
+    "restoreRoute": "/listings/create",
+    "requireSameDraftId": true,
+    "requireFreshGetById": true,
+    "requireConfirmedMedia": true,
+    "requireNoSecondCreate": true,
+    "requireNoSubmission": true,
+    "requireOwnerIsolation": true,
+    "requireRefusedReadBlocksWrites": true,
+    "globalCrossDeviceIdempotencyClaimed": false
+  },
+  "rollback": {
+    "sha": "c927351b2a0db4972b8cbc244102c795e2588d3c",
+    "tree": "359d6ca6352414168d2f8bf994d65a0f7db16d34",
+    "apiDeployment": "e947ec0d-6464-4f15-9371-f10e33b52e03",
+    "frontendDeployment": "dpl_Dv23xoKFYsaYJ3HVWvYUVeXTNAXx",
+    "operator": "senior only after state assessment",
+    "automatic": false,
+    "databaseRollback": false,
+    "preserveNewDraftAndMedia": true
+  },
+  "holds": [
+    "deployment",
+    "public reopening",
+    "email worker",
+    "lead job/cron",
+    "payments",
+    "automatic production deployments",
+    "migrations",
+    "reference loads",
+    "grants",
+    "runner provisioning"
+  ],
+  "preparationFindings": [
+    "Public API health/version/readiness returned HTTP403 non-JSON; runtime proof requires senior's reviewed private transport, not a bypass or reopening.",
+    "Existing pending destructive runner deletion must remain outside application execution.",
+    "Production frontend inputs are encrypted; build through provider retaining them rather than claiming a minimal local bundle preserves all product settings."
+  ],
+  "privateEvidenceRoot": "/home/edwardspc/.local/state/property-listify/private-draft-release-packet-20261011"
+}
