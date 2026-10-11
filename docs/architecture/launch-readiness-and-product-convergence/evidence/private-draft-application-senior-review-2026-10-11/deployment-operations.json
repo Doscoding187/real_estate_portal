@@ -1,0 +1,81 @@
+{
+  "status": "PREPARED_NOT_DISPATCHED",
+  "sourceSha": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+  "tree": "db97cbe05ad4fa4a0d69905dd489b4b074c26f20",
+  "apiConfiguration": {
+    "query": "mutation($environmentId:String!,$patch:EnvironmentConfig!,$commitMessage:String!){environmentPatchCommit(environmentId:$environmentId,patch:$patch,commitMessage:$commitMessage,skipDeploys:true)}",
+    "variables": {
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "commitMessage": "Reviewed PR599 application source and SHA identity; API only; no deployment",
+      "patch": {
+        "services": {
+          "db88a720-2d1f-4afc-a3a8-6228b6b08d3e": {
+            "source": {
+              "commitSha": "f6d2e9c532b8110770777e8b20889d2b8b7f9058"
+            },
+            "variables": {
+              "BUILD_SHA": {
+                "value": "f6d2e9c532b8110770777e8b20889d2b8b7f9058"
+              }
+            }
+          }
+        }
+      }
+    },
+    "excludesStagedPatch": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+    "requiredReadbackBeforeDeployment": "Exact supplied API-only diff; pending deletion still STAGED and unchanged; all other configuration, variables and triggers unchanged; no deployment triggered. Unknown/refusal stops, no staged commit fallback."
+  },
+  "apiDeployment": {
+    "query": "mutation($serviceId:String!,$environmentId:String!,$commitSha:String!){serviceInstanceDeployV2(serviceId:$serviceId,environmentId:$environmentId,commitSha:$commitSha)}",
+    "variables": {
+      "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "commitSha": "f6d2e9c532b8110770777e8b20889d2b8b7f9058"
+    },
+    "dispatchCount": 1,
+    "result": "Capture the returned deployment ID, then observe that exact deployment to SUCCESS; unknown outcomes are inspected, never blindly retried."
+  },
+  "frontendDeployment": {
+    "name": "create_deployment",
+    "arguments": {
+      "teamId": "team_wGNClVbXptfEtznBC5p1YfO2",
+      "requestBody": {
+        "name": "real-estate-portal",
+        "project": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+        "target": "production",
+        "gitSource": {
+          "type": "github",
+          "repoId": 1090889528,
+          "ref": "main",
+          "sha": "f6d2e9c532b8110770777e8b20889d2b8b7f9058"
+        },
+        "withLatestCommit": false,
+        "projectSettings": {
+          "buildCommand": "pnpm build:frontend",
+          "framework": "vite",
+          "installCommand": "pnpm install --frozen-lockfile --prod=false",
+          "nodeVersion": "22.x",
+          "outputDirectory": "dist/public",
+          "rootDirectory": null
+        }
+      }
+    }
+  },
+  "held": [
+    "public reopening",
+    "email worker",
+    "lead job/cron",
+    "payments",
+    "automatic deployments",
+    "pending runner deletion",
+    "schema/reference/grant operations",
+    "runner provisioning"
+  ],
+  "rollback": {
+    "sourceSha": "c927351b2a0db4972b8cbc244102c795e2588d3c",
+    "apiDeployment": "e947ec0d-6464-4f15-9371-f10e33b52e03",
+    "apiSnapshot": "68872c82-f9d7-4406-849d-8c5a1373426d",
+    "frontendDeployment": "dpl_Dv23xoKFYsaYJ3HVWvYUVeXTNAXx",
+    "configuration": "Restore only reviewed API source/BUILD_SHA and matching runtime configuration; keep unrelated staged patch and database unchanged. Assess in-flight and unknown writes before rollback."
+  }
+}
