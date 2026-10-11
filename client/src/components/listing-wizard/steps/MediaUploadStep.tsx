@@ -32,7 +32,7 @@ const PRESENTATION_CATEGORIES: Array<{
   { id: 'documents', label: 'Documents', description: 'Public brochures and information sheets' },
 ];
 
-const MediaUploadStep: React.FC = () => {
+const MediaUploadStep: React.FC<{ listingId?: number }> = ({ listingId }) => {
   const store = useListingWizardStore();
   const [uploads, setUploads] = useState<UploadProgress[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -41,6 +41,13 @@ const MediaUploadStep: React.FC = () => {
     useState<(typeof PROPERTY_PRESENTATION_PLAN_LABELS)[number]>('other');
   const [tourUrl, setTourUrl] = useState('');
   const [tourLabel, setTourLabel] = useState('3D virtual tour');
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TRPC mutation for media upload
@@ -68,6 +75,10 @@ const MediaUploadStep: React.FC = () => {
     ) => {
       if (!files || files.length === 0) return;
       const existingCount = store.media.length;
+      const ownerId = store.persistedOwnerId;
+      const stillOwned = () =>
+        mounted.current && useListingWizardStore.getState().persistedOwnerId === ownerId;
+      if (ownerId == null || !stillOwned()) return;
 
       // Create upload progress entries
       const newUploads: UploadProgress[] = files.map((file, index) => ({
@@ -81,6 +92,7 @@ const MediaUploadStep: React.FC = () => {
 
       // Process each file
       for (let i = 0; i < files.length; i++) {
+        if (!stillOwned()) return;
         const file = files[i];
         const uploadId = newUploads[i].id;
         const startTime = Date.now();
@@ -105,10 +117,13 @@ const MediaUploadStep: React.FC = () => {
 
           // Request presigned URL from server
           const uploadData = await uploadMediaMutation.mutateAsync({
+            listingId,
             type: mediaType,
             filename: file.name,
             contentType: file.type,
           });
+
+          if (!stillOwned()) return;
 
           // Update progress: uploading to S3
           setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 20 } : u)));
@@ -158,9 +173,12 @@ const MediaUploadStep: React.FC = () => {
           // A successful browser PUT is not yet listing authority. The server
           // verifies the object and returns a confirmation token bound to this
           // user/upload before the item enters wizard state.
+          if (!stillOwned()) return;
           const confirmation = await confirmMediaUploadMutation.mutateAsync({
             uploadToken: uploadData.uploadToken,
           });
+
+          if (!stillOwned()) return;
 
           // Update progress: finalizing
           setUploads(prev => prev.map(u => (u.id === uploadId ? { ...u, progress: 95 } : u)));
@@ -207,7 +225,7 @@ const MediaUploadStep: React.FC = () => {
         }
       }
     },
-    [store, uploadMediaMutation, confirmMediaUploadMutation],
+    [store, listingId, uploadMediaMutation, confirmMediaUploadMutation],
   );
 
   const MAX_FILES = 30;

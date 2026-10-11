@@ -7,7 +7,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { SaveStatusIndicator } from '@/components/ui/SaveStatusIndicator';
 import { DraftManager } from '@/components/wizard/DraftManager';
 import {
   ProgressIndicator,
@@ -16,7 +15,7 @@ import {
 } from '@/components/wizard/ProgressIndicator';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { ValidationErrorList } from '@/components/ui/ValidationErrorList';
-import { parseError, getRecoveryStrategy, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
+import { parseError, type AppError } from '@/lib/errors/ErrorRecoveryStrategy';
 import {
   parseServerValidationErrors,
   type ValidationErrorResult,
@@ -27,7 +26,7 @@ import {
   clearSessionExpiryFlags,
 } from '@/lib/auth/SessionExpiryHandler';
 import { trpc } from '@/lib/trpc';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import ActionStep from './steps/ActionStep';
 import PropertyTypeStep from './steps/PropertyTypeStep';
@@ -38,13 +37,15 @@ import LocationStep from './steps/LocationStep';
 import MediaUploadStep from './steps/MediaUploadStep';
 import PreviewStep from './steps/PreviewStep';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, Home, Save, Check, AlertTriangle, ListChecks } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Home, Save, AlertTriangle, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { ReadinessIndicator } from '@/components/common/ReadinessIndicator';
 import { calculateListingReadiness } from '@/lib/readiness';
 import { buildCanonicalCorePropertyDetails } from '@/../../shared/core-property-information';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { buildListingWizardSubmitPayload } from '@/lib/listingWizardSubmitMapper';
+import { createListingSchema } from '@shared/listing-draft-input';
+import { ZodError } from 'zod';
 import { LISTING_MEDIA_TYPES } from '@/../../shared/listing-media';
 import { buildPricingContract } from '@/../../shared/pricing-contract';
 import { getPresentationMediaDescriptor } from '@/../../shared/property-presentation';
@@ -56,7 +57,7 @@ import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@/../../shared/listing-w
 
 const ListingWizard: React.FC = () => {
   const store = useListingWizardStore();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -66,11 +67,35 @@ const ListingWizard: React.FC = () => {
   const [draftSaved, setDraftSaved] = useState(false);
   const [serverDraftId, setServerDraftId] = useState<number | null>(null);
   const [apiError, setApiError] = useState<AppError | null>(null);
-  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [, setRetryAttempt] = useState(0);
   const [validationErrors, setValidationErrors] = useState<ValidationErrorResult | null>(null);
   const [showPreflightModal, setShowPreflightModal] = useState(false);
   const [draftIdentityReady, setDraftIdentityReady] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [createUncertain, setCreateUncertain] = useState(false);
+  const [reconcileId, setReconcileId] = useState('');
+  const [inventoryChecked, setInventoryChecked] = useState(false);
+  const [reconciliationDrafts, setReconciliationDrafts] = useState<Array<{
+    id: number;
+    title: string;
+  }> | null>(null);
+  const [existingListing, setExistingListing] = useState<any>(null);
+  const [isLoadingExisting, setIsLoadingExisting] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const lastIntent = useRef<'save' | 'submit'>('save');
+  const activeOwner = useRef<number | null>(null);
+  const sessionEpoch = useRef(0);
+  const ownerNow = authLoading ? null : (user?.id ?? null);
+  if (activeOwner.current !== ownerNow) sessionEpoch.current += 1;
+  activeOwner.current = ownerNow;
+  useEffect(
+    () => () => {
+      activeOwner.current = null;
+    },
+    [],
+  );
+  const utils = trpc.useUtils();
   const appliedSellerProspectId = useRef<number | null>(null);
   const isDraftIdentityCurrent =
     !authLoading && user?.id != null && draftIdentityReady && store.persistedOwnerId === user.id;
@@ -128,7 +153,7 @@ const ListingWizard: React.FC = () => {
   const updateListingMutation = trpc.listing.update.useMutation();
 
   // Parse query params
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = new URLSearchParams(useSearch());
   const editId = searchParams.get('id');
   const isEditMode = searchParams.get('edit') === 'true';
   const sellerProspectId = Number(searchParams.get('sellerProspectId') || 0);
@@ -143,6 +168,8 @@ const ListingWizard: React.FC = () => {
           : { href: '/dashboard', label: 'Back to dashboard' };
   const serverDraftStorageKey = user?.id ? `listing-wizard-server-draft:${user.id}` : null;
 
+  const uncertainStorageKey = user?.id ? `listing-wizard-create-uncertain:${user.id}` : null;
+
   useEffect(() => {
     if (authLoading) {
       setDraftIdentityReady(false);
@@ -154,6 +181,18 @@ const ListingWizard: React.FC = () => {
     setIsInitialized(false);
     setShowResumeDraftDialog(false);
     setServerDraftId(null);
+    setExistingListing(null);
+    setLoadError(null);
+    setCreateUncertain(false);
+    setReconcileId('');
+    setInventoryChecked(false);
+    setReconciliationDrafts(null);
+    setApiError(null);
+    setSubmitError(null);
+    setValidationErrors(null);
+    setDraftSaved(false);
+    setIsSavingDraft(false);
+    setIsSubmitting(false);
     appliedSellerProspectId.current = null;
 
     void hydrateListingWizardForUser(user?.id ?? null)
@@ -167,11 +206,55 @@ const ListingWizard: React.FC = () => {
     };
   }, [authLoading, user?.id]);
 
-  // Fetch existing listing if in edit mode
-  const { data: existingListing, isLoading: isLoadingExisting } = trpc.listing.getById.useQuery(
-    { id: Number(editId) },
-    { enabled: isDraftIdentityCurrent && !!editId && isEditMode },
-  );
+  // Each account/route verifies custody with a fresh authenticated server read.
+  // Query cache data from a previous session is never used to hydrate this form.
+  useEffect(() => {
+    if (!isDraftIdentityCurrent) return;
+    let cancelled = false;
+    const storedId = serverDraftStorageKey
+      ? Number(localStorage.getItem(serverDraftStorageKey))
+      : 0;
+    const id = isEditMode ? Number(editId) : storedId;
+    setCreateUncertain(Boolean(uncertainStorageKey && localStorage.getItem(uncertainStorageKey)));
+    setExistingListing(null);
+    setServerDraftId(null);
+    setLoadError(null);
+    setIsLoadingExisting(false);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      if (isEditMode) setLoadError('Choose an owned listing from your listings workspace.');
+      return;
+    }
+    setIsLoadingExisting(true);
+    void utils.client.listing.getById
+      .query({ id })
+      .then(result => {
+        if (cancelled) return;
+        const record = result.property;
+        if (!record || Number(record.id) !== id) throw new Error('Listing could not be verified.');
+        setExistingListing(result);
+        setServerDraftId(id);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setLoadError(
+            'Saved listing access could not be verified. Open your listings workspace and try again.',
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isDraftIdentityCurrent,
+    user?.id,
+    isEditMode,
+    editId,
+    serverDraftStorageKey,
+    uncertainStorageKey,
+    utils.client,
+  ]);
 
   const { data: sellerProspectPrefill } = trpc.canvassing.getListingPrefill.useQuery(
     { sellerProspectId },
@@ -180,15 +263,13 @@ const ListingWizard: React.FC = () => {
 
   const { data: preflight, isLoading: isPreflightLoading } =
     trpc.listing.getSubmissionPreflight.useQuery(undefined, {
-      enabled: isDraftIdentityCurrent && !isEditMode,
+      enabled: isDraftIdentityCurrent,
       refetchOnWindowFocus: true,
     });
 
   // Populate store with existing listing data
   useEffect(() => {
     if (isDraftIdentityCurrent && existingListing && isEditMode) {
-      console.log('Populating wizard with existing listing:', existingListing);
-
       const listing = (existingListing as any).property || existingListing;
       const listingMedia = (
         Array.isArray((existingListing as any).media) && (existingListing as any).media.length > 0
@@ -393,22 +474,6 @@ const ListingWizard: React.FC = () => {
     }
   }, [isDraftIdentityCurrent, isEditMode, preflight]);
 
-  useEffect(() => {
-    if (!isDraftIdentityCurrent || isEditMode || !serverDraftStorageKey) return;
-
-    const storedId = Number(window.localStorage.getItem(serverDraftStorageKey));
-    if (Number.isInteger(storedId) && storedId > 0) {
-      setServerDraftId(storedId);
-    }
-  }, [isDraftIdentityCurrent, isEditMode, serverDraftStorageKey]);
-
-  const rememberServerDraft = (listingId: number) => {
-    setServerDraftId(listingId);
-    if (serverDraftStorageKey) {
-      window.localStorage.setItem(serverDraftStorageKey, String(listingId));
-    }
-  };
-
   const forgetServerDraft = () => {
     setServerDraftId(null);
     if (serverDraftStorageKey) {
@@ -451,31 +516,174 @@ const ListingWizard: React.FC = () => {
   };
 
   const handleStartFresh = () => {
+    if (inFlight.current || createUncertain) {
+      setShowResumeDraftDialog(false);
+      return;
+    }
     setShowResumeDraftDialog(false);
     // Starting fresh must never overwrite a previous private server draft.
     // That draft remains available from the listings workspace.
     forgetServerDraft();
+    setExistingListing(null);
     store.reset();
+    if (isEditMode) setLocation('/listings/create');
     setWizardKey(prev => prev + 1); // Force re-render
   };
 
-  // Handle save draft
+  const currentListingStatus = existingListing?.property?.status;
+  const canSavePrivateDraft = !serverDraftId || currentListingStatus === 'draft';
+  const inventoryPath = user?.role === 'agency_admin' ? '/agency/listings' : '/agent/listings';
+
+  // Share persistence only. Saving never invokes a publication transition.
+  const persistListing = async () => {
+    const ownerId = user.id;
+    const epoch = sessionEpoch.current;
+    const key = serverDraftStorageKey;
+    const unknownKey = uncertainStorageKey;
+    const listingData = createListingSchema.parse(buildListingWizardSubmitPayload(store));
+    if (hasSellerProspectHandoff) listingData.sellerProspectId = sellerProspectId;
+    if (serverDraftId) {
+      const update = await updateListingMutation.mutateAsync({ id: serverDraftId, ...listingData });
+      return { id: serverDraftId, status: update?.status || currentListingStatus };
+    }
+    if (createUncertain || localStorage.getItem(unknownKey)) {
+      throw new Error(
+        'A previous save may have created a draft. Check your owned listings before creating again.',
+      );
+    }
+    // Persist this marker BEFORE dispatch. Even a server error can follow a durable insert.
+    localStorage.setItem(unknownKey, 'awaiting-owned-inventory-reconciliation');
+    setCreateUncertain(true);
+    const result = await createListingMutation.mutateAsync(listingData);
+    if (!Number.isSafeInteger(result.id) || result.id <= 0) {
+      throw new Error('The saved draft ID could not be confirmed. Check your owned listings.');
+    }
+    // Retain the result for its captured owner even if the account changed in flight.
+    localStorage.setItem(key, String(result.id));
+    localStorage.removeItem(unknownKey);
+    if (activeOwner.current === ownerId && sessionEpoch.current === epoch) {
+      setServerDraftId(result.id);
+      setExistingListing({ property: { id: result.id, status: 'draft' } });
+      setCreateUncertain(false);
+    }
+    return result;
+  };
+
+  useEffect(() => {
+    setDraftSaved(false);
+  }, [
+    store.action,
+    store.propertyType,
+    store.title,
+    store.description,
+    store.pricing,
+    store.propertyDetails,
+    store.additionalInfo,
+    store.location,
+    store.media,
+    store.mainMediaId,
+  ]);
+
   const handleSaveDraft = async () => {
+    if (
+      inFlight.current ||
+      !isDraftIdentityCurrent ||
+      !canSavePrivateDraft ||
+      isLoadingExisting ||
+      loadError ||
+      !preflight?.canPrepareDraft
+    )
+      return;
+    inFlight.current = true;
+    lastIntent.current = 'save';
+    const ownerId = user.id;
+    const epoch = sessionEpoch.current;
     setIsSavingDraft(true);
     setDraftSaved(false);
-
+    setSubmitError(null);
+    setApiError(null);
+    setValidationErrors(null);
     try {
-      // Browser recovery is intentionally labelled as device-only. A durable
-      // server draft is created only after a complete listing payload reaches
-      // the canonical listing lifecycle.
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate save
-
-      setDraftSaved(true);
-      setTimeout(() => setDraftSaved(false), 2000); // Hide success message after 2s
+      const savedPayload = JSON.stringify(buildListingWizardSubmitPayload(store));
+      await persistListing();
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
+      const unchanged =
+        savedPayload ===
+        JSON.stringify(buildListingWizardSubmitPayload(useListingWizardStore.getState()));
+      setDraftSaved(unchanged);
+      toast.success(
+        unchanged
+          ? 'Private draft saved to your account.'
+          : 'Private draft saved. Save again to keep your latest edits.',
+      );
     } catch (error) {
-      console.error('Error saving draft:', error);
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
+      const message =
+        error instanceof ZodError
+          ? error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`).join('; ')
+          : error instanceof Error
+            ? error.message
+            : 'Private draft save failed.';
+      setSubmitError(message);
+      toast.error('Private draft save could not be confirmed.', { description: message });
     } finally {
-      setIsSavingDraft(false);
+      inFlight.current = false;
+      if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
+        setIsSavingDraft(false);
+    }
+  };
+
+  const checkOwnedInventory = async () => {
+    if (inFlight.current || !isDraftIdentityCurrent) return;
+    inFlight.current = true;
+    const ownerId = user.id;
+    const epoch = sessionEpoch.current;
+    setInventoryChecked(false);
+    setReconciliationDrafts(null);
+    try {
+      const drafts = await utils.client.listing.myListings.query({
+        status: 'draft',
+        limit: 100,
+        offset: 0,
+      });
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
+      setReconciliationDrafts(drafts.map(draft => ({ id: Number(draft.id), title: draft.title })));
+      setSubmitError(null);
+    } catch {
+      if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
+        setSubmitError('Your saved drafts could not be checked. Keep this form and try again.');
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
+  const reconcileOwnedDraft = async () => {
+    if (inFlight.current || !isDraftIdentityCurrent) return;
+    const id = Number(reconcileId);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      setSubmitError('Enter the draft ID shown in your owned listings.');
+      return;
+    }
+    inFlight.current = true;
+    const ownerId = user.id;
+    const epoch = sessionEpoch.current;
+    try {
+      const result = await utils.client.listing.getById.query({ id });
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
+      if (Number(result.property?.id) !== id || result.property?.status !== 'draft')
+        throw new Error('Select a private draft from your listings.');
+      localStorage.setItem(serverDraftStorageKey, String(id));
+      localStorage.removeItem(uncertainStorageKey);
+      setCreateUncertain(false);
+      setServerDraftId(id);
+      setExistingListing(result);
+      setSubmitError(null);
+      setLocation(`/listings/create?id=${id}&edit=true`);
+    } catch {
+      if (activeOwner.current === ownerId && sessionEpoch.current === epoch)
+        setSubmitError('This owned private draft could not be verified. No new draft was created.');
+    } finally {
+      inFlight.current = false;
     }
   };
 
@@ -488,54 +696,37 @@ const ListingWizard: React.FC = () => {
 
   // Handle form submission with error recovery
   const handleSubmit = async () => {
+    if (
+      inFlight.current ||
+      !isDraftIdentityCurrent ||
+      isLoadingExisting ||
+      loadError ||
+      createUncertain
+    )
+      return;
     if (!store.validate()) {
       return;
     }
 
+    inFlight.current = true;
+    lastIntent.current = 'submit';
+    const ownerId = user.id;
+    const epoch = sessionEpoch.current;
     setIsSubmitting(true);
     setSubmitError(null);
     setApiError(null);
     setValidationErrors(null);
 
     try {
-      const listingData = buildListingWizardSubmitPayload(store);
-      if (hasSellerProspectHandoff) {
-        (listingData as any).sellerProspectId = sellerProspectId;
-      }
-
-      console.log('Submitting listing data:', listingData);
-
-      // Submit to API
-      let result;
-      let shouldSubmitForReview = true;
-      if (isEditMode && editId) {
-        const currentListing = (existingListing as any)?.property || existingListing;
-        const wasAlreadyPendingReview = currentListing?.status === 'pending_review';
-        const updateResult = await updateListingMutation.mutateAsync({
-          id: Number(editId),
-          ...listingData,
-        });
-        shouldSubmitForReview =
-          updateResult?.status !== 'pending_review' && !wasAlreadyPendingReview;
-        result = { id: Number(editId) };
-        console.log('Listing updated:', result);
-      } else if (serverDraftId) {
-        await updateListingMutation.mutateAsync({
-          id: serverDraftId,
-          ...listingData,
-        });
-        result = { id: serverDraftId };
-        console.log('Private server draft updated:', result);
-      } else {
-        result = await createListingMutation.mutateAsync(listingData);
-        rememberServerDraft(result.id);
-        console.log('Listing created:', result);
-      }
+      const result = await persistListing();
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
+      const shouldSubmitForReview = result.status !== 'pending_review';
 
       // Submit for review
       try {
         if (shouldSubmitForReview) {
           await submitForReviewMutation.mutateAsync({ listingId: result.id });
+          if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
           console.log('Listing submitted for review');
         } else {
           console.log('Listing is already pending review');
@@ -573,7 +764,7 @@ const ListingWizard: React.FC = () => {
           }
         }
       } catch (reviewError: any) {
-        console.error('Error submitting for review:', reviewError);
+        if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
 
         // Parse and handle review submission error
         const appError = parseError(reviewError, {
@@ -590,14 +781,13 @@ const ListingWizard: React.FC = () => {
         // Keep as draft and stay on page
       }
     } catch (error: any) {
-      console.error('Error submitting listing:', error);
+      if (activeOwner.current !== ownerId || sessionEpoch.current !== epoch) return;
 
       // Parse error and determine recovery strategy
       const appError = parseError(error, {
         type: 'network',
         context: { operation: 'createListing' },
       });
-      const strategy = getRecoveryStrategy(appError);
 
       // Check if this is a validation error
       if (appError.type === 'validation') {
@@ -616,7 +806,7 @@ const ListingWizard: React.FC = () => {
         if (appError.type === 'network') {
           toast.error('Connection lost. Your browser recovery copy is still available.', {
             description:
-              'Reconnect and retry. A server draft is created only after the listing reaches Property Listify.',
+              'Check your owned listings before creating again: a save can succeed even when its response is lost.',
           });
         } else if (appError.type === 'session') {
           // Handle session expiry with draft restoration
@@ -635,14 +825,16 @@ const ListingWizard: React.FC = () => {
         }
       }
     } finally {
-      setIsSubmitting(false);
+      inFlight.current = false;
+      if (activeOwner.current === ownerId && sessionEpoch.current === epoch) setIsSubmitting(false);
     }
   };
 
   // Handle retry for failed submissions
   const handleRetry = async () => {
     setRetryAttempt(prev => prev + 1);
-    await handleSubmit();
+    if (lastIntent.current === 'save') await handleSaveDraft();
+    else await handleSubmit();
   };
 
   // Clear API error
@@ -682,7 +874,7 @@ const ListingWizard: React.FC = () => {
           <LocationStep addressHint={sellerProspectPrefill?.propertyLocation?.address || ''} />
         );
       case 7:
-        return <MediaUploadStep />;
+        return <MediaUploadStep listingId={serverDraftId ?? undefined} />;
       case 8:
         return <PreviewStep />;
       default:
@@ -870,9 +1062,14 @@ const ListingWizard: React.FC = () => {
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
           </div>
-        ) : isPreflightLoading ? (
+        ) : isPreflightLoading || isLoadingExisting ? (
           <div className="flex items-center justify-center min-h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="p-6">
+            <p>{loadError}</p>
+            <Button onClick={() => setLocation(inventoryPath)}>Open my listings</Button>
           </div>
         ) : showResumeDraftDialog ? (
           <div className="flex items-center justify-center min-h-[60vh]">
@@ -940,6 +1137,13 @@ const ListingWizard: React.FC = () => {
               </div>
             ) : null}
 
+            <p className="mb-4 text-xs text-slate-500" role="status">
+              {autoSaveError
+                ? 'Device recovery copy could not be saved.'
+                : isAutoSaving
+                  ? 'Saving progress on this device...'
+                  : 'Device recovery stays in this browser. Use Save private draft to save to your account.'}
+            </p>
             {/* Step Indicator */}
             <div className="mb-8">
               <ProgressIndicator
@@ -950,7 +1154,7 @@ const ListingWizard: React.FC = () => {
 
             {/* Step Content */}
             <div
-              key={wizardKey}
+              key={`${user.id}:${wizardKey}`}
               className="mb-8 rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] sm:p-8"
             >
               {getCurrentStep()}
@@ -989,13 +1193,12 @@ const ListingWizard: React.FC = () => {
               </div>
             )}
 
-            {serverDraftId && !isEditMode && (
+            {serverDraftId && !isEditMode && currentListingStatus === 'draft' && (
               <div className="mb-8 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-blue-950">Private server draft saved</p>
                   <p className="mt-1 text-sm text-blue-800">
-                    Your next review attempt will update this same draft, so it will not create a
-                    duplicate listing.
+                    Further saves and review submission use this same owned draft.
                   </p>
                 </div>
                 <Button
@@ -1008,6 +1211,84 @@ const ListingWizard: React.FC = () => {
               </div>
             )}
 
+            {createUncertain && !isSavingDraft && !isSubmitting && (
+              <div
+                role="alert"
+                className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3"
+              >
+                <p>
+                  A save may already have created your draft. Your form is retained. Check your
+                  owned listings before another create.
+                </p>
+                <Button onClick={() => setLocation(inventoryPath)}>Open my listings</Button>
+                <Button onClick={checkOwnedInventory}>Check saved drafts</Button>
+                {reconciliationDrafts && (
+                  <label className="block">
+                    Choose your saved draft
+                    <select
+                      aria-label="Choose your saved draft"
+                      value={reconcileId}
+                      onChange={event => setReconcileId(event.target.value)}
+                    >
+                      <option value="">Select a draft</option>
+                      {reconciliationDrafts.map(draft => (
+                        <option key={draft.id} value={draft.id}>
+                          {draft.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {reconciliationDrafts?.length === 100 && (
+                  <p>
+                    More drafts may be available. Check your full listings workspace before
+                    continuing.
+                  </p>
+                )}
+                <Button onClick={reconcileOwnedDraft}>Continue with this saved draft</Button>
+                <label className="block">
+                  <input
+                    type="checkbox"
+                    checked={inventoryChecked}
+                    onChange={event => setInventoryChecked(event.target.checked)}
+                  />
+                  I checked my listings and confirmed no draft was created
+                </label>
+                <Button
+                  disabled={
+                    !inventoryChecked ||
+                    !reconciliationDrafts ||
+                    reconciliationDrafts.length === 100 ||
+                    isSavingDraft ||
+                    isSubmitting
+                  }
+                  onClick={() => {
+                    if (
+                      inFlight.current ||
+                      !inventoryChecked ||
+                      !reconciliationDrafts ||
+                      reconciliationDrafts.length === 100
+                    )
+                      return;
+                    localStorage.removeItem(uncertainStorageKey);
+                    setCreateUncertain(false);
+                    setInventoryChecked(false);
+                  }}
+                >
+                  Allow a new save after checking listings
+                </Button>
+              </div>
+            )}
+
+            {serverDraftId && (
+              <Button
+                variant="ghost"
+                disabled={isSubmitting || isSavingDraft || createUncertain}
+                onClick={handleStartFresh}
+              >
+                Start a new draft
+              </Button>
+            )}
             {/* Navigation */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap gap-2">
@@ -1020,25 +1301,23 @@ const ListingWizard: React.FC = () => {
                   Previous
                 </Button>
 
-                {/* Browser recovery protects in-progress work. A completed payload becomes a private server draft. */}
-                <Button
-                  variant="outline"
-                  onClick={handleSaveDraft}
-                  disabled={isSavingDraft || isSubmitting}
-                  className={`gap-2 ${draftSaved ? 'border-green-500 text-green-600' : ''}`}
-                >
-                  {draftSaved ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Saved on this device
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      {isSavingDraft ? 'Saving...' : 'Save progress on this device'}
-                    </>
-                  )}
-                </Button>
+                {canSavePrivateDraft && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSaveDraft}
+                    disabled={
+                      isSavingDraft ||
+                      isSubmitting ||
+                      createUncertain ||
+                      !preflight?.canPrepareDraft
+                    }
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSavingDraft ? 'Saving private draft...' : 'Save private draft'}
+                  </Button>
+                )}
+                {draftSaved && <span role="status">Private draft saved to your account</span>}
               </div>
 
               {store.currentStep < 8 ? (
@@ -1061,10 +1340,16 @@ const ListingWizard: React.FC = () => {
                   <Button
                     onClick={handleSubmit}
                     disabled={
-                      isSubmitting || readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
+                      isSubmitting ||
+                      isSavingDraft ||
+                      createUncertain ||
+                      readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
                     }
                     className={
-                      isSubmitting || readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
+                      isSubmitting ||
+                      isSavingDraft ||
+                      createUncertain ||
+                      readiness.score < LISTING_SUBMISSION_READINESS_THRESHOLD
                         ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                         : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg'
                     }
@@ -1096,7 +1381,7 @@ const ListingWizard: React.FC = () => {
                 <ErrorAlert
                   type={apiError.type}
                   message={apiError.message}
-                  retryable={apiError.isRecoverable}
+                  retryable={apiError.isRecoverable && !createUncertain}
                   onRetry={handleRetry}
                   onDismiss={handleDismissError}
                   show={true}
