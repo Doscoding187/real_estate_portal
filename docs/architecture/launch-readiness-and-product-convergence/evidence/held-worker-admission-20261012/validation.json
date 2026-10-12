@@ -21,5 +21,19 @@
   "acceptedPackageScopes": 8,
   "totalPackageScopes": 18,
   "localTargetFingerprint": "696244befaf65c73f005dd18e67e3b2d786045ba69ff1906481f85846f0ce12b",
-  "localAvailability": "database-unreachable; focused/static validation uses doubles and offline authority contracts"
+  "localAvailability": "database-unreachable; focused/static validation uses doubles and offline authority contracts",
+  "ciMockIsolationCorrection": {
+    "failedRun": 38256226927,
+    "failedJob": 114836323650,
+    "failedSourceSha": "c402009dbf4ebeff7a598d3153a484d8516f7ea7",
+    "failure": "Shared Vitest beforeAll initialized the real runtime pool through the suite-level connection-authority mock before its beforeEach configured that mock.",
+    "correction": "Use the established suite-local SKIP_DB_INIT pattern, preserving/restoring the original value afterAll. No shared setup, CI workflow, production command or database authority changed.",
+    "verification": {
+      "focusedTests": 31,
+      "unreachableSentinelTests": 30,
+      "changedTestLintExitCode": 0
+    },
+    "sentinel": "Fictional loopback target on port 1; worker suite passed without a connection. The CLI suite retained normal setup and refused that unreachable sentinel in a separate diagnostic run.",
+    "remoteCi": "New source requires fresh checks; no merge or hosted execution performed."
+  }
 }

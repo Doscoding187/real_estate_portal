@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildIsolatedCiGrantPlan } from '../../server/_core/databaseAuthority/isolatedCiCredentials';
 import { B08_WORKER_IDENTITY } from '../../server/_core/databaseAuthority/authorization';
 import {
@@ -6,6 +6,15 @@ import {
   inspectLaunchWorker,
   type WorkerAdmissionExpectation,
 } from '../launchWorkerAdmissionCheck';
+
+// This suite owns a mocked connection authority. Shared database setup must
+// not initialize the runtime pool through these mocks before beforeEach runs.
+const previousSkipDbInit = process.env.SKIP_DB_INIT;
+process.env.SKIP_DB_INIT = '1';
+afterAll(() => {
+  if (previousSkipDbInit === undefined) delete process.env.SKIP_DB_INIT;
+  else process.env.SKIP_DB_INIT = previousSkipDbInit;
+});
 
 const mocks = vi.hoisted(() => ({
   resolve: vi.fn(),
