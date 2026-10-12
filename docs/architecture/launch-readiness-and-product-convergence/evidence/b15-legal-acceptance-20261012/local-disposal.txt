@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:dispose /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:dispose -- --ack\=CONFIRM_DATABASE_DISPOSE_3d1259268441812f
+
+{
+  "operation": "dispose",
+  "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+  "databaseName": "listify_wt_b15_legal_acceptance_authority_3200f8a41f86",
+  "ownershipKey": "3200f8a41f8670deda79555d",
+  "changed": true
+}

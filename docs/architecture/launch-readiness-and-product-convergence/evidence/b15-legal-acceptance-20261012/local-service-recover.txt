@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:authority:service:recover /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+> bash scripts/local-db.sh recover
+
+Legacy home service residue is inactive and never adopted: /home/edwardspc/.config/property-listify/mysql-3307
+Runtime state: cleanly stopped; recovery is a safe no-op.

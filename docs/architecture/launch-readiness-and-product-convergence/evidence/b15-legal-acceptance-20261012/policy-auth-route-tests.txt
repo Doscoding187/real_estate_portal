@@ -1,0 +1,85 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+
+stdout | server/services/__tests__/legalAcceptancePolicy.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: 
+
+stdout | server/__tests__/authRoutes.registrationLegalAcceptance.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: 
+
+stdout | server/__tests__/authRoutes.emailDeliveryBoundary.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: 
+
+stdout | server/services/__tests__/legalAcceptancePolicy.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/legalAcceptancePolicy.test.ts (35 tests) 123ms
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  enable debug logging with { debug: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: 
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/authRoutes.registrationLegalAcceptance.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/authRoutes.emailDeliveryBoundary.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stderr | server/__tests__/authRoutes.emailDeliveryBoundary.test.ts > authentication email delivery boundary > does not expose provider errors from one account as an account-existence signal
+[Auth] Forgot password failed { requestId: 'unknown', code: null, name: 'Error' }
+
+stderr | server/__tests__/authRoutes.emailDeliveryBoundary.test.ts > authentication email delivery boundary > does not expose provider errors from one account as an account-existence signal
+[Auth] Resend verification failed { requestId: 'unknown', code: null, name: 'Error' }
+
+ ✓ |server| server/__tests__/authRoutes.emailDeliveryBoundary.test.ts (2 tests) 249ms
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > passes visitor choice to the canonical transaction before sending mail
+[Auth] Verification email sent successfully
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > passes agent choice to the canonical transaction before sending mail
+[Auth] Verification email sent successfully
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > passes agency_admin choice to the canonical transaction before sending mail
+[Auth] Verification email sent successfully
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > passes property_developer choice to the canonical transaction before sending mail
+[Auth] Verification email sent successfully
+
+stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > passes service_provider choice to the canonical transaction before sending mail
+[Auth] Verification email sent successfully
+
+stderr | server/__tests__/auth.registrationLegalAcceptance.test.ts > registration commit and email boundary > preserves a committed account when verification delivery fails
+[Auth] Failed to send verification email { code: null, name: 'Error' }
+
+ ✓ |server| server/__tests__/auth.registrationLegalAcceptance.test.ts (7 tests) 37ms
+stdout | server/__tests__/authRoutes.registrationLegalAcceptance.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/__tests__/authRoutes.registrationLegalAcceptance.test.ts (7 tests) 270ms
+
+ Test Files  4 passed (4)
+      Tests  51 passed (51)
+   Start at  23:27:49
+   Duration  11.09s (transform 4.52s, setup 2.63s, collect 18.75s, tests 679ms, environment 5ms, prepare 1.95s)
+

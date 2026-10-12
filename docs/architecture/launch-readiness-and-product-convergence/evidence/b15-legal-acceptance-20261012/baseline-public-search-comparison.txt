@@ -1,0 +1,91 @@
+
+ RUN  v2.1.9 /tmp/property-listify-b15-baseline-check-20261012
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: 
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[Redis] No REDIS_URL configured, using in-memory fallback
+
+stdout | server/__tests__/contract.canonical-place-public-search.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stderr | server/__tests__/contract.canonical-place-public-search.test.ts > prepared canonical Place inventory authority > agrees with the established execution reader for the required admitted identities
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-check-20261012/server/db-connection.ts:207:41)
+    at Module.loadCanonicalPlaceSearchProjection (/tmp/property-listify-b15-baseline-check-20261012/server/services/canonicalPlaceSearchService.ts:176:12)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-check-20261012/server/__tests__/contract.canonical-place-public-search.test.ts:11:24
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-check-20261012/server/db-connection.ts:207:41)
+    at Module.executePlace (/tmp/property-listify-b15-baseline-check-20261012/server/services/placeDiscoveryService.ts:369:6)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-check-20261012/server/__tests__/contract.canonical-place-public-search.test.ts:19:27
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+
+stderr | server/__tests__/contract.canonical-place-public-search.test.ts > prepared canonical Place inventory authority > refuses an unknown exact identity without returning country inventory
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-check-20261012/server/db-connection.ts:207:41)
+    at readNodes (/tmp/property-listify-b15-baseline-check-20261012/server/services/canonicalPlaceSearchService.ts:106:10)
+    at readAncestry (/tmp/property-listify-b15-baseline-check-20261012/server/services/canonicalPlaceSearchService.ts:117:13)
+    at loadRequestedGraph (/tmp/property-listify-b15-baseline-check-20261012/server/services/canonicalPlaceSearchService.ts:123:9)
+    at Module.loadCanonicalPlaceSearchProjection (/tmp/property-listify-b15-baseline-check-20261012/server/services/canonicalPlaceSearchService.ts:170:13)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at PublicSearchService.searchInventory (/tmp/property-listify-b15-baseline-check-20261012/server/services/publicSearchService.ts:492:26)
+    at /tmp/property-listify-b15-baseline-check-20261012/server/__tests__/contract.canonical-place-public-search.test.ts:60:20
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+
+ ❯ |server| server/__tests__/contract.canonical-place-public-search.test.ts (3 tests | 1 failed) 37ms
+   × prepared canonical Place inventory authority > agrees with the established execution reader for the required admitted identities 20ms
+     → Required admitted Place unavailable: pl-place-01-6a145c6d642ba208a2c12de7
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/contract.canonical-place-public-search.test.ts > prepared canonical Place inventory authority > agrees with the established execution reader for the required admitted identities
+Error: Required admitted Place unavailable: pl-place-01-6a145c6d642ba208a2c12de7
+ ❯ server/__tests__/contract.canonical-place-public-search.test.ts:20:34
+     18|     ]) {
+     19|       const established = await executePlace(id);
+     20|       if (!established.ok) throw new Error(`Required admitted Place un…
+       |                                  ^
+     21|       expect(projection.executions.get(id)).toEqual(established.execut…
+     22|       expect(projection.labels.has(id)).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  23:32:51
+   Duration  4.27s (transform 1.86s, setup 159ms, collect 3.54s, tests 37ms, environment 0ms, prepare 118ms)
+

@@ -6,6 +6,11 @@ import { ENV } from './env';
 import { isTransactionalEmailDeliveryAvailable } from './transactionalEmailConfig';
 import { getActiveDistributionIdentityFlags } from '../services/distributionIdentityProjection';
 
+import {
+  getCurrentRegistrationLegalRelease,
+  RegistrationLegalError,
+} from '../services/registrationLegalAcceptanceService';
+
 const VERIFIED_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const getRequestId = (req: Request): string => {
@@ -41,6 +46,39 @@ const VERIFICATION_EMAIL_PENDING_MESSAGE =
  * This replaces the Manus OAuth routes
  */
 export function registerAuthRoutes(app: Express) {
+  const legalLookupFailure = (req: Request, error: unknown) => {
+    const failure = error as { code?: unknown; name?: unknown } | null;
+    console.error('[Legal] Approved-copy lookup failed', {
+      requestId: getRequestId(req),
+      code: typeof failure?.code === 'string' ? failure.code : null,
+      name: typeof failure?.name === 'string' ? failure.name : null,
+    });
+  };
+  app.get('/api/legal/releases/:bundleId', async (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(req.params.bundleId))
+        return res.status(404).json({ error: 'Document unavailable.' });
+      return res.json(await getCurrentRegistrationLegalRelease(req.params.bundleId));
+    } catch (error) {
+      if (!(error instanceof RegistrationLegalError)) legalLookupFailure(req, error);
+      return res.status(503).json({ error: 'Document unavailable.' });
+    }
+  });
+  app.get('/api/auth/registration-legal', async (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      return res.json(await getCurrentRegistrationLegalRelease());
+    } catch (error) {
+      if (error instanceof RegistrationLegalError)
+        return res.status(503).json({ code: error.code, error: error.message });
+      legalLookupFailure(req, error);
+      return res.status(503).json({
+        code: 'LEGAL_RELEASE_STORAGE_UNAVAILABLE',
+        error: 'Account registration is temporarily unavailable.',
+      });
+    }
+  });
   /**
    * Register a new user
    * POST /api/auth/register
@@ -48,7 +86,7 @@ export function registerAuthRoutes(app: Express) {
    */
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     try {
-      const { email, password, name, role, agentProfile } = req.body;
+      const { email, password, name, role, agentProfile, legalAcceptance } = req.body;
       const normalizedAgentProfile =
         role === 'agent' && agentProfile
           ? {
@@ -112,6 +150,7 @@ export function registerAuthRoutes(app: Express) {
         name,
         requestedRole as any,
         normalizedAgentProfile,
+        legalAcceptance,
       );
 
       // Return success message - user must verify email before logging in
@@ -130,6 +169,15 @@ export function registerAuthRoutes(app: Express) {
           : 'Account created, but we could not send the verification email right now. Please use resend verification before logging in.',
       });
     } catch (error: any) {
+      if (error instanceof RegistrationLegalError) {
+        const status =
+          error.code === 'LEGAL_RELEASE_UNAVAILABLE'
+            ? 503
+            : error.code === 'LEGAL_VERSION_STALE'
+              ? 409
+              : 400;
+        return res.status(status).json({ code: error.code, error: error.message });
+      }
       console.error('[Auth] Registration failed', {
         requestId: getRequestId(req),
         code: error?.code || null,

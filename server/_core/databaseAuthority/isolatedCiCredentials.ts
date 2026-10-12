@@ -194,7 +194,7 @@ export function buildIsolatedCiGrantPlan(
   const database = quotedIdentifier(databaseName);
   const runtime = applicationTables.map(
     table =>
-      `GRANT SELECT, INSERT, UPDATE, DELETE ON ${database}.${quotedIdentifier(table)} TO ${quotedAccount(roleUsers.runtime)}`,
+      `GRANT ${table === 'legal_releases' || table === 'legal_active_release' ? 'SELECT' : table === 'user_legal_acceptances' ? 'SELECT, INSERT' : 'SELECT, INSERT, UPDATE, DELETE'} ON ${database}.${quotedIdentifier(table)} TO ${quotedAccount(roleUsers.runtime)}`,
   );
   if (input.runtimeLedgerRead) {
     runtime.push(
@@ -238,9 +238,7 @@ export function buildIsolatedCiGrantPlan(
     `GRANT SELECT, INSERT, UPDATE ON ${database}.${quotedIdentifier('transactional_email_deliveries')} TO ${quotedAccount(roleUsers.worker)}`,
     `GRANT SELECT ON ${database}.${quotedIdentifier('users')} TO ${quotedAccount(roleUsers.worker)}`,
   ];
-  const verifier = [
-    `GRANT SELECT ON ${database}.* TO ${quotedAccount(roleUsers['read-only'])}`,
-  ];
+  const verifier = [`GRANT SELECT ON ${database}.* TO ${quotedAccount(roleUsers['read-only'])}`];
   const migration = [
     `GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON ${database}.* TO ${quotedAccount(roleUsers.migration)}`,
   ];

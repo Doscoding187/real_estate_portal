@@ -31,6 +31,9 @@ const TABLES = [
   'search_area',
   'search_area_member',
 ] as const;
+// This retained protected operation is pinned to the pre-B15 grant footprint.
+// Legal tables require their own reviewed release/grants; they are never added here.
+const LATER_LEGAL_TABLES = ['legal_releases', 'legal_active_release', 'user_legal_acceptances'];
 const DATABASE = 'propertylistify_database';
 const HEAD = '0111_properties_canonical_place_reference_fk.sql';
 const MODEL_DIGEST = 'a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97';
@@ -42,15 +45,16 @@ export function canonicalPlaceRuntimeGrantPlan(root = process.cwd()) {
   const inventory = JSON.parse(
     readFileSync(resolve(root, 'drizzle/schema/canonical-model-inventory.json'), 'utf8'),
   ) as { tables: string[] };
+  const historicalTables = inventory.tables.filter(table => !LATER_LEGAL_TABLES.includes(table));
   if (
-    inventory.tables.length !== 221 ||
-    new Set(inventory.tables).size !== 221 ||
+    historicalTables.length !== 221 ||
+    new Set(historicalTables).size !== 221 ||
     TABLES.some(table => !inventory.tables.includes(table))
   ) {
     throw new Error('Place runtime grant plan refused: canonical table inventory changed.');
   }
   const before = buildIsolatedCiGrantPlan({
-    tables: inventory.tables.filter(table => !(TABLES as readonly string[]).includes(table)),
+    tables: historicalTables.filter(table => !(TABLES as readonly string[]).includes(table)),
     databaseName: DATABASE,
     roleUsers: {
       runtime: B08_RUNTIME_IDENTITY,

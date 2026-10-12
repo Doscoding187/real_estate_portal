@@ -1,0 +1,16 @@
+
+> real_estate_portal@1.0.0 db:migrate:plan /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+> tsx scripts/databaseAuthorityCli.ts migration:plan
+
+{
+  "mode": "plan",
+  "planId": "903a7cae9413a9b9870e00b4",
+  "planDigest": "903a7cae9413a9b9870e00b4cf75abbc27858b1c380c0d3077415c34ab1efb85",
+  "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+  "acceptedOldHead": "0114_user_legal_acceptances.sql",
+  "pending": [],
+  "expectedNewHead": "0114_user_legal_acceptances.sql",
+  "lock": null,
+  "applied": [],
+  "freshSessionEvidence": null
+}

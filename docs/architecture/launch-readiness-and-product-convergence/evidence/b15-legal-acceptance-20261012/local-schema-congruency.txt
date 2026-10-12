@@ -1,0 +1,25 @@
+
+> real_estate_portal@1.0.0 db:schema:congruency /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+> tsx scripts/databaseAuthorityCli.ts schema:check
+
+{
+  "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+  "targetClass": "disposable-worktree",
+  "congruent": true,
+  "desiredDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+  "actualDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+  "differences": [],
+  "checkConstraintEnforcement": {
+    "applicable": false,
+    "variable": "tidb_enable_check_constraint",
+    "value": null,
+    "enabled": null,
+    "physical": {
+      "total": 39,
+      "enforced": 39,
+      "allEnforced": true,
+      "unenforced": []
+    }
+  },
+  "omittedDifferenceCount": 0
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "Actual local SPA; mocked synthetic legal API; no production or final-copy approval proof",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "unapprovedCookiesUnavailable": true,
+      "unavailableRegistrationAndLegalPageVerified": true,
+      "registrationChoiceInitiallyUnchecked": true,
+      "submissionDisabledWithoutChoice": true,
+      "exactBundleLink": true,
+      "dialogWithinViewport": true,
+      "horizontalOverflow": false,
+      "legalFixtureRendered": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "unapprovedCookiesUnavailable": true,
+      "unavailableRegistrationAndLegalPageVerified": true,
+      "registrationChoiceInitiallyUnchecked": true,
+      "submissionDisabledWithoutChoice": true,
+      "exactBundleLink": true,
+      "dialogWithinViewport": true,
+      "horizontalOverflow": false,
+      "legalFixtureRendered": true,
+      "pageErrors": []
+    }
+  ]
+}

@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0111_properties_canonical_place_reference_fk.sql');
+    expect(manifest.expectedHead.filename).toBe('0114_user_legal_acceptances.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0111_properties_canonical_place_reference_fk.sql',
+      expectedNewHead: '0114_user_legal_acceptances.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(104);
+    expect(plan.pending).toHaveLength(107);
       expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -479,8 +479,11 @@ describe('canonical migration manifest', () => {
         '0109_properties_canonical_place_reference.sql',
         '0110_properties_canonical_place_reference_index.sql',
         '0111_properties_canonical_place_reference_fk.sql',
+      '0112_legal_releases.sql',
+      '0113_legal_active_release.sql',
+      '0114_user_legal_acceptances.sql',
       ]);
-    expect(plan.expectedNewHead).toBe('0111_properties_canonical_place_reference_fk.sql');
+    expect(plan.expectedNewHead).toBe('0114_user_legal_acceptances.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

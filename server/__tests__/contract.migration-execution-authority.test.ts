@@ -490,8 +490,11 @@ describe('migration execution authority', () => {
       '0109_properties_canonical_place_reference.sql',
       '0110_properties_canonical_place_reference_index.sql',
       '0111_properties_canonical_place_reference_fk.sql',
+        '0112_legal_releases.sql',
+        '0113_legal_active_release.sql',
+        '0114_user_legal_acceptances.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0111_properties_canonical_place_reference_fk.sql');
+    expect(executionManifest.expectedHead).toBe('0114_user_legal_acceptances.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

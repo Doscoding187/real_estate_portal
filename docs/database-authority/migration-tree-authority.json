@@ -1312,6 +1312,30 @@
       ]
     },
     {
+      "path": "server/migrations/0112_legal_releases.sql",
+      "classification": "canonical active",
+      "purpose": "B15 additive legal acceptance authority candidate; no approved customer copy, installation, backfill or protected release.",
+      "approvedFiles": [
+        "server/migrations/0112_legal_releases.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0113_legal_active_release.sql",
+      "classification": "canonical active",
+      "purpose": "B15 additive legal acceptance authority candidate; no approved customer copy, installation, backfill or protected release.",
+      "approvedFiles": [
+        "server/migrations/0113_legal_active_release.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0114_user_legal_acceptances.sql",
+      "classification": "canonical active",
+      "purpose": "B15 additive legal acceptance authority candidate; no approved customer copy, installation, backfill or protected release.",
+      "approvedFiles": [
+        "server/migrations/0114_user_legal_acceptances.sql"
+      ]
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

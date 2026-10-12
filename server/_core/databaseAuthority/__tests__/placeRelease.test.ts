@@ -137,7 +137,7 @@ function fixture() {
     before = empty();
   const statements: string[] = [];
   const settings = {
-    headCount: 112,
+    headCount: loadAndValidateMigrationManifest().orderedMigrations.length,
     physicalCount: 5,
     wrongOwner: false,
     failInsert: false,

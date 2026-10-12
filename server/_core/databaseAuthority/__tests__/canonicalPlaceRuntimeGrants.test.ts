@@ -29,7 +29,18 @@ function fixture() {
 
 describe('canonical Place runtime grant release', () => {
   it('pins the accepted model and grants reads on exactly seven new tables, with only coverage writes', () => {
-    expect(normalizedDesiredSchema(schema).digest).toBe(plan.expectedModelDigest);
+    // The old protected grant release remains bound to its exact pre-B15 model.
+    const {
+      legalReleases: _releases,
+      legalActiveRelease: _pointer,
+      userLegalAcceptances: _acceptances,
+      ...historicalSchema
+    } = schema;
+    expect(normalizedDesiredSchema(historicalSchema).digest).toBe(plan.expectedModelDigest);
+    expect(normalizedDesiredSchema(schema).digest).not.toBe(plan.expectedModelDigest);
+    expect(plan.after.join(' ')).not.toMatch(
+      /legal_releases|legal_active_release|user_legal_acceptances/,
+    );
     expect(plan.planDigest).toBe(
       '8a99133a0e23a21e1a38aee5f6d5507779628c0b7b0a5434b9e64bf8c5f9dead',
     );

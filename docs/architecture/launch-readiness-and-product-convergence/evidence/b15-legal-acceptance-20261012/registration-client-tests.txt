@@ -1,0 +1,102 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+
+stderr | client/src/pages/__tests__/Login.legal-acceptance.test.tsx
+⚠️ Environment variable VITE_API_URL is not defined. Using fallback: http://localhost:3000
+⚠️ Environment variable VITE_APP_LOGO is not defined. Using fallback: /logo.png
+⚠️ Environment variable VITE_APP_TITLE is not defined. Using fallback: Property Listify
+⚠️ Environment variable VITE_ANALYTICS_ENDPOINT is not defined. Using fallback: http://localhost:3000/analytics
+⚠️ Environment variable VITE_ANALYTICS_WEBSITE_ID is not defined. Using fallback: local-test-site
+⚠️ Environment variable VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED is not defined. Using fallback: 1
+
+stderr | client/src/pages/__tests__/Login.register-role.test.tsx
+⚠️ Environment variable VITE_API_URL is not defined. Using fallback: http://localhost:3000
+⚠️ Environment variable VITE_APP_LOGO is not defined. Using fallback: /logo.png
+⚠️ Environment variable VITE_APP_TITLE is not defined. Using fallback: Property Listify
+⚠️ Environment variable VITE_ANALYTICS_ENDPOINT is not defined. Using fallback: http://localhost:3000/analytics
+⚠️ Environment variable VITE_ANALYTICS_WEBSITE_ID is not defined. Using fallback: local-test-site
+⚠️ Environment variable VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED is not defined. Using fallback: 1
+
+stderr | client/src/pages/__tests__/Login.register-role-preselection.test.tsx
+⚠️ Environment variable VITE_API_URL is not defined. Using fallback: http://localhost:3000
+⚠️ Environment variable VITE_APP_LOGO is not defined. Using fallback: /logo.png
+⚠️ Environment variable VITE_APP_TITLE is not defined. Using fallback: Property Listify
+⚠️ Environment variable VITE_ANALYTICS_ENDPOINT is not defined. Using fallback: http://localhost:3000/analytics
+⚠️ Environment variable VITE_ANALYTICS_WEBSITE_ID is not defined. Using fallback: local-test-site
+⚠️ Environment variable VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED is not defined. Using fallback: 1
+
+stderr | client/src/pages/__tests__/Login.register-role-preselection.test.tsx > Login register role preselection > preselects the Agency role card for the agency commercial entry link
+An update to Login inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | client/src/pages/__tests__/Login.register-role-preselection.test.tsx > Login register role preselection > preselects other available roles passed through the role parameter
+An update to Login inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ |client| client/src/pages/__tests__/Login.register-role-preselection.test.tsx (4 tests) 1868ms
+   ✓ Login register role preselection > preselects the Agency role card for the agency commercial entry link 1279ms
+stderr | client/src/pages/__tests__/Login.register-role.test.tsx > Login registration audience preselection > preselects the Developer registration dialog for the developer commercial entry
+An update to Login inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+stderr | client/src/pages/__tests__/Login.register-role.test.tsx > Login registration audience preselection > preselects the matching role card for other commercial audiences
+An update to Login inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://react.dev/link/wrap-tests-with-act
+
+ ✓ |client| client/src/pages/__tests__/Login.register-role.test.tsx (5 tests) 3775ms
+   ✓ Login registration audience preselection > preselects the Developer registration dialog for the developer commercial entry 1415ms
+   ✓ Login registration audience preselection > preselects the matching role card for other commercial audiences 580ms
+   ✓ Login registration audience preselection > keeps the neutral role chooser open when no role is requested 317ms
+   ✓ Login registration audience preselection > lets a global registration visitor choose their own account path 1331ms
+ ✓ |client| client/src/pages/__tests__/Login.legal-acceptance.test.tsx (3 tests) 5106ms
+   ✓ registration legal choice > requires an unchecked choice and links to the precise bundle in a new tab 2019ms
+   ✓ registration legal choice > sends an explicit choice and requires a new choice after stale-copy rejection 2492ms
+   ✓ registration legal choice > keeps new registration disabled when approved documents cannot be loaded 593ms
+stderr | client/src/pages/__tests__/Login.founder-google-entry.test.tsx
+⚠️ Environment variable VITE_API_URL is not defined. Using fallback: http://localhost:3000
+⚠️ Environment variable VITE_APP_LOGO is not defined. Using fallback: /logo.png
+⚠️ Environment variable VITE_APP_TITLE is not defined. Using fallback: Property Listify
+⚠️ Environment variable VITE_ANALYTICS_ENDPOINT is not defined. Using fallback: http://localhost:3000/analytics
+⚠️ Environment variable VITE_ANALYTICS_WEBSITE_ID is not defined. Using fallback: local-test-site
+⚠️ Environment variable VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED is not defined. Using fallback: 1
+
+ ✓ |client| client/src/pages/__tests__/Login.founder-google-entry.test.tsx (5 tests) 1144ms
+   ✓ normal founder Google sign-in entry > uses the API entry only after server admission is enabled, without a caller redirect 636ms
+
+ Test Files  4 passed (4)
+      Tests  17 passed (17)
+   Start at  23:12:21
+   Duration  18.05s (transform 1.46s, setup 2.54s, collect 11.42s, tests 11.89s, environment 14.96s, prepare 1.34s)
+
