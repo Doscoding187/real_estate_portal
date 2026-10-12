@@ -170,11 +170,13 @@ const ListingWizard: React.FC = () => {
   );
 
   // TRPC mutation for creating listing
-  const createListingMutation = trpc.listing.create.useMutation();
+  // A transport/server failure can follow a committed write. The wizard owns
+  // reconciliation; inherited QueryClient retries must never repeat that write.
+  const createListingMutation = trpc.listing.create.useMutation({ retry: false });
   // TRPC mutation for submitting for review
-  const submitForReviewMutation = trpc.listing.submitForReview.useMutation();
+  const submitForReviewMutation = trpc.listing.submitForReview.useMutation({ retry: false });
   // TRPC mutation for updating listing
-  const updateListingMutation = trpc.listing.update.useMutation();
+  const updateListingMutation = trpc.listing.update.useMutation({ retry: false });
 
   const workspaceReturn =
     user?.role === 'agent'

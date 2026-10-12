@@ -1,0 +1,40 @@
+{
+  "reviewedAt": "2026-10-12T06:30:36.933313+00:00",
+  "base": "f6d2e9c532b8110770777e8b20889d2b8b7f9058",
+  "before": {
+    "selectedRegressions": 7,
+    "failed": 7
+  },
+  "after": {
+    "selectedPassed": 7,
+    "focusedPassed": 88,
+    "appTypecheckExit": 0,
+    "scopedTestTypecheckExit": 0,
+    "authorityCheckExit": 0,
+    "lintErrors": 0,
+    "lintWarnings": 47,
+    "buildExit": 0
+  },
+  "nativeLeastPrivilegeProof": false,
+  "productionSharedLockProof": "NOT_RUN",
+  "hostedCI": "NOT_RUN_AT_COMMIT",
+  "files": {
+    "server/services/placeDiscoveryService.ts": "eb3283618cd9ac971883c2ac60ac7a7a128c9a5ec5d5db9d0368280e1d759b97",
+    "server/services/canonicalListingPlaceResolver.ts": "ad6d9b3e101d7224c5a9028275f48dac285a1dd9ae60f866a7a3a1ad10cd7fab",
+    "client/src/components/listing-wizard/ListingWizard.tsx": "950ae86ef7b351078fef1c12bc09a99299b41a5b8ec8af7a97eb66fc05c955f3",
+    "client/src/components/listing-wizard/steps/MediaUploadStep.tsx": "302f180a8830c08b9475762c2d4040bce59d5ee01dc47e89665b9213fba96c30",
+    "server/__tests__/contract.canonical-listing-place.test.ts": "fbb1e4d3ba9f70d2eb298ccd7ec602700ad26f38f2f2724e1c739d976ad6cf1a",
+    "client/src/components/listing-wizard/ListingWizard.persistence.test.tsx": "5767ef5ba80d1fc24568dbf97ceb83dba690fec01733bc5f6c4d9a52418e5d57",
+    "client/src/components/listing-wizard/steps/MediaUploadStep.persistence.test.tsx": "cc26836ceaf1869060105ac4c2c6448af061d4b462dc1622b0d8bef02ba4e627"
+  },
+  "privateLogHashes": {
+    "repair-before-selected-corrected.log": "ff3a14031e195e65ecf9b292869320c9cdb0a8825e89afb8d48632834207bb93",
+    "repair-after-selected-corrected.log": "d9caf53ea3d3ae5032840ba6bf7ddc9a4351ac5afdfc29ff0983b8629fdde102",
+    "repair-focused-corrected.log": "a25e8f1471ae899364d17d49c2deb2c6011ed19310901380f292660687af3e7a",
+    "repair-app-check.log": "1372cf1721f566a2aa081fc31c20e56b3a8ad9fdf53f37a658c335384ae30b0a",
+    "repair-test-typecheck-with-ambient.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "repair-authority-check.log": "6755929559af1370427a5c41841071ab37dd29a9d4ce30adae062aa8c0126609",
+    "repair-lint-corrected.log": "13bfcba744429eaae43899554554ca0a06c789a8fd25bb1a74b133be67a987c9",
+    "repair-build-with-identity.log": "34c40b012279f5229d8488531c8a1127c01bb119d7963c4263f9cd7cb208603e"
+  }
+}

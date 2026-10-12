@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { drizzle as proxyDrizzle } from 'drizzle-orm/mysql-proxy';
 import {
   canonicalListingLocationFromRecord,
   canonicalListingLocationSchema,
@@ -342,8 +343,39 @@ describe('Listing transaction locks and persistence boundary', () => {
       publication: true,
       lock: true,
     });
-    expect(database.locks).toEqual(['update', 'update', 'update', 'update', 'update']);
+    expect(database.locks).toEqual(['share', 'share', 'share', 'share', 'share']);
     expect(assignment?.execution.placeId).toBe(id);
+    expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it('resolves using SELECT-only reference authority while retaining every transactional lock', async () => {
+    const responses = selectedRows();
+    const statements: string[] = [];
+    // Real Drizzle SQL generation, with a modeled MySQL privilege boundary.
+    // This is not a native database concurrency or production permission proof.
+    const database = proxyDrizzle(async query => {
+      statements.push(query);
+      if (/for update/i.test(query)) throw new Error('SELECT with locking clause command denied');
+      if (!/^select /i.test(query) || !/for share\s*$/i.test(query)) {
+        throw new Error('Reference reads must remain locked and must never write');
+      }
+      const rows = responses.shift();
+      if (!rows) throw new Error('Unexpected reference query');
+      return { rows: rows.map(row => Object.values(row as Record<string, unknown>)) };
+    });
+    const assignment = await resolveCanonicalListingPlace(location, {
+      database: database as any,
+      propertyType: 'house',
+      publication: false,
+      lock: true,
+    });
+    expect(assignment?.execution.placeId).toBe(id);
+    expect(assignment?.labels).toMatchObject({
+      selected: 'Chosen Locality',
+      province: 'Chosen Province',
+    });
+    expect(statements).toHaveLength(5);
+    expect(responses).toHaveLength(0);
     expect(getDb).not.toHaveBeenCalled();
   });
 
