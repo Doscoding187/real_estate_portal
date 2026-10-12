@@ -1,0 +1,32 @@
+[
+  {
+    "viewport": "desktop",
+    "width": 1440,
+    "height": 1000,
+    "overflow": false,
+    "externalRequests": 0,
+    "headings": [
+      "Changes requiring review",
+      "Payment disclosure — show before invoice request and EFT instructions",
+      "Terms of Service — proposed customer text",
+      "Privacy Notice — proposed customer text",
+      "Internal publication holds — excluded from final customer text"
+    ],
+    "scope": "internal draft preview only; no application signup or acceptance proof"
+  },
+  {
+    "viewport": "mobile",
+    "width": 390,
+    "height": 844,
+    "overflow": false,
+    "externalRequests": 0,
+    "headings": [
+      "Changes requiring review",
+      "Payment disclosure — show before invoice request and EFT instructions",
+      "Terms of Service — proposed customer text",
+      "Privacy Notice — proposed customer text",
+      "Internal publication holds — excluded from final customer text"
+    ],
+    "scope": "internal draft preview only; no application signup or acceptance proof"
+  }
+]
