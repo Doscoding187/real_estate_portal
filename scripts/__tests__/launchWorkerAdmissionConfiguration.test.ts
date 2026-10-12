@@ -1,11 +1,14 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const configuration = JSON.parse(
-  readFileSync(path.resolve(process.cwd(), 'railway.worker-admission.json'), 'utf8'),
+  readFileSync(
+    path.resolve(process.cwd(), 'deployment/railway-worker-admission-service-settings.json'),
+    'utf8',
+  ),
 );
 const inputs = {
   LAUNCH_WORKER_ADMISSION_EXPECTED_SHA: 'a'.repeat(40),
@@ -36,6 +39,35 @@ describe('deployment-effective held worker admission command', () => {
       timeout: 5_000,
     });
   }
+
+  it('has no default repository file that can override the chosen service settings', () => {
+    for (const filename of ['railway.json', 'railway.toml']) {
+      expect(existsSync(path.resolve(process.cwd(), filename))).toBe(false);
+    }
+    expect(configuration.build).toEqual({
+      builder: 'RAILPACK',
+      buildCommand: 'pnpm build:backend',
+    });
+  });
+
+  it('preserves the API release settings separately from the admission process', () => {
+    const api = JSON.parse(
+      readFileSync(
+        path.resolve(process.cwd(), 'deployment/railway-api-service-settings.json'),
+        'utf8',
+      ),
+    );
+    expect(api.build).toEqual({ builder: 'RAILPACK', buildCommand: 'pnpm build:railway' });
+    expect(api.deploy).toEqual({
+      startCommand: 'node --import tsx server/_core/start.ts',
+      drainingSeconds: 30,
+      healthcheckPath: '/api/readiness',
+      healthcheckTimeout: 300,
+      restartPolicyType: 'ON_FAILURE',
+      restartPolicyMaxRetries: 10,
+    });
+    expect(api.deploy.startCommand).not.toBe(configuration.deploy.startCommand);
+  });
 
   it('starts only the diagnostic and forwards all independently reviewed arguments', () => {
     const result = run();

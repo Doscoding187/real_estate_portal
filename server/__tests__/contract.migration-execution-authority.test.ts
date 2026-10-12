@@ -150,13 +150,17 @@ function trackedWorkflowFiles(): string[] {
 }
 
 function deploymentFiles(): string[] {
-  return readdirSync(ROOT)
+  const rootFiles = readdirSync(ROOT)
     .filter(file =>
       /^(Dockerfile.*|Procfile.*|docker-compose.*\.ya?ml|railway\.json|render\.ya?ml|fly\.toml|vercel\.json)$/.test(
         file,
       ),
     )
     .sort();
+  const serviceSettings = readdirSync(join(ROOT, 'deployment'))
+    .filter(file => file.endsWith('.json'))
+    .map(file => `deployment/${file}`);
+  return [...rootFiles, ...serviceSettings].sort();
 }
 
 describe('migration execution authority', () => {
@@ -253,6 +257,7 @@ describe('migration execution authority', () => {
       'start:hosted:api',
       'email:supervisor',
       'lead-delivery:worker',
+      'launch:worker-admission',
     ];
 
     for (const name of startupScripts) {
@@ -280,7 +285,9 @@ describe('migration execution authority', () => {
       expect(source).not.toContain('db:migrate:test');
     }
 
-    expect(read('railway.json')).toContain('"startCommand": "node --import tsx server/_core/start.ts"');
+    expect(read('deployment/railway-api-service-settings.json')).toContain(
+      '"startCommand": "node --import tsx server/_core/start.ts"',
+    );
     expect(read('railway.email-worker.json')).toContain('"startCommand": "pnpm email:supervisor"');
     expect(read('railway.lead-job.json')).toContain('"startCommand": "pnpm lead-delivery:worker"');
   });

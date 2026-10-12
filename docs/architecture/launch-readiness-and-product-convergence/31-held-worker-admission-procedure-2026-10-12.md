@@ -31,15 +31,27 @@ objects before queue inspection. No additional grant is requested.
 
 ## Concrete execution scope
 
-The source must include `railway.worker-admission.json`, and each temporary
-deployment must explicitly select `/railway.worker-admission.json` as its
-configuration file. Railway configuration in source overrides dashboard
-settings: the default `railway.json` starts the API, the email file starts the
-normal supervisor, and the lead file includes its recurring cron. A dashboard
-start-command override alone cannot establish the promised admission process.
-The dedicated file selects the backend build, admission-only command, empty
-pre-deploy list, NEVER restart and no cron or API healthcheck. Read the actual
-deployment-effective settings before accepting any result.
+Use `deployment/railway-worker-admission-service-settings.json` as the reviewed
+build/deploy fragment for an explicit one-service environment patch. It is
+not a Config as Code file and must not be selected as a Railway Config File.
+Railway rejected the earlier dedicated file selection as deprecated. The
+published EnvironmentConfig `configFile` key was also accepted without being
+retained; a successful patch response did not prove selection.
+
+The reviewed source must have no default `railway.json` or `railway.toml`, and
+both workers must retain a null custom Config File setting. This removes the
+repository API default that could override the diagnostic command, healthcheck
+and restart policy. The API's settings are preserved separately in
+`deployment/railway-api-service-settings.json` for its own approved release;
+the running API deployment is not changed by this source correction.
+
+Apply the admission fragment's `build` and `deploy` objects, with explicit null
+cron and healthcheck, to only the approved service. Use an explicit minimal
+`environmentPatchCommit` and `skipDeploys:true`, then deploy the exact merged
+commit separately. Backend build, admission-only start, empty pre-deploy work
+and NEVER restart must be verified from deployment-effective settings. Its
+resolved repository file manifest must be empty. Stop before accepting any
+runtime result if source configuration or an unexpected setting is resolved.
 
 Provide all six independently reviewed inputs as temporary per-service
 variables: `LAUNCH_WORKER_ADMISSION_EXPECTED_SHA`,
@@ -51,7 +63,7 @@ variables: `LAUNCH_WORKER_ADMISSION_EXPECTED_SHA`,
 launching the diagnostic; values remain quoted arguments. Expected source and
 identities must come from the approved manifest, never from the service's
 actual automatic Railway variables. Restore/remove only these temporary
-variables and restore the previous configuration-file setting during teardown.
+variables during teardown. Do not attempt a new Config as Code selection.
 
 Use the existing project `8cdd7515-ddd2-4252-bbee-df5a5c209d4b`, Production
 `63070d99-357a-40ba-99c3-6d1368f61652`, target fingerprint
@@ -59,10 +71,10 @@ Use the existing project `8cdd7515-ddd2-4252-bbee-df5a5c209d4b`, Production
 The schema/reference release remains head0111 / 16,944 approved Places; this
 operation does not reinstall, migrate, seed or change it.
 
-| Service | Exact ID | Temporary admission process | Held final command |
-| --- | --- | --- | --- |
-| Email | `59c0d8f8-abe2-4696-ad9c-de1037723b66` | Admission command, restart NEVER, no cron, one replica | `pnpm email:supervisor`, ALWAYS; deployment held |
-| Lead | `e1e32aa8-0b85-4c91-af18-843f1bc52d9f` | Admission command, restart NEVER, no cron, one replica | `pnpm lead-delivery:worker`, NEVER; cron and deployment held |
+| Service | Exact ID                               | Temporary admission process                            | Held final command                                           |
+| ------- | -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| Email   | `59c0d8f8-abe2-4696-ad9c-de1037723b66` | Admission command, restart NEVER, no cron, one replica | `pnpm email:supervisor`, ALWAYS; deployment held             |
+| Lead    | `e1e32aa8-0b85-4c91-af18-843f1bc52d9f` | Admission command, restart NEVER, no cron, one replica | `pnpm lead-delivery:worker`, NEVER; cron and deployment held |
 
 No new service, bucket, database, network range or paid resource is proposed.
 Inspect effective credentials, strict TLS and per-service egress/network
@@ -76,7 +88,10 @@ range. Any network change requires its own exact reviewed scope.
 2. Complete a private execution manifest with that source, both service IDs,
    fingerprint, `worker-connect` approval, attended UTC window, incident owner,
    permitted effects (read-only admission), provider operation details and
-   containment. This plan does not start or renew an execution window.
+   containment. Use one bounded 30-minute window starting at receipt of its
+   explicit timing approval; record the exact UTC deadline before mutation and
+   supply the same deadline to both services. Do not extend it. This plan does
+   not start or renew an execution window.
 3. Read effective provider configuration and unrelated staged work. Patch
    `398fb997-eeee-4b51-904e-6d4c01fd0aed` belongs to another workstream. Do not
    accept, modify, discard or consume it. Validate that the chosen per-service

@@ -6,16 +6,19 @@ Use this for the backend service that serves `api.propertylistifysa.co.za`.
 
 Railway starts the API with:
 
-`pnpm start:prod`
+`node --import tsx server/_core/start.ts`
 
-This is pinned in `railway.json`. Launch preflight, migration planning, and
+This is recorded in `deployment/railway-api-service-settings.json` and must be
+applied explicitly to the approved API service. Railway does not discover this
+fragment during deployment. There is no repository default Config as Code file
+that can override other services' commands. Launch preflight, migration planning, and
 explicit release application are deliberately outside server startup; use the
 release procedure before deployment. Server startup must not mutate a protected
 database or silently turn a failed preflight into an application boot.
 
-The production commands explicitly pin both `NODE_ENV=production` and
-`APP_ENV=production`, so a stale service variable cannot make the release
-select a development or staging database target.
+The API service must explicitly supply both `NODE_ENV=production` and
+`APP_ENV=production`; verify their actual values before a release so a stale
+service variable cannot select a development or staging database target.
 
 ## Why this matters
 

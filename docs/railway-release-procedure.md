@@ -43,7 +43,13 @@ canonical reference preparation automatically.
 
 ## 3) Deploy to Railway
 
-- Keep Railway start command set to `pnpm start:prod` (the value pinned in `railway.json`).
+- Review and apply `deployment/railway-api-service-settings.json` to the exact
+  API service through an explicit environment-scoped plan. Its start command
+  is `node --import tsx server/_core/start.ts`; the API service must explicitly
+  supply `APP_ENV=production` and `NODE_ENV=production`.
+- The repository has no default `railway.json` or `railway.toml`. The JSON
+  fragment is not a Config as Code file; do not select it as one. Verify build,
+  start, readiness, draining and restart values on the actual deployment.
 - Trigger deploy after successful predeploy step.
 
 ## 4) Post-deploy smoke check
@@ -78,6 +84,7 @@ Then verify in browser/network logs:
 Immediate containment:
 
 1. Roll back to last known-good commit/deployment.
-2. Confirm Railway start command remains `pnpm start:prod`.
+2. Confirm the API start command remains `node --import tsx server/_core/start.ts`
+   and both production environment values match the approved release.
 3. For `AUTH_RATE_LIMIT_STORE_UNAVAILABLE`, inspect the Railway Redis service health and its `REDIS_URL` binding without exposing credentials. Do not add an in-memory production limiter or loosen CORS to mask the failure.
 4. Re-run predeploy and `release:smoke:auth-boundary` on a fix branch; redeploy only after both are green.

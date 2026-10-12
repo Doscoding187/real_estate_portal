@@ -16,13 +16,15 @@ describe('launch safety contract', () => {
   });
 
   it('keeps migration execution outside hosted application startup', () => {
-    const railway = readRepoFile('railway.json');
+    const railway = readRepoFile('deployment/railway-api-service-settings.json');
+    const admission = readRepoFile('deployment/railway-worker-admission-service-settings.json');
     const packageJson = readRepoFile('package.json');
 
     expect(railway).toContain('"startCommand": "node --import tsx server/_core/start.ts"');
     expect(packageJson).toContain('"start": "pnpm start:prod"');
     expect(packageJson).not.toContain('start:prod:with-migrations');
     expect(railway).not.toContain('db:migrate');
+    expect(admission).not.toContain('db:migrate');
   });
 
   it('keeps committed email env examples shell-safe', () => {
