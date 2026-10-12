@@ -90,7 +90,7 @@ export default function Favorites() {
 
       <footer className="mt-12 bg-muted/30 py-8">
         <div className="container text-center text-muted-foreground">
-          <p>&copy; 2025 Real Estate Portal. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Property Listify. All rights reserved.</p>
         </div>
       </footer>
     </ProspectLayout>
