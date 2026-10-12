@@ -477,10 +477,15 @@ export async function resubmitRejectedDeveloperOrganisation(
   });
 }
 
-export async function getPublisherById(id: number) {
-  const database = await getDb();
-  if (!database) throw new Error('Database not available');
-  const [publisher] = await database
+export async function getPublisherById(
+  id: number,
+  database?: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+) {
+  // Workers keep their admitted connection; standalone API lookups resolve
+  // the normal runtime pool.
+  const selectedDatabase = database ?? (await getDb());
+  if (!selectedDatabase) throw new Error('Database not available');
+  const [publisher] = await selectedDatabase
     .select()
     .from(cataloguePublishers)
     .where(eq(cataloguePublishers.id, id))
