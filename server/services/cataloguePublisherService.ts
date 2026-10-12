@@ -117,8 +117,11 @@ async function createPlatformReferencePublisher(input: CreateCataloguePublisherI
   return { id: databasePublisher.id, slug: databasePublisher.slug };
 }
 
-async function getPublisherById(id: number) {
-  return projectPublisher(await developerIdentityService.getPublisherById(id));
+async function getPublisherById(
+  id: number,
+  database?: Parameters<typeof developerIdentityService.getPublisherById>[1],
+) {
+  return projectPublisher(await developerIdentityService.getPublisherById(id, database));
 }
 
 async function getPublisherBySlug(slug: string) {

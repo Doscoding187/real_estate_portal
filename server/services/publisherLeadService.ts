@@ -186,8 +186,15 @@ export async function dispatchPublisherLeadDelivery(
     throw new Error('Claimed publisher delivery does not match the lead recipient.');
   }
 
-  const profile = await cataloguePublisherService.getPublisherById(claim.recipientPublisherId);
-  if (!profile || !profile.publicContactEmail || profile.ownerType === 'platform') {
+  const profile = await cataloguePublisherService.getPublisherById(
+    claim.recipientPublisherId,
+    database,
+  );
+  if (
+    !profile ||
+    !profile.publicContactEmail ||
+    profile.authorityKind !== 'developer_first_party'
+  ) {
     throw new Error('Claimed publisher has no eligible email destination.');
   }
 
@@ -218,7 +225,7 @@ async function retryPublisherLeadDelivery(leadId: number) {
   const profile = await cataloguePublisherService.getPublisherById(lead.cataloguePublisherId);
   if (
     !profile?.publicContactEmail ||
-    profile.ownerType === 'platform' ||
+    profile.authorityKind !== 'developer_first_party' ||
     !profile.developerOrganisationId
   ) {
     return { success: false as const, status: 'attention_required' as const };

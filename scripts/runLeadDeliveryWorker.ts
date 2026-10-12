@@ -14,6 +14,12 @@ import { dispatchPublisherLeadDelivery } from '../server/services/publisherLeadS
  * are registered explicitly only when their provider contract supports stable
  * idempotency keys.
  */
+assertNoDeployedTestConfiguration();
+assertHostedRuntimeConfiguration();
+
+const database = await getWorkerDb();
+if (!database) throw new Error('Database unavailable');
+
 const dispatcher: LeadDeliveryDispatcher = async claim => {
   if (
     claim.channel === 'none' ||
@@ -26,7 +32,7 @@ const dispatcher: LeadDeliveryDispatcher = async claim => {
     };
   }
   if (claim.channel === 'email' && claim.recipientPublisherId) {
-    return dispatchPublisherLeadDelivery(claim);
+    return dispatchPublisherLeadDelivery(claim, database);
   }
   return {
     status: 'attention_required',
@@ -34,11 +40,6 @@ const dispatcher: LeadDeliveryDispatcher = async claim => {
   };
 };
 
-assertNoDeployedTestConfiguration();
-assertHostedRuntimeConfiguration();
-
-const database = await getWorkerDb();
-if (!database) throw new Error('Database unavailable');
 try {
   const result = await runLeadDeliveryWorker({ database, dispatcher, limit: 25 });
   const backlog = await getLeadDeliveryBacklog(database);
