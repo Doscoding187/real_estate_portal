@@ -1,12 +1,19 @@
-import { useEffect, useMemo } from 'react';
-import { Link, useLocation, useRoute } from 'wouter';
+import { useEffect, useMemo, useState } from 'react';
+import { useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
   formatCategoryLabel,
   getCategoryMeta,
+  parseServiceLocationInput,
   serviceCategoryFromSlug,
+  serviceJourneyContextFromSearch,
   slugifyLocationSegment,
+  toProviderSlug,
   toServiceCategorySlug,
+  buildProviderProfilePath,
+  buildServiceCategoryPath,
+  buildServiceLocationPath,
+  buildServiceRequestPath,
   type ServiceCategory,
 } from '@/features/services/catalog';
 import { ServiceHeroSearch } from '@/components/services/ServiceHeroSearch';
@@ -14,57 +21,96 @@ import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/
 import { TrustStepsRow } from '@/components/services/TrustStepsRow';
 import { applySeo } from '@/lib/seo';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BadgeCheck, MapPinned, Sparkles } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowRight, BadgeCheck, MapPinned, Search, Sparkles } from 'lucide-react';
 import { getServiceTopicPage, ServiceTopicPage } from './ServiceTopicPage';
+import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 function normalizeLocation(location: string) {
-  const [suburb, city, province] = location
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean);
-  return { suburb, city, province };
+  return parseServiceLocationInput(location);
 }
 
 export default function ServicesCategoryPage() {
   const [, params] = useRoute('/services/:category');
-  const [, setLocation] = useLocation();
+  const { search, setLocation } = useServicesLocation();
   const categoryParam = String(params?.category || '').trim();
   const serviceTopic = getServiceTopicPage(slugifyLocationSegment(categoryParam));
-  const category =
-    serviceCategoryFromSlug(categoryParam) || ('home_improvement' as ServiceCategory);
-
+  const parsedCategory = serviceCategoryFromSlug(categoryParam);
+  const category = parsedCategory || ('home_improvement' as ServiceCategory);
   const initialQuery = useMemo(() => {
-    const search = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(search);
     return {
-      city: search.get('city') || undefined,
-      suburb: search.get('suburb') || undefined,
-      province: search.get('province') || undefined,
+      query: params.get('query') || undefined,
+      requestUnmatched: params.get('request') === 'unmatched',
+      city: params.get('city') || undefined,
+      suburb: params.get('suburb') || undefined,
+      province: params.get('province') || undefined,
+      propertyId: params.get('propertyId') || undefined,
+      listingId: params.get('listingId') || undefined,
+      developmentId: params.get('developmentId') || undefined,
+      intentStage: params.get('intentStage') || undefined,
+      sourceSurface: params.get('sourceSurface') || undefined,
+      sourceDetail: params.get('sourceDetail') || undefined,
+      reasonKey: params.get('reasonKey') || undefined,
     };
-  }, []);
-
-  const providersQuery = trpc.servicesEngine.directorySearch.useQuery({
-    category,
+  }, [search]);
+  const journeyContext = {
+    ...serviceJourneyContextFromSearch(search),
     city: initialQuery.city,
     suburb: initialQuery.suburb,
     province: initialQuery.province,
-    limit: 20,
-  });
+  };
+  const [searchText, setSearchText] = useState(initialQuery.query || '');
 
+  const providersQuery = trpc.servicesEngine.directorySearch.useQuery(
+    {
+      category,
+      query: searchText.trim() || undefined,
+      city: initialQuery.city,
+      suburb: initialQuery.suburb,
+      province: initialQuery.province,
+      limit: 20,
+    },
+    {
+      enabled: Boolean(parsedCategory),
+    },
+  );
   const providers = (providersQuery.data || []) as ProviderDirectoryItem[];
   const categoryMeta = getCategoryMeta(category);
-  const topProviders = providers.slice(0, 6);
+  const hasLocation = Boolean(initialQuery.city || initialQuery.suburb || initialQuery.province);
 
   useEffect(() => {
     const categoryLabel = formatCategoryLabel(category);
     applySeo({
-      title: `${categoryLabel} Services | Services`,
-      description: `Get matched with verified ${categoryLabel.toLowerCase()} providers in your area. Compare ratings, reviews, and request quotes.`,
+      title: `${categoryLabel} Services | Property Listify`,
+      description: `Browse published ${categoryLabel.toLowerCase()} providers and their listed service coverage.`,
       canonicalPath: `/services/${toServiceCategorySlug(category)}`,
     });
   }, [category]);
 
-  if (serviceTopic && !serviceCategoryFromSlug(categoryParam)) {
+  if (serviceTopic && !parsedCategory) {
     return <ServiceTopicPage topic={serviceTopic} />;
+  }
+
+  if (!parsedCategory) {
+    return (
+      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
+        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-8">
+            <h1 className="text-2xl font-semibold text-slate-950">Service category unavailable</h1>
+            <p className="text-sm leading-6 text-slate-600">
+              Choose a supported service category from the Property Listify directory.
+            </p>
+            <Button onClick={() => setLocation('/services')}>Browse services</Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  function submitLocation(selectedCategory: ServiceCategory, location: string) {
+    const normalized = normalizeLocation(location);
+    setLocation(buildServiceLocationPath(selectedCategory, normalized, journeyContext));
   }
 
   return (
@@ -77,42 +123,38 @@ export default function ServicesCategoryPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-flex items-center gap-2 rounded-full border border-[#0f3d91]/15 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Service Listify
+                  Property Listify Services
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full bg-[#10294f] px-3 py-1 text-xs font-semibold text-white">
                   <BadgeCheck className="h-3.5 w-3.5" />
                   {categoryMeta.shortLabel}
                 </span>
               </div>
-
               <div className="max-w-3xl space-y-4">
                 <h1 className="font-serif text-4xl leading-tight text-slate-950 md:text-6xl">
-                  Find trusted {formatCategoryLabel(category).toLowerCase()} through Service
-                  Listify.
+                  Find {formatCategoryLabel(category).toLowerCase()} through Property Listify.
                 </h1>
                 <p className="max-w-2xl text-base leading-7 text-slate-700 md:text-lg">
-                  {categoryMeta.subtitle} Start with your location and move straight into
-                  comparison, quotes, and provider discovery.
+                  {categoryMeta.subtitle} Compare published services and listed coverage before you
+                  send a request.
                 </p>
               </div>
-
               <div className="flex flex-wrap gap-3">
                 <Button
                   className="h-12 rounded-full bg-[#0f3d91] px-6 text-sm font-semibold text-white hover:bg-[#0a2e6e]"
-                  onClick={() => setLocation(`/services/request/${category}`)}
+                  onClick={() => setLocation(buildServiceCategoryPath(category, journeyContext))}
                 >
-                  Find a pro
+                  Browse providers
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   className="h-12 rounded-full border-[#0f3d91]/20 bg-white/85 px-6 text-sm font-semibold text-[#0f3d91] hover:bg-white"
-                  onClick={() => setLocation('/service/profile')}
+                  onClick={() => setLocation('/services')}
                 >
-                  Become a provider
+                  All services
                 </Button>
               </div>
-
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -128,9 +170,11 @@ export default function ServicesCategoryPage() {
                 </div>
                 <div className="rounded-[1.5rem] border border-white/70 bg-white/85 p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Search mode
+                    Search scope
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-slate-950">National + local</p>
+                  <p className="mt-2 text-base font-semibold text-slate-950">
+                    {hasLocation ? 'Listed coverage' : 'All published areas'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -142,31 +186,23 @@ export default function ServicesCategoryPage() {
                   defaultLocation={[initialQuery.suburb, initialQuery.city, initialQuery.province]
                     .filter(Boolean)
                     .join(', ')}
-                  title={`Find top rated ${formatCategoryLabel(category)} in your area`}
-                  subtitle="Start with your location and we will match you with trusted providers who cover your project type."
-                  onSubmit={({ category: selectedCategory, location }) => {
-                    const normalized = normalizeLocation(location);
-                    if (normalized.city && normalized.province) {
-                      setLocation(
-                        `/services/${toServiceCategorySlug(selectedCategory)}/${slugifyLocationSegment(normalized.city)}/${slugifyLocationSegment(normalized.province)}`,
-                      );
-                      return;
-                    }
-                    setLocation(`/services/request/${selectedCategory}`);
-                  }}
+                  title={`Browse ${formatCategoryLabel(category).toLowerCase()} providers`}
+                  subtitle="Choose a service and enter the area where the work will happen."
+                  onSubmit={({ category: selectedCategory, location }) =>
+                    submitLocation(selectedCategory, location)
+                  }
                 />
               </div>
-
               <div className="rounded-[2rem] bg-[#10294f] p-6 text-white shadow-[0_24px_90px_-40px_rgba(16,41,79,0.8)]">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
                   <MapPinned className="h-4 w-4" />
-                  What you can do here
+                  Directory guidance
                 </div>
                 <div className="mt-4 space-y-3">
                   {[
-                    'Filter this category by suburb, city, or province.',
-                    'Browse trusted providers before submitting your request.',
-                    'Jump into the guided request flow when you are ready.',
+                    'Providers shown here have an active published profile.',
+                    'Coverage is shown exactly as the provider listed it.',
+                    'A request is routed to one provider you select.',
                   ].map(item => (
                     <div
                       key={item}
@@ -180,61 +216,109 @@ export default function ServicesCategoryPage() {
             </div>
           </section>
 
+          {initialQuery.requestUnmatched && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+              No published provider currently covers this request. It was not sent to an unrelated
+              provider; browse the available options or try a wider area.
+            </div>
+          )}
+
           <TrustStepsRow />
 
           <section className="space-y-4">
-            <div className="flex items-end justify-between gap-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   Directory results
                 </p>
                 <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
-                  Top {formatCategoryLabel(category)} providers
+                  {hasLocation
+                    ? 'Providers covering your search'
+                    : `Published ${categoryMeta.label} providers`}
                 </h2>
               </div>
-              <Link
-                href="/services"
-                className="hidden text-sm font-semibold text-[#0f3d91] md:inline-flex md:items-center md:gap-2"
-              >
-                Back to all categories
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <label className="flex w-full max-w-sm items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 md:w-auto">
+                <Search className="h-4 w-4 text-slate-400" />
+                <span className="sr-only">Search providers</span>
+                <input
+                  value={searchText}
+                  onChange={event => setSearchText(event.target.value)}
+                  placeholder="Search provider or service"
+                  className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                />
+              </label>
             </div>
             <div className="grid gap-3">
-              {topProviders.map(provider => (
-                <ProviderCard
-                  key={provider.providerId}
-                  provider={provider}
-                  onCta={providerId =>
-                    setLocation(`/services/request/${category}?providerId=${providerId}`)
-                  }
-                />
-              ))}
-              {providers.length === 0 && (
-                <p className="rounded-[1.5rem] border border-dashed border-slate-300 bg-white/75 p-6 text-sm text-slate-600">
-                  No providers found for this category yet.
-                </p>
+              {providersQuery.isLoading &&
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={`category-provider-skeleton-${index}`}
+                    className="h-44 animate-pulse rounded-2xl bg-slate-200"
+                  />
+                ))}
+              {!providersQuery.isLoading && providersQuery.error && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+                  We could not load providers for this category. Please try again.
+                </div>
+              )}
+              {!providersQuery.isLoading &&
+                !providersQuery.error &&
+                providers.map(provider => (
+                  <ProviderCard
+                    key={provider.providerId}
+                    provider={provider}
+                    serviceCategory={category}
+                    profileHref={buildProviderProfilePath(
+                      toProviderSlug(provider.companyName, provider.providerId),
+                      search,
+                      {
+                        ...journeyContext,
+                        category,
+                        providerId: provider.providerId,
+                        serviceCode:
+                          provider.services?.find(service => service.category === category)?.code ||
+                          '',
+                      },
+                    )}
+                    onCta={providerId => {
+                      const serviceCode =
+                        provider.services?.find(service => service.category === category)?.code ||
+                        '';
+                      setLocation(
+                        buildServiceRequestPath(category, providerId, serviceCode, journeyContext),
+                      );
+                    }}
+                  />
+                ))}
+              {!providersQuery.isLoading && !providersQuery.error && providers.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white/75 p-6 text-sm leading-6 text-slate-600">
+                  No published providers match this search. Try a wider area or another service
+                  category.
+                </div>
               )}
             </div>
           </section>
 
           <section className="grid gap-3 md:grid-cols-3">
             <article className="rounded-[1.5rem] border bg-white p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-900">How many quotes will I get?</h3>
+              <h3 className="font-semibold text-slate-900">How are providers selected?</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Most requests are routed to up to 3 providers based on fit and location.
+                The directory shows active providers with a published profile and a matching
+                service.
               </p>
             </article>
             <article className="rounded-[1.5rem] border bg-white p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-900">Are providers vetted?</h3>
+              <h3 className="font-semibold text-slate-900">What does verified mean?</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Verified providers and moderation tiers are shown as profile badges.
+                It means the provider has passed the platform verification state recorded for this
+                directory.
               </p>
             </article>
             <article className="rounded-[1.5rem] border bg-white p-5 shadow-sm">
               <h3 className="font-semibold text-slate-900">Can I edit my request?</h3>
               <p className="mt-2 text-sm text-slate-600">
-                Yes. You can refine stage, context, and location before final submission.
+                Start a new request from the provider profile or directory card. Each request is
+                tied to the provider you choose.
               </p>
             </article>
           </section>

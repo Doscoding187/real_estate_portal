@@ -25,7 +25,7 @@ describe('Main Platform Navigation account routing', () => {
     ['property_developer', '/developer/dashboard'],
     ['agency_admin', '/agency/overview'],
     ['agent', '/agent/dashboard'],
-    ['service_provider', '/service/dashboard'],
+    ['service_provider', '/service/profile'],
   ])('keeps %s in its primary operational workspace', (role, href) => {
     expect(getCanonicalAccountDestination({ role, hasReferrerIdentity: true })).toBe(href);
   });

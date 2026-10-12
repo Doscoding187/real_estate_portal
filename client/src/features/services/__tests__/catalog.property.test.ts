@@ -1,49 +1,29 @@
-// Feature: services-marketplace-overhaul, Property 13: ZAR price range formatting
-
-/**
- * Property-Based Tests for catalog.ts utility functions
- *
- * Property 13: ZAR price range formatting
- * For any non-negative integers where max >= min,
- * formatPriceRange(min, max) returns a string matching R{min} – R{max}
- * with no decimal places.
- *
- * Validates: Requirements 6.4
- */
-
 import { describe, it, expect } from 'vitest';
 import fc from 'fast-check';
-import { formatPriceRange } from '../catalog';
+import {
+  buildServiceLocationPath,
+  buildServiceRequestPath,
+  formatPriceRange,
+  parseServiceLocationInput,
+  serviceJourneyContextFromSearch,
+} from '../catalog';
 
 describe('catalog.ts — Property-Based Tests', () => {
   describe('Property 13: ZAR price range formatting', () => {
     it('returns a string matching R{min} – R{max} for any non-negative integers where max >= min', () => {
       fc.assert(
-        fc.property(
-          // Generate two non-negative integers and ensure max >= min
-          fc.nat({ max: 10_000_000 }),
-          fc.nat({ max: 10_000_000 }),
-          (a, b) => {
-            const min = Math.min(a, b);
-            const max = Math.max(a, b);
-            const result = formatPriceRange(min, max);
+        fc.property(fc.nat({ max: 10_000_000 }), fc.nat({ max: 10_000_000 }), (a, b) => {
+          const min = Math.min(a, b);
+          const max = Math.max(a, b);
+          const result = formatPriceRange(min, max);
 
-            // Must match the pattern R{min} – R{max}
-            const expected = `R${min} \u2013 R${max}`;
-            expect(result).toBe(expected);
+          expect(result).toBe(`R${min} – R${max}`);
+          expect(result).not.toMatch(/\./);
+          expect(result).toMatch(/^R/);
+          expect(result).toContain('–');
 
-            // Must contain no decimal points
-            expect(result).not.toMatch(/\./);
-
-            // Must start with "R"
-            expect(result).toMatch(/^R/);
-
-            // Must contain the en-dash separator
-            expect(result).toContain('\u2013');
-
-            return true;
-          },
-        ),
+          return true;
+        }),
         { numRuns: 20 },
       );
     });
@@ -52,7 +32,7 @@ describe('catalog.ts — Property-Based Tests', () => {
       fc.assert(
         fc.property(fc.nat({ max: 10_000_000 }), n => {
           const result = formatPriceRange(n, n);
-          expect(result).toBe(`R${n} \u2013 R${n}`);
+          expect(result).toBe(`R${n} – R${n}`);
           expect(result).not.toMatch(/\./);
           return true;
         }),
@@ -70,19 +50,81 @@ describe('catalog.ts — Property-Based Tests', () => {
             const max = Math.max(a, b);
             const result = formatPriceRange(min, max);
 
-            // Result must not contain decimal points
             expect(result).not.toMatch(/\./);
-
-            // Result must match the rounded values
-            const expectedMin = Math.round(min);
-            const expectedMax = Math.round(max);
-            expect(result).toBe(`R${expectedMin} \u2013 R${expectedMax}`);
+            expect(result).toBe(`R${Math.round(min)} – R${Math.round(max)}`);
 
             return true;
           },
         ),
         { numRuns: 20 },
       );
+    });
+  });
+
+  it('round-trips the allowlisted journey context without inventing values', () => {
+    const context = {
+      category: 'moving',
+      providerId: 42,
+      serviceCode: 'removals',
+      propertyId: 7,
+      listingId: 8,
+      developmentId: 9,
+      propertyLinked: true,
+      intentStage: 'buyer_move_ready',
+
+      sourceSurface: 'journey_injection',
+      sourceDetail: 'saved_property',
+      reasonKey: 'move_ready',
+      suburb: 'Rondebosch',
+      city: 'Cape Town',
+      province: 'Western Cape',
+    } as const;
+
+    const requestPath = buildServiceRequestPath('moving', 42, 'removals', context);
+    const requestUrl = new URL(requestPath, 'https://property-listify.test');
+    expect(requestUrl.pathname).toBe('/services/request/moving');
+    expect(Object.fromEntries(requestUrl.searchParams.entries())).toEqual(
+      Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
+    );
+
+    const localizedPath = buildServiceLocationPath(
+      'moving',
+      { city: 'Cape Town', province: 'Western Cape' },
+      context,
+    );
+    const localizedUrl = new URL(localizedPath, 'https://property-listify.test');
+    expect(localizedUrl.pathname).toBe('/services/moving/cape-town/western-cape');
+    expect(serviceJourneyContextFromSearch(localizedUrl.search)).toEqual(
+      Object.fromEntries(Object.entries(context).map(([key, value]) => [key, String(value)])),
+    );
+  });
+
+  it('keeps city-only and province-only location input typed', () => {
+    expect(parseServiceLocationInput('Cape Town')).toEqual({
+      suburb: '',
+      city: 'Cape Town',
+      province: '',
+    });
+    expect(parseServiceLocationInput('Western Cape')).toEqual({
+      suburb: '',
+      city: '',
+      province: 'Western Cape',
+    });
+    expect(parseServiceLocationInput('gauteng')).toEqual({
+      suburb: '',
+      city: '',
+      province: 'Gauteng',
+    });
+
+    expect(parseServiceLocationInput('Rondebosch, Cape Town, Western Cape')).toEqual({
+      suburb: 'Rondebosch',
+      city: 'Cape Town',
+      province: 'Western Cape',
+    });
+    expect(parseServiceLocationInput('Rondebosch, Cape Town, western cape')).toEqual({
+      suburb: 'Rondebosch',
+      city: 'Cape Town',
+      province: 'Western Cape',
     });
   });
 });

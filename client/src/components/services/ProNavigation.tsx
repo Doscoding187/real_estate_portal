@@ -1,17 +1,21 @@
 import { Link, useLocation } from 'wouter';
+import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 
 const PRO_NAV_ITEMS = [
-  { href: '/service/dashboard', label: 'Dashboard' },
+  { href: '/service/dashboard', label: 'Requests' },
   { href: '/service/profile', label: 'Profile' },
-  { href: '/service/explore', label: 'Explore' },
 ];
 
 export function ProNavigation() {
   const [location] = useLocation();
+  const { status } = useServiceProviderOnboardingStatus();
+  const visibleItems = PRO_NAV_ITEMS.filter(
+    item => item.href !== '/service/dashboard' || status?.dashboardUnlocked,
+  );
 
   return (
     <nav className="flex flex-wrap gap-2 rounded-[1.25rem] border border-[#0f3d91]/10 bg-white/90 p-2 shadow-sm">
-      {PRO_NAV_ITEMS.map(item => {
+      {visibleItems.map(item => {
         const isActive = location === item.href;
         return (
           <Link

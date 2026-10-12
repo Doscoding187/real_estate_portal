@@ -1,23 +1,8 @@
-/**
- * Property-Based Tests for ServiceProviderProfilePage
- *
- * Feature: services-marketplace-overhaul
- *
- * Property 14: Reviews list is capped at 5
- * For any array of reviews of length n, the profile page displays exactly
- * Math.min(n, 5) review items.
- * Validates: Requirements 6.7
- */
-
-import { describe, it, expect, vi } from 'vitest';
-import * as fc from 'fast-check';
-import { render, screen } from '@testing-library/react';
-
-// ---------------------------------------------------------------------------
-// Mock tRPC
-// ---------------------------------------------------------------------------
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 const mockProfileData = vi.fn();
+const mockSetLocation = vi.fn();
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -34,7 +19,8 @@ vi.mock('wouter', async () => {
   return {
     ...actual,
     useRoute: () => [true, { slug: 'test-provider--123' }],
-    useLocation: () => ['/services/provider/test-provider--123', vi.fn()],
+    useLocation: () => ['/services/provider/test-provider--123', mockSetLocation],
+
     Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
       <a href={href}>{children}</a>
     ),
@@ -43,148 +29,189 @@ vi.mock('wouter', async () => {
 
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
-// ---------------------------------------------------------------------------
-// Import page after mocks
-// ---------------------------------------------------------------------------
-
 import ServiceProviderProfilePage from '../ServiceProviderProfilePage';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function makeReview(id: number) {
-  return {
-    id,
-    rating: 4,
-    title: `Review ${id}`,
-    content: `Content for review ${id}`,
-    isVerified: 0,
-  };
-}
-
-function makeProfile(reviews: ReturnType<typeof makeReview>[]) {
+function makeProfile(overrides: Record<string, unknown> = {}) {
   return {
     providerId: 123,
     companyName: 'Test Provider Co',
-    headline: 'We do great work',
-    bio: 'A great provider',
+    headline: 'We do clear property work',
+    bio: 'A published provider profile',
     logoUrl: null,
-    averageRating: 4.2,
-    reviewCount: reviews.length,
+    isPublished: true,
+    publicationStatus: 'published',
     verificationStatus: 'verified' as const,
-    moderationTier: null,
-    subscriptionTier: 'directory' as const,
     services: [],
     locations: [],
-    reviews,
+    reviews: [],
+    ...overrides,
   };
 }
 
-// ---------------------------------------------------------------------------
-// Property 14: Reviews list is capped at 5
-// ---------------------------------------------------------------------------
+describe('ServiceProviderProfilePage', () => {
+  beforeEach(() => {
+    mockProfileData.mockReset();
+    mockSetLocation.mockReset();
+    mockProfileData.mockReturnValue(makeProfile());
+    window.history.pushState({}, '', '/services/provider/test-provider--123');
+  });
 
-// Feature: services-marketplace-overhaul, Property 14: Reviews list is capped at 5
-describe('ServiceProviderProfilePage — Property 14: reviews list capped at 5', () => {
-  it('displays exactly Math.min(n, 5) review articles for any array of length n', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 0, max: 12 }),
-        n => {
-          const reviews = Array.from({ length: n }, (_, i) => makeReview(i + 1));
-          mockProfileData.mockReturnValue(makeProfile(reviews));
+  it('renders published service and coverage details', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        services: [
+          {
+            id: 1,
+            code: 'svc1',
+            displayName: 'Plumbing',
+            description: 'Fix pipes',
+            category: 'home_improvement',
+            minPrice: null,
+            maxPrice: null,
+          },
+        ],
+        locations: [
+          {
+            id: 1,
+            suburb: 'Rondebosch',
+            city: 'Cape Town',
+            province: 'Western Cape',
+            radiusKm: 25,
+          },
+        ],
+      }),
+    );
+    render(<ServiceProviderProfilePage />);
 
-          const { unmount } = render(<ServiceProviderProfilePage />);
+    expect(screen.getByText('Test Provider Co')).toBeInTheDocument();
+    expect(screen.getByText('Plumbing')).toBeInTheDocument();
+    expect(screen.getByText('Rondebosch, Cape Town, Western Cape')).toBeInTheDocument();
+  });
 
-          const articles = document.querySelectorAll('article');
-          expect(articles.length).toBe(Math.min(n, 5));
-
-          unmount();
-        },
-      ),
-      { numRuns: 13 }, // covers 0–12 reviews
+  it('shows a provider website when one is published', () => {
+    mockProfileData.mockReturnValue(makeProfile({ websiteUrl: 'https://provider.example' }));
+    render(<ServiceProviderProfilePage />);
+    expect(screen.getByRole('link', { name: /visit provider website/i })).toHaveAttribute(
+      'href',
+      'https://provider.example',
     );
   });
 
-  it('never displays more than 5 reviews regardless of how many exist', () => {
-    fc.assert(
-      fc.property(
-        fc.integer({ min: 6, max: 50 }),
-        n => {
-          const reviews = Array.from({ length: n }, (_, i) => makeReview(i + 1));
-          mockProfileData.mockReturnValue(makeProfile(reviews));
-
-          const { unmount } = render(<ServiceProviderProfilePage />);
-
-          const articles = document.querySelectorAll('article');
-          expect(articles.length).toBeLessThanOrEqual(5);
-
-          unmount();
-        },
-      ),
-      { numRuns: 10 },
+  it('shows price on request when no range is published', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        services: [
+          {
+            id: 1,
+            code: 'svc1',
+            displayName: 'Plumbing',
+            description: '',
+            category: 'home_improvement',
+            minPrice: null,
+            maxPrice: null,
+          },
+        ],
+      }),
     );
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Unit tests
-// ---------------------------------------------------------------------------
-
-describe('ServiceProviderProfilePage — unit tests', () => {
-  it('shows "Price on request" when minPrice is null', () => {
-    mockProfileData.mockReturnValue({
-      ...makeProfile([]),
-      services: [
-        { code: 'svc1', displayName: 'Plumbing', description: 'Fix pipes', category: 'home_improvement', minPrice: null, maxPrice: null },
-      ],
-    });
-
     render(<ServiceProviderProfilePage />);
     expect(screen.getByText('Price on request')).toBeInTheDocument();
   });
 
-  it('shows formatted ZAR price range when both prices are provided', () => {
-    mockProfileData.mockReturnValue({
-      ...makeProfile([]),
-      services: [
-        { code: 'svc1', displayName: 'Plumbing', description: 'Fix pipes', category: 'home_improvement', minPrice: 500, maxPrice: 2000 },
-      ],
-    });
-
+  it('shows a formatted price range when the provider publishes one', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        services: [
+          {
+            id: 1,
+            code: 'svc1',
+            displayName: 'Plumbing',
+            description: '',
+            category: 'home_improvement',
+            minPrice: 500,
+            maxPrice: 2000,
+          },
+        ],
+      }),
+    );
     render(<ServiceProviderProfilePage />);
     expect(screen.getByText('R500 – R2000')).toBeInTheDocument();
   });
 
-  it('shows "Verified review" label when isVerified === 1', () => {
-    mockProfileData.mockReturnValue(makeProfile([
-      { id: 1, rating: 5, title: 'Great!', content: 'Loved it', isVerified: 1 },
-    ]));
-
+  it('shows published feedback without adding a second trust badge', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        reviews: [{ id: 1, title: 'Great', content: 'Helpful' }],
+      }),
+    );
     render(<ServiceProviderProfilePage />);
-    expect(screen.getByText('Verified review')).toBeInTheDocument();
-  });
-
-  it('does not show "Verified review" label when isVerified === 0', () => {
-    mockProfileData.mockReturnValue(makeProfile([
-      { id: 1, rating: 3, title: 'Okay', content: 'It was fine', isVerified: 0 },
-    ]));
-
-    render(<ServiceProviderProfilePage />);
+    expect(screen.getByText('Great')).toBeInTheDocument();
     expect(screen.queryByText('Verified review')).not.toBeInTheDocument();
   });
 
-  it('Request quote button navigates to /services/request/{category}?providerId={id}', () => {
-    mockProfileData.mockReturnValue({
-      ...makeProfile([]),
-      services: [
-        { code: 'svc1', displayName: 'Plumbing', description: '', category: 'home_improvement', minPrice: null, maxPrice: null },
-      ],
-    });
+  it('does not render a review link when no feedback is published', () => {
+    render(<ServiceProviderProfilePage />);
+    expect(screen.queryByRole('link', { name: /published feedback/i })).not.toBeInTheDocument();
+  });
+
+  it('does not expose private contact fields in the public profile', () => {
+    mockProfileData.mockReturnValue(
+      makeProfile({ contactEmail: 'private@example.com', contactPhone: '+27 11 000 0000' }),
+    );
+    render(<ServiceProviderProfilePage />);
+    expect(screen.queryByText('private@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByText('+27 11 000 0000')).not.toBeInTheDocument();
+  });
+
+  it('carries the selected service and journey context into the request path', () => {
+    window.history.pushState(
+      {},
+      '',
+      '/services/provider/test-provider--123?category=home-improvement&serviceCode=plumbing&propertyId=7&listingId=8&developmentId=9&intentStage=buyer_move_ready&sourceSurface=journey_injection&sourceDetail=saved_property&reasonKey=move_ready&city=Cape%20Town&province=Western%20Cape',
+    );
+    mockProfileData.mockReturnValue(
+      makeProfile({
+        services: [
+          {
+            id: 1,
+            code: 'plumbing',
+            displayName: 'Plumbing',
+            category: 'home_improvement',
+            minPrice: null,
+            maxPrice: null,
+          },
+          {
+            id: 2,
+            code: 'moving',
+            displayName: 'Moving',
+            category: 'moving',
+            minPrice: null,
+            maxPrice: null,
+          },
+        ],
+      }),
+    );
 
     render(<ServiceProviderProfilePage />);
-    const btn = screen.getByRole('button', { name: /request quote/i });
-    expect(btn).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /request service/i })[0]!);
+
+    const path = mockSetLocation.mock.calls.at(-1)?.[0] || '';
+    expect(path).toContain('/services/request/home-improvement?');
+    expect(path).toContain('serviceCode=plumbing');
+    expect(path).toContain('propertyId=7');
+    expect(path).toContain('listingId=8');
+    expect(path).toContain('developmentId=9');
+    expect(path).toContain('intentStage=buyer_move_ready');
+    expect(path).toContain('sourceSurface=journey_injection');
+    expect(path).toContain('sourceDetail=saved_property');
+    expect(path).toContain('reasonKey=move_ready');
+  });
+
+  it('has a clear unavailable state for unpublished providers', () => {
+    mockProfileData.mockReturnValue(null);
+    render(<ServiceProviderProfilePage />);
+    expect(
+      screen.getByRole('heading', { name: /provider profile unavailable/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /browse services/i })).toBeInTheDocument();
   });
 });

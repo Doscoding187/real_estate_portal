@@ -30,8 +30,12 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
       dispatch({ type: 'SET_PENDING', step: null });
       onNext();
     },
-    onError: (err) => {
-      dispatch({ type: 'SET_ERROR', step: 3, message: err.message || 'Failed to save. Please try again.' });
+    onError: err => {
+      dispatch({
+        type: 'SET_ERROR',
+        step: 3,
+        message: err.message || 'Failed to save. Please try again.',
+      });
       dispatch({ type: 'SET_PENDING', step: null });
     },
   });
@@ -46,7 +50,11 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
       const min = Number(svc.minPrice);
       const max = Number(svc.maxPrice);
       if (svc.minPrice && svc.maxPrice && max < min) {
-        dispatch({ type: 'SET_ERROR', step: 3, message: `Max price must be ≥ min price for "${svc.displayName || 'a service'}".` });
+        dispatch({
+          type: 'SET_ERROR',
+          step: 3,
+          message: `Max price must be ≥ min price for "${svc.displayName || 'a service'}".`,
+        });
         return;
       }
     }
@@ -57,13 +65,15 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
     const services = state.services
       .filter(s => s.displayName.trim().length > 0)
       .map(s => ({
+        id: s.recordId,
         category: s.category,
-        code: s.displayName.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
+        code: s.code || s.displayName.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
         displayName: s.displayName.trim(),
+        description: s.description || undefined,
         minPrice: s.minPrice ? Number(s.minPrice) : undefined,
         maxPrice: s.maxPrice ? Number(s.maxPrice) : undefined,
-        currency: 'ZAR',
-        isActive: true,
+        currency: s.currency,
+        isActive: s.isActive,
       }));
 
     replaceServices.mutate({ services });
@@ -73,7 +83,9 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
     <div className="space-y-6">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-slate-900">What services do you offer?</h2>
-        <p className="text-sm text-slate-500">Add the services you provide and set your pricing in ZAR</p>
+        <p className="text-sm text-slate-500">
+          Add the services you provide and set your pricing in ZAR
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -94,13 +106,38 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
               </button>
             </div>
 
+            <div className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                id={`svc-active-${svc.id}`}
+                type="checkbox"
+                checked={svc.isActive}
+                onChange={e =>
+                  dispatch({
+                    type: 'UPDATE_SERVICE',
+                    id: svc.id,
+                    field: 'isActive',
+                    value: e.target.checked,
+                  })
+                }
+                disabled={isPending}
+              />
+              <Label htmlFor={`svc-active-${svc.id}`}>Available for requests</Label>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor={`svc-name-${svc.id}`}>Service name</Label>
                 <Input
                   id={`svc-name-${svc.id}`}
                   value={svc.displayName}
-                  onChange={e => dispatch({ type: 'UPDATE_SERVICE', id: svc.id, field: 'displayName', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_SERVICE',
+                      id: svc.id,
+                      field: 'displayName',
+                      value: e.target.value,
+                    })
+                  }
                   placeholder="e.g. Geyser replacement"
                   disabled={isPending}
                 />
@@ -111,12 +148,21 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
                 <select
                   id={`svc-cat-${svc.id}`}
                   value={svc.category}
-                  onChange={e => dispatch({ type: 'UPDATE_SERVICE', id: svc.id, field: 'category', value: e.target.value })}
+                  onChange={e =>
+                    dispatch({
+                      type: 'UPDATE_SERVICE',
+                      id: svc.id,
+                      field: 'category',
+                      value: e.target.value,
+                    })
+                  }
                   disabled={isPending}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   {SERVICE_CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -129,7 +175,14 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
                     type="number"
                     min={0}
                     value={svc.minPrice}
-                    onChange={e => dispatch({ type: 'UPDATE_SERVICE', id: svc.id, field: 'minPrice', value: e.target.value })}
+                    onChange={e =>
+                      dispatch({
+                        type: 'UPDATE_SERVICE',
+                        id: svc.id,
+                        field: 'minPrice',
+                        value: e.target.value,
+                      })
+                    }
                     placeholder="0"
                     disabled={isPending}
                   />
@@ -141,7 +194,14 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
                     type="number"
                     min={0}
                     value={svc.maxPrice}
-                    onChange={e => dispatch({ type: 'UPDATE_SERVICE', id: svc.id, field: 'maxPrice', value: e.target.value })}
+                    onChange={e =>
+                      dispatch({
+                        type: 'UPDATE_SERVICE',
+                        id: svc.id,
+                        field: 'maxPrice',
+                        value: e.target.value,
+                      })
+                    }
                     placeholder="0"
                     disabled={isPending}
                   />
@@ -164,7 +224,10 @@ export function ServicesOfferedStep({ state, dispatch, onNext, onBack }: Service
       </div>
 
       {error && (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p
+          role="alert"
+          className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        >
           {error}
         </p>
       )}

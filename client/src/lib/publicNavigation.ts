@@ -363,7 +363,7 @@ export const SERVICE_CATEGORY_DESTINATIONS = SERVICE_CATEGORIES.map(category =>
     label: category.label,
     href: `/services/${toServiceCategorySlug(category.value)}`,
     owner: 'services-engine',
-    capability: 'LAUNCH_READY',
+    capability: 'LIMITED_BUT_VALID',
     activeHref: '/services',
   }),
 );
@@ -737,7 +737,7 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
             label: 'Service providers',
             href: '/services',
             owner: 'services-engine',
-            capability: 'LAUNCH_READY',
+            capability: 'LIMITED_BUT_VALID',
             activeHref: '/services',
           }),
         ],
@@ -905,7 +905,8 @@ export const PUBLIC_NAVIGATION_MENUS: PublicNavigationMenu[] = [
       label: 'Browse all property services',
       href: '/services',
       owner: 'services-engine',
-      capability: 'LAUNCH_READY',
+      capability: 'LIMITED_BUT_VALID',
+
       activeHref: '/services',
     }),
     groups: [
@@ -1189,7 +1190,7 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
   if (role === 'property_developer') return '/developer/dashboard';
   if (role === 'agency_admin') return '/agency/overview';
   if (role === 'agent') return '/agent/dashboard';
-  if (role === 'service_provider') return '/service/dashboard';
+  if (role === 'service_provider') return '/service/profile';
   if (user.hasReferrerIdentity || role === 'referrer') {
     return '/distribution/partner/overview';
   }

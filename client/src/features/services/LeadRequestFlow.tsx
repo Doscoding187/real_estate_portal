@@ -20,16 +20,17 @@ import { Loader2 } from 'lucide-react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
 import { CategoryTileGrid } from '@/components/services/CategoryTileGrid';
 import {
+  parseServiceLocationInput,
   SA_PROVINCES,
   type IntentStage,
   type ServiceCategory,
-  type SourceSurface,
+  type ServiceRequestSourceSurface,
 } from '@/features/services/catalog';
 
 export type LeadWizardSubmit = {
   category: ServiceCategory;
   intentStage: IntentStage;
-  sourceSurface: SourceSurface;
+  sourceSurface: ServiceRequestSourceSurface;
   notes: string;
   province?: string;
   city?: string;
@@ -37,15 +38,26 @@ export type LeadWizardSubmit = {
   propertyId?: number;
   listingId?: number;
   developmentId?: number;
+  sourceDetail?: string;
+  propertyLinked?: boolean;
   reasonKey?: string;
 };
 
 export type LeadRequestFlowProps = {
   defaultCategory: ServiceCategory;
   defaultLocation?: string;
+  defaultLocationParts?: {
+    suburb?: string;
+    city?: string;
+    province?: string;
+  };
   defaultIntentStage?: IntentStage;
-  defaultSourceSurface?: SourceSurface;
+  defaultSourceSurface?: ServiceRequestSourceSurface;
   propertyId?: number;
+  listingId?: number;
+  developmentId?: number;
+  sourceDetail?: string;
+  propertyLinked?: boolean;
   reasonKey?: string;
   submitting?: boolean;
   error?: string | null;
@@ -65,8 +77,8 @@ const TOTAL_STEPS = 3;
 
 const STEP_ENCOURAGING_COPY: Record<number, string> = {
   1: 'Choose the service that best fits your needs.',
-  2: 'Help us find providers near you.',
-  3: 'The more detail you share, the better your matches.',
+  2: 'Tell us where the work will happen.',
+  3: 'The more detail you share, the better the provider can assess fit.',
 };
 
 /**
@@ -76,59 +88,75 @@ const STEP_ENCOURAGING_COPY: Record<number, string> = {
 export function LeadRequestFlow({
   defaultCategory,
   defaultLocation = '',
+  defaultLocationParts,
   defaultIntentStage = 'general',
   defaultSourceSurface = 'directory',
   propertyId,
+  listingId,
+  developmentId,
+  sourceDetail,
+  propertyLinked,
   reasonKey,
   submitting = false,
   error,
   onSubmit,
 }: LeadRequestFlowProps) {
-  // Parse defaultLocation into suburb/city/province if provided
-  const parsedLocation = (() => {
-    const parts = defaultLocation
-      .split(',')
-      .map(p => p.trim())
-      .filter(Boolean);
-    return {
-      suburb: parts[0] ?? '',
-      city: parts[1] ?? '',
-      province: parts[2] ?? '',
-    };
-  })();
+  const parsedLocation = defaultLocationParts || parseServiceLocationInput(defaultLocation);
 
   const [state, setState] = useState<FlowState>({
     step: 1,
     category: defaultCategory,
-    suburb: parsedLocation.suburb,
-    city: parsedLocation.city,
-    province: parsedLocation.province,
+    suburb: parsedLocation.suburb || '',
+    city: parsedLocation.city || '',
+    province: parsedLocation.province || '',
     notes: '',
   });
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   function setField<K extends keyof FlowState>(field: K, value: FlowState[K]) {
+    setValidationError(null);
     setState(prev => ({ ...prev, [field]: value }));
   }
 
   function goNext() {
+    if (state.step === 2 && !state.suburb.trim() && !state.city.trim() && !state.province) {
+      setValidationError('Add at least one area so the provider can check listed coverage.');
+      return;
+    }
+    if (state.step === 3 && !state.notes.trim()) {
+      setValidationError('Add a short project description before submitting.');
+      return;
+    }
+    setValidationError(null);
     if (state.step < TOTAL_STEPS) {
       setState(prev => ({ ...prev, step: (prev.step + 1) as 1 | 2 | 3 }));
     }
   }
 
   function goBack() {
+    setValidationError(null);
     if (state.step > 1) {
       setState(prev => ({ ...prev, step: (prev.step - 1) as 1 | 2 | 3 }));
     }
   }
 
   function handleSubmit() {
+    if (!state.notes.trim()) {
+      setValidationError('Add a short project description before submitting.');
+      return;
+    }
+    setValidationError(null);
     onSubmit({
       category: state.category,
       intentStage: defaultIntentStage,
       sourceSurface: defaultSourceSurface,
       propertyId,
+      listingId,
+      developmentId,
+      sourceDetail,
+      propertyLinked,
       reasonKey,
+
       notes: state.notes.trim(),
       suburb: state.suburb || undefined,
       city: state.city || undefined,
@@ -149,7 +177,10 @@ export function LeadRequestFlow({
         />
 
         {/* Step content — aria-live="polite" for accessibility */}
-        <div aria-live="polite" className="rounded-[1.75rem] border border-slate-100 bg-[linear-gradient(180deg,_#ffffff,_#faf7f0)] p-5 md:p-6">
+        <div
+          aria-live="polite"
+          className="rounded-[1.75rem] border border-slate-100 bg-[linear-gradient(180deg,_#ffffff,_#faf7f0)] p-5 md:p-6"
+        >
           {/* Step 1: Category selection */}
           {state.step === 1 && (
             <div className="space-y-4">
@@ -157,9 +188,7 @@ export function LeadRequestFlow({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   Step 1
                 </p>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  What service do you need?
-                </h2>
+                <h2 className="text-lg font-semibold text-slate-900">What service do you need?</h2>
                 <p className="text-sm text-slate-600">
                   Start by choosing the category that best matches the work.
                 </p>
@@ -180,15 +209,12 @@ export function LeadRequestFlow({
                 </p>
                 <h2 className="text-lg font-semibold text-slate-900">Where are you located?</h2>
                 <p className="text-sm text-slate-600">
-                  Providers use this to confirm coverage and travel range.
+                  Providers use this to check the coverage areas they have listed.
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <label
-                    htmlFor="lead-suburb"
-                    className="text-sm font-medium text-slate-700"
-                  >
+                  <label htmlFor="lead-suburb" className="text-sm font-medium text-slate-700">
                     Suburb
                   </label>
                   <Input
@@ -201,10 +227,7 @@ export function LeadRequestFlow({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label
-                    htmlFor="lead-city"
-                    className="text-sm font-medium text-slate-700"
-                  >
+                  <label htmlFor="lead-city" className="text-sm font-medium text-slate-700">
                     City
                   </label>
                   <Input
@@ -218,10 +241,7 @@ export function LeadRequestFlow({
                 </div>
               </div>
               <div className="space-y-1">
-                <label
-                  htmlFor="lead-province"
-                  className="text-sm font-medium text-slate-700"
-                >
+                <label htmlFor="lead-province" className="text-sm font-medium text-slate-700">
                   Province
                 </label>
                 <select
@@ -248,9 +268,7 @@ export function LeadRequestFlow({
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
                   Step 3
                 </p>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Describe your project
-                </h2>
+                <h2 className="text-lg font-semibold text-slate-900">Describe your project</h2>
               </div>
               <p className="text-sm text-slate-600">
                 Describe the project clearly so providers can judge fit faster.
@@ -258,7 +276,7 @@ export function LeadRequestFlow({
               <Textarea
                 value={state.notes}
                 onChange={e => setField('notes', e.target.value)}
-                placeholder="Describe what you need — the more detail, the better your matches"
+                placeholder="Describe what you need — the more detail, the better the provider can assess fit"
                 rows={5}
                 className="resize-none border-slate-200 bg-white"
               />
@@ -269,17 +287,23 @@ export function LeadRequestFlow({
         <div className="grid gap-3 rounded-[1.5rem] border border-slate-100 bg-slate-50/80 p-4 text-sm text-slate-600 md:grid-cols-3">
           <div>
             <p className="font-semibold text-slate-900">Short flow</p>
-            <p className="mt-1">Three steps only, so you reach matching faster.</p>
+            <p className="mt-1">Three steps only, so you can reach a provider quickly.</p>
           </div>
           <div>
             <p className="font-semibold text-slate-900">Location aware</p>
-            <p className="mt-1">Your area helps us narrow to relevant providers.</p>
+            <p className="mt-1">Your area helps you compare relevant listed coverage.</p>
           </div>
           <div>
             <p className="font-semibold text-slate-900">More detail, better fit</p>
             <p className="mt-1">Clear notes improve provider quality and response speed.</p>
           </div>
         </div>
+
+        {validationError && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {validationError}
+          </p>
+        )}
 
         {/* Inline error — shown above submit button on step 3 */}
         {state.step === 3 && error && (
