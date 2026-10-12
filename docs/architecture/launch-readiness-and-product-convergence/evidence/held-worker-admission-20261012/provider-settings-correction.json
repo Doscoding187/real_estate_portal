@@ -1,0 +1,41 @@
+{
+  "phase": "Source correction after contained provider refusal; no worker deployed",
+  "baseSha": "27ed252549526c9bae83f9569e68a0bdeebfc3f2",
+  "finding": "Railway accepted an explicit EnvironmentConfig configFile patch but did not retain the field. Both remote MCP and direct serviceInstanceUpdate rejected custom Config as Code file selection as deprecated.",
+  "providerRefusalCode": "BAD_USER_INPUT",
+  "officialReference": "https://docs.railway.com/config-as-code",
+  "configurationAttempt": {
+    "approvedPlan": "WA605-20261012-relative-01",
+    "approvalObservedAt": "2026-10-12T19:19:22Z",
+    "deadline": "2026-10-12T19:49:22Z",
+    "leadSettingsTemporarilyApplied": true,
+    "sourceFileSelectionSucceeded": false,
+    "leadSettingsFullyRestored": true,
+    "sixTemporaryInputsRemoved": true,
+    "originalApprovalVariablesRestored": true,
+    "bothWorkersNoDeployments": true,
+    "cronHeld": true,
+    "unrelatedStagedPatchUnchanged": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+    "databaseConnectionPerformed": false,
+    "workerDeployed": false,
+    "deliveryPerformed": false,
+    "approvalClosedEarly": true
+  },
+  "correction": "Remove default repository Config as Code discovery. Preserve API and admission build/deploy settings in deployment/*.json review fragments, applied only through explicit one-service environment patches with skipDeploys:true. Keep null custom config paths, no cron/healthcheck, NEVER restart, exact source/target/window and six expected inputs; inspect effective deployment configuration and empty resolved file manifest.",
+  "apiSettingsSemanticallyPreserved": true,
+  "workerSettingsSemanticallyPreserved": true,
+  "noProjectIacOwnershipChange": true,
+  "validation": {
+    "focusedTests": 48,
+    "testFiles": 5,
+    "focusedExitCode": 0,
+    "lintExitCode": 0,
+    "typecheckExitCode": 0,
+    "defaultConfigOverrideRegressionTests": 2,
+    "migrationExecutionContractsPreservedAndExtended": true
+  },
+  "databaseAuthorityEvidence": "Reuse PR604 720 authority tests; this source correction changes no runtime queries/schema/migrations/grants. Updated migration-free startup contracts pass in the 48 focused tests. Fresh complete CI remains required.",
+  "acceptedPackageScopes": 8,
+  "totalPackageScopes": 18,
+  "recordedAt": "2026-10-12T19:37:07.104079+00:00"
+}
