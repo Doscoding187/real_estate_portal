@@ -1,0 +1,23 @@
+{
+  "classification": "deployment configuration correction; no database query/schema/credential/grant change",
+  "baseSha": "d4ce7609f8c17fd198f47ba23f48b260848eb71d",
+  "stoppedPlan": "WA604-20261012-1640",
+  "approvedWindow": "2026-10-12T16:40:00Z to 2026-10-12T17:10:00Z",
+  "preflightFinding": "Railway source configuration overrides dashboard settings. Root railway.json starts API; normal lead file includes cron; normal email file starts the supervisor. No source file selected the new diagnostic.",
+  "officialReference": "https://docs.railway.com/config-as-code",
+  "correction": "Dedicated /railway.worker-admission.json, explicitly selected for both temporary deployments, requires six independent reviewed inputs before exec and forwards them as quoted arguments. Backend build, no pre-deploy actions, NEVER restart, no cron/healthcheck in the selected file.",
+  "verification": {
+    "newCommandBoundaryTests": 8,
+    "combinedFocusedTests": 39,
+    "focusedExitCode": 0,
+    "lintExitCode": 0,
+    "requiredTypecheckExitCode": 0
+  },
+  "schemaValidation": "JSON parsed; the downloaded published schema uses draft2020-12, which the existing Ajv6 cannot fully validate. No validator dependency installed and no full JSON-schema validation claimed. Provider validation remains part of the separately approved deployment.",
+  "databaseConnectionPerformed": false,
+  "providerMutationPerformed": false,
+  "workerDeployed": false,
+  "emailSent": false,
+  "approvalReusedForChangedSource": false,
+  "authorityEvidenceReused": "PR604: 720 database authority tests, utility inventory/lifecycle validation and unchanged canonical head0111; this correction changes no database consumer or authority."
+}

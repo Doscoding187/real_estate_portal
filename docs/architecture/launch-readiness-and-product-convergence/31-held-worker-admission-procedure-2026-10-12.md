@@ -31,6 +31,28 @@ objects before queue inspection. No additional grant is requested.
 
 ## Concrete execution scope
 
+The source must include `railway.worker-admission.json`, and each temporary
+deployment must explicitly select `/railway.worker-admission.json` as its
+configuration file. Railway configuration in source overrides dashboard
+settings: the default `railway.json` starts the API, the email file starts the
+normal supervisor, and the lead file includes its recurring cron. A dashboard
+start-command override alone cannot establish the promised admission process.
+The dedicated file selects the backend build, admission-only command, empty
+pre-deploy list, NEVER restart and no cron or API healthcheck. Read the actual
+deployment-effective settings before accepting any result.
+
+Provide all six independently reviewed inputs as temporary per-service
+variables: `LAUNCH_WORKER_ADMISSION_EXPECTED_SHA`,
+`LAUNCH_WORKER_ADMISSION_EXPECTED_FINGERPRINT`,
+`LAUNCH_WORKER_ADMISSION_EXPECTED_PROJECT_ID`,
+`LAUNCH_WORKER_ADMISSION_EXPECTED_ENVIRONMENT_ID`,
+`LAUNCH_WORKER_ADMISSION_EXPECTED_SERVICE_ID` and
+`LAUNCH_WORKER_ADMISSION_EXPIRES_AT`. The shell refuses any absent input before
+launching the diagnostic; values remain quoted arguments. Expected source and
+identities must come from the approved manifest, never from the service's
+actual automatic Railway variables. Restore/remove only these temporary
+variables and restore the previous configuration-file setting during teardown.
+
 Use the existing project `8cdd7515-ddd2-4252-bbee-df5a5c209d4b`, Production
 `63070d99-357a-40ba-99c3-6d1368f61652`, target fingerprint
 `b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced`.

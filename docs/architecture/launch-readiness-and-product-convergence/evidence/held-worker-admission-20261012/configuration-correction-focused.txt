@@ -1,0 +1,36 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-launch-worker-admission-20261012
+
+stdout | scripts/__tests__/launchWorkerAdmission.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | scripts/__tests__/launchWorkerAdmission.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| scripts/__tests__/launchWorkerAdmission.test.ts (30 tests) 59ms
+stdout | scripts/__tests__/launchWorkerAdmissionConfiguration.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | scripts/__tests__/launchWorkerAdmissionConfiguration.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| scripts/__tests__/launchWorkerAdmissionConfiguration.test.ts (8 tests) 898ms
+stdout | scripts/__tests__/launchWorkerAdmissionCli.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | scripts/__tests__/launchWorkerAdmissionCli.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| scripts/__tests__/launchWorkerAdmissionCli.test.ts (1 test) 671ms
+
+ Test Files  3 passed (3)
+      Tests  39 passed (39)
+   Start at  18:58:20
+   Duration  4.01s (transform 656ms, setup 213ms, collect 1.43s, tests 1.63s, environment 1ms, prepare 227ms)
+
