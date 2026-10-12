@@ -99,4 +99,3 @@ stderr | client/src/pages/__tests__/Login.founder-google-entry.test.tsx
       Tests  17 passed (17)
    Start at  23:12:21
    Duration  18.05s (transform 1.46s, setup 2.54s, collect 11.42s, tests 11.89s, environment 14.96s, prepare 1.34s)
-

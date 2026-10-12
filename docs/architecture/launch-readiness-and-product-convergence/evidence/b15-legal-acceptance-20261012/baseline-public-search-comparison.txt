@@ -4,7 +4,7 @@
 stdout | server/__tests__/contract.canonical-place-public-search.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/__tests__/contract.canonical-place-public-search.test.ts
 [ENV] Runtime configuration loaded {
@@ -88,4 +88,3 @@ Error: Required admitted Place unavailable: pl-place-01-6a145c6d642ba208a2c12de7
       Tests  1 failed | 2 passed (3)
    Start at  23:32:51
    Duration  4.27s (transform 1.86s, setup 159ms, collect 3.54s, tests 37ms, environment 0ms, prepare 118ms)
-

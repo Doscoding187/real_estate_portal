@@ -4,17 +4,17 @@
 stdout | server/services/__tests__/legalAcceptancePolicy.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/__tests__/authRoutes.registrationLegalAcceptance.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/__tests__/authRoutes.emailDeliveryBoundary.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔑 add access controls to secrets: https://dotenvx.com/ops
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/services/__tests__/legalAcceptancePolicy.test.ts
 [Test Setup] SKIP_DB_INIT=1; skipping database initialization
@@ -23,7 +23,7 @@ stdout | server/services/__tests__/legalAcceptancePolicy.test.ts
 stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  enable debug logging with { debug: true }
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/__tests__/auth.registrationLegalAcceptance.test.ts
 [ENV] Runtime configuration loaded {
@@ -82,4 +82,3 @@ stdout | server/__tests__/authRoutes.registrationLegalAcceptance.test.ts
       Tests  51 passed (51)
    Start at  23:27:49
    Duration  11.09s (transform 4.52s, setup 2.63s, collect 18.75s, tests 679ms, environment 5ms, prepare 1.95s)
-

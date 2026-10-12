@@ -4,12 +4,12 @@
 stdout | server/__tests__/contract.place-executable-foundation.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
 [dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
 [Test Setup] Loaded .env.test
-[Test Setup] DATABASE_URL: 
+[Test Setup] DATABASE_URL:
 
 stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
 [Test Setup] SKIP_DB_INIT=1; skipping database initialization
@@ -436,4 +436,3 @@ If this is a long-running test, pass a timeout value as the last argument or con
       Tests  22 failed | 20 passed (42)
    Start at  23:23:10
    Duration  23.75s (transform 2.88s, setup 476ms, collect 5.12s, tests 22.66s, environment 0ms, prepare 368ms)
-
