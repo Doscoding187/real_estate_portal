@@ -186,8 +186,9 @@ Local status/manifest/context passed for the task-owned disposable target
 `listify_wt_launch_shared_closure_20261012_5a2ac80a3e3e`,
 fingerprint `f1cae8cafe6314dc09b4ac3ce31f627996018dd728dd8645eb23b9f579cb6137`.
 The local service was unreachable; no database was started, created, migrated
-or seeded. No protected database connection, provider configuration mutation,
-customer send, payment/document upload, publication or deployment was performed.
+or seeded. No protected database connection, customer send, payment/document
+upload, publication or production/worker deployment was performed. The only
+provider mutation is the branch-specific preview correction recorded below.
 
 Dated acceptance sources were read from Edward's Codex Audits folder:
 
@@ -206,3 +207,18 @@ Accepted storage evidence comes from
 B15 facts/remaining decisions from
 [the existing preparation record](evidence/b15-copy-approval-preparation-2026-09-27-v0.6.md).
 
+### Branch preview configuration
+
+The original candidate `7000c0432a8019823d9351ae22115996ccef93f5` passed all
+five required GitHub CI jobs, including DB Contract Verification, Location
+Authority, Lint & TypeCheck, Unit & Integration Tests and Build Application.
+Its Vercel preview failed because this new branch had no explicit preview
+environment. Provider logs identify the existing hosted build guard.
+
+Two public inputs were created only for this branch and the preview target:
+`VITE_DEPLOY_ENV=preview` and
+`VITE_API_URL=https://api-staging.propertylistifysa.co.za`.
+[Provider creation/readback and removal IDs](evidence/shared-launch-closure-20261012/preview-config.json)
+record the bounded correction. Production/shared inputs and build guards are
+unchanged. The next pushed source must pass required CI and its preview build;
+this configuration receipt is not customer-journey or API admission evidence.

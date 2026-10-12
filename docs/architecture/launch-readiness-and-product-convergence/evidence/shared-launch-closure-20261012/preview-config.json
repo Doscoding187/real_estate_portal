@@ -1,0 +1,41 @@
+{
+  "kind": "branch-preview-configuration-correction",
+  "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+  "teamSlug": "edwards-projects-29c395d1",
+  "branch": "feat/launch-shared-closure-20261012",
+  "target": "preview",
+  "failedDeploymentId": "dpl_FZ3hs1MGfo4kfKEahiArRri4L6GE",
+  "failedSource": "7000c0432a8019823d9351ae22115996ccef93f5",
+  "failure": [
+    {
+      "created": 1791796462146,
+      "text": "[property-listify-hosted-frontend-contract] Vercel preview requires explicit VITE_DEPLOY_ENV=staging or preview."
+    }
+  ],
+  "readback": [
+    {
+      "id": "9fH6t1tHPODsr8Ox",
+      "key": "VITE_DEPLOY_ENV",
+      "value": "preview",
+      "type": "plain",
+      "target": [
+        "preview"
+      ],
+      "gitBranch": "feat/launch-shared-closure-20261012",
+      "createdAt": 1791798021237
+    },
+    {
+      "id": "saqdvKuTGrJdrmUg",
+      "key": "VITE_API_URL",
+      "value": "https://api-staging.propertylistifysa.co.za",
+      "type": "plain",
+      "target": [
+        "preview"
+      ],
+      "gitBranch": "feat/launch-shared-closure-20261012",
+      "createdAt": 1791798021237
+    }
+  ],
+  "rollback": "Remove only these two branch-specific environment IDs. Preserve production/shared inputs.",
+  "buildStatus": "Next branch push must build successfully; no hosted customer/API verification claimed."
+}

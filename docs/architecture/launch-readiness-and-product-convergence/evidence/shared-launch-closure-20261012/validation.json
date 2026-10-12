@@ -6,7 +6,7 @@
   "schemaChanged": false,
   "grantPlanChanged": false,
   "protectedDatabaseConnected": false,
-  "providerMutationPerformed": false,
+  "providerMutationPerformed": true,
   "checks": [
     {
       "command": "pnpm db:authority:status",
@@ -34,7 +34,7 @@
       "result": "Static authority gate and its database-free contract suite passed"
     },
     {
-      "command": "git diff --check",
+      "command": "git diff origin/main --check",
       "exitCode": 0,
       "result": "No whitespace errors"
     },
@@ -63,7 +63,8 @@
   },
   "acceptanceLimits": [
     "No hosted email receipt or worker deployment is certified by source tests.",
-    "Fresh-schema physical consumer/credential checks remain on required PR CI.",
+    "Physical fresh-schema DB Contract Verification passed on original candidate 7000c0432a8019823d9351ae22115996ccef93f5; final-head CI must also pass.",
     "No full B-package closure or register amendment is claimed."
-  ]
+  ],
+  "providerMutationScope": "Two public settings on this exact feature branch, Vercel preview target only; see preview-config.json"
 }
