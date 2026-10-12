@@ -1,0 +1,12 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "RAILPACK",
+    "buildCommand": "pnpm build:backend"
+  },
+  "deploy": {
+    "startCommand": "/bin/sh -c 'exec pnpm launch:worker-admission --sha=\"${LAUNCH_WORKER_ADMISSION_EXPECTED_SHA:?missing reviewed source}\" --fingerprint=\"${LAUNCH_WORKER_ADMISSION_EXPECTED_FINGERPRINT:?missing reviewed target}\" --project-id=\"${LAUNCH_WORKER_ADMISSION_EXPECTED_PROJECT_ID:?missing reviewed project}\" --environment-id=\"${LAUNCH_WORKER_ADMISSION_EXPECTED_ENVIRONMENT_ID:?missing reviewed environment}\" --service-id=\"${LAUNCH_WORKER_ADMISSION_EXPECTED_SERVICE_ID:?missing reviewed service}\" --expires-at=\"${LAUNCH_WORKER_ADMISSION_EXPIRES_AT:?missing approved deadline}\"'",
+    "preDeployCommand": [],
+    "restartPolicyType": "NEVER"
+  }
+}
