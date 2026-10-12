@@ -1,0 +1,25 @@
+{
+  "phase": "source verification; hosted execution not performed",
+  "classification": "additive database consumer diagnostic; no schema/data transition",
+  "baseSha": "46d4d05da014c2837741fb0317b1d5c8318afd03",
+  "focusedTests": 31,
+  "databaseAuthorityTests": 720,
+  "utilityRegistrationTests": 39,
+  "exitCodes": {
+    "focused": 0,
+    "authority": 0,
+    "lint": 0,
+    "typecheck-ci": 0,
+    "utility-tests": 0
+  },
+  "typecheckCommand": "pnpm exec tsc --noEmit --incremental false -p tsconfig.check.json",
+  "remoteConnectionPerformed": false,
+  "localDatabaseProvisioned": false,
+  "schemaOrGrantChanged": false,
+  "workerDeployed": false,
+  "deliveryPerformed": false,
+  "acceptedPackageScopes": 8,
+  "totalPackageScopes": 18,
+  "localTargetFingerprint": "696244befaf65c73f005dd18e67e3b2d786045ba69ff1906481f85846f0ce12b",
+  "localAvailability": "database-unreachable; focused/static validation uses doubles and offline authority contracts"
+}

@@ -275,6 +275,7 @@
     "dev:backend:clean": "powershell -NoProfile -Command \"$p=(Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue).OwningProcess; if($p -and $p -ne 0){Stop-Process -Id $p -Force};\" && pnpm dev:backend",
     "dev:frontend": "vite",
     "email:backlog": "tsx scripts/transactionalEmailBacklog.ts",
+    "launch:worker-admission": "tsx scripts/launchWorkerAdmission.ts",
     "email:supervisor": "tsx scripts/runTransactionalEmailSupervisor.ts",
     "email:worker": "tsx scripts/runTransactionalEmailWorker.ts",
     "env:authority:status": "tsx scripts/localEnvironmentAuthorityStatus.ts",

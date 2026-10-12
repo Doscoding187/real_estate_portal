@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-launch-worker-admission-20261012
+
+ ✓ |database-authority-static| scripts/__tests__/databaseUtilityAuthority.test.ts (39 tests) 898ms
+   ✓ database utility authority guard > accepts the current explicit authority inventory 855ms
+
+ Test Files  1 passed (1)
+      Tests  39 passed (39)
+   Start at  15:26:04
+   Duration  2.04s (transform 255ms, setup 0ms, collect 265ms, tests 898ms, environment 0ms, prepare 229ms)
+

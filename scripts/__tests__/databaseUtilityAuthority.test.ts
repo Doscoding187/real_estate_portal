@@ -39,6 +39,11 @@ describe('database utility authority guard', () => {
       "import mysql from 'mysql2/promise'; await mysql.createConnection(url).then(connection => connection.query('SELECT 1'))",
     ],
     [
+      'guarded worker admission',
+      'scripts/launchWorkerAdmissionCheck.ts',
+      "await createAuthorityRuntimePool(authority, decision); await connection.query('SELECT state FROM lead_deliveries')",
+    ],
+    [
       'disposable E2E fixture',
       'scripts/verify-prospect-journey-cross-agency.ts',
       "await connection.query('INSERT INTO agencies ...')",
