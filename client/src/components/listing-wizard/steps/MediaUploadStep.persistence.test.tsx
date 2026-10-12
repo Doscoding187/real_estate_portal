@@ -1,12 +1,30 @@
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useMutation as useQueryMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
-const api = vi.hoisted(() => ({ reserve: vi.fn(), confirm: vi.fn() }));
+const api = vi.hoisted(() => ({ reserve: vi.fn(), confirm: vi.fn(), realMutations: false }));
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     listing: {
-      uploadMedia: { useMutation: () => ({ mutateAsync: api.reserve }) },
-      confirmMediaUpload: { useMutation: () => ({ mutateAsync: api.confirm }) },
+      uploadMedia: {
+        useMutation: (options?: { retry?: boolean }) => {
+          const mutation = useQueryMutation(
+            { mutationFn: (input: unknown) => api.reserve(input), ...options },
+            queryClient,
+          );
+          return api.realMutations ? mutation : { mutateAsync: api.reserve };
+        },
+      },
+      confirmMediaUpload: {
+        useMutation: (options?: { retry?: boolean }) => {
+          const mutation = useQueryMutation(
+            { mutationFn: (input: unknown) => api.confirm(input), ...options },
+            queryClient,
+          );
+          return api.realMutations ? mutation : { mutateAsync: api.confirm };
+        },
+      },
     },
   },
 }));
@@ -20,6 +38,8 @@ const reservation = {
   uploadToken: 'reserved-token',
 };
 beforeEach(async () => {
+  api.realMutations = false;
+  queryClient.clear();
   localStorage.clear();
   await hydrateListingWizardForUser(null);
   await hydrateListingWizardForUser(101);
@@ -27,6 +47,44 @@ beforeEach(async () => {
   api.confirm.mockResolvedValue({ uploadToken: 'confirmed-token', fileSize: 4 });
 });
 describe('media ownership orchestration (mocked transport)', () => {
+  it.each(['reservation', 'confirmation'] as const)(
+    'does not automatically replay a failed %s with the production QueryClient',
+    async phase => {
+      api.realMutations = true;
+      if (phase === 'reservation')
+        api.reserve.mockRejectedValue(new Error('Reservation result unknown'));
+      else api.confirm.mockRejectedValue(new Error('Confirmation result unknown'));
+      class MockXHR extends EventTarget {
+        upload = new EventTarget();
+        status = 200;
+        open = vi.fn();
+        setRequestHeader = vi.fn();
+        send() {
+          this.dispatchEvent(new Event('load'));
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', MockXHR);
+      try {
+        const view = render(<MediaUploadStep listingId={88} />);
+        fireEvent.change(view.container.querySelector('input[type=file]')!, {
+          target: { files: [new File(['png!'], 'fixture.png', { type: 'image/png' })] },
+        });
+        await waitFor(() => expect(api.reserve).toHaveBeenCalled());
+        // The inherited production retry delay is one second. Wait beyond it
+        // so a suppressed duplicate is observable, rather than checking options.
+        await act(async () => {
+          await new Promise(resolve => setTimeout(resolve, 1300));
+        });
+        expect(api.reserve).toHaveBeenCalledOnce();
+        if (phase === 'reservation') expect(api.confirm).not.toHaveBeenCalled();
+        else expect(api.confirm).toHaveBeenCalledOnce();
+        expect(useListingWizardStore.getState().media).toHaveLength(0);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+
   it('ignores a late confirmation after the draft changes but keeps uploads during its first save', async () => {
     let confirm!: (value: { uploadToken: string; fileSize: number }) => void;
     api.confirm.mockImplementation(

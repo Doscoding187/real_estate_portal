@@ -368,7 +368,10 @@ export async function executePlace(
     .from(place)
     .where(eq(place.placeId, placeId))
     .limit(1);
-  const rows = await (options.lock ? query.for('update') : query);
+  // Runtime consumers read governed Places; they never update reference rows.
+  // Shared locks keep those rows stable through the caller's transaction without
+  // requiring UPDATE/DELETE privileges on the reference catalogue.
+  const rows = await (options.lock ? query.for('share') : query);
   if (rows.length === 0) return { ok: false, reason: 'unknown_place' };
   const row = rows[0];
 
@@ -493,7 +496,7 @@ async function loadContainmentAncestry(
         ),
       )
       .limit(2);
-    const parent = await (lock ? parentQuery.for('update') : parentQuery);
+    const parent = await (lock ? parentQuery.for('share') : parentQuery);
     if (parent.length === 0) return ancestry;
     if (parent.length !== 1) throw new PlaceContainmentError('unresolved_parent');
     const parentId = parent[0].toPlaceId;
@@ -504,7 +507,7 @@ async function loadContainmentAncestry(
       .from(place)
       .where(eq(place.placeId, parentId))
       .limit(1);
-    const parentRow = await (lock ? parentPlaceQuery.for('update') : parentPlaceQuery);
+    const parentRow = await (lock ? parentPlaceQuery.for('share') : parentPlaceQuery);
     if (parentRow.length === 0 || parentRow[0].lifecycleStatus !== 'active') {
       throw new PlaceContainmentError('unresolved_parent');
     }

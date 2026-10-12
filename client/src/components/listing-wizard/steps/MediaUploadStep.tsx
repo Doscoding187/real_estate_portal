@@ -66,8 +66,8 @@ const MediaUploadStep: React.FC<{ listingId?: number; draftContextKey?: string }
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TRPC mutation for media upload
-  const uploadMediaMutation = trpc.listing.uploadMedia.useMutation();
-  const confirmMediaUploadMutation = trpc.listing.confirmMediaUpload.useMutation();
+  const uploadMediaMutation = trpc.listing.uploadMedia.useMutation({ retry: false });
+  const confirmMediaUploadMutation = trpc.listing.confirmMediaUpload.useMutation({ retry: false });
 
   const savedPresentation = useMemo(
     () => safeParsePropertyPresentation(store.propertyDetails?.propertyPresentation).data,

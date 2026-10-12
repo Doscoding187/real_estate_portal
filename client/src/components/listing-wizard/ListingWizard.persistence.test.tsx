@@ -1,5 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useMutation as useQueryMutation } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
 
 const harness = vi.hoisted(() => ({
@@ -10,6 +12,7 @@ const harness = vi.hoisted(() => ({
   inventory: vi.fn(),
   read: vi.fn(),
   navigate: vi.fn(),
+  realMutations: false,
 }));
 const client = {
   listing: { getById: { query: harness.read }, myListings: { query: harness.inventory } },
@@ -18,9 +21,33 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     useUtils: () => ({ client }),
     listing: {
-      create: { useMutation: () => ({ mutateAsync: harness.create }) },
-      update: { useMutation: () => ({ mutateAsync: harness.update }) },
-      submitForReview: { useMutation: () => ({ mutateAsync: harness.review }) },
+      create: {
+        useMutation: (options?: { retry?: boolean }) => {
+          const mutation = useQueryMutation(
+            { mutationFn: (input: unknown) => harness.create(input), ...options },
+            queryClient,
+          );
+          return harness.realMutations ? mutation : { mutateAsync: harness.create };
+        },
+      },
+      update: {
+        useMutation: (options?: { retry?: boolean }) => {
+          const mutation = useQueryMutation(
+            { mutationFn: (input: unknown) => harness.update(input), ...options },
+            queryClient,
+          );
+          return harness.realMutations ? mutation : { mutateAsync: harness.update };
+        },
+      },
+      submitForReview: {
+        useMutation: (options?: { retry?: boolean }) => {
+          const mutation = useQueryMutation(
+            { mutationFn: (input: unknown) => harness.review(input), ...options },
+            queryClient,
+          );
+          return harness.realMutations ? mutation : { mutateAsync: harness.review };
+        },
+      },
       getSubmissionPreflight: {
         useQuery: () => ({
           data: { canPrepareDraft: true, canStartListing: false },
@@ -142,6 +169,8 @@ function serverRecord(id = 88, status = 'draft') {
   };
 }
 beforeEach(async () => {
+  harness.realMutations = false;
+  queryClient.clear();
   localStorage.clear();
   window.history.replaceState({}, '', '/listings/create');
   harness.user = { id: 101, role: 'agent' };
@@ -153,6 +182,18 @@ beforeEach(async () => {
 });
 
 describe('private draft wizard orchestration (mocked APIs)', () => {
+  it('does not replay a failed create under the actual production QueryClient retry defaults', async () => {
+    harness.realMutations = true;
+    harness.create.mockRejectedValue(new Error('Request result unknown'));
+    await open();
+    save();
+    await screen.findByText(/A save may already have created your draft/, {}, { timeout: 4000 });
+    expect(harness.create).toHaveBeenCalledOnce();
+    expect(harness.review).not.toHaveBeenCalled();
+    expect(localStorage.getItem('listing-wizard-create-uncertain:101')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Save private draft' })).toBeDisabled();
+  });
+
   it.each(['missing', 'stale'] as const)(
     'restores a stored server draft before enabling save with %s device data, including another reload',
     async deviceCopy => {
@@ -461,12 +502,14 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     expect(harness.review).not.toHaveBeenCalled();
   });
   it('keeps the confirmed ID and visible error on a failed update', async () => {
+    harness.realMutations = true;
     await open();
     save();
     await screen.findByText('Private draft saved to your account');
     harness.update.mockRejectedValue(new Error('Update unavailable'));
     save();
-    await screen.findByText('Update unavailable');
+    await screen.findByText('Update unavailable', {}, { timeout: 4000 });
+    expect(harness.update).toHaveBeenCalledOnce();
     expect(localStorage.getItem('listing-wizard-server-draft:101')).toBe('88');
     expect(useListingWizardStore.getState().title).toBe(title);
     harness.update.mockResolvedValue({ success: true });
@@ -531,6 +574,7 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     expect(harness.update).not.toHaveBeenCalled();
   });
   it('submits the same saved ID and retains it after review denial', async () => {
+    harness.realMutations = true;
     await open();
     save();
     await screen.findByText('Private draft saved to your account');
@@ -540,9 +584,11 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Submit Listing' }));
     await waitFor(() => expect(harness.review).toHaveBeenCalledWith({ listingId: 88 }));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Submit Listing' })).not.toBeDisabled(),
+    await waitFor(
+      () => expect(screen.getByRole('button', { name: 'Submit Listing' })).not.toBeDisabled(),
+      { timeout: 4000 },
     );
+    expect(harness.review).toHaveBeenCalledOnce();
     expect(harness.create).toHaveBeenCalledOnce();
     expect(harness.update).toHaveBeenCalledWith(expect.objectContaining({ id: 88 }));
     expect(localStorage.getItem('listing-wizard-server-draft:101')).toBe('88');

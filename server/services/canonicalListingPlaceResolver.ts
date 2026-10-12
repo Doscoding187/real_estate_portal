@@ -75,7 +75,9 @@ export async function resolveCanonicalListingPlace(
         eq(placeName.nameState, 'active'),
       ),
     );
-  const names = await (options.lock ? nameQuery.for('update') : nameQuery);
+  // Preferred labels are read-only reference authority, protected until the
+  // authoring transaction completes with the same shared-lock policy as Places.
+  const names = await (options.lock ? nameQuery.for('share') : nameQuery);
   const labels = new Map<string, string>();
   for (const row of names) {
     if (labels.has(row.placeId) || !row.name.trim()) {
