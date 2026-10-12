@@ -1,7 +1,16 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Send } from 'lucide-react';
+import {
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
+} from 'lucide-react';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 export function Footer() {
@@ -38,11 +47,13 @@ export function Footer() {
                 <Twitter className="h-5 w-5" />
               </a>
               <a
-                href="#"
-                aria-label="Property Listify on Instagram"
-                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all"
+                href="https://wa.link/mh6juy"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Property Listify on WhatsApp"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
               >
-                <Instagram className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
               </a>
               <a
                 href="#"
