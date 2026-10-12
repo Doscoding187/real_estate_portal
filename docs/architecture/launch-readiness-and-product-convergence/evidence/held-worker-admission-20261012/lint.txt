@@ -1,0 +1,9 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-launch-worker-admission-20261012/scripts/__tests__/databaseUtilityAuthority.test.ts
+  117:6  warning  Replace `'production·seed·utility',·'tools/production-seed.ts',·"await·connection.query('INSERT·INTO·users·...')"` with `⏎······'production·seed·utility',⏎······'tools/production-seed.ts',⏎······"await·connection.query('INSERT·INTO·users·...')",⏎····`                  prettier/prettier
+  118:6  warning  Replace `'admin·bootstrap·utility',·'tools/admin-bootstrap.ts',·"await·connection.query('UPDATE·users·SET·role·=·admin')"` with `⏎······'admin·bootstrap·utility',⏎······'tools/admin-bootstrap.ts',⏎······"await·connection.query('UPDATE·users·SET·role·=·admin')",⏎····`  prettier/prettier
+  119:6  warning  Replace `'backfill·utility',·'tools/moved-repair.ts',·"await·connection.query('UPDATE·listings·SET·location_id·=·1')"` with `⏎······'backfill·utility',⏎······'tools/moved-repair.ts',⏎······"await·connection.query('UPDATE·listings·SET·location_id·=·1')",⏎····`          prettier/prettier
+
+✖ 3 problems (0 errors, 3 warnings)
+  0 errors and 3 warnings potentially fixable with the `--fix` option.
+

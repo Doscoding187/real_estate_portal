@@ -17,6 +17,7 @@
     "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
     "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
     "server/_core/launchPreflight.ts",
+    "scripts/launchWorkerAdmissionCheck.ts",
     "scripts/databaseAuthorityCli.ts",
     "scripts/databaseAuthorityConsumerContract.ts",
     "scripts/databaseAuthorityFreshTestApply.ts",

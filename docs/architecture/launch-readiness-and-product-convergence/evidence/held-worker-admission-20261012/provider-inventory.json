@@ -1,0 +1,94 @@
+{
+  "checkedAt": "2026-10-12 13:21:17 UTC",
+  "kind": "read-only-held-worker-inventory",
+  "services": [
+    {
+      "service": {
+        "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "name": "paid-mvp-email-worker",
+        "state": "live"
+      },
+      "config": {
+        "build": {
+          "buildCommand": "pnpm build:backend",
+          "buildEnvironment": "V3",
+          "builder": "RAILPACK"
+        },
+        "deploy": {
+          "ipv6EgressEnabled": false,
+          "multiRegionConfig": {
+            "asia-southeast1-eqsg3a": {
+              "numReplicas": 1
+            }
+          },
+          "restartPolicyType": "ALWAYS",
+          "runtime": "V2",
+          "startCommand": "pnpm email:supervisor",
+          "useLegacyStacker": false
+        },
+        "source": {
+          "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "repo": "Doscoding187/real_estate_portal"
+        }
+      },
+      "latestDeployment": null,
+      "staged": {
+        "changeCount": 1,
+        "createdAt": "2026-10-10T19:41:16.959Z",
+        "message": null,
+        "patchId": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+        "status": "STAGED",
+        "updatedAt": "2026-10-10T19:41:16.959Z"
+      },
+      "stagedChanges": [],
+      "domains": {
+        "customDomains": [],
+        "serviceDomains": []
+      }
+    },
+    {
+      "service": {
+        "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "name": "paid-mvp-lead-job",
+        "state": "live"
+      },
+      "config": {
+        "build": {
+          "buildCommand": "pnpm build:backend",
+          "buildEnvironment": "V3",
+          "builder": "RAILPACK"
+        },
+        "deploy": {
+          "ipv6EgressEnabled": false,
+          "multiRegionConfig": {
+            "asia-southeast1-eqsg3a": {
+              "numReplicas": 1
+            }
+          },
+          "restartPolicyType": "NEVER",
+          "runtime": "V2",
+          "startCommand": "pnpm lead-delivery:worker",
+          "useLegacyStacker": false
+        },
+        "source": {
+          "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+          "repo": "Doscoding187/real_estate_portal"
+        }
+      },
+      "latestDeployment": null,
+      "staged": {
+        "changeCount": 1,
+        "createdAt": "2026-10-10T19:41:16.959Z",
+        "message": null,
+        "patchId": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+        "status": "STAGED",
+        "updatedAt": "2026-10-10T19:41:16.959Z"
+      },
+      "stagedChanges": [],
+      "domains": {
+        "customDomains": [],
+        "serviceDomains": []
+      }
+    }
+  ]
+}

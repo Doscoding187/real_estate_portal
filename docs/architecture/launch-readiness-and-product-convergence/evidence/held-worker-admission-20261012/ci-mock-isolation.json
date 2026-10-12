@@ -1,0 +1,14 @@
+{
+  "failedRun": 38256226927,
+  "failedJob": 114836323650,
+  "failedSourceSha": "c402009dbf4ebeff7a598d3153a484d8516f7ea7",
+  "failure": "Shared Vitest beforeAll initialized the real runtime pool through the suite-level connection-authority mock before its beforeEach configured that mock.",
+  "correction": "Use the established suite-local SKIP_DB_INIT pattern, preserving/restoring the original value afterAll. No shared setup, CI workflow, production command or database authority changed.",
+  "verification": {
+    "focusedTests": 31,
+    "unreachableSentinelTests": 30,
+    "changedTestLintExitCode": 0
+  },
+  "sentinel": "Fictional loopback target on port 1; worker suite passed without a connection. The CLI suite retained normal setup and refused that unreachable sentinel in a separate diagnostic run.",
+  "remoteCi": "New source requires fresh checks; no merge or hosted execution performed."
+}
