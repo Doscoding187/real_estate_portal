@@ -1,0 +1,95 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-launch-shared-closure-20261012
+
+stdout | server/services/__tests__/publisherLeadService.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/__tests__/db-connection.concurrency.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/publisherLeadWorker.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/__tests__/db-connection.concurrency.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/__tests__/db-connection.concurrency.test.ts > runtime connection initialization > keeps an admitted worker pool separate from API runtime access
+[Database] Authorized worker-connect target aaaaaaaaaaaaaaaa is connected.
+
+stdout | server/__tests__/db-connection.concurrency.test.ts > runtime connection initialization > refuses a worker accessor after an API pool is admitted
+[Database] Authorized runtime-connect target aaaaaaaaaaaaaaaa is connected.
+
+stdout | server/__tests__/db-connection.concurrency.test.ts > runtime connection initialization > closes the unpublished pool when ORM initialization fails
+[Database] Authorized runtime-connect target aaaaaaaaaaaaaaaa is connected.
+
+stdout | server/__tests__/db-connection.concurrency.test.ts > runtime connection initialization > shares one pool across concurrent startup callers
+[Database] Authorized runtime-connect target aaaaaaaaaaaaaaaa is connected.
+
+stdout | server/__tests__/db-connection.concurrency.test.ts > runtime connection initialization > allows a new connection attempt after a shared failure
+[Database] Authorized runtime-connect target aaaaaaaaaaaaaaaa is connected.
+
+ ✓ |server| server/__tests__/db-connection.concurrency.test.ts (6 tests) 72ms
+stdout | scripts/__tests__/runLeadDeliveryWorker.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | scripts/__tests__/runLeadDeliveryWorker.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| scripts/__tests__/runLeadDeliveryWorker.test.ts (5 tests) 87ms
+stdout | server/services/__tests__/publisherLeadService.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publisherLeadService.contract.test.ts (3 tests) 40ms
+stdout | server/services/__tests__/publisherLeadWorker.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publisherLeadWorker.contract.test.ts (12 tests) 69ms
+stdout | server/services/__tests__/leadDeliveryService.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | scripts/emailWorkerSupervisor.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/leadDeliveryService.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/leadDeliveryService.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/leadDeliveryService.contract.test.ts (3 tests) 15ms
+stdout | scripts/emailWorkerSupervisor.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | scripts/emailWorkerSupervisor.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| scripts/emailWorkerSupervisor.test.ts (2 tests) 1016ms
+   ✓ email supervisor loop > repeats batches and drains the current batch on shutdown 1011ms
+
+ Test Files  6 passed (6)
+      Tests  31 passed (31)
+   Start at  11:11:17
+   Duration  11.04s (transform 3.52s, setup 1.38s, collect 17.81s, tests 1.30s, environment 6ms, prepare 1.40s)
+

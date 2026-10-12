@@ -22,7 +22,7 @@ vi.mock('../_core/databaseAuthority/authorization', () => ({
   authorizeDatabaseOperation: () => ({}),
   protectedDatabaseApprovalFromEnvironment: () => undefined,
 }));
-import { getDb, resetDb } from '../db-connection';
+import { getDb, getWorkerDb, resetDb } from '../db-connection';
 
 beforeEach(() => resetDb());
 
@@ -33,6 +33,26 @@ afterEach(() => {
 });
 
 describe('runtime connection initialization', () => {
+  it('keeps an admitted worker pool separate from API runtime access', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const database = { worker: true };
+    mocks.create.mockResolvedValue({ pool: {}, end: vi.fn(async () => {}) });
+    mocks.drizzle.mockReturnValue(database);
+    await expect(getWorkerDb()).resolves.toBe(database);
+    await expect(getWorkerDb()).resolves.toBe(database);
+    await expect(getDb()).rejects.toThrow('cannot reuse a runtime pool as a worker pool');
+    expect(mocks.create).toHaveBeenCalledOnce();
+  });
+
+  it('refuses a worker accessor after an API pool is admitted', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    mocks.create.mockResolvedValue({ pool: {}, end: vi.fn(async () => {}) });
+    mocks.drizzle.mockReturnValue({ runtime: true });
+    await getDb();
+    await expect(getWorkerDb()).rejects.toThrow('cannot reuse a runtime pool as a worker pool');
+    expect(mocks.create).toHaveBeenCalledOnce();
+  });
+
   it('closes the unpublished pool when ORM initialization fails', async () => {
     vi.stubEnv('NODE_ENV', 'production');
     const pool = { pool: {}, end: vi.fn(async () => {}) };

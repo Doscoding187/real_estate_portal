@@ -1,0 +1,69 @@
+{
+  "kind": "shared-launch-closure-source-validation",
+  "baseSha": "3e061d78bdb74f26b51acd5d1ab1ec13b934a796",
+  "classification": "consumer-work",
+  "phase": "source-verification-and-protected-release-planning",
+  "schemaChanged": false,
+  "grantPlanChanged": false,
+  "protectedDatabaseConnected": false,
+  "providerMutationPerformed": false,
+  "checks": [
+    {
+      "command": "pnpm db:authority:status",
+      "exitCode": 0,
+      "result": "Exact-owned disposable-worktree context; service unreachable; no ledger/schema/data readiness claim"
+    },
+    {
+      "command": "pnpm db:authority:manifest",
+      "exitCode": 0,
+      "result": "Validated head0111; digest 600ccfc5ae5ddc480fe0274edc8a5e3624c2bab32aa3da65f314acd3803cef3c"
+    },
+    {
+      "command": "pnpm db:authority:context",
+      "exitCode": 0,
+      "result": "Owned local target; no protected connection"
+    },
+    {
+      "command": "pnpm check",
+      "exitCode": 0,
+      "result": "TypeScript check passed"
+    },
+    {
+      "command": "pnpm db:authority:check",
+      "exitCode": 0,
+      "result": "Static authority gate and its database-free contract suite passed"
+    },
+    {
+      "command": "git diff --check",
+      "exitCode": 0,
+      "result": "No whitespace errors"
+    },
+    {
+      "command": "pnpm exec eslint <seven changed runtime/test files> --format json",
+      "exitCode": 0,
+      "result": "Zero errors; 26 warnings in existing runtime files; new regression files have zero warnings"
+    },
+    {
+      "command": "SKIP_DB_INIT=1 pnpm exec vitest run --config vitest.server.config.ts <six focused files> --reporter=dot",
+      "exitCode": 0,
+      "testFiles": 6,
+      "tests": 31,
+      "artifact": "focused-tests.txt"
+    }
+  ],
+  "sourceReproduction": {
+    "testFile": "server/services/__tests__/publisherLeadWorker.contract.test.ts",
+    "beforeFix": {
+      "tests": 8,
+      "failed": 5,
+      "passing": 3
+    },
+    "mechanism": "Injected worker database reaches lead SELECT, then canonical publisher lookup calls API getDb and receives role-reuse rejection",
+    "limitation": "Controlled query/provider doubles; not a live database/provider test"
+  },
+  "acceptanceLimits": [
+    "No hosted email receipt or worker deployment is certified by source tests.",
+    "Fresh-schema physical consumer/credential checks remain on required PR CI.",
+    "No full B-package closure or register amendment is claimed."
+  ]
+}

@@ -1,0 +1,464 @@
+{
+  "kind": "shared-launch-closure-readonly-inventory",
+  "capturedAt": "2026-10-12 09:05:34 UTC",
+  "sourceBase": "3e061d78bdb74f26b51acd5d1ab1ec13b934a796",
+  "providerMutationPerformed": false,
+  "protectedDatabaseConnected": false,
+  "variableValuesRead": false,
+  "railway": {
+    "project": {
+      "id": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "name": "successful-tranquility",
+      "workspaceName": "doscoding187's Projects"
+    },
+    "environment": {
+      "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "isEphemeral": false,
+      "name": "production"
+    },
+    "staged": {
+      "changeCount": 1,
+      "createdAt": "2026-10-10T19:41:16.959Z",
+      "message": null,
+      "patchId": "398fb997-eeee-4b51-904e-6d4c01fd0aed",
+      "status": "STAGED",
+      "updatedAt": "2026-10-10T19:41:16.959Z"
+    },
+    "services": [
+      {
+        "cronSchedule": null,
+        "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+        "latestDeployment": null,
+        "name": "paid-mvp-email-worker",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": null,
+          "image": null,
+          "repo": "Doscoding187/real_estate_portal"
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": []
+      },
+      {
+        "cronSchedule": null,
+        "id": "bb79bb51-7abb-4194-9f62-81e80b410c24",
+        "latestDeployment": {
+          "createdAt": "2026-09-05T12:50:33.234Z",
+          "id": "ff97a541-e5b0-4520-920f-3681d18e3c7d",
+          "status": "SUCCESS",
+          "url": null
+        },
+        "name": "Redis",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": null,
+          "image": "redis:8.2.9",
+          "repo": null
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": [
+          {
+            "mountPath": "/data",
+            "volumeId": "08e289dc-d01f-4e64-850a-a5a1283f6a2c",
+            "volumeName": "redis-volume"
+          }
+        ]
+      },
+      {
+        "cronSchedule": null,
+        "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+        "latestDeployment": null,
+        "name": "paid-mvp-lead-job",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": null,
+          "image": null,
+          "repo": "Doscoding187/real_estate_portal"
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": []
+      },
+      {
+        "cronSchedule": null,
+        "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+        "latestDeployment": {
+          "createdAt": "2026-10-12T07:33:45.725Z",
+          "id": "80b36119-97f0-4811-a508-5cab37f8052a",
+          "status": "SUCCESS",
+          "url": null
+        },
+        "name": "real_estate_portal",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": {
+          "branch": "main",
+          "image": null,
+          "repo": "Doscoding187/real_estate_portal"
+        },
+        "stagedChangeCount": 0,
+        "state": "live",
+        "volumeMounts": []
+      },
+      {
+        "cronSchedule": null,
+        "id": "aa916378-feb3-40e7-b9e5-4f790d77ea1a",
+        "latestDeployment": {
+          "createdAt": "2026-10-10T18:52:58.907Z",
+          "id": "d1fe3001-d205-4693-99be-d33abeda2d99",
+          "status": "FAILED",
+          "url": null
+        },
+        "name": "pl-runtime-recovery-20261010-182259",
+        "numReplicas": 1,
+        "regions": [
+          "asia-southeast1-eqsg3a"
+        ],
+        "source": null,
+        "stagedChangeCount": 1,
+        "state": "staged-delete",
+        "volumeMounts": []
+      }
+    ],
+    "configs": [
+      {
+        "config": {
+          "build": {
+            "buildCommand": "pnpm build:railway",
+            "buildEnvironment": "V3",
+            "builder": "RAILPACK"
+          },
+          "deploy": {
+            "drainingSeconds": 30,
+            "healthcheckPath": "/api/readiness",
+            "healthcheckTimeout": 300,
+            "ipv6EgressEnabled": false,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "preDeployCommand": [],
+            "runtime": "V2",
+            "startCommand": "node --import tsx server/_core/start.ts",
+            "useLegacyStacker": false
+          },
+          "networking": {
+            "customDomains": {
+              "api.propertylistifysa.co.za": {
+                "port": 3000
+              }
+            },
+            "privateNetworkEndpoint": "realestateportal",
+            "serviceDomains": {
+              "realestateportal-production-9bb8.up.railway.app": {
+                "port": 3000
+              }
+            }
+          },
+          "source": {
+            "branch": "main",
+            "commitSha": "3e061d78bdb74f26b51acd5d1ab1ec13b934a796",
+            "repo": "Doscoding187/real_estate_portal"
+          }
+        },
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "service": {
+          "id": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+          "name": "real_estate_portal"
+        },
+        "staged": null,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILD_SHA",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FOUNDER_GOOGLE_EMAIL",
+          "FOUNDER_GOOGLE_LOGIN_ENABLED",
+          "FOUNDER_GOOGLE_PROOF_ENABLED",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_OAUTH_CLIENT_ID",
+          "GOOGLE_OAUTH_CLIENT_SECRET",
+          "GOOGLE_OAUTH_REDIRECT_URI",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "PORT",
+          "RAILWAY_CACHE_BUST",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      },
+      {
+        "config": {
+          "build": {
+            "buildCommand": "pnpm build:backend",
+            "buildEnvironment": "V3",
+            "builder": "RAILPACK"
+          },
+          "deploy": {
+            "ipv6EgressEnabled": false,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "restartPolicyType": "ALWAYS",
+            "runtime": "V2",
+            "startCommand": "pnpm email:supervisor",
+            "useLegacyStacker": false
+          },
+          "source": {
+            "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "repo": "Doscoding187/real_estate_portal"
+          }
+        },
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "service": {
+          "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+          "name": "paid-mvp-email-worker"
+        },
+        "staged": null,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      },
+      {
+        "config": {
+          "build": {
+            "buildCommand": "pnpm build:backend",
+            "buildEnvironment": "V3",
+            "builder": "RAILPACK"
+          },
+          "deploy": {
+            "ipv6EgressEnabled": false,
+            "multiRegionConfig": {
+              "asia-southeast1-eqsg3a": {
+                "numReplicas": 1
+              }
+            },
+            "restartPolicyType": "NEVER",
+            "runtime": "V2",
+            "startCommand": "pnpm lead-delivery:worker",
+            "useLegacyStacker": false
+          },
+          "source": {
+            "commitSha": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+            "repo": "Doscoding187/real_estate_portal"
+          }
+        },
+        "environment": {
+          "id": "63070d99-357a-40ba-99c3-6d1368f61652",
+          "name": "production"
+        },
+        "service": {
+          "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+          "name": "paid-mvp-lead-job"
+        },
+        "staged": null,
+        "variableNames": [
+          "API_URL",
+          "APP_ENV",
+          "APP_URL",
+          "AWS_ACCESS_KEY_ID",
+          "AWS_REGION",
+          "AWS_S3_BUCKET",
+          "AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_AWS_ACCESS_KEY_ID",
+          "BILLING_PROOF_AWS_SECRET_ACCESS_KEY",
+          "BILLING_PROOF_S3_BUCKET",
+          "BILLING_PROOF_S3_PREFIX",
+          "BILLING_PROOF_S3_REGION",
+          "BILLING_PROOF_STORAGE_ADAPTER",
+          "BUILT_IN_FORGE_API_KEY",
+          "BUILT_IN_FORGE_API_URL",
+          "CLOUDFRONT_URL",
+          "CORS_ALLOWED_ORIGINS",
+          "DATABASE_AUTHORITY_APPROVAL_ACTOR",
+          "DATABASE_AUTHORITY_APPROVAL_REFERENCE",
+          "DATABASE_AUTHORITY_APPROVED_CREDENTIAL_CLASS",
+          "DATABASE_AUTHORITY_APPROVED_FINGERPRINT",
+          "DATABASE_CREDENTIAL_CLASS",
+          "DATABASE_URL",
+          "EMAIL_FROM",
+          "FRONTEND_URL",
+          "GOOGLE_GEOCODING_API_KEY",
+          "GOOGLE_MAPS_API_KEY",
+          "GOOGLE_PLACES_API_KEY",
+          "GOOGLE_STREET_VIEW_API_KEY",
+          "JWT_SECRET",
+          "MAX_IMAGE_SIZE_MB",
+          "MEDIA_STORAGE_ADAPTER",
+          "MEDIA_UPLOAD_TOKEN_SECRET",
+          "NEXT_PUBLIC_APP_URL",
+          "NODE_ENV",
+          "OAUTH_SERVER_URL",
+          "OWNER_OPEN_ID",
+          "PAID_MVP_SALES_PAUSED",
+          "REDIS_URL",
+          "RESEND_API_KEY",
+          "S3_BUCKET_NAME",
+          "SAVED_SEARCH_SCHEDULER_ENABLED",
+          "SKIP_FRONTEND",
+          "STRIPE_PUBLISHABLE_KEY",
+          "STRIPE_SECRET_KEY",
+          "STRIPE_WEBHOOK_SECRET",
+          "TRUST_PROXY",
+          "VITE_ANALYTICS_ENDPOINT",
+          "VITE_ANALYTICS_WEBSITE_ID",
+          "VITE_API_URL",
+          "VITE_APP_ID",
+          "VITE_APP_LOGO",
+          "VITE_APP_TITLE",
+          "VITE_APP_URL"
+        ]
+      }
+    ],
+    "apiDeployment": {
+      "id": "80b36119-97f0-4811-a508-5cab37f8052a",
+      "status": "SUCCESS",
+      "sourceSha": "3e061d78bdb74f26b51acd5d1ab1ec13b934a796",
+      "snapshotId": "cf182d18-bde3-4ee6-ad99-327e25a3075a",
+      "regions": [
+        "asia-southeast1-eqsg3a"
+      ]
+    }
+  },
+  "vercel": {
+    "deploymentId": "dpl_Hu9aij7VmRDQJUQ3d5U4WsaEEpuU",
+    "state": "READY",
+    "sourceSha": "3e061d78bdb74f26b51acd5d1ab1ec13b934a796",
+    "projectId": "prj_Xf9Sfzemo9c0Bfq6cgzRb5PGHTtN",
+    "aliases": [
+      "www.propertylistifysa.co.za",
+      "real-estate-portal-xi.vercel.app",
+      "propertylistifysa.co.za",
+      "real-estate-portal-edwards-projects-29c395d1.vercel.app",
+      "real-estate-portal-git-main-edwards-projects-29c395d1.vercel.app"
+    ],
+    "target": "production"
+  },
+  "limits": [
+    "Provider configuration reads do not establish successful worker connections or deliveries.",
+    "Railway OAuth returned variable names only; effective values and secret identity were not independently verified.",
+    "The staged deletion belongs to an earlier recovery workstream and was left untouched.",
+    "Accepted private proof and holds are referenced from dated acceptance; no customer journey was repeated."
+  ]
+}
