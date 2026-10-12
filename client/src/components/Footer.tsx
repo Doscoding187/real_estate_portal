@@ -1,7 +1,16 @@
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Send } from 'lucide-react';
+import {
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+  Send,
+} from 'lucide-react';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 
 export function Footer() {
@@ -22,7 +31,9 @@ export function Footer() {
             </p>
             <div className="flex gap-4">
               <a
-                href="#"
+                href="https://www.facebook.com/profile.php?id=61584910410092"
+                target="_blank"
+                rel="noopener noreferrer"
                 aria-label="Property Listify on Facebook"
                 className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
               >
@@ -36,11 +47,13 @@ export function Footer() {
                 <Twitter className="h-5 w-5" />
               </a>
               <a
-                href="#"
-                aria-label="Property Listify on Instagram"
-                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-pink-600 hover:text-white transition-all"
+                href="https://wa.link/mh6juy"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Property Listify on WhatsApp"
+                className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
               >
-                <Instagram className="h-5 w-5" />
+                <MessageCircle className="h-5 w-5" />
               </a>
               <a
                 href="#"
@@ -87,11 +100,11 @@ export function Footer() {
               ) : null}
               <li>
                 <Link
-                  href="/list-property"
+                  href="/advertise"
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  List your property
+                  Advertise / List Property
                 </Link>
               </li>
             </ul>
@@ -170,15 +183,15 @@ export function Footer() {
         <div className="pt-8 border-t border-slate-800 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4">
           <p>© 2026 Property Listify. All rights reserved.</p>
           <div className="flex gap-6 text-sm">
-            <a href="#" className="hover:text-white transition-colors">
+            <Link href="/legal/privacy" className="hover:text-white transition-colors">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
+            </Link>
+            <Link href="/legal/terms" className="hover:text-white transition-colors">
               Terms of Service
-            </a>
-            <a href="#" className="hover:text-white transition-colors">
+            </Link>
+            <Link href="/legal/cookies" className="hover:text-white transition-colors">
               Cookie Policy
-            </a>
+            </Link>
           </div>
         </div>
       </div>
