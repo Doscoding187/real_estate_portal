@@ -219,8 +219,8 @@ export function LocationHeroSection({
     }
   };
 
-  const handlePostProperty = () => {
-    setLocation('/list-property');
+  const handleAdvertise = () => {
+    setLocation('/advertise');
   };
 
   return (
@@ -295,13 +295,13 @@ export function LocationHeroSection({
                 );
               })}
 
-            {/* Post Property CTA */}
+            {/* Advertise CTA */}
             <button
-              onClick={handlePostProperty}
+              onClick={handleAdvertise}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg font-medium text-sm bg-green-600 text-white hover:bg-green-700 transition-all duration-200 shadow-md whitespace-nowrap"
             >
               <Plus className="h-4 w-4" />
-              Post Property
+              Advertise / List Property
             </button>
           </div>
 
