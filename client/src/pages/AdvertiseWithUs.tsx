@@ -316,6 +316,40 @@ function PreparationAdvertiseWithUs() {
                 </div>
               ))}
             </div>
+
+            <div className="mt-12" data-testid="advertise-owner-info">
+              <div className="mx-auto max-w-4xl">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 md:p-8">
+                  <div className="mx-auto max-w-2xl text-center">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
+                      Private property owners
+                    </p>
+                    <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+                      Selling or letting your own property?
+                    </h3>
+                    <p className="mt-4 text-base leading-7 text-slate-600 md:text-lg">
+                      Self-service private-owner listing is not yet available. Ask about listing
+                      options or browse estate agents. Submitting a request does not publish a
+                      property.
+                    </p>
+                  </div>
+                  <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
+                    <a
+                      href="/contact?area=other&topic=listing-preparation"
+                      className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-base font-semibold text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      Ask about listing options
+                    </a>
+                    <a
+                      href="/agents"
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-base font-semibold text-slate-700 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 bg-white hover:bg-slate-50"
+                    >
+                      Browse estate agents
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
