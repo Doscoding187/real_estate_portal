@@ -1,6 +1,6 @@
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
 import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import * as schema from '../../../drizzle/schema';
 import { resolveDatabaseAuthority } from '../../_core/databaseAuthority/context';
 import { authorizeDatabaseOperation } from '../../_core/databaseAuthority/authorization';
@@ -11,6 +11,7 @@ import {
 import { legalReleaseContentDigest } from '../legalAcceptancePolicy';
 import {
   findVerifiedRegistrationAccount,
+  createRegistrationWithLegalAcceptance,
   insertRegistrationWithLegalAcceptance,
   validateCurrentLegalAcceptanceInTransaction,
 } from '../registrationLegalAcceptanceService';
@@ -19,6 +20,7 @@ const runLocal = process.env.B15_LOCAL_DB_PROOF === '1';
 describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
   let connection: AuthoritySqlConnection;
   let db: MySql2Database<typeof schema>;
+  let originalBundleId: string | undefined;
   const bundleId = 'synthetic-local-proof-only';
   const release = {
     formatVersion: 1 as const,
@@ -57,14 +59,24 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
       'negative@example.invalid',
       'erasure@example.invalid',
       'privileged@example.invalid',
+      'parallel@example.invalid',
+      '  PARALLEL@example.invalid ',
+      'parallel-one@example.invalid',
+      'parallel-two@example.invalid',
     );
     await db.transaction(async tx => {
       await tx
         .delete(schema.userLegalAcceptances)
         .where(eq(schema.userLegalAcceptances.bundleId, bundleId));
-      await tx
-        .delete(schema.legalActiveRelease)
-        .where(eq(schema.legalActiveRelease.bundleId, bundleId));
+      if (originalBundleId)
+        await tx
+          .update(schema.legalActiveRelease)
+          .set({ bundleId: originalBundleId })
+          .where(eq(schema.legalActiveRelease.bundleId, bundleId));
+      else
+        await tx
+          .delete(schema.legalActiveRelease)
+          .where(eq(schema.legalActiveRelease.bundleId, bundleId));
       await tx.delete(schema.users).where(inArray(schema.users.email, emails));
       await tx.delete(schema.legalReleases).where(eq(schema.legalReleases.bundleId, bundleId));
     });
@@ -87,6 +99,11 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
     );
     db = drizzle(connection as never, { schema, mode: 'default' });
     await clearOwnFixtures();
+    const [original] = await db
+      .select()
+      .from(schema.legalActiveRelease)
+      .where(eq(schema.legalActiveRelease.purpose, 'account_registration'));
+    originalBundleId = original?.bundleId;
     await db.insert(schema.legalReleases).values({
       bundleId,
       formatVersion: 1,
@@ -102,7 +119,8 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
     });
     await db
       .insert(schema.legalActiveRelease)
-      .values({ purpose: 'account_registration', bundleId });
+      .values({ purpose: 'account_registration', bundleId })
+      .onDuplicateKeyUpdate({ set: { bundleId } });
   });
   afterAll(async () => {
     try {
@@ -169,6 +187,76 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
       } finally {
         await publisherConnection.end();
       }
+    }
+  });
+
+  it('serializes normalized duplicate registrations while keeping evidence atomic', async () => {
+    let release!: () => void;
+    const commit = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let inserted!: () => void;
+    let insertionFailed!: (error: unknown) => void;
+    const ready = new Promise<void>((resolve, reject) => {
+      inserted = resolve;
+      insertionFailed = reject;
+    });
+    const first = db.transaction(async tx => {
+      const result = await insertRegistrationWithLegalAcceptance(
+        tx,
+        { ...user('parallel'), email: '  PARALLEL@example.invalid ' },
+        choice,
+      );
+      inserted();
+      await commit;
+      return result;
+    });
+    void first.catch(insertionFailed);
+    try {
+      await ready;
+      const second = createRegistrationWithLegalAcceptance(user('parallel'), choice);
+      // Keep the first row uncommitted while the independent runtime connection
+      // attempts the same normalized identity. A legal-copy shared lock alone
+      // permits a second account to be inserted against the non-unique index.
+      void second.catch(() => undefined);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      release();
+      const results = await Promise.allSettled([first, second]);
+      expect(results[0].status).toBe('fulfilled');
+      expect(results[1]).toMatchObject({
+        status: 'rejected',
+        reason: { message: 'User with this email already exists' },
+      });
+      const accounts = await db
+        .select()
+        .from(schema.users)
+        .where(sql`LOWER(TRIM(${schema.users.email})) = ${'parallel@example.invalid'}`);
+      expect(accounts).toHaveLength(1);
+      expect(accounts[0].email).toBe('parallel@example.invalid');
+      const evidence = await db
+        .select()
+        .from(schema.userLegalAcceptances)
+        .where(eq(schema.userLegalAcceptances.userId, accounts[0].id));
+      expect(evidence).toHaveLength(1);
+    } finally {
+      release();
+      await first.catch(() => undefined);
+    }
+  });
+
+  it('commits independent registrations contending for the same email-index gap', async () => {
+    const results = await Promise.all([
+      createRegistrationWithLegalAcceptance(user('parallel-one'), choice),
+      createRegistrationWithLegalAcceptance(user('parallel-two'), choice),
+    ]);
+    expect(new Set(results.map(result => result.userId)).size).toBe(2);
+    for (const result of results) {
+      expect(
+        await db
+          .select()
+          .from(schema.userLegalAcceptances)
+          .where(eq(schema.userLegalAcceptances.id, result.evidenceId)),
+      ).toHaveLength(1);
     }
   });
 

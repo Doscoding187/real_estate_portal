@@ -137,10 +137,22 @@ export async function insertRegistrationWithLegalAcceptance(
   ) {
     throw new Error('Invalid public registration identity');
   }
+  const normalizedEmail = userData.email.trim().toLowerCase();
+  if (!normalizedEmail) throw new Error('Invalid public registration identity');
+  // email_idx is intentionally non-unique. This current locking read protects
+  // the normalized identity (including an absent-key gap) until account and
+  // evidence commit. A shared legal pointer lock does not serialize sign-ups.
+  const [currentAccount] = await tx
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.email, normalizedEmail))
+    .limit(1)
+    .for('update');
+  if (currentAccount) throw new Error('User with this email already exists');
   const [existing] = await tx
     .select({ id: schema.users.id })
     .from(schema.users)
-    .where(sql`LOWER(TRIM(${schema.users.email})) = ${userData.email.trim().toLowerCase()}`)
+    .where(sql`LOWER(TRIM(${schema.users.email})) = ${normalizedEmail}`)
     .limit(1);
   if (existing) throw new Error('User with this email already exists');
   if (
@@ -150,9 +162,13 @@ export async function insertRegistrationWithLegalAcceptance(
     throw new Error('Agent profile with display name and phone number is required');
   }
   const mysqlNow = now.toISOString().slice(0, 23).replace('T', ' ');
-  const [created] = await tx
-    .insert(schema.users)
-    .values({ ...userData, createdAt: mysqlNow, updatedAt: mysqlNow, lastSignedIn: mysqlNow });
+  const [created] = await tx.insert(schema.users).values({
+    ...userData,
+    email: normalizedEmail,
+    createdAt: mysqlNow,
+    updatedAt: mysqlNow,
+    lastSignedIn: mysqlNow,
+  });
   const userId = Number(created.insertId);
   if (!Number.isSafeInteger(userId) || userId <= 0)
     throw new Error('Registration did not return an account identity');
@@ -194,9 +210,20 @@ export async function createRegistrationWithLegalAcceptance(
   agentProfile?: RegistrationAgentProfile,
 ) {
   const db = await database();
-  return db.transaction(tx =>
-    insertRegistrationWithLegalAcceptance(tx, userData, choice, agentProfile),
-  );
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await db.transaction(
+        tx => insertRegistrationWithLegalAcceptance(tx, userData, choice, agentProfile),
+        { isolationLevel: 'repeatable read' },
+      );
+    } catch (error) {
+      const detail = error as { cause?: { errno?: unknown }; errno?: unknown };
+      // MySQL 1213 confirms a rolled-back victim transaction. Adjacent absent
+      // email keys can share a gap; retry the whole transaction with a fresh
+      // snapshot and legal-release validation. Never retry ambiguous outcomes.
+      if (attempt >= 2 || Number(detail?.cause?.errno ?? detail?.errno) !== 1213) throw error;
+    }
+  }
 }
 
 /** Administrative approval may attach an identity only to an account the
