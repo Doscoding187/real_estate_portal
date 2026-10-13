@@ -1907,6 +1907,300 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     expect(renewalApproval).toMatchObject({ activationOccurred: true, invoiceStatus: 'paid' });
   }, 60_000);
 
+  it.each(['agent', 'agency', 'developer'] as const)(
+    'accepts a no-attachment %s notice without access, then activates exactly once from bank review',
+    async ownerType => {
+      const db = await getDb();
+      if (!db) throw new Error('Missing disposable database');
+      const role =
+        ownerType === 'agency'
+          ? 'agency_admin'
+          : ownerType === 'developer'
+            ? 'property_developer'
+            : 'agent';
+      const agencyId = ownerType === 'agency' ? await insertAgency('notice-agency') : null;
+      const userId = await insertUser({ label: `notice-${ownerType}`, role, agencyId });
+      const ownerId =
+        ownerType === 'agency'
+          ? agencyId!
+          : ownerType === 'developer'
+            ? await insertDeveloper(userId, 'notice-developer')
+            : userId;
+      const financeId = await insertUser({ label: 'notice-finance', role: 'super_admin' });
+      const caller = createCallerForFixtureUser({ id: userId, role, agencyId });
+      const invoice = (
+        await caller.billing.requestLaunchAccessInvoice({
+          legalAcceptance: await purchaseChoice(role),
+        })
+      ).invoice;
+      const notice = {
+        invoiceId: invoice.id,
+        requestId: randomUUID(),
+        payerName: 'Test payer',
+        paymentDate: '2026-10-13',
+      };
+      const previousRegion = process.env.BILLING_PROOF_S3_REGION;
+      process.env.BILLING_PROOF_S3_REGION = 'eu-north-1';
+      let paymentId: number;
+      try {
+        expect(getBillingProofStorageStatus().configured).toBe(false);
+        const results = await Promise.all([
+          caller.billing.submitLaunchAccessPaymentNotice(notice),
+          caller.billing.submitLaunchAccessPaymentNotice({ ...notice, requestId: randomUUID() }),
+        ]);
+        paymentId = results[0].paymentId;
+        expect(results[1].paymentId).toBe(paymentId);
+        expect(results.every(result => result.documentId === null)).toBe(true);
+      } finally {
+        process.env.BILLING_PROOF_S3_REGION = previousRegion;
+      }
+      expect(proofStorageObjects.size).toBe(0);
+      const paymentRows = await db
+        .select()
+        .from(billingPayments)
+        .where(eq(billingPayments.invoiceId, invoice.id));
+      expect(paymentRows).toHaveLength(1);
+      expect(paymentRows[0]).toMatchObject({
+        state: 'under_review',
+        paymentReference: invoice.paymentReference,
+        bankReference: null,
+      });
+      expect((await loadSubscription(ownerType, ownerId))?.status).toBe('payment_under_review');
+      const queueRow = (await getAdminFinanceQueue({ status: 'under_review' })).payments.find(
+        row => row.payment.id === paymentId,
+      );
+      expect(queueRow?.documentId).toBeNull();
+      expect(queueRow?.noticeHistory).toHaveLength(1);
+      const approval = {
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId,
+        decision: 'approve' as const,
+        verifiedAmount: invoice.amountDue,
+        bankPaymentReference: invoice.paymentReference,
+        note: 'Bank receipt matched amount, invoice reference, payer and date.',
+      };
+      const financeCaller = createCallerForFixtureUser({ id: financeId, role: 'super_admin' });
+      const approved = await Promise.all([
+        financeCaller.billing.admin.reviewManualPayment(approval),
+        financeCaller.billing.admin.reviewManualPayment(approval),
+      ]);
+      expect(approved.filter(result => result.activationOccurred)).toHaveLength(1);
+      const term = await loadSubscription(ownerType, ownerId);
+      expect(term?.status).toBe('active');
+      expect(
+        parseCanonicalCommercialTimestamp(term?.currentPeriodEnd)! -
+          parseCanonicalCommercialTimestamp(term?.currentPeriodStart)!,
+      ).toBe(90 * 24 * 60 * 60 * 1000);
+      await expect(caller.billing.submitLaunchAccessPaymentNotice(notice)).resolves.toMatchObject({
+        paymentId,
+        idempotent: true,
+      });
+      expect((await loadSubscription(ownerType, ownerId))?.currentPeriodEnd).toBe(
+        term?.currentPeriodEnd,
+      );
+      const events = await db
+        .select()
+        .from(billingAuditEvents)
+        .where(eq(billingAuditEvents.invoiceId, invoice.id));
+      expect(events.filter(event => event.eventType === 'payment_notice_received')).toHaveLength(1);
+      const activations = events.filter(
+        event => event.eventType === 'payment_approved_subscription_activated',
+      );
+      expect(activations).toHaveLength(1);
+      expect(activations[0]).toMatchObject({
+        actorUserId: financeId,
+        paymentId,
+        invoiceId: invoice.id,
+        message: approval.note,
+      });
+      expect(activations[0].createdAt).toBeTruthy();
+      expect(activations[0].afterData).toMatchObject({
+        amountPaid: invoice.amountDue,
+        reconciliationNote: approval.note,
+        bankPaymentReference: invoice.paymentReference,
+      });
+      expect((activations[0].afterData as any).paidTermStart).toBeTruthy();
+      expect((activations[0].afterData as any).paidTermEnd).toBeTruthy();
+    },
+    60_000,
+  );
+
+  it.each([
+    'partial',
+    'unmatched',
+    'duplicate',
+    'excess',
+    'rejected',
+    'wrong_reference',
+    'missing_note',
+  ] as const)(
+    'keeps new access inactive for a %s payment notice',
+    async scenario => {
+      const db = await getDb();
+      if (!db) throw new Error('Missing disposable database');
+      const userId = await insertUser({ label: `notice-${scenario}`, role: 'agent' });
+      const financeId = await insertUser({
+        label: 'notice-exception-finance',
+        role: 'super_admin',
+      });
+      const caller = createCallerForFixtureUser({ id: userId, role: 'agent' });
+      const invoice = (
+        await caller.billing.requestLaunchAccessInvoice({
+          legalAcceptance: await purchaseChoice('agent'),
+        })
+      ).invoice;
+      const notice = {
+        invoiceId: invoice.id,
+        requestId: randomUUID(),
+        payerName: 'Test payer',
+        paymentDate: '2026-10-13',
+      };
+      const submitted = await caller.billing.submitLaunchAccessPaymentNotice(notice);
+      const decision =
+        scenario === 'unmatched'
+          ? 'unmatched'
+          : scenario === 'duplicate'
+            ? 'duplicate'
+            : scenario === 'rejected'
+              ? 'reject'
+              : 'approve';
+      const approval = {
+        actorUser: { id: financeId, role: 'super_admin' },
+        paymentId: submitted.paymentId,
+        decision: decision as 'approve' | 'unmatched' | 'duplicate' | 'reject',
+        verifiedAmount:
+          invoice.amountDue + (scenario === 'excess' ? 100 : scenario === 'partial' ? -100 : 0),
+        bankPaymentReference: scenario === 'wrong_reference' ? 'WRONG' : invoice.paymentReference,
+        note:
+          scenario === 'missing_note'
+            ? ''
+            : 'Internal bank reference information; manual review recorded.',
+        overpaymentReconciled: true,
+      };
+      if (['excess', 'wrong_reference', 'missing_note'].includes(scenario))
+        await expect(reviewManualPayment(approval)).rejects.toBeInstanceOf(Error);
+      else await reviewManualPayment(approval);
+      expect((await loadSubscription('agent', userId))?.status).not.toBe('active');
+      expect((await loadSubscription('agent', userId))?.currentPeriodEnd).toBeNull();
+      const events = await db
+        .select()
+        .from(billingAuditEvents)
+        .where(eq(billingAuditEvents.invoiceId, invoice.id));
+      expect(
+        events.some(event => event.eventType === 'payment_approved_subscription_activated'),
+      ).toBe(false);
+      if (['unmatched', 'duplicate', 'rejected'].includes(scenario)) {
+        const workspace = await caller.billing.agentWorkspace();
+        expect(
+          workspace.payments.find(payment => payment.id === submitted.paymentId)?.reviewNote,
+        ).toBeNull();
+        const notices = await db
+          .select()
+          .from(notifications)
+          .where(eq(notifications.userId, userId));
+        expect(notices.every(item => !item.content?.includes('Internal bank'))).toBe(true);
+      }
+    },
+    60_000,
+  );
+
+  it('accepts a second EFT notice for the remaining balance after a verified partial payment', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Missing disposable database');
+    const userId = await insertUser({ label: 'notice-two-bank-payments', role: 'agent' });
+    const financeId = await insertUser({ label: 'notice-partial-finance', role: 'super_admin' });
+    const caller = createCallerForFixtureUser({ id: userId, role: 'agent' });
+    const invoice = (
+      await caller.billing.requestLaunchAccessInvoice({
+        legalAcceptance: await purchaseChoice('agent'),
+      })
+    ).invoice;
+    const notice = {
+      invoiceId: invoice.id,
+      requestId: randomUUID(),
+      payerName: 'Test payer',
+      paymentDate: '2026-10-13',
+    };
+    const first = await caller.billing.submitLaunchAccessPaymentNotice(notice);
+    const review = {
+      actorUser: { id: financeId, role: 'super_admin' },
+      decision: 'approve' as const,
+      bankPaymentReference: invoice.paymentReference,
+    };
+    await reviewManualPayment({
+      ...review,
+      paymentId: first.paymentId,
+      verifiedAmount: 10000,
+      note: 'First distinct bank receipt matched; partial funds only.',
+    });
+    expect((await loadSubscription('agent', userId))?.status).not.toBe('active');
+    await expect(caller.billing.submitLaunchAccessPaymentNotice(notice)).resolves.toMatchObject({
+      paymentId: first.paymentId,
+      idempotent: true,
+    });
+    const second = await caller.billing.submitLaunchAccessPaymentNotice({
+      ...notice,
+      requestId: randomUUID(),
+    });
+    expect(second.paymentId).not.toBe(first.paymentId);
+    const [pending] = await db
+      .select()
+      .from(billingPayments)
+      .where(eq(billingPayments.id, second.paymentId));
+    expect(pending.amount).toBe(invoice.amountDue - 10000);
+    await reviewManualPayment({
+      ...review,
+      paymentId: second.paymentId,
+      verifiedAmount: invoice.amountDue - 10000,
+      note: 'Second distinct bank receipt matched; remaining invoice balance settled.',
+    });
+    expect((await loadSubscription('agent', userId))?.status).toBe('active');
+    const events = await db
+      .select()
+      .from(billingAuditEvents)
+      .where(eq(billingAuditEvents.invoiceId, invoice.id));
+    expect(
+      events.filter(event => event.eventType === 'payment_approved_subscription_activated'),
+    ).toHaveLength(1);
+  });
+
+  it('rejects foreign-owner invoices, invented references, attachments, invalid dates and altered retries', async () => {
+    const userId = await insertUser({ label: 'notice-boundary', role: 'agent' });
+    const otherUserId = await insertUser({ label: 'notice-other-owner', role: 'agent' });
+    const caller = createCallerForFixtureUser({ id: userId, role: 'agent' });
+    const other = createCallerForFixtureUser({ id: otherUserId, role: 'agent' });
+    const invoice = (
+      await caller.billing.requestLaunchAccessInvoice({
+        legalAcceptance: await purchaseChoice('agent'),
+      })
+    ).invoice;
+    const notice = {
+      invoiceId: invoice.id,
+      requestId: randomUUID(),
+      payerName: 'Test payer',
+      paymentDate: '2026-10-13',
+    };
+    await expect(other.billing.submitLaunchAccessPaymentNotice(notice)).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    await expect(
+      caller.billing.submitLaunchAccessPaymentNotice({
+        ...notice,
+        bankReference: 'invented',
+      } as any),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.billing.submitLaunchAccessPaymentNotice({ ...notice, file: {} } as any),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.billing.submitLaunchAccessPaymentNotice({ ...notice, paymentDate: '2026-02-31' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await caller.billing.submitLaunchAccessPaymentNotice(notice);
+    await expect(
+      caller.billing.submitLaunchAccessPaymentNotice({ ...notice, payerName: 'Changed payer' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+  });
+
   it('returns a rejected Launch Access proof to the issued state so the owner can resubmit', async () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');

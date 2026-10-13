@@ -1,3 +1,7 @@
+import {
+  EftPaymentNoticeForm,
+  usePaymentNoticeRequest,
+} from '@/components/billing/EftPaymentNoticeForm';
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import type { inferRouterOutputs } from '@trpc/server';
@@ -5,8 +9,6 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { APP_TITLE } from '@/const';
 import { apiFetch } from '@/lib/api';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
@@ -43,7 +45,6 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AgentBillingWorkspace = RouterOutputs['billing']['agentWorkspace'];
 type AgentInvoice = NonNullable<AgentBillingWorkspace['activeInvoice']>;
 type AgentBankDetails = AgentBillingWorkspace['bankDetails'];
-type AgentProofStorage = AgentBillingWorkspace['proofStorage'];
 
 type AgentInvoiceResponse = {
   invoice: AgentInvoice;
@@ -115,7 +116,7 @@ function ActivationSteps() {
   const steps = [
     'Request the canonical invoice',
     'Pay by manual EFT',
-    'Submit payment proof',
+    'Submit payment notification',
     'Finance verifies and activates access',
   ];
 
@@ -136,15 +137,6 @@ function ActivationSteps() {
   );
 }
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-    reader.onerror = () => reject(reader.error || new Error('Could not read proof document.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 function formatInvoiceAmount(amountMinor: number | null | undefined): string {
   return new Intl.NumberFormat('en-ZA', {
     style: 'currency',
@@ -157,32 +149,20 @@ function formatInvoiceAmount(amountMinor: number | null | undefined): string {
 function AgentManualEftPanel({
   invoice,
   bankDetails,
-  proofStorage,
-  paymentAmount,
-  setPaymentAmount,
-  bankReference,
-  setBankReference,
   payerName,
   setPayerName,
   paymentDate,
   setPaymentDate,
-  setProofFile,
   rejectionMessage,
   onSubmit,
   isSubmitting,
 }: {
   invoice: AgentInvoice;
   bankDetails?: AgentBankDetails;
-  proofStorage?: AgentProofStorage;
-  paymentAmount: string;
-  setPaymentAmount: Dispatch<SetStateAction<string>>;
-  bankReference: string;
-  setBankReference: Dispatch<SetStateAction<string>>;
   payerName: string;
   setPayerName: Dispatch<SetStateAction<string>>;
   paymentDate: string;
   setPaymentDate: Dispatch<SetStateAction<string>>;
-  setProofFile: Dispatch<SetStateAction<File | null>>;
   rejectionMessage?: string | null;
   onSubmit: () => void;
   isSubmitting: boolean;
@@ -214,7 +194,7 @@ function AgentManualEftPanel({
           <div>
             <p className="text-slate-500">Status</p>
             <Badge variant="outline" className="mt-1">
-              {invoice.status === 'submitted' ? 'Proof under review' : invoice.status}
+              {invoice.status === 'submitted' ? 'Payment verification pending' : invoice.status}
             </Badge>
           </div>
         </div>
@@ -248,7 +228,8 @@ function AgentManualEftPanel({
             </div>
           </dl>
           <p className="mt-3 text-xs text-slate-500">
-            Use the invoice payment reference above.{' '}
+            Copy the invoice payment reference above exactly into your banking app’s transfer
+            reference field.{' '}
             {bankDetails?.configurationMessage ||
               'Finance verification is required before the 90-day term starts.'}
           </p>
@@ -264,72 +245,22 @@ function AgentManualEftPanel({
               <p className="font-semibold">Finance requested a correction</p>
               <p className="mt-1 leading-6">{rejectionMessage}</p>
               <p className="mt-1 text-xs text-amber-800">
-                Update the details or attach a clearer proof document, then submit it below for a
-                new review.
+                Check your payment details, then submit a corrected notice below for a new review.
               </p>
             </div>
           </div>
         ) : null}
 
         {proofCanBeSubmitted ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <Label htmlFor="agent-payment-amount">Amount paid</Label>
-              <Input
-                id="agent-payment-amount"
-                inputMode="decimal"
-                value={paymentAmount}
-                onChange={event => setPaymentAmount(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="agent-payment-date">Payment date</Label>
-              <Input
-                id="agent-payment-date"
-                type="date"
-                value={paymentDate}
-                onChange={event => setPaymentDate(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="agent-bank-reference">Bank reference</Label>
-              <Input
-                id="agent-bank-reference"
-                value={bankReference}
-                onChange={event => setBankReference(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="agent-payer-name">Payer name</Label>
-              <Input
-                id="agent-payer-name"
-                value={payerName}
-                onChange={event => setPayerName(event.target.value)}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="agent-proof-file">Proof of payment</Label>
-              <Input
-                id="agent-proof-file"
-                type="file"
-                accept="application/pdf,image/jpeg,image/png,image/webp"
-                onChange={event => setProofFile(event.target.files?.[0] || null)}
-              />
-            </div>
-            <Button
-              className="md:col-span-2"
-              disabled={isSubmitting || proofStorage?.configured === false}
-              onClick={onSubmit}
-            >
-              {isSubmitting ? 'Submitting proof…' : 'Submit proof for review'}
-              <UploadCloud className="ml-2 h-4 w-4" />
-            </Button>
-            {proofStorage?.configured === false && (
-              <p className="md:col-span-2 text-xs text-amber-700">
-                Proof upload is not available until private billing storage is configured.
-              </p>
-            )}
-          </div>
+          <EftPaymentNoticeForm
+            invoiceId={invoice.id}
+            paymentDate={paymentDate}
+            payerName={payerName}
+            setPaymentDate={setPaymentDate}
+            setPayerName={setPayerName}
+            isSubmitting={isSubmitting}
+            onSubmit={onSubmit}
+          />
         ) : (
           <p className="text-sm font-medium text-blue-800">
             This invoice is already under review. Finance verification is required before the 90-day
@@ -362,14 +293,12 @@ export function CommercialAgentPackageSelection({
     staleTime: 0,
     refetchOnMount: true,
   });
-  const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
+  const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation();
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
   const [isRequestingInvoice, setIsRequestingInvoice] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [bankReference, setBankReference] = useState('');
   const [payerName, setPayerName] = useState('');
+  const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const agentProducts = useMemo(
     () =>
@@ -434,7 +363,6 @@ export function CommercialAgentPackageSelection({
 
   const activeInvoice = invoiceResponse?.invoice ?? workspaceQuery.data?.activeInvoice ?? null;
   const bankDetails = invoiceResponse?.bankDetails ?? workspaceQuery.data?.bankDetails;
-  const proofStorage = workspaceQuery.data?.proofStorage;
   const rejectionMessage = useMemo(() => {
     if (!activeInvoice) return null;
 
@@ -454,15 +382,9 @@ export function CommercialAgentPackageSelection({
     return (
       latestPayment.reviewNote?.trim() ||
       latestPayment.rejectionReason?.trim() ||
-      'The previous payment proof was not approved. Please submit corrected proof for review.'
+      'The previous payment notification was not approved. Check your payment details and submit a corrected notice for review.'
     );
   }, [activeInvoice, workspaceQuery.data?.payments]);
-
-  useEffect(() => {
-    if (activeInvoice && !paymentAmount) {
-      setPaymentAmount((Number(activeInvoice.amountDue || 0) / 100).toFixed(2));
-    }
-  }, [activeInvoice, paymentAmount]);
 
   if (loading || statusLoading || catalog.isLoading) {
     return (
@@ -519,12 +441,11 @@ export function CommercialAgentPackageSelection({
         body: JSON.stringify({ planId, legalAcceptance: legal.choice }),
       });
       setInvoiceResponse(result);
-      setPaymentAmount((Number(result.invoice.amountDue || 0) / 100).toFixed(2));
       await workspaceQuery.refetch();
       toast.success(
         result.reused ? 'Your existing Agent invoice is ready.' : 'Agent invoice ready.',
         {
-          description: 'Pay by manual EFT and submit proof for finance verification.',
+          description: 'Pay by manual EFT, then select “I’ve paid” for finance verification.',
         },
       );
     } catch (error) {
@@ -537,50 +458,24 @@ export function CommercialAgentPackageSelection({
   };
 
   const handleProofSubmit = async () => {
-    if (!agentLaunchAccessAvailable) {
-      toast.info(
-        'Agent Launch Access is unavailable while commercial availability is being verified.',
-      );
-      return;
-    }
-    if (!activeInvoice) {
-      toast.error('Request an invoice before submitting payment proof.');
-      return;
-    }
-    if (!proofFile) {
-      toast.error('Attach proof of payment.');
-      return;
-    }
-
-    const amountRand = Number(paymentAmount);
-    if (!Number.isFinite(amountRand) || amountRand <= 0) {
-      toast.error('Enter a valid payment amount.');
-      return;
-    }
-
+    if (!agentLaunchAccessAvailable || !activeInvoice) return;
     try {
-      const contentBase64 = await fileToBase64(proofFile);
-      await submitProof.mutateAsync({
-        invoiceId: activeInvoice.id,
-        amount: Math.round(amountRand * 100),
-        bankReference,
-        payerName,
-        paymentDate,
-        file: {
-          filename: proofFile.name,
-          mimeType: proofFile.type || 'application/octet-stream',
-          sizeBytes: proofFile.size,
-          contentBase64,
-        },
-      });
+      await submitProof.mutateAsync(
+        paymentNoticeRequest({
+          invoiceId: activeInvoice.id,
+          paymentDate,
+          payerName: payerName.trim(),
+        }),
+      );
+      resetPaymentNoticeRequest();
       await workspaceQuery.refetch();
       setInvoiceResponse(null);
-      setProofFile(null);
-      setBankReference('');
-      toast.success('Payment proof submitted for finance review.');
+      toast.success('Payment notification submitted. Bank verification is pending.');
       setLocation('/agent/dashboard');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Payment proof could not be submitted.');
+      toast.error(
+        error instanceof Error ? error.message : 'Payment notification could not be submitted.',
+      );
     }
   };
 
@@ -653,8 +548,8 @@ export function CommercialAgentPackageSelection({
               </div>
               <div className="mt-6 rounded-2xl bg-slate-950 px-5 py-4 text-sm leading-6 text-white">
                 Your profile and private preparation work can continue now. Commercial activation,
-                payment proof and the fixed 90-day term become available only after the approved
-                payment workflow is opened.
+                payment notification and the fixed 90-day term become available only after the
+                approved payment workflow is opened.
               </div>
               {agentLaunchAccessAvailable && <PaidCommitmentDisclosure legal={legal} />}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -684,16 +579,10 @@ export function CommercialAgentPackageSelection({
                 <AgentManualEftPanel
                   invoice={activeInvoice}
                   bankDetails={bankDetails}
-                  proofStorage={proofStorage}
-                  paymentAmount={paymentAmount}
-                  setPaymentAmount={setPaymentAmount}
-                  bankReference={bankReference}
-                  setBankReference={setBankReference}
                   payerName={payerName}
                   setPayerName={setPayerName}
                   paymentDate={paymentDate}
                   setPaymentDate={setPaymentDate}
-                  setProofFile={setProofFile}
                   rejectionMessage={rejectionMessage}
                   onSubmit={() => void handleProofSubmit()}
                   isSubmitting={submitProof.isPending}
@@ -762,8 +651,8 @@ function PreparationAgentPackageSelection({
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">
             Complete your professional presence and prepare private inventory now. Commercial
-            products, invoices, payment proof, and marketplace publishing remain unavailable until
-            approved commercial activation.
+            products, invoices, payment notification, and marketplace publishing remain unavailable
+            until approved commercial activation.
           </p>
 
           <div className="mt-7 max-w-2xl">

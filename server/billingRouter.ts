@@ -31,6 +31,7 @@ import {
   startAgencyManualCheckout,
   submitAgencyPaymentProof,
   submitPaidLaunchAccessPaymentProof,
+  submitPaidLaunchAccessPaymentNotice,
   submitDeveloperPaymentProof,
   updateSubscriptionLifecycle,
   MAX_PROOF_BASE64_CHARS,
@@ -93,6 +94,16 @@ const submitPaymentProofSchema = z.object({
   }),
 });
 
+// Notifications carry no attachment and never verify received funds.
+const submitPaymentNoticeSchema = z
+  .object({
+    invoiceId: z.number().int().positive(),
+    requestId: z.string().uuid(),
+    payerName: z.string().trim().min(1).max(160),
+    paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  })
+  .strict();
+
 const reviewPaymentSchema = z.object({
   paymentId: z.number().int().positive(),
   decision: z.enum([
@@ -105,6 +116,7 @@ const reviewPaymentSchema = z.object({
   ]),
   note: z.string().max(2000).optional(),
   verifiedAmount: z.number().int().positive().safe().optional(),
+  bankPaymentReference: z.string().trim().min(1).max(120).optional(),
   overpaymentReconciled: z.boolean().optional(),
 });
 
@@ -207,6 +219,12 @@ export const billingRouter = {
         notes: input.notes,
         file: input.file,
       }),
+    ),
+
+  submitLaunchAccessPaymentNotice: protectedProcedure
+    .input(submitPaymentNoticeSchema)
+    .mutation(async ({ ctx, input }) =>
+      submitPaidLaunchAccessPaymentNotice({ ...input, user: requireUser(ctx) }),
     ),
 
   submitLaunchAccessPaymentProof: protectedProcedure
@@ -396,6 +414,7 @@ export const billingRouter = {
           decision: input.decision,
           note: input.note,
           verifiedAmount: input.verifiedAmount,
+          bankPaymentReference: input.bankPaymentReference,
           overpaymentReconciled: input.overpaymentReconciled,
         }),
       ),

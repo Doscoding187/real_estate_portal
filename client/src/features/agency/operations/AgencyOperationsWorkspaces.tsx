@@ -1,4 +1,8 @@
 import {
+  EftPaymentNoticeForm,
+  usePaymentNoticeRequest,
+} from '@/components/billing/EftPaymentNoticeForm';
+import {
   ArrowRight,
   AlertTriangle,
   Building2,
@@ -15,13 +19,11 @@ import {
   UploadCloud,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { trpc } from '@/lib/trpc';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
@@ -228,11 +230,9 @@ export function CommercialAgencyBillingWorkspace(
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(
     Number.isFinite(invoiceIdFromUrl) && invoiceIdFromUrl > 0 ? invoiceIdFromUrl : null,
   );
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [bankReference, setBankReference] = useState('');
   const [payerName, setPayerName] = useState('');
+  const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const billingStateQuery = trpc.agency.getBillingState.useQuery();
   const workspaceQuery = trpc.billing.workspace.useQuery();
@@ -255,7 +255,6 @@ export function CommercialAgencyBillingWorkspace(
     onSuccess: async data => {
       await refreshBilling(utils);
       setSelectedInvoiceId(data.invoice.id);
-      setPaymentAmount(String(Number(data.invoice.amountDue || 0) / 100));
       toast.success('Invoice issued', {
         description: `${data.invoice.invoiceNumber} is ready for EFT payment.`,
       });
@@ -266,14 +265,13 @@ export function CommercialAgencyBillingWorkspace(
       toast.error(error.message || 'Invoice could not be issued');
     },
   });
-  const submitProof = trpc.billing.submitPaymentProof.useMutation({
+  const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation({
     onSuccess: async () => {
+      resetPaymentNoticeRequest();
       await refreshBilling(utils);
-      setProofFile(null);
-      setBankReference('');
-      toast.success('Proof submitted for review');
+      toast.success('Payment notification submitted. Bank verification is pending.');
     },
-    onError: error => toast.error(error.message || 'Proof could not be submitted'),
+    onError: error => toast.error(error.message || 'Payment notification could not be submitted'),
   });
 
   const billingState = billingStateQuery.data;
@@ -287,7 +285,6 @@ export function CommercialAgencyBillingWorkspace(
   const payments = workspace?.payments || [];
   const bankDetails = workspace?.bankDetails;
   const eftCanIssueInvoices = Boolean(bankDetails?.canIssueInvoices);
-  const proofStorageReady = Boolean(workspace?.proofStorage?.configured);
   const activeInvoice =
     (selectedInvoiceId
       ? invoices.find((invoice: any) => invoice.id === selectedInvoiceId)
@@ -313,12 +310,6 @@ export function CommercialAgencyBillingWorkspace(
     startCheckout.mutate({ planId, billingCycle: 'monthly', legalAcceptance: legal.choice });
   };
 
-  useEffect(() => {
-    if (!activeInvoice) return;
-    if (!paymentAmount) {
-      setPaymentAmount(String(Number(activeInvoice.amountDue || 0) / 100));
-    }
-  }, [activeInvoice, paymentAmount]);
   const capabilityLabels = [
     { key: 'listings', label: 'Listing workspace' },
     { key: 'publishing', label: 'Publication controls' },
@@ -347,37 +338,14 @@ export function CommercialAgencyBillingWorkspace(
   };
 
   const handleProofSubmit = async () => {
-    if (!activeInvoice) {
-      toast.error('Select an invoice first');
-      return;
-    }
-    if (!proofFile) {
-      toast.error('Attach proof of payment');
-      return;
-    }
-    if (!proofStorageReady) {
-      toast.error(workspace?.proofStorage?.message || 'Private proof storage is not configured');
-      return;
-    }
-    const amountRand = Number(paymentAmount);
-    if (!Number.isFinite(amountRand) || amountRand <= 0) {
-      toast.error('Enter a valid payment amount');
-      return;
-    }
-    const contentBase64 = await fileToBase64(proofFile);
-    submitProof.mutate({
-      invoiceId: activeInvoice.id,
-      amount: Math.round(amountRand * 100),
-      bankReference,
-      payerName,
-      paymentDate,
-      file: {
-        filename: proofFile.name,
-        mimeType: proofFile.type || 'application/octet-stream',
-        sizeBytes: proofFile.size,
-        contentBase64,
-      },
-    });
+    if (!activeInvoice) return;
+    submitProof.mutate(
+      paymentNoticeRequest({
+        invoiceId: activeInvoice.id,
+        paymentDate,
+        payerName: payerName.trim(),
+      }),
+    );
   };
 
   return (
@@ -491,11 +459,7 @@ export function CommercialAgencyBillingWorkspace(
                 {bankDetails?.configurationMessage || 'Manual EFT bank details are not configured.'}
               </div>
             ) : null}
-            {!proofStorageReady ? (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-                {workspace?.proofStorage?.message || 'Private proof storage is not configured.'}
-              </div>
-            ) : null}
+
             <InfoTile
               icon={Building2}
               label="Bank"
@@ -601,7 +565,11 @@ export function CommercialAgencyBillingWorkspace(
 
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardHeader className="pb-2">
-          <SectionTitle icon={UploadCloud} title="Proof Of Payment" eyebrow="Private upload" />
+          <SectionTitle
+            icon={UploadCloud}
+            title="Payment Notification"
+            eyebrow="Bank verification"
+          />
         </CardHeader>
         <CardContent>
           {activeInvoice ? (
@@ -616,64 +584,26 @@ export function CommercialAgencyBillingWorkspace(
                 </p>
                 <StatusBadge status={activeInvoice.status} />
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <Label htmlFor="payment-amount">Amount paid</Label>
-                  <Input
-                    id="payment-amount"
-                    inputMode="decimal"
-                    value={paymentAmount}
-                    onChange={event => setPaymentAmount(event.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="payment-date">Payment date</Label>
-                  <Input
-                    id="payment-date"
-                    type="date"
-                    value={paymentDate}
-                    onChange={event => setPaymentDate(event.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bank-reference">Bank reference</Label>
-                  <Input
-                    id="bank-reference"
-                    value={bankReference}
-                    onChange={event => setBankReference(event.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="payer-name">Payer</Label>
-                  <Input
-                    id="payer-name"
-                    value={payerName}
-                    onChange={event => setPayerName(event.target.value)}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="proof-file">Proof document</Label>
-                  <Input
-                    id="proof-file"
-                    type="file"
-                    accept="application/pdf,image/jpeg,image/png,image/webp"
-                    onChange={event => setProofFile(event.target.files?.[0] || null)}
-                  />
-                </div>
-                <Button
-                  disabled={submitProof.isPending || !proofStorageReady || !invoiceAcceptsProof}
-                  onClick={handleProofSubmit}
-                  className="md:col-span-2"
-                >
-                  {invoiceAcceptsProof ? 'Submit proof' : 'Proof submitted for finance review'}
-                  <UploadCloud className="h-4 w-4" />
-                </Button>
-              </div>
+              {invoiceAcceptsProof ? (
+                <EftPaymentNoticeForm
+                  invoiceId={activeInvoice.id}
+                  paymentDate={paymentDate}
+                  payerName={payerName}
+                  setPaymentDate={setPaymentDate}
+                  setPayerName={setPayerName}
+                  isSubmitting={submitProof.isPending}
+                  onSubmit={handleProofSubmit}
+                />
+              ) : (
+                <p role="status">
+                  Payment verification pending. Access begins only after received bank funds are
+                  matched and approved.
+                </p>
+              )}
             </div>
           ) : (
             <div className="rounded-lg border border-slate-200 p-6 text-sm text-slate-500">
-              Select a plan to generate an invoice before uploading proof of payment.
+              Request an invoice before notifying us of payment.
             </div>
           )}
         </CardContent>
@@ -697,7 +627,6 @@ export function CommercialAgencyBillingWorkspace(
                     type="button"
                     onClick={() => {
                       setSelectedInvoiceId(invoice.id);
-                      setPaymentAmount(String(Number(invoice.amountDue || 0) / 100));
                     }}
                     className="text-left font-medium text-slate-950"
                   >
@@ -835,7 +764,7 @@ function getAgencyLaunchStageLabel(stage: AgencyLaunchStage) {
   return {
     selected_pending: 'Selected pending product',
     invoice_issued: 'Invoice issued',
-    proof_submitted: 'Proof submitted',
+    proof_submitted: 'Payment verification pending',
     finance_review: 'Finance review',
     active: 'Active',
     expired: 'Expired',
@@ -845,9 +774,12 @@ function getAgencyLaunchStageLabel(stage: AgencyLaunchStage) {
 function getAgencyLaunchStageDetail(stage: AgencyLaunchStage) {
   return {
     selected_pending: 'The Agency product is selected. Request the once-off invoice to continue.',
-    invoice_issued: 'Pay the R999 invoice by EFT, then upload private proof of payment.',
-    proof_submitted: 'Proof is recorded. Finance review remains required before access starts.',
-    finance_review: 'Finance is reconciling the EFT payment. Proof alone does not activate access.',
+    invoice_issued:
+      'Pay the R999 invoice by EFT using its exact reference, then select “I’ve paid”. No document is required.',
+    proof_submitted:
+      'Your payment notice is recorded. Bank matching and finance approval remain required before access starts.',
+    finance_review:
+      'Finance is reconciling the EFT payment. A customer notice or optional document does not activate access.',
     active: 'The Agency-owned 90-day term is active. Team members work under this access.',
     expired: 'This fixed term has ended. Agency identity, memberships, and historical work remain.',
   }[stage];
@@ -985,16 +917,4 @@ async function refreshBilling(utils: ReturnType<typeof trpc.useUtils>) {
     utils.billing.invoices.invalidate(),
     utils.billing.payments.invalidate(),
   ]);
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || '');
-      resolve(result.includes(',') ? result.split(',').pop() || '' : result);
-    };
-    reader.onerror = () => reject(reader.error || new Error('File could not be read'));
-    reader.readAsDataURL(file);
-  });
 }

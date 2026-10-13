@@ -16,7 +16,8 @@ type Delivery = typeof transactionalEmailDeliveries.$inferSelect;
 const MAX_ATTEMPTS = 3;
 const LEASE_MS = 10 * 60_000;
 const DUE_EVENT_TYPES = ['invoice_issued', 'payment_request_correction', 'payment_reject',
-  'payment_approved_subscription_activated', 'payment_partially_approved'] as const;
+  'payment_approved_subscription_activated', 'payment_partially_approved',
+  'payment_notice_received', 'payment_unmatched', 'payment_duplicate'] as const;
 
 function utc(value: Date = new Date()): string {
   return `${value.toISOString().slice(0, 19).replace('T', ' ')}.${value.toISOString().slice(20, 23)}000`;
@@ -330,19 +331,42 @@ async function messageForDelivery(db: Database, row: Delivery) {
     const [invoice] = await db.select({ name: plans.name, ownerType: billingInvoices.ownerType,
       ownerId: billingInvoices.ownerId, invoiceNumber: billingInvoices.invoiceNumber,
       paymentReference: billingInvoices.paymentReference, amountDue: billingInvoices.amountDue,
-      currency: billingInvoices.currency, metadata: billingInvoices.metadata }).from(billingInvoices)
+      currency: billingInvoices.currency, status: billingInvoices.status, amountPaid: billingInvoices.amountPaid, metadata: billingInvoices.metadata }).from(billingInvoices)
       .innerJoin(plans, eq(billingInvoices.planId, plans.id))
       .where(eq(billingInvoices.id, event.invoiceId)).limit(1);
     if (!invoice || invoice.ownerType !== event.ownerType || invoice.ownerId !== event.ownerId ||
       !isPaidMvpLaunchAccessProductKey(invoice.name)) return null;
     product = invoice.name;
+    const metadata = invoice.metadata as Record<string, unknown> | null;
+    const bank = metadata?.eft_bank_details as Record<string, unknown> | undefined;
+    const bankDetails = bank && ['accountName', 'bankName', 'accountNumber', 'branchCode', 'accountType']
+      .every(key => typeof bank[key] === 'string' && String(bank[key]).trim())
+      ? bank as { accountName: string; bankName: string; accountNumber: string; branchCode: string; accountType: string }
+      : undefined;
+    let noticeReviewed = invoice.status !== 'submitted';
+    if (row.purpose === 'payment_notice_received' && event.paymentId) {
+      // An earlier partial notice can be reviewed while a later notice leaves
+      // the same invoice submitted again. Use this payment's canonical review.
+      const [review] = await db.select({ id: billingAuditEvents.id }).from(billingAuditEvents)
+        .where(and(eq(billingAuditEvents.invoiceId, event.invoiceId!),
+          eq(billingAuditEvents.paymentId, event.paymentId),
+          inArray(billingAuditEvents.eventType, ['payment_approved_subscription_activated',
+            'payment_partially_approved', 'payment_request_correction', 'payment_reject',
+            'payment_unmatched', 'payment_duplicate', 'payment_approved_invoice_already_paid'])))
+        .limit(1);
+      noticeReviewed ||= Boolean(review);
+    }
+    const outcome = event.afterData as Record<string, unknown> | null;
     return renderLaunchEmail({ purpose: row.purpose as LaunchEmailPurpose, product, publicOrigin,
-      ...(row.purpose === 'invoice_issued' ? { invoice: {
+      invoice: {
         invoiceNumber: invoice.invoiceNumber, paymentReference: invoice.paymentReference,
-        amountDue: invoice.amountDue, currency: invoice.currency,
-        legalBundleId: typeof invoice.metadata?.legal_bundle_id === 'string'
-          ? invoice.metadata.legal_bundle_id : undefined,
-      } } : {}) });
+        amountDue: invoice.amountDue, currency: invoice.currency, status: invoice.status, amountPaid: invoice.amountPaid, bankDetails,
+        legalBundleId: typeof metadata?.legal_bundle_id === 'string' ? metadata.legal_bundle_id : undefined,
+      },
+      ...(row.purpose === 'payment_notice_received' ? { noticeReviewed } : {}),
+      ...(row.purpose === 'payment_approved' && typeof outcome?.paidTermStart === 'string' &&
+        typeof outcome?.paidTermEnd === 'string' ? { term: { start: outcome.paidTermStart, end: outcome.paidTermEnd } } : {}),
+    });
   } else {
     const [notice] = await db.select().from(notifications)
       .where(eq(notifications.id, row.sourceId)).limit(1);

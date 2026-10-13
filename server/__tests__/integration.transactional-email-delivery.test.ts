@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import {
-  agencies, agencyAgentMemberships, agents, auditLogs, billableAccounts, billingAuditEvents, billingInvoices,
+  agencies, agencyAgentMemberships, agents, auditLogs, billableAccounts, billingAuditEvents, billingInvoices, billingPayments,
   developerOrganisationMemberships, developerOrganisations, invitations, notifications, plans, subscriptions,
   transactionalEmailAttempts, transactionalEmailDeliveries, users,
 } from '../../drizzle/schema';
@@ -39,7 +39,7 @@ async function fixture(eventType = 'invoice_issued') {
   const [invoiceId] = await db.insert(billingInvoices).values({ ownerType: 'agent', ownerId: userId.id,
     billableAccountId: accountId.id, subscriptionId: termId.id, planId,
     invoiceNumber, paymentReference: invoiceNumber, amountDue: 49900,
-    commercialTermKind: 'paid_launch_access', status: 'issued' }).$returningId();
+    commercialTermKind: 'paid_launch_access', status: eventType === 'payment_notice_received' ? 'submitted' : 'issued', metadata: { eft_bank_details: { accountName: 'TEST COMPANY', bankName: 'TEST BANK', accountNumber: '0000000000', branchCode: '000000', accountType: 'TEST ACCOUNT' } } }).$returningId();
   made.invoices.push(invoiceId.id);
   const [auditId] = await db.insert(billingAuditEvents).values({ ownerType: 'agent', ownerId: userId.id,
     billableAccountId: accountId.id, subscriptionId: termId.id, invoiceId: invoiceId.id,
@@ -136,10 +136,10 @@ describeDb('B10 transactional email delivery authority', () => {
     const provider = async (input: { idempotencyKey: string; text: string }) => {
       calls += 1;
       expect(input.idempotencyKey).toBe(job.deliveryKey);
-      expect(input.text).toContain('Sign in to review it');
-      expect(input.text).not.toContain('R499');
-      expect(input.text).not.toContain(source.invoiceNumber);
-      expect(input.text).not.toContain('EFT payment reference:');
+      expect(input.text).toContain('Copy the invoice reference exactly');
+      expect(input.text).toContain('499');
+      expect(input.text).toContain(source.invoiceNumber);
+      expect(input.text).toContain('Payment reference:');
       await new Promise(resolve => setTimeout(resolve, 25));
       return { kind: 'accepted' as const, reference: 'resend-test-accepted' };
     };
@@ -155,10 +155,65 @@ describeDb('B10 transactional email delivery authority', () => {
     expect(final.attemptCount).toBe(1);
   });
 
+  it('queues a notice acknowledgement once and never labels it bank receipt or activation', async () => {
+    const source = await fixture('payment_notice_received');
+    await consumeLaunchEmailEvents({ database: db });
+    await consumeLaunchEmailEvents({ database: db });
+    const job = await jobFor(source.auditId, 'billing_audit');
+    expect(job.purpose).toBe('payment_notice_received');
+    let calls = 0;
+    await Promise.all([1, 2].map(() => runTransactionalEmailWorker({ database: db, deliveryId: job.id,
+      provider: async input => {
+        calls += 1; expect(input.subject).toContain('verification pending');
+        expect(input.text).toContain('not confirmation of received bank funds');
+        expect(input.text).not.toContain('term was activated');
+        return { kind: 'accepted', reference: 'synthetic-notice-no-send' };
+      } })));
+    expect(calls).toBe(1);
+    expect((await jobFor(source.auditId, 'billing_audit')).state).toBe('accepted');
+  });
+
+  it('does not send a stale pending acknowledgement after the invoice is settled', async () => {
+    const source = await fixture('payment_notice_received');
+    await consumeLaunchEmailEvents({ database: db });
+    const job = await jobFor(source.auditId, 'billing_audit');
+    await db.update(billingInvoices).set({ status: 'paid', amountPaid: 49900 }).where(eq(billingInvoices.id, source.invoiceId));
+    let captured = false;
+    await runTransactionalEmailWorker({ database: db, deliveryId: job.id, provider: async input => {
+      captured = true; expect(input.subject).toContain('review update');
+      expect(input.text).not.toContain('Verification is pending');
+      expect(input.text).not.toContain('term was activated');
+      return { kind: 'accepted', reference: 'synthetic-delayed-notice-no-send' };
+    } });
+    expect(captured).toBe(true);
+  });
+
+  it('does not call an earlier partial notice pending when a later notice keeps the invoice under review', async () => {
+    const source = await fixture('payment_notice_received');
+    const [payment] = await db.insert(billingPayments).values({ invoiceId: source.invoiceId,
+      subscriptionId: source.termId, billableAccountId: source.accountId, ownerType: 'agent', ownerId: source.userId,
+      amount: 10000, paymentReference: source.invoiceNumber, idempotencyKey: `synthetic-email-partial-${randomUUID()}`,
+      state: 'verified', submittedBy: source.userId }).$returningId();
+    await db.update(billingAuditEvents).set({ paymentId: payment.id }).where(eq(billingAuditEvents.id, source.auditId));
+    const [review] = await db.insert(billingAuditEvents).values({ ownerType: 'agent', ownerId: source.userId,
+      billableAccountId: source.accountId, invoiceId: source.invoiceId, paymentId: payment.id,
+      eventType: 'payment_partially_approved' }).$returningId();
+    made.audits.push(review.id);
+    await consumeLaunchEmailEvents({ database: db });
+    const job = await jobFor(source.auditId, 'billing_audit');
+    let captured = false;
+    await runTransactionalEmailWorker({ database: db, deliveryId: job.id, provider: async input => {
+      captured = true; expect(input.subject).toContain('review update');
+      expect(input.text).not.toContain('Verification is pending');
+      return { kind: 'accepted', reference: 'synthetic-partial-notice-no-send' };
+    } });
+    expect(captured).toBe(true);
+  });
+
   it('renders invoice legal links from the original persisted invoice metadata', async () => {
     const source = await fixture();
     const bundleId = 'synthetic-b15-issued-bundle';
-    await db.update(billingInvoices).set({ metadata: { legal_bundle_id: bundleId } })
+    await db.update(billingInvoices).set({ metadata: { legal_bundle_id: bundleId, eft_bank_details: { accountName: 'TEST COMPANY', bankName: 'TEST BANK', accountNumber: '0000000000', branchCode: '000000', accountType: 'TEST ACCOUNT' } } })
       .where(eq(billingInvoices.id, source.invoiceId));
     await consumeLaunchEmailEvents({ database: db });
     const job = await jobFor(source.auditId, 'billing_audit');
@@ -169,8 +224,8 @@ describeDb('B10 transactional email delivery authority', () => {
         expect(input.text).toContain(`/legal/terms?bundle=${bundleId}`);
         expect(input.text).toContain(`/legal/privacy?bundle=${bundleId}`);
         expect(input.html).toContain(`/legal/terms?bundle=${bundleId}`);
-        expect(input.text).toContain('Sign in to review it');
-        expect(input.text).not.toContain(source.invoiceNumber);
+        expect(input.text).toContain('Copy the invoice reference exactly');
+        expect(input.text).toContain(source.invoiceNumber);
         expect(input.text).toContain('support@propertylistifysa.co.za');
         return { kind: 'accepted', reference: 'synthetic-b15-no-send' };
       } });

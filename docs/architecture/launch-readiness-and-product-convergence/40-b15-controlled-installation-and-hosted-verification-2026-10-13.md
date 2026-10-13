@@ -116,3 +116,67 @@ the authenticated account. The old approved legal bytes remain immutable.
 After actual migration, update only the changed location/processing disclosure
 as a new legal version, preserving the old approval/history and applying the
 same controlled installer. Never claim domestic object storage before readback.
+
+
+## Focused manual-EFT notice release — founder brief, 13 October
+
+The founder's EFT implementation brief authorises the signed-in no-attachment
+payment notice and customer-facing invoice, pending-review and activation
+emails. This supersedes the earlier neutral-only billing email recommendation
+for this journey. Resend remains the existing provider; overseas retention is
+recorded as a founder-owned follow-up, not a verified compliance conclusion.
+No attachment, bank credential or internal reconciliation note is included in
+these customer emails. No new storage service or payment gateway is required
+for the notice. Existing hosted proof-storage guards remain in place.
+
+The historical approved `terms.txt`, receipt and candidate remain unchanged.
+`evidence/b15-existing-certificate-20261013/terms-payment-notice-2026-10-13.2.txt`
+is the prepared narrow amendment: no mandatory document, and the activation
+target starts after received funds are matched and full settlement approved.
+It is prepared text, not an installed release or a replacement approval receipt.
+Use the existing versioned copy release process when including this amendment;
+do not substitute its bytes into the old receipt or install the older upload
+wording as if it describes the revised flow. No external reviewer prerequisite
+or general B15 reopening is introduced.
+
+Controlled deployment order for this feature:
+
+1. Merge the reviewed payment-notice source only after required CI passes.
+   PR #608 is already merged at `8daa007de27fef20f1cd5d9671df8c575807e478`.
+   Keep Railway/Vercel production auto-deployment, public intake, sales and
+   worker dispatch held while funding remains pending.
+2. From a clean reviewed integration checkout, resolve the real Azure schema,
+   attempts and grant footprint. Apply only genuinely pending canonical
+   migrations through `pnpm db:release:plan` / `pnpm db:release:apply`, with the
+   reviewed digest, protected credentials and exact target acknowledgement.
+   This feature adds no migration or new runtime privilege.
+3. Include the matching recorded-copy amendment through the named legal
+   preparation/plan/apply/verify procedure above. Apply the separate bounded
+   legal runtime-grant operation from PR #609 through its own protected plan,
+   acknowledgement and ephemeral bootstrap-admin channel; do not reuse a
+   migrator as a grant administrator. Read back actual copy and permissions.
+4. Restore funded hosted runtime through the existing controlled API/frontend
+   release. Resolve the exact merged artifact head; do not deploy a worktree
+   or turn on production Git triggers as a shortcut. Verify process identity,
+   readiness and runtime permission denials before exposing customer intake.
+5. With one admitted attended customer, request an invoice, check actual bank
+   instructions/reference, submit “I’ve paid” without a file, and verify the
+   finance queue remains pending. Use an actual matched EFT only under the
+   existing finance authority; enter its verified amount, exact received bank
+   reference and reconciliation note. Confirm one settled invoice and one
+   90-day term. Test duplicate notices/approvals and exception containment.
+6. Admit the existing email worker through the held worker-admission procedure.
+   Collect genuine delivery evidence for invoice instructions, notice
+   acknowledgement and activation dates. Synthetic provider tests do not prove
+   delivery. Unknown sends require reconciliation, not a blind retry.
+7. Run the shared agent property journey: profile/preparation, property draft,
+   review, publication, public discovery and enquiry delivery. Open attended
+   sales only for verified journeys within the existing admission/calendar
+   controls. Do not infer hosted acceptance from local test results.
+
+Containment remains the existing sales/intake/worker hold and preserved
+canonical financial/consent records. Do not roll back to an artifact that
+bypasses recorded acceptance, manually activate access, replay an ambiguous
+protected installation, delete evidence, or change pricing, plan pairs,
+moderation or the 90-day term. A source merge, local test or prepared Terms
+file is not production installation or storage migration evidence.
