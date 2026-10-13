@@ -89,6 +89,14 @@
       "acknowledgement": "exact-target",
       "evidence": "exact-canonical-place-runtime-seven-table-grant-plan-and-before-after-proof"
     },
+    "runtime-legal-grant": {
+      "allowedTargetClasses": ["production"],
+      "credentialClasses": ["bootstrap-admin"],
+      "ownership": "none",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "exact-legal-runtime-three-table-grant-plan-and-before-after-proof"
+    },
     "b08-behavior-verify": {
       "allowedTargetClasses": ["production"],
       "credentialClasses": ["migration"],

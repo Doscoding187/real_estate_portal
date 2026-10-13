@@ -70,6 +70,8 @@ export const B08_WORKER_IDENTITY = 'propertylistify_job_worker';
 export const B08_RUNTIME_GRANT_DIGEST = '58f42389e76495048f32460f71c4cbe15bb85c9c1d5365426c0561383b75d1d5';
 export const B08_RUNTIME_LEDGER_READ_GRANT_DIGEST = '90c9d4aca03ac0820ebfe0fdbbbfef0617859bc6959e610be3b949ec27457fd9';
 export const CANONICAL_PLACE_RUNTIME_GRANT_DIGEST = 'cc6956ba9ba51dad7ceb3678f70658d46623adf66eedcc70a951aae602ae181d';
+export const LEGAL_RUNTIME_GRANT_DIGEST =
+  'eee8fa09d52b41c07f804e1484a92276f2c643b8575c547419bc721ddcf8f456';
 export const B08_WORKER_GRANT_DIGEST = '74b68ee103b3f1f345c7e7a0874b84fde128653977817cc59b5a2776b88f1f22';
 
 export function protectedDatabaseApprovalFromEnvironment(
@@ -335,6 +337,19 @@ export function authorizeDatabaseOperation(
       input.approval?.runtimeGrantDigest !== CANONICAL_PLACE_RUNTIME_GRANT_DIGEST)
   ) {
     throw new Error('Database operation refused: exact canonical Place runtime grant approval is required.');
+  }
+  if (
+    context.operation === 'runtime-legal-grant' &&
+    (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
+      context.provider !== 'mysql' ||
+      !context.tls.required ||
+      !context.tls.certificateVerificationRequired ||
+      input.approval?.credentialClass !== 'bootstrap-admin' ||
+      input.approval?.runtimeIdentity !== B08_RUNTIME_IDENTITY ||
+      input.approval?.runtimePreviousGrantDigest !== CANONICAL_PLACE_RUNTIME_GRANT_DIGEST ||
+      input.approval?.runtimeGrantDigest !== LEGAL_RUNTIME_GRANT_DIGEST)
+  ) {
+    throw new Error('Database operation refused: exact legal runtime grant approval is required.');
   }
   if (
     context.operation === 'b08-behavior-verify' &&
