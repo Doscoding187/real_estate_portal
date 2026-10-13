@@ -63,8 +63,9 @@ or dispute-scheme membership. No subscribed code of conduct was subsequently con
 registration was outstanding on October 12 after Edward replied “none so i need
 these”. On October 13 Edward supplied the successful-organisation-registration
 confirmation: completed on founder report, with certificate reportedly emailed
-and downloaded. Registered officer name, certificate date/reference and private
-evidence location await capture; the certificate has not been independently
+and downloaded. Edward subsequently supplied Lehlohonolo Banda as the
+registered Information Officer. Certificate date/reference and private evidence
+location await capture; the certificate has not been independently
 inspected. Remaining processor/transfer review and final exact public copy approval
 are not inferred from those factual confirmations. No identity document is needed
 for the office-bearer disclosure. Final approval must identify resolved text,
