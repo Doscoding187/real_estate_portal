@@ -29,7 +29,7 @@ target are carried forward. No request to reconfirm them is necessary.
 | --- | --- | --- | --- |
 | D1 | Address for receiving legal service; place of incorporation; publishable office-bearer names; business telephone or reviewed applicability treatment | Edward | Legal-document receipt at 96 Jorissen Street, Braamfontein confirmed October 12; director name Lehlohonolo Banda supplied; Johannesburg, Gauteng, South Africa, full registered name and sole-director status confirmed; messages-only WhatsApp retained |
 | D2 | Applicable accreditation/body membership, subscribed codes or dispute-resolution scheme, including a confirmed absence where appropriate | Edward / legal reviewer | Edward states no accreditation or dispute-scheme membership; No subscribed code confirmed October 12 |
-| D3 | Information Officer company registration evidence and responsible contact name | Edward | Outstanding after Edward replied “none so i need these”; official registration preparation recorded; no submission or certificate claimed |
+| D3 | Information Officer company registration evidence and responsible contact name | Edward | Completed on founder report October 13, supported by supplied portal success confirmation; certificate reportedly emailed/downloaded; officer name and certificate date/reference await capture |
 | D4 | Category schedule below, including disposal capability and holds | Edward / accounting or legal reviewer where needed | Business schedule in packet 33 confirmed October 12 subject to finance/legal review conditions; no expiry/delete job authorized |
 | D5 | Actual provider regions, subprocessors, transfer safeguards and log retention | Architect reconciles retained provider/configuration records; Edward reviews resulting commitments | Known provider list is below; missing tenant facts remain named |
 | D6 | Exact refund/dispute wording, document versions, effective date and full-copy approval | Edward or recorded delegate | Review 0.5 is unapproved; approval must identify its final resolved bytes |
@@ -201,7 +201,11 @@ with the named reviewer. No statutory policy period is supplied here.
 
 Company facts are incorporated in [review 0.6](evidence/b15-founder-review-2026-10-12-v0.6.md), an unapproved internal candidate. Prior candidate bytes and checksums are preserved.
 
-Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration remains outstanding. This candidate is not approved public copy.
+Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration was outstanding at the candidate checkpoint.
+On October 13 Edward supplied successful-registration confirmation; submission
+is now completed on founder report, with certificate fields awaiting capture.
+Review 0.7 bytes remain preserved and unapproved; this factual update is not a
+new public-copy release.
 
 ## Subsequent dedicated implementation checkpoint
 

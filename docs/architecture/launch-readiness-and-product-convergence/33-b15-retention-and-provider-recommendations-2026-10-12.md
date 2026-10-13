@@ -127,4 +127,8 @@ return-day sequence; B15 remains OPEN and the accepted-scope count stays eight.
 
 Company facts are incorporated in [review 0.6](evidence/b15-founder-review-2026-10-12-v0.6.md), an unapproved internal candidate. Prior candidate bytes and checksums are preserved.
 
-Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration remains outstanding. This candidate is not approved public copy.
+Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration was outstanding at the candidate checkpoint.
+On October 13 Edward supplied successful-registration confirmation; submission
+is now completed on founder report, with certificate fields awaiting capture.
+Review 0.7 bytes remain preserved and unapproved; this factual update is not a
+new public-copy release.
