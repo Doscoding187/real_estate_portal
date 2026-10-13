@@ -1300,6 +1300,13 @@ export async function requestPaidLaunchAccessInvoice(input: {
           billing_provider: 'manual_eft',
           payment_adapter: 'manual_eft',
           price_locked_at_invoice: true,
+          eft_bank_details: {
+            accountName: bankDetails.accountName,
+            bankName: bankDetails.bankName,
+            accountNumber: bankDetails.accountNumber,
+            accountType: bankDetails.accountType,
+            branchCode: bankDetails.branchCode,
+          },
           price_snapshot: { ...priceSnapshot, billingInterval: 'once_off' },
           requested_plan_id: plan.id,
           requested_billing_cycle: 'once_off',
@@ -1716,6 +1723,18 @@ export async function startAgencyManualCheckout(input: {
   });
 }
 
+function customerPaymentProjection(payment: PaymentRow): PaymentRow {
+  if (parseJsonRecord(payment.metadata).submission_kind !== 'payment_notice') return payment;
+  return {
+    ...payment,
+    reviewNote: null,
+    rejectionReason:
+      payment.state === 'rejected'
+        ? 'Payment could not be approved. Check the invoice reference and contact support.'
+        : null,
+  };
+}
+
 export async function getAgencyBillingWorkspace(user: BillingUser) {
   const db = await getDb();
   if (!db)
@@ -1762,7 +1781,7 @@ export async function getAgencyBillingWorkspace(user: BillingUser) {
     currentPlan: subscriptionWithPlan?.plan || null,
     activeInvoice,
     invoices: invoiceRows,
-    payments: paymentRows,
+    payments: paymentRows.map(customerPaymentProjection),
     bankDetails: getManualEftBankDetails('agency_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
@@ -1810,7 +1829,7 @@ export async function getAgentBillingWorkspace(user: BillingUser) {
         ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
       ) || null,
     invoices: invoiceRows,
-    payments: paymentRows,
+    payments: paymentRows.map(customerPaymentProjection),
     bankDetails: getManualEftBankDetails('agent_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
@@ -1838,36 +1857,81 @@ type LaunchPaymentProofInput = {
  * an agent, agency or developer cannot submit proof against another owner's
  * invoice.
  */
+type LaunchPaymentNoticeInput = Omit<
+  LaunchPaymentProofInput,
+  'file' | 'amount' | 'bankReference' | 'notes'
+> & {
+  requestId: string;
+  payerName: string;
+  paymentDate: string;
+};
+
 export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentProofInput) {
+  return submitPaidLaunchAccessPayment(input);
+}
+
+/** A customer notification is unverified: only finance can match bank funds. */
+export async function submitPaidLaunchAccessPaymentNotice(input: LaunchPaymentNoticeInput) {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      input.requestId,
+    ) ||
+    !input.payerName.trim() ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.paymentDate) ||
+    !Number.isFinite(new Date(input.paymentDate).getTime()) ||
+    new Date(input.paymentDate).toISOString().slice(0, 10) !== input.paymentDate
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Provide a valid request, payment date and payer name.',
+    });
+  }
+  return submitPaidLaunchAccessPayment({
+    user: input.user,
+    invoiceId: input.invoiceId,
+    requestId: input.requestId,
+    payerName: input.payerName.trim(),
+    paymentDate: input.paymentDate,
+  });
+}
+
+async function submitPaidLaunchAccessPayment(
+  input: LaunchPaymentProofInput | LaunchPaymentNoticeInput,
+) {
+  const isNotice = 'requestId' in input;
+  const file = 'file' in input ? input.file : null;
   requireAnyPaidMvpLaunchAccessActivation('Payment-proof submission');
   const db = await getDb();
   if (!db)
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
   const owner = await resolveLaunchBillingOwner(db, input.user);
-  const mimeType = input.file.mimeType.trim().toLowerCase();
-  if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'Unsupported proof-of-payment file type.',
-    });
+  const mimeType = file?.mimeType.trim().toLowerCase() || '';
+  let fileBuffer: Buffer | null = null;
+  if (file) {
+    if (!ALLOWED_PROOF_MIME_TYPES.has(mimeType)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Unsupported proof-of-payment file type.',
+      });
+    }
+    if (file.sizeBytes <= 0 || file.sizeBytes > MAX_PROOF_BYTES) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
+    }
+    if (file.contentBase64.length > MAX_PROOF_BASE64_CHARS) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
+    }
+
+    fileBuffer = Buffer.from(file.contentBase64, 'base64');
+    if (fileBuffer.length !== file.sizeBytes || fileBuffer.length > MAX_PROOF_BYTES) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file size mismatch.' });
+    }
   }
-  if (input.file.sizeBytes <= 0 || input.file.sizeBytes > MAX_PROOF_BYTES) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
-  }
-  if (input.file.contentBase64.length > MAX_PROOF_BASE64_CHARS) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file is too large.' });
-  }
-  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
+  if ('amount' in input && (!Number.isSafeInteger(input.amount) || input.amount <= 0)) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Payment amount must be a positive integer minor-unit value.',
     });
-  }
-
-  const fileBuffer = Buffer.from(input.file.contentBase64, 'base64');
-  if (fileBuffer.length !== input.file.sizeBytes || fileBuffer.length > MAX_PROOF_BYTES) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proof-of-payment file size mismatch.' });
   }
 
   return db.transaction(async tx => {
@@ -1904,6 +1968,64 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
         message: 'Launch Access requires a once-off canonical invoice.',
       });
     }
+    // Reference and claimed balance come from the locked invoice, never the client.
+    const amount =
+      'amount' in input ? input.amount : Math.max(0, invoice.amountDue - invoice.amountPaid);
+    const bankReference = 'bankReference' in input ? input.bankReference : null;
+    const notes = 'notes' in input ? input.notes : undefined;
+    const noticeDigest = isNotice
+      ? createHash('sha256')
+          .update(
+            JSON.stringify({
+              paymentDate: input.paymentDate,
+              payerName: input.payerName,
+            }),
+          )
+          .digest('hex')
+      : null;
+    const idempotencyKey = isNotice
+      ? `manual_eft_notice:${invoice.id}:${input.user.id}:${input.requestId}`
+      : `manual_eft:${invoice.id}:${randomUUID()}`;
+    if (isNotice) {
+      const [previous] = await tx
+        .select()
+        .from(billingPayments)
+        .where(eq(billingPayments.idempotencyKey, idempotencyKey))
+        .limit(1);
+      if (previous) {
+        if (parseJsonRecord(previous.metadata).notice_digest !== noticeDigest) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'This payment notification request was already used with different details.',
+          });
+        }
+        return { success: true, paymentId: previous.id, documentId: null, idempotent: true };
+      }
+    }
+    if (isNotice) {
+      const pending = await tx
+        .select()
+        .from(billingPayments)
+        .where(and(eq(billingPayments.invoiceId, invoice.id)));
+      const existing = pending.find(
+        row =>
+          parseJsonRecord(row.metadata).submission_kind === 'payment_notice' &&
+          (['submitted', 'under_review'].includes(row.state) ||
+            (row.state === 'verified' &&
+              invoice.status === 'paid' &&
+              parseJsonRecord(row.metadata).notice_digest === noticeDigest)),
+      );
+      if (existing) {
+        if (parseJsonRecord(existing.metadata).notice_digest !== noticeDigest) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'A payment notification is already awaiting review. Contact support to correct its details.',
+          });
+        }
+        return { success: true, paymentId: existing.id, documentId: null, idempotent: true };
+      }
+    }
     if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -1912,7 +2034,6 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     }
 
     const billableAccountId = invoice.billableAccountId;
-    const idempotencyKey = `manual_eft:${invoice.id}:${randomUUID()}`;
     const [paymentInsert] = await tx
       .insert(billingPayments)
       .values({
@@ -1923,16 +2044,18 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
         billableAccountId,
         paymentMethod: 'manual_eft',
         state: 'under_review',
-        amount: Math.round(input.amount),
+        amount: Math.round(amount),
         currency: invoice.currency,
         paymentReference: invoice.paymentReference,
-        bankReference: input.bankReference || null,
+        bankReference: bankReference || null,
         payerName: input.payerName || null,
         paymentDate: input.paymentDate ? toDbTimestamp(input.paymentDate) : nowDb(),
         submittedBy: input.user.id,
         idempotencyKey,
         metadata: {
-          notes: input.notes || null,
+          notes: notes || null,
+          submission_kind: isNotice ? 'payment_notice' : 'payment_proof',
+          ...(isNotice ? { notice_digest: noticeDigest } : {}),
           upload_source: `${owner.ownerType}_billing_workspace`,
           commercial_product_key: getCommercialProductKeyFromInvoice(invoice),
         },
@@ -1940,51 +2063,56 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       .$returningId();
 
     const paymentId = Number(paymentInsert.id);
-    const sha256Hash = createHash('sha256').update(fileBuffer).digest('hex');
-    const extension = safeFileExtension(input.file.filename, mimeType);
-    const storageKey = path.join(
-      owner.ownerType,
-      String(owner.ownerId),
-      `${paymentId}-${randomReferencePart(4)}${extension}`,
-    );
-    let storedDocument: Awaited<ReturnType<typeof storeBillingProofDocument>>;
-    try {
-      storedDocument = await storeBillingProofDocument({
-        storageKey,
-        buffer: fileBuffer,
-        mimeType,
-        originalFileName: input.file.filename,
-      });
-    } catch (error) {
-      if (error instanceof BillingProofStorageConfigurationError) {
-        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+    let documentId: number | null = null;
+    if (file && fileBuffer) {
+      const sha256Hash = createHash('sha256').update(fileBuffer).digest('hex');
+      const extension = safeFileExtension(file.filename, mimeType);
+      const storageKey = path.join(
+        owner.ownerType,
+        String(owner.ownerId),
+        `${paymentId}-${randomReferencePart(4)}${extension}`,
+      );
+      let storedDocument: Awaited<ReturnType<typeof storeBillingProofDocument>>;
+      try {
+        storedDocument = await storeBillingProofDocument({
+          storageKey,
+          buffer: fileBuffer,
+          mimeType,
+          originalFileName: file.filename,
+        });
+      } catch (error) {
+        if (error instanceof BillingProofStorageConfigurationError) {
+          throw new TRPCError({ code: 'PRECONDITION_FAILED', message: error.message });
+        }
+        throw error;
       }
-      throw error;
-    }
 
-    const [documentInsert] = await tx
-      .insert(billingPaymentDocuments)
-      .values({
-        paymentId,
-        invoiceId: invoice.id,
-        ownerType: toBillingOwnerType(invoice.ownerType),
-        ownerId: invoice.ownerId,
-        billableAccountId,
-        storageKey: storedDocument.storageKey,
-        originalFileName: input.file.filename,
-        mimeType,
-        fileSizeBytes: fileBuffer.length,
-        sha256Hash,
-        visibility: 'private',
-        status: 'active',
-        uploadedBy: input.user.id,
-        metadata: {
-          source: 'manual_eft_upload',
-          excluded_from_public_media: true,
-          ...storedDocument.metadata,
-        },
-      })
-      .$returningId();
+      const [documentInsert] = await tx
+        .insert(billingPaymentDocuments)
+        .values({
+          paymentId,
+          invoiceId: invoice.id,
+          ownerType: toBillingOwnerType(invoice.ownerType),
+          ownerId: invoice.ownerId,
+          billableAccountId,
+          storageKey: storedDocument.storageKey,
+          originalFileName: file.filename,
+          mimeType,
+          fileSizeBytes: fileBuffer.length,
+          sha256Hash,
+          visibility: 'private',
+          status: 'active',
+          uploadedBy: input.user.id,
+          metadata: {
+            source: 'manual_eft_upload',
+            excluded_from_public_media: true,
+            ...storedDocument.metadata,
+          },
+        })
+        .$returningId();
+
+      documentId = Number(documentInsert.id);
+    }
 
     await tx
       .update(billingInvoices)
@@ -2036,12 +2164,12 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
       invoiceId: invoice.id,
       paymentId,
       actorUserId: input.user.id,
-      eventType: 'payment_proof_received',
-      message: `Proof of payment received for ${invoice.invoiceNumber}.`,
+      eventType: isNotice ? 'payment_notice_received' : 'payment_proof_received',
+      message: `${isNotice ? 'Unverified payment notification' : 'Proof of payment'} received for ${invoice.invoiceNumber}.`,
       afterData: {
         paymentId,
-        documentId: Number(documentInsert.id),
-        amount: input.amount,
+        documentId,
+        amount,
         state: 'under_review',
         subscriptionStatus: nextSubscriptionStatus,
       },
@@ -2050,9 +2178,11 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     if (owner.ownerType === 'agency') {
       await notifyAgencyUsers(tx, {
         agencyId: owner.ownerId,
-        type: 'proof_received',
-        title: 'Proof received',
-        content: `Proof of payment for ${invoice.invoiceNumber} has been submitted for review.`,
+        type: isNotice ? 'payment_notice_received' : 'proof_received',
+        title: isNotice ? 'Payment notification received' : 'Proof received',
+        content: isNotice
+          ? 'Your payment notification is with finance. Paid access starts only after received bank funds are matched.'
+          : `Proof of payment for ${invoice.invoiceNumber} has been submitted for review.`,
         data: { invoiceId: invoice.id, paymentId },
       });
     }
@@ -2060,9 +2190,11 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     if (owner.ownerType === 'agent') {
       await notifyAgentOwner(tx, {
         ownerId: owner.ownerId,
-        type: 'proof_received',
-        title: 'Payment proof received',
-        content: `Your proof of payment for ${invoice.invoiceNumber} is with finance for review. We will notify you when verification completes.`,
+        type: isNotice ? 'payment_notice_received' : 'proof_received',
+        title: isNotice ? 'Payment notification received' : 'Payment proof received',
+        content: isNotice
+          ? 'Your payment notification is with finance. Paid access starts only after received bank funds are matched.'
+          : `Your proof of payment for ${invoice.invoiceNumber} is with finance for review. We will notify you when verification completes.`,
         actionUrl: '/agent/dashboard',
         data: { invoiceId: invoice.id, paymentId },
       });
@@ -2071,15 +2203,17 @@ export async function submitPaidLaunchAccessPaymentProof(input: LaunchPaymentPro
     if (owner.ownerType === 'developer') {
       await notifyDeveloperOrganisationOwners(tx, {
         organisationId: owner.ownerId,
-        type: 'proof_received',
-        title: 'Payment proof received',
-        content: `Proof of payment for ${invoice.invoiceNumber} is with finance for review.`,
+        type: isNotice ? 'payment_notice_received' : 'proof_received',
+        title: isNotice ? 'Payment notification received' : 'Payment proof received',
+        content: isNotice
+          ? 'Your payment notification is with finance. Paid access starts only after received bank funds are matched.'
+          : `Proof of payment for ${invoice.invoiceNumber} is with finance for review.`,
         actionUrl: '/developer/plans',
         data: { invoiceId: invoice.id, paymentId },
       });
     }
 
-    return { success: true, paymentId, documentId: Number(documentInsert.id) };
+    return { success: true, paymentId, documentId };
   });
 }
 
@@ -2341,7 +2475,7 @@ export async function getDeveloperBillingWorkspace(user: BillingUser) {
         ['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status),
       ) || null,
     invoices: invoiceRows,
-    payments: paymentRows,
+    payments: paymentRows.map(customerPaymentProjection),
     bankDetails: getManualEftBankDetails('developer_launch_access'),
     proofStorage: getBillingProofStorageStatus(),
   };
@@ -2419,9 +2553,27 @@ export async function getAdminFinanceQueue(input: {
     .from(billingPayments)
     .where(inArray(billingPayments.state, ['submitted', 'under_review']));
 
+  const invoiceIds = [...new Set<number>(rows.map(row => Number(row.invoice.id)))];
+  const noticeHistory = invoiceIds.length
+    ? await db
+        .select({
+          id: billingPayments.id,
+          invoiceId: billingPayments.invoiceId,
+          state: billingPayments.state,
+          payerName: billingPayments.payerName,
+          paymentDate: billingPayments.paymentDate,
+          submittedAt: billingPayments.createdAt,
+          reviewedAt: billingPayments.reviewedAt,
+        })
+        .from(billingPayments)
+        .where(inArray(billingPayments.invoiceId, invoiceIds))
+        .orderBy(desc(billingPayments.createdAt))
+        .limit(500)
+    : [];
   return {
     payments: rows.map(row => ({
       ...row,
+      noticeHistory: noticeHistory.filter(item => item.invoiceId === row.invoice.id),
       commercialProductKey:
         row.plan && isLaunchBillingOwnerType(row.invoice.ownerType)
           ? getPaidMvpLaunchAccessProductKey(row.plan, row.invoice.ownerType)
@@ -2562,6 +2714,7 @@ export async function reviewManualPayment(input: {
     | 'unmatched';
   note?: string;
   verifiedAmount?: number;
+  bankPaymentReference?: string;
   overpaymentReconciled?: boolean;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Payment review');
@@ -2706,6 +2859,19 @@ export async function reviewManualPayment(input: {
       });
     }
 
+    const isPaymentNotice =
+      parseJsonRecord(beforePayment.metadata).submission_kind === 'payment_notice';
+    if (
+      ['approve', 'partial_payment'].includes(input.decision) &&
+      isPaymentNotice &&
+      !input.note?.trim()
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Record the bank reconciliation evidence before approving a payment.',
+      });
+    }
+
     if (input.decision === 'duplicate' && !input.note?.trim()) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -2816,7 +2982,8 @@ export async function reviewManualPayment(input: {
             input.decision === 'request_correction'
               ? 'Payment correction requested'
               : 'Payment not approved',
-          content: input.note || reason,
+          content:
+            'Your payment could not be approved. Check the invoice reference and contact support for the next step.',
           data: { invoiceId: invoice.id, paymentId: beforePayment.id },
         });
       }
@@ -2836,7 +3003,7 @@ export async function reviewManualPayment(input: {
               : input.decision === 'request_correction'
                 ? 'Payment correction requested'
                 : 'Payment review update',
-          content: `${reason}. You can submit a corrected proof of payment for ${invoice.invoiceNumber} from the Launch Access page.`,
+          content: `Your payment could not be approved. Check the invoice reference and contact support, or submit a corrected payment notice for ${invoice.invoiceNumber} from the Launch Access page.`,
           actionUrl: '/agent/select-package',
           data: { invoiceId: invoice.id, paymentId: beforePayment.id },
         });
@@ -2857,7 +3024,7 @@ export async function reviewManualPayment(input: {
               : input.decision === 'request_correction'
                 ? 'Payment correction requested'
                 : 'Payment review update',
-          content: `${reason}. You can submit a corrected proof of payment for ${invoice.invoiceNumber} from the Developer Launch Access page.`,
+          content: `Your payment could not be approved. Check the invoice reference and contact support, or submit a corrected payment notice for ${invoice.invoiceNumber} from the Developer Launch Access page.`,
           actionUrl: '/developer/plans',
           data: { invoiceId: invoice.id, paymentId: beforePayment.id },
         });
@@ -2878,7 +3045,21 @@ export async function reviewManualPayment(input: {
         message: 'An explicit verified amount in positive integer cents is required.',
       });
     }
+    if (isPaymentNotice && input.bankPaymentReference?.trim() !== invoice.paymentReference) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'The received bank reference must exactly match this invoice. Keep unmatched funds for manual review.',
+      });
+    }
     const priorVerifiedAmount = await getLatestInvoicePaymentTotal(tx, invoice.id);
+    if (isPaymentNotice && priorVerifiedAmount + verifiedAmount > invoice.amountDue) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Excess funds require manual allocation or refund before this notification can activate access.',
+      });
+    }
     if (
       !invoiceWasAlreadyPaid &&
       priorVerifiedAmount + verifiedAmount > invoice.amountDue &&
@@ -2895,6 +3076,7 @@ export async function reviewManualPayment(input: {
       .set({
         state: 'verified',
         amount: verifiedAmount,
+        ...(isPaymentNotice ? { bankReference: input.bankPaymentReference?.trim() || null } : {}),
         reviewedBy: input.actorUser.id,
         reviewedAt,
         reviewNote: input.note || null,
@@ -2986,6 +3168,14 @@ export async function reviewManualPayment(input: {
       beforeData: beforePayment,
       afterData: {
         paymentState: 'verified',
+        paidTermStart: activationOccurred
+          ? parseJsonRecord(subscription?.metadata).paid_term_starts_at
+          : null,
+        paidTermEnd: activationOccurred
+          ? parseJsonRecord(subscription?.metadata).paid_term_ends_at
+          : null,
+        bankPaymentReference: input.bankPaymentReference?.trim() || null,
+        reconciliationNote: input.note?.trim() || null,
         invoiceStatus: nextInvoiceStatus,
         amountPaid,
         subscriptionStatus: subscription?.status || 'payment_under_review',
@@ -3007,7 +3197,7 @@ export async function reviewManualPayment(input: {
             ? 'Additional payment proof recorded'
             : 'Partial payment recorded',
         content: activationOccurred
-          ? `Payment for ${invoice.invoiceNumber} has been approved and your subscription is active.`
+          ? `Payment for ${invoice.invoiceNumber} has been approved and your 90-day Launch Access term is active. Start: ${parseJsonRecord(subscription?.metadata).paid_term_starts_at} UTC. End: ${parseJsonRecord(subscription?.metadata).paid_term_ends_at} UTC.`
           : invoiceWasAlreadyPaid
             ? `Additional proof for ${invoice.invoiceNumber} was recorded; the existing activation was not extended.`
             : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
@@ -3024,7 +3214,7 @@ export async function reviewManualPayment(input: {
         type: activationOccurred ? 'payment_approved' : 'partial_payment',
         title: activationOccurred ? 'Launch Access activated' : 'Partial payment recorded',
         content: activationOccurred
-          ? `Payment for ${invoice.invoiceNumber} has been verified. Your 90-day Launch Access term is active.`
+          ? `Payment for ${invoice.invoiceNumber} has been verified. Your 90-day Launch Access term is active. Start: ${parseJsonRecord(subscription?.metadata).paid_term_starts_at} UTC. End: ${parseJsonRecord(subscription?.metadata).paid_term_ends_at} UTC.`
           : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
         actionUrl: '/agent/dashboard',
         data: { invoiceId: invoice.id, paymentId: beforePayment.id },
@@ -3045,7 +3235,7 @@ export async function reviewManualPayment(input: {
             ? 'Additional payment proof recorded'
             : 'Partial payment recorded',
         content: activationOccurred
-          ? `Payment for ${invoice.invoiceNumber} has been verified. Your organisation's 90-day Launch Access term is active.`
+          ? `Payment for ${invoice.invoiceNumber} has been verified. Your organisation's 90-day Launch Access term is active. Start: ${parseJsonRecord(subscription?.metadata).paid_term_starts_at} UTC. End: ${parseJsonRecord(subscription?.metadata).paid_term_ends_at} UTC.`
           : invoiceWasAlreadyPaid
             ? `Additional proof for ${invoice.invoiceNumber} was recorded; the existing activation was not extended.`
             : `A partial payment was recorded for ${invoice.invoiceNumber}.`,
