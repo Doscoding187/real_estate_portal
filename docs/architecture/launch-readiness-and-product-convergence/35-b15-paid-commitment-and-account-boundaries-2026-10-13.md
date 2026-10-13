@@ -39,3 +39,15 @@ Fixture installation uses its own authorized `test-fixture` connection so isolat
 ## Remaining acceptance boundary
 
 Final exact Terms/Privacy/Cookies/payment text, versions, digest and effective date still need approval. Provider/transfer and finance/legal retention review, disposal/hold procedures, enquiry notices, the protected legal-release installation/grant contract and specified hosted customer evidence remain. The certificate correction is a follow-up. Local implementation and preparation do not increase the accepted count or permit opening sales. The coordinated return-day exercise and B17 24-hour workload remain required.
+
+## Subsequent existing-copy approval
+
+Edward's October 13 instruction “just approve the one thats there and proceed”
+now approves the existing review 0.7 candidate, including its planned-absence
+policy. This supersedes the pending existing-copy approval status above. See
+[packet 36](36-b15-founder-approval-and-copy-finalization-2026-10-13.md) for the
+exact source digest, separately tracked customer-text finalization and local
+browser results, and [packet 37](37-b14-offline-operating-card-2026-10-13.md)
+for the operating handoff. No materially changed final bytes, protected release
+or whole-package acceptance are inferred. B14/B15 remain OPEN; eight scopes
+accepted. Do not repeat the same source-copy or absence-policy approval question.

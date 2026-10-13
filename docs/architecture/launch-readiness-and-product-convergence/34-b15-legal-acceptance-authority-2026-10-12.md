@@ -169,3 +169,15 @@ do not establish a new deadline or an immediate new launch gate here. The OS
 worklog `2026-10-13 - B15 Information Regulator Registration Completion.md`
 records this operating handoff and the remaining evidence fields. B15 remains
 OPEN; eight scopes remain accepted; no release or worker hold was changed.
+
+## Subsequent existing-copy approval
+
+Edward's October 13 instruction “just approve the one thats there and proceed”
+now approves the existing review 0.7 candidate, including its planned-absence
+policy. This supersedes the pending existing-copy approval status above. See
+[packet 36](36-b15-founder-approval-and-copy-finalization-2026-10-13.md) for the
+exact source digest, separately tracked customer-text finalization and local
+browser results, and [packet 37](37-b14-offline-operating-card-2026-10-13.md)
+for the operating handoff. No materially changed final bytes, protected release
+or whole-package acceptance are inferred. B14/B15 remain OPEN; eight scopes
+accepted. Do not repeat the same source-copy or absence-policy approval question.
