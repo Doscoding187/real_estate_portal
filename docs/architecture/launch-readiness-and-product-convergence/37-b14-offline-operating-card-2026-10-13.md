@@ -1,7 +1,6 @@
 # B14 founder operating card
 
-13 October 2026. Prepared procedure and synthetic walkthrough cases, not a
-completed founder rehearsal or B14 acceptance. B14 OPEN; eight scopes accepted.
+13 October 2026. Prepared procedure, synthetic examples and one completed founder desk scenario. No hosted rehearsal or full B14 acceptance. B14 OPEN; eight scopes accepted.
 This follows the approved business copy in packet 36 and the October 12 calendar.
 
 ## Owner and calendar
@@ -125,3 +124,25 @@ The human walkthrough and specified hosted observations remain to capture in
 the shared return-day exercise. This card resolves the approved policy into
 one usable procedure; it does not change the accepted-scope count or admit a
 worker, deployment, finance mutation or paid sale.
+
+## Founder desk scenario completed — 13 October 2026
+
+Edward answered the Friday wrong-reference EFT plus Monday/Tuesday absence
+scenario in this conversation. Decision: record received funds as unmatched and
+unreconciled, retain private bank evidence/amount/date and seek the intended
+account/invoice; no allocation, receipt or activation before correct matching.
+Preserve existing customers' access and obligations, review deadlines/support
+before leaving, and tell affected customers what awaits his return. With no
+backup, pause sales requiring payment verification, activation or unsupported
+service delivery; enquiries may be recorded without taking payment or promising
+an unsupported start date. Check before Friday close and again **Wednesday
+09:00 SAST** after return, reconcile before dependent action and preserve all
+pending obligations. This is a founder desk walkthrough, not a bank event or a
+live pause/renewal. The response is retained verbatim in the existing B15
+closeout evidence folder's progression receipt.
+
+Outcome: this combined unmatched-payment, weekend, absence and return desk case
+is complete. It does not claim the other finance/moderation/support cases,
+monitored mailbox/alert, actual bank matching or hosted pause/resumption. Those
+specific observations continue in the existing shared exercise; no new general
+review or adviser approval is introduced.

@@ -2,11 +2,32 @@
 
 | Field | Authority |
 | --- | --- |
-| Status | **PAID OPENING NO-GO. B01–B07 accepted within scope; B08–B18 remain open.** Edward now authorizes controlled production release preparation/execution on existing infrastructure with public paid intake closed; exact operational gates and separate paid GO remain. |
+| Status | **PAID OPENING NO-GO. Eight scopes accepted within scope: B01–B07 and B12; remaining scopes await specified execution evidence.** Edward now authorizes controlled production release preparation/execution on existing infrastructure with public paid intake closed; exact operational gates and separate paid GO remain. |
 | Scope | Sole launch-disposition authority for the canonical three-audience Paid MVP. Services V1/PR #581, Explore expansion, Land launch, card payments, recurring billing and unrelated redesigns are excluded. |
-| Source | Published main `4e012b3044628fc06da7489c0055e9ce01bdc8d9`; accepted paid commit `a05868c66f493e3cbc972a119074c91a10797777`, tree `b21f454e215d8b02129e4daa14ba6f8d338406d1`; reviewed database/geography commit `b625a6dd0be7b105e100383dbc8f919a64d8b0bb` / PR #582. Both are incorporated with Git ancestry in this task-owned candidate. |
+| Source | Current remote integration main read back as `c475ed7249c3cc263a7554deb274e8d5bfd76dd0`. Prior B15 release-preparation commit `cef0e6335320285ee6a391648ff1f4a8576d15de`; this closeout remains on its task-owned feature branch. No branch artifact is claimed installed. Historical source provenance remains in the dated packets below. |
 | Evidence | [September 30 audit](25-paid-launch-deadline-audit-2026-09-30.md), [later B03–B07 scoped acceptance](evidence/b16-integration-review-packet-2026-09-27.md), [integration provenance](evidence/paid-mvp-integration-2026-09-30/source-provenance.json), [integrated review packet](26-paid-mvp-integrated-release-review-2026-09-30.md), [current controlled-production sequence](27-controlled-production-release-2026-09-30.md). Historical packets retain their original dated wording. |
 | Release boundary | Existing production validation replaces preview/staging closure: failed preview is founder-accepted non-gating. Coordinate deployment holds, merge, writer freeze/final archive, protected Azure geography, JWT invalidation and API/worker/frontend release in an attended window. No operation is claimed completed merely by this register. Owner-admission implementation is authorized and prepared for review in [packet 28](28-controlled-owner-admission-and-execution-2026-09-30.md), not enabled live. Required attendance/Vercel access, incremental spend and independent custody inputs and source/target review remain; paid opening requires separate GO. October 5–7 is conditional on evidence and staffed coverage. |
+
+## Current progression — 2026-10-13
+
+Founder decision: stop the general B15 review cycle, close completed work, adopt
+South African financial-record/proof storage, and continue to **B14 operating
+readiness**. Preserve the eight accepted scopes **B01–B07 and B12**. No accepted
+scope is reopened and preparation does not add a ninth acceptance.
+
+| Gate / work                                                                                                                 | Actual status                                                                                 | Next execution                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B15 supplier/certificate, exact copy approval, consent implementation, local verification and proportionate internal review | **CLOSED within completed local/decision scope**; existing receipts retained in packets 34–40 | No repeat review/approval of unchanged facts or text.                                                                                                                                                                                     |
+| B15 full gate                                                                                                               | **EVIDENCE INCOMPLETE — controlled installation and hosted acceptance outstanding**           | Complete exact-source integration, canonical schema/copy/grant execution and customer acceptance in the existing packet 40.                                                                                                               |
+| B14                                                                                                                         | **ACTIVE — operating readiness**                                                              | Founder completed the Friday unmatched-payment/weekend/no-backup absence desk scenario; capture remaining operator and hosted outcomes in packet 37/shared exercise.                                                                      |
+| SA finance/proof storage (B11/B15)                                                                                          | **IMPLEMENTATION PREPARED; new object storage, migration and recovery NOT VERIFIED**          | Domestic primary/backup provision and readback, runtime denial/positive probes, synthetic recovery, then bounded migration and current bindings. Existing Azure financial DB location/backups were re-read without a database connection. |
+| B08/B09/B10/B11/B13/B16/B17/B18                                                                                             | **Required remaining execution unchanged**                                                    | Admission, custody/delivery/storage/enquiry checks, release integration, recovery/capacity and final founder paid GO. B17 retains its 24-hour workload.                                                                                   |
+
+This is a progression decision, not a legal-compliance certification or paid
+opening. An accountant or external legal/privacy adviser is not a prerequisite
+to continued implementation. Handle a concrete unresolved condition only at
+its affected operation. The historical September disposition below is retained
+as dated evidence and does not override this current reconciliation.
 
 ## Paid MVP working disposition — 2026-09-30
 

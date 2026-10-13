@@ -1,0 +1,375 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Prepared only: dedicated South African finance records and versioned domestic backup. No app binding or access key output.",
+  "Resources": {
+    "FinanceBackup": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        }
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "FinanceBackupPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "FinanceBackup"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "RequireTLS",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "${FinanceBackup.Arn}"
+                },
+                {
+                  "Fn::Sub": "${FinanceBackup.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "DenyOtherPrincipals",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "${FinanceBackup.Arn}"
+                },
+                {
+                  "Fn::Sub": "${FinanceBackup.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "ArnNotEquals": {
+                  "aws:PrincipalArn": [
+                    {
+                      "Ref": "OperatorArn"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                    },
+                    {
+                      "Fn::GetAtt": ["ReplicationRole", "Arn"]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "FinancePrimary": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerEnforced"
+            }
+          ]
+        },
+        "BucketName": {
+          "Fn::Sub": "listify-finance-${AWS::AccountId}-${AWS::Region}"
+        },
+        "ReplicationConfiguration": {
+          "Role": {
+            "Fn::GetAtt": ["ReplicationRole", "Arn"]
+          },
+          "Rules": [
+            {
+              "Id": "DomesticBackup",
+              "Status": "Enabled",
+              "Priority": 1,
+              "Filter": {
+                "Prefix": ""
+              },
+              "DeleteMarkerReplication": {
+                "Status": "Disabled"
+              },
+              "Destination": {
+                "Bucket": {
+                  "Fn::GetAtt": ["FinanceBackup", "Arn"]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "FinancePrimaryPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "FinancePrimary"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "RequireTLS",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "${FinancePrimary.Arn}"
+                },
+                {
+                  "Fn::Sub": "${FinancePrimary.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            },
+            {
+              "Sid": "DenyOtherPrincipals",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::Sub": "${FinancePrimary.Arn}"
+                },
+                {
+                  "Fn::Sub": "${FinancePrimary.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "ArnNotEquals": {
+                  "aws:PrincipalArn": [
+                    {
+                      "Ref": "OperatorArn"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                    },
+                    {
+                      "Fn::GetAtt": ["ProofRuntimeUser", "Arn"]
+                    },
+                    {
+                      "Fn::GetAtt": ["ReplicationRole", "Arn"]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "ReplicationRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "s3.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "DomesticFinanceReplication",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetReplicationConfiguration", "s3:ListBucket"],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::listify-finance-${AWS::AccountId}-${AWS::Region}"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObjectVersionForReplication",
+                    "s3:GetObjectVersionAcl",
+                    "s3:GetObjectVersionTagging"
+                  ],
+                  "Resource": {
+                    "Fn::Sub": "arn:${AWS::Partition}:s3:::listify-finance-${AWS::AccountId}-${AWS::Region}/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:ReplicateObject", "s3:ReplicateTags"],
+                  "Resource": {
+                    "Fn::Sub": "${FinanceBackup.Arn}/*"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "ProofRuntimeUser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "Policies": [
+          {
+            "PolicyName": "DedicatedProofObjectsOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject", "s3:PutObject"],
+                  "Resource": {
+                    "Fn::Sub": "${FinancePrimary.Arn}/billing-proofs/*"
+                  }
+                },
+                {
+                  "Effect": "Deny",
+                  "Action": ["s3:DeleteObject", "s3:DeleteObjectVersion"],
+                  "Resource": {
+                    "Fn::Sub": "${FinancePrimary.Arn}/*"
+                  }
+                },
+                {
+                  "Effect": "Deny",
+                  "Action": "s3:*",
+                  "Resource": [
+                    {
+                      "Fn::Sub": "${FinanceBackup.Arn}"
+                    },
+                    {
+                      "Fn::Sub": "${FinanceBackup.Arn}/*"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    }
+  },
+  "Outputs": {
+    "FinancePrimaryBucket": {
+      "Value": {
+        "Ref": "FinancePrimary"
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "FinanceBackupBucket": {
+      "Value": {
+        "Ref": "FinanceBackup"
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "ProofRuntimeUser": {
+      "Value": {
+        "Ref": "ProofRuntimeUser"
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    },
+    "Region": {
+      "Value": {
+        "Ref": "AWS::Region"
+      },
+      "Condition": "ExpectedSouthAfricanAccount"
+    }
+  },
+  "Parameters": {
+    "OperatorArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::914683204061:(user|role)/[A-Za-z0-9+=,.@_/-]+",
+      "Description": "Reviewed operator principal; no keys or secrets."
+    }
+  },
+  "Conditions": {
+    "ExpectedSouthAfricanAccount": {
+      "Fn::And": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AWS::Region"
+            },
+            "af-south-1"
+          ]
+        },
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AWS::AccountId"
+            },
+            "914683204061"
+          ]
+        }
+      ]
+    }
+  }
+}

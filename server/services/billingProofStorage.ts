@@ -35,12 +35,17 @@ export class BillingProofStorageConfigurationError extends Error {
 }
 
 function isProductionRuntime() {
-  return process.env.NODE_ENV === 'production' ||
-    process.env.APP_ENV === 'production' || process.env.APP_ENV === 'staging';
+  return (
+    process.env.NODE_ENV === 'production' ||
+    process.env.APP_ENV === 'production' ||
+    process.env.APP_ENV === 'staging'
+  );
 }
 
 function normalizeAdapter(value?: string | null): BillingProofStorageAdapter {
-  const normalized = String(value || '').trim().toLowerCase();
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase();
   if (normalized === 's3') return 's3';
   if (normalized === 'local') return 'local';
   return isProductionRuntime() ? 's3' : 'local';
@@ -75,26 +80,38 @@ export function getBillingProofStorageStatus(): BillingProofStorageStatus {
   }
 
   const bucket = process.env.BILLING_PROOF_S3_BUCKET || '';
-  const region = process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '';
+  const region =
+    process.env.BILLING_PROOF_S3_REGION || (production ? '' : process.env.AWS_REGION) || '';
   const dedicatedAccessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID || '';
   const dedicatedSecretAccessKey = process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY || '';
   const accessKeyId = production
-    ? dedicatedAccessKeyId : dedicatedAccessKeyId || process.env.AWS_ACCESS_KEY_ID || '';
+    ? dedicatedAccessKeyId
+    : dedicatedAccessKeyId || process.env.AWS_ACCESS_KEY_ID || '';
   const secretAccessKey = production
-    ? dedicatedSecretAccessKey : dedicatedSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '';
+    ? dedicatedSecretAccessKey
+    : dedicatedSecretAccessKey || process.env.AWS_SECRET_ACCESS_KEY || '';
   const missing = [
     !bucket ? 'BILLING_PROOF_S3_BUCKET' : null,
     production && bucket && bucket === process.env.S3_BUCKET_NAME
-      ? 'BILLING_PROOF_S3_BUCKET (must differ from public media)' : null,
+      ? 'BILLING_PROOF_S3_BUCKET (must differ from public media)'
+      : null,
     !region ? 'BILLING_PROOF_S3_REGION or AWS_REGION' : null,
+    production && region && region !== 'af-south-1'
+      ? 'BILLING_PROOF_S3_REGION=af-south-1 (South Africa)'
+      : null,
     !accessKeyId
-      ? production ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID' : 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID'
+      ? production
+        ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID'
+        : 'BILLING_PROOF_AWS_ACCESS_KEY_ID or AWS_ACCESS_KEY_ID'
       : null,
     !secretAccessKey
-      ? production ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY' : 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY'
+      ? production
+        ? 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY'
+        : 'BILLING_PROOF_AWS_SECRET_ACCESS_KEY or AWS_SECRET_ACCESS_KEY'
       : null,
     production && dedicatedAccessKeyId && dedicatedAccessKeyId === process.env.AWS_ACCESS_KEY_ID
-      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID (must differ from public media)' : null,
+      ? 'BILLING_PROOF_AWS_ACCESS_KEY_ID (must differ from public media)'
+      : null,
   ].filter(Boolean) as string[];
 
   return {
@@ -126,11 +143,16 @@ function resolveStorageConfig(): BillingProofStorageConfig {
   return {
     adapter: 's3',
     bucket: process.env.BILLING_PROOF_S3_BUCKET || '',
-    region: process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '',
+    region:
+      process.env.BILLING_PROOF_S3_REGION ||
+      (isProductionRuntime() ? '' : process.env.AWS_REGION) ||
+      '',
     prefix: normalizeKey(process.env.BILLING_PROOF_S3_PREFIX || 'billing-proofs'),
-    accessKeyId: process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
+    accessKeyId:
+      process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
       (isProductionRuntime() ? undefined : process.env.AWS_ACCESS_KEY_ID),
-    secretAccessKey: process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
+    secretAccessKey:
+      process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
       (isProductionRuntime() ? undefined : process.env.AWS_SECRET_ACCESS_KEY),
   };
 }
@@ -233,18 +255,42 @@ export async function readBillingProofDocument(input: {
     return readFile(absolutePath);
   }
 
-  const bucket = String(input.metadata?.storage_bucket || process.env.BILLING_PROOF_S3_BUCKET || '');
-  const region = String(
-    input.metadata?.storage_region || process.env.BILLING_PROOF_S3_REGION || process.env.AWS_REGION || '',
+  const bucket = String(
+    input.metadata?.storage_bucket || process.env.BILLING_PROOF_S3_BUCKET || '',
   );
-  const accessKeyId = process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
+  const region = String(
+    input.metadata?.storage_region ||
+      process.env.BILLING_PROOF_S3_REGION ||
+      process.env.AWS_REGION ||
+      '',
+  );
+  const accessKeyId =
+    process.env.BILLING_PROOF_AWS_ACCESS_KEY_ID ||
     (isProductionRuntime() ? undefined : process.env.AWS_ACCESS_KEY_ID);
-  const secretAccessKey = process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
+  const secretAccessKey =
+    process.env.BILLING_PROOF_AWS_SECRET_ACCESS_KEY ||
     (isProductionRuntime() ? undefined : process.env.AWS_SECRET_ACCESS_KEY);
+
+  if (
+    isProductionRuntime() &&
+    (region !== 'af-south-1' ||
+      bucket !== process.env.BILLING_PROOF_S3_BUCKET ||
+      bucket === process.env.S3_BUCKET_NAME)
+  ) {
+    throw new BillingProofStorageConfigurationError(
+      'Hosted billing proof retrieval requires the dedicated South African bucket; migrate retained documents through the controlled procedure.',
+    );
+  }
 
   if (!bucket || !region || !accessKeyId || !secretAccessKey) {
     throw new BillingProofStorageConfigurationError(
       'Private billing proof S3 retrieval is not configured.',
+    );
+  }
+
+  if (isProductionRuntime() && !getBillingProofStorageStatus().configured) {
+    throw new BillingProofStorageConfigurationError(
+      'Dedicated South African billing proof retrieval is not configured.',
     );
   }
 

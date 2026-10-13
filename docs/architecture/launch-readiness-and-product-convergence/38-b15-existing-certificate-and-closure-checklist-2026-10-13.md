@@ -1,6 +1,6 @@
 # B15 existing certificate and closure checklist
 
-13 October 2026. B15 OPEN; eight accepted scopes. This continues the same
+13 October 2026. Completed B15 decision/local-review work CLOSED; full gate awaiting installation/hosted evidence. Eight accepted scopes. Active work transitions to B14. This continues the same
 task-owned legal-acceptance branch and packets 34–37. Certificate replacement
 is not a B15 prerequisite.
 
@@ -103,7 +103,7 @@ retain the final check and teardown results.
 | Supplier, commercial, support and absence facts       | Existing founder approvals retained; no repeat factual questions.                                                                                                                                                                   |
 | Meaningful account/purchase acceptance implementation | Locally verified in packets 34/35; new legal routes/payment-email consistency checks recorded here.                                                                                                                                 |
 | Final Privacy wording and effective-time rule         | COMPLETE on explicit final-wording approval; exact version/digests and controlled release-time rule recorded.                                                                                                                       |
-| Provider/retention/cookie facts                       | Retained provider/browser facts prepared; current hosted configuration must agree. Conditional accounting/retention and transfer reviews remain as recorded in the approved source; no unsupported public purge/adequacy guarantee. |
+| Provider/retention/cookie facts                       | Proportionate internal review CLOSED to evidenced limits in packet 39. Founder-selected domestic storage implementation and actual hosted configuration remain specific execution conditions in packet 40; no external adviser prerequisite or unsupported purge/adequacy claim. |
 | Integration and controlled legal installation         | Review/CI/merge, named protected migration/grant/copy-install procedure and exact artifact remain separate; no startup auto-install or use of an expired approval window.                                                           |
 | Actual hosted display/recorded customer evidence      | Required registration, Agent/Agency/Developer payment and enquiry/network/storage observations remain in the coordinated hosted exercise. Local intercepts are not hosted receipts.                                                 |
 

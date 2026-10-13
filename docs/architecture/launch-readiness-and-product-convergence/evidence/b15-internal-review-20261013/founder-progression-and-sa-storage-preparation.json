@@ -1,0 +1,101 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-10-13T11:11:18.968345+00:00",
+  "sourceParent": "cef0e6335320285ee6a391648ff1f4a8576d15de",
+  "remoteIntegrationHeadReadback": "c475ed7249c3cc263a7554deb274e8d5bfd76dd0",
+  "founderDirection": {
+    "actor": "Edward",
+    "source": "Explicit current conversation instruction",
+    "decision": "Close completed B15 decision/local work and general review cycle; move active work to B14; adopt dedicated South African finance/proof storage; preserve production safeguards and required execution evidence.",
+    "newGeneralAuditOrAdviserApprovalRequired": false
+  },
+  "gateStatus": {
+    "acceptedScopes": ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B12"],
+    "B15CompletedDecisionLocalReview": "closed",
+    "B15FullGate": "evidence_incomplete_controlled_installation_and_hosted_acceptance",
+    "activeNextGate": "B14",
+    "newSAObjectStorage": "prepared_not_provisioned_not_migrated_not_recovery_verified"
+  },
+  "B14FounderDeskWalkthrough": {
+    "scenario": "Friday wrong-reference EFT; away Monday/Tuesday; no backup",
+    "answerVerbatim": "Friday: Record the EFT as received but unmatched and unreconciled because the reference is wrong. Preserve the bank evidence and transaction details, note the amount and date, and ask the customer to confirm the intended account or invoice. Don’t allocate it to an account, issue a receipt, or activate paid access until it is correctly identified and reconciled.\nExisting customers: Keep their current access and commitments unchanged. Check upcoming renewals, service deadlines, and support matters before I leave; tell affected customers if anything will wait until I’m back. Don’t promise work or changes that require cover while I’m away.\nNew sales: Pause any sale that depends on immediate payment verification, activation, or service delivery. I can capture enquiries and explain that I’ll follow up after returning, without taking payment or promising a start date that I can’t support.\nChecks: Review the unmatched payment and any customer obligations before finishing on Friday. With no backup, check again Wednesday morning, when I return, and then follow up with the customer and reconcile the payment before taking any dependent action.",
+    "outcome": "completed_founder_desk_scenario",
+    "nextCheck": "Wednesday 09:00 SAST on confirmed return",
+    "realBankEvent": false,
+    "hostedPauseResumeVerified": false
+  },
+  "freshReadOnlyEvidence": {
+    "Azure": {
+      "command": "az mysql flexible-server list --query (exact name propertylistify-mysql); az mysql flexible-server parameter show --resource-group rg-property-listify --server-name propertylistify-mysql --name require_secure_transport",
+      "name": "propertylistify-mysql",
+      "resourceGroup": "rg-property-listify",
+      "location": "South Africa North",
+      "state": "Ready",
+      "backupRetentionDays": 14,
+      "geoRedundantBackup": "Disabled",
+      "earliestRestoreDate": "2026-09-29T11:06:37.976602+00:00",
+      "require_secure_transport": "ON",
+      "databaseConnectionOpened": false,
+      "applicationRestoreVerified": false
+    },
+    "Railway": {
+      "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+      "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+      "method": "railway service status --json, explicit project/environment/service IDs",
+      "workers": [
+        {
+          "id": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+          "deploymentId": null,
+          "status": null,
+          "stopped": false
+        },
+        {
+          "id": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+          "deploymentId": null,
+          "status": null,
+          "stopped": false
+        }
+      ],
+      "newDeploymentOrProcessCreated": false,
+      "billingRestoredOrAdmissionProven": false
+    },
+    "AWS": {
+      "sdkCredentialChain": "unavailable",
+      "ec2MetadataDisabledDuringCredentialCheck": true,
+      "providerRequestSent": false,
+      "capeTownAccountAdmissionVerified": false,
+      "newStorageLocationVerified": false
+    }
+  },
+  "verification": {
+    "focusedTests": {
+      "passed": 44,
+      "files": 4,
+      "billingProofStorage": 7,
+      "transactionalEmailPolicy": 17,
+      "financeStorageEvidence": 11,
+      "existingBillingContract": 9
+    },
+    "configuredReleaseTypecheck": "pnpm check: PASS",
+    "storageScriptsAndTestsStrictTypecheck": "PASS",
+    "databaseAuthority": "pnpm db:authority:check: PASS; 745 tests in 63 files, 122 classified utility surfaces, 224 canonical tables, 115 active migrations; deterministic inventory/lifecycle PASS",
+    "lint": "0 errors; two existing any warnings in billingProofStorage.ts; new storage scripts/tests zero warnings",
+    "formatting": "changed source and storage template PASS",
+    "cloudFormation": "JSON parse, dependency graph/no cycles, exact account/region conditions, no access-key resource PASS; AWS service validation/change set NOT performed",
+    "broadLegacyTypecheck": "pnpm typecheck failed on diagnostics outside configured release check; not reported as passing",
+    "corrections": [
+      "Removed an incorrect positive-case provider call-count assertion; functional read-only/security tests then all passed.",
+      "A guessed Azure resource group returned ResourceGroupNotFound; resolved actual rg-property-listify from control-plane inventory before the successful transport-setting readback."
+    ]
+  },
+  "productionInstallationCompleted": false,
+  "protectedDatabaseConnectionOrMutation": false,
+  "newProviderResourceOrBindingMutation": false,
+  "customerMailSent": false,
+  "previousEvidencePreserved": true,
+  "unchangedApprovedCopySha256": {
+    "terms.txt": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72",
+    "privacy.txt": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608",
+    "payment.txt": "c36e08198de60dad85b27de0cc8da3c609480bea24d782cbbe886eee76ac0611"
+  }
+}

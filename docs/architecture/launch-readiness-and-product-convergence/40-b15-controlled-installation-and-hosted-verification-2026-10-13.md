@@ -55,3 +55,64 @@ New offline checks exercise the real Express route on a temporary loopback liste
 The named installer and offline grant delta are implemented. Local verification includes 87 focused checks, the database-authority static gate and 13 real MySQL rehearsal checks, including a registration-style pointer lock and an actual commit followed by an injected lost acknowledgement. The CLI read-only plan is exercised separately. Only synthetic text is installed locally; four historical synthetic rows are preserved and no user acceptances are fabricated. The exact test database is then disposed and the task-started local service stopped.
 
 Remaining work is integration/CI, applicable provider/finance dispositions, authorised schema/copy/grant execution and independent hosted verification. The grant delta is prepared, not applied; no protected grant-apply authority is inferred from its JSON. Internal review does not wait for an external professional. No production installation, grant or hosted result is claimed complete.
+
+## Founder progression and domestic storage implementation
+
+Completed B15 review/decision/local items are closed; B14 is the active next
+gate. Installation and hosted observations stay on this existing execution
+checklist. Unchanged approvals and accepted packages are preserved. No adviser
+appointment or second general review is required.
+
+The prepared `scripts/storage/south-african-finance-storage.template.json`
+defines new primary and separate backup buckets in the existing AWS account,
+conditioned on Cape Town (`af-south-1`) and the exact account. Wrong-region or
+wrong-account execution creates no resources/outputs; it is not a successful
+installation. Both buckets use encryption, all public-access blocks,
+bucket-owner-enforced ownership, versioning, TLS-only and explicit principal
+isolation. The runtime identity may GET/PUT only `billing-proofs/*` in primary,
+cannot delete versions/objects and has no backup access. The backup gets
+same-region replication without propagated delete markers or automatic record
+expiry. CF deletion/replacement retains both buckets. No access key, secret,
+production variable change or existing media resource is in the template.
+
+The read-only `tsx scripts/storage/verifySouthAfricanFinanceStorage.ts
+<primary-bucket> <backup-bucket> <runtime-arn> <operator-arn>` uses the existing
+AWS SDK process/profile credential chain and expected bucket-owner guards. It
+checks actual locations, versioning/encryption/public blocks/TLS/principal
+isolation, absence of automatic expiry and exact domestic replication. Output
+explicitly leaves runtime exercises, recovery and migration false. Neither
+configured versioning nor replication is a completed recovery test.
+
+Execution order: obtain the existing AWS operator session and check Cape Town
+region admission; validate the prepared CF template/change set under the
+existing infrastructure/spend controls; provision only the dedicated resources;
+retain real outputs and run the verifier. Then use a synthetic dedicated canary
+for runtime PUT/GET, wrong-owner/anonymous/public-media identity/backup/delete
+and version-delete denials. Retain its original version/checksum, overwrite the
+canary, wait for confirmed replication, independently read the original backup
+version with the recovery identity, compare exact bytes/checksum and record
+elapsed time. Leave ambiguous outcomes contained; no customer object deletion.
+Same-region separate-bucket replication improves isolation and accidental-loss
+recovery; it does not claim independent regional-disaster recovery. Existing
+objects are not covered by automatic replication; copy/census/checksum them
+explicitly if any actual financial documents exist.
+
+Keep required finance rows in the South African Azure database and archive
+necessary readable finance exports in the dedicated domestic primary/backup,
+using a release-authorised read-only export route. The present 14-day Azure
+backup horizon is recovery configuration, not the accounting-retention period.
+Never truncate financial rows based on that horizon. Apply a named bounded
+document relocation/database-metadata transition only after real inventory and
+preservation evidence; no historic bucket fallback or manual database edit.
+Keep existing foreign records preserved/contained until their specific
+retention/disposition is resolved. No completed migration or zero-customer-proof
+claim is inferred from the old canary.
+
+Hosted proof writes and reads now reject overseas/unadmitted buckets. Existing
+verified public-media and non-financial functionality can progress separately.
+Billing email notification bodies no longer retain individual financial facts
+at the overseas email provider; canonical invoice/payment facts remain inside
+the authenticated account. The old approved legal bytes remain immutable.
+After actual migration, update only the changed location/processing disclosure
+as a new legal version, preserving the old approval/history and applying the
+same controlled installer. Never claim domestic object storage before readback.
