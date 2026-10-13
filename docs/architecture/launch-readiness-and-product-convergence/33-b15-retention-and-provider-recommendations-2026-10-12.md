@@ -129,6 +129,10 @@ Company facts are incorporated in [review 0.6](evidence/b15-founder-review-2026-
 
 Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration was outstanding at the candidate checkpoint.
 On October 13 Edward supplied successful-registration confirmation; submission
-is now completed on founder report, with certificate fields awaiting capture.
+is completed and the supplied certificate has now been inspected. It confirms
+Lehlohonolo Banda, date 2026-10-13, reference 2026-069040 and matching
+private-company CIPC 2026/702814/07. Printed name PROPERTY LISTIFY t/a DOS
+HOLDINGS differs from the supplier draft; legal/trading-name clarification is
+pending. The full certificate stays in private OS evidence.
 Review 0.7 bytes remain preserved and unapproved; this factual update is not a
 new public-copy release.

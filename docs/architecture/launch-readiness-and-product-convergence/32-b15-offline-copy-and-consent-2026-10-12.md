@@ -29,7 +29,7 @@ target are carried forward. No request to reconfirm them is necessary.
 | --- | --- | --- | --- |
 | D1 | Address for receiving legal service; place of incorporation; publishable office-bearer names; business telephone or reviewed applicability treatment | Edward | Legal-document receipt at 96 Jorissen Street, Braamfontein confirmed October 12; director name Lehlohonolo Banda supplied; Johannesburg, Gauteng, South Africa, full registered name and sole-director status confirmed; messages-only WhatsApp retained |
 | D2 | Applicable accreditation/body membership, subscribed codes or dispute-resolution scheme, including a confirmed absence where appropriate | Edward / legal reviewer | Edward states no accreditation or dispute-scheme membership; No subscribed code confirmed October 12 |
-| D3 | Information Officer company registration evidence and responsible contact name | Edward | Completed on founder report October 13, supported by supplied portal success confirmation; certificate reportedly emailed/downloaded; officer name and certificate date/reference await capture |
+| D3 | Information Officer company registration evidence and responsible contact name | Edward | Supplied certificate inspected October 13: Lehlohonolo Banda; registration 2026-10-13; reference 2026-069040; private company with matching CIPC 2026/702814/07. Private custody/hash recorded; printed legal/trading-name difference needs clarification |
 | D4 | Category schedule below, including disposal capability and holds | Edward / accounting or legal reviewer where needed | Business schedule in packet 33 confirmed October 12 subject to finance/legal review conditions; no expiry/delete job authorized |
 | D5 | Actual provider regions, subprocessors, transfer safeguards and log retention | Architect reconciles retained provider/configuration records; Edward reviews resulting commitments | Known provider list is below; missing tenant facts remain named |
 | D6 | Exact refund/dispute wording, document versions, effective date and full-copy approval | Edward or recorded delegate | Review 0.5 is unapproved; approval must identify its final resolved bytes |
@@ -203,7 +203,11 @@ Company facts are incorporated in [review 0.6](evidence/b15-founder-review-2026-
 
 Latest factual candidate: [review 0.7](evidence/b15-founder-review-2026-10-12-v0.7.md). No code membership is confirmed; Information Officer registration was outstanding at the candidate checkpoint.
 On October 13 Edward supplied successful-registration confirmation; submission
-is now completed on founder report, with certificate fields awaiting capture.
+is completed and the supplied certificate has now been inspected. It confirms
+Lehlohonolo Banda, date 2026-10-13, reference 2026-069040 and matching
+private-company CIPC 2026/702814/07. Printed name PROPERTY LISTIFY t/a DOS
+HOLDINGS differs from the supplier draft; legal/trading-name clarification is
+pending. The full certificate stays in private OS evidence.
 Review 0.7 bytes remain preserved and unapproved; this factual update is not a
 new public-copy release.
 
