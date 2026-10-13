@@ -343,6 +343,19 @@ async function messageForDelivery(db: Database, row: Delivery) {
       .every(key => typeof bank[key] === 'string' && String(bank[key]).trim())
       ? bank as { accountName: string; bankName: string; accountNumber: string; branchCode: string; accountType: string }
       : undefined;
+    let noticeReviewed = invoice.status !== 'submitted';
+    if (row.purpose === 'payment_notice_received' && event.paymentId) {
+      // An earlier partial notice can be reviewed while a later notice leaves
+      // the same invoice submitted again. Use this payment's canonical review.
+      const [review] = await db.select({ id: billingAuditEvents.id }).from(billingAuditEvents)
+        .where(and(eq(billingAuditEvents.invoiceId, event.invoiceId!),
+          eq(billingAuditEvents.paymentId, event.paymentId),
+          inArray(billingAuditEvents.eventType, ['payment_approved_subscription_activated',
+            'payment_partially_approved', 'payment_request_correction', 'payment_reject',
+            'payment_unmatched', 'payment_duplicate', 'payment_approved_invoice_already_paid'])))
+        .limit(1);
+      noticeReviewed ||= Boolean(review);
+    }
     const outcome = event.afterData as Record<string, unknown> | null;
     return renderLaunchEmail({ purpose: row.purpose as LaunchEmailPurpose, product, publicOrigin,
       invoice: {
@@ -350,7 +363,7 @@ async function messageForDelivery(db: Database, row: Delivery) {
         amountDue: invoice.amountDue, currency: invoice.currency, status: invoice.status, amountPaid: invoice.amountPaid, bankDetails,
         legalBundleId: typeof metadata?.legal_bundle_id === 'string' ? metadata.legal_bundle_id : undefined,
       },
-      ...(row.purpose === 'payment_notice_received' ? { noticeReviewed: invoice.status !== 'submitted' } : {}),
+      ...(row.purpose === 'payment_notice_received' ? { noticeReviewed } : {}),
       ...(row.purpose === 'payment_approved' && typeof outcome?.paidTermStart === 'string' &&
         typeof outcome?.paidTermEnd === 'string' ? { term: { start: outcome.paidTermStart, end: outcome.paidTermEnd } } : {}),
     });

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { and, eq } from 'drizzle-orm';
 import {
-  agencies, agencyAgentMemberships, agents, auditLogs, billableAccounts, billingAuditEvents, billingInvoices,
+  agencies, agencyAgentMemberships, agents, auditLogs, billableAccounts, billingAuditEvents, billingInvoices, billingPayments,
   developerOrganisationMemberships, developerOrganisations, invitations, notifications, plans, subscriptions,
   transactionalEmailAttempts, transactionalEmailDeliveries, users,
 } from '../../drizzle/schema';
@@ -184,6 +184,28 @@ describeDb('B10 transactional email delivery authority', () => {
       expect(input.text).not.toContain('Verification is pending');
       expect(input.text).not.toContain('term was activated');
       return { kind: 'accepted', reference: 'synthetic-delayed-notice-no-send' };
+    } });
+    expect(captured).toBe(true);
+  });
+
+  it('does not call an earlier partial notice pending when a later notice keeps the invoice under review', async () => {
+    const source = await fixture('payment_notice_received');
+    const [payment] = await db.insert(billingPayments).values({ invoiceId: source.invoiceId,
+      subscriptionId: source.termId, billableAccountId: source.accountId, ownerType: 'agent', ownerId: source.userId,
+      amount: 10000, paymentReference: source.invoiceNumber, idempotencyKey: `synthetic-email-partial-${randomUUID()}`,
+      state: 'verified', submittedBy: source.userId }).$returningId();
+    await db.update(billingAuditEvents).set({ paymentId: payment.id }).where(eq(billingAuditEvents.id, source.auditId));
+    const [review] = await db.insert(billingAuditEvents).values({ ownerType: 'agent', ownerId: source.userId,
+      billableAccountId: source.accountId, invoiceId: source.invoiceId, paymentId: payment.id,
+      eventType: 'payment_partially_approved' }).$returningId();
+    made.audits.push(review.id);
+    await consumeLaunchEmailEvents({ database: db });
+    const job = await jobFor(source.auditId, 'billing_audit');
+    let captured = false;
+    await runTransactionalEmailWorker({ database: db, deliveryId: job.id, provider: async input => {
+      captured = true; expect(input.subject).toContain('review update');
+      expect(input.text).not.toContain('Verification is pending');
+      return { kind: 'accepted', reference: 'synthetic-partial-notice-no-send' };
     } });
     expect(captured).toBe(true);
   });
