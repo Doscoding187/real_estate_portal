@@ -21,6 +21,7 @@ vi.mock('../_core/email', () => ({
 
 import { appRouter } from '../routers';
 import { authService } from '../_core/auth';
+import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
 import { resolveDatabaseAuthority } from '../_core/databaseAuthority/context';
 import { getDb } from '../db';
 import { createListing } from '../db';
@@ -77,6 +78,7 @@ const created = {
 };
 
 const originalEnv: Record<string, string | undefined> = {};
+let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>>;
 const idOf = (result: any) => Number(result?.insertId || result?.[0]?.insertId || 0);
 const caller = (user: {
   id: number;
@@ -182,6 +184,8 @@ async function registerPrincipal(suffix: string) {
     'StrongPassword1!',
     'Bootstrap Principal',
     'agency_admin',
+    undefined,
+    legalFixture.registrationChoice,
   );
   created.userIds.push(result.userId);
   const db = await getDb();
@@ -198,7 +202,8 @@ async function registerPrincipal(suffix: string) {
   return { user: unverified, verificationToken: delivered.verificationToken, email };
 }
 
-beforeAll(() => {
+beforeAll(async () => {
+  if (hasTestDb) legalFixture = await installSyntheticLegalRelease();
   rememberEnv('BILLING_PROOF_STORAGE_ADAPTER', 'local');
   rememberEnv(
     'BILLING_PRIVATE_STORAGE_DIR',
@@ -212,7 +217,13 @@ beforeAll(() => {
   rememberEnv('BILLING_SUPPORT_EMAIL', 'billing-test@propertylistify.local');
 });
 
-afterAll(restoreEnv);
+afterAll(async () => {
+  try {
+    await legalFixture?.cleanup();
+  } finally {
+    restoreEnv();
+  }
+});
 
 afterEach(async () => {
   if (!hasTestDb) return;
@@ -296,6 +307,10 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
   it('registers, verifies, bootstraps once, reuses EFT checkout, and activates canonical access', async () => {
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
     const planId = await canonicalAgencyLaunchAccessPlanId();
+    const legalAcceptance = {
+      ...legalFixture.choice,
+      quote: { planId, amountDue: 99_900, currency: 'ZAR' as const },
+    };
     const principal = await registerPrincipal(suffix);
 
     await expect(
@@ -382,8 +397,16 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     });
     expect((await attachedCaller.agency.getAccessState()).workspaceAccess.publishing).toBe(false);
     const [checkout, concurrentCheckout] = await Promise.all([
-      attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
-      attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
+      attachedCaller.billing.startManualEftCheckout({
+        planId,
+        billingCycle: 'monthly',
+        legalAcceptance,
+      }),
+      attachedCaller.billing.startManualEftCheckout({
+        planId,
+        billingCycle: 'monthly',
+        legalAcceptance,
+      }),
     ]);
     expect(concurrentCheckout.invoice.id).toBe(checkout.invoice.id);
     expect(concurrentCheckout.paymentReference).toBe(checkout.paymentReference);
@@ -400,12 +423,14 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     ).toHaveLength(1);
     const checkoutRetry = await attachedCaller.billing.startManualEftCheckout({
       planId,
+      legalAcceptance,
       billingCycle: 'monthly',
     });
     expect(checkoutRetry.invoice.id).toBe(checkout.invoice.id);
     expect(checkoutRetry.paymentReference).toBe(checkout.paymentReference);
     const alternateCycleCheckout = await attachedCaller.billing.startManualEftCheckout({
       planId,
+      legalAcceptance,
       billingCycle: 'annual',
     });
     expect(alternateCycleCheckout.invoice.id).toBe(checkout.invoice.id);
@@ -446,7 +471,11 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
       }),
     );
     const checkoutDuringApprovalPromise = concurrentStart.then(() =>
-      attachedCaller.billing.startManualEftCheckout({ planId, billingCycle: 'monthly' }),
+      attachedCaller.billing.startManualEftCheckout({
+        planId,
+        billingCycle: 'monthly',
+        legalAcceptance,
+      }),
     );
     releaseConcurrentStart?.();
     const [approvalResult, checkoutDuringApprovalResult] = await Promise.allSettled([
@@ -473,6 +502,7 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     )).limit(1);
     const renewalCheckout = await attachedCaller.billing.startManualEftCheckout({
       planId,
+      legalAcceptance,
       billingCycle: 'monthly',
     });
     expect(renewalCheckout.invoice.id).not.toBe(checkout.invoice.id);
@@ -539,6 +569,7 @@ guardedDescribe('agency principal bootstrap persisted acceptance', () => {
     ).toBe(true);
     const renewalRetry = await attachedCaller.billing.startManualEftCheckout({
       planId,
+      legalAcceptance,
       billingCycle: 'monthly',
     });
     expect(renewalRetry.invoice.id).toBe(renewalCheckout.invoice.id);

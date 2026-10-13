@@ -55,10 +55,14 @@ export async function installSyntheticLegalRelease() {
         .onDuplicateKeyUpdate({ set: { bundleId } });
     });
     return {
+      registrationChoice: { bundleId, termsAccepted: true as const },
       choice: { bundleId, termsAccepted: true as const, purchaseAccepted: true as const },
       cleanup: async () => {
         try {
           await db.transaction(async tx => {
+            await tx
+              .delete(schema.userLegalAcceptances)
+              .where(eq(schema.userLegalAcceptances.bundleId, bundleId));
             if (original)
               await tx
                 .update(schema.legalActiveRelease)

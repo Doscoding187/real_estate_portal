@@ -64,6 +64,7 @@ import {
 } from '../../drizzle/schema';
 import { appRouter } from '../routers';
 import { getAgencyOperatingHome } from '../services/agencyOperatingHome';
+import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
 
 const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
 const AGENCY_EMAIL = `principal-${suffix}@walkthrough.test`;
@@ -85,6 +86,7 @@ let invitationToken: string;
   const createdPropertyIds: number[] = [];
 const proofDirectory = join(tmpdir(), `property-listify-b16-agency-proof-${process.pid}-${randomUUID()}`);
 const originalBillingEnv = new Map<string, string | undefined>();
+let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>>;
 
 function setBillingTestEnv(key: string, value: string) {
   if (!originalBillingEnv.has(key)) originalBillingEnv.set(key, process.env[key]);
@@ -119,6 +121,7 @@ beforeAll(async () => {
   setBillingTestEnv('BILLING_EFT_ACCOUNT_TYPE', 'Local test account');
   setBillingTestEnv('BILLING_SUPPORT_EMAIL', 'billing-test@propertylistify.local');
   await getDb();
+  legalFixture = await installSyntheticLegalRelease();
   // The acceptance path mints a session token through the auth service.
 
 
@@ -235,6 +238,7 @@ afterAll(async () => {
     await db.delete(users).where(eq(users.id, userId)).catch(() => undefined);
   }
   if (agencyId) await db.delete(agencies).where(eq(agencies.id, agencyId)).catch(() => undefined);
+  await legalFixture?.cleanup();
 });
 
 describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
@@ -309,7 +313,13 @@ describeWithDb('AGY-S8: full Agency journey walkthrough', () => {
   });
 
   it('STAGE 3: Manual-EFT checkout issues an invoice', async () => {
-    const result = await principalCaller.billing.createCheckoutSession({ planId });
+    const result = await principalCaller.billing.createCheckoutSession({
+      planId,
+      legalAcceptance: {
+        ...legalFixture.choice,
+        quote: { planId, amountDue: 99_900, currency: 'ZAR' },
+      },
+    });
     expect(result.sessionId).toContain('manual_eft:');
     invoiceId = Number(result.sessionId.split(':').pop());
     expect(invoiceId).toBeGreaterThan(0);

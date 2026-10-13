@@ -12,6 +12,7 @@ import { legalReleaseContentDigest } from '../legalAcceptancePolicy';
 import {
   findVerifiedRegistrationAccount,
   insertRegistrationWithLegalAcceptance,
+  validateCurrentLegalAcceptanceInTransaction,
 } from '../registrationLegalAcceptanceService';
 
 const runLocal = process.env.B15_LOCAL_DB_PROOF === '1';
@@ -108,6 +109,66 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
       if (db) await clearOwnFixtures();
     } finally {
       await connection?.end();
+    }
+  });
+
+  it('holds the released copy stable against a publisher until acceptance commits', async () => {
+    const authority = resolveDatabaseAuthority({
+      operation: 'test-fixture',
+      processEnv: { ...process.env, NODE_ENV: 'development', APP_ENV: 'development' },
+    });
+    if (
+      authority.context.targetFingerprintHash !==
+      '3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4'
+    )
+      throw new Error('B15 locking proof requires its exact owned disposable target');
+    const publisherConnection = await createAuthoritySqlConnection(
+      authority,
+      authorizeDatabaseOperation(authority),
+    );
+    const publisher = drizzle(publisherConnection as never, { schema, mode: 'default' });
+    let release!: () => void;
+    const continueAcceptance = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    let acquired!: () => void;
+    let acquisitionFailed!: (error: unknown) => void;
+    const locked = new Promise<void>((resolve, reject) => {
+      acquired = resolve;
+      acquisitionFailed = reject;
+    });
+    const acceptance = db.transaction(async tx => {
+      try {
+        await validateCurrentLegalAcceptanceInTransaction(tx, choice);
+        acquired();
+        await continueAcceptance;
+      } catch (error) {
+        acquisitionFailed(error);
+        throw error;
+      }
+    });
+    void acceptance.catch(() => undefined);
+    const publisherLock = () =>
+      publisher.transaction(tx =>
+        tx
+          .select()
+          .from(schema.legalActiveRelease)
+          .where(eq(schema.legalActiveRelease.purpose, 'account_registration'))
+          .for('update', { noWait: true }),
+      );
+    try {
+      await locked;
+      await expect(publisherLock()).rejects.toMatchObject({ cause: { errno: 3572 } });
+      release();
+      await acceptance;
+      await expect(publisherLock()).resolves.toMatchObject([{ bundleId }]);
+    } finally {
+      release();
+      try {
+        await acceptance;
+      } finally {
+        await publisherConnection.end();
+      }
     }
   });
 

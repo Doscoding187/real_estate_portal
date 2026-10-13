@@ -96,7 +96,7 @@ export interface RegistrationAgentProfile {
   specializations?: string[];
 }
 
-/** Lock the shared Terms release until the caller's commitment is durable. */
+/** Hold the release pointer stable until commitment without runtime write privileges. */
 export async function validateCurrentLegalAcceptanceInTransaction(
   tx: Transaction,
   choice: unknown,
@@ -106,7 +106,7 @@ export async function validateCurrentLegalAcceptanceInTransaction(
     .from(schema.legalActiveRelease)
     .where(eq(schema.legalActiveRelease.purpose, 'account_registration'))
     .limit(1)
-    .for('update');
+    .for('share');
   const [row] = pointer
     ? await tx
         .select()
