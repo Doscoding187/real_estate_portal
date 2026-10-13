@@ -699,6 +699,39 @@ describe('immutable resolved database context and operation authorization', () =
     expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), acknowledgement })).toThrow();
   });
 
+  it('confines legal grant approval to the exact runtime identity, target and before/after plans', () => {
+    const identity = fixtureIdentity();
+    const authority = resolveDatabaseAuthority({
+      operation: 'runtime-legal-grant', cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: 'mysql://admin:secret@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+      credentialClass: 'bootstrap-admin',
+      processEnv: { NODE_ENV: 'production', APP_ENV: 'production' },
+    });
+    const approval = {
+      reference: 'LEGAL-RUNTIME-GRANT-TEST', actor: 'test-reviewer',
+      operation: 'runtime-legal-grant' as const,
+      targetFingerprintHash: authority.context.targetFingerprintHash,
+      credentialClass: 'bootstrap-admin' as const,
+      runtimeIdentity: 'propertylistify_app_runtime',
+      runtimePreviousGrantDigest: 'cc6956ba9ba51dad7ceb3678f70658d46623adf66eedcc70a951aae602ae181d',
+      runtimeGrantDigest: 'eee8fa09d52b41c07f804e1484a92276f2c643b8575c547419bc721ddcf8f456',
+    };
+    const acknowledgement = expectedDatabaseAcknowledgement(authority.context);
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval, acknowledgement })).not.toThrow();
+    for (const changed of [
+      { runtimeIdentity: 'propertylistify_job_worker' },
+      { runtimePreviousGrantDigest: 'different' },
+      { runtimeGrantDigest: 'different' },
+      { credentialClass: 'migration' as const },
+      { targetFingerprintHash: '0'.repeat(64) },
+    ]) {
+      expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval: { ...approval, ...changed }, acknowledgement })).toThrow();
+    }
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), approval })).toThrow('exact acknowledgement');
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd(), acknowledgement })).toThrow();
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({
