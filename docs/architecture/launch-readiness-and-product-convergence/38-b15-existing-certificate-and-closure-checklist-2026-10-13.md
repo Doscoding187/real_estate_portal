@@ -111,3 +111,16 @@ The certificate requirement is finished. Full B15 is accepted only when the
 closure plan's remaining approval, release and actual observation requirements
 are supported. Funding-wait preparation does not add a ninth accepted package,
 open sales or admit a worker. B17 still needs the specified 24-hour workload.
+
+## Subsequent founder-operated internal review
+
+Edward authorised proportionate internal review without waiting for external
+accounting/legal appointments. [Packet 39](39-b15-provisional-policy-and-material-launch-conditions-2026-10-13.md)
+records the resulting provisional policy, actual provider evidence, precise
+SARS/operator-agreement/frontend-plan conditions and scoped mitigations.
+External specialist availability is not an independent launch requirement.
+[Packet 40](40-b15-controlled-installation-and-hosted-verification-2026-10-13.md)
+continues exact-copy compilation, installation safeguards and hosted checks.
+This supersedes an interpretation that every retained conditional review
+requires an external professional. Actual legal, contract, installation and
+hosted proof remain; copy and certificate approvals stay complete.

@@ -1,0 +1,18 @@
+{
+  "executionState": "prepared_not_applied",
+  "targetFingerprintHash": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "database": "propertylistify_database",
+  "identity": "propertylistify_app_runtime",
+  "expectedHead": "0114_user_legal_acceptances.sql",
+  "manifestDigest": "7c5a7c8f514ea9be21ec668a9953a7de428ecf5719b746876ef64aae78b0dc9c",
+  "expectedModelDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+  "previousGrantDigest": "cc6956ba9ba51dad7ceb3678f70658d46623adf66eedcc70a951aae602ae181d",
+  "resultingGrantDigest": "eee8fa09d52b41c07f804e1484a92276f2c643b8575c547419bc721ddcf8f456",
+  "statements": [
+    "GRANT SELECT ON `propertylistify_database`.`legal_active_release` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT ON `propertylistify_database`.`legal_releases` TO 'propertylistify_app_runtime'@'%'",
+    "GRANT SELECT, INSERT ON `propertylistify_database`.`user_legal_acceptances` TO 'propertylistify_app_runtime'@'%'"
+  ],
+  "protectedApplyAuthority": "not_granted_by_this_offline_plan",
+  "planDigest": "237b724cf6fcf6a465c5b601e75ee3ed9fbd86bb944c0e0162951344b6e1f2d3"
+}

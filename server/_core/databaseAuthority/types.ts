@@ -32,6 +32,9 @@ export const DATABASE_OPERATIONS = [
   'release-reference-plan',
   'release-reference-apply',
   'release-reference-verify',
+  'legal-release-plan',
+  'legal-release-apply',
+  'legal-release-verify',
 ] as const;
 
 export type DatabaseOperation = (typeof DATABASE_OPERATIONS)[number];

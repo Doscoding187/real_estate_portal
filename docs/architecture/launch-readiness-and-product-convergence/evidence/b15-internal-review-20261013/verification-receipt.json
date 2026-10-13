@@ -1,0 +1,77 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-10-13T10:34:04.187394+00:00",
+  "sourceParent": "ebf5653d43bcb429ad8ecc1b0dd40d26d424ff71",
+  "branch": "feat/b15-legal-acceptance-authority-20261012",
+  "checks": {
+    "focused": {
+      "passed": 87,
+      "files": 7,
+      "cases": {
+        "analyticsPayloadMinimization": 5,
+        "financeRetentionPolicy": 13,
+        "legalReleasePreparation": 9,
+        "existingLegalAcceptancePolicy": 35,
+        "legalReleaseInstallation": 20,
+        "legalRuntimeGrantPlan": 1,
+        "legalReleaseCommandClosure": 4
+      },
+      "scope": "Real temporary loopback Express HTTP, pure policy/compiler and simulated canonical release protocol/closure checks; no test-runner database/provider initialization"
+    },
+    "typecheck": "passed",
+    "focusedLint": "New/changed product code, helpers and their tests: passed, zero errors or warnings. Extended legacy authority/CLI lint: zero errors, eight pre-existing any warnings.",
+    "configuredBackendBuild": "Runs an informational no-op; not counted as a backend compilation result",
+    "approvedCompanyCopyCompiler": "passed; exact prepared byte hashes/versions, canonical digest and format; planned metadata only",
+    "publicSourceSnapshots": {
+      "retained": 13,
+      "failed": 0,
+      "receipt": "source-snapshots.json"
+    },
+    "providerReceiptHashes": "verified retained repository receipts; no fresh protected/provider readback",
+    "databaseAuthorityStatic": {
+      "passed": 745,
+      "files": 63,
+      "schemaTables": 224,
+      "activeSqlFiles": 115,
+      "inventory": "deterministic and current",
+      "lifecycle": "passed"
+    },
+    "actualMySqlInstallerRehearsal": {
+      "passed": 13,
+      "receipt": "local-installer-rehearsal.json",
+      "scope": "Exact owned disposable target, canonical migrations, synthetic text only; real row/pointer/locking/commit-loss verification"
+    },
+    "cliReadOnlyPlan": {
+      "passed": true,
+      "receipt": "cli-read-only-plan.json",
+      "syntheticOnly": true
+    },
+    "runtimeGrantDelta": "Prepared exact three restricted grants, reviewed predecessor unchanged; not applied"
+  },
+  "corrections": [
+    "Initial test imported uninstalled supertest; replaced with native loopback HTTP/fetch without installing a package.",
+    "A leap-day test accidentally supplied a later tax trigger; corrected the fixture.",
+    "Typecheck rejected Array.at under project library; used explicit later-date comparison.",
+    "A leftover test request call was replaced; final suite passed.",
+    "Resolved source-head access through canonical context.repository.head; optional unknown receipt fields are passed explicitly to compiler.",
+    "Preserved retained Place grant footprint instead of deriving its broader historical privileges from generic CI grants.",
+    "Initial fresh migration apply refused without explicit accepted-old-head; reissued with verified none/head and exact local acknowledgement.",
+    "Actual MySQL metadata read required explicit lowercase aliases; corrected aliases and all 13 real SQL checks passed."
+  ],
+  "protectedConnections": false,
+  "localDatabaseStarted": true,
+  "providerMutation": false,
+  "customerCommunication": false,
+  "disposal": {
+    "onlyExactOwnedDisposableTarget": true,
+    "customerOrProviderDisposal": false
+  },
+  "gateStatus": {
+    "B15": "OPEN: material dispositions and controlled/hosted evidence pending",
+    "acceptedScopes": 8
+  },
+  "localServiceStopped": true,
+  "companyLegalCopyInstalled": false,
+  "syntheticLegalRowsInstalled": 4,
+  "customerAcceptanceBackfill": false
+}

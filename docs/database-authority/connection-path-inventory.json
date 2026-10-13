@@ -25,7 +25,8 @@
     "scripts/db-verify-distribution-schema.ts",
     "scripts/bootstrapIsolatedCiDatabaseIdentities.ts",
     "scripts/verifyIsolatedCiDatabaseIdentities.ts",
-    "server/_core/databaseAuthority/sourceArchive.ts"
+    "server/_core/databaseAuthority/sourceArchive.ts",
+    "server/_core/databaseAuthority/legalReleaseInstallation.ts"
   ],
   "testInfrastructureRawConnectionSources": ["server/test-utils/developmentIntegrationMutex.ts"],
   "retiredDirectMutationSources": ["scripts/testDbWorkflow.ts"],

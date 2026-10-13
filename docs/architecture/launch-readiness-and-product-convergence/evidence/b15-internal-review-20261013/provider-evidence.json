@@ -1,0 +1,51 @@
+{
+  "recordedAt": "2026-10-13T09:58:00.075760+00:00",
+  "sourceParent": "ebf5653d43bcb429ad8ecc1b0dd40d26d424ff71",
+  "sources": [
+    {
+      "label": "AWS media configuration/runtime readback",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/mvp1-aws-storage-hardening-20261001/media-hardening-execution-20261002.json",
+      "sha256": "218df52067a962e7f9d1927b4d7539b0745d1e2067290a75f73c83e001cd78fb",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    },
+    {
+      "label": "AWS private proof and source/archive inspection",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/mvp1-aws-storage-hardening-20261001/continuation-verification.json",
+      "sha256": "cc745240802bbb2443bb5b5ab813759008a8c045b08ad21a304eb6f34b4207d5",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    },
+    {
+      "label": "AWS independent existing-proof canary denial correction",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/mvp1-aws-storage-hardening-20261001/cross-proof-read-correction-20261002.json",
+      "sha256": "4b0f00ffaae05de73938db3ee048a96fb345a60e6d7e10857e80fedd4abc0743",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    },
+    {
+      "label": "AWS and Azure reviewed runtime/worker binding preparation",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/mvp1-aws-storage-hardening-20261001/production-binding-preparation-20261002.json",
+      "sha256": "c49dc9a2e12f8712e713e776ad10e83aae6d723f430a4fd6bb10e9093774fb02",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    },
+    {
+      "label": "Railway held-worker configured service regions",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/held-worker-admission-20261012/provider-inventory.json",
+      "sha256": "38708953a654ed7ccb2542f1573b514395242516725579e05880f4c5025ad1a0",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    },
+    {
+      "label": "Vercel existing frontend/media input evidence",
+      "repositoryPath": "docs/architecture/launch-readiness-and-product-convergence/evidence/mvp1-aws-storage-hardening-20261001/vercel-production-media-setting.json",
+      "sha256": "ca9cfbae8ff550efb0f2118bcf101a2d91c18744e827d830d4132c4b9518d674",
+      "scope": "Retained dated readback/preparation with later corrections; not a current live provider check"
+    }
+  ],
+  "offlineReconciliation": "retained-provider-facts-20261012.json",
+  "publicSources": "source-snapshots.json",
+  "awsConclusion": "Established by recorded operator and independent provider checks, bucket identities and later reviewed bindings, not an SDK assumption. Current hosted identities/bindings still require release readback.",
+  "limits": [
+    "No current protected database or provider API connection",
+    "No full private configuration or credential payload copied",
+    "Actual Vercel plan and executed Railway DPA not established",
+    "Published DPA/security text is not complete company compliance verification"
+  ]
+}

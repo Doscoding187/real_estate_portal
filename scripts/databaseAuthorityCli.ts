@@ -1,3 +1,4 @@
+import { completeLegalReleaseCommand, LegalReleaseCommandFailure } from './legalReleaseCommand';
 import {
   completePlaceReleaseCommand,
   placeCommandFailure,
@@ -25,6 +26,10 @@ import {
 } from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
 import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
 import { resolve } from 'node:path';
+import {
+  installLegalRelease,
+  prepareLegalInstallationPacket,
+} from '../server/_core/databaseAuthority/legalReleaseInstallation';
 import * as schema from '../drizzle/schema';
 import {
   authorizeDatabaseOperation,
@@ -170,6 +175,10 @@ type Command =
   | 'places:release-preview:verify'
   | 'release-reference:apply'
   | 'release-reference:verify'
+  | 'legal-release:prepare'
+  | 'legal-release:plan'
+  | 'legal-release:apply'
+  | 'legal-release:verify'
   | 'readiness'
   | 'schema:check'
   | 'schema:tidb-audit'
@@ -807,6 +816,41 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'legal-release:prepare') {
+    const previous = requiredOption('previous-bundle');
+    print(
+      prepareLegalInstallationPacket({
+        root: process.cwd(),
+        plannedEffectiveAt: requiredOption('effective-at'),
+        validUntil: requiredOption('valid-until'),
+        expectedPreviousBundleId: previous === 'none' ? null : previous,
+      }),
+    );
+    return;
+  }
+
+  if (command.startsWith('legal-release:')) {
+    const apply = command === 'legal-release:apply';
+    const operation: DatabaseOperation = apply
+      ? 'legal-release-apply'
+      : command === 'legal-release:plan'
+        ? 'legal-release-plan'
+        : 'legal-release-verify';
+    const packet = JSON.parse(readFileSync(resolve(requiredOption('packet')), 'utf8'));
+    const expectedPlanDigest = apply ? requiredOption('plan-digest') : undefined;
+    const authority = authorityFor(operation, apply ? 'migration' : 'read-only');
+    const decision = authorizationFor(authority, option('ack'));
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    print(
+      await completeLegalReleaseCommand({
+        connection,
+        operation: () =>
+          installLegalRelease({ authority, decision, connection, packet, expectedPlanDigest }),
+      }),
+    );
+    return;
+  }
+
   if (command === 'readiness') {
     print(
       await assessRuntimeDatabaseReadiness({
@@ -1022,6 +1066,23 @@ export async function runDatabaseAuthorityCommand(command: Command): Promise<voi
   try {
     await run(command);
   } catch (error) {
+    if (error instanceof LegalReleaseCommandFailure) {
+      console.error(
+        JSON.stringify(
+          {
+            command,
+            unsafeToReplay: true,
+            connectionClosed: false,
+            operationResult: error.operationResult ?? null,
+            primaryFailurePresent: error.primaryFailure !== undefined,
+            message: error.message,
+          },
+          null,
+          2,
+        ),
+      );
+      throw error;
+    }
     const placeCommand =
       command.startsWith('places:release-preview:') ||
       command === 'release-reference:inspect' ||
@@ -1076,6 +1137,10 @@ const commands = new Set<Command>([
   'places:release-preview:verify',
   'release-reference:apply',
   'release-reference:verify',
+  'legal-release:prepare',
+  'legal-release:plan',
+  'legal-release:apply',
+  'legal-release:verify',
   'readiness',
   'schema:check',
   'schema:tidb-audit',
