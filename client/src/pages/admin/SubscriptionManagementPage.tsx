@@ -48,6 +48,17 @@ import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCommercialActivationAvailability } from '@/hooks/useCommercialProductAvailability';
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return 'Not supplied';
+  const date = new Date(value.includes('T') ? value : value.replace(' ', 'T') + 'Z');
+  return Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat('en-ZA', {
+        dateStyle: 'medium',
+        timeZone: 'Africa/Johannesburg',
+      }).format(date)
+    : 'Not supplied';
+}
+
 export default function SubscriptionManagementPage({
   initialTab = 'subscriptions',
 }: { initialTab?: string } = {}) {
@@ -59,11 +70,12 @@ export default function SubscriptionManagementPage({
   const [page, setPage] = useState(1);
   const [reviewPayment, setReviewPayment] = useState<{
     id: number;
-    decision: 'approve' | 'duplicate';
+    decision: 'approve' | 'duplicate' | 'reject' | 'unmatched';
     commercialProductKey: string | null;
   } | null>(null);
   const [verifiedCents, setVerifiedCents] = useState('');
   const [financeNote, setFinanceNote] = useState('');
+  const [bankPaymentReference, setBankPaymentReference] = useState('');
   const [overpaymentReconciled, setOverpaymentReconciled] = useState(false);
 
   // Queries
@@ -132,10 +144,12 @@ export default function SubscriptionManagementPage({
       setReviewPayment({ id: paymentId, decision: 'approve', commercialProductKey });
       setVerifiedCents('');
       setFinanceNote('');
+      setBankPaymentReference('');
       setOverpaymentReconciled(false);
       return;
     }
-    verifyPaymentMutation.mutate({ paymentId, decision: 'reject' });
+    setReviewPayment({ id: paymentId, decision: 'reject', commercialProductKey });
+    setFinanceNote('');
   };
 
   const handleRequestCorrection = (paymentId: number, commercialProductKey: string | null) => {
@@ -146,7 +160,7 @@ export default function SubscriptionManagementPage({
     verifyPaymentMutation.mutate({
       paymentId,
       decision: 'request_correction',
-      note: 'Finance team requested a corrected proof of payment.',
+      note: 'Finance requested corrected payment details.',
     });
   };
 
@@ -238,12 +252,14 @@ export default function SubscriptionManagementPage({
             <DialogTitle>
               {reviewPayment?.decision === 'duplicate'
                 ? 'Record duplicate payment proof'
-                : 'Reconcile received EFT funds'}
+                : reviewPayment?.decision === 'approve'
+                  ? 'Reconcile received EFT funds'
+                  : 'Record payment review decision'}
             </DialogTitle>
             <DialogDescription>
               {reviewPayment?.decision === 'duplicate'
                 ? 'Do not approve or extend access. Record the manual treatment for this duplicate proof.'
-                : 'Match actual bank receipt to the invoice and payer. Uploaded proof alone is not payment verification.'}
+                : 'Match actual bank receipt to the invoice amount, reference, payer and payment date. A customer notice or uploaded proof is not bank verification.'}
             </DialogDescription>
           </DialogHeader>
           {reviewPayment?.decision === 'approve' ? (
@@ -255,6 +271,16 @@ export default function SubscriptionManagementPage({
                 step="1"
                 value={verifiedCents}
                 onChange={event => setVerifiedCents(event.target.value)}
+              />
+            </label>
+          ) : null}
+          {reviewPayment?.decision === 'approve' ? (
+            <label>
+              Reference shown on the received bank transaction
+              <Input
+                value={bankPaymentReference}
+                maxLength={120}
+                onChange={event => setBankPaymentReference(event.target.value)}
               />
             </label>
           ) : null}
@@ -284,7 +310,9 @@ export default function SubscriptionManagementPage({
                 !canReviewPayment(reviewPayment?.commercialProductKey) ||
                 verifyPaymentMutation.isPending ||
                 (reviewPayment?.decision === 'approve' &&
-                  (!Number.isSafeInteger(Number(verifiedCents)) || Number(verifiedCents) <= 0)) ||
+                  (!Number.isSafeInteger(Number(verifiedCents)) ||
+                    Number(verifiedCents) <= 0 ||
+                    !bankPaymentReference.trim())) ||
                 !financeNote.trim()
               }
               onClick={() =>
@@ -294,6 +322,7 @@ export default function SubscriptionManagementPage({
                   ...(reviewPayment?.decision === 'approve'
                     ? {
                         verifiedAmount: Number(verifiedCents),
+                        bankPaymentReference: bankPaymentReference.trim() || undefined,
                         overpaymentReconciled,
                       }
                     : {}),
@@ -303,7 +332,9 @@ export default function SubscriptionManagementPage({
             >
               {reviewPayment?.decision === 'duplicate'
                 ? 'Record duplicate proof'
-                : 'Confirm finance approval'}
+                : reviewPayment?.decision === 'approve'
+                  ? 'Confirm finance approval'
+                  : 'Record review decision'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -574,119 +605,157 @@ export default function SubscriptionManagementPage({
 
                       return (
                         <TableRow
-                        key={row.payment.id}
-                        className="hover:bg-slate-50/50 transition-colors"
-                      >
-                        <TableCell>
-                          {new Date(row.payment.createdAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {row.agentUser?.name ||
-                                row.agentUser?.email ||
-                                row.agency?.name ||
-                                row.developerOrganisation?.name ||
-                                'Unknown account'}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {row.agentUser?.email ||
-                                row.agency?.email ||
-                                row.developerOrganisation?.email ||
-                                ''}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {formatCurrency(row.payment.amount / 100)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <Badge variant="outline" className="w-fit font-mono text-xs">
-                              {row.payment.paymentReference}
-                            </Badge>
-                            <span className="text-xs text-slate-500">
-                              {row.invoice.invoiceNumber}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {row.documentId ? (
-                            <button
-                              type="button"
-                              onClick={() => handleViewProof(row.documentId)}
-                              className="flex items-center text-blue-600 hover:underline text-sm"
-                            >
-                              <FileText className="w-3 h-3 mr-1" />
-                              View Proof
-                            </button>
-                          ) : (
-                            <span className="text-slate-400 text-sm">No file</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(row.payment.state)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!paymentReviewAvailable}
-                              className="text-green-600 hover:bg-green-50 border-green-200"
-                              onClick={() =>
-                                handleVerifyPayment(
-                                  row.payment.id,
-                                  'verified',
-                                  row.commercialProductKey,
-                                )
-                              }
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!paymentReviewAvailable}
-                              className="text-amber-600 hover:bg-amber-50 border-amber-200"
-                              onClick={() =>
-                                handleRequestCorrection(row.payment.id, row.commercialProductKey)
-                              }
-                            >
-                              Correction
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!paymentReviewAvailable}
-                              className="text-slate-600 hover:bg-slate-50 border-slate-200"
-                              onClick={() =>
-                                handleDuplicatePayment(row.payment.id, row.commercialProductKey)
-                              }
-                            >
-                              Duplicate
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!paymentReviewAvailable}
-                              className="text-red-600 hover:bg-red-50 border-red-200"
-                              onClick={() =>
-                                handleVerifyPayment(
-                                  row.payment.id,
-                                  'rejected',
-                                  row.commercialProductKey,
-                                )
-                              }
-                            >
-                              <XCircle className="w-4 h-4" />
-                            </Button>
-                          </div>
-                          {!paymentReviewAvailable ? (
-                            <p className="mt-2 text-xs text-amber-700">
-                              Finance action is unavailable for this payment&apos;s commercial product.
+                          key={row.payment.id}
+                          className="hover:bg-slate-50/50 transition-colors"
+                        >
+                          <TableCell>
+                            {new Date(row.payment.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {row.agentUser?.name ||
+                                  row.agentUser?.email ||
+                                  row.agency?.name ||
+                                  row.developerOrganisation?.name ||
+                                  'Unknown account'}
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                {row.agentUser?.email ||
+                                  row.agency?.email ||
+                                  row.developerOrganisation?.email ||
+                                  ''}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatCurrency(row.payment.amount / 100)}
+                            <p className="text-xs text-slate-500">
+                              Invoice {formatCurrency(row.invoice.amountDue / 100)} · Balance{' '}
+                              {formatCurrency(
+                                Math.max(0, row.invoice.amountDue - row.invoice.amountPaid) / 100,
+                              )}
                             </p>
-                          ) : null}
-                        </TableCell>
+                            <p className="text-xs text-slate-500">
+                              Submitted {formatDate(row.payment.createdAt)} · Payment date{' '}
+                              {formatDate(row.payment.paymentDate)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              Payer: {row.payment.payerName || 'Not supplied'}
+                            </p>
+                            <details className="text-xs">
+                              <summary>Notice history</summary>
+                              {(row.noticeHistory || []).map((item: any) => (
+                                <p key={item.id}>
+                                  {formatDate(item.submittedAt)} ·{' '}
+                                  {item.payerName || 'Not supplied'} · {item.state}
+                                </p>
+                              ))}
+                            </details>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="outline" className="w-fit font-mono text-xs">
+                                {row.payment.paymentReference}
+                              </Badge>
+                              <span className="text-xs text-slate-500">
+                                {row.invoice.invoiceNumber}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {row.documentId ? (
+                              <button
+                                type="button"
+                                onClick={() => handleViewProof(row.documentId)}
+                                className="flex items-center text-blue-600 hover:underline text-sm"
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                View Proof
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 text-sm">No file</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(row.payment.state)}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-wrap justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!paymentReviewAvailable}
+                                className="text-green-600 hover:bg-green-50 border-green-200"
+                                onClick={() =>
+                                  handleVerifyPayment(
+                                    row.payment.id,
+                                    'verified',
+                                    row.commercialProductKey,
+                                  )
+                                }
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!paymentReviewAvailable}
+                                onClick={() => {
+                                  setFinanceNote('');
+                                  setReviewPayment({
+                                    id: row.payment.id,
+                                    decision: 'unmatched',
+                                    commercialProductKey: row.commercialProductKey,
+                                  });
+                                }}
+                              >
+                                Unmatched
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!paymentReviewAvailable}
+                                className="text-amber-600 hover:bg-amber-50 border-amber-200"
+                                onClick={() =>
+                                  handleRequestCorrection(row.payment.id, row.commercialProductKey)
+                                }
+                              >
+                                Correction
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!paymentReviewAvailable}
+                                className="text-slate-600 hover:bg-slate-50 border-slate-200"
+                                onClick={() =>
+                                  handleDuplicatePayment(row.payment.id, row.commercialProductKey)
+                                }
+                              >
+                                Duplicate
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!paymentReviewAvailable}
+                                className="text-red-600 hover:bg-red-50 border-red-200"
+                                onClick={() =>
+                                  handleVerifyPayment(
+                                    row.payment.id,
+                                    'rejected',
+                                    row.commercialProductKey,
+                                  )
+                                }
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {!paymentReviewAvailable ? (
+                              <p className="mt-2 text-xs text-amber-700">
+                                Finance action is unavailable for this payment&apos;s commercial
+                                product.
+                              </p>
+                            ) : null}
+                          </TableCell>
                         </TableRow>
                       );
                     })

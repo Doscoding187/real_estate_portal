@@ -46,7 +46,7 @@ vi.mock('@/lib/trpc', () => ({
       agentWorkspace: {
         useQuery: (...args: unknown[]) => agentWorkspaceMock(...args),
       },
-      submitLaunchAccessPaymentProof: {
+      submitLaunchAccessPaymentNotice: {
         useMutation: (...args: unknown[]) => submitProofMock(...args),
       },
     },
@@ -287,6 +287,37 @@ describe('Agent pre-payment preparation', () => {
     expect(options.enabled).toBe(false);
   });
 
+  it('submits I’ve paid without a file, amount or invented reference and reuses an uncertain request', async () => {
+    const mutate = vi.fn().mockRejectedValue(new Error('Connection interrupted'));
+    submitProofMock.mockReturnValue({ mutateAsync: mutate, isPending: false });
+    const workspace = agentWorkspaceMock();
+    agentWorkspaceMock.mockReturnValue({
+      ...workspace,
+      data: { ...workspace.data, activeInvoice: invoice, proofStorage: { configured: false } },
+    });
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    const button = await screen.findByRole('button', { name: 'I’ve paid' });
+    expect(button).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Payer / account name'), {
+      target: { value: 'Test payer' },
+    });
+    expect(button).toBeEnabled();
+    expect(screen.queryByLabelText('Proof of payment')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Bank reference')).not.toBeInTheDocument();
+    fireEvent.click(button);
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    fireEvent.click(button);
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    expect(mutate.mock.calls[1][0]).toEqual(mutate.mock.calls[0][0]);
+    expect(mutate.mock.calls[0][0]).toEqual({
+      invoiceId: invoice.id,
+      payerName: 'Test payer',
+      paymentDate: expect.any(String),
+      requestId: expect.any(String),
+    });
+    expect(screen.getByText(invoice.paymentReference)).toBeInTheDocument();
+  });
+
   it('allows corrected proof for a rejected invoice while finance approval remains required', async () => {
     agentWorkspaceMock.mockReturnValue({
       data: {
@@ -333,7 +364,7 @@ describe('Agent pre-payment preparation', () => {
     render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
 
     expect(await screen.findByText('What happens next')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit proof for review' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'I’ve paid' })).toBeInTheDocument();
     expect(screen.getByText('Please upload a legible bank-stamped proof.')).toBeInTheDocument();
   });
 

@@ -48,7 +48,7 @@ vi.mock('@/lib/trpc', () => ({
       startManualEftCheckout: {
         useMutation: (...args: unknown[]) => startCheckoutMock(...args),
       },
-      submitPaymentProof: {
+      submitLaunchAccessPaymentNotice: {
         useMutation: (...args: unknown[]) => submitProofMock(...args),
       },
       cancelSubscription: {
@@ -225,5 +225,45 @@ describe('Agency Launch Access billing', () => {
         quote: { planId: 701, amountDue: 99900, currency: 'ZAR' },
       },
     });
+  });
+  it('allows an Agency payment notice without configured proof storage and shows pending after submission', async () => {
+    const mutate = vi.fn();
+    const workspace = billingWorkspaceQueryMock();
+    const invoice = {
+      id: 27,
+      invoiceNumber: 'TEST-AGENCY-27',
+      paymentReference: 'EXACT-AGENCY-27',
+      amountDue: 99900,
+      amountPaid: 0,
+      status: 'issued',
+    };
+    billingWorkspaceQueryMock.mockReturnValue({
+      ...workspace,
+      data: { ...workspace.data, activeInvoice: invoice, invoices: [invoice] },
+    });
+    submitProofMock.mockReturnValue({ mutate, isPending: false });
+    const view = render(<AgencyBillingWorkspace {...billingWorkspaceProps} />);
+    fireEvent.change(screen.getByLabelText('Payer / account name'), {
+      target: { value: 'Agency payer' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'I’ve paid' }));
+    expect(mutate).toHaveBeenCalledWith({
+      invoiceId: 27,
+      payerName: 'Agency payer',
+      paymentDate: expect.any(String),
+      requestId: expect.any(String),
+    });
+    expect(screen.queryByLabelText('Proof document')).not.toBeInTheDocument();
+    billingWorkspaceQueryMock.mockReturnValue({
+      ...workspace,
+      data: {
+        ...workspace.data,
+        activeInvoice: { ...invoice, status: 'submitted' },
+        invoices: [{ ...invoice, status: 'submitted' }],
+      },
+    });
+    view.rerender(<AgencyBillingWorkspace {...billingWorkspaceProps} />);
+    expect(screen.getByText(/Payment verification pending\. Access begins/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'I’ve paid' })).not.toBeInTheDocument();
   });
 });

@@ -36,14 +36,14 @@ vi.mock('@/lib/trpc', () => ({
       developerWorkspace: {
         useQuery: (...args: unknown[]) => developerWorkspaceQueryMock(...args),
       },
-      submitDeveloperPaymentProof: {
+      submitLaunchAccessPaymentNotice: {
         useMutation: (...args: unknown[]) => submitProofMock(...args),
       },
     },
   },
 }));
 
-import BillingPanel from './BillingPanel';
+import BillingPanel, { CommercialDeveloperBillingPanel } from './BillingPanel';
 
 describe('Developer billing preparation containment', () => {
   beforeEach(() => {
@@ -73,5 +73,49 @@ describe('Developer billing preparation containment', () => {
 
     expect(setLocationMock).toHaveBeenNthCalledWith(1, '/developer/create-development');
     expect(setLocationMock).toHaveBeenNthCalledWith(2, '/developer/drafts');
+  });
+  it('shows payable bank instructions and submits a Developer notice without storage or an attachment', () => {
+    const mutate = vi.fn();
+    developerSubscriptionQueryMock.mockReturnValue({
+      data: null,
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    developerWorkspaceQueryMock.mockReturnValue({
+      data: {
+        activeInvoice: {
+          id: 17,
+          invoiceNumber: 'TEST-DEV-17',
+          paymentReference: 'EXACT-DEV-17',
+          amountDue: 149900,
+          status: 'issued',
+        },
+        bankDetails: {
+          accountName: 'TEST COMPANY',
+          bankName: 'TEST BANK',
+          accountNumber: '0000000000',
+          branchCode: '000000',
+          accountType: 'TEST ACCOUNT',
+        },
+        proofStorage: { configured: false },
+        invoices: [],
+      },
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    submitProofMock.mockReturnValue({ mutate, isPending: false });
+    render(<CommercialDeveloperBillingPanel />);
+    expect(screen.getByText('EXACT-DEV-17')).toBeInTheDocument();
+    expect(screen.getByText(/0000000000/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Payer / account name'), {
+      target: { value: 'Developer payer' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'I’ve paid' }));
+    expect(mutate).toHaveBeenCalledWith({
+      invoiceId: 17,
+      payerName: 'Developer payer',
+      paymentDate: expect.any(String),
+      requestId: expect.any(String),
+    });
   });
 });

@@ -137,7 +137,8 @@ describe('developer canonical commercial contract', () => {
     expect(billingRouter).toContain('requestDeveloperLaunchAccessInvoice: protectedProcedure');
     expect(billingRouter).toContain('submitDeveloperPaymentProof: protectedProcedure');
     expect(billingPanel).toContain('once-off for 90 days');
-    expect(billingPanel).toContain('Submit proof for review');
+    expect(billingPanel).toContain('EftPaymentNoticeForm');
+    expect(billingPanel).toContain('submitLaunchAccessPaymentNotice');
     expect(billingPanel).not.toContain('Upgrade to a paid plan');
     expect(billingPanel).not.toContain('/month');
   });

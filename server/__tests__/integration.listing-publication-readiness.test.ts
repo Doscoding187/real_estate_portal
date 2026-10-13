@@ -7,7 +7,7 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
   : ((name: string, fn: Parameters<typeof describe>[1]) =>
       describe.skip(`${name} (requires DATABASE_URL disposable DB)`, fn)) as typeof describe;
 
-import { db } from '../db';
+import { db, getDb } from '../db';
 import {
   agencies,
   agencyAgentMemberships,
@@ -139,6 +139,7 @@ async function insertActiveSubscription(input: {
 
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  if (!(await getDb())) throw new Error('Owned disposable database unavailable.');
 });
 
 afterAll(async () => {

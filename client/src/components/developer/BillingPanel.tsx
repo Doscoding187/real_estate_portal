@@ -1,5 +1,9 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import {
+  EftPaymentNoticeForm,
+  usePaymentNoticeRequest,
+} from '@/components/billing/EftPaymentNoticeForm';
+import React, { useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -29,8 +33,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCommercialStatus, formatInvoiceStatus } from '@/lib/developerStatusVocabulary';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
@@ -47,15 +49,6 @@ const PLAN_PRESENTATION = {
     gradient: 'from-blue-500 to-cyan-500',
   },
 };
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
-    reader.onerror = () => reject(reader.error || new Error('Could not read proof document.'));
-    reader.readAsDataURL(file);
-  });
-}
 
 function formatInvoiceAmount(amountMinor: number | null | undefined): string {
   return new Intl.NumberFormat('en-ZA', {
@@ -160,11 +153,9 @@ function PreparationTile({ title, detail }) {
 
 export function CommercialDeveloperBillingPanel() {
   const [, setLocation] = useLocation();
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [bankReference, setBankReference] = useState('');
   const [payerName, setPayerName] = useState('');
+  const { paymentNoticeRequest, resetPaymentNoticeRequest } = usePaymentNoticeRequest();
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
-  const [proofFile, setProofFile] = useState<File | null>(null);
 
   // Fetch subscription data
   const {
@@ -176,14 +167,13 @@ export function CommercialDeveloperBillingPanel() {
     staleTime: 0,
     refetchOnMount: true,
   });
-  const submitProof = trpc.billing.submitDeveloperPaymentProof.useMutation({
+  const submitProof = trpc.billing.submitLaunchAccessPaymentNotice.useMutation({
     onSuccess: async () => {
+      resetPaymentNoticeRequest();
       await Promise.all([refetch(), workspaceQuery.refetch()]);
-      setProofFile(null);
-      setBankReference('');
-      toast.success('Proof submitted for finance review');
+      toast.success('Payment notification submitted. Bank verification is pending.');
     },
-    onError: error => toast.error(error.message || 'Proof could not be submitted'),
+    onError: error => toast.error(error.message || 'Payment notification could not be submitted'),
   });
 
   // The tRPC procedure returns the canonical developer projection directly.
@@ -226,45 +216,15 @@ export function CommercialDeveloperBillingPanel() {
   const maxTeamMembers = limits?.maxTeamMembers ?? 0;
   const analyticsRetentionDays = limits?.analyticsRetentionDays ?? 0;
 
-  useEffect(() => {
-    if (activeInvoice && !paymentAmount) {
-      setPaymentAmount((Number(activeInvoice.amountDue || 0) / 100).toFixed(2));
-    }
-  }, [activeInvoice, paymentAmount]);
-
   const handleProofSubmit = async () => {
-    if (!activeInvoice) {
-      toast.error('Request an invoice before submitting payment proof');
-      return;
-    }
-    if (!proofFile) {
-      toast.error('Attach proof of payment');
-      return;
-    }
-    const amountRand = Number(paymentAmount);
-    if (!Number.isFinite(amountRand) || amountRand <= 0) {
-      toast.error('Enter a valid payment amount');
-      return;
-    }
-
-    try {
-      const contentBase64 = await fileToBase64(proofFile);
-      submitProof.mutate({
+    if (!activeInvoice) return;
+    submitProof.mutate(
+      paymentNoticeRequest({
         invoiceId: activeInvoice.id,
-        amount: Math.round(amountRand * 100),
-        bankReference,
-        payerName,
         paymentDate,
-        file: {
-          filename: proofFile.name,
-          mimeType: proofFile.type || 'application/octet-stream',
-          sizeBytes: proofFile.size,
-          contentBase64,
-        },
-      });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not read proof document');
-    }
+        payerName: payerName.trim(),
+      }),
+    );
   };
 
   if (isLoading || workspaceQuery.isLoading) {
@@ -285,16 +245,10 @@ export function CommercialDeveloperBillingPanel() {
           <DeveloperManualEftPanel
             invoice={activeInvoice}
             bankDetails={workspace?.bankDetails}
-            proofStorage={workspace?.proofStorage}
-            paymentAmount={paymentAmount}
-            setPaymentAmount={setPaymentAmount}
-            bankReference={bankReference}
-            setBankReference={setBankReference}
             payerName={payerName}
             setPayerName={setPayerName}
             paymentDate={paymentDate}
             setPaymentDate={setPaymentDate}
-            setProofFile={setProofFile}
             onSubmit={handleProofSubmit}
             isSubmitting={submitProof.isPending}
           />
@@ -324,7 +278,7 @@ export function CommercialDeveloperBillingPanel() {
   const isTrial = subscription.commercial?.commercialTerm?.kind === 'free_trial';
   const isLaunchAccess = subscription.commercial?.commercialTerm?.kind === 'paid_launch_access';
   // Only the canonical expired status means expired. Unpaid invoices and
-  // payment proofs under review are pending commercial states, not expiries.
+  // payment notifications under review are pending commercial states, not expiries.
   const launchAccessExpired = isLaunchAccess && subscription.commercial?.status === 'expired';
   const tierConfig = isTrial ? PLAN_PRESENTATION.trial : PLAN_PRESENTATION.standard;
   const TierIcon = tierConfig.icon;
@@ -485,16 +439,10 @@ export function CommercialDeveloperBillingPanel() {
         <DeveloperManualEftPanel
           invoice={activeInvoice}
           bankDetails={workspace?.bankDetails}
-          proofStorage={workspace?.proofStorage}
-          paymentAmount={paymentAmount}
-          setPaymentAmount={setPaymentAmount}
-          bankReference={bankReference}
-          setBankReference={setBankReference}
           payerName={payerName}
           setPayerName={setPayerName}
           paymentDate={paymentDate}
           setPaymentDate={setPaymentDate}
-          setProofFile={setProofFile}
           onSubmit={handleProofSubmit}
           isSubmitting={submitProof.isPending}
         />
@@ -588,16 +536,10 @@ export function CommercialDeveloperBillingPanel() {
 function DeveloperManualEftPanel({
   invoice,
   bankDetails,
-  proofStorage,
-  paymentAmount,
-  setPaymentAmount,
-  bankReference,
-  setBankReference,
   payerName,
   setPayerName,
   paymentDate,
   setPaymentDate,
-  setProofFile,
   onSubmit,
   isSubmitting,
 }) {
@@ -638,72 +580,26 @@ function DeveloperManualEftPanel({
           <p className="mt-1">
             {bankDetails?.accountName || 'Account details unavailable'} ·{' '}
             {bankDetails?.bankName || 'Bank details unavailable'} ·{' '}
-            {bankDetails?.maskedAccountNumber || 'Account number unavailable'}
+            {bankDetails?.accountNumber || 'Account number unavailable'} · Branch{' '}
+            {bankDetails?.branchCode || 'unavailable'} ·{' '}
+            {bankDetails?.accountType || 'Account type unavailable'}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Use the payment reference above. Do not treat local fixture banking details as payable.
+            Copy the invoice payment reference above exactly into your banking app’s transfer
+            reference field. Do not treat local fixture banking details as payable.
           </p>
         </div>
 
         {proofCanBeSubmitted ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <Label htmlFor="developer-payment-amount">Amount paid</Label>
-              <Input
-                id="developer-payment-amount"
-                inputMode="decimal"
-                value={paymentAmount}
-                onChange={event => setPaymentAmount(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="developer-payment-date">Payment date</Label>
-              <Input
-                id="developer-payment-date"
-                type="date"
-                value={paymentDate}
-                onChange={event => setPaymentDate(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="developer-bank-reference">Bank reference</Label>
-              <Input
-                id="developer-bank-reference"
-                value={bankReference}
-                onChange={event => setBankReference(event.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="developer-payer-name">Payer name</Label>
-              <Input
-                id="developer-payer-name"
-                value={payerName}
-                onChange={event => setPayerName(event.target.value)}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="developer-proof-file">Proof of payment</Label>
-              <Input
-                id="developer-proof-file"
-                type="file"
-                accept="application/pdf,image/jpeg,image/png,image/webp"
-                onChange={event => setProofFile(event.target.files?.[0] || null)}
-              />
-            </div>
-            <Button
-              className="md:col-span-2"
-              disabled={isSubmitting || proofStorage?.configured === false}
-              onClick={onSubmit}
-            >
-              {isSubmitting ? 'Submitting proof…' : 'Submit proof for review'}
-              <UploadCloud className="ml-2 h-4 w-4" />
-            </Button>
-            {proofStorage?.configured === false && (
-              <p className="md:col-span-2 text-xs text-amber-700">
-                Proof upload is not available until private billing storage is configured.
-              </p>
-            )}
-          </div>
+          <EftPaymentNoticeForm
+            invoiceId={invoice.id}
+            paymentDate={paymentDate}
+            payerName={payerName}
+            setPaymentDate={setPaymentDate}
+            setPayerName={setPayerName}
+            isSubmitting={isSubmitting}
+            onSubmit={onSubmit}
+          />
         ) : (
           <p className="text-sm font-medium text-blue-800">
             This invoice is already under review. Finance verification is required before the 90-day
