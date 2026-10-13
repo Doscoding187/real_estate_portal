@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import express from 'express';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
 import { createTRPCProxyClient, httpLink } from '@trpc/client';
 import superjson from 'superjson';
 import { and, eq, inArray } from 'drizzle-orm';
@@ -187,6 +188,7 @@ async function registerAndVerify(input: {
       password: 'StrongPassword1!',
       name: input.name,
       role: input.role,
+      legalAcceptance: legalFixture.registrationChoice,
     }),
   });
   expect(registration.status).toBe(201);
@@ -371,8 +373,10 @@ async function cleanup() {
     await db.delete(agencies).where(eq(agencies.id, created.outsiderAgencyId));
 }
 
+let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>>;
 beforeAll(async () => {
   if (!process.env.DATABASE_URL) return;
+  legalFixture = await installSyntheticLegalRelease();
 
   mediaRoot = await mkdtemp(`${tmpdir()}/property-listify-agency-media-`);
   billingProofRoot = await mkdtemp(`${tmpdir()}/property-listify-agency-billing-`);
@@ -423,6 +427,7 @@ afterAll(async () => {
     );
   }
   await cleanup();
+  await legalFixture?.cleanup();
   if (mediaRoot) await rm(mediaRoot, { recursive: true, force: true });
   if (billingProofRoot) await rm(billingProofRoot, { recursive: true, force: true });
   ENV.mediaStorageAdapter = priorMediaAdapter;
@@ -573,10 +578,26 @@ describeWithDb('agency full operating journey acceptance', () => {
     const checkout = await ownerApi.billing.startManualEftCheckout.mutate({
       planId: Number(agencyPlan.id),
       billingCycle: 'monthly',
+      legalAcceptance: {
+        ...legalFixture.choice,
+        quote: {
+          planId: Number(agencyPlan.id),
+          amountDue: Number(agencyPlan.price),
+          currency: 'ZAR',
+        },
+      },
     });
     const checkoutRetry = await ownerApi.billing.startManualEftCheckout.mutate({
       planId: Number(agencyPlan.id),
       billingCycle: 'monthly',
+      legalAcceptance: {
+        ...legalFixture.choice,
+        quote: {
+          planId: Number(agencyPlan.id),
+          amountDue: Number(agencyPlan.price),
+          currency: 'ZAR',
+        },
+      },
     });
     expect(checkoutRetry).toMatchObject({
       invoice: { id: checkout.invoice.id },

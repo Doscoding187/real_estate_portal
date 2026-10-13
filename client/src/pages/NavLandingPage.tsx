@@ -1,3 +1,4 @@
+import LegalDocumentPage, { LegalDocumentUnavailable } from './LegalDocumentPage';
 import { useEffect } from 'react';
 import { Link } from 'wouter';
 import { HomeLayout } from '@/layouts/HomeLayout';
@@ -315,138 +316,6 @@ const landingPages: Record<string, LandingPageConfig> = {
       },
     ],
   },
-  '/legal/consumer-rights': {
-    eyebrow: 'Legal',
-    title: 'Consumer Rights',
-    description:
-      'A plain-language starting point for property consumer rights, responsible platform conduct, and where to get help.',
-    canonicalPath: '/legal/consumer-rights',
-    primaryCta: { label: 'Find legal services', href: '/services/legal-services' },
-    sections: [
-      {
-        title: 'Buying and renting confidence',
-        body: 'Consumers should understand documents, disclosures, deposits, offers, and lease obligations.',
-      },
-      {
-        title: 'Professional advice',
-        body: 'This page is informational and should route legal needs into the Services engine.',
-      },
-      {
-        title: 'Platform trust',
-        body: 'Clear rights content improves confidence across the property, services, and referral engines.',
-      },
-    ],
-  },
-  '/legal/dispute-resolution': {
-    eyebrow: 'Legal',
-    title: 'Dispute Resolution',
-    description:
-      'Guidance on resolving property-related disputes, gathering documentation, and finding appropriate professional support.',
-    canonicalPath: '/legal/dispute-resolution',
-    primaryCta: { label: 'Find legal services', href: '/services/legal-services' },
-    sections: [
-      {
-        title: 'Document everything',
-        body: 'Keep agreements, messages, proof of payment, photos, inspection notes, and timelines.',
-      },
-      {
-        title: 'Use the right channel',
-        body: 'Different disputes may belong with an agent, landlord, body corporate, service provider, or legal advisor.',
-      },
-      {
-        title: 'Escalate carefully',
-        body: 'Professional support should remain in the Services engine where legal providers can be matched.',
-      },
-    ],
-  },
-  '/legal/terms': {
-    eyebrow: 'Legal',
-    title: 'Terms of Service',
-    description:
-      'The starting point for Property Listify platform terms across property search, services, referrals, and partner workflows.',
-    canonicalPath: '/legal/terms',
-    primaryCta: { label: 'Contact support', href: '/company/contact' },
-    sections: [
-      {
-        title: 'Platform use',
-        body: 'Terms should define responsible use across public marketplace and authenticated workflows.',
-      },
-      {
-        title: 'Marketplace roles',
-        body: 'Buyers, renters, sellers, agents, developers, providers, and partners each need clear obligations.',
-      },
-      {
-        title: 'Next revision',
-        body: 'This thin page gives the route a canonical home until full legal copy is finalized.',
-      },
-    ],
-  },
-  '/legal/privacy': {
-    eyebrow: 'Legal',
-    title: 'Privacy Policy',
-    description:
-      'A privacy hub for how Property Listify handles marketplace, account, lead, service, and referral data.',
-    canonicalPath: '/legal/privacy',
-    primaryCta: { label: 'Contact support', href: '/company/contact' },
-    sections: [
-      {
-        title: 'Data collection',
-        body: 'Property search, lead routing, saved searches, services, and referrals all require clear data handling.',
-      },
-      {
-        title: 'User control',
-        body: 'Privacy content should explain account, communication, and data-request options.',
-      },
-      {
-        title: 'Trust layer',
-        body: 'Privacy pages support confidence across every marketplace engine.',
-      },
-    ],
-  },
-  '/legal/cookies': {
-    eyebrow: 'Legal',
-    title: 'Cookie Policy',
-    description:
-      'Information about cookie and tracking use for analytics, marketplace performance, account sessions, and user experience.',
-    canonicalPath: '/legal/cookies',
-    primaryCta: { label: 'Contact support', href: '/company/contact' },
-    sections: [
-      {
-        title: 'Session cookies',
-        body: 'Authentication and dashboard workflows need reliable session behaviour.',
-      },
-      {
-        title: 'Analytics cookies',
-        body: 'Market and product analytics help improve search, services, and content discovery.',
-      },
-      {
-        title: 'Consent direction',
-        body: 'This page can expand into a full cookie-management explanation.',
-      },
-    ],
-  },
-  '/legal/compliance': {
-    eyebrow: 'Legal',
-    title: 'Compliance',
-    description:
-      'A compliance overview for marketplace trust, listing quality, partner behaviour, and service provider accountability.',
-    canonicalPath: '/legal/compliance',
-    primaryCta: { label: 'View consumer rights', href: '/legal/consumer-rights' },
-    sections: [
-      {
-        title: 'Listing integrity',
-        body: 'Property pages need accurate location, pricing, availability, and representative information.',
-      },
-      {
-        title: 'Provider accountability',
-        body: 'Service providers and referral partners need clear quality and conduct expectations.',
-      },
-      {
-        title: 'Operational governance',
-        body: 'Compliance content should support review, approval, audit, and dispute workflows.',
-      },
-    ],
-  },
   '/support/help': {
     eyebrow: 'Support',
     title: 'Help Center',
@@ -666,10 +535,6 @@ function getPageConfig(): LandingPageConfig {
     '/help': '/support/help',
     '/safety': '/support/safety',
     '/faq': '/support/faq',
-    '/terms': '/legal/terms',
-    '/privacy': '/legal/privacy',
-    '/cookies': '/legal/cookies',
-    '/compliance': '/legal/compliance',
   };
 
   return (
@@ -680,6 +545,39 @@ function getPageConfig(): LandingPageConfig {
 }
 
 export default function NavLandingPage() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (
+    ['/terms', '/legal/terms', '/legal/consumer-rights', '/legal/dispute-resolution'].includes(path)
+  ) {
+    return <LegalDocumentPage kind="terms" />;
+  }
+  if (
+    [
+      '/privacy',
+      '/legal/privacy',
+      '/cookies',
+      '/legal/cookies',
+      '/compliance',
+      '/legal/compliance',
+    ].includes(path)
+  ) {
+    return <LegalDocumentPage kind="privacy" />;
+  }
+  if (path.startsWith('/legal/') || ['/cookies', '/compliance'].includes(path)) {
+    const titles: Record<string, string> = {
+      '/legal/consumer-rights': 'Consumer Rights',
+      '/legal/dispute-resolution': 'Dispute Resolution',
+      '/legal/cookies': 'Cookie Policy',
+      '/cookies': 'Cookie Policy',
+      '/legal/compliance': 'Compliance',
+      '/compliance': 'Compliance',
+    };
+    return <LegalDocumentUnavailable title={titles[path] || 'Legal document'} />;
+  }
+  return <GenericNavLandingPage />;
+}
+
+function GenericNavLandingPage() {
   const page = getPageConfig();
   const primaryCtaEnabled =
     !page.primaryCta.href.startsWith('/property-to-rent') || isHomepageHeroJourneyEnabled('rent');

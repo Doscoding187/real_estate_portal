@@ -1,0 +1,46 @@
+{
+  "recordedDate": "2026-10-12",
+  "scope": "Offline reconciliation of retained evidence, not current provider readback or gate acceptance",
+  "sources": [
+    {
+      "privateEvidenceRelativePath": "geography-schema-resume-preparation-20261010/azure-server.json",
+      "sha256": "5882d4579704b0291827d9d2ca1974c663644ffac1314da75b332a02af26660d",
+      "facts": {
+        "location": "South Africa North",
+        "backup": {
+          "backupRetentionDays": 14,
+          "geoRedundantBackup": "Disabled"
+        }
+      }
+    },
+    {
+      "privateEvidenceRelativePath": "held-worker-admission-20261012/final-contained-provider-state.private.json",
+      "sha256": "5f451f0957dfc341a8319b38a281d8014eb620ae2e7350bdec3db5be7aa0c844",
+      "facts": {
+        "configuredServiceRegions": {
+          "59c0d8f8-abe2-4696-ad9c-de1037723b66": ["asia-southeast1-eqsg3a"],
+          "aa916378-feb3-40e7-b9e5-4f790d77ea1a": ["asia-southeast1-eqsg3a"],
+          "bb79bb51-7abb-4194-9f62-81e80b410c24": ["asia-southeast1-eqsg3a"],
+          "db88a720-2d1f-4afc-a3a8-6228b6b08d3e": ["asia-southeast1-eqsg3a"],
+          "e1e32aa8-0b85-4c91-af18-843f1bc52d9f": ["asia-southeast1-eqsg3a"]
+        },
+        "volumeRegions": ["asia-southeast1-eqsg3a"],
+        "limit": "Stored configuration only; held workers have no active processing proof. No variables copied."
+      }
+    },
+    {
+      "privateEvidenceRelativePath": "tidb-final-archive-20261001/tidb-final-20261001110645227.enc.evidence.json",
+      "sha256": "58af39f057bbed51658d291bc8659d407bcd511ad8ba3b30eb50c25053229370",
+      "facts": {
+        "startedAt": "2026-10-01T11:03:28.741Z",
+        "tableCount": 218,
+        "totalRows": 152,
+        "archiveSha256": "f0e5a7418d0db6159a4c31e773c34f2056a5bab86e997492c128ae8736d7ee98",
+        "authenticatedReadback": true,
+        "frozen": true,
+        "retainedCiphertextChecksumMatches": true,
+        "limit": "Ciphertext and existing metadata only; no decryption, fresh census, source connection or disposal."
+      }
+    }
+  ]
+}

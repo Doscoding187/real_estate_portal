@@ -89,7 +89,12 @@ function assertNoCounts() {
   }
 }
 async function submit() {
-  fireEvent.click(screen.getByLabelText(/I agree to the terms and conditions/));
+  const confirmation = screen.getByRole('checkbox', {
+    name: /I confirm that I am authorised to prepare this Developer profile/,
+  });
+  expect(confirmation).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Submit Application' })).toBeDisabled();
+  fireEvent.click(confirmation);
   fireEvent.click(screen.getByRole('button', { name: 'Submit Application' }));
   await waitFor(() => expect(mutation).toHaveBeenCalledOnce());
   const input = mutation.mock.calls[0][0];

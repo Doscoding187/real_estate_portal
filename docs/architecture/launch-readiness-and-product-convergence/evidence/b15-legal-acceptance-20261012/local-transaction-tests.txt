@@ -1,0 +1,17 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012
+
+stdout | server/services/__tests__/registrationLegalAcceptance.integration.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  enable debug logging with { debug: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL:
+
+stdout | server/services/__tests__/registrationLegalAcceptance.integration.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/registrationLegalAcceptance.integration.test.ts (12 tests) 1892ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  23:16:57
+   Duration  21.16s (transform 10.77s, setup 820ms, collect 16.46s, tests 1.89s, environment 3ms, prepare 395ms)

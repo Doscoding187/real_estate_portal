@@ -19,6 +19,11 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { paidLegalAcceptanceSchema } from './legalAcceptancePolicy';
+import {
+  RegistrationLegalError,
+  validateCurrentLegalAcceptanceInTransaction,
+} from './registrationLegalAcceptanceService';
 import {
   BillingProofStorageConfigurationError,
   getBillingProofStorageStatus,
@@ -1072,6 +1077,7 @@ async function getLaunchPlanForOwner(
 export async function requestPaidLaunchAccessInvoice(input: {
   user: BillingUser;
   planId?: number;
+  legalAcceptance?: unknown;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Invoice requests');
   requirePaidMvpSalesOpen('Invoice requests');
@@ -1097,9 +1103,73 @@ export async function requestPaidLaunchAccessInvoice(input: {
     // REPEATABLE READ snapshot before waiting on the owner lock and then miss
     // the invoice committed by the first checkout.
     const lockedState = await lockLaunchBillingState(tx, owner);
-    const plan = await getLaunchPlanForOwner(tx, owner.ownerType, input.planId);
+    const choice = paidLegalAcceptanceSchema.safeParse(input.legalAcceptance);
+    if (!choice.success) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'Review the Terms and Privacy Notice, and explicitly confirm the once-off purchase before requesting an invoice.',
+      });
+    }
+    const acceptance = await validateCurrentLegalAcceptanceInTransaction(tx, {
+      bundleId: choice.data.bundleId,
+      termsAccepted: choice.data.termsAccepted,
+    }).catch(error => {
+      if (!(error instanceof RegistrationLegalError)) throw error;
+      throw new TRPCError({
+        code: error.code === 'LEGAL_VERSION_STALE' ? 'CONFLICT' : 'PRECONDITION_FAILED',
+        message:
+          error.code === 'LEGAL_RELEASE_UNAVAILABLE'
+            ? 'Invoice requests are temporarily unavailable because the released legal documents are unavailable.'
+            : error.message,
+      });
+    });
+    const plan = await getLaunchPlanForOwner(
+      tx,
+      owner.ownerType,
+      input.planId ?? choice.data.quote.planId,
+    );
     const term = resolveCommercialTerm(plan);
     const launchFee = getConfiguredLaunchFeeMinor(plan)!;
+    if (
+      choice.data.quote.planId !== plan.id ||
+      choice.data.quote.amountDue !== launchFee ||
+      choice.data.quote.currency !== (plan.currency || 'ZAR')
+    ) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'The product or price has changed. Review the current price and choose again.',
+      });
+    }
+    // Existing accounts make a new, explicit purchase commitment here. Never
+    // backfill or mislabel it as historical registration consent.
+    const { source: _registrationSource, ...releasedDocuments } = acceptance;
+    const commitment = {
+      ...releasedDocuments,
+      source: 'paid_access_invoice_request',
+      termsAccepted: true,
+      purchaseAccepted: true,
+      planId: plan.id,
+      commercialProductKey: getCommercialProductKey(plan),
+      amountDue: launchFee,
+      currency: plan.currency || 'ZAR',
+      commercialTermKind: 'paid_launch_access',
+      durationDays: term.durationDays,
+      autoRenews: false,
+      paymentMethod: 'manual_eft',
+      entitlementStartsOnVerifiedActivation: true,
+    };
+    const recordCommitment = (invoiceId: number, subscriptionId: number) =>
+      logBillingEvent(tx, {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        invoiceId,
+        subscriptionId,
+        actorUserId: input.user.id,
+        eventType: 'invoice_commitment_accepted',
+        message: 'Released Terms and once-off Launch Access purchase explicitly accepted.',
+        afterData: commitment,
+      });
     const lockedSubscription = lockedState.subscription;
 
     if (
@@ -1159,6 +1229,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
           message: `An outstanding ${plan.displayName} invoice already exists with different commercial terms.`,
         });
       }
+      await recordCommitment(outstandingInvoice.id, subscriptionResult.subscription.id);
       return {
         ownerType: owner.ownerType,
         ownerId: owner.ownerId,
@@ -1238,12 +1309,14 @@ export async function requestPaidLaunchAccessInvoice(input: {
           commercial_auto_renews: false,
           entitlement_starts_on_verified_activation: true,
           dedicated_advertising_budget_included: false,
+          legal_bundle_id: acceptance.bundleId,
         },
         createdBy: input.user.id,
         updatedBy: input.user.id,
       })
       .$returningId();
     const invoiceId = Number(invoiceInsert.id);
+    await recordCommitment(invoiceId, subscriptionResult.subscription.id);
 
     await logBillingEvent(tx, {
       ownerType: owner.ownerType,
@@ -1321,7 +1394,10 @@ export async function requestPaidLaunchAccessInvoice(input: {
 }
 
 /** Compatibility wrapper retained for the existing Developer billing surface. */
-export async function requestDeveloperLaunchAccessInvoice(input: { user: BillingUser }) {
+export async function requestDeveloperLaunchAccessInvoice(input: {
+  user: BillingUser;
+  legalAcceptance?: unknown;
+}) {
   const result = await requestPaidLaunchAccessInvoice(input);
   return { ...result, developerId: result.ownerId };
 }
@@ -1331,6 +1407,7 @@ export async function startAgencyManualCheckout(input: {
   planId: number;
   billingCycle: BillingCycle;
   couponCode?: string;
+  legalAcceptance?: unknown;
 }) {
   requireAnyPaidMvpLaunchAccessActivation('Manual-EFT checkout');
   requirePaidMvpSalesOpen('Manual-EFT checkout');
@@ -1350,7 +1427,11 @@ export async function startAgencyManualCheckout(input: {
     selectedAgencyPlan.segment === 'agency' &&
     getPaidMvpLaunchAccessProductKey(selectedAgencyPlan, 'agency')
   ) {
-    return requestPaidLaunchAccessInvoice({ user: input.user, planId: input.planId });
+    return requestPaidLaunchAccessInvoice({
+      user: input.user,
+      planId: input.planId,
+      legalAcceptance: input.legalAcceptance,
+    });
   }
 
   requireCommercialActivation('Manual-EFT checkout');
@@ -3047,11 +3128,7 @@ export async function updateSubscriptionLifecycle(input: {
       });
     }
 
-    const [plan] = await tx
-      .select()
-      .from(plans)
-      .where(eq(plans.id, subscription.planId))
-      .limit(1);
+    const [plan] = await tx.select().from(plans).where(eq(plans.id, subscription.planId)).limit(1);
     requireSubscriptionCommercialActivation(
       'Subscription lifecycle changes',
       plan,
@@ -3139,11 +3216,7 @@ export async function requestAgencyCancellationAtPeriodEnd(user: BillingUser) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
     }
 
-    const [plan] = await tx
-      .select()
-      .from(plans)
-      .where(eq(plans.id, subscription.planId))
-      .limit(1);
+    const [plan] = await tx.select().from(plans).where(eq(plans.id, subscription.planId)).limit(1);
     requireSubscriptionCommercialActivation('Subscription lifecycle changes', plan, 'agency');
 
     const accessPreservingStatus = ACTIVE_SUBSCRIPTION_STATUSES.has(
@@ -3203,11 +3276,7 @@ export async function restoreAgencySubscription(user: BillingUser) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'No agency subscription found.' });
     }
 
-    const [plan] = await tx
-      .select()
-      .from(plans)
-      .where(eq(plans.id, subscription.planId))
-      .limit(1);
+    const [plan] = await tx.select().from(plans).where(eq(plans.id, subscription.planId)).limit(1);
     requireSubscriptionCommercialActivation('Subscription lifecycle changes', plan, 'agency');
 
     const restoredStatus: CanonicalSubscriptionStatus =

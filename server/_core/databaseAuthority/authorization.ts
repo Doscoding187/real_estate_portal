@@ -259,6 +259,23 @@ export function authorizeDatabaseOperation(
     );
   }
   if (
+    context.operation.startsWith('legal-release-') &&
+    policy.protectedTargetClasses.includes(context.targetClass)
+  ) {
+    if (!['read-only', 'migration'].includes(context.credentialClass))
+      throw new Error('Protected legal release refuses local-owner credentials.');
+    if (
+      context.operation === 'legal-release-apply' &&
+      (context.credentialClass !== 'migration' ||
+        context.credentialSource !== 'protected-migration-url' ||
+        !context.tls.required ||
+        !context.tls.certificateVerificationRequired)
+    )
+      throw new Error(
+        'Protected legal release requires the distinct ephemeral migration channel with verified TLS.',
+      );
+  }
+  if (
     context.operation === 'inspection-identity-provision' &&
     (context.targetFingerprintHash !== B08_AZURE_TARGET_FINGERPRINT_HASH ||
       input.approval?.credentialClass !== 'bootstrap-admin' ||

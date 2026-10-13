@@ -1,0 +1,438 @@
+
+ RUN  v2.1.9 /tmp/property-listify-b15-baseline-20261012
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 📡 add observability to secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL:
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🗂️ backup and recover secrets: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL:
+
+stdout | server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/contract.place-executable-foundation.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+stderr | server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: no-result and ambiguity produce governed evidence > records a no-result query as evidence with no Place referent
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:226:8
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+stderr | server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > refuses a Place that does not exist
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at Module.executePlace (/tmp/property-listify-b15-baseline-20261012/server/services/placeDiscoveryService.ts:369:6)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:532:20
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+
+stderr | server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > refuses a malformed Place identity rather than coercing it
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at Module.executePlace (/tmp/property-listify-b15-baseline-20261012/server/services/placeDiscoveryService.ts:369:6)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:538:22
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at Module.executePlace (/tmp/property-listify-b15-baseline-20261012/server/services/placeDiscoveryService.ts:369:6)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:538:22
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlVarChar'
+    |     property 'table' -> object with constructor 'MySqlTable'
+    --- property 'placeId' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at Module.executePlace (/tmp/property-listify-b15-baseline-20261012/server/services/placeDiscoveryService.ts:369:6)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:538:22
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+
+stderr | server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > never widens scope through a relationship that is not containment
+[Mock DB] Could not parse where condition: TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'MySqlTable'
+    |     property 'id' -> object with constructor 'MySqlInt'
+    --- property 'table' closes the circle
+    at JSON.stringify (<anonymous>)
+    at Object.where (/tmp/property-listify-b15-baseline-20261012/server/db-connection.ts:207:41)
+    at /tmp/property-listify-b15-baseline-20261012/server/__tests__/contract.place-executable-foundation.test.ts:550:8
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:5
+    at runTest (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:11)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/property-listify-main/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+
+ ❯ |server| server/__tests__/contract.place-executable-foundation.test.ts (37 tests | 19 failed) 152ms
+   × Slice 3: discovery resolves canonical identity > requires the admitted Place fixture identities 66ms
+     → Missing admitted Gauteng Place fixtures: prepare and verify db:places with --territory=za-gp before dependent tests: expected [ …(9) ] to deeply equal []
+   × Slice 3: discovery resolves canonical identity > refuses to collapse an ambiguous exact preferred name to one canonical Place 17ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: discovery resolves canonical identity > returns distinct canonical identities for the two admitted Diepkloof Places 2ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: discovery resolves canonical identity > resolves an alias to the same canonical identity as the preferred name 4ms
+     → db.execute is not a function
+   × Slice 3: discovery resolves canonical identity > finds a Place by a searchable historical or common name form 1ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place 1ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: discovery resolves canonical identity > separates search eligibility from publication eligibility 1ms
+     → db.execute is not a function
+   × Slice 3: no-result and ambiguity produce governed evidence > records a no-result query as evidence with no Place referent 6ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: no-result and ambiguity produce governed evidence > creates no Place when a query resolves to nothing 4ms
+     → db.execute is not a function
+   × Slice 3: no-result and ambiguity produce governed evidence > is idempotent for a repeated query and only raises research priority 2ms
+     → db.select(...).from(...).innerJoin is not a function
+   × Slice 3: canonical execution is exact and fail-closed > executes a canonical metro-city Place to its exact evidenced scope 1ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > executes a canonical locality Place with only a province context 2ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > records the municipality on the path as context, never as a search level 1ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > admits many locality-scoped Places, because scope is a category 0ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > does not expand a selected Place into other Places 1ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > refuses every admitted Place that carries no executable scope 1ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > executes the province-scoped Place, which needs no ancestor 1ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor 5ms
+     → db.execute is not a function
+   × Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically 9ms
+     → db.execute is not a function
+ ❯ |server| server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts (5 tests | 3 failed) 22506ms
+   × hosted readiness logs for hung verification > a first assessment that hangs after resolving its target logs target and stage before completion 8301ms
+     → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × hosted readiness logs for hung verification > a hang during recovery after a failed assessment logs the new target and stage, not the failed one 7239ms
+     → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+   × hosted readiness logs for hung verification > a held snapshot that expires while verifying progresses into a hung cleanup, logged with its stage 6746ms
+     → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 22 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > requires the admitted Place fixture identities
+AssertionError: Missing admitted Gauteng Place fixtures: prepare and verify db:places with --territory=za-gp before dependent tests: expected [ …(9) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "pl-place-01-131e3e75ad70424e0f9c869a",
++   "pl-place-01-1a30ae4d635ef747d6c987df",
++   "pl-place-01-f175328139bb845a4645b9d4",
++   "pl-place-01-99b91be60755ea1f09bf6349",
++   "pl-place-01-dee61758ef3bda7cd1a258ad",
++   "pl-place-01-6a145c6d642ba208a2c12de7",
++   "pl-place-01-00a8aa324ee0aabf33eb3c71",
++   "pl-place-01-27a63c126cf908282985f8d5",
++   "pl-place-01-e417e2e8049345e728be0ad2",
++ ]
+
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:128:7
+    126|       missing,
+    127|       'Missing admitted Gauteng Place fixtures: prepare and verify db:…
+    128|     ).toEqual([]);
+       |       ^
+    129|     for (const name of Object.keys(requiredPlaces) as (keyof typeof re…
+    130|       expect(await placeByPreferredName(name)).toBe(requiredPlaces[nam…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > refuses to collapse an ambiguous exact preferred name to one canonical Place
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:135:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > returns distinct canonical identities for the two admitted Diepkloof Places
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:147:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > resolves an alias to the same canonical identity as the preferred name
+TypeError: db.execute is not a function
+ ❯ placeByPreferredName server/__tests__/contract.place-executable-foundation.test.ts:63:27
+     61| async function placeByPreferredName(name: keyof typeof requiredPlaces)…
+     62|   const db = await getDb();
+     63|   const result = await db.execute(sql`
+       |                           ^
+     64|     SELECT p.place_id AS placeId
+     65|     FROM place p
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:157:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > finds a Place by a searchable historical or common name form
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:169:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > never returns a non-searchable or retired Place
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:176:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: discovery resolves canonical identity > separates search eligibility from publication eligibility
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:193:30
+    191|     // content, so the two gates are asserted as independent facts.
+    192|     const db = await getDb();
+    193|     const osmOnly = await db.execute(sql`
+       |                              ^
+    194|       SELECT p.place_id AS placeId, p.verification_status AS verificat…
+    195|              p.search_eligible AS searchEligible, p.publication_eligib…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: no-result and ambiguity produce governed evidence > records a no-result query as evidence with no Place referent
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:228:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: no-result and ambiguity produce governed evidence > creates no Place when a query resolves to nothing
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:255:41
+    253|   it('creates no Place when a query resolves to nothing', async () => {
+    254|     const db = await getDb();
+    255|     const totalBefore = rowsOf(await db.execute(sql`SELECT COUNT(*) AS…
+       |                                         ^
+    256|     await discoverPlaces(unresolvableTerm('anothermissingplace'));
+    257|     const totalAfter = rowsOf(await db.execute(sql`SELECT COUNT(*) AS …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: no-result and ambiguity produce governed evidence > is idempotent for a repeated query and only raises research priority
+TypeError: db.select(...).from(...).innerJoin is not a function
+ ❯ Module.discoverPlaces server/services/placeDiscoveryService.ts:143:6
+    141|     })
+    142|     .from(place)
+    143|     .innerJoin(placeName, eq(placeName.placeId, place.placeId))
+       |      ^
+    144|     .where(
+    145|       and(
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:265:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical metro-city Place to its exact evidenced scope
+TypeError: db.execute is not a function
+ ❯ placeByPreferredName server/__tests__/contract.place-executable-foundation.test.ts:63:27
+     61| async function placeByPreferredName(name: keyof typeof requiredPlaces)…
+     62|   const db = await getDb();
+     63|   const result = await db.execute(sql`
+       |                           ^
+     64|     SELECT p.place_id AS placeId
+     65|     FROM place p
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:293:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a canonical locality Place with only a province context
+TypeError: db.execute is not a function
+ ❯ placeByPreferredName server/__tests__/contract.place-executable-foundation.test.ts:63:27
+     61| async function placeByPreferredName(name: keyof typeof requiredPlaces)…
+     62|   const db = await getDb();
+     63|   const result = await db.execute(sql`
+       |                           ^
+     64|     SELECT p.place_id AS placeId
+     65|     FROM place p
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:311:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > records the municipality on the path as context, never as a search level
+TypeError: db.execute is not a function
+ ❯ placeByPreferredName server/__tests__/contract.place-executable-foundation.test.ts:63:27
+     61| async function placeByPreferredName(name: keyof typeof requiredPlaces)…
+     62|   const db = await getDb();
+     63|   const result = await db.execute(sql`
+       |                           ^
+     64|     SELECT p.place_id AS placeId
+     65|     FROM place p
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:326:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > admits many locality-scoped Places, because scope is a category
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:340:16
+    338|     const db = await getDb();
+    339|     const localityScoped = rowsOf(
+    340|       await db.execute(sql`
+       |                ^
+    341|         SELECT COUNT(*) AS n FROM place WHERE search_scope = 'locality…
+    342|       `),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > does not expand a selected Place into other Places
+TypeError: db.execute is not a function
+ ❯ placeByPreferredName server/__tests__/contract.place-executable-foundation.test.ts:63:27
+     61| async function placeByPreferredName(name: keyof typeof requiredPlaces)…
+     62|   const db = await getDb();
+     63|   const result = await db.execute(sql`
+       |                           ^
+     64|     SELECT p.place_id AS placeId
+     65|     FROM place p
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:390:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > refuses every admitted Place that carries no executable scope
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:435:16
+    433|     const db = await getDb();
+    434|     const notExecutable = rowsOf(
+    435|       await db.execute(sql`
+       |                ^
+    436|         SELECT place_id AS placeId FROM place
+    437|         WHERE search_eligible = 0 AND lifecycle_status = 'active'
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes the province-scoped Place, which needs no ancestor
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:452:16
+    450|     const db = await getDb();
+    451|     const provinces = rowsOf(
+    452|       await db.execute(sql`
+       |                ^
+    453|         SELECT place_id AS placeId FROM place
+    454|         WHERE place_id = ${requiredPlaces.Gauteng}
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes a metro-city Place that has an evidenced province ancestor
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:472:16
+    470|     const db = await getDb();
+    471|     const rows = rowsOf(
+    472|       await db.execute(sql`
+       |                ^
+    473|         SELECT p.place_id AS placeId
+    474|         FROM place p
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/22]⎯
+
+ FAIL |server|  server/__tests__/contract.place-executable-foundation.test.ts > Slice 3: canonical execution is exact and fail-closed > executes every single search-eligible Place deterministically
+TypeError: db.execute is not a function
+ ❯ server/__tests__/contract.place-executable-foundation.test.ts:500:18
+    498|       const db = await getDb();
+    499|       const eligible = rowsOf(
+    500|         await db.execute(sql`
+       |                  ^
+    501|         SELECT place_id AS placeId FROM place WHERE search_eligible = …
+    502|       `),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/22]⎯
+
+ FAIL |server|  server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts > hosted readiness logs for hung verification > a first assessment that hangs after resolving its target logs target and stage before completion
+ FAIL |server|  server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts > hosted readiness logs for hung verification > a hang during recovery after a failed assessment logs the new target and stage, not the failed one
+ FAIL |server|  server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts > hosted readiness logs for hung verification > a held snapshot that expires while verifying progresses into a hung cleanup, logged with its stage
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/22]⎯
+
+ Test Files  2 failed (2)
+      Tests  22 failed | 20 passed (42)
+   Start at  23:23:10
+   Duration  23.75s (transform 2.88s, setup 476ms, collect 5.12s, tests 22.66s, environment 0ms, prepare 368ms)

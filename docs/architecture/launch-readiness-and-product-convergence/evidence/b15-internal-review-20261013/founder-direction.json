@@ -1,0 +1,25 @@
+{
+  "reference": "B15-PROVISIONAL-INTERNAL-REVIEW-DIRECTION-20261013-01",
+  "recordedAt": "2026-10-13T09:59:31.019586+00:00",
+  "actor": "Edward, founder/user in this session",
+  "decision": "Proceed with B15 closure through proportionate internal review; no accountant or external privacy/legal reviewer available.",
+  "quotedInstructions": [
+    "Do not wait for an external accountant or lawyer merely to continue technical work.",
+    "If a specific unresolved legal requirement demonstrably prevents a particular operation, explain that requirement and the smallest practical mitigation. Otherwise, continue towards closure.",
+    "Preserve existing production database, security and destructive-operation safeguards."
+  ],
+  "authorised": [
+    "Internal authoritative-source review",
+    "Implementation and focused local checks",
+    "Concrete provider/configuration evidence reconciliation",
+    "Release and hosted-verification preparation",
+    "Proportionate data-flow mitigation"
+  ],
+  "notAuthorised": [
+    "Unapproved production installation or database change",
+    "Destructive operation without its existing controls",
+    "Unsupported compliance assertion",
+    "Ignoring demonstrated legal requirements"
+  ],
+  "effectOnPriorConditions": "External appointment is not a gate. Actual statutory, contract, release and hosted evidence requirements remain; no certificate replacement or repeat approved-copy question."
+}

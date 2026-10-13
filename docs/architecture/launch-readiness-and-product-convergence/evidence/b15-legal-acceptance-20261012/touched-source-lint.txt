@@ -1,0 +1,26 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/auth.ts
+   56:25  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  104:9   warning  Replace `options.founderPrincipal·!==·undefined·&&·!GOOGLE_FOUNDER_PRINCIPAL_PATTERN.test(options.founderPrincipal)` with `⏎······options.founderPrincipal·!==·undefined·&&⏎······!GOOGLE_FOUNDER_PRINCIPAL_PATTERN.test(options.founderPrincipal)⏎····`  prettier/prettier
+  143:91  warning  Replace `string,·unknown` with `⏎········string,⏎········unknown⏎······`                                                                                                                                                                                  prettier/prettier
+  149:43  warning  Replace `·(typeof·founderPrincipal·!==·'string'·||` with `⏎··········(typeof·founderPrincipal·!==·'string'·||⏎···········`                                                                                                                                prettier/prettier
+  372:30  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  373:30  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  400:28  warning  Replace `'This·account·uses·Google·sign-in.·Please·use·your·original·login·method.'` with `⏎········'This·account·uses·Google·sign-in.·Please·use·your·original·login·method.',⏎······`                                                                   prettier/prettier
+  475:37  warning  Replace `⏎····email:·string,⏎··` with `email:·string`                                                                                                                                                                                                     prettier/prettier
+  591:13  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/authRoutes.ts
+   17:29  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  151:26  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  171:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  265:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  334:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  335:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  417:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  460:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  501:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 19 problems (0 errors, 19 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.

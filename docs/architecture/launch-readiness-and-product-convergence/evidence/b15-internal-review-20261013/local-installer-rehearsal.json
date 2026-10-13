@@ -1,0 +1,34 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-10-13T10:25:12.382Z",
+  "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+  "targetClass": "disposable-worktree",
+  "expectedHead": "0114_user_legal_acceptances.sql",
+  "manifestDigest": "7c5a7c8f514ea9be21ec668a9953a7de428ecf5719b746876ef64aae78b0dc9c",
+  "checks": [
+    "accepted head, physical shape and InnoDB read-only plan",
+    "missing plan digest denied",
+    "immutable bundle and pointer committed atomically",
+    "independent connection exact row/pointer verification",
+    "exact replay does not insert duplicate copy",
+    "wrong source commit denied",
+    "wrong manifest denied",
+    "same ID changed copy denied",
+    "changed prior pointer blocks stale replay",
+    "registration-style pointer lock serializes release switch",
+    "actual commit with injected lost acknowledgement requires read-only verification",
+    "expired activation denied",
+    "four historical rows preserved; zero fabricated user acceptances"
+  ],
+  "passed": 13,
+  "syntheticOnly": true,
+  "companyCopyInstalled": false,
+  "protectedConnection": false,
+  "productionInstallation": false,
+  "disposal": {
+    "canonicalExactTargetDisposed": true,
+    "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+    "localServiceStopped": true,
+    "providerOrCustomerDataDisposed": false
+  }
+}

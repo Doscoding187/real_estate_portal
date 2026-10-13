@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0111_properties_canonical_place_reference_fk.sql",
+  "expectedHead": "0114_user_legal_acceptances.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1171,6 +1171,36 @@
       "checksum": "2ce21151b1793e94436d3018da62aa730a950409b25dbab9cb68893ec530926b",
       "parent": "0110_properties_canonical_place_reference_index.sql",
       "parentChecksum": "4b5750bb9ef30a64fd27e6acae3f436504f7e0719d148dadf3131e4b21b4fa3f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 112,
+      "filename": "0112_legal_releases.sql",
+      "checksum": "e2929e1581562a36cde8e90aa39e6f22391040aa36e241ef0b6a05bdf23374db",
+      "parent": "0111_properties_canonical_place_reference_fk.sql",
+      "parentChecksum": "2ce21151b1793e94436d3018da62aa730a950409b25dbab9cb68893ec530926b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 113,
+      "filename": "0113_legal_active_release.sql",
+      "checksum": "b1a595c06b79ecb2dce3540f1c70d23a1decbb53a2f2783ab47addb656cba62c",
+      "parent": "0112_legal_releases.sql",
+      "parentChecksum": "e2929e1581562a36cde8e90aa39e6f22391040aa36e241ef0b6a05bdf23374db",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 114,
+      "filename": "0114_user_legal_acceptances.sql",
+      "checksum": "44bd9e23779fefee710eb90da832261dc0ade2b51649a4b59fdefe675dd1d3a4",
+      "parent": "0113_legal_active_release.sql",
+      "parentChecksum": "b1a595c06b79ecb2dce3540f1c70d23a1decbb53a2f2783ab47addb656cba62c",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

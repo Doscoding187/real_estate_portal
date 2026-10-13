@@ -1,0 +1,73 @@
+{
+  "formatVersion": 1,
+  "recordedAt": "2026-10-13T09:27:21.689720+00:00",
+  "branch": "feat/b15-legal-acceptance-authority-20261012",
+  "sourceParent": "b0acbbb15fc78509ffd7ef3f291369e7228c55a2",
+  "scope": "Local source and disposable-database verification; simulated email providers and intercepted browser APIs; no hosted acceptance, actual customer copy installation or launch GO.",
+  "checks": {
+    "focused": {
+      "passed": 36,
+      "legalRoutes": 12,
+      "paidDisclosure": 4,
+      "propertyEnquiry": 9,
+      "emailPolicy": 11
+    },
+    "actualSqlEmailDelivery": {
+      "passed": 11,
+      "provider": "simulated",
+      "realMailConfigured": false
+    },
+    "browser": {
+      "documentViews": 20,
+      "registrationViews": 2,
+      "receipt": "browser-checks.json",
+      "viewports": ["1440x1000", "390x844"],
+      "backend": "intercepted prepared-copy fixtures"
+    },
+    "typecheck": "passed",
+    "frontendProductionBuild": "passed; existing large-chunk warning retained",
+    "focusedLint": {
+      "errors": 0,
+      "warnings": 436,
+      "scope": "touched consumers/tests; legacy formatting and any warnings retained"
+    },
+    "databaseAuthorityStatic": {
+      "passed": 720,
+      "testFiles": 60,
+      "classifiedUtilitySurfaces": 122,
+      "canonicalTables": 224,
+      "activeSqlFiles": 115,
+      "inventory": "deterministic/current",
+      "lifecycle": "passed"
+    }
+  },
+  "database": {
+    "classification": "consumer",
+    "host": "127.0.0.1",
+    "port": 3307,
+    "name": "listify_wt_b15_legal_acceptance_authority_3200f8a41f86",
+    "fingerprint": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+    "manifestDigest": "7c5a7c8f514ea9be21ec668a9953a7de428ecf5719b746876ef64aae78b0dc9c",
+    "acceptedOldHead": "none",
+    "verifiedNewHead": "0114_user_legal_acceptances.sql",
+    "applyPlanDigest": "aead9f6b152b13ecf49a586019067c6f0a8e00dead440845232ec3397dcdec5c",
+    "finalPlanDigest": "903a7cae9413a9b9870e00b4cf75abbc27858b1c380c0d3077415c34ab1efb85",
+    "finalPendingTransitions": 0,
+    "physicalCongruency": "passed: 39 constraints / 224 tables",
+    "foundationAfterTestCleanup": "passed",
+    "exactTargetDisposed": true,
+    "serviceState": "stopped",
+    "runtimeCustomerReleaseInstalled": false
+  },
+  "teardown": {
+    "browserPreviewStopped": true,
+    "ports3307And5197": "no listeners at final check",
+    "protectedConnections": false,
+    "actualOutboundMail": false
+  },
+  "corrections": "Route beforeEach returned a mock interpreted as cleanup; changed to void. Two unnecessary quote escapes removed. Final checks passed; no waiver.",
+  "gateStatus": {
+    "B15": "OPEN pending retained review, controlled integration/install and hosted observations",
+    "acceptedScopes": 8
+  }
+}

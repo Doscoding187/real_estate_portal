@@ -48,6 +48,7 @@ import { APP_TITLE } from '@/const';
 import { apiFetch, ApiError, getApiUrl } from '@/lib/api';
 import { getLoginRedirectPath, getSafeNextPath } from '@/lib/publicNavigation';
 import { cn } from '@/lib/utils';
+import type { RegistrationLegalRelease } from '@/lib/registrationLegal';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -68,6 +69,12 @@ const registerSchema = z
       .regex(/\d/, 'Password must contain at least one number')
       .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
     confirmPassword: z.string(),
+    termsAccepted: z
+      .boolean()
+      .refine(
+        value => value === true,
+        'Please accept the Terms of Service after reviewing the documents.',
+      ),
     role: z
       .enum(['visitor', 'agent', 'agency_admin', 'property_developer', 'service_provider'])
       .default('visitor'),
@@ -207,6 +214,7 @@ const registerDefaults: RegisterFormData = {
   phoneNumber: '',
   password: '',
   confirmPassword: '',
+  termsAccepted: false,
   role: 'visitor',
 };
 
@@ -254,11 +262,18 @@ export default function Login() {
     const controller = new AbortController();
     void (async () => {
       try {
-        const status = await apiFetch<{ founderLoginAvailable: boolean }>('/auth/google/status', { signal: controller.signal });
+        const status = await apiFetch<{ founderLoginAvailable: boolean }>('/auth/google/status', {
+          signal: controller.signal,
+        });
         if (active && status?.founderLoginAvailable === true) setFounderLoginAvailable(true);
-      } catch { /* Availability remains false unless the server explicitly enables it. */ }
+      } catch {
+        /* Availability remains false unless the server explicitly enables it. */
+      }
     })();
-    return () => { active = false; controller.abort(); };
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   const loginForm = useForm<LoginFormData>({
@@ -266,10 +281,35 @@ export default function Login() {
     defaultValues: { email: '', password: '', rememberMe: false },
   });
 
+  const [legalRelease, setLegalRelease] = useState<RegistrationLegalRelease | null>(null);
+  const [legalRefresh, setLegalRefresh] = useState(0);
+  const [legalLoading, setLegalLoading] = useState(false);
+
   const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: registerDefaults,
   });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    registerForm.setValue('termsAccepted', false);
+    setLegalRelease(null);
+    if (!selectedRole) return;
+    setLegalLoading(true);
+    void (async () => {
+      try {
+        const value = await apiFetch<RegistrationLegalRelease>('/auth/registration-legal', {
+          signal: controller.signal,
+        });
+        if (!controller.signal.aborted && value?.bundleId) setLegalRelease(value);
+      } catch {
+        /* The unavailable state keeps submission disabled. */
+      } finally {
+        if (!controller.signal.aborted) setLegalLoading(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [selectedRole, legalRefresh, registerForm]);
 
   useEffect(() => {
     if (searchParams.get('verified') === 'true') {
@@ -376,6 +416,7 @@ export default function Login() {
   };
 
   const onRegister = async (data: RegisterFormData) => {
+    if (!legalRelease || data.termsAccepted !== true) return;
     setPendingAction('register');
     try {
       const result = await apiFetch('/auth/register', {
@@ -386,6 +427,7 @@ export default function Login() {
           email: data.email,
           password: data.password,
           role: data.role,
+          legalAcceptance: { bundleId: legalRelease.bundleId, termsAccepted: data.termsAccepted },
           agentProfile:
             data.role === 'agent'
               ? {
@@ -406,6 +448,11 @@ export default function Login() {
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.body?.error || `Registration failed (${error.status})`);
+        if (
+          error.body?.code === 'LEGAL_VERSION_STALE' ||
+          error.body?.code === 'LEGAL_RELEASE_UNAVAILABLE'
+        )
+          setLegalRefresh(value => value + 1);
       } else {
         toast.error(error instanceof Error ? error.message : 'Registration failed');
       }
@@ -525,7 +572,7 @@ export default function Login() {
         {selectedRole ? (
           <DialogContent
             showCloseButton={false}
-            className="overflow-hidden border-slate-200/80 bg-white/95 p-0 shadow-2xl shadow-slate-300/30 backdrop-blur-2xl dark:border-white/10 dark:bg-[#141d2e]/95 dark:shadow-black/50 sm:max-w-[460px]"
+            className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-slate-200/80 bg-white/95 p-0 shadow-2xl shadow-slate-300/30 backdrop-blur-2xl dark:border-white/10 dark:bg-[#141d2e]/95 dark:shadow-black/50 sm:max-w-[460px]"
           >
             <div className="relative px-6 pb-6 pt-6 sm:px-8 sm:pb-8">
               <button
@@ -665,9 +712,72 @@ export default function Login() {
 
                 <div className="border-t border-slate-200 dark:border-white/[0.08]" />
 
+                {legalRelease ? (
+                  <div className="space-y-3 text-sm">
+                    <p>
+                      Read the{' '}
+                      <a
+                        className="underline"
+                        href={`${legalRelease.terms.path}?bundle=${encodeURIComponent(legalRelease.bundleId)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Terms of Service ({legalRelease.terms.version})
+                      </a>{' '}
+                      and{' '}
+                      <a
+                        className="underline"
+                        href={`${legalRelease.privacy.path}?bundle=${encodeURIComponent(legalRelease.bundleId)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Privacy Notice ({legalRelease.privacy.version})
+                      </a>{' '}
+                      before creating your account.
+                    </p>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="registration-terms"
+                        className="mt-0.5 border-slate-500 bg-white data-[state=checked]:border-indigo-600 data-[state=checked]:bg-indigo-600"
+                        checked={registerForm.watch('termsAccepted')}
+                        onCheckedChange={checked =>
+                          registerForm.setValue('termsAccepted', checked === true, {
+                            shouldValidate: true,
+                          })
+                        }
+                      />
+                      <label htmlFor="registration-terms">
+                        I agree to the Terms of Service. I have been shown the Privacy Notice.
+                      </label>
+                    </div>
+                    {registerErrors.termsAccepted ? (
+                      <p role="alert" className="text-red-600">
+                        {registerErrors.termsAccepted.message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div role="status" className="space-y-2 text-sm">
+                    <p>
+                      {legalLoading
+                        ? 'Loading account documents…'
+                        : 'New account registration is temporarily unavailable. Please try again later.'}
+                    </p>
+                    {!legalLoading ? (
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => setLegalRefresh(value => value + 1)}
+                      >
+                        Check again
+                      </button>
+                    ) : null}
+                  </div>
+                )}
+
                 <Button
                   type="submit"
-                  disabled={isRegistering}
+                  disabled={isRegistering || !legalRelease || !registerForm.watch('termsAccepted')}
                   className={cn(
                     'h-12 w-full rounded-xl bg-gradient-to-r text-sm font-semibold text-white shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]',
                     selectedRole.buttonClass,

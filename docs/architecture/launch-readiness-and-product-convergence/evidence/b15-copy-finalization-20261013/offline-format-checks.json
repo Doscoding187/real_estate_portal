@@ -1,0 +1,14 @@
+{
+  "scope": "Offline file integrity and pure-policy format verification only; simulated metadata/approval for compatibility check; no SQL or runtime release",
+  "sourceCandidateSha256": "e3e5d9885b98744d98eaad36c6929434bff57ca6e1c2ed7ef376d5aab06aeb45",
+  "sourceBytesPreserved": true,
+  "derivedDigestsMatch": true,
+  "termsCommitmentsPreserved": true,
+  "paymentCommitmentsPreserved": true,
+  "customerTextPlaceholderFree": true,
+  "derivedFormatCompatible": true,
+  "draftRejected": true,
+  "unresolvedSourceRejected": true,
+  "publicEffectiveDateUnset": true,
+  "realRuntimeApprovalNotFabricated": true
+}

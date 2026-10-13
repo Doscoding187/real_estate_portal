@@ -20,12 +20,12 @@ export interface ReviewData {
   basicInfo: BasicInfoData;
   contactInfo: ContactInfoData;
   portfolio: PortfolioData;
-  termsAccepted: boolean;
+  authorityConfirmed: boolean;
 }
 
 export interface ReviewStepProps {
   data: ReviewData;
-  onTermsChange: (accepted: boolean) => void;
+  onAuthorityChange: (accepted: boolean) => void;
   onEditStep: (step: number) => void;
   submitting?: boolean;
   errors?: Record<string, string>;
@@ -58,8 +58,8 @@ const formatProvince = (province: string): string => {
 };
 
 export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
-  ({ data, onTermsChange, onEditStep, submitting, errors, className }, ref) => {
-    const { basicInfo, contactInfo, portfolio, termsAccepted } = data;
+  ({ data, onAuthorityChange, onEditStep, submitting, errors, className }, ref) => {
+    const { basicInfo, contactInfo, portfolio, authorityConfirmed } = data;
 
     return (
       <div ref={ref} className={cn('space-y-6', className)}>
@@ -143,32 +143,25 @@ export const ReviewStep = React.forwardRef<HTMLDivElement, ReviewStepProps>(
         <div className="space-y-4">
           <div className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50">
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900">Terms and Conditions</h3>
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>By submitting this application, you agree to:</p>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>Provide accurate and truthful information</li>
-                  <li>Comply with our platform terms of service</li>
-                  <li>Allow verification of your company details</li>
-                  <li>Maintain professional standards on the platform</li>
-                  <li>Keep your profile information up to date</li>
-                </ul>
-              </div>
-
+              <h3 className="text-lg font-semibold text-gray-900">Profile confirmation</h3>
+              <p className="text-sm text-gray-600">
+                Confirm your authority to prepare this company profile and keep its details
+                accurate.
+              </p>
               <div className="flex items-start gap-3">
                 <GradientCheckbox
-                  id="terms"
-                  checked={termsAccepted}
-                  onCheckedChange={onTermsChange}
+                  id="profile-authority"
+                  checked={authorityConfirmed}
+                  onCheckedChange={onAuthorityChange}
                   disabled={submitting}
                 />
-                <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
-                  I agree to the terms and conditions and confirm that all information provided is
-                  accurate *
+                <label htmlFor="profile-authority" className="text-sm text-gray-700 cursor-pointer">
+                  I confirm that I am authorised to prepare this Developer profile and that the
+                  information provided is accurate. *
                 </label>
               </div>
 
-              {errors?.terms && <p className="text-sm text-red-600">{errors.terms}</p>}
+              {errors?.authority && <p className="text-sm text-red-600">{errors.authority}</p>}
             </div>
           </div>
         </div>

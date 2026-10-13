@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import type { User } from '../../drizzle/schema';
 import * as db from '../db';
 import { ENV } from './env';
+import { createRegistrationWithLegalAcceptance } from '../services/registrationLegalAcceptanceService';
 import { measureAuthMePhase } from './authMeTiming';
 import { sendVerificationEmail, sendPasswordResetEmail } from './email';
 import { EmailService } from './emailService';
@@ -306,6 +307,7 @@ export class AuthService {
       licenseNumber?: string;
       specializations?: string[];
     },
+    legalAcceptance?: unknown,
   ): Promise<{ userId: number; verificationEmailSent: boolean }> {
     if (isReservedFounderGoogleEmail(email)) {
       throw new Error('User with this email already exists or uses its original login method.');
@@ -322,54 +324,32 @@ export class AuthService {
     // Generate email verification token
     const emailVerificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Create user
-    const userId = await db.createUser({
-      email,
-      passwordHash,
-      name: name || email.split('@')[0],
-      emailVerified: 0,
-      loginMethod: 'email',
-      role: role, // Use requested role
-      isSubaccount: 0,
-      emailVerificationToken: hashOpaqueToken(emailVerificationToken),
-      emailVerificationTokenExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS)
-        .toISOString()
-        .slice(0, 19)
-        .replace('T', ' '),
-    });
-
     const normalizedAgentProfile =
       role === 'agent' && agentProfile
         ? {
+            ...agentProfile,
             displayName: agentProfile.displayName.trim(),
-            phone: agentProfile.phone || agentProfile.phoneNumber,
-            bio: agentProfile.bio,
-            licenseNumber: agentProfile.licenseNumber,
-            specializations: agentProfile.specializations,
+            phone: agentProfile.phone || agentProfile.phoneNumber || '',
           }
         : undefined;
-
-    // Create the pending agent profile immediately so registration does not
-    // depend on the optional pending_agent_profiles staging table.
-    if (role === 'agent' && normalizedAgentProfile) {
-      if (!normalizedAgentProfile.displayName || !normalizedAgentProfile.phone) {
-        throw new Error('Agent profile with display name and phone number is required');
-      }
-
-      try {
-        await db.createAgentProfile({
-          userId,
-          displayName: normalizedAgentProfile.displayName,
-          phone: normalizedAgentProfile.phone,
-          bio: normalizedAgentProfile.bio,
-          licenseNumber: normalizedAgentProfile.licenseNumber,
-          specializations: normalizedAgentProfile.specializations,
-        });
-      } catch (error) {
-        await db.deleteUserById(userId);
-        throw error;
-      }
-    }
+    const { userId } = await createRegistrationWithLegalAcceptance(
+      {
+        email,
+        passwordHash,
+        name: name || email.split('@')[0],
+        emailVerified: 0,
+        loginMethod: 'email',
+        role,
+        isSubaccount: 0,
+        emailVerificationToken: hashOpaqueToken(emailVerificationToken),
+        emailVerificationTokenExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TOKEN_TTL_MS)
+          .toISOString()
+          .slice(0, 19)
+          .replace('T', ' '),
+      },
+      legalAcceptance,
+      normalizedAgentProfile,
+    );
 
     // Get the created user
     const user = await db.getUserById(userId);

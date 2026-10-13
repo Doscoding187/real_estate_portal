@@ -115,6 +115,13 @@ async function main(): Promise<void> {
     };
     await currentUser(runtimeConnection, ISOLATED_CI_ROLE_USERS.runtime);
     await runtimeConnection.execute('SELECT 1 FROM `users` LIMIT 1');
+    // Approved copy is SELECT-only. Shared locking reads protect acceptance
+    // against release-pointer switches without granting runtime write access.
+    await runtimeConnection.execute('SELECT `purpose` FROM `legal_active_release` FOR SHARE');
+    await assertDenied(
+      runtimeConnection,
+      'UPDATE `legal_active_release` SET `bundle_id` = `bundle_id` WHERE 1 = 0',
+    );
     await runtimeConnection.execute('UPDATE `users` SET `id` = `id` WHERE 1 = 0');
     await assertDenied(
       runtimeConnection,
@@ -182,9 +189,11 @@ async function main(): Promise<void> {
       'SELECT CONNECTION_ID() AS connection_id, @@session.sql_generate_invisible_primary_key AS gipk',
     );
     const afterRow = Array.isArray(after?.[0]) ? after[0][0] : undefined;
-    if (!beforeRow?.connection_id ||
-        Number(afterRow?.connection_id) !== Number(beforeRow.connection_id) ||
-        Number(afterRow?.gipk) !== 0) {
+    if (
+      !beforeRow?.connection_id ||
+      Number(afterRow?.connection_id) !== Number(beforeRow.connection_id) ||
+      Number(afterRow?.gipk) !== 0
+    ) {
       throw new Error('Isolated CI migration identity cannot disable GIPK on the same session.');
     }
     await migration.connection.execute(

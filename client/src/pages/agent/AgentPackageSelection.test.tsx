@@ -141,6 +141,12 @@ beforeEach(() => {
     isPending: false,
   });
   apiFetchMock.mockImplementation((endpoint: string) => {
+    if (endpoint === '/auth/registration-legal')
+      return Promise.resolve({
+        bundleId: 'synthetic-paid-test',
+        terms: { version: 'test-terms' },
+        privacy: { version: 'test-privacy' },
+      });
     if (endpoint === '/agent/onboarding-status') {
       return Promise.resolve({
         packageSelected: false,
@@ -173,6 +179,30 @@ beforeEach(() => {
 });
 
 describe('Agent pre-payment preparation', () => {
+  it('sends the exact legal bundle and displayed quote only after explicit purchase acceptance', async () => {
+    render(<CommercialAgentPackageSelection agentLaunchAccessAvailable />);
+    const checkbox = await screen.findByRole('checkbox');
+    const request = screen.getByRole('button', { name: /Get Agent Launch Access/i });
+    expect(request).toBeDisabled();
+    fireEvent.click(checkbox);
+    fireEvent.click(request);
+    await waitFor(() =>
+      expect(apiFetchMock).toHaveBeenCalledWith(
+        '/agent/request-launch-access-invoice',
+        expect.objectContaining({
+          body: JSON.stringify({
+            planId: 42,
+            legalAcceptance: {
+              bundleId: 'synthetic-paid-test',
+              termsAccepted: true,
+              purchaseAccepted: true,
+              quote: { planId: 42, amountDue: 49900, currency: 'ZAR' },
+            },
+          }),
+        }),
+      ),
+    );
+  });
   it('keeps the direct package route in preparation without loading commercial data', () => {
     render(<AgentPackageSelection />);
 
@@ -373,7 +403,9 @@ describe('Agent pre-payment preparation', () => {
 
     expect(screen.getByTestId('agent-package-preparation')).toBeInTheDocument();
     expect(
-      screen.getByText('Agent Launch Access could not be verified, so paid actions remain unavailable.'),
+      screen.getByText(
+        'Agent Launch Access could not be verified, so paid actions remain unavailable.',
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(catalogMock).not.toHaveBeenCalled();

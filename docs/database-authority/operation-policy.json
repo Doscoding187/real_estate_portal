@@ -294,6 +294,30 @@
       "approval": "protected-target",
       "acknowledgement": "exact-target",
       "evidence": "exact-Azure-identity-expiring-purpose-bound-synthetic-probes"
+    },
+    "legal-release-plan": {
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "credentialClasses": ["read-only", "migration", "local-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-exact-copy-release-plan"
+    },
+    "legal-release-apply": {
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "credentialClasses": ["migration", "local-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "exact-target",
+      "evidence": "sanitized-exact-copy-release-apply"
+    },
+    "legal-release-verify": {
+      "allowedTargetClasses": ["disposable-worktree", "staging", "production"],
+      "credentialClasses": ["read-only", "migration", "local-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "protected-target",
+      "acknowledgement": "none",
+      "evidence": "sanitized-exact-copy-release-verify"
     }
   }
 }

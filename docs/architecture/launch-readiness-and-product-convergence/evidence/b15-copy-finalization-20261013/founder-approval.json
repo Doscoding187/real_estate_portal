@@ -1,0 +1,34 @@
+{
+  "recordFormat": 1,
+  "reference": "B15-FOUNDER-COPY-APPROVAL-20261013-01",
+  "recordedAt": "2026-10-13T08:52:16Z",
+  "actor": "Edward (founder, user in this session)",
+  "userInstruction": "just approve the one thats there and proceed",
+  "approvedExistingCandidate": {
+    "identity": "B15-FOUNDER-REVIEW-0.7",
+    "file": "b15-founder-review-2026-10-12-v0.7.md",
+    "sha256": "e3e5d9885b98744d98eaad36c6929434bff57ca6e1c2ed7ef376d5aab06aeb45"
+  },
+  "scope": "Founder approval of existing candidate and instruction to proceed. Includes existing commercial, refund, support and planned-absence policy. Preserves its explicitly unresolved technical fields and conditional finance/legal review boundaries.",
+  "notInferred": [
+    "approval of materially revised exact bytes",
+    "completion of processor/transfer or finance/legal review",
+    "protected database or provider mutation",
+    "hosted gate acceptance",
+    "paid launch GO"
+  ],
+  "sourceApprovalStatus": "recorded",
+  "derivedCustomerText": {
+    "terms.txt": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72",
+    "privacy.txt": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608",
+    "payment.txt": "c36e08198de60dad85b27de0cc8da3c609480bea24d782cbbe886eee76ac0611"
+  },
+  "derivedTextStatus": "prepared for technical release review; no runtime approval object or active release installed",
+  "effectiveAt": null,
+  "certificateNameCorrection": "Founder-deferred follow-up; supplier remains Property Listify (Pty) Ltd; not an offline implementation hold",
+  "gateStatus": {
+    "B15": "OPEN",
+    "B14": "OPEN",
+    "acceptedScopes": 8
+  }
+}

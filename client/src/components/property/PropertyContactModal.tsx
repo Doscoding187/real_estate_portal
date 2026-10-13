@@ -355,7 +355,7 @@ export function PropertyContactModal({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Privacy Policy
+                    Privacy Notice
                   </a>
                   .
                 </Label>

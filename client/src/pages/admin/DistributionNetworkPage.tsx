@@ -54,7 +54,10 @@ function registrationAreaLabel(area: unknown): string {
   }
 }
 
-function registrationStatusLabel(registration: { requestedArea?: unknown; status?: unknown }): string {
+function registrationStatusLabel(registration: {
+  requestedArea?: unknown;
+  status?: unknown;
+}): string {
   if (registration.status === 'approved' && registration.requestedArea !== 'distribution_manager') {
     return 'reviewed';
   }
@@ -250,18 +253,7 @@ export default function DistributionNetworkPage() {
     trpc.distribution.admin.reviewReferrerApplication.useMutation({
       onSuccess: result => {
         if (result.status === 'approved') {
-          if (!result.activationEmailSent && result.activationResetLink) {
-            void copyActivationResetLink(result.activationResetLink, 'Referrer approval');
-          }
-          toast.success(
-            result.userCreated
-              ? result.activationEmailSent
-                ? 'Referrer approved, account created, and activation email sent.'
-                : result.activationResetLink
-                  ? 'Referrer approved and account created. Email failed; reset link copied.'
-                  : 'Referrer approved and account created, but activation email failed to send. Ask user to use Forgot Password.'
-              : 'Referrer approved.',
-          );
+          toast.success('Referrer approved for their verified, self-registered account.');
         } else {
           toast.success('Referrer application rejected.');
         }
@@ -275,11 +267,7 @@ export default function DistributionNetworkPage() {
       onSuccess: result => {
         setResendTargetId(null);
         if (result.activationEmailSent) {
-          toast.success(
-            result.userCreated
-              ? `Activation email sent and account created for ${result.email}.`
-              : `Activation email resent to ${result.email}.`,
-          );
+          toast.success(`Activation email resent to ${result.email}.`);
         } else {
           if (result.activationResetLink) {
             void copyActivationResetLink(result.activationResetLink, 'Activation');
@@ -919,7 +907,9 @@ export default function DistributionNetworkPage() {
                           <Badge variant="outline">
                             {registrationAreaLabel(registration.requestedArea)}
                           </Badge>
-                          <Badge variant={registration.status === 'approved' ? 'default' : 'secondary'}>
+                          <Badge
+                            variant={registration.status === 'approved' ? 'default' : 'secondary'}
+                          >
                             {statusLabel}
                           </Badge>
                           {isManagerRegistration && registration.status === 'approved' ? (
@@ -932,14 +922,20 @@ export default function DistributionNetworkPage() {
                             </Badge>
                           ) : null}
                           {isManagerRegistration && registration.status === 'approved' ? (
-                            <Badge variant={registration.managerAccessActive ? 'default' : 'outline'}>
-                              {registration.managerAccessActive ? 'access active' : 'access revoked'}
+                            <Badge
+                              variant={registration.managerAccessActive ? 'default' : 'outline'}
+                            >
+                              {registration.managerAccessActive
+                                ? 'access active'
+                                : 'access revoked'}
                             </Badge>
                           ) : null}
                         </div>
                         {registration.company || registration.currentRole ? (
                           <p className="mt-2 text-xs text-slate-600">
-                            {[registration.company, registration.currentRole].filter(Boolean).join(' · ')}
+                            {[registration.company, registration.currentRole]
+                              .filter(Boolean)
+                              .join(' · ')}
                           </p>
                         ) : null}
                         {registration.notes ? (
@@ -1027,7 +1023,9 @@ export default function DistributionNetworkPage() {
                             </Button>
                           </>
                         ) : null}
-                        {isManagerRegistration && registration.status === 'approved' && registration.userId ? (
+                        {isManagerRegistration &&
+                        registration.status === 'approved' &&
+                        registration.userId ? (
                           <Button
                             size="sm"
                             variant={registration.managerAccessActive ? 'destructive' : 'outline'}

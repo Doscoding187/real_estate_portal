@@ -45,6 +45,7 @@ import {
 } from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
 import { getCommercialActivationStatus } from './services/commercialActivationPolicy';
+import { paidLegalAcceptanceSchema } from './services/legalAcceptancePolicy';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
@@ -60,6 +61,7 @@ async function getAgencyBillableAccountId(db: Awaited<ReturnType<typeof getDb>>,
 }
 
 const createCheckoutSessionSchema = z.object({
+  legalAcceptance: paidLegalAcceptanceSchema.optional(),
   planId: z.number().int().positive(),
   successUrl: z.string().url().optional(),
   cancelUrl: z.string().url().optional(),
@@ -68,6 +70,7 @@ const createCheckoutSessionSchema = z.object({
 });
 
 const startManualCheckoutSchema = z.object({
+  legalAcceptance: paidLegalAcceptanceSchema.optional(),
   planId: z.number().int().positive(),
   billingCycle: billingCycleSchema.default('monthly'),
   couponCode: z.string().optional(),
@@ -166,14 +169,30 @@ export const billingRouter = {
   }),
 
   requestLaunchAccessInvoice: protectedProcedure
-    .input(z.object({ planId: z.number().int().positive().optional() }).optional())
+    .input(
+      z
+        .object({
+          planId: z.number().int().positive().optional(),
+          legalAcceptance: paidLegalAcceptanceSchema.optional(),
+        })
+        .optional(),
+    )
     .mutation(async ({ ctx, input }) =>
-      requestPaidLaunchAccessInvoice({ user: requireUser(ctx), planId: input?.planId }),
+      requestPaidLaunchAccessInvoice({
+        user: requireUser(ctx),
+        planId: input?.planId,
+        legalAcceptance: input?.legalAcceptance,
+      }),
     ),
 
-  requestDeveloperLaunchAccessInvoice: protectedProcedure.mutation(async ({ ctx }) => {
-    return requestDeveloperLaunchAccessInvoice({ user: requireUser(ctx) });
-  }),
+  requestDeveloperLaunchAccessInvoice: protectedProcedure
+    .input(z.object({ legalAcceptance: paidLegalAcceptanceSchema.optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      return requestDeveloperLaunchAccessInvoice({
+        user: requireUser(ctx),
+        legalAcceptance: input?.legalAcceptance,
+      });
+    }),
 
   submitDeveloperPaymentProof: protectedProcedure
     .input(submitPaymentProofSchema)
@@ -213,6 +232,7 @@ export const billingRouter = {
         planId: input.planId,
         billingCycle: input.billingCycle as BillingCycle,
         couponCode: input.couponCode,
+        legalAcceptance: input.legalAcceptance,
       });
     }),
 
@@ -225,6 +245,7 @@ export const billingRouter = {
         planId: input.planId,
         billingCycle: input.billingCycle as BillingCycle,
         couponCode: input.couponCode,
+        legalAcceptance: input.legalAcceptance,
       });
 
       const url = input.successUrl

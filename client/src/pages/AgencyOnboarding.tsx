@@ -74,7 +74,9 @@ const teamSetupSchema = z.object({
 // Step 4: Plan Selection Schema
 const planSelectionSchema = z.object({
   selectedPlanId: z.number(),
-  agreeToTerms: z.boolean().refine(val => val, 'You must agree to the terms'),
+  authorityConfirmed: z
+    .boolean()
+    .refine(val => val, 'Confirm that you are authorised to prepare this Agency workspace'),
 });
 
 type BasicInfoData = z.infer<typeof basicInfoSchema>;
@@ -323,7 +325,11 @@ const AgencyOnboarding: React.FC = () => {
                   setBasicInfo(draftData.data.basicInfo);
                   setBranding(draftData.data.branding);
                   setTeamSetup(draftData.data.teamSetup);
-                  setPlanSelection(draftData.data.planSelection);
+                  setPlanSelection(
+                    draftData.data.planSelection
+                      ? { ...draftData.data.planSelection, authorityConfirmed: false }
+                      : null,
+                  );
                   setCurrentStep(draftData.step);
                 }
                 setShowResumeModal(false);
@@ -698,7 +704,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
   });
 
   const selectedPlanId = watch('selectedPlanId');
-  const agreeToTerms = watch('agreeToTerms');
+  const authorityConfirmed = watch('authorityConfirmed');
 
   return (
     <div className="space-y-6">
@@ -797,24 +803,17 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
         <div className="space-y-4">
           <div className="flex items-start space-x-2">
             <Checkbox
-              id="agreeToTerms"
-              checked={agreeToTerms}
-              onCheckedChange={checked => setValue('agreeToTerms', checked as boolean)}
+              id="authorityConfirmed"
+              checked={authorityConfirmed}
+              onCheckedChange={checked => setValue('authorityConfirmed', checked as boolean)}
             />
-            <Label htmlFor="agreeToTerms" className="text-sm leading-relaxed">
-              I agree to the{' '}
-              <a href="/terms" className="text-primary hover:underline" target="_blank">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="/privacy" className="text-primary hover:underline" target="_blank">
-                Privacy Policy
-              </a>
-              *
+            <Label htmlFor="authorityConfirmed" className="text-sm leading-relaxed">
+              I confirm that I am authorised to prepare this Agency workspace and that the
+              information I provide is accurate. *
             </Label>
           </div>
-          {errors.agreeToTerms && (
-            <p className="text-sm text-red-600">{errors.agreeToTerms.message}</p>
+          {errors.authorityConfirmed && (
+            <p className="text-sm text-red-600">{errors.authorityConfirmed.message}</p>
           )}
         </div>
 
@@ -823,7 +822,7 @@ export const PlanSelectionStep: React.FC<PlanSelectionStepProps> = ({ plans, onN
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button type="submit" disabled={!selectedPlanId || !agreeToTerms}>
+          <Button type="submit" disabled={!selectedPlanId || !authorityConfirmed}>
             Review onboarding
           </Button>
         </div>

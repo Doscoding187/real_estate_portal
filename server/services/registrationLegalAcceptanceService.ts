@@ -1,0 +1,274 @@
+import { randomUUID } from 'node:crypto';
+import { and, desc, eq, sql } from 'drizzle-orm';
+import type { MySql2Database } from 'drizzle-orm/mysql2';
+import * as schema from '../../drizzle/schema';
+import { getDb } from '../db-connection';
+import {
+  getRegistrationLegalDisclosure,
+  validateRegistrationLegalAcceptance,
+  type LegalRelease,
+} from './legalAcceptancePolicy';
+
+type Database = MySql2Database<typeof schema>;
+type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+type ReleaseRow = typeof schema.legalReleases.$inferSelect;
+
+function releaseFromRow(row: ReleaseRow | undefined): unknown {
+  if (!row) return undefined;
+  return {
+    formatVersion: row.formatVersion,
+    bundleId: row.bundleId,
+    effectiveAt: row.effectiveAt,
+    terms: { version: row.termsVersion, content: row.termsContent },
+    privacy: { version: row.privacyVersion, content: row.privacyContent },
+    status: 'approved',
+    approval: {
+      reference: row.approvalReference,
+      actor: row.approvalActor,
+      approvedAt: row.approvedAt,
+      contentSha256: row.contentSha256,
+    },
+  };
+}
+
+async function database(): Promise<Database> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return db as Database;
+}
+
+export class RegistrationLegalError extends Error {
+  constructor(
+    public readonly code:
+      | 'LEGAL_RELEASE_UNAVAILABLE'
+      | 'TERMS_ACCEPTANCE_REQUIRED'
+      | 'LEGAL_VERSION_STALE',
+  ) {
+    super(
+      code === 'LEGAL_RELEASE_UNAVAILABLE'
+        ? 'New account registration is temporarily unavailable. Please try again later.'
+        : code === 'LEGAL_VERSION_STALE'
+          ? 'The Terms or Privacy Notice have changed. Review the current documents and choose again.'
+          : 'Please review the Terms of Service and Privacy Notice and explicitly accept the Terms.',
+    );
+    this.name = 'RegistrationLegalError';
+  }
+}
+
+/** Every response contains the exact validated copy; no request owns approval. */
+export async function getCurrentRegistrationLegalRelease(bundleId?: string) {
+  const db = await database();
+  let row: ReleaseRow | undefined;
+  if (bundleId) {
+    [row] = await db
+      .select()
+      .from(schema.legalReleases)
+      .where(eq(schema.legalReleases.bundleId, bundleId))
+      .limit(1);
+  } else {
+    const [selected] = await db
+      .select({ release: schema.legalReleases })
+      .from(schema.legalActiveRelease)
+      .innerJoin(
+        schema.legalReleases,
+        eq(schema.legalActiveRelease.bundleId, schema.legalReleases.bundleId),
+      )
+      .where(eq(schema.legalActiveRelease.purpose, 'account_registration'))
+      .limit(1);
+    row = selected?.release;
+  }
+  const release = releaseFromRow(row);
+  const disclosure = getRegistrationLegalDisclosure(release, new Date());
+  if (!disclosure) throw new RegistrationLegalError('LEGAL_RELEASE_UNAVAILABLE');
+  const approved = release as LegalRelease;
+  return {
+    ...disclosure,
+    terms: { ...disclosure.terms, content: approved.terms.content },
+    privacy: { ...disclosure.privacy, content: approved.privacy.content },
+  };
+}
+
+export interface RegistrationAgentProfile {
+  displayName: string;
+  phone: string;
+  bio?: string;
+  licenseNumber?: string;
+  specializations?: string[];
+}
+
+/** Hold the release pointer stable until commitment without runtime write privileges. */
+export async function validateCurrentLegalAcceptanceInTransaction(
+  tx: Transaction,
+  choice: unknown,
+) {
+  const [pointer] = await tx
+    .select()
+    .from(schema.legalActiveRelease)
+    .where(eq(schema.legalActiveRelease.purpose, 'account_registration'))
+    .limit(1)
+    .for('share');
+  const [row] = pointer
+    ? await tx
+        .select()
+        .from(schema.legalReleases)
+        .where(eq(schema.legalReleases.bundleId, pointer.bundleId))
+        .limit(1)
+    : [];
+  const result = validateRegistrationLegalAcceptance(choice, releaseFromRow(row), new Date());
+  if (!result.ok) throw new RegistrationLegalError(result.code);
+  return result.acceptance;
+}
+
+/** Exported transaction body is also exercised against the actual local schema. */
+export async function insertRegistrationWithLegalAcceptance(
+  tx: Transaction,
+  userData: Omit<schema.InsertUser, 'id' | 'createdAt' | 'updatedAt' | 'lastSignedIn'>,
+  choice: unknown,
+  agentProfile?: RegistrationAgentProfile,
+): Promise<{ userId: number; evidenceId: string }> {
+  const acceptance = await validateCurrentLegalAcceptanceInTransaction(tx, choice);
+  const now = new Date(acceptance.acceptedAt);
+  if (
+    !userData.email ||
+    !userData.passwordHash ||
+    userData.loginMethod !== 'email' ||
+    userData.founderAuthority ||
+    userData.role === 'super_admin'
+  ) {
+    throw new Error('Invalid public registration identity');
+  }
+  const normalizedEmail = userData.email.trim().toLowerCase();
+  if (!normalizedEmail) throw new Error('Invalid public registration identity');
+  // email_idx is intentionally non-unique. This current locking read protects
+  // the normalized identity (including an absent-key gap) until account and
+  // evidence commit. A shared legal pointer lock does not serialize sign-ups.
+  const [currentAccount] = await tx
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(eq(schema.users.email, normalizedEmail))
+    .limit(1)
+    .for('update');
+  if (currentAccount) throw new Error('User with this email already exists');
+  const [existing] = await tx
+    .select({ id: schema.users.id })
+    .from(schema.users)
+    .where(sql`LOWER(TRIM(${schema.users.email})) = ${normalizedEmail}`)
+    .limit(1);
+  if (existing) throw new Error('User with this email already exists');
+  if (
+    userData.role === 'agent' &&
+    (!agentProfile?.displayName.trim() || !agentProfile.phone.trim())
+  ) {
+    throw new Error('Agent profile with display name and phone number is required');
+  }
+  const mysqlNow = now.toISOString().slice(0, 23).replace('T', ' ');
+  const [created] = await tx.insert(schema.users).values({
+    ...userData,
+    email: normalizedEmail,
+    createdAt: mysqlNow,
+    updatedAt: mysqlNow,
+    lastSignedIn: mysqlNow,
+  });
+  const userId = Number(created.insertId);
+  if (!Number.isSafeInteger(userId) || userId <= 0)
+    throw new Error('Registration did not return an account identity');
+  if (userData.role === 'agent' && agentProfile) {
+    const displayName = agentProfile.displayName.trim();
+    await tx.insert(schema.agents).values({
+      userId,
+      displayName,
+      phone: agentProfile.phone.trim(),
+      bio: agentProfile.bio || null,
+      licenseNumber: agentProfile.licenseNumber || null,
+      specialization: agentProfile.specializations?.join(',') || null,
+      firstName: displayName.split(' ')[0],
+      lastName: displayName.split(' ').slice(1).join(' '),
+      isVerified: 0,
+      isFeatured: 0,
+      status: 'pending',
+      createdAt: mysqlNow,
+      updatedAt: mysqlNow,
+    });
+  }
+  const evidenceId = randomUUID();
+  await tx.insert(schema.userLegalAcceptances).values({
+    id: evidenceId,
+    userId,
+    bundleId: acceptance.bundleId,
+    termsSha256: acceptance.termsSha256,
+    privacyNoticeSha256: acceptance.privacyNoticeSha256,
+    releaseContentSha256: acceptance.releaseContentSha256,
+    acceptedAt: mysqlNow,
+    source: acceptance.source,
+  });
+  return { userId, evidenceId };
+}
+
+export async function createRegistrationWithLegalAcceptance(
+  userData: Parameters<typeof insertRegistrationWithLegalAcceptance>[1],
+  choice: unknown,
+  agentProfile?: RegistrationAgentProfile,
+) {
+  const db = await database();
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await db.transaction(
+        tx => insertRegistrationWithLegalAcceptance(tx, userData, choice, agentProfile),
+        { isolationLevel: 'repeatable read' },
+      );
+    } catch (error) {
+      const detail = error as { cause?: { errno?: unknown }; errno?: unknown };
+      // MySQL 1213 confirms a rolled-back victim transaction. Adjacent absent
+      // email keys can share a gap; retry the whole transaction with a fresh
+      // snapshot and legal-release validation. Never retry ambiguous outcomes.
+      if (attempt >= 2 || Number(detail?.cause?.errno ?? detail?.errno) !== 1213) throw error;
+    }
+  }
+}
+
+/** Administrative approval may attach an identity only to an account the
+ * applicant already created, verified and accepted Terms for. No backfill. */
+export async function findVerifiedRegistrationAccount(
+  db: Database,
+  email: string,
+  expectedUserId?: number,
+): Promise<number | undefined> {
+  const [record] = await db
+    .select({
+      accountId: schema.users.id,
+      evidence: schema.userLegalAcceptances,
+      release: schema.legalReleases,
+    })
+    .from(schema.users)
+    .innerJoin(schema.userLegalAcceptances, eq(schema.userLegalAcceptances.userId, schema.users.id))
+    .innerJoin(
+      schema.legalReleases,
+      eq(schema.legalReleases.bundleId, schema.userLegalAcceptances.bundleId),
+    )
+    .where(
+      and(
+        eq(schema.users.email, email.trim().toLowerCase()),
+        eq(schema.users.emailVerified, 1),
+        expectedUserId ? eq(schema.users.id, expectedUserId) : undefined,
+      ),
+    )
+    .orderBy(desc(schema.userLegalAcceptances.acceptedAt))
+    .limit(1);
+  if (!record) return undefined;
+  const { evidence } = record;
+  const acceptedAt = new Date(evidence.acceptedAt.replace(' ', 'T') + 'Z');
+  if (!Number.isFinite(acceptedAt.getTime()) || acceptedAt.getTime() > Date.now()) return undefined;
+  const result = validateRegistrationLegalAcceptance(
+    { bundleId: evidence.bundleId, termsAccepted: true },
+    releaseFromRow(record.release),
+    acceptedAt,
+  );
+  if (
+    !result.ok ||
+    result.acceptance.termsSha256 !== evidence.termsSha256 ||
+    result.acceptance.privacyNoticeSha256 !== evidence.privacyNoticeSha256 ||
+    result.acceptance.releaseContentSha256 !== evidence.releaseContentSha256
+  )
+    return undefined;
+  return record.accountId;
+}

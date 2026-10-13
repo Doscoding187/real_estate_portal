@@ -27,7 +27,16 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(221);
+    expect(plan.applicationTables).toHaveLength(224);
+    expect(
+      plan.statementsByCredential.runtime.filter(statement =>
+        /legal_releases|legal_active_release|user_legal_acceptances/.test(statement),
+      ),
+    ).toEqual([
+      "GRANT SELECT ON `listify_test`.`legal_active_release` TO 'listify_ci_app'@'%'",
+      "GRANT SELECT ON `listify_test`.`legal_releases` TO 'listify_ci_app'@'%'",
+      "GRANT SELECT, INSERT ON `listify_test`.`user_legal_acceptances` TO 'listify_ci_app'@'%'",
+    ]);
     expect(plan.statementsByCredential.runtime.every(statement => !statement.includes('.*'))).toBe(
       true,
     );

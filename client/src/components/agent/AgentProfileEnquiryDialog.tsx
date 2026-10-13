@@ -156,8 +156,8 @@ export function AgentProfileEnquiryDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-              Property Listify has recorded your enquiry against {agentName}&rsquo;s public
-              profile, so the agent can continue the conversation in their workspace.
+              Property Listify has recorded your enquiry against {agentName}&rsquo;s public profile,
+              so the agent can continue the conversation in their workspace.
             </div>
             <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
               Done
@@ -261,7 +261,7 @@ export function AgentProfileEnquiryDialog({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Privacy Policy
+                    Privacy Notice
                   </a>
                   .
                 </Label>

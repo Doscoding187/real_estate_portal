@@ -349,6 +349,11 @@
     "test:watch": "vitest",
     "type-check": "pnpm run check",
     "typecheck": "tsc --noEmit --incremental false -p .",
-    "typecheck:count": "tsc --noEmit --incremental false -p . || true"
+    "typecheck:count": "tsc --noEmit --incremental false -p . || true",
+    "db:legal:release:plan": "tsx scripts/databaseAuthorityCli.ts legal-release:plan",
+    "db:legal:release:apply": "tsx scripts/databaseAuthorityCli.ts legal-release:apply",
+    "db:legal:release:verify": "tsx scripts/databaseAuthorityCli.ts legal-release:verify",
+    "db:legal:release:ack": "tsx scripts/databaseAuthorityCli.ts worktree:ack --operation=legal-release-apply --credential=migration",
+    "db:legal:release:prepare": "tsx scripts/databaseAuthorityCli.ts legal-release:prepare"
   }
 }

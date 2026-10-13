@@ -119,5 +119,13 @@
   "canonicalPlaceReleasePreviewPrepareCommand": "db:places:release-preview:prepare",
   "canonicalPlaceReleasePreviewVerifyCommand": "db:places:release-preview:verify",
   "canonicalPlaceReleaseInspection": "server/_core/databaseAuthority/dataAdapters/placeReleaseInspection.ts",
-  "canonicalPlaceReleaseInspectionCommand": "db:release:reference:inspect -- --adapter=places"
+  "canonicalPlaceReleaseInspectionCommand": "db:release:reference:inspect -- --adapter=places",
+  "legalCopyReleaseAuthority": "server/_core/databaseAuthority/legalReleaseInstallation.ts",
+  "legalCopyReleaseCommands": [
+    "db:legal:release:prepare",
+    "db:legal:release:plan",
+    "db:legal:release:ack",
+    "db:legal:release:apply",
+    "db:legal:release:verify"
+  ]
 }

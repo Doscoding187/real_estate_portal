@@ -83,6 +83,9 @@ const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'release-reference-plan',
   'release-reference-apply',
   'release-reference-verify',
+  'legal-release-plan',
+  'legal-release-apply',
+  'legal-release-verify',
 ];
 
 async function selectedDatabase(connection: {

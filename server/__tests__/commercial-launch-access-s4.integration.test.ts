@@ -33,11 +33,11 @@ import {
 } from '../services/planAccessService';
 import {
   getAdminFinanceQueue,
-  requestPaidLaunchAccessInvoice,
+  requestPaidLaunchAccessInvoice as requestPaidInvoiceRuntime,
   requestAgencyCancellationAtPeriodEnd,
   restoreAgencySubscription,
   reviewManualPayment,
-  startAgencyManualCheckout,
+  startAgencyManualCheckout as startAgencyCheckoutRuntime,
   submitAgencyPaymentProof,
   submitPaidLaunchAccessPaymentProof,
   updateSubscriptionLifecycle,
@@ -47,6 +47,48 @@ import {
   deleteDeveloperTestContext,
   type DeveloperTestContext,
 } from '../test-utils/developerTestContext';
+
+import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
+import { getConfiguredLaunchFeeMinor } from '../services/commercialTerm';
+
+let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>>;
+async function purchaseChoice(role: string, planId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Missing isolated test database');
+  const name =
+    role === 'agency_admin'
+      ? 'agency_launch_access'
+      : role === 'property_developer'
+        ? 'developer_launch_access'
+        : 'agent_launch_access';
+  const [plan] = await db
+    .select()
+    .from(plans)
+    .where(planId ? eq(plans.id, planId) : eq(plans.name, name))
+    .limit(1);
+  return {
+    ...legalFixture.choice,
+    quote: {
+      planId: Number(plan?.id || planId || 1),
+      amountDue: plan ? getConfiguredLaunchFeeMinor(plan) || 1 : 1,
+      currency: 'ZAR' as const,
+    },
+  };
+}
+async function requestPaidLaunchAccessInvoice(
+  input: Parameters<typeof requestPaidInvoiceRuntime>[0],
+) {
+  return requestPaidInvoiceRuntime({
+    ...input,
+    legalAcceptance: await purchaseChoice(input.user.role || '', input.planId),
+  });
+}
+async function startAgencyManualCheckout(input: Parameters<typeof startAgencyCheckoutRuntime>[0]) {
+  return startAgencyCheckoutRuntime({
+    ...input,
+    legalAcceptance: await purchaseChoice('agency_admin', input.planId),
+  });
+}
 
 const proofStorageObjects = vi.hoisted(() => new Map<string, Uint8Array>());
 const b03BillingRouter = router({ billing: billingRouter });
@@ -582,7 +624,10 @@ async function cleanup() {
 }
 
 describeWithDb('S4 paid Launch Access disposable runtime', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
+    const fixtureDb = await getDb();
+    if (!fixtureDb) throw new Error('Missing isolated test database');
+    legalFixture = await installSyntheticLegalRelease();
     rememberEnvironment('NODE_ENV', 'production');
     rememberEnvironment('APP_ENV', 'production');
     rememberEnvironment(
@@ -599,7 +644,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     );
     rememberEnvironment('BILLING_PROOF_STORAGE_ADAPTER', 's3');
     rememberEnvironment('BILLING_PROOF_S3_BUCKET', `b03-proof-test-${process.pid}`);
-    rememberEnvironment('BILLING_PROOF_S3_REGION', 'us-east-1');
+    rememberEnvironment('BILLING_PROOF_S3_REGION', 'af-south-1');
     rememberEnvironment('BILLING_PROOF_AWS_ACCESS_KEY_ID', `b03-test-access-${process.pid}`);
     rememberEnvironment('BILLING_PROOF_AWS_SECRET_ACCESS_KEY', `b03-test-secret-${process.pid}`);
     rememberEnvironment('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');
@@ -632,6 +677,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
 
   afterAll(async () => {
     await cleanup();
+    await legalFixture?.cleanup();
     proofStorageObjects.clear();
     for (const [key, value] of Object.entries(originalEnvironment)) {
       if (value === undefined) delete process.env[key];
@@ -1032,6 +1078,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       await expect(
         agencyCaller.billing.requestLaunchAccessInvoice({
           planId: agentPlan.id,
+          legalAcceptance: await purchaseChoice('agent', agentPlan.id),
           productKey: 'agency_launch_access',
         } as any),
       ).rejects.toMatchObject({ code: 'NOT_FOUND' });
@@ -1717,8 +1764,14 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
       }
       const requested =
         owner.ownerType === 'developer'
-          ? await caller.billing.requestDeveloperLaunchAccessInvoice()
-          : await caller.billing.requestLaunchAccessInvoice();
+          ? await caller.billing.requestDeveloperLaunchAccessInvoice({
+              legalAcceptance: await purchaseChoice('property_developer'),
+            })
+          : await caller.billing.requestLaunchAccessInvoice({
+              legalAcceptance: await purchaseChoice(
+                owner.ownerType === 'agency' ? 'agency_admin' : 'agent',
+              ),
+            });
       expect(requested).toMatchObject({ ownerType: owner.ownerType, ownerId: owner.ownerId });
       if (owner.ownerType === 'agency') {
         for (const route of ['startManualEftCheckout', 'createCheckoutSession'] as const) {
@@ -1731,7 +1784,11 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
             } as any),
           ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
           await expect(
-            caller.billing[route]({ planId: requested.invoice.planId!, billingCycle: 'monthly' }),
+            caller.billing[route]({
+              planId: requested.invoice.planId!,
+              billingCycle: 'monthly',
+              legalAcceptance: await purchaseChoice('agency_admin', requested.invoice.planId!),
+            }),
           ).resolves.toMatchObject({ invoice: { id: requested.invoice.id } });
         }
       }

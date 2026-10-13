@@ -1,0 +1,132 @@
+[
+  {
+    "name": "sars-record-keeping",
+    "url": "https://www.sars.gov.za/client-segments/record-keeping/",
+    "resolvedUrl": "https://www.sars.gov.za/client-segments/record-keeping/",
+    "retrievedAt": "2026-10-13T09:52:24.314595+00:00",
+    "sha256": "07bcf0f57f35d58207f9ba426bbce44f03a392e7ff498698a018f62eba28d8dc",
+    "bytes": 294981,
+    "retainedFile": "sars-record-keeping.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "sars-retention-policy",
+    "url": "https://www.sars.gov.za/wp-content/uploads/Ops/Policies/GEN-GEN-23-POL02-Manage-taxpayer-record-retention-authorisation-External-Policy.pdf",
+    "resolvedUrl": "https://www.sars.gov.za/wp-content/uploads/Ops/Policies/GEN-GEN-23-POL02-Manage-taxpayer-record-retention-authorisation-External-Policy.pdf",
+    "retrievedAt": "2026-10-13T09:52:25.264716+00:00",
+    "sha256": "9f15cdb269f8f4691a0f6ac47ecf2663f701113ca6b5f0108ed3895d426cc4de",
+    "bytes": 203580,
+    "retainedFile": "sars-retention-policy.pdf",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "sars-efr001",
+    "url": "https://www.sars.gov.za/wp-content/uploads/Ops/Forms/EFR001-Electronic-Record-Keeping-Declaration-External-Form.pdf",
+    "resolvedUrl": "https://www.sars.gov.za/wp-content/uploads/Ops/Forms/EFR001-Electronic-Record-Keeping-Declaration-External-Form.pdf",
+    "retrievedAt": "2026-10-13T09:52:27.072568+00:00",
+    "sha256": "1fd01dd01a430b9b71c8c597d35f4a7b9383f962bdff6c960bd1fbc1350ac66a",
+    "bytes": 382031,
+    "retainedFile": "sars-efr001.pdf",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "companies-act",
+    "url": "https://www.justice.gov.za/legislation/acts/2008-071.pdf",
+    "resolvedUrl": "https://www.justice.gov.za/legislation/acts/2008-071.pdf",
+    "retrievedAt": "2026-10-13T09:52:52.177726+00:00",
+    "sha256": "c53ca598929d36773a7c76632339512ee01f618bbd7ee6ed01cb874f055626fe",
+    "bytes": 880673,
+    "retainedFile": "companies-act.pdf",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "popia",
+    "url": "https://www.treasury.gov.za/POPIA/POPI%20Act%204%20of%202013.pdf",
+    "resolvedUrl": "https://www.treasury.gov.za/POPIA/POPI%20Act%204%20of%202013.pdf",
+    "retrievedAt": "2026-10-13T09:52:17.517935+00:00",
+    "sha256": "f8a3f29471a2a20c92bdefdcd146ca3dee16be6782a0d6a863256a05bbb1df7e",
+    "bytes": 263566,
+    "retainedFile": "popia.pdf",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "aws-service-terms",
+    "url": "https://aws.amazon.com/service-terms/",
+    "resolvedUrl": "https://aws.amazon.com/service-terms/",
+    "retrievedAt": "2026-10-13T09:52:31.017245+00:00",
+    "sha256": "f5d665630e2e8266b9b8766028311d26f24f9b9808aa02e5c901261ffc96bb59",
+    "bytes": 1035117,
+    "retainedFile": "aws-service-terms.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "aws-dpa",
+    "url": "https://d1.awsstatic.com/legal/aws-gdpr/aws-gdpr-dpa-online.pdf",
+    "resolvedUrl": "https://d1.awsstatic.com/legal/aws-gdpr/aws-gdpr-dpa-online.pdf",
+    "retrievedAt": "2026-10-13T09:52:19.875420+00:00",
+    "sha256": "95930ebb72ed92549a6411c75797c5d79e632e8ff905fb14d710de5cf58f2d6d",
+    "bytes": 188247,
+    "retainedFile": "aws-dpa.pdf",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "railway-dpa",
+    "url": "https://railway.com/legal/dpa",
+    "resolvedUrl": "https://railway.com/legal/dpa",
+    "retrievedAt": "2026-10-13T09:52:21.460957+00:00",
+    "sha256": "c854c803619b6b6183c1f8a885b4d9f73b87e78de981e132d0dd8b7c673201df",
+    "bytes": 167826,
+    "retainedFile": "railway-dpa.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "resend-dpa",
+    "url": "https://resend.com/legal/dpa",
+    "resolvedUrl": "https://resend.com/legal/dpa",
+    "retrievedAt": "2026-10-13T09:52:34.032803+00:00",
+    "sha256": "503ffd9a86cec3f7bacf0ccf8a302487492c551da1de3f3cee1a5fdbe00db32c",
+    "bytes": 270808,
+    "retainedFile": "resend-dpa.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "resend-data-handling",
+    "url": "https://resend.com/security/gdpr",
+    "resolvedUrl": "https://resend.com/security/gdpr",
+    "retrievedAt": "2026-10-13T09:52:37.233581+00:00",
+    "sha256": "267408dbb53b8ce4bdf30e7e245155c58e587d85d08488764a9960dbf9a8b79a",
+    "bytes": 189260,
+    "retainedFile": "resend-data-handling.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "vercel-dpa",
+    "url": "https://vercel.com/legal/dpa",
+    "resolvedUrl": "https://vercel.com/legal/dpa",
+    "retrievedAt": "2026-10-13T09:52:49.426713+00:00",
+    "sha256": "8243d460b33e2351e5da866b81c148bb72b9f20d65ff9d0c072cac0c28b365d2",
+    "bytes": 733511,
+    "retainedFile": "vercel-dpa.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "vercel-terms",
+    "url": "https://vercel.com/legal/terms",
+    "resolvedUrl": "https://vercel.com/legal/terms",
+    "retrievedAt": "2026-10-13T09:52:45.832324+00:00",
+    "sha256": "6483a11f7bdf3c8b706699a94290fb0678fc064ee97afd8a6f720efcdcdd5339",
+    "bytes": 793158,
+    "retainedFile": "vercel-terms.html",
+    "status": "retained_public_source"
+  },
+  {
+    "name": "microsoft-dpa-index",
+    "url": "https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA?lang=1",
+    "resolvedUrl": "https://www.microsoft.com/licensing/docs/view/Microsoft-Products-and-Services-Data-Protection-Addendum-DPA?lang=1",
+    "retrievedAt": "2026-10-13T09:52:35.809077+00:00",
+    "sha256": "1e3a4d5925064ac44e405e196d45adfe142d128988565ecc4df881d924884516",
+    "bytes": 138993,
+    "retainedFile": "microsoft-dpa-index.html",
+    "status": "retained_public_source"
+  }
+]

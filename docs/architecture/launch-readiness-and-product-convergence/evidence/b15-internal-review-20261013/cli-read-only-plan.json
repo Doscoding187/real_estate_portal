@@ -1,0 +1,20 @@
+{
+  "operation": "legal-release-plan",
+  "operationApprovalReference": null,
+  "operationApprovalActor": null,
+  "state": "prepared_not_installed",
+  "planDigest": "12a5e4664aa2b3370a86ac864071be6ad32887ab20b97f31ae1a6e15c4115359",
+  "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+  "sourceHead": "ebf5653d43bcb429ad8ecc1b0dd40d26d424ff71",
+  "manifestDigest": "7c5a7c8f514ea9be21ec668a9953a7de428ecf5719b746876ef64aae78b0dc9c",
+  "expectedHead": "0114_user_legal_acceptances.sql",
+  "bundleId": "synthetic-b15-cli-plan-only",
+  "contentSha256": "7167ee03cbb9c95b8498320802c130207068d064af268aeecb5f2c154a60d5f2",
+  "approvalReference": "SYNTHETIC-FINAL",
+  "activeBundleId": "synthetic-b15-sql-four",
+  "effectiveAt": "2026-10-13T10:27:50.624Z",
+  "validUntil": "2026-10-13T10:37:50.624Z",
+  "acceptanceWrites": false,
+  "schemaWrites": false,
+  "grantWrites": false
+}

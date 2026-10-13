@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation, useSearch } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,29 +26,17 @@ import {
   resolveManagerInvitePresentationState,
 } from './managerInviteOnboarding';
 
-const onboardingSchema = z
-  .object({
-    fullName: z.string().trim().min(2, 'Full name is required'),
-    phone: z.string().trim().min(7, 'Contact number is required'),
-    currentRole: z.string().trim().optional(),
-    profileImageUrl: z.string().trim().url('Use a valid image URL').optional().or(z.literal('')),
-    password: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[a-z]/, 'Must include a lowercase letter')
-      .regex(/[A-Z]/, 'Must include an uppercase letter')
-      .regex(/\d/, 'Must include a number')
-      .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?/]/, 'Must include a special character'),
-    confirmPassword: z.string(),
-  })
-  .refine(data => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  });
+const onboardingSchema = z.object({
+  fullName: z.string().trim().min(2, 'Full name is required'),
+  phone: z.string().trim().min(7, 'Contact number is required'),
+  currentRole: z.string().trim().optional(),
+  profileImageUrl: z.string().trim().url('Use a valid image URL').optional().or(z.literal('')),
+});
 
 type OnboardingFormData = z.infer<typeof onboardingSchema>;
 
 export default function ManagerInviteOnboardingPage() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const inviteParams = useMemo(() => parseDistributionManagerInviteParams(search), [search]);
@@ -80,8 +69,6 @@ export default function ManagerInviteOnboardingPage() {
       phone: inviteQuery.data?.phone || '',
       currentRole: inviteQuery.data?.currentRole || '',
       profileImageUrl: '',
-      password: '',
-      confirmPassword: '',
     },
   });
 
@@ -92,8 +79,6 @@ export default function ManagerInviteOnboardingPage() {
       phone: inviteQuery.data.phone || '',
       currentRole: inviteQuery.data.currentRole || '',
       profileImageUrl: '',
-      password: '',
-      confirmPassword: '',
     });
   }, [inviteQuery.data, form]);
 
@@ -121,7 +106,6 @@ export default function ManagerInviteOnboardingPage() {
       phone: values.phone.trim(),
       currentRole: values.currentRole?.trim() || undefined,
       profileImageUrl: values.profileImageUrl?.trim() || undefined,
-      password: values.password,
     });
   };
 
@@ -137,8 +121,8 @@ export default function ManagerInviteOnboardingPage() {
           <CardContent className="space-y-4">
             {inviteParams.recovered ? (
               <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                We recovered your invite details from a malformed link and loaded the current onboarding
-                invite.
+                We recovered your invite details from a malformed link and loaded the current
+                onboarding invite.
               </div>
             ) : null}
             {presentationState === 'loading' ? (
@@ -242,35 +226,22 @@ export default function ManagerInviteOnboardingPage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="Create password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <p className="text-sm text-slate-600">
+                    First create, verify and sign in to an account using the email on this
+                    invitation, and accept the released Terms during registration. Then return here
+                    to accept the manager invitation.{' '}
+                    <a
+                      href="/login"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      Open account registration or sign in
+                    </a>
+                    .
+                  </p>
 
-                  <FormField
-                    control={form.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input type="password" placeholder="Confirm password" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <Button type="submit" disabled={completeMutation.isPending}>
+                  <Button type="submit" disabled={completeMutation.isPending || !user}>
                     {completeMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

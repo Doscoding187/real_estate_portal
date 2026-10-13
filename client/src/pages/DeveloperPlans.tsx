@@ -41,6 +41,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { usePaidLegalAcceptance } from '@/hooks/usePaidLegalAcceptance';
+import { PaidCommitmentDisclosure } from '@/components/commercial/PaidCommitmentDisclosure';
 
 const PLAN_STYLES = [
   {
@@ -77,7 +79,22 @@ function ProductIcon({ index, className }: { index: number; className?: string }
 export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?: boolean }) {
   const [, setLocation] = useLocation();
   const [selectedProduct, setSelectedProduct] = useState<CommercialProduct | null>(null);
-  const { data: catalog, isLoading, isError } = useCommercialCatalog('developer');
+  const legal = usePaidLegalAcceptance(
+    !salesPaused && selectedProduct ? JSON.stringify(selectedProduct) : null,
+    selectedProduct?.source?.planId && selectedProduct.pricing.basePrice
+      ? {
+          planId: selectedProduct.source.planId,
+          amountDue: selectedProduct.pricing.basePrice.amountMinor,
+          currency: selectedProduct.pricing.basePrice.currency,
+        }
+      : undefined,
+  );
+  const {
+    data: catalog,
+    isLoading,
+    isError,
+    refetch: refetchCatalog,
+  } = useCommercialCatalog('developer');
   const { data: subscription } = trpc.developer.getSubscription.useQuery(undefined, {
     staleTime: 60_000,
   });
@@ -90,6 +107,9 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
       setLocation(`/developer/subscription?invoiceId=${result.invoice.id}`);
     },
     onError: error => {
+      legal.reload();
+      void refetchCatalog();
+      setSelectedProduct(null);
       toast.error(error.message || 'Launch Access invoice could not be issued');
     },
   });
@@ -108,13 +128,13 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
   };
 
   const continueWithProduct = () => {
-    if (!selectedProduct || salesPaused) return;
+    if (!selectedProduct || salesPaused || !legal.choice) return;
     if (
       selectedProduct.audience === 'developer' &&
       selectedProduct.term.kind === 'paid_launch_access' &&
       selectedProduct.action.mode === 'request_invoice'
     ) {
-      requestLaunchInvoice.mutate();
+      requestLaunchInvoice.mutate({ legalAcceptance: legal.choice });
       return;
     }
     const action = getCommercialActionPresentation(selectedProduct);
@@ -294,9 +314,7 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
                         disabled={isCurrentPlan || action.disabled}
                         onClick={() => handleSelectProduct(product)}
                       >
-                        {isCurrentPlan
-                          ? 'Current Plan'
-                          : action.label}
+                        {isCurrentPlan ? 'Current Plan' : action.label}
                         {!isCurrentPlan && <ArrowUpRight className="ml-2 h-4 w-4" />}
                       </Button>
                     </div>
@@ -328,7 +346,7 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
         open={Boolean(selectedProduct)}
         onOpenChange={open => !open && setSelectedProduct(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Continue with {selectedProduct?.displayName}</DialogTitle>
             <DialogDescription>
@@ -343,23 +361,27 @@ export function CommercialDeveloperPlans({ salesPaused = false }: { salesPaused?
                 {getCommercialPricePresentation(selectedProduct).period || ''}
               </p>
               <p>
-                Developer Launch Access is once-off for 90 days and does not renew automatically.
-                An invoice is reusable while payment remains pending; selecting it never grants
+                Developer Launch Access is once-off for 90 days and does not renew automatically. An
+                invoice is reusable while payment remains pending; selecting it never grants
                 publication or paid access.
               </p>
               <p>No promotion is shown unless it is configured by the commercial catalog.</p>
             </div>
           )}
+          {!salesPaused && <PaidCommitmentDisclosure legal={legal} />}
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending || salesPaused}>
+            <Button
+              onClick={continueWithProduct}
+              disabled={requestLaunchInvoice.isPending || salesPaused || !legal.choice}
+            >
               {salesPaused
                 ? 'New sales paused'
                 : requestLaunchInvoice.isPending
-                ? 'Requesting invoice…'
-                : 'Continue'}
+                  ? 'Requesting invoice…'
+                  : 'Continue'}
             </Button>
           </DialogFooter>
         </DialogContent>

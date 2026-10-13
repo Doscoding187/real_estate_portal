@@ -330,7 +330,7 @@ async function messageForDelivery(db: Database, row: Delivery) {
     const [invoice] = await db.select({ name: plans.name, ownerType: billingInvoices.ownerType,
       ownerId: billingInvoices.ownerId, invoiceNumber: billingInvoices.invoiceNumber,
       paymentReference: billingInvoices.paymentReference, amountDue: billingInvoices.amountDue,
-      currency: billingInvoices.currency }).from(billingInvoices)
+      currency: billingInvoices.currency, metadata: billingInvoices.metadata }).from(billingInvoices)
       .innerJoin(plans, eq(billingInvoices.planId, plans.id))
       .where(eq(billingInvoices.id, event.invoiceId)).limit(1);
     if (!invoice || invoice.ownerType !== event.ownerType || invoice.ownerId !== event.ownerId ||
@@ -340,6 +340,8 @@ async function messageForDelivery(db: Database, row: Delivery) {
       ...(row.purpose === 'invoice_issued' ? { invoice: {
         invoiceNumber: invoice.invoiceNumber, paymentReference: invoice.paymentReference,
         amountDue: invoice.amountDue, currency: invoice.currency,
+        legalBundleId: typeof invoice.metadata?.legal_bundle_id === 'string'
+          ? invoice.metadata.legal_bundle_id : undefined,
       } } : {}) });
   } else {
     const [notice] = await db.select().from(notifications)

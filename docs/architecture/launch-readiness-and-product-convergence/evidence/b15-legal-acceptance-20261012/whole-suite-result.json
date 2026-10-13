@@ -1,0 +1,37 @@
+{
+  "command": "SKIP_DB_INIT=1 DATABASE_URL= pnpm test:ci",
+  "exitCode": 1,
+  "scope": "Database-free whole suite; not configured isolated-database CI proof",
+  "testFiles": {
+    "passed": 684,
+    "failed": 3,
+    "skipped": 66,
+    "total": 753
+  },
+  "tests": {
+    "passed": 5194,
+    "failed": 23,
+    "skipped": 333,
+    "total": 5550
+  },
+  "rawLogSha256": "a1c8b45e376a1a9e0c256f5e505de75789e348f23539e52783cbdf54c147abe3",
+  "baseline": "Unchanged c475ed724, clean detached temporary worktrees, identical environment flags; removed after comparison",
+  "baselineFailures": [
+    {
+      "file": "server/__tests__/contract.place-executable-foundation.test.ts",
+      "count": 19,
+      "reason": "Missing admitted Place fixtures / mock query methods"
+    },
+    {
+      "file": "server/__tests__/contract.canonical-place-public-search.test.ts",
+      "count": 1,
+      "reason": "Required admitted Place unavailable"
+    },
+    {
+      "file": "server/_core/hostedDatabaseReadinessMonitor.pipeline.test.ts",
+      "count": 3,
+      "reason": "5-second readiness-test timeouts"
+    }
+  ],
+  "verdict": "All 23 observed failures reproduced on unchanged baseline; configured CI remains required before integration"
+}

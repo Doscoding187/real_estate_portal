@@ -1,0 +1,73 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+import { resolveDatabaseAuthority } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/databaseAuthority/context';
+import { authorizeDatabaseOperation, expectedDatabaseAcknowledgement } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/databaseAuthority/authorization';
+import { createAuthoritySqlConnection, type AuthoritySqlConnection } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/databaseAuthority/connectionAuthority';
+import { installLegalRelease } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/databaseAuthority/legalReleaseInstallation';
+import { assertOwnedDisposableTarget } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/_core/databaseAuthority/lifecycle';
+import { loadAndValidateMigrationManifest } from '/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-legal-acceptance-authority-20261012/server/migrations/migrationManifest';
+
+async function main() {
+ const opened: AuthoritySqlConnection[] = [], checks: string[] = [];
+ const manifest = loadAndValidateMigrationManifest();
+ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
+ const open = async (operation: 'legal-release-plan'|'legal-release-apply'|'legal-release-verify') => {
+  const authority = resolveDatabaseAuthority({ operation, credentialClass: 'local-owner' });
+  assertOwnedDisposableTarget(authority);
+  assert.equal(authority.context.targetFingerprintHash, '3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4');
+  const decision = authorizeDatabaseOperation(authority, { acknowledgement: expectedDatabaseAcknowledgement(authority.context) });
+  const connection = await createAuthoritySqlConnection(authority, decision); opened.push(connection);
+  return { authority, decision, connection };
+ };
+ try {
+  const p = await open('legal-release-plan'), a = await open('legal-release-apply'), v = await open('legal-release-verify');
+  const time = new Date(Date.now()-1000).toISOString();
+  const packet = (id: string, prior: string|null, text='Synthetic SQL Terms only.\n') => ({
+   formatVersion: 1, sourceHead: p.authority.context.repository.head, manifestDigest: manifest.manifestDigest,
+   expectedPreviousBundleId: prior, validUntil: new Date(Date.now()+10*60_000).toISOString(), plannedEffectiveAt: time,
+   terms: text, privacy: 'Synthetic SQL Privacy only.\n',
+   candidate: { formatVersion:1, bundleId:id, termsVersion:'test-terms', privacyVersion:'test-privacy', effectiveAt:null,
+    sourceBusinessApproval:'SYNTHETIC-BUSINESS', finalPrivacyApproval:'SYNTHETIC-FINAL',
+    documents:{'terms.txt':{file:'terms.txt',sha256:sha(text)},'privacy.txt':{file:'privacy.txt',sha256:sha('Synthetic SQL Privacy only.\n')}} },
+   approval:{ reference:'SYNTHETIC-FINAL', actor:'Synthetic reviewer', recordedAt:'2026-10-12T00:00:00Z', answer:'Approve finalized Privacy wording', sourceBusinessApproval:'SYNTHETIC-BUSINESS',
+    document:{file:'privacy.txt',version:'test-privacy',sha256:sha('Synthetic SQL Privacy only.\n')},termsAndPayment:{versions:{terms:'test-terms'},termsSha256:sha(text)}}
+  });
+  const first=packet('synthetic-b15-sql-one',null);
+  const plan=await installLegalRelease({...p,packet:first});
+  assert.equal(plan.state,'prepared_not_installed'); checks.push('accepted head, physical shape and InnoDB read-only plan');
+  await assert.rejects(installLegalRelease({...a,packet:first}),/plan digest/); checks.push('missing plan digest denied');
+  const installed=await installLegalRelease({...a,packet:first,expectedPlanDigest:plan.planDigest}); assert.equal(installed.state,'installed'); checks.push('immutable bundle and pointer committed atomically');
+  assert.equal((await installLegalRelease({...v,packet:first})).state,'verified'); checks.push('independent connection exact row/pointer verification');
+  assert.equal((await installLegalRelease({...a,packet:first,expectedPlanDigest:plan.planDigest})).state,'already_installed'); checks.push('exact replay does not insert duplicate copy');
+  await assert.rejects(installLegalRelease({...p,packet:{...first,sourceHead:'a'.repeat(40)}}),/source head/); checks.push('wrong source commit denied');
+  await assert.rejects(installLegalRelease({...p,packet:{...first,manifestDigest:'a'.repeat(64)}}),/manifest digest/); checks.push('wrong manifest denied');
+  const collision={...packet(first.candidate.bundleId,null,'Different synthetic text.\n'), validUntil:first.validUntil};
+  await assert.rejects(installLegalRelease({...p,packet:collision}),/collision/); checks.push('same ID changed copy denied');
+  const second=packet('synthetic-b15-sql-two',first.candidate.bundleId);
+  const secondPlan=await installLegalRelease({...p,packet:second});
+  await installLegalRelease({...a,packet:second,expectedPlanDigest:secondPlan.planDigest});
+  await assert.rejects(installLegalRelease({...a,packet:first,expectedPlanDigest:plan.planDigest}),/prior pointer changed/); checks.push('changed prior pointer blocks stale replay');
+  const third=packet('synthetic-b15-sql-three',second.candidate.bundleId);
+  const thirdPlan=await installLegalRelease({...p,packet:third});
+  const held=await open('legal-release-verify');
+  await held.connection.query('START TRANSACTION');
+  await held.connection.execute('SELECT bundle_id FROM legal_active_release WHERE purpose = ? FOR UPDATE',['account_registration']);
+  let finished=false;
+  const waiting=installLegalRelease({...a,packet:third,expectedPlanDigest:thirdPlan.planDigest}).then(result=>{finished=true;return result;});
+  await new Promise(resolve=>setTimeout(resolve,150)); assert.equal(finished,false);
+  const snapshot:any=await v.connection.execute('SELECT bundle_id FROM legal_active_release WHERE purpose = ?',['account_registration']); assert.equal(snapshot[0][0].bundle_id,second.candidate.bundleId);
+  await held.connection.query('COMMIT'); assert.equal((await waiting).state,'installed'); checks.push('registration-style pointer lock serializes release switch');
+  const fourth=packet('synthetic-b15-sql-four',third.candidate.bundleId);
+  const fourthPlan=await installLegalRelease({...p,packet:fourth});
+  const lostAck:AuthoritySqlConnection={...a.connection, query:async(sql,values)=>{const result=await a.connection.query(sql,values);if(sql==='COMMIT')throw new Error('Injected lost commit response after actual commit');return result;}};
+  await assert.rejects(installLegalRelease({...a,connection:lostAck,packet:fourth,expectedPlanDigest:fourthPlan.planDigest}),e=>Boolean((e as any).unsafeToReplay));
+  assert.equal((await installLegalRelease({...v,packet:fourth})).state,'verified'); checks.push('actual commit with injected lost acknowledgement requires read-only verification');
+  await assert.rejects(installLegalRelease({...a,packet:fourth,expectedPlanDigest:fourthPlan.planDigest,now:()=>new Date('2030-01-01T00:00:00Z')}),/window/); checks.push('expired activation denied');
+  const rows:any=await v.connection.execute('SELECT COUNT(*) AS total FROM legal_releases'); assert.equal(Number(rows[0][0].total),4);
+  const accepts:any=await v.connection.execute('SELECT COUNT(*) AS total FROM user_legal_acceptances'); assert.equal(Number(accepts[0][0].total),0); checks.push('four historical rows preserved; zero fabricated user acceptances');
+  const receipt={formatVersion:1,recordedAt:new Date().toISOString(),targetFingerprintHash:p.authority.context.targetFingerprintHash,targetClass:p.authority.context.targetClass,expectedHead:manifest.document.expectedHead,manifestDigest:manifest.manifestDigest,checks,passed:checks.length,syntheticOnly:true,companyCopyInstalled:false,protectedConnection:false,productionInstallation:false,disposal:'pending canonical exact-target disposal'};
+  writeFileSync('/tmp/property-listify-b15-installer-sql-receipt.json',JSON.stringify(receipt,null,2)+'\n'); console.log(JSON.stringify(receipt,null,2));
+ } finally { for(const c of opened.reverse())await c.end(); }
+}
+main().catch(e=>{console.error(e.message);process.exitCode=1;});

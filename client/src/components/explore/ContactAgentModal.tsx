@@ -201,7 +201,16 @@ export function ContactAgentModal({ video, onClose }: ContactAgentModalProps) {
           </Button>
 
           <p className="text-xs text-muted-foreground text-center">
-            The agent will receive your inquiry and can respond directly.
+            The agent will receive your inquiry and can respond directly. See our{' '}
+            <a
+              href="/legal/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Privacy Notice
+            </a>{' '}
+            for how Property Listify handles your information.
           </p>
         </div>
       </DialogContent>
