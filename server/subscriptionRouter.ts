@@ -371,41 +371,11 @@ export const subscriptionRouter = router({
         offset: z.number().default(0),
       }),
     )
-    .query(async ({ input }) => {
-      if (input.category === 'agent' || input.category === 'developer') {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message: 'Legacy agent and developer subscription administration is retired.',
-        });
-      }
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable' });
-
-      let query = `
-        SELECT us.*, sp.name as plan_name, sp.category, u.email, u.name as user_name
-        FROM user_subscriptions us
-        JOIN subscription_plans sp ON us.plan_id = sp.plan_id
-        JOIN users u ON us.user_id = u.id
-        WHERE sp.category NOT IN ('agent', 'developer')
-      `;
-      const params: any[] = [];
-
-      if (input.status) {
-        query += ' AND us.status = ?';
-        params.push(input.status);
-      }
-
-      if (input.category) {
-        query += ' AND sp.category = ?';
-        params.push(input.category);
-      }
-
-      query += ' ORDER BY us.created_at DESC LIMIT ? OFFSET ?';
-      params.push(input.limit, input.offset);
-
-      const [rows] = await db.execute(query, params);
-      return rows;
+    .query(() => {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Legacy subscription administration is retired. Use billing.admin.subscriptions.',
+      });
     }),
 
   /**

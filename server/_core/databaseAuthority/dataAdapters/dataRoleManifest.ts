@@ -1,3 +1,4 @@
+import { LOCAL_JOURNEY_VERSION, LOCAL_JOURNEY_DIGEST } from './localJourneyPreview';
 import type { DatabaseOperation } from '../types';
 import { PLACE_RELEASE_DIGEST, PLACE_RELEASE_POLICY } from './placeRelease';
 import {
@@ -157,6 +158,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['homepage-manual-preview', 'local-journey-review'],
+    },
+    {
+      key: 'demo.local-journey',
+      role: 'demo',
+      adapter: 'local-journey-preview',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/localJourneyPreview.ts',
+      version: LOCAL_JOURNEY_VERSION,
+      digest: LOCAL_JOURNEY_DIGEST,
+      prepareCommand: 'db:local-journey:prepare',
+      verifyCommand: 'db:local-journey:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['local-journey-review'],
     },
     {
       key: 'scenario.search-to-lead',

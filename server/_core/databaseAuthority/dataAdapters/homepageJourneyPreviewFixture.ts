@@ -1144,11 +1144,24 @@ async function ensureLaunchAccessSubscription(input: {
       : input.ownerType === 'agency'
         ? 'agency_id'
         : 'developer_organisation_id';
-  const accountRows = await queryRows(
+  let accountRows = await queryRows(
     input.connection,
     `SELECT id FROM billable_accounts WHERE account_kind = ? AND ${ownerColumn} = ? ORDER BY id`,
     [input.ownerType, input.ownerId],
   );
+  // A fresh preview database has no runtime-created billing accounts yet.
+  // Seed the canonical single-owner account before its sample subscription.
+  if (accountRows.length === 0) {
+    await input.connection.execute(
+      `INSERT INTO billable_accounts (account_kind, ${ownerColumn}) VALUES (?, ?)`,
+      [input.ownerType, input.ownerId],
+    );
+    accountRows = await queryRows(
+      input.connection,
+      `SELECT id FROM billable_accounts WHERE account_kind = ? AND ${ownerColumn} = ? ORDER BY id`,
+      [input.ownerType, input.ownerId],
+    );
+  }
   if (accountRows.length !== 1) {
     throw new Error(`Homepage journey preview fixture requires exactly one ${input.ownerType} billable account.`);
   }

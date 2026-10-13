@@ -17,6 +17,7 @@ import {
 import { and, desc, eq, sql } from 'drizzle-orm';
 import {
   getAdminFinanceQueue,
+  getAdminSubscriptions,
   getAgentBillingWorkspace,
   getAgencyBillingWorkspace,
   getBillingDocumentForUser,
@@ -370,6 +371,14 @@ export const billingRouter = {
   ),
 
   admin: {
+    subscriptions: superAdminProcedure
+      .input(z.object({
+        status: z.enum(['trial', 'pending_payment', 'payment_under_review', 'active', 'grace_period', 'past_due', 'suspended', 'cancelled', 'expired']).optional(),
+        limit: z.number().int().positive().max(100).default(50),
+        offset: z.number().int().min(0).default(0),
+      }))
+      .query(({ input }) => getAdminSubscriptions(input)),
+
     plans: superAdminProcedure.query(async () => {
       const db = await getDb();
       if (!db)

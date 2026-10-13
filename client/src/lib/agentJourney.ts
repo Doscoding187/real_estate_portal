@@ -90,13 +90,13 @@ export function getAgentJourneyAction(
         label: 'Complete payment',
         title: 'Complete your Launch Access payment',
         description:
-          'Your Launch Access invoice is ready. Pay by EFT and submit proof here to begin verification.',
+          'Your Launch Access invoice is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
       };
     case 'await_payment_review':
       return {
         href: '/agent/dashboard',
         label: 'Return to dashboard',
-        title: 'Your payment proof is under review',
+        title: 'Your payment notice is under review',
         description:
           'We will notify you when Launch Access is active. Your professional profile remains available while verification is in progress.',
         waiting: true,

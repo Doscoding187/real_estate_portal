@@ -29,6 +29,23 @@ export function resolveAppRuntimeEnv(env: NodeJS.ProcessEnv = process.env): AppR
   return normalizeRuntimeEnv(env.NODE_ENV) ?? 'development';
 }
 
+/** The dedicated local demo must never bind to a network interface. */
+export function resolveHttpListenHost(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.PROPERTY_LISTIFY_LOCAL_VISUAL_JOURNEY !== 'true') return '0.0.0.0';
+  if (
+    env.NODE_ENV !== 'test' ||
+    env.APP_ENV !== 'test' ||
+    !env.DATABASE_AUTHORITY_PARENT_FINGERPRINT ||
+    !env.DATABASE_AUTHORITY_CORRELATION_ID ||
+    Object.entries(env).some(([key, value]) => /^(RAILWAY|VERCEL)_/.test(key) && value)
+  ) {
+    throw new Error(
+      'The local visual journey requires an authority-wrapped, undeployed test runtime.',
+    );
+  }
+  return '127.0.0.1';
+}
+
 export function resolveTrustProxySetting(
   env: NodeJS.ProcessEnv = process.env,
 ): number | string | boolean {

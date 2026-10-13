@@ -51,6 +51,7 @@ import {
   assertDeployedTrustProxyConfiguration,
   resolveAppRuntimeEnv,
   resolveTrustProxySetting,
+  resolveHttpListenHost,
 } from './runtimeBootstrap';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
@@ -306,7 +307,7 @@ async function startServer() {
   console.log(`[Server] Starting on port ${port}`);
   console.log('----------------------------------------');
 
-  server.listen({ port, host: '0.0.0.0', signal: listenerCancellation.signal }, () => {
+  server.listen({ port, host: resolveHttpListenHost(), signal: listenerCancellation.signal }, () => {
     if (shuttingDown) return;
     console.log(`Backend running on http://localhost:${port}`);
     console.log(`tRPC endpoint: http://localhost:${port}/api/trpc`);
