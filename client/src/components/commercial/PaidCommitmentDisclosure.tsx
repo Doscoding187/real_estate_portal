@@ -30,11 +30,13 @@ export function PaidCommitmentDisclosure({
   return (
     <div className="my-4 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
       <p>
-        The displayed price is payable once by manual EFT for 90 days, with no automatic renewal.
-        Access starts after finance verifies payment. Property Listify is not VAT registered; no VAT
-        is charged. Cancellation and refund terms are in the linked Terms. For payment help,{' '}
-        <a className="underline" href="/contact">
-          contact us
+        The supplier and EFT payee is Property Listify (Pty) Ltd (registration 2026/702814/07). The
+        displayed price is payable once by manual EFT for 90 days, with no automatic renewal. Access
+        starts after finance matches received funds to the invoice and approves payment; uploading
+        proof alone does not activate access. Property Listify is not VAT registered; no VAT is
+        charged. Cancellation and refund terms are in the linked Terms. For payment help,{' '}
+        <a className="underline" href="mailto:support@propertylistifysa.co.za">
+          support@propertylistifysa.co.za
         </a>
         .
       </p>

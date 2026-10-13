@@ -1,0 +1,26 @@
+{
+  "recordFormat": 1,
+  "reference": "B15-FINAL-PRIVACY-APPROVAL-20261013-01",
+  "recordedAt": "2026-10-13T09:23:39Z",
+  "actor": "Edward (founder, user in this session)",
+  "answer": "Approve finalized Privacy wording",
+  "questionReference": "call_50b725bb5ded4b809563b9c223b9a819",
+  "document": {
+    "file": "privacy.txt",
+    "version": "privacy-2026-10-13.1",
+    "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+  },
+  "sourceBusinessApproval": "B15-FOUNDER-COPY-APPROVAL-20261013-01",
+  "termsAndPayment": {
+    "commitments": "Preserved from approved review 0.7",
+    "versions": {
+      "terms": "terms-2026-10-13.1"
+    },
+    "termsSha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72",
+    "paymentSha256": "c36e08198de60dad85b27de0cc8da3c609480bea24d782cbbe886eee76ac0611"
+  },
+  "effectiveAtPolicy": "Actual controlled release timestamp, never earlier than final approval. No public effect or automatic installation from this candidate manifest.",
+  "certificateEvidence": "B15-EXISTING-CERTIFICATE-ACCEPTANCE-20261013-01",
+  "replacementCertificateRequired": false,
+  "scope": "Exact prepared Privacy wording approved by founder. Existing Terms/payment business approval retained. No production installation, independent regulatory finding, provider/retention review waiver, hosted acceptance or paid GO inferred."
+}

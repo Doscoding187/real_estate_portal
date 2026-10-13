@@ -1,0 +1,287 @@
+{
+  "scope": "Actual local SPA rendering prepared customer copy through mocked API; preview metadata only; no installed or approved runtime bundle, database, hosted receipt or gate closure",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/terms",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/terms",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/consumer-rights",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/dispute-resolution",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/privacy",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/privacy",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/cookies",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/cookies",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/compliance",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "alias": "/legal/compliance",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "registrationChoiceUnchecked": true,
+      "submissionDisabled": true,
+      "exactBundleLink": true,
+      "pageErrors": [],
+      "blockedExternalHosts": ["fonts.googleapis.com"]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/terms",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/terms",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/consumer-rights",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/dispute-resolution",
+      "kind": "terms",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/privacy",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/privacy",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/cookies",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/cookies",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/compliance",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "alias": "/legal/compliance",
+      "kind": "privacy",
+      "renderedExactText": true,
+      "unresolvedInstructions": false,
+      "horizontalOverflow": false,
+      "printControl": true,
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "registrationChoiceUnchecked": true,
+      "submissionDisabled": true,
+      "exactBundleLink": true,
+      "pageErrors": [],
+      "blockedExternalHosts": ["fonts.googleapis.com"]
+    }
+  ]
+}

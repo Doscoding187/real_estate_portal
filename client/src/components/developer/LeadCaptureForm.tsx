@@ -232,13 +232,20 @@ export function LeadCaptureForm({
           />
           <Label htmlFor="developer-lead-consent" className="text-xs leading-5 text-gray-600">
             I agree to be contacted about this enquiry. See our{' '}
-            <a className="text-blue-700 underline" href="/legal/privacy" target="_blank" rel="noreferrer">
-              Privacy Policy
+            <a
+              className="text-blue-700 underline"
+              href="/legal/privacy"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Privacy Notice
             </a>
             .
           </Label>
         </div>
-        {consentError && <p className="text-xs text-red-600">Consent is required before submitting.</p>}
+        {consentError && (
+          <p className="text-xs text-red-600">Consent is required before submitting.</p>
+        )}
 
         <Button
           type="submit"
@@ -251,8 +258,8 @@ export function LeadCaptureForm({
 
         {/* Privacy Notice */}
         <p className="text-xs text-gray-500 text-center">
-          By submitting this form, you agree to be contacted about this property. Your information
-          will be kept confidential.
+          Property Listify records your enquiry and shares it with the authorised recipient for
+          follow-up about this property. This choice does not give optional marketing permission.
         </p>
 
         {/* Error Message */}

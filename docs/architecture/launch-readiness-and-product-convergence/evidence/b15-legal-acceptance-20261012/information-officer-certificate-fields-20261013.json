@@ -12,6 +12,14 @@
   "organisationType": "PRIVATE ORGANISATION",
   "privateOrganisationType": "PRIVATE COMPANY [ (PTY) LTD ]",
   "cipcNumber": "2026/702814/07",
-  "supplierNamingStatus": "Edward confirms Property Listify and Dos Holdings are separate companies. Property Listify (Pty) Ltd remains the supplier. Certificate name correction is a deferred founder follow-up, not a hold on offline implementation; the printed certificate name is preserved as evidence.",
-  "scope": "Registration evidence only; not full POPIA compliance or B15 acceptance; no identity number, contact payload or complete certificate included"
+  "supplierNamingStatus": "Founder explicitly accepts this existing certificate as registration evidence for Property Listify, with matching CIPC 2026/702814/07. No replacement certificate is a B15 prerequisite. Printed name PROPERTY LISTIFY t/a DOS HOLDINGS remains unchanged in the evidence; Property Listify (Pty) Ltd remains the supplier.",
+  "scope": "Registration evidence only; not full POPIA compliance or B15 acceptance; no identity number, contact payload or complete certificate included",
+  "founderAcceptance": {
+    "reference": "B15-EXISTING-CERTIFICATE-ACCEPTANCE-20261013-01",
+    "recordedAt": "2026-10-13T09:07:09Z",
+    "instruction": "lets continue we need to close this gate the we will only use the certificate thats there dont hold off for another one since it contains property lisfify lets use that",
+    "replacementCertificateRequired": false,
+    "registrationEvidenceStatus": "accepted existing inspected certificate on founder instruction",
+    "verificationScope": "PDF fields and retained file integrity; no independent authenticated portal verification"
+  }
 }

@@ -116,3 +116,13 @@ walkthrough and hosted bank/queue/mailbox/alert results remain distinct evidence
 No B14 or B15 package acceptance is claimed. B17 still needs its 24-hour hosted
 workload and the return-day sequence remains worker admission, shared journeys,
 recovery/capacity and final acceptance.
+
+## Subsequent final approval and certificate disposition
+
+[Packet 38](38-b15-existing-certificate-and-closure-checklist-2026-10-13.md)
+records explicit acceptance of the existing Information Officer certificate and
+final Privacy wording, version `privacy-2026-10-13.1`. Those decisions are
+complete; no replacement certificate or repeat copy approval is required.
+Its additional legal-route, invoice-email and local verification evidence
+continues this packet. Full B15 still requires the retained review, controlled
+release and hosted observations.

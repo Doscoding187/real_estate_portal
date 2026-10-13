@@ -47,6 +47,13 @@ describe('paid commitment', () => {
       'target',
       '_blank',
     );
+    expect(
+      screen.getByText(/The supplier and EFT payee is Property Listify \(Pty\) Ltd/),
+    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'support@propertylistifysa.co.za' })).toHaveAttribute(
+      'href',
+      'mailto:support@propertylistifysa.co.za',
+    );
     fireEvent.click(checkbox);
     fireEvent.click(screen.getByRole('button', { name: 'Request invoice' }));
     expect(submit).toHaveBeenCalledWith({

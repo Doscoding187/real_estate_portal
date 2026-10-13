@@ -24,14 +24,25 @@ export const BILLING_AUDIT_EMAIL_POLICY: Readonly<Record<string, LaunchEmailPurp
   subscription_restored: null,
 };
 
-export const LAUNCH_PRODUCT_EMAIL_TERMS: Record<PaidMvpLaunchAccessProductKey, {
-  audience: string;
-  price: string;
-  actionPath: string;
-}> = {
-  agent_launch_access: { audience: 'Independent Agent', price: 'R499', actionPath: '/agent/select-package' },
+export const LAUNCH_PRODUCT_EMAIL_TERMS: Record<
+  PaidMvpLaunchAccessProductKey,
+  {
+    audience: string;
+    price: string;
+    actionPath: string;
+  }
+> = {
+  agent_launch_access: {
+    audience: 'Independent Agent',
+    price: 'R499',
+    actionPath: '/agent/select-package',
+  },
   agency_launch_access: { audience: 'Agency', price: 'R999', actionPath: '/agency/billing' },
-  developer_launch_access: { audience: 'Developer', price: 'R1,499', actionPath: '/developer/plans' },
+  developer_launch_access: {
+    audience: 'Developer',
+    price: 'R1,499',
+    actionPath: '/developer/plans',
+  },
 };
 
 export function requiredBillingEmailPurpose(eventType: string): LaunchEmailPurpose | null {
@@ -48,27 +59,50 @@ export function renderLaunchEmail(input: {
     paymentReference: string;
     amountDue: number;
     currency: string;
+    legalBundleId?: string;
   };
 }): { subject: string; text: string; html: string } {
   const terms = LAUNCH_PRODUCT_EMAIL_TERMS[input.product];
-  const actionUrl = input.purpose === 'agency_invitation'
-    ? input.invitationUrl
-    : `${input.publicOrigin}${terms.actionPath}`;
+  const actionUrl =
+    input.purpose === 'agency_invitation'
+      ? input.invitationUrl
+      : `${input.publicOrigin}${terms.actionPath}`;
   if (!actionUrl) throw new Error('Invitation URL is required.');
-  const invoiceDetails = input.purpose === 'invoice_issued' && input.invoice
-    ? `\nInvoice: ${input.invoice.invoiceNumber}\nEFT payment reference: ${input.invoice.paymentReference}\nInvoice total: ${new Intl.NumberFormat('en-ZA', {
-      style: 'currency', currency: input.invoice.currency, maximumFractionDigits: 0,
-    }).format(input.invoice.amountDue / 100)}.`
+  const bundleQuery = input.invoice?.legalBundleId
+    ? `?bundle=${encodeURIComponent(input.invoice.legalBundleId)}`
     : '';
+  const termsUrl = `${input.publicOrigin}/legal/terms${bundleQuery}`;
+  const privacyUrl = `${input.publicOrigin}/legal/privacy${bundleQuery}`;
+  const paymentDisclosure =
+    input.purpose === 'invoice_issued'
+      ? '\nSupplier and EFT payee: Property Listify (Pty) Ltd (registration 2026/702814/07). Uploading proof alone does not activate access. Review the cancellation and refund terms before paying.'
+      : '';
+  const invoiceDetails =
+    input.purpose === 'invoice_issued' && input.invoice
+      ? `\nInvoice: ${input.invoice.invoiceNumber}\nEFT payment reference: ${input.invoice.paymentReference}\nInvoice total: ${new Intl.NumberFormat(
+          'en-ZA',
+          {
+            style: 'currency',
+            currency: input.invoice.currency,
+            maximumFractionDigits: 0,
+          },
+        ).format(input.invoice.amountDue / 100)}.`
+      : '';
   const message: Record<LaunchEmailPurpose, string> = {
     invoice_issued: `Your ${terms.audience} Launch Access invoice is ready. The total is ${terms.price} once-off for 90 days with no automatic renewal. Pay by EFT using the invoice reference; access starts only after funds reconciliation and finance approval.`,
-    payment_correction_requested: 'Your payment proof needs a correction. Open Launch Access to review the request and submit corrected evidence.',
-    payment_rejected: 'Your payment proof was not approved. Open Launch Access to review the decision or contact support.',
+    payment_correction_requested:
+      'Your payment proof needs a correction. Open Launch Access to review the request and submit corrected evidence.',
+    payment_rejected:
+      'Your payment proof was not approved. Open Launch Access to review the decision or contact support.',
     payment_approved: `Your ${terms.audience} Launch Access payment has been verified and access is active for 90 days. There is no automatic renewal.`,
-    partial_payment: 'A partial payment was recorded. Open Launch Access to view the remaining amount and next step. Access is not active until finance approves the full payment.',
-    launch_access_expiry_notice: 'Your Launch Access term is nearing its end. Open Launch Access to arrange another once-off term. There is no automatic renewal.',
-    launch_access_expired: 'Your Launch Access term has ended. Existing business records and enquiries remain available; new paid publication and enquiry intake require another approved term.',
-    agency_invitation: 'You have been invited to join an Agency on Property Listify. Accept the invitation using the link below.',
+    partial_payment:
+      'A partial payment was recorded. Open Launch Access to view the remaining amount and next step. Access is not active until finance approves the full payment.',
+    launch_access_expiry_notice:
+      'Your Launch Access term is nearing its end. Open Launch Access to arrange another once-off term. There is no automatic renewal.',
+    launch_access_expired:
+      'Your Launch Access term has ended. Existing business records and enquiries remain available; new paid publication and enquiry intake require another approved term.',
+    agency_invitation:
+      'You have been invited to join an Agency on Property Listify. Accept the invitation using the link below.',
   };
   const subject: Record<LaunchEmailPurpose, string> = {
     invoice_issued: 'Property Listify Launch Access invoice',
@@ -80,16 +114,25 @@ export function renderLaunchEmail(input: {
     launch_access_expired: 'Property Listify Launch Access ended',
     agency_invitation: 'Property Listify Agency invitation',
   };
-  const escape = (value: string) => value.replace(/[&<>"']/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[char]!);
-  const text = `${message[input.purpose]}${invoiceDetails}\n\n${actionUrl}\n\nProperty Listify (Pty) Ltd is not VAT registered and does not charge VAT.`;
+  const escape = (value: string) =>
+    value.replace(
+      /[&<>"']/g,
+      char =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[char]!,
+    );
+  const text = `${message[input.purpose]}${invoiceDetails}${paymentDisclosure}\n\n${actionUrl}\n\nTerms of Service: ${termsUrl}\nPrivacy Notice: ${privacyUrl}\nSupport and billing: support@propertylistifysa.co.za\n\nProperty Listify (Pty) Ltd is not VAT registered and does not charge VAT.`;
   const escapedInvoiceDetails = invoiceDetails
     ? `<p>${invoiceDetails.trim().split('\n').map(escape).join('<br>')}</p>`
     : '';
   return {
     subject: subject[input.purpose],
     text,
-    html: `<p>${escape(message[input.purpose])}</p>${escapedInvoiceDetails}<p><a href="${escape(actionUrl)}">Open Property Listify</a></p><p>Property Listify (Pty) Ltd is not VAT registered and does not charge VAT.</p>`,
+    html: `<p>${escape(message[input.purpose])}</p>${escapedInvoiceDetails}${paymentDisclosure ? `<p>${escape(paymentDisclosure.trim())}</p>` : ''}<p><a href="${escape(actionUrl)}">Open Property Listify</a></p><p><a href="${escape(termsUrl)}">Terms of Service</a> · <a href="${escape(privacyUrl)}">Privacy Notice</a></p><p>Support and billing: <a href="mailto:support@propertylistifysa.co.za">support@propertylistifysa.co.za</a></p><p>Property Listify (Pty) Ltd is not VAT registered and does not charge VAT.</p>`,
   };
 }

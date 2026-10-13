@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "bundleId": "property-listify-legal-2026-10-13.1",
+  "termsVersion": "terms-2026-10-13.1",
+  "privacyVersion": "privacy-2026-10-13.1",
+  "preparedAt": "2026-10-13T09:18:42Z",
+  "documents": {
+    "terms.txt": {
+      "file": "terms.txt",
+      "sha256": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72"
+    },
+    "privacy.txt": {
+      "file": "privacy.txt",
+      "sha256": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608"
+    },
+    "payment.txt": {
+      "file": "payment.txt",
+      "sha256": "c36e08198de60dad85b27de0cc8da3c609480bea24d782cbbe886eee76ac0611"
+    }
+  },
+  "effectiveAt": null,
+  "effectiveAtPolicy": "Actual controlled release timestamp, never earlier than final approval. No public effect or automatic installation from this candidate manifest.",
+  "sourceBusinessApproval": "B15-FOUNDER-COPY-APPROVAL-20261013-01",
+  "finalPrivacyApprovalStatus": "Approved by founder: B15-FINAL-PRIVACY-APPROVAL-20261013-01",
+  "certificateEvidence": "B15-EXISTING-CERTIFICATE-ACCEPTANCE-20261013-01",
+  "replacementCertificateRequired": false,
+  "scope": "Concrete exact-copy release candidate; not a runtime approved object, database release or launch GO",
+  "finalPrivacyApproval": "B15-FINAL-PRIVACY-APPROVAL-20261013-01",
+  "copyStatus": "Approved customer text; awaiting controlled release metadata and verification"
+}

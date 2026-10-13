@@ -153,6 +153,28 @@ describeDb('B10 transactional email delivery authority', () => {
     expect(final.attemptCount).toBe(1);
   });
 
+  it('renders invoice legal links from the original persisted invoice metadata', async () => {
+    const source = await fixture();
+    const bundleId = 'synthetic-b15-issued-bundle';
+    await db.update(billingInvoices).set({ metadata: { legal_bundle_id: bundleId } })
+      .where(eq(billingInvoices.id, source.invoiceId));
+    await consumeLaunchEmailEvents({ database: db });
+    const job = await jobFor(source.auditId, 'billing_audit');
+    let captured = false;
+    await runTransactionalEmailWorker({ database: db, deliveryId: job.id,
+      provider: async input => {
+        captured = true;
+        expect(input.text).toContain(`/legal/terms?bundle=${bundleId}`);
+        expect(input.text).toContain(`/legal/privacy?bundle=${bundleId}`);
+        expect(input.html).toContain(`/legal/terms?bundle=${bundleId}`);
+        expect(input.text).toContain('Supplier and EFT payee: Property Listify (Pty) Ltd');
+        expect(input.text).toContain('support@propertylistifysa.co.za');
+        return { kind: 'accepted', reference: 'synthetic-b15-no-send' };
+      } });
+    expect(captured).toBe(true);
+    expect((await jobFor(source.auditId, 'billing_audit')).state).toBe('accepted');
+  });
+
   it('retries a definite transient rejection with the same key, then records acceptance', async () => {
     const source = await fixture();
     await consumeLaunchEmailEvents({ database: db });

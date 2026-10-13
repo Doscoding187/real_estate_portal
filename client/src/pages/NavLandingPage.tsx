@@ -546,8 +546,23 @@ function getPageConfig(): LandingPageConfig {
 
 export default function NavLandingPage() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
-  if (path === '/terms' || path === '/legal/terms') return <LegalDocumentPage kind="terms" />;
-  if (path === '/privacy' || path === '/legal/privacy') return <LegalDocumentPage kind="privacy" />;
+  if (
+    ['/terms', '/legal/terms', '/legal/consumer-rights', '/legal/dispute-resolution'].includes(path)
+  ) {
+    return <LegalDocumentPage kind="terms" />;
+  }
+  if (
+    [
+      '/privacy',
+      '/legal/privacy',
+      '/cookies',
+      '/legal/cookies',
+      '/compliance',
+      '/legal/compliance',
+    ].includes(path)
+  ) {
+    return <LegalDocumentPage kind="privacy" />;
+  }
   if (path.startsWith('/legal/') || ['/cookies', '/compliance'].includes(path)) {
     const titles: Record<string, string> = {
       '/legal/consumer-rights': 'Consumer Rights',
