@@ -78,12 +78,8 @@ vi.mock('@/components/ui/carousel', () => ({
       {children}
     </div>
   ),
-  CarouselNext: ({ className }: { className?: string }) => (
-    <button aria-label="Next slide" className={className} />
-  ),
-  CarouselPrevious: ({ className }: { className?: string }) => (
-    <button aria-label="Previous slide" className={className} />
-  ),
+  CarouselNext: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} />,
+  CarouselPrevious: (props: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props} />,
 }));
 
 import { HomeTrendingSection } from './HomeTrendingSection';
@@ -152,7 +148,7 @@ describe('HomeTrendingSection request states', () => {
     expect(screen.queryByTestId('home-property-feed-loading')).not.toBeInTheDocument();
   });
 
-  it('keeps ten selected items in a four-card desktop rail with exterior hover controls', () => {
+  it('keeps ten selected items in a four-card desktop rail with named browsing controls', () => {
     const items = Array.from({ length: 10 }, (_, index) => ({
       id: String(index + 1),
       kind: 'listing' as const,
@@ -183,14 +179,8 @@ describe('HomeTrendingSection request states', () => {
     expect(rail.querySelector('[data-slot="carousel"]')).not.toHaveClass('lg:px-12');
     expect(rail.querySelector('[data-slot="carousel-content"]')).toHaveClass('-ml-3.5');
     expect(screen.getAllByRole('button', { name: 'Save property' })).toHaveLength(10);
-    expect(screen.getByRole('button', { name: 'Previous slide' })).toHaveClass(
-      'lg:-left-12',
-      'group-hover/rail:opacity-100',
-    );
-    expect(screen.getByRole('button', { name: 'Next slide' })).toHaveClass(
-      'lg:-right-12',
-      'group-hover/rail:opacity-100',
-    );
+    expect(screen.getByRole('button', { name: 'Previous properties' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Next properties' })).toBeVisible();
     expect(screen.getAllByText('For sale')).toHaveLength(10);
     expect(screen.queryByText('Resale')).not.toBeInTheDocument();
     expect(testState.homeFeedUseQuery).toHaveBeenLastCalledWith(

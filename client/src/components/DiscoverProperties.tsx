@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { buildDiscoverBrowseHref, buildDiscoverCardHref } from '@/lib/publicDiscoveryRoutes';
@@ -114,7 +114,7 @@ export function DiscoverProperties({
 }: DiscoverPropertiesProps = {}) {
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
-  const defaultTitle = `Browse by city, category, and property journey`;
+  const defaultTitle = 'Find a place that suits you';
   const defaultSubtitle =
     rentJourneyEnabled && developmentsJourneyEnabled
       ? `Not sure what to search yet? Explore homes, rentals, and new developments across ${locationName}${locationName.endsWith('s') ? "'" : "'s"} leading markets.`
@@ -141,6 +141,22 @@ export function DiscoverProperties({
     slidesToScroll: 1,
     containScroll: 'trimSnaps',
   });
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+  useEffect(() => {
+    if (!emblaApi) return;
+    const updateControls = () => {
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    };
+    updateControls();
+    emblaApi.on('select', updateControls);
+    emblaApi.on('reInit', updateControls);
+    return () => {
+      emblaApi.off('select', updateControls);
+      emblaApi.off('reInit', updateControls);
+    };
+  }, [emblaApi]);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -223,9 +239,11 @@ export function DiscoverProperties({
             {displayCities.map(city => (
               <button
                 key={city}
+                type="button"
+                aria-pressed={selectedCity === city}
                 onClick={() => setSelectedCity(city)}
                 className={`
-                  rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap
+                  min-h-11 rounded-lg px-4 py-2 text-sm font-semibold border border-transparent transition-all whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE]
                   ${
                     selectedCity === city
                       ? 'bg-[#2774AE] text-white shadow-sm'
@@ -258,13 +276,15 @@ export function DiscoverProperties({
                 return (
                   <button
                     key={tab.id}
+                    type="button"
+                    aria-pressed={isActive}
                     onClick={() => {
                       setListingType(tab.id);
                       setSaleExpanded(tab.id === 'sale');
                       setRentExpanded(tab.id === 'rent');
                       setDevelopmentsExpanded(tab.id === 'developments');
                     }}
-                    className={`relative pb-3 text-sm font-semibold transition-colors ${
+                    className={`relative min-h-11 pb-3 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE] ${
                       isActive ? 'text-slate-900' : 'text-slate-500'
                     }`}
                   >
@@ -295,6 +315,8 @@ export function DiscoverProperties({
               {/* Properties for Sale */}
               <div className="border-b border-slate-100">
                 <button
+                  type="button"
+                  aria-expanded={saleExpanded}
                   onClick={handleSaleClick}
                   className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
                     saleExpanded
@@ -312,6 +334,7 @@ export function DiscoverProperties({
                   </div>
                 </button>
                 <div
+                  hidden={!saleExpanded}
                   className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     saleExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                   }`}
@@ -334,6 +357,8 @@ export function DiscoverProperties({
               {rentJourneyEnabled ? (
                 <div className="border-b border-slate-100">
                   <button
+                    type="button"
+                    aria-expanded={rentExpanded}
                     onClick={handleRentClick}
                     className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
                       rentExpanded
@@ -351,6 +376,7 @@ export function DiscoverProperties({
                     </div>
                   </button>
                   <div
+                    hidden={!rentExpanded}
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
                       rentExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                     }`}
@@ -377,6 +403,8 @@ export function DiscoverProperties({
                   {/* New Developments */}
                   <div>
                     <button
+                      type="button"
+                      aria-expanded={developmentsExpanded}
                       onClick={handleDevelopmentsClick}
                       className={`w-full p-3.5 sm:p-4 flex items-center justify-between transition-all duration-300 ${
                         developmentsExpanded
@@ -394,6 +422,7 @@ export function DiscoverProperties({
                       </div>
                     </button>
                     <div
+                      hidden={!developmentsExpanded}
                       className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         developmentsExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                       }`}
@@ -436,7 +465,8 @@ export function DiscoverProperties({
                     >
                       <img
                         src={property.image}
-                        alt={property.type}
+                        alt=""
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-70 transition-opacity duration-300" />
@@ -473,23 +503,30 @@ export function DiscoverProperties({
               </div>
             </div>
 
-            {/* Navigation Buttons - Visible on large screens or hover */}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
-              onClick={scrollPrev}
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full h-12 w-12 shadow-xl z-20 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 hover:scale-110 bg-white/90 hover:bg-white text-slate-900 hover:text-blue-600 border border-slate-200 hidden md:flex"
-              onClick={scrollNext}
-            >
-              <ChevronRight className="h-6 w-6" />
-            </Button>
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
+                type="button"
+                aria-label="Previous property categories"
+                disabled={!canScrollPrev}
+                variant="secondary"
+                size="icon"
+                className="h-11 w-11 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-blue-50 hover:text-blue-700"
+                onClick={scrollPrev}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                aria-label="Next property categories"
+                disabled={!canScrollNext}
+                variant="secondary"
+                size="icon"
+                className="h-11 w-11 rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-blue-50 hover:text-blue-700"
+                onClick={scrollNext}
+              >
+                <ChevronRight className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>

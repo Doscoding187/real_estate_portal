@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -110,6 +110,14 @@ const JOURNEY_ICONS: Record<PublicHeroJourneyKey, typeof Home> = {
   commercial: BriefcaseBusiness,
   find_agent: Users,
 };
+const JOURNEY_SEARCH_TITLES: Partial<Record<PublicHeroJourneyKey, string>> = {
+  buy: 'Find homes for sale',
+  rent: 'Find a home to rent',
+  developments: 'Find new developments',
+  shared_living: 'Find shared living',
+  plot_land: 'Find plots and land',
+  commercial: 'Find commercial space',
+};
 const PRICE_OPTIONS = [
   { value: '500000', label: 'R500k' },
   { value: '1000000', label: 'R1m' },
@@ -119,10 +127,14 @@ const PRICE_OPTIONS = [
   { value: '5000000', label: 'R5m' },
   { value: '10000000', label: 'R10m+' },
 ] as const;
+const MONTHLY_RENT_OPTIONS = [3000, 5000, 7500, 10000, 15000, 20000, 30000, 50000].map(value => ({
+  value: String(value),
+  label: `Up to R${value.toLocaleString('en-ZA')}`,
+}));
 const FILTER_TRIGGER_CLASS =
   'min-w-0 h-11 data-[size=default]:!h-11 gap-2 rounded-lg border border-slate-200 bg-blue-50/45 px-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-1';
 const FILTER_CELL_CLASS =
-  'min-w-0 w-full border-l border-slate-200/80 px-3 first:border-l-0 sm:px-4 lg:w-fit lg:flex-none';
+  'min-w-0 w-full lg:border-l lg:border-slate-200/80 lg:px-3 lg:first:border-l-0 lg:w-fit lg:flex-none';
 const BEDROOM_OPTIONS = [1, 2, 3, 4, 5].map(value => ({
   value: String(value),
   label: value === 5 ? '5+' : `${value}+`,
@@ -190,7 +202,7 @@ const JOURNEY_PRESENTATION: Partial<
         label: 'Monthly budget',
         emptyLabel: 'Any budget',
         icon: CircleDollarSign,
-        options: PRICE_OPTIONS,
+        options: MONTHLY_RENT_OPTIONS,
       },
     ],
   },
@@ -296,7 +308,7 @@ const JOURNEY_PRESENTATION: Partial<
         label: 'Monthly rent',
         emptyLabel: 'Any budget',
         icon: CircleDollarSign,
-        options: PRICE_OPTIONS,
+        options: MONTHLY_RENT_OPTIONS,
       },
     ],
   },
@@ -348,13 +360,15 @@ function FilterControl({
   cellClassName?: string;
 }) {
   const Icon = definition.icon;
+  const controlId = useId();
   return (
     <div className={`${FILTER_CELL_CLASS} ${cellClassName || ''}`}>
-      <Label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <Label htmlFor={controlId} className="mb-1.5 block text-xs font-semibold text-slate-600">
         {definition.label}
       </Label>
       <Select value={value || 'any'} onValueChange={next => onChange(next === 'any' ? '' : next)}>
         <SelectTrigger
+          id={controlId}
           className={`${FILTER_TRIGGER_CLASS} w-full lg:w-fit`}
           onPointerDown={onInteractionStart}
           onFocus={onInteractionStart}
@@ -392,6 +406,7 @@ function PriceRangeControl({
   onOpenChange: (open: boolean) => void;
   cellClassName?: string;
 }) {
+  const controlId = useId();
   const summary =
     filters.priceMin && filters.priceMax
       ? `${formatCompactZar(filters.priceMin)} – ${formatCompactZar(filters.priceMax)}`
@@ -406,10 +421,14 @@ function PriceRangeControl({
       className={`${FILTER_CELL_CLASS} ${cellClassName || ''}`}
       onPointerDown={event => event.stopPropagation()}
     >
-      <Label className="mb-1.5 block text-xs font-semibold text-slate-600">Price Range</Label>
+      <Label htmlFor={controlId} className="mb-1.5 block text-xs font-semibold text-slate-600">
+        Price Range
+      </Label>
       <div className="relative">
         <button
+          id={controlId}
           type="button"
+          aria-label={`Price range: ${summary}`}
           aria-expanded={open}
           onClick={() => {
             onOpenChange(!open);
@@ -423,16 +442,19 @@ function PriceRangeControl({
           />
         </button>
         {open ? (
-          <div className="absolute left-0 z-40 mt-2 grid w-[384px] max-w-[calc(100vw-2rem)] grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/15 sm:grid-cols-2">
+          <div className="absolute right-0 z-40 mt-2 grid w-[384px] max-w-[calc(100vw-4rem)] grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/15 sm:grid-cols-2 lg:left-0 lg:right-auto">
             <div>
-              <Label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <Label
+                htmlFor={`${controlId}-min`}
+                className="mb-1.5 block text-xs font-semibold text-slate-600"
+              >
                 Minimum price
               </Label>
               <Select
                 value={filters.priceMin || 'any'}
                 onValueChange={value => onChange('priceMin', value === 'any' ? '' : value)}
               >
-                <SelectTrigger className={`${FILTER_TRIGGER_CLASS} w-full`}>
+                <SelectTrigger id={`${controlId}-min`} className={`${FILTER_TRIGGER_CLASS} w-full`}>
                   <SelectValue placeholder="No min" />
                 </SelectTrigger>
                 <SelectContent data-price-range-menu>
@@ -452,14 +474,17 @@ function PriceRangeControl({
               </Select>
             </div>
             <div>
-              <Label className="mb-1.5 block text-xs font-semibold text-slate-600">
+              <Label
+                htmlFor={`${controlId}-max`}
+                className="mb-1.5 block text-xs font-semibold text-slate-600"
+              >
                 Maximum price
               </Label>
               <Select
                 value={filters.priceMax || 'any'}
                 onValueChange={value => onChange('priceMax', value === 'any' ? '' : value)}
               >
-                <SelectTrigger className={`${FILTER_TRIGGER_CLASS} w-full`}>
+                <SelectTrigger id={`${controlId}-max`} className={`${FILTER_TRIGGER_CLASS} w-full`}>
                   <SelectValue placeholder="No max" />
                 </SelectTrigger>
                 <SelectContent data-price-range-menu>
@@ -741,7 +766,7 @@ export function EnhancedHero({
           className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-[0.05]"
         />
       ) : null}
-      <div className="container py-10 sm:py-14 lg:py-16">
+      <div className="container py-8 sm:py-12 lg:py-14">
         <header className="mx-auto max-w-5xl text-center">
           {title ? (
             <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
@@ -749,22 +774,32 @@ export function EnhancedHero({
             </h1>
           ) : (
             <h1 className="text-4xl font-bold leading-[1.05] tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              <span className="block">South Africa&apos;s smarter</span>
+              <span className="block">Find your next place</span>
               <span className="block bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                property platform
+                in South Africa
               </span>
             </h1>
           )}
-          <p className="mx-auto mt-5 max-w-3xl text-base font-medium leading-7 text-slate-600 sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-600 sm:text-lg sm:leading-7">
             {subtitle ||
-              'Search homes, discover new developments, explore local insights, and connect with trusted property professionals.'}
+              'Search property, explore neighbourhoods and connect with the people who can help you move.'}
           </p>
         </header>
         <div
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
-          className="mx-auto mt-8 w-full overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:mt-10"
+          className="mx-auto mt-6 w-full sm:mt-8"
         >
-          <div className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto">
+          <p
+            id="homepage-journey-label"
+            className="mb-3 text-center text-sm font-semibold text-slate-700"
+          >
+            What are you looking for?
+          </p>
+          <div
+            role="group"
+            aria-labelledby="homepage-journey-label"
+            className="grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] sm:flex sm:flex-wrap sm:justify-center"
+          >
             {categories.map(category => {
               const Icon = JOURNEY_ICONS[category.key];
               const selected = journey === category.key;
@@ -777,7 +812,7 @@ export function EnhancedHero({
                   onFocus={() => setPriceRangeOpen(false)}
                   className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {category.label}
                 </button>
               );
@@ -790,7 +825,9 @@ export function EnhancedHero({
         >
           <div className="flex flex-col gap-3 rounded-t-[1.45rem] bg-gradient-to-r from-blue-100/90 via-blue-50/70 to-cyan-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div>
-              <h2 className="font-semibold text-slate-950">Start your property journey</h2>
+              <h2 className="font-semibold text-slate-950">
+                {journey ? JOURNEY_SEARCH_TITLES[journey] : 'Start with a location'}
+              </h2>
               <p
                 id="homepage-journey-selection-prompt"
                 role="status"
@@ -801,7 +838,7 @@ export function EnhancedHero({
                   ? presentation.guidance
                   : selectedLocations.length > 0
                     ? `What are you looking for in ${formatLocationNames(selectedLocations)}?`
-                    : 'Choose how you would like to start.'}
+                    : 'Choose a journey above, or explore an area below.'}
               </p>
             </div>
             <span className="hidden items-center gap-1.5 rounded-full border border-cyan-300 bg-white/80 px-3 py-1.5 text-sm font-semibold text-cyan-700 md:inline-flex">
@@ -829,7 +866,7 @@ export function EnhancedHero({
                   inputClassName="h-14 w-full rounded-xl border-slate-200 bg-white pl-11 pr-4 text-base text-slate-800 shadow-[0_2px_5px_rgba(15,23,42,0.06)] transition-all placeholder:text-slate-500 hover:border-blue-200 focus-visible:border-blue-600 focus-visible:ring-2 focus-visible:ring-blue-600/25"
                   showIcon={false}
                   inputRef={inputRef}
-                  inputAriaDescribedBy="homepage-journey-selection-prompt"
+                  inputAriaDescribedBy="homepage-journey-selection-prompt homepage-location-help"
                   selectedLocations={selectedLocations}
                   onRemove={index => {
                     setSelectedSearchArea(null);
@@ -895,6 +932,7 @@ export function EnhancedHero({
               <Button
                 type="submit"
                 disabled={!canSubmitSearch || Boolean(priceRangeError)}
+                aria-describedby="homepage-location-help"
                 onFocus={() => setPriceRangeOpen(false)}
                 className="h-14 min-w-[150px] rounded-xl bg-blue-700 px-7 text-base font-semibold text-white shadow-md shadow-blue-700/25 transition-all hover:-translate-y-px hover:bg-blue-800 hover:shadow-lg hover:shadow-blue-700/25 active:translate-y-0 active:shadow-sm disabled:bg-slate-200 disabled:text-slate-500"
               >
@@ -902,6 +940,13 @@ export function EnhancedHero({
                 Search
               </Button>
             </form>
+            <p id="homepage-location-help" className="mt-3 text-xs leading-5 text-slate-600">
+              {canSubmitSearch
+                ? journey
+                  ? 'Your selected area is ready to search.'
+                  : 'Search to explore your selected area, or choose a journey above.'
+                : 'Type a city, suburb or area, then select a location from the suggestions.'}
+            </p>
             {locationSelectionNotice ? (
               <p className="mt-3 text-sm text-slate-600" role="status">
                 {locationSelectionNotice}
@@ -967,7 +1012,7 @@ export function EnhancedHero({
           {journey && (
             <div className="border-t border-slate-200/80 bg-slate-50/80 p-3 sm:p-4">
               <div
-                className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-end lg:gap-0"
+                className="grid grid-cols-2 gap-3 lg:flex lg:flex-nowrap lg:items-end lg:gap-0"
                 onPointerDown={() => setPriceRangeOpen(false)}
                 onFocusCapture={event => {
                   if (
@@ -1009,13 +1054,13 @@ export function EnhancedHero({
                   })}
                 </div>
                 <div
-                  className={`${FILTER_CELL_CLASS} flex min-w-0 w-full flex-col lg:ml-auto ${
+                  className={`${FILTER_CELL_CLASS} col-span-2 flex min-w-0 w-full flex-col lg:ml-auto ${
                     presentation.primaryFilters.length % 2 === 0 ? 'sm:border-l-0 lg:border-l' : ''
                   }`}
                 >
                   <span
                     aria-hidden="true"
-                    className="mb-1.5 block text-xs font-semibold leading-[18px] text-transparent"
+                    className="mb-1.5 hidden text-xs font-semibold leading-[18px] text-transparent lg:block"
                   >
                     More Filters
                   </span>
@@ -1029,26 +1074,32 @@ export function EnhancedHero({
                     disabled={!canSubmitSearch || Boolean(priceRangeError)}
                     className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm transition-all hover:-translate-y-px hover:border-blue-600 hover:bg-blue-50 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-0 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 lg:w-fit"
                   >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    More Filters
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    All search filters
                   </button>
                 </div>
               </div>
             </div>
           )}
         </div>
-        <section
+        <details
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
-          className="mx-auto mt-5 w-full"
-          aria-label="Platform tools"
+          className="group/tools mx-auto mt-4 w-full text-slate-600"
         >
-          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0">
+          <summary className="mx-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-3 text-xs font-medium hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 [&::-webkit-details-marker]:hidden">
+            Upcoming property tools
+            <ChevronDown
+              className="h-4 w-4 transition-transform group-open/tools:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {PLATFORM_TOOL_ITEMS.map(item => {
               const Icon = item.icon;
               return (
                 <article
                   key={item.label}
-                  className="flex min-h-24 w-[calc(100%-2rem)] shrink-0 snap-start items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/75 px-4 text-left shadow-sm sm:w-auto sm:min-w-0"
+                  className="flex min-h-24 min-w-0 items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white/75 px-4 text-left sm:w-auto"
                 >
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
                     <Icon className="h-5 w-5" />
@@ -1064,7 +1115,7 @@ export function EnhancedHero({
               );
             })}
           </div>
-        </section>
+        </details>
       </div>
     </section>
   );

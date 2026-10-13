@@ -126,7 +126,9 @@ describe('EnhancedHero explicit journey selection', () => {
       .getAllByRole('button', { name: 'Find an Agent' })
       .forEach(button => expect(button).toHaveAttribute('aria-pressed', 'false'));
     expect(screen.getByRole('combobox')).not.toBeDisabled();
-    expect(screen.getByText('Choose how you would like to start.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Choose a journey above, or explore an area below.'),
+    ).toBeInTheDocument();
     screen
       .getAllByRole('button', { name: 'Search', exact: true })
       .forEach(button => expect(button).toBeDisabled());
@@ -331,6 +333,32 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(screen.getByText('Maximum price')).toBeInTheDocument();
     expect(screen.getByText('No min')).toBeInTheDocument();
     expect(screen.getByText('No max')).toBeInTheDocument();
+  });
+
+  it('submits a monthly rental budget rather than a purchase-price amount', () => {
+    // Radix scrolls options into view; jsdom does not implement this API.
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    try {
+      render(<EnhancedHero activeTab="rent" />);
+      fireEvent.keyDown(screen.getByRole('combobox', { name: 'Monthly budget' }), {
+        key: 'ArrowDown',
+      });
+      expect(screen.queryByRole('option', { name: 'R500k' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('option', { name: /Up to R10\s000/ }));
+      fireEvent.click(screen.getByTestId('select-johannesburg'));
+      fireEvent.click(screen.getByRole('button', { name: 'Search', exact: true }));
+
+      const submittedUrl = new URL(
+        String(setLocation.mock.calls.at(-1)?.[0]),
+        'https://listify.test',
+      );
+      expect(submittedUrl.pathname).toBe('/property-to-rent');
+      expect(submittedUrl.searchParams.get('maxPrice')).toBe('10000');
+      expect(submittedUrl.searchParams.get('locationId')).toBe('city:12');
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    }
   });
 
   it('retains a location when Buy is selected after location-first input', () => {

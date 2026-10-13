@@ -74,7 +74,10 @@ export function SimpleHomeListingCard({
 
   return (
     <div className="group relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg">
-      <Link href={href || `/property/${id}`} className="block focus-visible:outline-none">
+      <Link
+        href={href || `/property/${id}`}
+        className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2774AE]"
+      >
         <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
           {!resolvedImage && (
             <div className="absolute inset-0 flex items-center justify-center text-slate-300">
@@ -103,7 +106,7 @@ export function SimpleHomeListingCard({
             {withRentalPeriod(priceLabel, listingType)}
           </div>
 
-          <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
+          <h3 className="mb-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-900 transition-colors group-hover:text-[#2774AE]">
             {title}
           </h3>
 
@@ -135,7 +138,7 @@ export function SimpleHomeListingCard({
       {onFavoriteClick ? (
         <button
           type="button"
-          className={`absolute right-2.5 top-2.5 z-30 inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 ${
+          className={`absolute right-2.5 top-2.5 z-30 inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2774AE] focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70 ${
             isSaved
               ? 'border-rose-200 bg-white/95 text-rose-600 hover:bg-rose-50'
               : 'border-white/80 bg-white/90 text-slate-600 hover:bg-white hover:text-rose-600'
