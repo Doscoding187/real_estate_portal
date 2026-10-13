@@ -1,0 +1,17 @@
+{
+  "inspectionDate": "2026-10-13",
+  "sourceDocument": {
+    "filename": "IO_Certificate_2026-069040.pdf",
+    "sha256": "9e48d5b1d0fd25ef97c7b95c92561399aa8f0714d11afd81cc40ca1f2bb79c45",
+    "verificationScope": "Locally inspected supplied PDF; not independent portal verification"
+  },
+  "registrationReference": "2026-069040",
+  "registrationDate": "2026-10-13",
+  "informationOfficerName": "Lehlohonolo Banda",
+  "organisationNameAsPrinted": "PROPERTY LISTIFY t/a DOS HOLDINGS",
+  "organisationType": "PRIVATE ORGANISATION",
+  "privateOrganisationType": "PRIVATE COMPANY [ (PTY) LTD ]",
+  "cipcNumber": "2026/702814/07",
+  "supplierNamingStatus": "CIPC number matches confirmed supplier number; legal/trading name differs from existing draft and clarification requested",
+  "scope": "Registration evidence only; not full POPIA compliance or B15 acceptance; no identity number, contact payload or complete certificate included"
+}

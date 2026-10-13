@@ -64,9 +64,12 @@ registration was outstanding on October 12 after Edward replied “none so i nee
 these”. On October 13 Edward supplied the successful-organisation-registration
 confirmation: completed on founder report, with certificate reportedly emailed
 and downloaded. Edward subsequently supplied Lehlohonolo Banda as the
-registered Information Officer. Certificate date/reference and private evidence
-location await capture; the certificate has not been independently
-inspected. Remaining processor/transfer review and final exact public copy approval
+registered Information Officer. The supplied certificate was subsequently
+inspected: registration date 2026-10-13, reference 2026-069040, private-company
+CIPC number 2026/702814/07. The printed organisation name PROPERTY LISTIFY t/a
+DOS HOLDINGS differs from the draft supplier name; clarification is pending.
+The certificate was preserved privately and its SHA-256/minimal fields retained
+in repository evidence; no independent portal verification is claimed. Remaining processor/transfer review and final exact public copy approval
 are not inferred from those factual confirmations. No identity document is needed
 for the office-bearer disclosure. Final approval must identify resolved text,
 versions, digest and effective date before any release installation/publication.
@@ -118,7 +121,7 @@ this slice does not backfill or infer acceptance. These are B15 closure gaps,
 not evidence that every identity path is covered.
 
 Also remaining: final Terms/Privacy/Cookies and payment copy approval, supplier
-telephone applicability review, registration certificate-field capture, processor/transfer
+telephone applicability review, legal/trading-name reconciliation, processor/transfer
 and finance/legal retention review, operational disposal/hold capability,
 Agency/Developer setup wording, paid commitment and enquiry notices, specified hosted acceptance. Do not merge
 or deploy this slice as a completed launch gate or silently disable the maintained
@@ -155,10 +158,16 @@ preview was stopped after verification; no task-owned service remains running.
 ## October 13 registration and operating continuation
 
 The organisation-registration submission is no longer an outstanding founder
-action. The portal confirmation supplied by Edward is the evidence for that
-status; do not imply Codex accessed the portal/email or verified a certificate.
-Capture the minimal officer/date/reference fields without importing private ID
-numbers or publishing a full certificate. No registration event is installed
+action. Edward then supplied IO_Certificate_2026-069040.pdf. Local inspection
+confirms officer Lehlohonolo Banda, registration date 2026-10-13 and reference
+2026-069040. The private-company type and CIPC 2026/702814/07 match the accepted
+company number. Minimal fields and source SHA-256 are retained in
+[evidence](evidence/b15-legal-acceptance-20261012/information-officer-certificate-fields-20261013.json).
+The complete certificate is privately preserved in the OS worklog evidence
+folder; ID/contact payloads were excluded from Git. No portal/email access or
+independent regulator verification was performed. Supplier legal/trading names
+need reconciliation because the printed name is PROPERTY LISTIFY t/a DOS
+HOLDINGS, while the approved-fact draft says Property Listify (Pty) Ltd. No registration event is installed
 as customer legal-copy approval, and no exact-copy candidate is mutated here.
 
 Ongoing privacy/request/security procedures and the applicable PAIA manual
