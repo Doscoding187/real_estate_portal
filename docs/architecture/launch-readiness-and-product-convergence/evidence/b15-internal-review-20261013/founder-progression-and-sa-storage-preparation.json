@@ -85,8 +85,30 @@
     "broadLegacyTypecheck": "pnpm typecheck failed on diagnostics outside configured release check; not reported as passing",
     "corrections": [
       "Removed an incorrect positive-case provider call-count assertion; functional read-only/security tests then all passed.",
-      "A guessed Azure resource group returned ResourceGroupNotFound; resolved actual rg-property-listify from control-plane inventory before the successful transport-setting readback."
-    ]
+      "A guessed Azure resource group returned ResourceGroupNotFound; resolved actual rg-property-listify from control-plane inventory before the successful transport-setting readback.",
+      "Aligned existing S4 synthetic proof region and persisted-invoice notification assertions with the new domestic/neutral-email behavior. Initial actual-DB run lacked a synthetic JWT_SECRET and retained one old payee-email assertion; corrected test inputs/assertions, final 21/21 pass.",
+      "Concurrent plan during active canonical migration correctly reported a running attempt; no retry or ledger mutation. A temporary read-only diagnostic incorrectly selected unregistered ledger column names and failed without mutation; no alternate-shape fallback was added. Canonical apply completed normally."
+    ],
+    "actualPaymentEmailIntegration": {
+      "passed": 21,
+      "files": 2,
+      "commercialLaunchAccessS4": 10,
+      "transactionalEmailDelivery": 11,
+      "targetClass": "disposable-worktree",
+      "targetFingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+      "databaseName": "listify_wt_b15_legal_acceptance_authority_3200f8a41f86",
+      "canonicalHead": "0114_user_legal_acceptances.sql",
+      "canonicalApplyPlanDigest": "aead9f6b152b13ecf49a586019067c6f0a8e00dead440845232ec3397dcdec5c",
+      "schemaCongruency": "PASS",
+      "foundationPrepareAndVerify": "PASS",
+      "fixtureBankSessionLegalTextsAndObjectProvider": "synthetic; no real mail or S3 call",
+      "testsRunThrough": "test:authority",
+      "teardown": {
+        "foundationAfterFixtureCleanup": "PASS",
+        "exactOwnedDatabaseDisposed": true,
+        "taskStarted3307ServiceStoppedByExactUnixSocket": true
+      }
+    }
   },
   "productionInstallationCompleted": false,
   "protectedDatabaseConnectionOrMutation": false,
@@ -97,5 +119,16 @@
     "terms.txt": "7ea195a03f0f04afbf2ae101ecad10082d2d85f7fbfea0e55d3191cc06cbcc72",
     "privacy.txt": "69aeeb5a86c6c526590fcd9b0fce38b277c58f90bcae2d25b0f7872af2cce608",
     "payment.txt": "c36e08198de60dad85b27de0cc8da3c609480bea24d782cbbe886eee76ac0611"
+  },
+  "B14AdditionalFounderDeskCases": {
+    "source": "Explicit reply in current conversation",
+    "completed": [
+      "duplicate_or_excess_EFT",
+      "moderation_complaint_and_separate_privacy_request",
+      "ambiguous_email_timeout"
+    ],
+    "owner": "Edward",
+    "calendar": "09:00,13:00,16:30 SAST weekdays excluding public holidays; no weekend/absence cover",
+    "outcomes": "See existing packet37; no live bank, mail, moderation/privacy event or hosted exercise claimed."
   }
 }

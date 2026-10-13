@@ -644,7 +644,7 @@ describeWithDb('S4 paid Launch Access disposable runtime', () => {
     );
     rememberEnvironment('BILLING_PROOF_STORAGE_ADAPTER', 's3');
     rememberEnvironment('BILLING_PROOF_S3_BUCKET', `b03-proof-test-${process.pid}`);
-    rememberEnvironment('BILLING_PROOF_S3_REGION', 'us-east-1');
+    rememberEnvironment('BILLING_PROOF_S3_REGION', 'af-south-1');
     rememberEnvironment('BILLING_PROOF_AWS_ACCESS_KEY_ID', `b03-test-access-${process.pid}`);
     rememberEnvironment('BILLING_PROOF_AWS_SECRET_ACCESS_KEY', `b03-test-secret-${process.pid}`);
     rememberEnvironment('BILLING_EFT_ACCOUNT_NAME', 'LOCAL TEST EFT ACCOUNT - NOT PAYABLE');

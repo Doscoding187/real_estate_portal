@@ -136,8 +136,10 @@ describeDb('B10 transactional email delivery authority', () => {
     const provider = async (input: { idempotencyKey: string; text: string }) => {
       calls += 1;
       expect(input.idempotencyKey).toBe(job.deliveryKey);
-      expect(input.text).toContain('R499 once-off for 90 days');
-      expect(input.text).toContain(`EFT payment reference: ${source.invoiceNumber}`);
+      expect(input.text).toContain('Sign in to review it');
+      expect(input.text).not.toContain('R499');
+      expect(input.text).not.toContain(source.invoiceNumber);
+      expect(input.text).not.toContain('EFT payment reference:');
       await new Promise(resolve => setTimeout(resolve, 25));
       return { kind: 'accepted' as const, reference: 'resend-test-accepted' };
     };
@@ -167,7 +169,8 @@ describeDb('B10 transactional email delivery authority', () => {
         expect(input.text).toContain(`/legal/terms?bundle=${bundleId}`);
         expect(input.text).toContain(`/legal/privacy?bundle=${bundleId}`);
         expect(input.html).toContain(`/legal/terms?bundle=${bundleId}`);
-        expect(input.text).toContain('Supplier and EFT payee: Property Listify (Pty) Ltd');
+        expect(input.text).toContain('Sign in to review it');
+        expect(input.text).not.toContain(source.invoiceNumber);
         expect(input.text).toContain('support@propertylistifysa.co.za');
         return { kind: 'accepted', reference: 'synthetic-b15-no-send' };
       } });

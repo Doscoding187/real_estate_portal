@@ -146,3 +146,35 @@ is complete. It does not claim the other finance/moderation/support cases,
 monitored mailbox/alert, actual bank matching or hosted pause/resumption. Those
 specific observations continue in the existing shared exercise; no new general
 review or adviser approval is introduced.
+
+## Remaining founder desk responses — 13 October 2026
+
+Edward completed three more specific desk cases in this conversation:
+
+- **Duplicate/excess EFT:** retain each credit and bank evidence separately;
+  reconcile the amount due and leave excess unresolved until origin/treatment
+  is confirmed. No assumed allocation, refund, credit, receipt or extra access.
+  Edward owns the case; review at the next confirmed weekday check and keep it
+  on the unresolved register, escalating suspected fraud, dispute or deadline
+  risk for a documented decision.
+- **Moderation complaint plus privacy request:** create separate cases so
+  moderation does not delay access/correction. Acknowledge, preserve restricted
+  evidence, use actual moderation rules for restriction/removal, verify identity
+  before personal disclosure/change, and retain the outcome trail. Edward owns
+  both; triage at the next check, record each actual applicable deadline, and
+  act on a credible urgent threat/disclosure risk when observed. If uncertain,
+  contain the specific disclosure/change and obtain targeted guidance before
+  its deadline; no general adviser prerequisite is created.
+- **Ambiguous email timeout:** classify unknown, inspect authoritative provider
+  event/message and recipient status, preserve the obligation and avoid an
+  unverified duplicate. Retry only through an approved idempotent path whose
+  provider guarantees still apply; an arbitrary repeated message ID is not a
+  deduplication guarantee. Use a verified alternate channel for a time-sensitive
+  unresolved message and record it; escalate repeated outages/critical failure.
+  Edward owns the communication, checked at the next staffed review.
+
+All four named founder desk scenarios are complete. They use the confirmed
+09:00/13:00/16:30 weekday calendar, without weekend or absence cover. This does
+not assert actual bank matching, mailbox/alert delivery, a live moderation or
+privacy case, or hosted sales pause/resumption. Those remain execution evidence,
+not a second general operating review.
