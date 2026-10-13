@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '../../drizzle/schema';
 import { getDb } from '../db-connection';
@@ -96,14 +96,11 @@ export interface RegistrationAgentProfile {
   specializations?: string[];
 }
 
-/** Exported transaction body is also exercised against the actual local schema. */
-export async function insertRegistrationWithLegalAcceptance(
+/** Lock the shared Terms release until the caller's commitment is durable. */
+export async function validateCurrentLegalAcceptanceInTransaction(
   tx: Transaction,
-  userData: Omit<schema.InsertUser, 'id' | 'createdAt' | 'updatedAt' | 'lastSignedIn'>,
   choice: unknown,
-  agentProfile?: RegistrationAgentProfile,
-): Promise<{ userId: number; evidenceId: string }> {
-  // Registration and a governed pointer switch must lock this same row.
+) {
   const [pointer] = await tx
     .select()
     .from(schema.legalActiveRelease)
@@ -117,9 +114,20 @@ export async function insertRegistrationWithLegalAcceptance(
         .where(eq(schema.legalReleases.bundleId, pointer.bundleId))
         .limit(1)
     : [];
-  const now = new Date();
-  const result = validateRegistrationLegalAcceptance(choice, releaseFromRow(row), now);
+  const result = validateRegistrationLegalAcceptance(choice, releaseFromRow(row), new Date());
   if (!result.ok) throw new RegistrationLegalError(result.code);
+  return result.acceptance;
+}
+
+/** Exported transaction body is also exercised against the actual local schema. */
+export async function insertRegistrationWithLegalAcceptance(
+  tx: Transaction,
+  userData: Omit<schema.InsertUser, 'id' | 'createdAt' | 'updatedAt' | 'lastSignedIn'>,
+  choice: unknown,
+  agentProfile?: RegistrationAgentProfile,
+): Promise<{ userId: number; evidenceId: string }> {
+  const acceptance = await validateCurrentLegalAcceptanceInTransaction(tx, choice);
+  const now = new Date(acceptance.acceptedAt);
   if (
     !userData.email ||
     !userData.passwordHash ||
@@ -167,7 +175,6 @@ export async function insertRegistrationWithLegalAcceptance(
     });
   }
   const evidenceId = randomUUID();
-  const acceptance = result.acceptance;
   await tx.insert(schema.userLegalAcceptances).values({
     id: evidenceId,
     userId,
@@ -190,4 +197,51 @@ export async function createRegistrationWithLegalAcceptance(
   return db.transaction(tx =>
     insertRegistrationWithLegalAcceptance(tx, userData, choice, agentProfile),
   );
+}
+
+/** Administrative approval may attach an identity only to an account the
+ * applicant already created, verified and accepted Terms for. No backfill. */
+export async function findVerifiedRegistrationAccount(
+  db: Database,
+  email: string,
+  expectedUserId?: number,
+): Promise<number | undefined> {
+  const [record] = await db
+    .select({
+      accountId: schema.users.id,
+      evidence: schema.userLegalAcceptances,
+      release: schema.legalReleases,
+    })
+    .from(schema.users)
+    .innerJoin(schema.userLegalAcceptances, eq(schema.userLegalAcceptances.userId, schema.users.id))
+    .innerJoin(
+      schema.legalReleases,
+      eq(schema.legalReleases.bundleId, schema.userLegalAcceptances.bundleId),
+    )
+    .where(
+      and(
+        eq(schema.users.email, email.trim().toLowerCase()),
+        eq(schema.users.emailVerified, 1),
+        expectedUserId ? eq(schema.users.id, expectedUserId) : undefined,
+      ),
+    )
+    .orderBy(desc(schema.userLegalAcceptances.acceptedAt))
+    .limit(1);
+  if (!record) return undefined;
+  const { evidence } = record;
+  const acceptedAt = new Date(evidence.acceptedAt.replace(' ', 'T') + 'Z');
+  if (!Number.isFinite(acceptedAt.getTime()) || acceptedAt.getTime() > Date.now()) return undefined;
+  const result = validateRegistrationLegalAcceptance(
+    { bundleId: evidence.bundleId, termsAccepted: true },
+    releaseFromRow(record.release),
+    acceptedAt,
+  );
+  if (
+    !result.ok ||
+    result.acceptance.termsSha256 !== evidence.termsSha256 ||
+    result.acceptance.privacyNoticeSha256 !== evidence.privacyNoticeSha256 ||
+    result.acceptance.releaseContentSha256 !== evidence.releaseContentSha256
+  )
+    return undefined;
+  return record.accountId;
 }

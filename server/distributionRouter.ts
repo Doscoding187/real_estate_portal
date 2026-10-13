@@ -1,3 +1,5 @@
+import { findVerifiedRegistrationAccount } from './services/registrationLegalAcceptanceService';
+import { requireUser } from './_core/requireUser';
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
@@ -250,19 +252,6 @@ function normalizeDateForSql(value: Date) {
 
 function dateHoursFromNow(hours: number) {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
-}
-
-function splitFullName(fullName: string) {
-  const normalized = fullName.trim().replace(/\s+/g, ' ');
-  if (!normalized) {
-    return { firstName: null as string | null, lastName: null as string | null };
-  }
-  const [firstName, ...rest] = normalized.split(' ');
-  const lastName = rest.length ? rest.join(' ') : null;
-  return {
-    firstName: firstName || null,
-    lastName,
-  };
 }
 
 function issueManagerInviteUrl(input: { registrationId: number; email: string }) {
@@ -3370,6 +3359,7 @@ const adminDistributionRouter = router({
       const [application] = await db
         .select({
           id: distributionReferrerApplications.id,
+          userId: distributionReferrerApplications.userId,
           requestedIdentity: distributionReferrerApplications.requestedIdentity,
           fullName: distributionReferrerApplications.fullName,
           email: distributionReferrerApplications.email,
@@ -3408,87 +3398,17 @@ const adminDistributionRouter = router({
       const normalizedEmail = String(application.email || '')
         .trim()
         .toLowerCase();
-      const [existingUser] = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.email, normalizedEmail))
-        .limit(1);
-
-      let userId = Number(existingUser?.id || 0);
-      let userCreated = false;
-      let activationEmailSent = false;
-      let activationResetLink: string | null = null;
-
-      if (!userId) {
-        const cleanFullName = String(application.fullName || '').trim();
-        const { firstName, lastName } = splitFullName(cleanFullName || normalizedEmail);
-        const tempPassword = `Tmp!${Math.random().toString(36).slice(-10)}Aa1`;
-        const passwordHash = await authService.hashPassword(tempPassword);
-
-        const [insertResult] = await db.insert(users).values({
-          email: normalizedEmail,
-          passwordHash,
-          name: cleanFullName || normalizedEmail,
-          firstName: firstName || null,
-          lastName: lastName || null,
-          phone: application.phone ? String(application.phone).trim() : null,
-          loginMethod: 'email',
-          emailVerified: 1,
-          role: 'visitor',
-          isSubaccount: 0,
+      const userId = await findVerifiedRegistrationAccount(
+        db,
+        normalizedEmail,
+        Number(application.userId || 0) || undefined,
+      );
+      if (!userId)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'The applicant must create and verify their account and accept the released Terms before approval.',
         });
-
-        userId = Number((insertResult as any).insertId || 0);
-        if (!userId) {
-          const [resolvedUser] = await db
-            .select({ id: users.id })
-            .from(users)
-            .where(eq(users.email, normalizedEmail))
-            .limit(1);
-          userId = Number(resolvedUser?.id || 0);
-        }
-
-        if (!userId) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Unable to resolve approved referrer account.',
-          });
-        }
-
-        userCreated = true;
-
-        try {
-          const resetLink = await authService.generatePasswordResetLink(normalizedEmail);
-          activationResetLink = resetLink ? `${resetLink}&flow=onboarding` : null;
-          if (activationResetLink) {
-            activationEmailSent = await EmailService.sendReferrerActivationEmail(
-              normalizedEmail,
-              String(application.fullName || ''),
-              activationResetLink,
-            );
-          }
-          if (!activationEmailSent) {
-            console.warn(
-              '[distribution.reviewReferrerApplication] Activation onboarding email was not delivered.',
-              { applicationId: input.applicationId, userId },
-            );
-          }
-        } catch (error) {
-          console.warn(
-            '[distribution.reviewReferrerApplication] Failed to send activation onboarding email:',
-            error,
-          );
-        }
-      }
-
-      await db
-        .update(users)
-        .set({
-          emailVerified: 1,
-          emailVerificationToken: null,
-          emailVerificationTokenExpiresAt: null,
-        })
-        .where(eq(users.id, userId));
 
       await db
         .insert(distributionIdentities)
@@ -3521,9 +3441,6 @@ const adminDistributionRouter = router({
         applicationId: input.applicationId,
         status: 'approved' as const,
         userId,
-        userCreated,
-        activationEmailSent,
-        activationResetLink,
       };
     }),
 
@@ -3574,64 +3491,17 @@ const adminDistributionRouter = router({
         });
       }
 
-      let userId = Number(application.userId || 0);
-      let userCreated = false;
-      if (!userId) {
-        const [resolvedUser] = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.email, normalizedEmail))
-          .limit(1);
-        userId = Number(resolvedUser?.id || 0);
-      }
-
-      if (!userId) {
-        const cleanFullName = String(application.fullName || '').trim();
-        const { firstName, lastName } = splitFullName(cleanFullName || normalizedEmail);
-        const tempPassword = `Tmp!${Math.random().toString(36).slice(-10)}Aa1`;
-        const passwordHash = await authService.hashPassword(tempPassword);
-
-        const [insertResult] = await db.insert(users).values({
-          email: normalizedEmail,
-          passwordHash,
-          name: cleanFullName || normalizedEmail,
-          firstName: firstName || null,
-          lastName: lastName || null,
-          phone: application.phone ? String(application.phone).trim() : null,
-          loginMethod: 'email',
-          emailVerified: 1,
-          role: 'visitor',
-          isSubaccount: 0,
+      const userId = await findVerifiedRegistrationAccount(
+        db,
+        normalizedEmail,
+        Number(application.userId || 0) || undefined,
+      );
+      if (!userId)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'The applicant must create and verify their account and accept the released Terms before an activation email can be resent.',
         });
-
-        userId = Number((insertResult as any).insertId || 0);
-        if (!userId) {
-          const [resolvedUser] = await db
-            .select({ id: users.id })
-            .from(users)
-            .where(eq(users.email, normalizedEmail))
-            .limit(1);
-          userId = Number(resolvedUser?.id || 0);
-        }
-
-        if (!userId) {
-          throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'Unable to resolve approved referrer account for resend.',
-          });
-        }
-
-        userCreated = true;
-      }
-
-      await db
-        .update(users)
-        .set({
-          emailVerified: 1,
-          emailVerificationToken: null,
-          emailVerificationTokenExpiresAt: null,
-        })
-        .where(eq(users.id, userId));
 
       await db
         .insert(distributionIdentities)
@@ -3681,7 +3551,6 @@ const adminDistributionRouter = router({
         applicationId: input.applicationId,
         userId,
         email: normalizedEmail,
-        userCreated,
         activationEmailSent,
         activationResetLink,
       };
@@ -8213,7 +8082,7 @@ export const distributionRouter = router({
       };
     }),
 
-  completeManagerInviteRegistration: publicProcedure
+  completeManagerInviteRegistration: protectedProcedure
     .input(
       z
         .object({
@@ -8224,19 +8093,12 @@ export const distributionRouter = router({
           phone: z.string().trim().max(50).optional(),
           currentRole: z.string().trim().max(150).optional(),
           profileImageUrl: z.string().trim().url().max(1000).optional(),
-          password: z
-            .string()
-            .min(8)
-            .regex(/[a-z]/)
-            .regex(/[A-Z]/)
-            .regex(/\d/)
-            .regex(/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?/]/),
         })
         .refine(input => Boolean(input.token || (input.registrationId && input.email)), {
           message: 'Invite token or legacy invite parameters are required.',
         }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
@@ -8275,54 +8137,13 @@ export const distributionRouter = router({
         });
       }
 
-      const [existingUser] = await db
-        .select({
-          id: users.id,
-          email: users.email,
-          passwordHash: users.passwordHash,
-        })
-        .from(users)
-        .where(eq(users.email, normalizedEmail))
-        .limit(1);
-
-      let userId: number;
-      if (existingUser) {
-        userId = Number(existingUser.id);
-        const { firstName, lastName } = splitFullName(input.fullName);
-        const updatePayload: Record<string, unknown> = {
-          name: input.fullName.trim(),
-          firstName,
-          lastName,
-          phone: input.phone?.trim() || null,
-          emailVerified: 1,
-        };
-        if (!existingUser.passwordHash) {
-          updatePayload.passwordHash = await authService.hashPassword(input.password);
-        }
-        await db
-          .update(users)
-          .set(updatePayload as any)
-          .where(eq(users.id, userId));
-      } else {
-        const registration = await authService.register(
-          normalizedEmail,
-          input.password,
-          input.fullName.trim(),
-          'visitor',
-        );
-        userId = registration.userId;
-        const { firstName, lastName } = splitFullName(input.fullName);
-        await db
-          .update(users)
-          .set({
-            name: input.fullName.trim(),
-            firstName,
-            lastName,
-            phone: input.phone?.trim() || null,
-            emailVerified: 1,
-          } as any)
-          .where(eq(users.id, userId));
-      }
+      const userId = await findVerifiedRegistrationAccount(db, normalizedEmail, requireUser(ctx).id);
+      if (!userId)
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Create and verify your account and accept the released Terms before completing the manager invitation.',
+        });
 
       await db
         .insert(distributionIdentities)

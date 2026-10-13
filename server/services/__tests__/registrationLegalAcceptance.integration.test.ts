@@ -9,7 +9,10 @@ import {
   type AuthoritySqlConnection,
 } from '../../_core/databaseAuthority/connectionAuthority';
 import { legalReleaseContentDigest } from '../legalAcceptancePolicy';
-import { insertRegistrationWithLegalAcceptance } from '../registrationLegalAcceptanceService';
+import {
+  findVerifiedRegistrationAccount,
+  insertRegistrationWithLegalAcceptance,
+} from '../registrationLegalAcceptanceService';
 
 const runLocal = process.env.B15_LOCAL_DB_PROOF === '1';
 describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
@@ -180,6 +183,28 @@ describe.skipIf(!runLocal)('B15 canonical local transaction proof', () => {
     expect(
       await db.select().from(schema.agents).where(eq(schema.agents.displayName, 'Rollback Agent')),
     ).toHaveLength(0);
+  });
+
+  it('allows administrative attachment only for verified accounts with matching recorded copy', async () => {
+    const email = 'positive-visitor@example.invalid';
+    const [account] = await db.select().from(schema.users).where(eq(schema.users.email, email));
+    expect(await findVerifiedRegistrationAccount(db, email)).toBeUndefined();
+    await db.update(schema.users).set({ emailVerified: 1 }).where(eq(schema.users.id, account.id));
+    expect(await findVerifiedRegistrationAccount(db, email, account.id)).toBe(account.id);
+    expect(await findVerifiedRegistrationAccount(db, email, account.id + 100000)).toBeUndefined();
+    const [evidence] = await db
+      .select()
+      .from(schema.userLegalAcceptances)
+      .where(eq(schema.userLegalAcceptances.userId, account.id));
+    await db
+      .update(schema.userLegalAcceptances)
+      .set({ termsSha256: '0'.repeat(64) })
+      .where(eq(schema.userLegalAcceptances.id, evidence.id));
+    expect(await findVerifiedRegistrationAccount(db, email)).toBeUndefined();
+    await db
+      .update(schema.userLegalAcceptances)
+      .set({ termsSha256: evidence.termsSha256 })
+      .where(eq(schema.userLegalAcceptances.id, evidence.id));
   });
 
   it.each([

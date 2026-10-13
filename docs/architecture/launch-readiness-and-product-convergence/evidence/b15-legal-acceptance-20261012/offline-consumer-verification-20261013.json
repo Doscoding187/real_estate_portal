@@ -1,0 +1,116 @@
+{
+  "date": "2026-10-13",
+  "scope": "Offline B15 consumer continuation; not gate or package acceptance",
+  "acceptedScopeCount": 8,
+  "gateStatus": "B15 OPEN",
+  "target": {
+    "class": "disposable-worktree",
+    "fingerprintHash": "3d1259268441812f91c3ee04775defa67522ef1902bc72c3a97382fcf96d1bf4",
+    "acceptedOldHead": null,
+    "expectedHead": "0114_user_legal_acceptances.sql",
+    "planDigest": "aead9f6b152b13ecf49a586019067c6f0a8e00dead440845232ec3397dcdec5c"
+  },
+  "schema": {
+    "congruent": true,
+    "desiredDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+    "actualDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+    "all39ChecksEnforced": true
+  },
+  "foundation": {
+    "version": "canonical-launch-foundation-v1",
+    "digest": "aaac24d45d655d2702348aa948ff53742358d9c6af95f8dfcbf7da3ab758a780",
+    "head": "0114_user_legal_acceptances.sql",
+    "verified": {
+      "planId": 5,
+      "productKey": "developer_launch_access",
+      "active": true,
+      "pricingMode": "fixed",
+      "priceConfigured": true,
+      "launchFeeMinor": 149900,
+      "entitlementKeys": [
+        "unlimited_development_portfolio"
+      ],
+      "products": [
+        {
+          "planId": 3,
+          "productKey": "agent_launch_access",
+          "segment": "agent",
+          "price": 49900,
+          "durationDays": 90,
+          "entitlementKeys": [
+            "has_commission_tracking",
+            "has_revenue_dashboard",
+            "max_active_listings"
+          ],
+          "entitlementSource": "explicit_launch_capabilities"
+        },
+        {
+          "planId": 4,
+          "productKey": "agency_launch_access",
+          "segment": "agency",
+          "price": 99900,
+          "durationDays": 90,
+          "entitlementKeys": [
+            "has_commission_tracking",
+            "has_lead_routing",
+            "has_revenue_dashboard",
+            "has_team_dashboard",
+            "max_active_listings"
+          ],
+          "entitlementSource": "explicit_launch_capabilities"
+        },
+        {
+          "planId": 5,
+          "productKey": "developer_launch_access",
+          "segment": "developer",
+          "price": 149900,
+          "durationDays": 90,
+          "entitlementKeys": [
+            "unlimited_development_portfolio"
+          ],
+          "entitlementSource": "explicit"
+        }
+      ]
+    }
+  },
+  "localChecks": {
+    "actualMySqlRegistrationAndIdentity": 13,
+    "actualMySqlPaidCommitment": 10,
+    "actualMySqlExistingPaidLaunchScenarios": 10,
+    "clientFocused": 28,
+    "typecheck": "passed",
+    "frontendBuild": "passed",
+    "lint": "zero errors; retained warnings in existing files; six new TS/TSX files clean",
+    "fullCI": "not rerun; previous baseline-reproduced full-suite failures remain separately documented",
+    "finalFocusedServerGroup": 92,
+    "databaseAuthorityStatic": 720
+  },
+  "fixtureBoundary": {
+    "copyApproval": "synthetic only",
+    "bankAndSessionDetails": "synthetic only",
+    "proofObjectStorage": "synthetic in-memory adapter",
+    "emailsSent": 0,
+    "protectedConnections": 0,
+    "hostedDeployments": 0,
+    "newSchemasInThisContinuation": 0,
+    "syntheticCopyWrites": "separate authorized test-fixture connection; no runtime grant widening"
+  },
+  "diagnostics": {
+    "initialPaidFixtureSetup": "canonical plan features/limits TEXT serialization corrected; no DDL or ledger repair",
+    "initialBroaderScenarioRun": "missing synthetic JWT setting and an old negative-test purchase envelope corrected; final 10 scenarios passed"
+  },
+  "teardown": {
+    "disposed": true,
+    "acknowledgement": "CONFIRM_DATABASE_DISPOSE_3d1259268441812f",
+    "serviceStopped": "exact validated Unix socket",
+    "recovery": "clean stopped no-op"
+  },
+  "certificateCorrection": "founder-deferred follow-up; Property Listify (Pty) Ltd remains supplier; actual printed certificate name preserved",
+  "remaining": [
+    "exact customer-copy approval/version/digest/effective date",
+    "processor/transfer and finance/legal retention review",
+    "disposal/hold procedures and enquiry notices",
+    "reviewed protected release/grants",
+    "specified hosted acceptance and B17 24-hour workload"
+  ]
+}

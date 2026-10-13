@@ -3,6 +3,7 @@ import { ZodError, z } from 'zod';
 import { requireAuth } from '../_core/auth';
 import { agentOnboardingService } from '../services/agentOnboardingService';
 import { requestPaidLaunchAccessInvoice } from '../services/billingFoundationService';
+import { TRPCError } from '@trpc/server';
 import { AgentCoverageAreaValidationError } from '../services/agentCoverageAreaService';
 import {
   AGENT_COVERAGE_AREA_MAX,
@@ -47,6 +48,19 @@ export const agentProfileSchema = z
   .strict();
 
 function respondForError(res: Response, error: unknown) {
+  if (error instanceof TRPCError) {
+    const status =
+      error.code === 'CONFLICT' || error.code === 'PRECONDITION_FAILED'
+        ? 409
+        : error.code === 'BAD_REQUEST'
+          ? 400
+          : error.code === 'FORBIDDEN'
+            ? 403
+            : error.code === 'NOT_FOUND'
+              ? 404
+              : 500;
+    return res.status(status).json({ error: error.message });
+  }
   if (error instanceof ZodError) {
     return res.status(400).json({
       error: 'Invalid request payload',
@@ -56,21 +70,22 @@ function respondForError(res: Response, error: unknown) {
 
   const message = error instanceof Error ? error.message : 'Request failed';
   const normalized = message.toLowerCase();
-  const status = error instanceof AgentCoverageAreaValidationError
-    ? 400
-    : normalized.includes('preparation-only onboarding')
-    ? 409
-    : normalized.includes('not found')
-      ? 404
-      : normalized.includes('only available to agents') ||
-          normalized.includes('only available to agent') ||
-          normalized.includes('only available to')
-        ? 403
-        : normalized.includes('required') ||
-            normalized.includes('already taken') ||
-            normalized.includes('url-safe')
-          ? 400
-          : 500;
+  const status =
+    error instanceof AgentCoverageAreaValidationError
+      ? 400
+      : normalized.includes('preparation-only onboarding')
+        ? 409
+        : normalized.includes('not found')
+          ? 404
+          : normalized.includes('only available to agents') ||
+              normalized.includes('only available to agent') ||
+              normalized.includes('only available to')
+            ? 403
+            : normalized.includes('required') ||
+                normalized.includes('already taken') ||
+                normalized.includes('url-safe')
+              ? 400
+              : 500;
 
   return res.status(status).json({ error: message });
 }
@@ -116,7 +131,11 @@ router.post('/request-launch-access-invoice', async (req, res) => {
     const planId =
       req.body?.planId === undefined ? undefined : selectPackageSchema.parse(req.body).planId;
     const user = (req as AuthenticatedRequest).user;
-    const result = await requestPaidLaunchAccessInvoice({ user, planId });
+    const result = await requestPaidLaunchAccessInvoice({
+      user,
+      planId,
+      legalAcceptance: req.body?.legalAcceptance,
+    });
     res.json(result);
   } catch (error) {
     respondForError(res, error);

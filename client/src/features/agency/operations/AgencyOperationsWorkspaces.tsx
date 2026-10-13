@@ -26,6 +26,8 @@ import { Progress } from '@/components/ui/progress';
 import { trpc } from '@/lib/trpc';
 import { CommercialActivationNotice } from '@/components/commercial/CommercialActivationNotice';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { usePaidLegalAcceptance } from '@/hooks/usePaidLegalAcceptance';
+import { PaidCommitmentDisclosure } from '@/components/commercial/PaidCommitmentDisclosure';
 import { WORKSPACE_TITLES } from '../workspace/constants';
 import { SectionTitle } from '../workspace/WorkspacePrimitives';
 import { AttentionPanel } from '../workspace/WorkspacePanels';
@@ -234,6 +236,21 @@ export function CommercialAgencyBillingWorkspace(
 
   const billingStateQuery = trpc.agency.getBillingState.useQuery();
   const workspaceQuery = trpc.billing.workspace.useQuery();
+  const quotedPlan = workspaceQuery.data?.plans.find(plan => plan.name === 'agency_launch_access');
+  const legal = usePaidLegalAcceptance(
+    !salesPaused && workspaceQuery.data?.plans
+      ? JSON.stringify(
+          workspaceQuery.data.plans.filter(plan => plan.name === 'agency_launch_access'),
+        )
+      : null,
+    quotedPlan
+      ? {
+          planId: quotedPlan.id,
+          amountDue: Number(quotedPlan.price),
+          currency: quotedPlan.currency || 'ZAR',
+        }
+      : undefined,
+  );
   const startCheckout = trpc.billing.startManualEftCheckout.useMutation({
     onSuccess: async data => {
       await refreshBilling(utils);
@@ -243,7 +260,11 @@ export function CommercialAgencyBillingWorkspace(
         description: `${data.invoice.invoiceNumber} is ready for EFT payment.`,
       });
     },
-    onError: error => toast.error(error.message || 'Invoice could not be issued'),
+    onError: error => {
+      legal.reload();
+      void workspaceQuery.refetch();
+      toast.error(error.message || 'Invoice could not be issued');
+    },
   });
   const submitProof = trpc.billing.submitPaymentProof.useMutation({
     onSuccess: async () => {
@@ -285,11 +306,11 @@ export function CommercialAgencyBillingWorkspace(
   );
 
   const handleStartCheckout = (planId: number) => {
-    if (salesPaused) return;
+    if (salesPaused || !legal.choice) return;
     // `startAgencyManualCheckout` recognizes the exact canonical Agency
     // Launch Access plan and delegates to the fixed once-off invoice authority.
     // Its legacy cycle parameter is retained at the API boundary only.
-    startCheckout.mutate({ planId, billingCycle: 'monthly' });
+    startCheckout.mutate({ planId, billingCycle: 'monthly', legalAcceptance: legal.choice });
   };
 
   useEffect(() => {
@@ -455,7 +476,6 @@ export function CommercialAgencyBillingWorkspace(
                   </p>
                   <p className="mt-2 text-sm font-medium text-slate-700">{nextBillingAction}</p>
                 </div>
-
               </div>
             )}
           </CardContent>
@@ -528,6 +548,7 @@ export function CommercialAgencyBillingWorkspace(
           <SectionTitle icon={CreditCard} title="Agency Launch Access" eyebrow="Once-off access" />
         </CardHeader>
         <CardContent>
+          {!salesPaused && <PaidCommitmentDisclosure legal={legal} />}
           {workspaceQuery.isLoading ? (
             <div className="h-40 animate-pulse rounded-lg bg-slate-100" />
           ) : launchPlans.length ? (
@@ -554,6 +575,7 @@ export function CommercialAgencyBillingWorkspace(
                     disabled={
                       startCheckout.isPending ||
                       !eftCanIssueInvoices ||
+                      !legal.choice ||
                       salesPaused
                     }
                     onClick={() => handleStartCheckout(plan.id)}
@@ -640,11 +662,7 @@ export function CommercialAgencyBillingWorkspace(
                   />
                 </div>
                 <Button
-                  disabled={
-                    submitProof.isPending ||
-                    !proofStorageReady ||
-                    !invoiceAcceptsProof
-                  }
+                  disabled={submitProof.isPending || !proofStorageReady || !invoiceAcceptsProof}
                   onClick={handleProofSubmit}
                   className="md:col-span-2"
                 >

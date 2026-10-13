@@ -22,6 +22,8 @@ import {
 } from '@/lib/commercialCatalog';
 import { useCommercialCatalog, type CommercialProduct } from '@/hooks/useCommercialCatalog';
 import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
+import { usePaidLegalAcceptance } from '@/hooks/usePaidLegalAcceptance';
+import { PaidCommitmentDisclosure } from '@/components/commercial/PaidCommitmentDisclosure';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   ArrowRight,
@@ -378,6 +380,16 @@ export function CommercialAgentPackageSelection({
   );
   const launchProduct =
     agentProducts.find(product => product.productKey === 'agent_launch_access') ?? agentProducts[0];
+  const legal = usePaidLegalAcceptance(
+    agentLaunchAccessAvailable && launchProduct ? JSON.stringify(launchProduct) : null,
+    launchProduct?.source?.planId && launchProduct.pricing.basePrice
+      ? {
+          planId: launchProduct.source.planId,
+          amountDue: launchProduct.pricing.basePrice.amountMinor,
+          currency: launchProduct.pricing.basePrice.currency,
+        }
+      : undefined,
+  );
 
   useEffect(() => {
     if (new URLSearchParams(search).get('verified') === 'true') {
@@ -493,6 +505,7 @@ export function CommercialAgentPackageSelection({
       return;
     }
     const planId = launchProduct.source?.planId;
+    if (!legal.choice) return;
     if (!planId) {
       toast.error('The canonical Agent Launch Access product is not requestable right now.');
       return;
@@ -503,7 +516,7 @@ export function CommercialAgentPackageSelection({
       const result = await apiFetch<AgentInvoiceResponse>('/agent/request-launch-access-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, legalAcceptance: legal.choice }),
       });
       setInvoiceResponse(result);
       setPaymentAmount((Number(result.invoice.amountDue || 0) / 100).toFixed(2));
@@ -515,6 +528,8 @@ export function CommercialAgentPackageSelection({
         },
       );
     } catch (error) {
+      legal.reload();
+      void catalog.refetch();
       toast.error(error instanceof Error ? error.message : 'Could not request the Agent invoice');
     } finally {
       setIsRequestingInvoice(false);
@@ -523,7 +538,9 @@ export function CommercialAgentPackageSelection({
 
   const handleProofSubmit = async () => {
     if (!agentLaunchAccessAvailable) {
-      toast.info('Agent Launch Access is unavailable while commercial availability is being verified.');
+      toast.info(
+        'Agent Launch Access is unavailable while commercial availability is being verified.',
+      );
       return;
     }
     if (!activeInvoice) {
@@ -639,10 +656,11 @@ export function CommercialAgentPackageSelection({
                 payment proof and the fixed 90-day term become available only after the approved
                 payment workflow is opened.
               </div>
+              {agentLaunchAccessAvailable && <PaidCommitmentDisclosure legal={legal} />}
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
                   className="h-12 flex-1 rounded-2xl"
-                  disabled={isRequestingInvoice}
+                  disabled={isRequestingInvoice || (agentLaunchAccessAvailable && !legal.choice)}
                   onClick={() => void handleRequestInvoice()}
                 >
                   {!agentLaunchAccessAvailable
@@ -754,7 +772,9 @@ function PreparationAgentPackageSelection({
 
           {availabilityError ? (
             <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-              <span>Agent Launch Access could not be verified, so paid actions remain unavailable.</span>
+              <span>
+                Agent Launch Access could not be verified, so paid actions remain unavailable.
+              </span>
               <Button type="button" variant="outline" onClick={onRetry}>
                 Retry
               </Button>

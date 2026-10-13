@@ -39,6 +39,20 @@ export const registrationLegalAcceptanceSchema = z
   .object({ bundleId: identity, termsAccepted: z.literal(true) })
   .strict();
 
+/** An invoice request is a separate commitment from account registration. */
+export const paidLegalAcceptanceSchema = registrationLegalAcceptanceSchema
+  .extend({
+    purchaseAccepted: z.literal(true),
+    quote: z
+      .object({
+        planId: z.number().int().positive(),
+        amountDue: z.number().int().positive().safe(),
+        currency: z.literal('ZAR'),
+      })
+      .strict(),
+  })
+  .strict();
+
 function sha256(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
 }

@@ -33,7 +33,7 @@ export function getManagerInviteStateCopy(
       return {
         title: 'Accept manager invite',
         description:
-          'Your invite is valid. Complete your profile and password below to activate manager access.',
+          'Your invite is valid. Create and verify your account first, then complete your profile below to accept manager access.',
       };
     case 'accepted':
       return {

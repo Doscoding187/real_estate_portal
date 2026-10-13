@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceContentProps } from '../workspace/types';
+import { apiFetch } from '@/lib/api';
 
 const {
   billingStateQueryMock,
@@ -59,6 +60,18 @@ vi.mock('@/lib/trpc', () => ({
     },
   },
 }));
+
+vi.mock('@/lib/api', () => ({
+  apiFetch: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(apiFetch).mockResolvedValue({
+    bundleId: 'synthetic-paid-test',
+    terms: { version: 'test-terms' },
+    privacy: { version: 'test-privacy' },
+  });
+});
 
 import { AgencyBillingWorkspace } from './AgencyOperationsWorkspaces';
 
@@ -180,7 +193,7 @@ describe('Agency Launch Access billing', () => {
     useUtilsMock.mockReturnValue({});
   });
 
-  it('keeps a selected pending Agency plan actionable for its first once-off invoice', () => {
+  it('requires released Terms and purchase acceptance for its first once-off invoice', async () => {
     render(<AgencyBillingWorkspace {...billingWorkspaceProps} />);
 
     expect(screen.getByText('R999 once-off')).toBeInTheDocument();
@@ -195,9 +208,22 @@ describe('Agency Launch Access billing', () => {
     expect(screen.queryByRole('button', { name: 'monthly' })).not.toBeInTheDocument();
 
     const requestInvoice = screen.getByRole('button', { name: /Request R999 invoice/i });
-    expect(requestInvoice).toBeEnabled();
+    expect(requestInvoice).toBeDisabled();
+    fireEvent.click(requestInvoice);
+    expect(startCheckoutMutation).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('checkbox'));
+    await waitFor(() => expect(requestInvoice).toBeEnabled());
     fireEvent.click(requestInvoice);
 
-    expect(startCheckoutMutation).toHaveBeenCalledWith({ planId: 701, billingCycle: 'monthly' });
+    expect(startCheckoutMutation).toHaveBeenCalledWith({
+      planId: 701,
+      billingCycle: 'monthly',
+      legalAcceptance: {
+        bundleId: 'synthetic-paid-test',
+        termsAccepted: true,
+        purchaseAccepted: true,
+        quote: { planId: 701, amountDue: 99900, currency: 'ZAR' },
+      },
+    });
   });
 });

@@ -40,7 +40,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 type FormValues = BasicInfoData &
   ContactInfoData &
   PortfolioData & {
-    termsAccepted: boolean;
+    authorityConfirmed: boolean;
   };
 
 const STEPS = [
@@ -128,7 +128,7 @@ export default function DeveloperSetupWizardEnhanced() {
       // Expertise
       specializations: [],
       // Terms
-      termsAccepted: false,
+      authorityConfirmed: false,
     },
   });
 
@@ -163,8 +163,8 @@ export default function DeveloperSetupWizardEnhanced() {
     });
   };
 
-  const handleTermsChange = (accepted: boolean) => {
-    setValue('termsAccepted', accepted);
+  const handleAuthorityChange = (accepted: boolean) => {
+    setValue('authorityConfirmed', accepted);
   };
 
   const handleEditStep = (stepIndex: number) => {
@@ -261,7 +261,7 @@ export default function DeveloperSetupWizardEnhanced() {
         province: draft.province || '',
         logo: draft.logo || null,
         specializations: draft.specializations || [],
-        termsAccepted: false,
+        authorityConfirmed: false,
       });
 
       // Restore wizard state
@@ -293,7 +293,7 @@ export default function DeveloperSetupWizardEnhanced() {
       province: '',
       logo: null,
       specializations: [],
-      termsAccepted: false,
+      authorityConfirmed: false,
     });
     setStep(1);
     setCompletedSteps([]);
@@ -342,7 +342,7 @@ export default function DeveloperSetupWizardEnhanced() {
           typeof data.specializations === 'string'
             ? (JSON.parse(data.specializations) as string[])
             : ((data.specializations || []) as string[]),
-        termsAccepted: false,
+        authorityConfirmed: false,
       });
 
       if (data.status === 'pending') {
@@ -362,7 +362,7 @@ export default function DeveloperSetupWizardEnhanced() {
       case 3:
         return formValues.specializations.length > 0; // At least one specialization required
       case 4:
-        return formValues.termsAccepted;
+        return formValues.authorityConfirmed;
       default:
         return false;
     }
@@ -397,8 +397,8 @@ export default function DeveloperSetupWizardEnhanced() {
 
   const onSubmit = async (data: FormValues) => {
     try {
-      if (!data.termsAccepted) {
-        toast.error('Please accept the terms and conditions');
+      if (!data.authorityConfirmed) {
+        toast.error('Please confirm your authority to prepare this Developer profile');
         return;
       }
 
@@ -697,9 +697,9 @@ export default function DeveloperSetupWizardEnhanced() {
                     portfolio: {
                       specializations: formValues.specializations,
                     },
-                    termsAccepted: formValues.termsAccepted,
+                    authorityConfirmed: formValues.authorityConfirmed,
                   }}
-                  onTermsChange={handleTermsChange}
+                  onAuthorityChange={handleAuthorityChange}
                   onEditStep={handleEditStep}
                   submitting={createProfile.isPending}
                   errors={getErrorMessages()}
@@ -745,7 +745,7 @@ export default function DeveloperSetupWizardEnhanced() {
                     type="submit"
                     variant="success"
                     loading={createProfile.isPending}
-                    disabled={!formValues.termsAccepted}
+                    disabled={!formValues.authorityConfirmed}
                   >
                     {profileStatus === 'rejected' ? 'Resubmit Application' : 'Submit Application'}
                   </GradientButton>
