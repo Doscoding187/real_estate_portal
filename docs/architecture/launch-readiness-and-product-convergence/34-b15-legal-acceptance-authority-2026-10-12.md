@@ -60,7 +60,12 @@ Edward confirmed legal-document receipt at 96 Jorissen Street, Braamfontein;
 Johannesburg, Gauteng, South Africa as incorporation/registration location; sole
 director and full registered name Lehlohonolo Banda. He states no accreditation
 or dispute-scheme membership. No subscribed code of conduct was subsequently confirmed. Information Officer
-registration is treated as outstanding after Edward replied “none so i need these”; remaining processor/transfer review and final exact public copy approval
+registration was outstanding on October 12 after Edward replied “none so i need
+these”. On October 13 Edward supplied the successful-organisation-registration
+confirmation: completed on founder report, with certificate reportedly emailed
+and downloaded. Registered officer name, certificate date/reference and private
+evidence location await capture; the certificate has not been independently
+inspected. Remaining processor/transfer review and final exact public copy approval
 are not inferred from those factual confirmations. No identity document is needed
 for the office-bearer disclosure. Final approval must identify resolved text,
 versions, digest and effective date before any release installation/publication.
@@ -112,7 +117,7 @@ this slice does not backfill or infer acceptance. These are B15 closure gaps,
 not evidence that every identity path is covered.
 
 Also remaining: final Terms/Privacy/Cookies and payment copy approval, supplier
-telephone applicability review, Information Officer evidence, processor/transfer
+telephone applicability review, registration certificate-field capture, processor/transfer
 and finance/legal retention review, operational disposal/hold capability,
 Agency/Developer setup wording, paid commitment and enquiry notices, specified hosted acceptance. Do not merge
 or deploy this slice as a completed launch gate or silently disable the maintained
@@ -145,3 +150,24 @@ reported zero errors and 19 pre-existing any/formatting warnings in auth.ts and
 authRoutes.ts; newly added standalone files reported no warnings. Browser checks
 also verified the unapproved Cookies route at both viewports. The owned Vite
 preview was stopped after verification; no task-owned service remains running.
+
+## October 13 registration and operating continuation
+
+The organisation-registration submission is no longer an outstanding founder
+action. The portal confirmation supplied by Edward is the evidence for that
+status; do not imply Codex accessed the portal/email or verified a certificate.
+Capture the minimal officer/date/reference fields without importing private ID
+numbers or publishing a full certificate. No registration event is installed
+as customer legal-copy approval, and no exact-copy candidate is mutated here.
+
+Ongoing privacy/request/security procedures and the applicable PAIA manual
+remain launch work. The supplied success message also describes PAIA annual
+reporting and a future POPIA Annual Compliance Assessment. B14 should retain
+request counts/outcomes, review regulator notices through the normal staffed
+checks and record the actual applicable submission window/receipt. Private-body
+reporting follows the relevant section 83(4) request; public-body section 32 is
+not substituted. Historical 2024/2026 windows and the proposed future assessment
+do not establish a new deadline or an immediate new launch gate here. The OS
+worklog `2026-10-13 - B15 Information Regulator Registration Completion.md`
+records this operating handoff and the remaining evidence fields. B15 remains
+OPEN; eight scopes remain accepted; no release or worker hold was changed.
