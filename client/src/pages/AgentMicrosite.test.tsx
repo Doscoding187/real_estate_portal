@@ -264,6 +264,7 @@ describe('AgentMicrosite public web presence', () => {
           bedrooms: 4,
           bathrooms: 2,
           internalAreaM2: 140,
+          propertyType: 'house',
           erfSizeM2: 600,
           mainImage: '/test/property.jpg',
           images: [{ url: '/test/property.jpg' }],
