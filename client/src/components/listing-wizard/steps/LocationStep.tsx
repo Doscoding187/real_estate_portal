@@ -212,8 +212,8 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           Where is the property?
         </h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Start with an approved location, then confirm the street-level property location. Map search
-          is optional and never required for manual authoring.
+          Select the property&apos;s area from the search results, then enter its address in the
+          separate fields below. You can confirm a valid manual location without using map search.
         </p>
       </div>
 
@@ -221,11 +221,10 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <MapPin className="h-5 w-5 text-[var(--primary)]" />
-            Enter the property location
+            1. Select the area
           </CardTitle>
           <CardDescription>
-            Choose an approved suburb, locality, city or town, then add the private property
-            address.
+            Search for the suburb, locality, city or town, rather than the full street address.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -237,6 +236,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
             </Alert>
           )}
           <CanonicalPlaceSelector
+            label="Area (suburb, locality, city or town)"
+            placeholder="e.g. Sandton — select a result below"
+            hint="Enter the area name only, then click a matching result. For 12 Katherine Street, Sandton, search for Sandton here and enter 12 and Katherine Street below. Typing a name alone does not select an area."
             value={currentLocation.canonicalPlace ?? null}
             onChange={canonicalPlace => {
               setLocation(
@@ -254,6 +256,17 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               setManualError('');
             }}
           />
+
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">
+              2. Enter the private property address
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              {isFarm
+                ? 'Add the farm or holding details below.'
+                : 'Enter the street name separately from the house or street number. The number is optional.'}
+            </p>
+          </div>
 
           {isFarm ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -400,9 +413,18 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
               {isConfirmed ? 'Reconfirm location' : 'Confirm location'}
             </Button>
             {!isConfirmed && confirmationPrerequisiteIssues.length > 0 && (
-              <p className="mt-2 text-xs text-slate-500">
-                Complete the required location details above to unlock confirmation.
-              </p>
+              <div className="mt-3 text-sm text-slate-700" aria-live="polite">
+                <p className="font-medium">To enable confirmation:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {confirmationPrerequisiteIssues.map(issue => (
+                    <li key={issue}>
+                      {issue === 'Select an approved location.'
+                        ? 'Select an area from the search results above; entering text alone is not enough.'
+                        : issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {manualError && (
               <p className="mt-2 flex items-center gap-2 text-sm text-red-700" role="alert">
@@ -469,8 +491,9 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
           <div className="min-w-0 flex-1">
             <p className="text-lg font-semibold text-slate-800">Use map search</p>
             <p className="mt-1 text-sm leading-5 text-slate-500">
-              Optional: search an address or move a pin to update the private address and coordinates.
-              Your selected location stays the same; review and confirm the updated details.
+              Optional: search an address or move a pin to update the private address and
+              coordinates. Your selected location stays the same; review and confirm the updated
+              details.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2 pt-1">
