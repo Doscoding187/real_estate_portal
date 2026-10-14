@@ -247,12 +247,12 @@ describe('AgentMicrosite public web presence', () => {
     const card = screen.getByTestId('inventory-card');
     expect(
       within(card)
-        .getByRole('link', { name: 'View property: Bryanston Family Home' })
+        .getByRole('link', { name: /Bryanston Family Home/ })
         .getAttribute('href'),
     ).toBe('/property/7');
   });
 
-  it('uses the shared public card with approved location, sizes and identity', () => {
+  it('uses the homepage card with approved location and compact property facts', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
     inventoryResult.current = {
       data: [
@@ -277,17 +277,15 @@ describe('AgentMicrosite public web presence', () => {
     };
     render(<AgentMicrosite />);
     const card = screen.getByTestId('inventory-card');
-    expect(card.querySelector('article')).not.toBeNull();
-    expect(within(card).getByLabelText('Internal area 140 square metres')).toBeInTheDocument();
-    expect(card.textContent).toContain('600m²');
-    expect(card.textContent).toContain('4 beds');
-    expect(card.textContent).toContain('2 baths');
+    expect(card.querySelector('[class*="aspect-"]')).not.toBeNull();
+    expect(within(card).getByText('140 m²')).toBeInTheDocument();
+    expect(card.textContent).toContain('600 m²');
+    expect(card.textContent).toContain('4 Bed');
+    expect(card.textContent).toContain('2 Bath');
     expect(card.textContent).toContain('Bryanston, Sandton, Gauteng');
-    expect(card.textContent).toContain('Jane Agent');
+    expect(card.textContent).toContain('For sale');
     expect(card.textContent).not.toContain('South Africa');
-    fireEvent.click(
-      within(card).getByRole('link', { name: 'View property: Bryanston Family Home' }),
-    );
+    fireEvent.click(within(card).getByRole('link'));
     expect(trackMutate).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'agent_profile_listing_click',
@@ -314,7 +312,7 @@ describe('AgentMicrosite public web presence', () => {
     };
     render(<AgentMicrosite />);
     expect(screen.getByTestId('inventory-card').textContent).toContain('/ month');
-    expect(screen.getByTestId('inventory-card').textContent).toContain('Parking to confirm');
+    expect(screen.getByTestId('inventory-card').textContent).toContain('To rent');
   });
   it('does not override an explicit pricing contract with a loose public price', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };

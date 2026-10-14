@@ -13,6 +13,7 @@ export interface SimpleHomeListingCardProps {
   id: string;
   title: string;
   city: string;
+  locationLabel?: string;
   suburb?: string;
   image?: string | null;
   href: string;
@@ -29,12 +30,14 @@ export interface SimpleHomeListingCardProps {
   isSaved?: boolean;
   favoritePending?: boolean;
   onFavoriteClick?: () => void;
+  onOpen?: () => void;
 }
 
 export function SimpleHomeListingCard({
   id,
   title,
   city,
+  locationLabel: publicLocationLabel,
   suburb,
   image,
   href,
@@ -51,6 +54,7 @@ export function SimpleHomeListingCard({
   isSaved = false,
   favoritePending = false,
   onFavoriteClick,
+  onOpen,
 }: SimpleHomeListingCardProps) {
   const normalizedProperty = {
     id,
@@ -67,14 +71,18 @@ export function SimpleHomeListingCard({
     parkingType,
     propertyType,
   };
-  const locationLabel = getPropertyCardLocation(normalizedProperty).label;
+  const locationLabel = publicLocationLabel || getPropertyCardLocation(normalizedProperty).label;
   const resolvedImage = image ? getPropertyCardImage(normalizedProperty) : undefined;
   const priceLabel = getPropertyCardPrice(normalizedProperty).label;
   const specItems = getCompactPropertyFacts(normalizedProperty, 4);
 
   return (
     <div className="group relative h-full w-full overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg">
-      <Link href={href || `/property/${id}`} className="block focus-visible:outline-none">
+      <Link
+        href={href || `/property/${id}`}
+        onClick={onOpen}
+        className="block focus-visible:outline-none"
+      >
         <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
           {!resolvedImage && (
             <div className="absolute inset-0 flex items-center justify-center text-slate-300">

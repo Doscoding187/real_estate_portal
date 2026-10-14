@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import {
-  ListingResultCard,
-  type ListingResultCardData,
-} from '@/components/property-results/ListingResultCard';
+  SimpleHomeListingCard,
+  type SimpleHomeListingCardProps,
+} from '@/components/SimpleHomeListingCard';
 import { normalizePublicPropertyCard } from '@/lib/property';
 import type { PublicPropertyDetailPresentation } from '@shared/public-property-detail-presentation';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +54,7 @@ interface InventoryCard extends Record<string, unknown> {
   detailPresentation?: PublicPropertyDetailPresentation;
 }
 
-function publicInventoryCardData(card: InventoryCard): ListingResultCardData {
+function publicInventoryCardData(card: InventoryCard): SimpleHomeListingCardProps {
   // The public inventory DTO exposes one price; the shared normalizer accepts
   // intent-specific price fields. Embedded pricing contracts retain precedence.
   const normalized = normalizePublicPropertyCard({
@@ -66,23 +66,18 @@ function publicInventoryCardData(card: InventoryCard): ListingResultCardData {
     id: normalized.id,
     href: normalized.href,
     title: normalized.title,
-    location: detail?.location?.label || normalized.location,
+    city: normalized.city,
+    suburb: normalized.suburb,
+    locationLabel: detail?.location?.label || normalized.location,
     price: normalized.price,
     image: normalized.image,
-    imageCount: detail?.media?.photoCount ?? normalized.imageCount,
     area: normalized.area,
     yardSize: normalized.yardSize,
     bedrooms: normalized.bedrooms,
     bathrooms: normalized.bathrooms,
-    parking: detail?.heroFacts?.find(fact => fact.key === 'parking'),
-    rentalSnapshot: detail?.rentalEssentials,
-    listingType: normalized.listingType,
-    listingSource: normalized.listingSource,
-    listerType: normalized.listerType,
-    contactRole: normalized.contactRole,
-    identity: normalized.identity,
-    development: normalized.development,
-    propertyId: normalized.propertyId,
+    propertyType: normalized.propertyType,
+    listingType: normalized.listingType === 'rent' ? 'rent' : 'sale',
+    badgeLabel: normalized.listingType === 'rent' ? 'To rent' : 'For sale',
   };
 }
 
@@ -482,19 +477,18 @@ export default function AgentMicrosite() {
               </p>
             </div>
 
-            <div className="space-y-5">
+            <div className="grid gap-5 md:grid-cols-2">
               {visibleInventory.map(card => (
                 <div key={card.id} data-testid="inventory-card">
-                  <ListingResultCard
-                    data={{
-                      ...publicInventoryCardData(card),
-                      onOpen: () =>
-                        track(AGENT_PROFILE_EVENTS.listingClick, {
-                          slug: profile.slug,
-                          agentId: profile.id,
-                          propertyId: card.id,
-                        }),
-                    }}
+                  <SimpleHomeListingCard
+                    {...publicInventoryCardData(card)}
+                    onOpen={() =>
+                      track(AGENT_PROFILE_EVENTS.listingClick, {
+                        slug: profile.slug,
+                        agentId: profile.id,
+                        propertyId: card.id,
+                      })
+                    }
                   />
                 </div>
               ))}
