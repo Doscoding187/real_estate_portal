@@ -41,14 +41,23 @@ export default function AgentDashboard() {
 
   return (
     <AgentAppShell>
-      <div className="min-h-[calc(100vh-4rem)] [.dark_&]:bg-background">
-        <div className="mx-auto max-w-[1400px] px-4 pt-4 md:px-7">
-          <AgentStatusStrip
-            compact
-            status={status}
-            agentLaunchAccessAvailable={agentLaunchAccessAvailable}
-          />
-        </div>
+      <div className="flex flex-col gap-4">
+        <AgentStatusStrip agentLaunchAccessAvailable={agentLaunchAccessAvailable} />
+        {!status.fullFeaturesUnlocked ? (
+          <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
+            <h2 className="text-lg font-semibold">Prepare your professional workspace</h2>
+            <p className="mt-2 text-sm">
+              Complete your profile and approval information, then prepare private listing drafts.
+              You can return and continue your work before payment. Marketplace publishing remains
+              locked until commercial activation.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold underline">
+              <a href="/agent/setup">Complete profile</a>
+              <a href="/listings/create">Prepare a listing</a>
+              <a href="/agent/listings?tab=draft">Resume drafts</a>
+            </div>
+          </section>
+        ) : null}
         <AgentDashboardOverview
           onboardingStatus={status}
           agentLaunchAccessAvailable={agentLaunchAccessAvailable}

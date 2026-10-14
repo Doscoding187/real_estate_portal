@@ -1,163 +1,331 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'wouter';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
+import { Badge } from '@/components/ui/badge';
 import { AgentPresenceProof } from '@/components/agent/AgentPresenceProof';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
 } from '@/lib/agentJourney';
-import { ArrowRight, Building2, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react';
+import {
+  ArrowRight,
+  Bell,
+  Building2,
+  CalendarDays,
+  CalendarPlus,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Lock,
+  MapPin,
+  X,
+} from 'lucide-react';
 
-type Stage = 'new' | 'contacted' | 'viewing' | 'offer' | 'closed';
-type Lead = {
+type PipelineStage = 'new' | 'contacted' | 'viewing' | 'offer' | 'closed';
+
+type LeadItem = {
   id: number;
   name: string;
+  email: string;
+  phone: string | null;
   status: string;
+  source: string | null;
   createdAt: string | Date;
-  property?: { id: number; title: string; city: string } | null;
-  commercial?: { listingTitle: string; city: string | null } | null;
+  campaignName?: string | null;
+  matchConfidence?: 'high' | 'medium' | 'low' | null;
+  property?: {
+    id: number;
+    title: string;
+    city: string;
+    price: number;
+  } | null;
+  commercial?: {
+    listingTitle: string;
+    spaceIdentifier: string;
+    useType: string;
+    city: string | null;
+    province: string | null;
+  } | null;
 };
-type Listing = {
+
+type PipelineData = Record<PipelineStage, LeadItem[]>;
+
+type ListingItem = {
   id: number;
   title: string;
   city: string;
   price: number;
   status: string;
-  enquiries?: number;
+  propertyType?: string | null;
+  views: number;
+  enquiries: number;
   primaryImage?: string | null;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 };
-type AuthoredListing = {
+
+type AuthoredListingItem = {
   id: number;
   title: string;
   status: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 };
-type Showing = {
+
+type ShowingItem = {
   id: number;
-  propertyId?: number | null;
   listingId?: number | null;
+  visitorName?: string | null;
   status: string;
   scheduledAt?: string | Date;
-  property?: { title?: string } | null;
-  client?: { name?: string } | null;
 };
-const stages: Array<{ key: Stage; label: string }> = [
-  { key: 'new', label: 'New' },
-  { key: 'contacted', label: 'Contacted' },
-  { key: 'viewing', label: 'Viewing' },
-  { key: 'offer', label: 'Offer' },
-  { key: 'closed', label: 'Closed' },
-];
-const emptyPipeline: Record<Stage, Lead[]> = {
-  new: [],
-  contacted: [],
-  viewing: [],
-  offer: [],
-  closed: [],
-};
-const panelClass =
-  'min-w-0 rounded-2xl border border-border bg-card text-card-foreground shadow-sm';
-const actionClass =
-  'inline-flex min-h-10 shrink-0 items-center gap-1 rounded-md text-xs font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
 
-function toDate(value: string | Date | undefined) {
+type DashboardGuidanceMode = 'setup';
+
+const GUIDANCE_STORAGE_KEY = 'agent-dashboard-guidance-dismissed';
+const SETUP_GUIDANCE_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+const PIPELINE_CONFIG: Array<{
+  key: PipelineStage;
+  label: string;
+  shellClassName: string;
+  dotClassName: string;
+}> = [
+  {
+    key: 'new',
+    label: 'New',
+    shellClassName: 'border-slate-200 bg-slate-100/80',
+    dotClassName: 'bg-slate-400',
+  },
+  {
+    key: 'contacted',
+    label: 'Contacted',
+    shellClassName:
+      'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)]',
+    dotClassName: 'bg-[var(--primary)]',
+  },
+  {
+    key: 'viewing',
+    label: 'Viewing',
+    shellClassName: 'border-violet-200 bg-violet-50',
+    dotClassName: 'bg-violet-500',
+  },
+  {
+    key: 'offer',
+    label: 'Offer',
+    shellClassName: 'border-amber-200 bg-amber-50',
+    dotClassName: 'bg-amber-500',
+  },
+  {
+    key: 'closed',
+    label: 'Closed',
+    shellClassName: 'border-emerald-200 bg-emerald-50',
+    dotClassName: 'bg-emerald-500',
+  },
+];
+
+const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function toDate(value: unknown): Date | null {
   if (!value) return null;
-  const normalized =
-    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(value)
-      ? value.replace(' ', 'T')
-      : value;
-  const timestampValue =
-    typeof normalized === 'string' &&
-    normalized.includes('T') &&
-    !/(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)
-      ? `${normalized}Z`
-      : normalized;
-  const date = new Date(timestampValue);
+  const date = new Date(value as string);
   return Number.isNaN(date.getTime()) ? null : date;
 }
-function sameDay(left: Date, right: Date) {
+
+function startOfDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function sameDay(a: Date, b: Date): boolean {
   return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
   );
 }
-function formatStatus(status: string) {
-  if (['available', 'published', 'active'].includes(status)) return 'Published';
-  if (status === 'pending_review') return 'Awaiting moderation';
-  return status.replace(/_/g, ' ').replace(/\b\w/g, value => value.toUpperCase());
+
+function addMonths(date: Date, months: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
 }
-function formatPrice(price: number) {
-  return price > 0
-    ? new Intl.NumberFormat('en-ZA', {
-        style: 'currency',
-        currency: 'ZAR',
-        maximumFractionDigits: 0,
-      }).format(price)
-    : 'Price not supplied';
+
+function formatPrice(value: number | null | undefined): string {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: 'ZAR',
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
-function timestamp(item: { updatedAt?: string | Date; createdAt?: string | Date }) {
-  return toDate(item.updatedAt ?? item.createdAt)?.getTime() || 0;
+
+function formatStatus(value: string | null | undefined): string {
+  if (!value) return 'Unknown';
+  return value.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
-function Panel({
-  title,
-  action,
-  children,
-  testId,
-}: {
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-  testId?: string;
-}) {
+
+function isActiveListingStatus(value: string | null | undefined): boolean {
+  const normalized = String(value || '').toLowerCase();
+  return ['available', 'published', 'active'].includes(normalized);
+}
+
+function formatPropertyType(value: string | null | undefined): string {
+  if (!value) return 'Property';
+  return formatStatus(value);
+}
+
+function getScheduleTime(showing: ShowingItem): Date | null {
+  return toDate(showing.scheduledAt);
+}
+
+function getLeadStage(status: string): PipelineStage {
+  switch (status) {
+    case 'contacted':
+    case 'qualified':
+      return 'contacted';
+    case 'viewing_scheduled':
+      return 'viewing';
+    case 'offer_sent':
+    case 'converted':
+      return 'offer';
+    case 'closed':
+      return 'closed';
+    default:
+      return 'new';
+  }
+}
+
+function getLeadStageBadgeClass(stage: PipelineStage): string {
+  switch (stage) {
+    case 'contacted':
+      return 'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]';
+    case 'viewing':
+      return 'border-violet-200 bg-violet-50 text-violet-700';
+    case 'offer':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    case 'closed':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    default:
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+}
+
+function getListingStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'available':
+    case 'published':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'pending':
+    case 'pending_review':
+      return 'border-amber-200 bg-amber-50 text-amber-700';
+    case 'sold':
+    case 'rented':
+      return 'border-slate-200 bg-slate-100 text-slate-700';
+    default:
+      return 'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]';
+  }
+}
+
+function getShowingBadgeClass(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'cancelled':
+      return 'border-rose-200 bg-rose-50 text-rose-700';
+    default:
+      return 'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]';
+  }
+}
+
+function getDateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function buildCalendarDays(month: Date): Array<Date | null> {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstDay = new Date(year, monthIndex, 1);
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const leadingEmptyDays = firstDay.getDay();
+  const days: Array<Date | null> = [];
+
+  for (let index = 0; index < leadingEmptyDays; index += 1) {
+    days.push(null);
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    days.push(new Date(year, monthIndex, day));
+  }
+
+  while (days.length % 7 !== 0) {
+    days.push(null);
+  }
+
+  return days;
+}
+
+function CardShell({ className, children }: { className?: string; children: ReactNode }) {
   return (
-    <section className={panelClass} data-testid={testId} aria-label={title}>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 sm:px-5">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {action}
-      </div>
-      <div className="px-4 py-3 sm:px-5">{children}</div>
+    <section
+      className={cn(
+        'rounded-[15px] border border-slate-200/80 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06),0_0_0_1px_rgba(15,23,42,0.04)]',
+        className,
+      )}
+    >
+      {children}
     </section>
   );
 }
-function RequestState({
-  loading,
-  error,
-  retry,
-  children,
+
+function formatSetupFlag(flag: string): string {
+  return flag
+    .replace(/^missing_/, '')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function FeatureLockOverlay({
+  title,
+  description,
+  actionLabel,
+  onAction,
 }: {
-  loading: boolean;
-  error: boolean;
-  retry: () => unknown;
-  children: ReactNode;
+  title: string;
+  description: string;
+  actionLabel?: string | null;
+  onAction?: () => void;
 }) {
-  if (error)
-    return (
-      <div role="alert" className="py-3 text-sm">
-        <p>We couldn’t load this information.</p>
-        <Button variant="outline" size="sm" className="mt-3" onClick={() => void retry()}>
-          Try again
-        </Button>
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[15px] bg-white/88 p-6 backdrop-blur-[2px]">
+      <div className="max-w-md text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+          <Lock className="h-5 w-5" />
+        </div>
+        <h3 className="mt-4 text-lg font-semibold tracking-[-0.03em] text-slate-950">{title}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+        {actionLabel && onAction ? (
+          <Button className="mt-5 rounded-full px-5" onClick={onAction}>
+            {actionLabel}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
-    );
-  if (loading)
-    return (
-      <div role="status" aria-label="Loading dashboard information" className="space-y-3 py-2">
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-1/2" />
-        <span className="sr-only">Loading…</span>
-      </div>
-    );
-  return <>{children}</>;
+    </div>
+  );
+}
+
+function getGuidanceSnoozeMs(mode: DashboardGuidanceMode | null) {
+  if (mode === 'setup') return SETUP_GUIDANCE_SNOOZE_MS;
+  return 0;
 }
 
 export function AgentDashboardOverview({
@@ -167,558 +335,1314 @@ export function AgentDashboardOverview({
   onboardingStatus: AgentOnboardingStatus;
   agentLaunchAccessAvailable?: boolean;
 }) {
+  const [, setLocation] = useLocation();
   const { user } = useAuth();
-  const operationalDataEnabled = Boolean(onboardingStatus.fullFeaturesUnlocked);
-  const authoredListingDataEnabled = Boolean(user && onboardingStatus.dashboardUnlocked);
-  const [calendarMonth, setCalendarMonth] = useState(
-    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   );
-  const statsQuery = trpc.agent.getDashboardStats.useQuery(undefined, {
-    enabled: operationalDataEnabled,
-    retry: false,
-  });
+  const [dismissedGuidance, setDismissedGuidance] = useState<{
+    signature: string;
+    dismissedAt: number;
+  } | null>(null);
+  const operationalDataEnabled = Boolean(onboardingStatus?.fullFeaturesUnlocked);
+  const authoredListingDataEnabled = Boolean(user && onboardingStatus?.dashboardUnlocked);
+
+  const { data: stats, isLoading: statsLoading } = trpc.agent.getDashboardStats.useQuery(
+    undefined,
+    {
+      enabled: operationalDataEnabled,
+      retry: false,
+    },
+  );
   const recordSurfaceView = trpc.agent.recordSurfaceView.useMutation();
   useEffect(() => {
     recordSurfaceView.mutate({ surface: 'dashboard' });
-    // Preserve the existing one-time dashboard telemetry.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const pipelineQuery = trpc.agent.getLeadsPipeline.useQuery(
+
+  const { data: pipelineData } = trpc.agent.getLeadsPipeline.useQuery(
     { filters: {} },
     { enabled: operationalDataEnabled, retry: false },
   );
-  const listingsQuery = trpc.agent.getMyListings.useQuery(
+
+  const { data: listingsData } = trpc.agent.getMyListings.useQuery(
     { status: 'all', limit: 24 },
     { enabled: operationalDataEnabled, retry: false },
   );
-  const authoredQuery = trpc.listing.myListings.useQuery(
-    { limit: 24, offset: 0 },
-    { retry: false, enabled: authoredListingDataEnabled },
-  );
-  const calendarRange = useMemo(
-    () => ({
+
+  // Published inventory is intentionally projected into `properties`, while
+  // drafts and submitted listings remain in the canonical Listing lifecycle.
+  // Read both surfaces so the agent dashboard can acknowledge work that is
+  // complete and awaiting review instead of treating the agent as brand new.
+  const { data: authoredListingsData, isLoading: authoredListingsLoading } =
+    trpc.listing.myListings.useQuery(
+      { limit: 24, offset: 0 },
+      { retry: false, enabled: authoredListingDataEnabled },
+    );
+
+  const calendarRange = useMemo(() => {
+    return {
       startDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
         .toISOString()
         .split('T')[0],
       endDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0)
         .toISOString()
         .split('T')[0],
-    }),
-    [calendarMonth],
-  );
-  const showingsQuery = trpc.agent.getMyShowings.useQuery(
-    { ...calendarRange, status: 'all' },
-    { enabled: operationalDataEnabled, retry: false },
-  );
-  const notificationsQuery = trpc.agent.getNotifications.useQuery(
-    { limit: 8, unreadOnly: true },
+    };
+  }, [calendarMonth]);
+
+  const { data: showingsData = [] } = trpc.agent.getMyShowings.useQuery(
+    {
+      startDate: calendarRange.startDate,
+      endDate: calendarRange.endDate,
+      status: 'all',
+    },
     { enabled: operationalDataEnabled, retry: false },
   );
 
-  const pipeline = (pipelineQuery.data || emptyPipeline) as Record<Stage, Lead[]>;
-  const activeListings = ((listingsQuery.data || []) as Listing[]).filter(item =>
-    ['available', 'published', 'active'].includes(item.status),
+  const { data: notificationsData = [] } = trpc.agent.getNotifications.useQuery(
+    {
+      limit: 8,
+      unreadOnly: true,
+    },
+    { enabled: operationalDataEnabled, retry: false },
   );
-  const authored = (authoredQuery.data || []) as AuthoredListing[];
-  const drafts = authored
-    .filter(item => item.status === 'draft')
-    .sort((a, b) => timestamp(b) - timestamp(a));
-  const pending = authored
-    .filter(item => item.status === 'pending_review')
-    .sort((a, b) => timestamp(b) - timestamp(a));
-  const newLeads = [...pipeline.new].sort(
-    (a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0),
+
+  const pipeline = useMemo(
+    () =>
+      (pipelineData || {
+        new: [],
+        contacted: [],
+        viewing: [],
+        offer: [],
+        closed: [],
+      }) as PipelineData,
+    [pipelineData],
   );
-  const otherActiveLeads = [...pipeline.contacted, ...pipeline.viewing, ...pipeline.offer].sort(
-    (a, b) => (toDate(b.createdAt)?.getTime() || 0) - (toDate(a.createdAt)?.getTime() || 0),
+
+  const allLeads = useMemo(
+    () =>
+      [
+        ...pipeline.new,
+        ...pipeline.contacted,
+        ...pipeline.viewing,
+        ...pipeline.offer,
+        ...pipeline.closed,
+      ] as LeadItem[],
+    [pipeline],
   );
-  const previewLeads = [...newLeads, ...otherActiveLeads].slice(0, 3);
-  const listingsByPropertyId = new Map(activeListings.map(item => [item.id, item]));
-  const now = new Date();
-  // This endpoint supplies booked property showings for the selected month, not all appointments.
-  const scheduledShowings = ((showingsQuery.data || []) as Showing[]).filter(
-    item => item.status === 'scheduled' && toDate(item.scheduledAt),
+
+  const activeLeads = useMemo(
+    () =>
+      pipeline.new.length +
+      pipeline.contacted.length +
+      pipeline.viewing.length +
+      pipeline.offer.length,
+    [pipeline],
   );
-  const todayShowings = scheduledShowings.filter(item => sameDay(toDate(item.scheduledAt)!, now));
-  const upcomingShowings = scheduledShowings.filter(
-    item =>
-      !sameDay(toDate(item.scheduledAt)!, now) &&
-      toDate(item.scheduledAt)!.getTime() > now.getTime(),
+
+  const activeListings = useMemo(
+    () =>
+      ((listingsData || []) as ListingItem[]).filter(listing =>
+        isActiveListingStatus(listing.status),
+      ),
+    [listingsData],
   );
-  const schedulePreview = [...todayShowings, ...upcomingShowings]
-    .sort((a, b) => toDate(a.scheduledAt)!.getTime() - toDate(b.scheduledAt)!.getTime())
-    .slice(0, 3);
-  const monthLabel = calendarMonth.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
-  const monthIsCurrent = sameDay(calendarMonth, new Date(now.getFullYear(), now.getMonth(), 1));
-  const canPublishListings = onboardingStatus.entitlements?.canPublishListings ?? false;
-  const needsProfile = isAgentProfileJourneyStep(onboardingStatus);
+
+  const authoredListings = useMemo(
+    () => (authoredListingsData || []) as AuthoredListingItem[],
+    [authoredListingsData],
+  );
+
+  const pendingReviewListings = useMemo(
+    () => authoredListings.filter(listing => listing.status === 'pending_review'),
+    [authoredListings],
+  );
+
+  const draftListings = useMemo(
+    () => authoredListings.filter(listing => listing.status === 'draft'),
+    [authoredListings],
+  );
+
+  const latestPendingReviewListing = useMemo(
+    () =>
+      [...pendingReviewListings].sort(
+        (left, right) =>
+          (toDate(right.updatedAt ?? right.createdAt)?.getTime() || 0) -
+          (toDate(left.updatedAt ?? left.createdAt)?.getTime() || 0),
+      )[0] || null,
+    [pendingReviewListings],
+  );
+
+  const latestDraftListing = useMemo(
+    () =>
+      [...draftListings].sort(
+        (left, right) =>
+          (toDate(right.updatedAt ?? right.createdAt)?.getTime() || 0) -
+          (toDate(left.updatedAt ?? left.createdAt)?.getTime() || 0),
+      )[0] || null,
+    [draftListings],
+  );
+
+  const listingsById = useMemo(
+    () => new Map(activeListings.map(listing => [listing.id, listing])),
+    [activeListings],
+  );
+
+  const listingsTableRows = useMemo(() => {
+    return [...activeListings]
+      .sort((a, b) => b.enquiries - a.enquiries || b.views - a.views)
+      .slice(0, 5);
+  }, [activeListings]);
+
+  const showings = (showingsData as ShowingItem[]).filter(
+    showing => showing.status !== 'cancelled',
+  );
+
+  const showingsByDate = useMemo(() => {
+    const grouped = new Map<string, ShowingItem[]>();
+
+    for (const showing of showings) {
+      const scheduled = getScheduleTime(showing);
+      if (!scheduled) continue;
+
+      const key = getDateKey(startOfDay(scheduled));
+      const current = grouped.get(key) || [];
+      current.push(showing);
+      grouped.set(key, current);
+    }
+
+    for (const [, dayShowings] of grouped) {
+      dayShowings.sort((left, right) => {
+        const leftTime = getScheduleTime(left)?.getTime() || 0;
+        const rightTime = getScheduleTime(right)?.getTime() || 0;
+        return leftTime - rightTime;
+      });
+    }
+
+    return grouped;
+  }, [showings]);
+
+  const selectedDayShowings = useMemo(() => {
+    return showingsByDate.get(getDateKey(startOfDay(selectedDate))) || [];
+  }, [selectedDate, showingsByDate]);
+
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const todaysShowings = useMemo(() => {
+    return showingsByDate.get(getDateKey(today)) || [];
+  }, [showingsByDate, today]);
+
+  const upcomingShowings = useMemo(() => {
+    return showings
+      .filter(showing => {
+        const scheduled = getScheduleTime(showing);
+        return !!scheduled && scheduled.getTime() > new Date().getTime();
+      })
+      .sort((left, right) => {
+        const leftTime = getScheduleTime(left)?.getTime() || 0;
+        const rightTime = getScheduleTime(right)?.getTime() || 0;
+        return leftTime - rightTime;
+      })
+      .slice(0, 3);
+  }, [showings]);
+
+  const unreadNotificationCount = notificationsData.length;
+  const pipelineLeadPreview = useMemo(() => {
+    return [...allLeads]
+      .filter(lead => getLeadStage(lead.status) !== 'closed')
+      .sort((left, right) => {
+        const leftTime = toDate(left.createdAt)?.getTime() || 0;
+        const rightTime = toDate(right.createdAt)?.getTime() || 0;
+        return rightTime - leftTime;
+      })
+      .slice(0, 3);
+  }, [allLeads]);
+
+  const additionalPipelineLeadCount = Math.max(activeLeads - pipelineLeadPreview.length, 0);
+
+  const entitlements = onboardingStatus?.entitlements;
+  const profileCompletionScore = onboardingStatus?.profileCompletionScore ?? 0;
+  const profileSetupFlags = onboardingStatus?.profileCompletionFlags ?? [];
+  const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
+  const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
-  const inventoryLoading =
-    authoredQuery.isLoading || (operationalDataEnabled && listingsQuery.isLoading);
-  const inventoryError = authoredQuery.isError || (operationalDataEnabled && listingsQuery.isError);
-  const hasPublished = activeListings.length > 0 || (statsQuery.data?.activeListings ?? 0) > 0;
-  const hasExistingWork =
-    authored.length > 0 ||
-    ((listingsQuery.data || []) as Listing[]).length > 0 ||
-    stages.some(stage => pipeline[stage.key].length > 0);
+  const canPublishListings = entitlements?.canPublishListings ?? false;
+  const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
+  const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
+  const guidanceSignature = JSON.stringify({
+    mode: guidanceMode,
+    onboardingStep: onboardingStatus?.onboardingStep ?? 0,
+    profileCompletionScore,
+    profileSetupFlags,
+  });
+  const guidanceSnoozeMs = getGuidanceSnoozeMs(guidanceMode);
+  const guidanceDismissed =
+    guidanceMode != null &&
+    dismissedGuidance?.signature === guidanceSignature &&
+    Date.now() - dismissedGuidance.dismissedAt < guidanceSnoozeMs;
+  const showFeatureBanner = Boolean(onboardingStatus) && guidanceMode != null && !guidanceDismissed;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(GUIDANCE_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { signature?: string; dismissedAt?: number };
+      if (typeof parsed?.signature === 'string' && typeof parsed?.dismissedAt === 'number') {
+        setDismissedGuidance({
+          signature: parsed.signature,
+          dismissedAt: parsed.dismissedAt,
+        });
+      }
+    } catch {
+      // Ignore corrupt local state and fall back to visible guidance.
+    }
+  }, []);
+
+  const dismissGuidance = () => {
+    if (typeof window === 'undefined' || !guidanceMode) return;
+    const next = {
+      signature: guidanceSignature,
+      dismissedAt: Date.now(),
+    };
+    setDismissedGuidance(next);
+    window.localStorage.setItem(GUIDANCE_STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const activeListingCount = stats?.activeListings ?? activeListings.length;
+  const pendingReviewCount = pendingReviewListings.length;
+  const draftCount = draftListings.length;
+
+  const heroMetrics = [
+    {
+      label: 'Active Listings',
+      value: statsLoading ? '-' : String(activeListingCount),
+      status:
+        activeListingCount > 0
+          ? 'Published'
+          : authoredListingsLoading
+            ? 'Loading'
+            : pendingReviewCount > 0
+              ? `${pendingReviewCount} in review`
+              : 'Start',
+      statusClassName:
+        activeListingCount > 0
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : pendingReviewCount > 0
+            ? 'border-amber-200 bg-amber-50 text-amber-700'
+            : 'border-slate-200 bg-slate-100 text-slate-700',
+      icon: Building2,
+      iconShellClassName:
+        'bg-[color:color-mix(in_oklab,var(--primary)_10%,white)] text-[var(--primary)]',
+    },
+    {
+      label: 'Appointments Today',
+      value: statsLoading ? '-' : String(stats?.showingsToday ?? todaysShowings.length),
+      status: (stats?.showingsToday ?? todaysShowings.length) > 0 ? 'Booked' : 'None',
+      statusClassName:
+        (stats?.showingsToday ?? todaysShowings.length) > 0
+          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          : 'border-slate-200 bg-slate-100 text-slate-700',
+      icon: CalendarDays,
+      iconShellClassName: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      label: 'Unread Alerts',
+      value: String(unreadNotificationCount),
+      status: unreadNotificationCount > 0 ? 'Unread' : 'Clear',
+      statusClassName:
+        unreadNotificationCount > 0
+          ? 'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]'
+          : 'border-slate-200 bg-slate-100 text-slate-700',
+      icon: Bell,
+      iconShellClassName:
+        unreadNotificationCount > 0
+          ? 'bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]'
+          : 'bg-slate-100 text-slate-600',
+    },
+  ];
+
+  const selectedDateLabel = selectedDate.toLocaleDateString('en-ZA', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+
+  const pageDateLabel = new Date().toLocaleDateString('en-ZA', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
   const firstName = user?.name?.trim().split(/\s+/)[0] || 'Agent';
-  const profileHref = onboardingStatus.profile?.slug
+  const publicProfileHref = onboardingStatus?.profile?.slug
     ? `/agents/${onboardingStatus.profile.slug}`
     : '/agent/settings';
-  const guidance = !canPublishListings
+  const publicProfileLabel = onboardingStatus?.profile?.slug
+    ? 'View public profile'
+    : 'Review your profile';
+  const hasPublishedInventory = activeListings.length > 0;
+  const hasPendingReviewInventory = pendingReviewCount > 0;
+  const hasDraftInventory = draftCount > 0;
+  const workspaceAction = !canPublishListings
     ? {
-        title: needsProfile ? 'Complete your professional profile' : journeyAction.title,
-        description: needsProfile
+        eyebrow: journeyAction.waiting ? 'Verification in progress' : 'Workspace activation',
+        title: needsProfileCompletion
+          ? 'Finish setting up your professional presence.'
+          : journeyAction.title,
+        description: needsProfileCompletion
           ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
           : journeyAction.description,
-        label: journeyAction.waiting ? null : needsProfile ? 'Continue setup' : journeyAction.label,
-        href: journeyAction.waiting ? null : needsProfile ? '/agent/setup' : journeyAction.href,
+        actionLabel: journeyAction.waiting
+          ? null
+          : needsProfileCompletion
+            ? 'Continue setup'
+            : journeyAction.label,
+        actionHref: journeyAction.waiting
+          ? null
+          : needsProfileCompletion
+            ? '/agent/setup'
+            : journeyAction.href,
       }
-    : inventoryError
+    : !hasPublishedInventory && hasPendingReviewInventory
       ? {
-          title: 'Your listing status is unavailable',
-          description: 'Try loading your inventory again before choosing your next listing step.',
-          label: 'Open listings',
-          href: '/agent/listings',
+          eyebrow: 'Listing submitted',
+          title:
+            pendingReviewCount === 1
+              ? 'Your first listing is in review.'
+              : `${pendingReviewCount} listings are in review.`,
+          description: latestPendingReviewListing
+            ? `${latestPendingReviewListing.title} is complete and waiting for Property Listify review. We will notify you when it is ready to go live.`
+            : 'Your completed listing is waiting for Property Listify review. We will notify you when it is ready to go live.',
+          actionLabel: 'View review status',
+          actionHref: '/agent/listings?tab=pending',
         }
-      : inventoryLoading
-        ? null
-        : !hasPublished && pending.length > 0
+      : !hasPublishedInventory && hasDraftInventory
+        ? {
+            eyebrow: 'Listing in progress',
+            title: 'Continue your listing draft.',
+            description: latestDraftListing
+              ? `${latestDraftListing.title} is saved as a private draft. Finish the remaining details when you are ready to submit it for review.`
+              : 'Your listing draft is saved privately. Finish the remaining details when you are ready to submit it for review.',
+            actionLabel: 'Continue draft',
+            actionHref: '/agent/listings?tab=draft',
+          }
+        : !hasPublishedInventory
           ? {
-              title:
-                pending.length === 1
-                  ? 'Your first listing is in review'
-                  : `${pending.length} listings are in review`,
-              description: `${pending[0].title} is awaiting moderation. Approval is required before it appears as published inventory.`,
-              label: 'View review status',
-              href: '/agent/listings?tab=pending',
+              eyebrow: 'Launch your business',
+              title: 'Get your first property live.',
+              description:
+                'Your Agent workspace is ready. Publishing a listing is the first step towards discovery, enquiries and a working pipeline.',
+              actionLabel: 'Add your first listing',
+              actionHref: '/listings/create',
             }
-          : !hasPublished && drafts.length > 0
+          : activeLeads > 0
             ? {
-                title: 'Continue your listing draft',
-                description: `${drafts[0].title} is saved privately. Continue when you’re ready to submit it for review.`,
-                label: 'Continue draft',
-                href: '/agent/listings?tab=draft',
+                eyebrow: 'Today’s priority',
+                title: `${activeLeads} lead${activeLeads === 1 ? '' : 's'} ready for follow-up.`,
+                description:
+                  'Keep the conversation moving while the enquiry and property context are still fresh.',
+                actionLabel: 'Work your leads',
+                actionHref: '/agent/leads',
               }
-            : !hasPublished &&
-                !hasExistingWork &&
-                !pipelineQuery.isLoading &&
-                !pipelineQuery.isError
+            : todaysShowings.length > 0
               ? {
-                  title: 'Get your first property ready',
+                  eyebrow: 'Today’s priority',
+                  title: `${todaysShowings.length} showing${todaysShowings.length === 1 ? '' : 's'} on your calendar.`,
                   description:
-                    'Add the property details and photos, then submit your listing for moderation.',
-                  label: 'Add your first listing',
-                  href: '/listings/create',
+                    'Review the schedule, prepare the property context and keep the next conversation on track.',
+                  actionLabel: 'Open your calendar',
+                  actionHref: '/agent/productivity',
                 }
-              : null;
-  const publishedCount =
-    !statsQuery.isError && !statsQuery.isLoading && statsQuery.data
-      ? String(statsQuery.data.activeListings)
-      : `${activeListings.length} shown`;
-  const enquirySummary = pipelineQuery.isError
-    ? 'Enquiry status unavailable'
-    : pipelineQuery.isLoading
-      ? 'Loading enquiries…'
-      : `${newLeads.length} new enquir${newLeads.length === 1 ? 'y' : 'ies'}`;
-  const unread = notificationsQuery.data?.length;
-  const summary = operationalDataEnabled
+              : {
+                  eyebrow: 'Grow your reach',
+                  title: 'Give your live listings another lift.',
+                  description:
+                    'Share a listing, use your marketing tools and keep your public presence working while new enquiries arrive.',
+                  actionLabel: 'Open Marketing Hub',
+                  actionHref: '/agent/marketing',
+                };
+  const showLaunchSteps =
+    canPublishListings &&
+    !hasPublishedInventory &&
+    !hasPendingReviewInventory &&
+    !hasDraftInventory;
+  const showReviewSteps = canPublishListings && !hasPublishedInventory && hasPendingReviewInventory;
+  const workspaceJourneyLabel = showLaunchSteps
+    ? 'Your launch path'
+    : showReviewSteps
+      ? 'Your review path'
+      : 'Your operating loop';
+  const workspaceJourneySteps = showLaunchSteps
     ? [
-        enquirySummary,
-        !showingsQuery.isError && !showingsQuery.isLoading && monthIsCurrent
-          ? `${todayShowings.length} scheduled showing${todayShowings.length === 1 ? '' : 's'} today`
-          : null,
-        !notificationsQuery.isError && !notificationsQuery.isLoading && unread
-          ? `${unread === 8 ? '8+' : unread} unread alert${unread === 1 ? '' : 's'}`
-          : null,
+        {
+          label: 'Publish your first listing',
+          detail: 'Give people something to discover.',
+        },
+        {
+          label: 'Receive enquiries',
+          detail: 'Keep interest tied to the property.',
+        },
+        {
+          label: 'Work your pipeline',
+          detail: 'Turn the next conversation into progress.',
+        },
       ]
-        .filter(Boolean)
-        .join(' · ')
-    : 'Prepare your profile and private inventory at your own pace.';
-  const listingRows = [...activeListings]
-    .sort((a, b) => (b.enquiries ?? 0) - (a.enquiries ?? 0) || timestamp(b) - timestamp(a))
-    .slice(0, 4);
+    : showReviewSteps
+      ? [
+          {
+            label: 'Listing submitted',
+            detail: 'Your property is complete and awaiting review.',
+          },
+          {
+            label: 'Review in progress',
+            detail: 'We will let you know if anything needs attention.',
+          },
+          {
+            label: 'Ready for enquiries',
+            detail: 'Once approved, people can discover and contact you.',
+          },
+        ]
+      : [
+          {
+            label: 'Keep inventory current',
+            detail: 'Make every live property easy to discover.',
+          },
+          {
+            label: 'Respond while interest is fresh',
+            detail: 'Keep each enquiry connected to its property.',
+          },
+          {
+            label: 'Plan the next conversation',
+            detail: 'Use your calendar and pipeline to keep momentum.',
+          },
+        ];
+  const workspaceJourneyFooter = showLaunchSteps
+    ? 'Start with the first property; the rest of your workspace opens around it.'
+    : showReviewSteps
+      ? 'Your completed listing is in the review queue. We will notify you when it is ready to go live.'
+      : 'Your workspace keeps inventory, enquiries and the working day connected.';
 
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="mx-auto flex max-w-[1400px] flex-col gap-4 px-4 py-5 text-foreground md:px-7 md:py-6"
-      data-testid="agent-dashboard-overview"
-    >
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome, {firstName}</h1>
-          <p className="mt-1 text-sm text-foreground/75">{summary}</p>
-        </div>
-        <p className="text-xs text-foreground/75">
-          {now.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
-      </header>
-      {guidance && (
-        <section
-          aria-label="Next step"
-          className="flex flex-col justify-between gap-3 rounded-xl border border-border bg-primary/5 p-4 sm:flex-row sm:items-center"
-        >
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">{guidance.title}</h2>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-              {guidance.description}
-            </p>
-          </div>
-          {guidance.href && guidance.label && (
-            <Button asChild className="h-10 shrink-0">
-              <Link href={guidance.href}>
-                {guidance.label}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Button>
-          )}
-        </section>
-      )}
-      {inventoryLoading && canPublishListings && (
-        <div role="status" aria-label="Loading listing status">
-          <Skeleton className="h-16 w-full rounded-xl" />
-        </div>
-      )}
-
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <Panel
-          title="Enquiries"
-          testId="dashboard-enquiries"
-          action={
-            operationalDataEnabled ? (
-              <Link className={actionClass} href="/agent/leads">
-                Open CRM <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            ) : null
-          }
-        >
-          {!operationalDataEnabled ? (
-            <p className="py-2 text-sm leading-6 text-muted-foreground">
-              New marketplace enquiries become available when your profile and Launch Access are
-              ready.
-            </p>
-          ) : (
-            <RequestState
-              loading={pipelineQuery.isLoading}
-              error={pipelineQuery.isError}
-              retry={pipelineQuery.refetch}
-            >
-              {previewLeads.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {previewLeads.map(lead => {
-                    const isNew = pipeline.new.some(item => item.id === lead.id);
-                    const received = toDate(lead.createdAt);
-                    return (
-                      <article
-                        key={lead.id}
-                        className="flex flex-wrap items-center gap-3 py-3 first:pt-1 last:pb-1"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-semibold">{lead.name || 'Enquiry'}</h3>
-                          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                            {lead.commercial?.listingTitle ||
-                              lead.property?.title ||
-                              'General enquiry'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {isNew ? 'New enquiry' : formatStatus(lead.status)}
-                            {received
-                              ? ` · Received ${received.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}`
-                              : ''}
-                          </p>
-                        </div>
-                        <Link href={`/agent/leads?leadId=${lead.id}`} className={actionClass}>
-                          {isNew ? 'Open enquiry' : 'Open lead'}{' '}
-                          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                        </Link>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-3 text-sm leading-6">
-                  <p className="font-medium">No active enquiries yet</p>
-                  <p className="text-muted-foreground">
-                    Enquiries about your published properties appear here and in Leads &amp; CRM.
-                  </p>
-                </div>
-              )}
-            </RequestState>
-          )}
-        </Panel>
-        <Panel
-          title="Today & upcoming"
-          testId="dashboard-schedule"
-          action={
-            operationalDataEnabled ? (
-              <Link href="/agent/productivity?tab=calendar" className={actionClass}>
-                Calendar <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            ) : null
-          }
-        >
-          {!operationalDataEnabled ? (
-            <p className="py-2 text-sm leading-6 text-muted-foreground">
-              Your showing schedule becomes available with workspace access.
-            </p>
-          ) : (
-            <>
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs text-muted-foreground">
-                  Booked property showings · {monthLabel}
-                </p>
-                <div className="flex shrink-0 gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-card-foreground"
-                    aria-label="Previous showing month"
-                    onClick={() =>
-                      setCalendarMonth(
-                        new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1),
-                      )
-                    }
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="text-card-foreground"
-                    aria-label="Next showing month"
-                    onClick={() =>
-                      setCalendarMonth(
-                        new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1),
-                      )
-                    }
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <RequestState
-                loading={showingsQuery.isLoading}
-                error={showingsQuery.isError}
-                retry={showingsQuery.refetch}
-              >
-                {schedulePreview.length > 0 ? (
-                  <div className="divide-y divide-border">
-                    {schedulePreview.map(showing => {
-                      const scheduled = toDate(showing.scheduledAt)!;
-                      const listing = showing.propertyId
-                        ? listingsByPropertyId.get(showing.propertyId)
-                        : undefined;
-                      return (
-                        <Link
-                          key={showing.id}
-                          href="/agent/productivity?tab=showings"
-                          className="flex items-start gap-3 rounded-md py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                        >
-                          <span className="w-16 shrink-0 rounded-lg bg-primary/10 p-2 text-center text-xs font-semibold text-primary">
-                            {sameDay(scheduled, now)
-                              ? 'Today'
-                              : scheduled.toLocaleDateString('en-ZA', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                })}
-                            <span className="mt-1 block">
-                              {scheduled.toLocaleTimeString('en-ZA', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-sm font-medium">
-                              {showing.property?.title ||
-                                listing?.title ||
-                                `Property showing #${showing.id}`}
-                            </span>
-                            {showing.client?.name && (
-                              <span className="block text-xs text-muted-foreground">
-                                {showing.client.name}
-                              </span>
-                            )}
-                            <span className="mt-1 block text-xs font-semibold text-primary">
-                              Open showings →
-                            </span>
-                          </span>
-                        </Link>
-                      );
-                    })}
+    <div className="min-h-screen bg-[#f7f6f3]">
+      <main className="mx-auto flex max-w-[1700px] flex-col gap-5 px-4 py-5 md:px-7 md:py-7 xl:px-7 xl:pb-10">
+        {showFeatureBanner ? (
+          <CardShell className="overflow-hidden border-transparent bg-gradient-to-r from-slate-950 via-slate-900 to-[#0f4c81] text-white shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)] lg:px-7">
+              <div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/72">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Workspace setup
                   </div>
-                ) : (
-                  <p className="py-3 text-sm leading-6 text-muted-foreground">
-                    No scheduled showings today or upcoming in this view.
-                  </p>
-                )}
-              </RequestState>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Property showings in the selected month only. Open Calendar for other dates and
-                appointment types.
-              </p>
-            </>
-          )}
-        </Panel>
-      </div>
-
-      <Panel
-        title="Pipeline"
-        testId="dashboard-pipeline"
-        action={
-          operationalDataEnabled ? (
-            <Link className={actionClass} href="/agent/leads">
-              Open leads <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          ) : null
-        }
-      >
-        {!operationalDataEnabled ? (
-          <p className="py-2 text-sm text-muted-foreground">
-            Your pipeline will be available once workspace access is active.
-          </p>
-        ) : (
-          <RequestState
-            loading={pipelineQuery.isLoading}
-            error={pipelineQuery.isError}
-            retry={pipelineQuery.refetch}
-          >
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {stages.map(stage => (
-                <Link
-                  key={stage.key}
-                  href="/agent/leads"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2.5 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                >
-                  <span className="text-muted-foreground">{stage.label}</span>
-                  <strong className="text-lg font-semibold tabular-nums text-card-foreground">
-                    {pipeline[stage.key].length}
-                  </strong>
-                </Link>
-              ))}
-            </div>
-          </RequestState>
-        )}
-      </Panel>
-
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <Panel
-          title="Your listings"
-          testId="dashboard-listings"
-          action={
-            <Link href="/agent/listings" className={actionClass}>
-              Manage listings <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          }
-        >
-          <RequestState
-            loading={inventoryLoading}
-            error={inventoryError}
-            retry={() => {
-              void authoredQuery.refetch();
-              if (operationalDataEnabled) void listingsQuery.refetch();
-            }}
-          >
-            {listingRows.length > 0 ? (
-              <>
-                <p className="mb-2 text-xs text-muted-foreground">
-                  {publishedCount} published listings · Previewing {listingRows.length}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={dismissGuidance}
+                    className="h-8 w-8 rounded-full border border-white/10 bg-white/6 text-white/72 hover:bg-white/12 hover:text-white"
+                    aria-label="Dismiss dashboard guidance"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <h2 className="mt-4 text-[24px] font-semibold tracking-[-0.04em] text-white">
+                  Finish the last profile details before you put your work live.
+                </h2>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
+                  Your profile is {profileCompletionScore}% complete. Add the remaining professional
+                  details so your listings, directory presence and operating workspace can work
+                  together.
                 </p>
-                <div className="divide-y divide-border">
-                  {listingRows.map(listing => (
-                    <article key={listing.id} className="flex items-center gap-3 py-3">
-                      <span className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
-                        {listing.primaryImage ? (
-                          <img
-                            src={listing.primaryImage}
-                            alt=""
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <Building2 className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-2 text-sm font-semibold">{listing.title}</h3>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {listing.city} · {formatPrice(listing.price)}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {formatStatus(listing.status)}
-                          {typeof listing.enquiries === 'number'
-                            ? ` · ${listing.enquiries} enquir${listing.enquiries === 1 ? 'y' : 'ies'}`
-                            : ''}
-                        </p>
-                      </div>
-                      <Link className={actionClass} href={`/property/${listing.id}`}>
-                        Open <span className="sr-only">{listing.title}</span>
-                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                      </Link>
-                    </article>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {setupPriorityFlags.map(flag => (
+                    <Badge
+                      key={flag}
+                      variant="outline"
+                      className="rounded-full border-white/14 bg-white/8 px-3 py-1 text-[11px] font-medium text-white/78"
+                    >
+                      Add {flag}
+                    </Badge>
                   ))}
                 </div>
-              </>
-            ) : drafts.length || pending.length ? (
-              <div className="divide-y divide-border">
-                {[...pending, ...drafts].slice(0, 3).map(listing => (
-                  <div key={listing.id} className="flex items-center gap-3 py-3">
-                    <Building2
-                      className="h-5 w-5 shrink-0 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{listing.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatStatus(listing.status)}
-                      </p>
-                    </div>
-                    <Link
-                      className={actionClass}
-                      href={`/agent/listings?tab=${listing.status === 'draft' ? 'draft' : 'pending'}`}
+              </div>
+
+              <div className="rounded-[20px] border border-white/12 bg-white/8 p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/52">
+                  Recommended next step
+                </p>
+                <p className="mt-2 text-lg font-semibold text-white">Finish your profile setup</p>
+                <p className="mt-2 text-sm leading-6 text-white/68">
+                  Complete the remaining items, then come back here to list, receive enquiries and
+                  manage the day from one place.
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => setLocation('/agent/setup')}
+                  className="mt-5 rounded-full bg-white text-slate-950 hover:bg-white/92"
+                >
+                  Continue setup
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardShell>
+        ) : null}
+
+        <section className="flex flex-col gap-4">
+          <CardShell className="overflow-hidden border-transparent bg-gradient-to-br from-[var(--primary)] via-[var(--primary)] to-[#0b4b81] text-white shadow-[0_14px_42px_rgba(0,92,168,0.26)]">
+            <div className="relative flex flex-col gap-5 px-5 py-5 sm:px-7 sm:py-6">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-sm" />
+              <div className="pointer-events-none absolute bottom-[-52px] left-8 h-32 w-32 rounded-full bg-white/8 blur-sm" />
+
+              <div className="relative z-10 min-w-0 space-y-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+                  {workspaceAction.eyebrow} · {firstName} · {pageDateLabel}
+                </p>
+                <h1 className="max-w-3xl text-balance break-words text-[26px] font-semibold tracking-[-0.035em] leading-[1.15] text-white md:text-[30px]">
+                  {workspaceAction.title}
+                </h1>
+                <p className="max-w-3xl text-sm leading-6 text-white/72 md:text-[15px]">
+                  {workspaceAction.description}
+                </p>
+              </div>
+
+              <div className="relative z-10 min-w-0 rounded-[18px] border border-white/14 bg-slate-950/10 p-4 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/58">
+                  {workspaceJourneyLabel}
+                </p>
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-3">
+                  {workspaceJourneySteps.map((step, index) => (
+                    <div
+                      key={step.label}
+                      className="flex min-w-0 gap-2.5 rounded-xl border border-white/10 bg-white/[0.07] p-3"
                     >
-                      {listing.status === 'draft' ? 'Continue draft' : 'Review status'}
-                    </Link>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/14 text-[11px] font-bold text-white">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-5 text-white">{step.label}</p>
+                        <p className="mt-1 text-[11px] leading-4 text-white/62">{step.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative z-10 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+                <div className="flex shrink-0 flex-wrap gap-3">
+                  {workspaceAction.actionHref && workspaceAction.actionLabel ? (
+                    <Button
+                      type="button"
+                      onClick={() => setLocation(workspaceAction.actionHref!)}
+                      className="h-auto rounded-full bg-white px-4 py-2 text-[12.5px] font-semibold text-[var(--primary)] shadow-none hover:bg-white/92"
+                    >
+                      {workspaceAction.actionLabel}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setLocation(publicProfileHref)}
+                    className="h-auto rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[12.5px] font-medium text-white hover:bg-white/18 hover:text-white"
+                  >
+                    {publicProfileLabel}
+                  </Button>
+                </div>
+                <p className="max-w-lg text-[11px] leading-5 text-white/58">
+                  {workspaceJourneyFooter}
+                </p>
+              </div>
+            </div>
+          </CardShell>
+
+          <div
+            className={cn(
+              'grid min-w-0 gap-4',
+              onboardingStatus?.approvalStatus === 'approved' &&
+                'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]',
+            )}
+          >
+            {onboardingStatus?.approvalStatus === 'approved' && <AgentPresenceProof />}
+
+            <CardShell className="px-[22px] py-5">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+                <div>
+                  <p className="text-[16px] font-semibold tracking-[-0.02em] text-slate-900">
+                    Today&apos;s operating pulse
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Current numbers across inventory, showings and notifications.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLocation('/agent/analytics')}
+                  className="h-auto rounded-full px-0 text-sm font-medium text-[var(--primary)] hover:bg-transparent hover:text-[var(--primary)]"
+                >
+                  See all
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+
+              {!showFeatureBanner && !fullFeaturesUnlocked ? (
+                <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{journeyAction.title}.</p>
+                      <p className="mt-1 text-sm text-amber-800">{journeyAction.description}</p>
+                    </div>
+                    {!journeyAction.waiting ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setLocation(journeyAction.href)}
+                        className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                      >
+                        {journeyAction.label}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-4 grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 border-b border-slate-200 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                <span>Metric</span>
+                <span className="text-right">Value</span>
+                <span className="text-right">Status</span>
+              </div>
+
+              <div className="divide-y divide-slate-200">
+                {heroMetrics.map(metric => {
+                  const Icon = metric.icon;
+
+                  return (
+                    <div
+                      key={metric.label}
+                      className="grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 py-[11px]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            'flex h-7 w-7 items-center justify-center rounded-[8px]',
+                            metric.iconShellClassName,
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-slate-900">
+                            {metric.label}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {metric.label === 'Unread Alerts'
+                              ? 'Unread notifications'
+                              : metric.label === 'Appointments Today'
+                                ? 'Showings booked for today'
+                                : 'Currently published inventory'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-[20px] font-semibold tracking-[-0.05em] text-slate-900">
+                        {metric.value}
+                      </div>
+                      <div className="justify-self-end">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'rounded-full border px-[10px] py-[3px] text-[11px] font-semibold',
+                            metric.statusClassName,
+                          )}
+                        >
+                          {metric.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardShell>
+          </div>
+        </section>
+
+        <section className="grid gap-[18px] xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="flex min-w-0 flex-col gap-[18px]">
+            <CardShell className="relative px-[22px] py-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--primary)]">
+                    CRM Pulse
+                  </p>
+                  <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.03em] text-slate-900">
+                    Leads &amp; Pipeline
+                  </h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLocation('/agent/leads')}
+                  className="h-auto rounded-full px-0 text-sm font-medium text-[var(--primary)] hover:bg-transparent hover:text-[var(--primary)]"
+                >
+                  Work CRM
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-[6px] md:grid-cols-5">
+                {PIPELINE_CONFIG.map(stage => (
+                  <div
+                    key={stage.key}
+                    className={cn(
+                      'rounded-[9px] border px-3 py-[9px] transition duration-200 hover:-translate-y-0.5 hover:shadow-soft',
+                      stage.shellClassName,
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className={cn('h-2.5 w-2.5 rounded-full', stage.dotClassName)} />
+                        <span className="text-[11px] font-semibold text-slate-700">
+                          {stage.label}
+                        </span>
+                      </div>
+                      <span className="text-[18px] font-semibold tracking-[-0.05em] text-slate-900">
+                        {pipeline[stage.key].length}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="py-3 text-sm leading-6 text-muted-foreground">
-                {canPublishListings
-                  ? 'Your published properties will appear here after moderation. Use Add listing in the header to begin.'
-                  : 'Private drafts stay in your listings workspace. Publishing remains locked until your profile and access are ready.'}
-              </p>
-            )}
-            {hasPublished && (drafts.length > 0 || pending.length > 0) && (
-              <div className="mt-2 flex flex-wrap gap-4 border-t border-border pt-3 text-xs">
-                <Link className={actionClass} href="/agent/listings?tab=draft">
-                  {drafts.length} draft{drafts.length === 1 ? '' : 's'}
-                </Link>
-                <Link className={actionClass} href="/agent/listings?tab=pending">
-                  {pending.length} awaiting moderation
-                </Link>
+
+              <div className="mt-4 border-t border-slate-200 pt-[14px]">
+                {pipelineLeadPreview.length > 0 ? (
+                  <div className="divide-y divide-slate-200">
+                    {pipelineLeadPreview.map(lead => {
+                      const stage = getLeadStage(lead.status);
+                      const initials = lead.name
+                        .split(' ')
+                        .map(part => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <div key={lead.id} className="flex items-center gap-3 py-[9px]">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#5a9bd6] to-[var(--primary)] text-[10px] font-semibold text-white shadow-[0_8px_24px_rgba(0,92,168,0.2)]">
+                            {initials}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {lead.name}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {lead.commercial?.listingTitle ||
+                                lead.property?.title ||
+                                'General inquiry'}
+                              {lead.commercial?.city || lead.property?.city
+                                ? ` - ${lead.commercial?.city || lead.property?.city}`
+                                : ''}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'rounded-full border px-[9px] py-[3px] text-[10px] font-semibold',
+                              getLeadStageBadgeClass(stage),
+                            )}
+                          >
+                            {PIPELINE_CONFIG.find(item => item.key === stage)?.label ||
+                              formatStatus(lead.status)}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+
+                    {additionalPipelineLeadCount > 0 && (
+                      <div className="flex items-center gap-3 py-[9px]">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-500">
+                          +{additionalPipelineLeadCount}
+                        </span>
+                        <p className="flex-1 text-sm text-slate-500">
+                          {additionalPipelineLeadCount} more lead
+                          {additionalPipelineLeadCount === 1 ? '' : 's'} in the pipeline
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => setLocation('/agent/leads')}
+                          className="h-auto rounded-full px-0 text-sm font-medium text-[var(--primary)] hover:bg-transparent hover:text-[var(--primary)]"
+                        >
+                          View all
+                          <ArrowRight className="ml-1 h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/90 px-5 py-8 text-center">
+                    <p className="text-sm font-medium text-slate-700">
+                      No active leads in the pipeline yet.
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      New inquiries will appear here as soon as they are assigned.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-            {!canPublishListings && !needsProfile && (
-              <Link className={actionClass} href="/listings/create">
-                Prepare a private listing <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
-            )}
-          </RequestState>
-        </Panel>
-        <div className="min-w-0 space-y-3">
-          {onboardingStatus.approvalStatus === 'approved' && <AgentPresenceProof />}
-          <Link href={profileHref} className={`${actionClass} px-1`}>
-            {onboardingStatus.profile?.slug ? 'View public profile' : 'Review your profile'}{' '}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-    </main>
+            </CardShell>
+
+            <CardShell className="px-[22px] py-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--primary)]">
+                    Inventory Overview
+                  </p>
+                  <h2 className="mt-1 text-[17px] font-semibold tracking-[-0.03em] text-slate-900">
+                    Active Listings
+                  </h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLocation('/agent/listings')}
+                  className="h-auto rounded-full px-0 text-sm font-medium text-[var(--primary)] hover:bg-transparent hover:text-[var(--primary)]"
+                >
+                  Manage all
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+
+              {listingsTableRows.length > 0 ? (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-[760px] w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        <th className="pb-3 pr-4">Property</th>
+                        <th className="pb-3 pr-4">Type</th>
+                        <th className="pb-3 pr-4">Price</th>
+                        <th className="pb-3 pr-4">Leads</th>
+                        <th className="pb-3 pr-4">Status</th>
+                        <th className="pb-3">Listed</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {listingsTableRows.map(listing => {
+                        const listedDate = toDate(listing.createdAt ?? listing.updatedAt);
+
+                        return (
+                          <tr
+                            key={listing.id}
+                            className="border-b border-slate-100 last:border-b-0 hover:bg-[color:color-mix(in_oklab,var(--primary)_3%,white)]"
+                          >
+                            <td className="py-3 pr-4">
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-8 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-[6px] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] text-[var(--primary)]">
+                                  {listing.primaryImage ? (
+                                    <img
+                                      src={listing.primaryImage}
+                                      alt={listing.title}
+                                      className="h-full w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <Home className="h-5 w-5" />
+                                  )}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                    {listing.title}
+                                  </p>
+                                  <p className="truncate text-xs text-slate-500">{listing.city}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 pr-4 text-[13px] text-slate-600">
+                              {formatPropertyType(listing.propertyType)}
+                            </td>
+                            <td className="py-3 pr-4 text-[13px] font-semibold text-slate-900">
+                              {formatPrice(listing.price)}
+                            </td>
+                            <td className="py-3 pr-4 text-[13px] text-slate-600">
+                              {listing.enquiries || 0} lead{listing.enquiries === 1 ? '' : 's'}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  'rounded-full border px-[9px] py-[3px] text-[10.5px] font-semibold',
+                                  getListingStatusBadgeClass(listing.status),
+                                )}
+                              >
+                                {formatStatus(listing.status)}
+                              </Badge>
+                            </td>
+                            <td className="py-3 text-[12px] text-slate-500">
+                              {listedDate
+                                ? listedDate.toLocaleDateString('en-ZA', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                  })
+                                : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/90 px-5 py-8 text-center">
+                  {hasPendingReviewInventory ? (
+                    <>
+                      <Badge
+                        variant="outline"
+                        className="rounded-full border-amber-200 bg-amber-50 px-3 py-1 text-[10.5px] font-semibold text-amber-700"
+                      >
+                        {pendingReviewCount} in review
+                      </Badge>
+                      <p className="mt-3 text-sm font-medium text-slate-700">
+                        {pendingReviewCount === 1
+                          ? 'Your first listing is complete and in review.'
+                          : `${pendingReviewCount} completed listings are in review.`}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {latestPendingReviewListing
+                          ? `${latestPendingReviewListing.title} will appear here as active inventory once it is approved.`
+                          : 'Your completed listing will appear here as active inventory once it is approved.'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setLocation('/agent/listings?tab=pending')}
+                        className="mt-4 rounded-full border-amber-300 bg-white text-amber-800 hover:bg-amber-50 hover:text-amber-900"
+                      >
+                        View review status
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : hasDraftInventory ? (
+                    <>
+                      <p className="text-sm font-medium text-slate-700">
+                        {draftCount === 1
+                          ? 'You have a listing draft in progress.'
+                          : `You have ${draftCount} listing drafts in progress.`}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {latestDraftListing
+                          ? `${latestDraftListing.title} is saved privately until you are ready to submit it for review.`
+                          : 'Your draft is saved privately until you are ready to submit it for review.'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setLocation('/agent/listings?tab=draft')}
+                        className="mt-4 rounded-full border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-white text-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]"
+                      >
+                        Continue draft
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-slate-700">
+                        You do not have active listings yet.
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Publish a property to start tracking leads, offers, and appointments here.
+                      </p>
+                      {canPublishListings ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setLocation('/listings/create')}
+                          className="mt-4 rounded-full border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-white text-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]"
+                        >
+                          Add your first listing
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {!canPublishListings ? (
+                <FeatureLockOverlay
+                  title={
+                    needsProfileCompletion
+                      ? 'Listing publishing is still locked'
+                      : journeyAction.title
+                  }
+                  description={
+                    needsProfileCompletion
+                      ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
+                      : journeyAction.description
+                  }
+                  actionLabel={
+                    journeyAction.waiting
+                      ? null
+                      : needsProfileCompletion
+                        ? 'Finish setup'
+                        : journeyAction.label
+                  }
+                  onAction={
+                    journeyAction.waiting
+                      ? undefined
+                      : () =>
+                          setLocation(needsProfileCompletion ? '/agent/setup' : journeyAction.href)
+                  }
+                />
+              ) : null}
+            </CardShell>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-4">
+            <CardShell className="px-[22px] py-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--primary)]">
+                    Calendar View
+                  </p>
+                  <h2 className="mt-1 text-[15px] font-semibold tracking-[-0.03em] text-slate-900">
+                    Schedule
+                  </h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setLocation('/agent/productivity')}
+                  className="h-auto rounded-full px-0 text-sm font-medium text-[var(--primary)] hover:bg-transparent hover:text-[var(--primary)]"
+                >
+                  Full calendar
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="mt-4">
+                <div className="mb-[10px] flex items-center justify-between">
+                  <span className="text-[12.5px] font-semibold text-slate-900">
+                    {calendarMonth.toLocaleDateString('en-ZA', {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(currentMonth => addMonths(currentMonth, -1))}
+                      className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-500 transition hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:text-[var(--primary)]"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth(currentMonth => addMonths(currentMonth, 1))}
+                      className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-slate-200 bg-white text-slate-500 transition hover:border-[color:color-mix(in_oklab,var(--primary)_24%,white)] hover:text-[var(--primary)]"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-[2px]">
+                  {DAY_LABELS.map((dayLabel, index) => (
+                    <span
+                      key={`${dayLabel}-${index}`}
+                      className="pb-1 text-center text-[9.5px] font-semibold uppercase tracking-[0.14em] text-slate-400"
+                    >
+                      {dayLabel}
+                    </span>
+                  ))}
+
+                  {buildCalendarDays(calendarMonth).map((date, index) => {
+                    if (!date) {
+                      return <span key={`empty-${index}`} className="h-9 rounded-lg" />;
+                    }
+
+                    const dateKey = getDateKey(startOfDay(date));
+                    const hasEvents = (showingsByDate.get(dateKey) || []).length > 0;
+                    const isToday = sameDay(date, today);
+                    const isSelected = sameDay(date, selectedDate);
+
+                    return (
+                      <button
+                        key={dateKey}
+                        type="button"
+                        onClick={() => setSelectedDate(date)}
+                        className={cn(
+                          'relative flex h-8 items-center justify-center rounded-[6px] text-[11.5px] transition',
+                          isSelected
+                            ? 'bg-[var(--primary)] font-semibold text-white shadow-[0_10px_24px_rgba(0,92,168,0.22)]'
+                            : isToday
+                              ? 'border border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)] font-semibold text-[var(--primary)]'
+                              : 'text-slate-600 hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]',
+                        )}
+                      >
+                        {date.getDate()}
+                        {hasEvents && (
+                          <span
+                            className={cn(
+                              'absolute bottom-1.5 h-1 w-1 rounded-full',
+                              isSelected ? 'bg-white' : 'bg-[var(--primary)]',
+                            )}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-4 h-px bg-slate-200" />
+
+              <div className="mt-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  {sameDay(selectedDate, today)
+                    ? `Today - ${selectedDateLabel}`
+                    : selectedDateLabel}
+                </p>
+                <div className="mt-3 space-y-[7px]">
+                  {selectedDayShowings.length > 0 ? (
+                    selectedDayShowings.map(showing => {
+                      const scheduled = getScheduleTime(showing);
+                      const listing = showing.listingId
+                        ? listingsById.get(showing.listingId)
+                        : undefined;
+
+                      return (
+                        <div
+                          key={showing.id}
+                          className={cn(
+                            'flex items-start gap-3 rounded-[9px] border px-3 py-[10px]',
+                            showing.status === 'completed'
+                              ? 'border-emerald-200 bg-emerald-50/70'
+                              : 'border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-[color:color-mix(in_oklab,var(--primary)_8%,white)]',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'flex h-8 w-8 flex-shrink-0 flex-col items-center justify-center rounded-[7px] text-[9.5px] font-semibold leading-tight',
+                              showing.status === 'completed'
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-[var(--primary)] text-white',
+                            )}
+                          >
+                            <span>
+                              {scheduled
+                                ? scheduled.toLocaleTimeString('en-ZA', {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                  })
+                                : 'TBD'}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {listing?.title || `Viewing #${showing.id}`}
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                              {showing.visitorName || 'Prospective client'}
+                            </p>
+                            {listing?.city && (
+                              <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+                                <MapPin className="h-3 w-3" />
+                                {listing.city}
+                              </p>
+                            )}
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              'rounded-full border px-[9px] py-[3px] text-[9.5px] font-semibold',
+                              getShowingBadgeClass(showing.status),
+                            )}
+                          >
+                            {formatStatus(showing.status)}
+                          </Badge>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/90 px-4 py-5 text-sm text-slate-500">
+                      No appointments scheduled for this day.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-[14px]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Upcoming
+                </p>
+                <div className="mt-3 space-y-[7px]">
+                  {upcomingShowings.length > 0 ? (
+                    upcomingShowings.map(showing => {
+                      const scheduled = getScheduleTime(showing);
+                      const listing = showing.listingId
+                        ? listingsById.get(showing.listingId)
+                        : undefined;
+
+                      return (
+                        <div
+                          key={`upcoming-${showing.id}`}
+                          className="flex items-center gap-3 rounded-[9px] border border-slate-200 bg-slate-50/80 px-3 py-[9px]"
+                        >
+                          <div className="flex h-8 w-8 flex-shrink-0 flex-col items-center justify-center rounded-[7px] bg-white text-[9.5px] font-semibold text-slate-600 shadow-sm">
+                            <span>
+                              {scheduled
+                                ? scheduled.toLocaleDateString('en-ZA', { weekday: 'short' })
+                                : 'TBD'}
+                            </span>
+                            <span>
+                              {scheduled
+                                ? scheduled.toLocaleDateString('en-ZA', { day: 'numeric' })
+                                : '--'}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-slate-900">
+                              {listing?.title || `Viewing #${showing.id}`}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">
+                              {scheduled
+                                ? `${scheduled.toLocaleTimeString('en-ZA', {
+                                    hour: 'numeric',
+                                    minute: '2-digit',
+                                  })}${listing?.city ? ` - ${listing.city}` : ''}`
+                                : 'Time to be confirmed'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/90 px-4 py-5 text-sm text-slate-500">
+                      No upcoming appointments in this calendar view.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setLocation('/agent/productivity')}
+                className="mt-3 h-10 w-full rounded-[9px] border-dashed border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-transparent text-[12px] font-medium text-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]"
+              >
+                <CalendarPlus className="mr-2 h-4 w-4" />
+                Add new appointment
+              </Button>
+            </CardShell>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }

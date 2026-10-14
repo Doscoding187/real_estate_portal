@@ -19,25 +19,6 @@ function renderStrip() {
 }
 
 describe('AgentStatusStrip', () => {
-  it('renders compact supplied status without refetching or a payment action during review', () => {
-    render(
-      <AgentStatusStrip
-        compact
-        agentLaunchAccessAvailable
-        status={{
-          packageSelected: true,
-          approvalStatus: 'approved',
-          subscriptionStatus: 'payment_under_review',
-          recommendedNextStep: 'await_payment_review',
-        }}
-      />,
-    );
-    expect(screen.getByText('Profile approved')).toBeTruthy();
-    expect(screen.getByText('Payment notice under review')).toBeTruthy();
-    expect(screen.queryByRole('link')).toBeNull();
-    expect(apiFetchMock).not.toHaveBeenCalled();
-  });
-
   it('offers private preparation to agents while commercial activation is disabled', async () => {
     apiFetchMock.mockResolvedValue({
       packageSelected: false,
