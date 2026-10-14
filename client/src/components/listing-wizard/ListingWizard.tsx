@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { hydrateListingWizardForUser, useListingWizardStore } from '@/hooks/useListingWizard';
+import { isReviewableListingEdit, loadedListingNavigation } from '@/lib/listingEditorNavigation';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { DraftManager } from '@/components/wizard/DraftManager';
 import {
@@ -457,9 +458,14 @@ const ListingWizard: React.FC = () => {
         });
       }
 
-      // Set step to 1 or last step?
-      // Maybe let user start at 1 to review everything
-      store.goToStep(1);
+      // Choose navigation only after the owned record and all its fields are hydrated.
+      const hydrated = useListingWizardStore.getState();
+      useListingWizardStore.setState(
+        loadedListingNavigation(
+          step => hydrated.canAdvanceFromStep(step),
+          isReviewableListingEdit(isEditMode, listing.status),
+        ),
+      );
 
       // Disable resume draft dialog
       setShowResumeDraftDialog(false);
@@ -568,6 +574,19 @@ const ListingWizard: React.FC = () => {
   };
 
   const currentListingStatus = existingListing?.property?.status;
+  const canReviewLoadedListing =
+    isReviewableListingEdit(isEditMode, currentListingStatus) &&
+    isDraftIdentityCurrent &&
+    serverDraftId != null &&
+    !isLoadingExisting &&
+    !loadError;
+  const navigateEditorStep = (step: number) => {
+    if (canReviewLoadedListing && step >= 1 && step <= 8) {
+      useListingWizardStore.setState({ currentStep: step });
+    } else {
+      store.goToStep(step);
+    }
+  };
   const canSavePrivateDraft = !serverDraftId || currentListingStatus === 'draft';
   const inventoryPath = user?.role === 'agency_admin' ? '/agency/listings' : '/agent/listings';
 
@@ -954,13 +973,20 @@ const ListingWizard: React.FC = () => {
   // Generate steps for progress indicator with error highlighting
   const canAdvanceFromCurrentStep = store.canAdvanceFromStep(store.currentStep);
   const progressSteps = useMemo(() => {
-    const steps = generateSteps(
+    const generatedSteps = generateSteps(
       stepTitles,
       store.currentStep,
       store.completedSteps,
       undefined,
       canAdvanceFromCurrentStep,
     );
+    const steps = canReviewLoadedListing
+      ? generatedSteps.map(step => ({
+          ...step,
+          isAccessible: true,
+          isComplete: step.number < 8 && store.canAdvanceFromStep(step.number),
+        }))
+      : generatedSteps;
 
     // Add error counts if validation errors exist
     if (validationErrors && validationErrors.affectedSteps.length > 0) {
@@ -982,6 +1008,8 @@ const ListingWizard: React.FC = () => {
     store.completedSteps,
     validationErrors,
     canAdvanceFromCurrentStep,
+    canReviewLoadedListing,
+    store,
   ]);
 
   // Calculate readiness
@@ -1200,12 +1228,29 @@ const ListingWizard: React.FC = () => {
             </p>
             {/* Step Indicator */}
             <div className="mb-8">
-              <ProgressIndicator
-                steps={progressSteps}
-                onStepClick={stepNumber => store.goToStep(stepNumber)}
-              />
+              <ProgressIndicator steps={progressSteps} onStepClick={navigateEditorStep} />
             </div>
 
+            {canReviewLoadedListing && (
+              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-slate-600">
+                  {store.currentStep === 8
+                    ? 'Your saved listing is loaded. Select a section above to edit it, then return to Preview to review your changes.'
+                    : 'Editing your saved listing. Your other sections stay filled in; review your changes in Preview before submitting.'}
+                </p>
+                {store.currentStep !== 8 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="shrink-0"
+                    disabled={isSubmitting || isSavingDraft}
+                    onClick={() => navigateEditorStep(8)}
+                  >
+                    Return to Preview
+                  </Button>
+                )}
+              </div>
+            )}
             {/* Step Content */}
             <div
               key={draftContextKey}
