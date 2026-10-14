@@ -127,7 +127,7 @@ export function SimpleDevelopmentUnitCard({
           {withRentalPeriod(formatPrice(priceFrom, priceTo), listingType)}
         </div>
 
-        <h3 className="mb-1 line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-slate-900 transition-colors group-hover:text-[#2774AE]">
+        <h3 className="mb-1 truncate whitespace-nowrap text-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
           {title}
         </h3>
 

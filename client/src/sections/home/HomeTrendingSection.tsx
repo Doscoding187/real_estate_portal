@@ -206,8 +206,8 @@ export function HomeTrendingSection({
             Shared Living
           </h2>
           <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
-            Find rooms, cottages and small places. Choose an area and compare the costs and details
-            that matter to you.
+            Search rooms, cottages, and small places in the dedicated Shared Living journey. Choose
+            a canonical area there to keep the search boundary exact.
           </p>
         </div>
         <a
@@ -230,7 +230,8 @@ export function HomeTrendingSection({
             Plots &amp; Land
           </h2>
           <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
-            Explore plots and land by city or area, then narrow your search by land type and budget.
+            Choose a city or exact location in the dedicated Land journey to keep the search
+            boundary precise.
           </p>
         </div>
         <a
@@ -258,35 +259,16 @@ export function HomeTrendingSection({
 
   return (
     <section className="home-section">
-      <div className="home-section-header flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1">
-            <span className="text-sm font-semibold text-orange-700">Explore property</span>
-          </div>
-          <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
-            {heroContent.title}
-          </h2>
-          <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
-            {heroContent.subtitle}
-          </p>
+      <div className="home-section-header">
+        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-3 py-1">
+          <span className="text-sm font-semibold text-orange-600">Explore property</span>
         </div>
-        <a
-          href={
-            activeHeroTab === 'rent'
-              ? '/property-to-rent'
-              : activeHeroTab === 'developments'
-                ? '/new-developments'
-                : '/property-for-sale'
-          }
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#2774AE] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE]"
-        >
-          {activeHeroTab === 'rent'
-            ? 'View all rentals'
-            : activeHeroTab === 'developments'
-              ? 'View all developments'
-              : 'View all homes for sale'}
-          <span aria-hidden="true">→</span>
-        </a>
+        <h2 className="home-section-title max-w-[20.5rem] text-[1.125rem] font-bold text-slate-900 sm:max-w-none sm:text-xl md:text-[26px]">
+          {heroContent.title}
+        </h2>
+        <p className="max-w-[21rem] text-[13px] leading-5 text-slate-600 sm:max-w-2xl sm:text-sm sm:leading-6 md:max-w-2xl md:text-sm md:leading-6">
+          {heroContent.subtitle}
+        </p>
       </div>
 
       <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
@@ -294,10 +276,8 @@ export function HomeTrendingSection({
           {PROVINCES.map(province => (
             <button
               key={province}
-              type="button"
-              aria-pressed={selectedProvince === province}
               onClick={() => onProvinceChange(province)}
-              className={`min-h-11 whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE] md:px-4 md:text-sm ${
+              className={`whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${
                 selectedProvince === province
                   ? 'bg-[#2774AE] text-white shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
@@ -379,7 +359,7 @@ export function HomeTrendingSection({
                   key={item.id}
                   className="basis-[77%] pl-3.5 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
-                  <div className="relative h-full [&>a]:h-full [&>a]:max-w-none [&>a]:focus-visible:outline [&>a]:focus-visible:outline-2 [&>a]:focus-visible:-outline-offset-2 [&>a]:focus-visible:outline-[#2774AE]">
+                  <div className="relative">
                     {item.kind === 'listing' ? (
                       <SimpleHomeListingCard
                         id={item.id}
@@ -472,21 +452,8 @@ export function HomeTrendingSection({
                 </CarouselItem>
               ))}
             </CarouselContent>
-            {trendingItems.length > 1 ? (
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-xs text-slate-600">Swipe or use the arrows to explore</p>
-                <div className="flex gap-2">
-                  <CarouselPrevious
-                    aria-label="Previous properties"
-                    className="static size-11 translate-y-0 border-slate-200 bg-white shadow-sm"
-                  />
-                  <CarouselNext
-                    aria-label="Next properties"
-                    className="static size-11 translate-y-0 border-slate-200 bg-white shadow-sm"
-                  />
-                </div>
-              </div>
-            ) : null}
+            <CarouselPrevious className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:-left-12 lg:inline-flex" />
+            <CarouselNext className="hidden size-10 border-slate-200 bg-white opacity-0 shadow-md transition-opacity duration-200 group-hover/rail:opacity-100 group-focus-within/rail:opacity-100 focus-visible:opacity-100 disabled:invisible lg:-right-12 lg:inline-flex" />
           </Carousel>
         </div>
       ) : (
@@ -495,7 +462,8 @@ export function HomeTrendingSection({
             No published matches in {selectedProvince} yet
           </h3>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            Try another province or browse available properties while more listings are being added.
+            We are not showing placeholder inventory here. Try another province or start a broader
+            search while more listings are being added.
           </p>
           <a
             href={

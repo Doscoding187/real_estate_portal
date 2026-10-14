@@ -258,7 +258,7 @@ export function ExploreCities({
                         <p className="mb-1 truncate text-sm text-slate-500">{city.propertyCount}</p>
                       )}
 
-                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                      <div className="flex items-center gap-1 text-xs text-slate-400">
                         <MapPin className="h-3 w-3" />
                         <span className="truncate">{city.province}</span>
                       </div>

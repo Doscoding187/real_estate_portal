@@ -33,8 +33,8 @@ export function HomeJourneySection() {
             Make every property move with more context.
           </h2>
           <p className="max-w-3xl text-[13px] leading-5 text-slate-600 md:text-sm md:leading-6">
-            Property Listify brings discovery, decision-making and the people around a property move
-            into one connected experience.
+            Property Listify brings discovery, decision-making and the people around a property
+            move into one connected experience.
           </p>
         </div>
 
@@ -48,7 +48,7 @@ export function HomeJourneySection() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#2774AE]">
                   <Icon className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <span className="text-xs font-bold tabular-nums text-slate-500">0{index + 1}</span>
+                <span className="text-xs font-bold tabular-nums text-slate-300">0{index + 1}</span>
               </div>
               <h3 className="text-base font-bold text-slate-900">{title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
