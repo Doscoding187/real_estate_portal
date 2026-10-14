@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0114_user_legal_acceptances.sql",
+  "expectedHead": "0115_non_geographic_place_search_eligibility.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1203,6 +1203,16 @@
       "parentChecksum": "b1a595c06b79ecb2dce3540f1c70d23a1decbb53a2f2783ab47addb656cba62c",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 115,
+      "filename": "0115_non_geographic_place_search_eligibility.sql",
+      "checksum": "53c65883b900d639d1ea989041386a4d4fea28e7a9a7b35579a52c449e9d649c",
+      "parent": "0114_user_legal_acceptances.sql",
+      "parentChecksum": "44bd9e23779fefee710eb90da832261dc0ade2b51649a4b59fdefe675dd1d3a4",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
       "requiredReferenceDataVersion": null
     }
   ]

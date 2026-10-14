@@ -8,7 +8,7 @@
     "territory_id": "za-nc",
     "display_name": "Northern Cape",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433"
+    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
   },
   "generated_from": {
     "source_authority_version": "za-nc-source-authority-v0.2",
@@ -63,7 +63,8 @@
     "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
-    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
   },
   "counts": {
     "source_identities": 1576,
@@ -87,11 +88,11 @@
       "permissive_supported": 1552
     },
     "scope_establishment": {
-      "established": 1520,
-      "not_established": 32,
+      "established": 1321,
+      "not_established": 231,
       "by_scope": {
         "locality": {
-          "established": 1493,
+          "established": 1294,
           "not_established": 0
         },
         "metro_city": {
@@ -104,13 +105,13 @@
         }
       }
     },
-    "executable_places": 1520,
+    "executable_places": 1321,
     "executable_by_scope": {
-      "locality": 1493,
+      "locality": 1294,
       "metro_city": 26,
       "province": 1
     },
-    "admitted_without_executable_scope": 32,
+    "admitted_without_executable_scope": 231,
     "names": 2192,
     "name_roles": {
       "preferred_public": 1552,

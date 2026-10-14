@@ -49,6 +49,8 @@ export function CanonicalPlaceSelectorView({
   label = 'Location',
   purpose = 'authoring',
   inputId: suppliedInputId,
+  placeholder,
+  hint,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
@@ -60,11 +62,14 @@ export function CanonicalPlaceSelectorView({
   label?: string;
   purpose?: 'authoring' | 'search';
   inputId?: string;
+  placeholder?: string;
+  hint?: string;
 }) {
   const generatedId = useId();
   const inputId = suppliedInputId ?? generatedId;
   const resultsId = useId();
   const statusId = useId();
+  const hintId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const normalized = normalizePlaceQuery(query);
@@ -122,13 +127,14 @@ export function CanonicalPlaceSelectorView({
         aria-autocomplete="list"
         aria-expanded={open && options.length > 0}
         aria-controls={resultsId}
-        aria-describedby={statusId}
+        aria-describedby={hint ? `${hintId} ${statusId}` : statusId}
         aria-activedescendant={
           open && active >= 0 && active < options.length ? `${resultsId}-${active}` : undefined
         }
         value={query}
         maxLength={200}
         autoComplete="off"
+        placeholder={placeholder}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         onChange={event => {
           onChange(null);
@@ -166,6 +172,11 @@ export function CanonicalPlaceSelectorView({
           }
         }}
       />
+      {hint && (
+        <p id={hintId} className="text-sm text-muted-foreground">
+          {hint}
+        </p>
+      )}
       <p id={statusId} role="status" className="text-sm text-muted-foreground">
         {status}
       </p>
@@ -223,12 +234,16 @@ export function CanonicalPlaceSelector({
   label,
   purpose,
   inputId,
+  placeholder,
+  hint,
 }: {
   value: CanonicalPlaceSelection | null;
   onChange: (value: CanonicalPlaceSelection | null) => void;
   label?: string;
   purpose?: 'authoring' | 'search';
   inputId?: string;
+  placeholder?: string;
+  hint?: string;
 }) {
   const [query, setQuery] = useState(value?.label ?? '');
   const [debounced, setDebounced] = useState(query);
@@ -253,6 +268,8 @@ export function CanonicalPlaceSelector({
       label={label}
       purpose={purpose}
       inputId={inputId}
+      placeholder={placeholder}
+      hint={hint}
       query={query}
       onQueryChange={setQuery}
       discovery={lookup.data}

@@ -57,7 +57,7 @@
         "evidence_rows": 4463,
         "external_mappings": 2971,
         "disposition_ledger_rows": 4350,
-        "executable_places": 1436
+        "executable_places": 1434
       }
     },
     {
@@ -114,7 +114,7 @@
         "evidence_rows": 11062,
         "external_mappings": 1905,
         "disposition_ledger_rows": 13025,
-        "executable_places": 1832
+        "executable_places": 1102
       }
     },
     {
@@ -171,7 +171,7 @@
         "evidence_rows": 9660,
         "external_mappings": 2170,
         "disposition_ledger_rows": 9176,
-        "executable_places": 2028
+        "executable_places": 1570
       }
     },
     {
@@ -228,7 +228,7 @@
         "evidence_rows": 14951,
         "external_mappings": 5328,
         "disposition_ledger_rows": 12661,
-        "executable_places": 5037
+        "executable_places": 4634
       }
     },
     {
@@ -285,7 +285,7 @@
         "evidence_rows": 7300,
         "external_mappings": 1572,
         "disposition_ledger_rows": 9343,
-        "executable_places": 1519
+        "executable_places": 1297
       }
     },
     {
@@ -342,7 +342,7 @@
         "evidence_rows": 5059,
         "external_mappings": 1078,
         "disposition_ledger_rows": 5855,
-        "executable_places": 1024
+        "executable_places": 795
       }
     },
     {
@@ -399,7 +399,7 @@
         "evidence_rows": 9443,
         "external_mappings": 1747,
         "disposition_ledger_rows": 11471,
-        "executable_places": 1639
+        "executable_places": 1493
       }
     },
     {
@@ -456,7 +456,7 @@
         "evidence_rows": 5113,
         "external_mappings": 1445,
         "disposition_ledger_rows": 5177,
-        "executable_places": 1329
+        "executable_places": 1162
       }
     },
     {
@@ -513,7 +513,7 @@
         "evidence_rows": 12874,
         "external_mappings": 1576,
         "disposition_ledger_rows": 16872,
-        "executable_places": 1520
+        "executable_places": 1321
       }
     }
   ]

@@ -8,7 +8,7 @@
     "territory_id": "za-gp",
     "display_name": "Gauteng",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433"
+    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
   },
   "generated_from": {
     "source_authority_version": "gauteng-source-authority-v0.2",
@@ -63,7 +63,8 @@
     "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
-    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
   },
   "counts": {
     "source_identities": 1488,
@@ -89,11 +90,11 @@
       "permissive_supported": 274
     },
     "scope_establishment": {
-      "established": 1436,
-      "not_established": 30,
+      "established": 1434,
+      "not_established": 32,
       "by_scope": {
         "locality": {
-          "established": 1096,
+          "established": 1094,
           "not_established": 0
         },
         "metro_city": {
@@ -106,13 +107,13 @@
         }
       }
     },
-    "executable_places": 1436,
+    "executable_places": 1434,
     "executable_by_scope": {
-      "locality": 1096,
+      "locality": 1094,
       "metro_city": 339,
       "province": 1
     },
-    "admitted_without_executable_scope": 30,
+    "admitted_without_executable_scope": 32,
     "names": 2476,
     "name_roles": {
       "preferred_public": 1466,

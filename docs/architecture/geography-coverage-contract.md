@@ -299,6 +299,21 @@ referent identity.
 
 ### D12 — Publication and search eligibility, and derived scopes
 
+**Source classification correction, 2026-10-14.** A hotel, shopping mall,
+convention/business centre, tower, railway siding or other source-classified
+spot/facility is not a geographic search area merely because an older mapping
+proposed `locality`, `suburb` or `town`. The admission builder applies
+`shared/placeSourceGeographyEligibility.ts` to the recorded native source
+classifications. A spot/facility-only group retains its ID, names and provenance,
+but has no search scope, search eligibility or publication eligibility. A group
+with independent populated-place, administrative, locality or OSM settlement
+evidence remains eligible under the existing scope rules. Names are never used
+as an exclusion filter. GeoNames definitions are recorded at
+<https://www.geonames.org/export/codes.html>.
+
+Existing stored authority requires a bounded transactional data migration;
+replaying a reference adapter must not silently rewrite stored assertions.
+
 Publication and search eligibility are recorded **per Place**, separately from
 identity, classification and lifecycle. Eligibility is a deterministic function
 of recorded lifecycle, verification, licence and tier state — never an ad hoc

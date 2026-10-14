@@ -67,9 +67,6 @@ EXACT_TYPE_BY_SOURCE_CODE: dict[str, str] = {
     "P.PPLA3": "town",
     # Settlement classes.
     "P.PPLX": "suburb",
-    "S.HTL": "locality",
-    "S.RSD": "suburb",
-    "S.TOWR": "town",
     "L.LCTY": "locality",
 }
 
