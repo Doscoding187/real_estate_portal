@@ -1336,6 +1336,14 @@
       ]
     },
     {
+      "path": "server/migrations/0115_non_geographic_place_search_eligibility.sql",
+      "classification": "canonical active",
+      "purpose": "Bounded transactional withdrawal of geographic search and publication eligibility from source-classified spot/facility records; preserves canonical identities and provenance.",
+      "approvedFiles": [
+        "server/migrations/0115_non_geographic_place_search_eligibility.sql"
+      ]
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",
