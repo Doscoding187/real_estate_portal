@@ -671,29 +671,6 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
 
     if (!currentStage || currentStage === targetStage) return;
 
-    setPipeline(current => {
-      const sourceColumn = current[currentStage];
-      const targetColumn = current[targetStage];
-      const leadToMove = sourceColumn?.leads.find(item => item.id === lead.id);
-
-      if (!sourceColumn || !targetColumn || !leadToMove) return current;
-
-      return {
-        ...current,
-        [currentStage]: {
-          ...sourceColumn,
-          leads: sourceColumn.leads.filter(item => item.id !== lead.id),
-        },
-        [targetStage]: {
-          ...targetColumn,
-          leads: [
-            ...targetColumn.leads,
-            { ...leadToMove, status: LEAD_STATUS_BY_STAGE[targetStage] },
-          ],
-        },
-      };
-    });
-
     updateLeadStatusMutation.mutate({
       leadId: lead.id,
       targetStage: targetStage as any,
