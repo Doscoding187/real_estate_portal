@@ -63,42 +63,6 @@ export function ProvinceCityGuides({
   const awaitingQuery = searching && (search?.query.trim().length || 0) < 2;
   return (
     <>
-      {search && (
-        <div className="mb-5 max-w-sm">
-          <label htmlFor={inputId} className="mb-2 block text-sm font-semibold text-slate-900">
-            Search cities in {provinceName}
-          </label>
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-              aria-hidden="true"
-            />
-            <Input
-              id={inputId}
-              ref={inputRef}
-              type="search"
-              value={search.query}
-              maxLength={100}
-              placeholder="Enter a city name"
-              className="min-h-[44px] rounded-full border-slate-200 pl-10 pr-12 [&::-webkit-search-cancel-button]:hidden"
-              onChange={event => search.onChange(event.target.value)}
-            />
-            {searching && (
-              <button
-                type="button"
-                className="absolute right-1 top-0 flex h-full min-w-[44px] items-center justify-center rounded-full text-slate-500 hover:text-[#2774AE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE]"
-                aria-label="Clear city search"
-                onClick={() => {
-                  search.onChange('');
-                  inputRef.current?.focus();
-                }}
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
       {awaitingQuery ? (
         <p role="status" className="py-6 text-sm text-slate-600">
           Enter at least two letters to search city guides.
@@ -151,9 +115,42 @@ export function ProvinceCityGuides({
           ))}
         </div>
       )}
-      <p className="mt-3 text-xs text-slate-500">
-        AI illustrations. Cities without their own cover use a province scene.
-      </p>
+      {search && (
+        <div className="mt-5 max-w-sm">
+          <label htmlFor={inputId} className="mb-2 block text-sm font-semibold text-slate-900">
+            Search cities in {provinceName}
+          </label>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              aria-hidden="true"
+            />
+            <Input
+              id={inputId}
+              ref={inputRef}
+              type="search"
+              value={search.query}
+              maxLength={100}
+              placeholder="Enter a city name"
+              className="min-h-[44px] rounded-full border-slate-200 pl-10 pr-12 [&::-webkit-search-cancel-button]:hidden"
+              onChange={event => search.onChange(event.target.value)}
+            />
+            {searching && (
+              <button
+                type="button"
+                className="absolute right-1 top-0 flex h-full min-w-[44px] items-center justify-center rounded-full text-slate-500 hover:text-[#2774AE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2774AE]"
+                aria-label="Clear city search"
+                onClick={() => {
+                  search.onChange('');
+                  inputRef.current?.focus();
+                }}
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

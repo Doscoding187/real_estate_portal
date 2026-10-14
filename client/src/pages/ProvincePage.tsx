@@ -271,9 +271,6 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   city guides.
                 </p>
               </div>
-              <a href="#provincial-composer-title" className="provincial-section__link">
-                Search this province <ArrowRight size={15} aria-hidden="true" />
-              </a>
             </div>
             {cityGuidesQuery.isError && (
               <div

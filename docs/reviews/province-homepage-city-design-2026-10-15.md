@@ -27,3 +27,9 @@ Screenshots and sanitized evidence: `/home/edwardspc/Desktop/Dev/review-artifact
 Changed files: shared CityGuideEntry; ExploreCities; ProvinceCityGuides and its tests; ProvincePage and its guide-availability test; provincial CSS; getCityGuides input schema; cityGuideDiscoveryService and its tests; this review. The rejected ProvinceAreaTable and its tests are removed.
 
 Worktree `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-ux-review-20261013`; branch `feat/homepage-ux-review-20261013`; successor to `101b202dd`. Local commit only: no push, merge, deployment or protected database operation.
+
+## Search placement follow-up
+
+At Edward's request, Search cities now sits below the suggested city entries. The Search this province shortcut is removed from this section, along with the two-sentence illustration/fallback caption. Existing image fallbacks and search behaviour are retained.
+
+Ten existing focused tests passed. Desktop 1440px and mobile 390px browser checks confirmed search below the entries, removal of the shortcut, twelve default cities, working search/clear/focus and no page overflow. Formatting, focused lint and whitespace checks passed. Updated screenshots and verification: `/home/edwardspc/Desktop/Dev/review-artifacts/province-city-search-placement-20261015/`.
