@@ -557,7 +557,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
       listingId: matchedListing ? String(matchedListing.id) : '',
       scheduledAt: defaultDateTime.toISOString().slice(0, 16),
       durationMinutes: '30',
-      notes: propertyEnquiryMessageText(lead.message),
+      notes: '',
     });
   };
 
