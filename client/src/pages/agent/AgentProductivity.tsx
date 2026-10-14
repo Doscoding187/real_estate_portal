@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useCallback, useMemo } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
@@ -131,17 +131,11 @@ function getFollowUpTone(value: string | Date | null | undefined) {
   return 'bg-blue-100 text-blue-700';
 }
 
-function productivityTabFromLocation(location: string) {
-  const search =
-    typeof window !== 'undefined'
-      ? window.location.search
-      : location.includes('?')
-        ? location.slice(location.indexOf('?'))
-        : '';
+function productivityTabFromSearch(search: string) {
   const requestedTab = new URLSearchParams(search).get('tab');
   return ['tasks', 'calendar', 'showings', 'reminders'].includes(String(requestedTab))
     ? String(requestedTab)
-    : 'tasks';
+    : 'calendar';
 }
 
 function leadWorkspaceHref(leadId: number) {
@@ -149,8 +143,14 @@ function leadWorkspaceHref(leadId: number) {
 }
 
 export default function AgentProductivity() {
-  const [location, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState(() => productivityTabFromLocation(location));
+  const [, setLocation] = useLocation();
+  const activeTab = productivityTabFromSearch(useSearch());
+  const setActiveTab = useCallback(
+    (tab: string) => {
+      setLocation(`/agent/productivity?tab=${tab}`, { replace: true });
+    },
+    [setLocation],
+  );
   const {
     status,
     isLoading: statusLoading,
@@ -164,10 +164,6 @@ export default function AgentProductivity() {
   const operationalDataEnabled = !statusLoading && !productivityLocked;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
-
-  useEffect(() => {
-    setActiveTab(productivityTabFromLocation(location));
-  }, [location]);
 
   const calendarRange = useMemo(() => {
     const now = new Date();
@@ -238,12 +234,12 @@ export default function AgentProductivity() {
         .filter(showing => {
           const scheduledAt = showing.scheduledAt;
           if (!scheduledAt) return false;
-          const scheduledDate = new Date(scheduledAt);
+          const scheduledDate = parseDatabaseTimestamp(scheduledAt);
           return !Number.isNaN(scheduledDate.getTime()) && scheduledDate.getTime() >= Date.now();
         })
         .sort((left, right) => {
-          const leftTime = new Date(left.scheduledAt || 0).getTime();
-          const rightTime = new Date(right.scheduledAt || 0).getTime();
+          const leftTime = parseDatabaseTimestamp(left.scheduledAt || '').getTime();
+          const rightTime = parseDatabaseTimestamp(right.scheduledAt || '').getTime();
           return leftTime - rightTime;
         }),
     [showingsData],
@@ -255,7 +251,7 @@ export default function AgentProductivity() {
     return upcomingShowings.filter(showing => {
       const scheduledAt = showing.scheduledAt;
       if (!scheduledAt) return false;
-      const scheduledDate = new Date(scheduledAt);
+      const scheduledDate = parseDatabaseTimestamp(scheduledAt);
       return !Number.isNaN(scheduledDate.getTime()) && sameDay(scheduledDate, today);
     });
   }, [upcomingShowings]);
@@ -275,7 +271,7 @@ export default function AgentProductivity() {
       new Set(
         upcomingShowings.map(showing => {
           const scheduledAt = showing.scheduledAt;
-          const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+          const scheduledDate = scheduledAt ? parseDatabaseTimestamp(scheduledAt) : null;
           return scheduledDate && !Number.isNaN(scheduledDate.getTime())
             ? scheduledDate.toISOString().split('T')[0]
             : null;
@@ -330,7 +326,7 @@ export default function AgentProductivity() {
       }));
 
     return [...followUpActions, ...showingActions, ...notificationActions].slice(0, 6);
-  }, [followUps, notificationsData, setLocation, upcomingShowings]);
+  }, [followUps, notificationsData, setLocation, setActiveTab, upcomingShowings]);
 
   const nextShowing = upcomingShowings[0] || null;
   const unreadAlerts =
@@ -370,16 +366,16 @@ export default function AgentProductivity() {
           <>
             <div className={agentPageStyles.header}>
               <div className={agentPageStyles.headingBlock}>
-                <h1 className={agentPageStyles.title}>Productivity</h1>
+                <h1 className={agentPageStyles.title}>Calendar</h1>
                 <p className={agentPageStyles.subtitle}>
-                  Live operational view across showings, reminders, and the month calendar.
+                  Plan viewings, review your schedule and follow up with customers.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
               <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Scheduled This Month</p>
@@ -390,7 +386,7 @@ export default function AgentProductivity() {
                         {daysWithAppointments} active calendar days
                       </p>
                     </div>
-                    <div className="rounded-xl bg-blue-50 p-3">
+                    <div className="rounded-xl bg-blue-50 p-2">
                       <CalendarDays className="h-6 w-6 text-blue-600" />
                     </div>
                   </div>
@@ -398,7 +394,7 @@ export default function AgentProductivity() {
               </Card>
 
               <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Showings Today</p>
@@ -411,7 +407,7 @@ export default function AgentProductivity() {
                           : 'No more showings today'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-violet-50 p-3">
+                    <div className="rounded-xl bg-violet-50 p-2">
                       <MapPin className="h-6 w-6 text-violet-600" />
                     </div>
                   </div>
@@ -419,7 +415,7 @@ export default function AgentProductivity() {
               </Card>
 
               <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Unread Alerts</p>
@@ -427,10 +423,10 @@ export default function AgentProductivity() {
                         {notificationsLoading ? '...' : unreadAlerts}
                       </p>
                       <p className={cn(agentPageStyles.statSub, 'text-amber-600')}>
-                        Real reminders from your notification feed
+                        Unread messages and reminders
                       </p>
                     </div>
-                    <div className="rounded-xl bg-amber-50 p-3">
+                    <div className="rounded-xl bg-amber-50 p-2">
                       <Bell className="h-6 w-6 text-amber-600" />
                     </div>
                   </div>
@@ -438,7 +434,7 @@ export default function AgentProductivity() {
               </Card>
 
               <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Follow-ups Due</p>
@@ -451,7 +447,7 @@ export default function AgentProductivity() {
                           : 'No lead follow-ups scheduled'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-emerald-50 p-3">
+                    <div className="rounded-xl bg-emerald-50 p-2">
                       <Clock className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
@@ -463,11 +459,11 @@ export default function AgentProductivity() {
               <TabsList
                 className={cn(agentPageStyles.tabsList, 'grid w-full max-w-2xl grid-cols-4')}
               >
-                <TabsTrigger value="tasks" className={agentPageStyles.tabTrigger}>
-                  Action Queue
-                </TabsTrigger>
                 <TabsTrigger value="calendar" className={agentPageStyles.tabTrigger}>
                   Calendar
+                </TabsTrigger>
+                <TabsTrigger value="tasks" className={agentPageStyles.tabTrigger}>
+                  Action Queue
                 </TabsTrigger>
                 <TabsTrigger value="showings" className={agentPageStyles.tabTrigger}>
                   Showings

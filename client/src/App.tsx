@@ -345,7 +345,7 @@ function Router() {
           </Route>
           <Route path="/agent/calendar">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <Redirect to="/agent/productivity" />
+              <Redirect to="/agent/productivity?tab=calendar" />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
