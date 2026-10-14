@@ -1,3 +1,4 @@
+import { HOME_PROVINCE_OPTIONS as PROVINCES } from '@/lib/homeProvinceOptions';
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -61,18 +62,6 @@ type TrendingItem = {
     billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
   };
 };
-
-const PROVINCES = [
-  'Gauteng',
-  'Western Cape',
-  'KwaZulu-Natal',
-  'Eastern Cape',
-  'Mpumalanga',
-  'Limpopo',
-  'North West',
-  'Free State',
-  'Northern Cape',
-];
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   buy: {

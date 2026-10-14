@@ -55,3 +55,9 @@ Directory, profile and project requests distinguish loading, failed/retry, confi
 The existing fictional demo has two qualifying developers in Gauteng, four public directory profiles nationally and no qualifying provincial projects elsewhere. It has missing logos and a broken project-image asset, so screenshots cannot establish final real-brand photography quality. No imagery, project prices, stock or counts were invented to improve the presentation.
 
 Pagination beyond the small real demo catalogue is covered with local mocked response/contract tests; the real API also verifies offset exhaustion. Current developer discovery is explicitly provincial. This change does not imply city/suburb relevance, proximity ranking or silently expand a buyer's separate location search. More precise project discovery should use the governed geographic search workstream.
+
+## Approved homepage pill refinement
+
+Following the visual review, replaced the homepage developer province dropdown with the same blue selected-state province pills used by the property section. The nine options appear in the same order, use native keyboard-operable buttons with an announced selected state, and scroll horizontally within the row on mobile. Both sections now share their existing province option list in `client/src/lib/homeProvinceOptions.ts`; the property section's options and behaviour are preserved.
+
+One-click selection retains the provincial query and project/profile/directory destinations. No enquiry, backend, access, publication or data change was included in this refinement. The 26 relevant component/journey tests and changed-file lint passed. Desktop, mobile and narrow-mobile browser evidence is recorded separately in `/home/edwardspc/Desktop/Dev/review-artifacts/developer-province-pills-20261014`.

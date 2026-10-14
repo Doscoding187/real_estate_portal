@@ -11,7 +11,8 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { trpc } from '@/lib/trpc';
-import { DEVELOPER_DISCOVERY_PROVINCES, developerDiscoveryHref } from '@shared/developerDiscovery';
+import { developerDiscoveryHref } from '@shared/developerDiscovery';
+import { HOME_PROVINCE_OPTIONS } from '@/lib/homeProvinceOptions';
 
 type TopDevelopersProps = {
   selectedProvince: string;
@@ -48,29 +49,32 @@ export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelop
               Explore developers with approved, published projects in {selectedProvince}.
             </p>
           </div>
-          {onProvinceChange && (
-            <div className="w-full sm:w-auto">
-              <label
-                htmlFor="homepage-developer-province"
-                className="mb-1 block text-xs font-semibold text-slate-600"
-              >
-                Project province
-              </label>
-              <select
-                id="homepage-developer-province"
-                value={selectedProvince}
-                onChange={event => onProvinceChange(event.target.value)}
-                className="min-h-[44px] w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 sm:w-48"
-              >
-                {DEVELOPER_DISCOVERY_PROVINCES.map(province => (
-                  <option key={province} value={province}>
-                    {province}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
+        {onProvinceChange && (
+          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div
+              role="group"
+              aria-label="Developer project province"
+              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
+            >
+              {HOME_PROVINCE_OPTIONS.map(province => (
+                <button
+                  key={province}
+                  type="button"
+                  aria-pressed={selectedProvince === province}
+                  onClick={() => onProvinceChange(province)}
+                  className={`min-h-[44px] whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${
+                    selectedProvince === province
+                      ? 'bg-[#2774AE] text-white shadow-sm'
+                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
+                  }`}
+                >
+                  {province}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div
             data-testid="developer-feed-loading"

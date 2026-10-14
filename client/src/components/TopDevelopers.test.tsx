@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => ({
@@ -87,6 +88,55 @@ describe('TopDevelopers request states', () => {
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByTestId('developer-feed-loading')).not.toBeInTheDocument();
+  });
+
+  it('changes project province with one pill click and carries it through discovery links', () => {
+    testState.query = {
+      ...testState.query,
+      data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder' }],
+    };
+    function HomepageSection() {
+      const [province, setProvince] = useState('Gauteng');
+      return <TopDevelopers selectedProvince={province} onProvinceChange={setProvince} />;
+    }
+    render(<HomepageSection />);
+    const pills = within(screen.getByRole('group', { name: 'Developer project province' }));
+    expect(pills.getAllByRole('button').map(button => button.textContent)).toEqual([
+      'Gauteng',
+      'Western Cape',
+      'KwaZulu-Natal',
+      'Eastern Cape',
+      'Mpumalanga',
+      'Limpopo',
+      'North West',
+      'Free State',
+      'Northern Cape',
+    ]);
+    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+
+    fireEvent.click(pills.getByRole('button', { name: 'Western Cape' }));
+
+    expect(pills.getByRole('button', { name: 'Western Cape' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'false');
+    expect(testState.queryInput).toEqual({ province: 'Western Cape', limit: 12 });
+    expect(
+      screen.getByRole('heading', { name: 'Developers with projects in Western Cape' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Western+Cape#developments',
+    );
+    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Western+Cape',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Explore developers in Western Cape' }),
+    ).toHaveAttribute('href', '/developers?province=Western+Cape');
   });
 
   it('uses the selected province and presents local evidence, not a featured claim', () => {
