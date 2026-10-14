@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEVELOPER_DISCOVERY_PROVINCES } from '../shared/developerDiscovery';
 import { router, protectedProcedure, publicProcedure, superAdminProcedure } from './_core/trpc';
 import * as db from './db';
 import { TRPCError } from '@trpc/server';
@@ -240,6 +241,8 @@ function toPublicPublisherProfileResponse(publisherProfile: any, developer: any)
     isClaimable: false,
     stats: {
       isVerified: Number(publisherProfile.isContactVerified || developer?.isVerified || 0) === 1,
+      isContactVerified: Number(publisherProfile.isContactVerified || 0) === 1,
+      isOrganisationVerified: Number(developer?.isVerified || 0) === 1,
       isTrusted: Number(developer?.isTrusted || 0) === 1,
       establishedYear: publisherProfile.foundedYear || developer?.establishedYear || null,
       totalProjects: Number(developer?.totalProjects || 0),
@@ -479,6 +482,15 @@ export const developerRouter = router({
     .input(
       z.object({
         cataloguePublisherId: z.number().int().positive(),
+        province: z
+          .string()
+          .refine(
+            value => DEVELOPER_DISCOVERY_PROVINCES.includes(value),
+            'Choose a supported province',
+          )
+          .optional(),
+        limit: z.number().int().min(1).max(50).optional(),
+        offset: z.number().int().min(0).max(100000).optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -490,6 +502,9 @@ export const developerRouter = router({
       }
       return developmentService.listPublicDevelopments({
         cataloguePublisherId: resolvedPublisher.publisherProfile.id,
+        ...(input.province ? { province: input.province } : {}),
+        ...(input.limit !== undefined ? { limit: input.limit } : {}),
+        ...(input.offset !== undefined ? { offset: input.offset } : {}),
       });
     }),
 

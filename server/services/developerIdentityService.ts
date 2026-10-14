@@ -59,6 +59,7 @@ export interface PublisherFilters {
   isVisible?: boolean;
   authorityKind?: PublisherAuthorityKind;
   search?: string;
+  province?: string;
   limit?: number;
   offset?: number;
 }
@@ -632,6 +633,15 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
     eq(cataloguePublishers.isVisible, 1),
     publicPublisherAuthorityCondition(),
   ];
+  if (filters.province) {
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM ${developments}
+      WHERE ${developments.cataloguePublisherId} = ${cataloguePublishers.id}
+        AND ${developments.province} = ${filters.province}
+        AND ${publicDevelopmentEligibilityConditions()}
+    )`);
+    conditions.push(inArray(cataloguePublishers.publisherType, ['developer', 'hybrid']));
+  }
   if (filters.brandTier) conditions.push(eq(cataloguePublishers.brandTier, filters.brandTier));
   if (filters.authorityKind)
     conditions.push(eq(cataloguePublishers.authorityKind, filters.authorityKind));
@@ -658,7 +668,7 @@ export async function listPublicCataloguePublishers(filters: PublisherFilters = 
       eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
     )
     .where(and(...conditions))
-    .orderBy(desc(cataloguePublishers.createdAt))
+    .orderBy(desc(cataloguePublishers.createdAt), desc(cataloguePublishers.id))
     .limit(filters.limit ?? 50)
     .offset(filters.offset ?? 0);
   const publishers = rows.map(row => row.publisher);

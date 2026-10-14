@@ -31,6 +31,11 @@ vi.mock('@/lib/trpc', () => ({
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', vi.fn()],
+  Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 import { TopDevelopers } from './TopDevelopers';
@@ -77,7 +82,9 @@ describe('TopDevelopers request states', () => {
 
     render(<TopDevelopers selectedProvince="Gauteng" />);
 
-    expect(screen.getByText('No developers are currently building in Gauteng')).toBeInTheDocument();
+    expect(
+      screen.getByText('No developers with published projects in Gauteng yet'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByTestId('developer-feed-loading')).not.toBeInTheDocument();
   });
@@ -100,9 +107,21 @@ describe('TopDevelopers request states', () => {
     render(<TopDevelopers selectedProvince="Gauteng" />);
 
     expect(testState.queryInput).toEqual({ province: 'Gauteng', limit: 12 });
-    expect(screen.getByRole('heading', { name: 'Developers building in Gauteng' })).toBeInTheDocument();
-    expect(screen.getByText('Active in Gauteng')).toBeInTheDocument();
-    expect(screen.getByText('Selling now')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Developers with projects in Gauteng' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('3 published projects')).toBeInTheDocument();
+    expect(screen.getByText('2 selling now')).toBeInTheDocument();
+    expect(screen.getByText('1 launching soon')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Gauteng#developments',
+    );
+    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Gauteng',
+    );
+    expect(screen.queryByRole('button', { name: /Active developments/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/featured/i)).not.toBeInTheDocument();
   });
 });

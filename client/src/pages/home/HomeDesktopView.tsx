@@ -45,7 +45,7 @@ export function HomeDesktopView({
           activeHeroTab={activeHeroTab}
         />
         <DiscoverProperties withinContentRail />
-        <TopDevelopers selectedProvince={selectedProvince} />
+        <TopDevelopers selectedProvince={selectedProvince} onProvinceChange={onProvinceChange} />
         <ExploreCities customLocations={popularCities} basePath="" withinContentRail />
         <HomeMarketInsightsSection />
         <HomeJourneySection />

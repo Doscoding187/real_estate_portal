@@ -17,6 +17,7 @@ import {
 } from './services/publicLeadRateLimitService';
 import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
+import { DEVELOPER_DISCOVERY_PROVINCES } from '../shared/developerDiscovery';
 
 // ============================================================================
 // Input Schemas
@@ -65,6 +66,13 @@ const listPublishersSchema = z
     authorityKind: z.enum(['platform_reference', 'developer_first_party']).optional(),
     isVisible: z.boolean().optional(),
     search: z.string().optional(),
+    province: z
+      .string()
+      .refine(
+        value => DEVELOPER_DISCOVERY_PROVINCES.includes(value),
+        'Choose a supported province',
+      )
+      .optional(),
     limit: z.number().int().positive().max(100).optional(),
     offset: z.number().int().min(0).optional(),
   })
