@@ -12,7 +12,11 @@ type StatusPayload = {
   subscriptionStatus?: string;
   recommendedNextStep?: AgentRecommendedNextStep;
   commercial?: {
-    ownerSource?: 'individual_agent' | 'agency_admin' | 'agency_membership' | 'developer_membership';
+    ownerSource?:
+      | 'individual_agent'
+      | 'agency_admin'
+      | 'agency_membership'
+      | 'developer_membership';
   };
 };
 
@@ -54,12 +58,17 @@ const APPROVAL_TONES: Record<string, ApprovalTone> = {
 
 export function AgentStatusStrip({
   agentLaunchAccessAvailable = false,
+  compact = false,
+  status: suppliedStatus,
 }: {
   agentLaunchAccessAvailable?: boolean;
+  compact?: boolean;
+  status?: StatusPayload;
 }) {
-  const [status, setStatus] = useState<StatusPayload | null>(null);
+  const [fetchedStatus, setStatus] = useState<StatusPayload | null>(null);
 
   useEffect(() => {
+    if (suppliedStatus) return;
     let cancelled = false;
     apiFetch<StatusPayload>('/agent/onboarding-status')
       .then(result => {
@@ -69,8 +78,9 @@ export function AgentStatusStrip({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [suppliedStatus]);
 
+  const status = suppliedStatus ?? fetchedStatus;
   if (!status) return null;
 
   const tone = APPROVAL_TONES[status.approvalStatus] ?? APPROVAL_TONES.pending;
@@ -78,7 +88,7 @@ export function AgentStatusStrip({
   const paidStates: Record<string, string> = {
     active: 'Launch Access active',
     pending_payment: 'Invoice issued — payment outstanding',
-    payment_under_review: 'Payment proof under review',
+    payment_under_review: 'Payment notice under review',
     expired: 'Launch Access expired',
     past_due: 'Launch Access payment overdue',
     cancelled: 'Launch Access cancelled',
@@ -90,9 +100,9 @@ export function AgentStatusStrip({
       : !agentLaunchAccessAvailable
         ? 'Preparation-only onboarding'
         : status.recommendedNextStep === 'await_agency_activation'
-      ? 'Agency Launch Access pending'
-      : (paidStates[status.subscriptionStatus ?? ''] ??
-        (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));
+          ? 'Agency Launch Access pending'
+          : (paidStates[status.subscriptionStatus ?? ''] ??
+            (status.packageSelected ? 'Commercial term in progress' : 'Launch Access not started'));
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const showJourneyAction = [
     'select_package',
@@ -101,6 +111,35 @@ export function AgentStatusStrip({
     'contact_support',
     'await_agency_activation',
   ].includes(status.recommendedNextStep || 'select_package');
+
+  if (compact) {
+    return (
+      <div data-testid="agent-status-strip" className="flex flex-wrap items-center gap-2 text-xs">
+        <span
+          title={tone.detail}
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium [.dark_&]:bg-card [.dark_&]:text-card-foreground [.dark_&]:border-border',
+            tone.className,
+          )}
+        >
+          <ToneIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          {tone.label}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 font-medium text-muted-foreground">
+          <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+          {commercialLabel}
+        </span>
+        {showJourneyAction && (
+          <Link
+            href={journeyAction.href}
+            className="inline-flex min-h-10 items-center rounded-md px-2 font-semibold text-primary hover:underline"
+          >
+            {journeyAction.label}
+          </Link>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
