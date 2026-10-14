@@ -1,14 +1,14 @@
 # Location search: product architecture recommendation
 
 Date: 14 October 2026
-Status: researched recommendation for founder review; no product implementation or geography-policy change
+Status: research record revised after founder direction; homepage implementation reviewed separately in `home-area-first-local-review-2026-10-14.md`
 Workstream: `feat/homepage-ux-review-20261013`
 
 ## Decision
 
 Support broad browsing and precise searching within one consistent journey. Make the geography visible and editable, offer narrowing before or alongside broad results, and expand only when the visitor deliberately changes the area.
 
-A city-level search is valid intent. Do not require every visitor to choose a suburb, redirect every transactional search through an SEO page, or guess a smaller area. The earlier proposal to add an area-selection step to every broad category click is refined: area selection should be available inline and in a skippable sheet; direct city-wide browsing remains explicit.
+Founder decision after reviewing this research: homepage Buy/Rent searches with broad geography clarify the area before navigating. A city-level search remains available through an explicit Browse all choice. Location-only entry continues to exploration. Do not guess a smaller area or make a guide page a mandatory transactional intermediary. Specific governed towns/localities can open directly even when their approved runtime handle is a city ID.
 
 This recommendation addresses the second homepage section while preserving its visual category cards. It also defines the handoff the hero and results page must share. A section-only change cannot deliver continuity if those surfaces continue to hold unrelated location state.
 
@@ -56,13 +56,13 @@ No data/service query was changed or executed for this research. No database ini
 
 Retain the existing cards and add a compact area row below the city choices:
 
-> Cape Town — all areas · Choose a suburb or area
+> Where would you like to look? · Choose an area
 
 If the visitor has explicitly selected a precise locality, show that instead:
 
 > Camps Bay · Change area
 
-A displayed default is only a browsing default. It must not be described as a personal preference. A new visitor can start with a neutral Choose a city control or an explicitly labelled featured-city default; do not pretend Cape Town was their choice.
+Do not prefill Cape Town. City tabs provide a browsing hint that must resolve through the governed lookup before it can power a query. A confirmed city-wide selection shows All areas; a precise selection shows the selected place.
 
 | Visitor action/state                              | Response                                                                                                         |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -70,7 +70,7 @@ A displayed default is only a browsing default. It must not be described as a pe
 | Selects an exact locality and clicks a category   | Open matching listings directly; no extra confirmation.                                                          |
 | Clicks a category with only a broad city context  | Open a compact area sheet with the category retained: choose an area, Browse all [city], or Explore area guides. |
 | Explicitly chooses Browse all [city]              | Open city-wide results and label them as such; no repeat precision prompt.                                       |
-| Uses the hero Search button with an explicit city | Honour that submitted city search directly; offer refinement on results.                                         |
+| Uses the hero Search button with an explicit city | Clarify the area before navigation, with explicit Browse all as an alternative.                                  |
 | Has no selected location                          | Ask for a city/locality, while keeping the chosen journey/category visible.                                      |
 | Enters an ambiguous name                          | Present distinguishable, eligible candidates with their context; do not auto-pick the first.                     |
 | Enters an unsupported/unresolved name             | Keep the query and explain the lack of a selectable match. Do not replace it with the city.                      |
@@ -140,4 +140,4 @@ Conduct short task-based sessions with people who know their suburb, people relo
 
 ## Review status
 
-Only this research/recommendation record is added. Runtime remains unchanged. Current selection, query, count and proximity capabilities must be verified under database authority if the implementation requires data-backed inspection. Push, merge and deployment remain outside this local research commit.
+The research commit originally changed no runtime code. A subsequent homepage implementation follows the founder’s area-first decision and is recorded in `home-area-first-local-review-2026-10-14.md`. This record does not authorize a new geography authority, ranking change, price model or global results redesign. Push, merge and deployment remain outside the local workstream.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
 import {
@@ -105,29 +106,31 @@ export default function Home() {
         image={toAbsoluteUrl(VITE_APP_LOGO)}
         structuredData={homeStructuredData}
       />
-      <PageFrame contained={false}>
-        {isMobile ? (
-          <HomeMobileView
-            activeHeroTab={effectiveHeroTab}
-            heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/property-for-sale')}
-            onProvinceChange={setSelectedProvince}
-            onTabChange={handleTabChange}
-            popularCities={popularCities}
-            selectedProvince={selectedProvince}
-          />
-        ) : (
-          <HomeDesktopView
-            activeHeroTab={effectiveHeroTab}
-            heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/property-for-sale')}
-            onProvinceChange={setSelectedProvince}
-            onTabChange={handleTabChange}
-            popularCities={popularCities}
-            selectedProvince={selectedProvince}
-          />
-        )}
-      </PageFrame>
+      <HomeSearchProvider journey={heroTabValue} onJourneyChange={handleTabChange}>
+        <PageFrame contained={false}>
+          {isMobile ? (
+            <HomeMobileView
+              activeHeroTab={effectiveHeroTab}
+              heroTabValue={heroTabValue}
+              onBrowseProperties={() => setLocation('/property-for-sale')}
+              onProvinceChange={setSelectedProvince}
+              onTabChange={handleTabChange}
+              popularCities={popularCities}
+              selectedProvince={selectedProvince}
+            />
+          ) : (
+            <HomeDesktopView
+              activeHeroTab={effectiveHeroTab}
+              heroTabValue={heroTabValue}
+              onBrowseProperties={() => setLocation('/property-for-sale')}
+              onProvinceChange={setSelectedProvince}
+              onTabChange={handleTabChange}
+              popularCities={popularCities}
+              selectedProvince={selectedProvince}
+            />
+          )}
+        </PageFrame>
+      </HomeSearchProvider>
     </HomeLayout>
   );
 }
