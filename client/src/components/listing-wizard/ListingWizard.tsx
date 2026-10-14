@@ -1238,6 +1238,18 @@ const ListingWizard: React.FC = () => {
                     ? 'Your saved listing is loaded. Select a section above to edit it, then return to Preview to review your changes.'
                     : 'Editing your saved listing. Your other sections stay filled in; review your changes in Preview before submitting.'}
                 </p>
+                <select
+                  aria-label="Edit listing section"
+                  value={store.currentStep}
+                  onChange={event => navigateEditorStep(Number(event.target.value))}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm sm:hidden"
+                >
+                  {stepTitles.map((title, index) => (
+                    <option key={title} value={index + 1}>
+                      {title}
+                    </option>
+                  ))}
+                </select>
                 {store.currentStep !== 8 && (
                   <Button
                     type="button"
