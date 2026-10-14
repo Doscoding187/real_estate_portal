@@ -31,7 +31,6 @@ export function ProvinceGuideHero({ provinceName, provinceSlug }: ProvinceGuideH
       <div className="province-guide-cover__shade" aria-hidden="true" />
       <div className="provincial-rail provincial-hero__inner">
         <div className="provincial-hero__copy">
-          <p className="provincial-eyebrow">Province guide · South Africa</p>
           <h1 id="province-page-title">Explore {provinceName}</h1>
           <p className="provincial-hero__proposition">
             Get to know the cities and neighbourhoods, explore available property, and connect with
@@ -39,7 +38,6 @@ export function ProvinceGuideHero({ provinceName, provinceSlug }: ProvinceGuideH
           </p>
         </div>
       </div>
-      <span className="province-guide-cover__label">Province illustration</span>
     </section>
   );
 }

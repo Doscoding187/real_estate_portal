@@ -363,7 +363,6 @@ export function ProvincialComposer({
     <section className="provincial-composer" aria-labelledby="provincial-composer-title">
       <div className="provincial-composer__topline">
         <div>
-          <p className="provincial-eyebrow">Find your place</p>
           <h2 id="provincial-composer-title">What would you like to explore?</h2>
         </div>
         {activeJourney ? (
@@ -371,7 +370,7 @@ export function ProvincialComposer({
             <Check aria-hidden="true" size={15} /> {activeJourney.label} selected
           </span>
         ) : requestedJourney?.state === 'unavailable' ? (
-          <span className="provincial-composer__hint">This journey is not active yet</span>
+          <span className="provincial-composer__hint">This option is currently unavailable</span>
         ) : state.unsupportedJourney ? (
           <span className="provincial-composer__hint">Choose an available journey below</span>
         ) : (
@@ -399,10 +398,7 @@ export function ProvincialComposer({
               <span className="provincial-journey__icon">
                 <Icon aria-hidden="true" size={17} />
               </span>
-              <span>
-                <strong>{journey.label}</strong>
-                <small>{unavailable ? 'Coming later' : journey.shortLabel}</small>
-              </span>
+              <strong>{journey.label}</strong>
             </button>
           );
         })}
@@ -412,7 +408,6 @@ export function ProvincialComposer({
         <div className="provincial-field provincial-field--location">
           <label htmlFor="provincial-location-input">Where in {province.name}?</label>
           <div className="provincial-location-control">
-            <MapPin aria-hidden="true" size={18} />
             <LocationAutosuggest
               placeholder={`Search a city, suburb or area`}
               inputId="provincial-location-input"
@@ -423,7 +418,7 @@ export function ProvincialComposer({
               inputAriaDescribedBy={locationError ? 'provincial-location-error' : undefined}
               className="provincial-location-autosuggest"
               inputClassName="provincial-location-input"
-              showIcon={false}
+              showIcon
             />
           </div>
           <p className="provincial-field__helper" data-testid="provincial-location-helper">
@@ -454,7 +449,6 @@ export function ProvincialComposer({
             </select>
             <ChevronDown aria-hidden="true" size={16} />
           </div>
-          <p className="provincial-field__helper">Optional refinement</p>
         </div>
 
         <div className="provincial-field">
@@ -475,7 +469,6 @@ export function ProvincialComposer({
             </select>
             <ChevronDown aria-hidden="true" size={16} />
           </div>
-          <p className="provincial-field__helper">Optional refinement</p>
         </div>
 
         <button
@@ -490,7 +483,7 @@ export function ProvincialComposer({
               ? canContinue
                 ? activeJourney.ctaLabel
                 : 'Province scope unavailable'
-              : 'Choose a journey above'}
+              : 'Search'}
           </span>
           <ArrowRight aria-hidden="true" size={18} />
         </button>

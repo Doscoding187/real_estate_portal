@@ -112,11 +112,7 @@ const COMING_SOON_JOURNEY = (id: ProvincialJourneyId, label: string, reason: str
 
 function deferredJourneys(): ProvincialJourneyConfig[] {
   return [
-    COMING_SOON_JOURNEY(
-      'land',
-      'Land & plots',
-      'Land inventory is not yet a bounded public journey.',
-    ),
+    COMING_SOON_JOURNEY('land', 'Land & plots', 'Land search is not enabled in this release.'),
     COMING_SOON_JOURNEY(
       'commercial',
       'Commercial',
@@ -204,11 +200,7 @@ export const PROVINCIAL_CONFIGS = {
       RENT_JOURNEY,
       DEVELOPMENTS_JOURNEY,
       EXPLORE_JOURNEY,
-      COMING_SOON_JOURNEY(
-        'land',
-        'Land & plots',
-        'Land inventory is not yet a bounded public journey.',
-      ),
+      COMING_SOON_JOURNEY('land', 'Land & plots', 'Land search is not enabled in this release.'),
       COMING_SOON_JOURNEY(
         'commercial',
         'Commercial',
