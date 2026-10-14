@@ -6,10 +6,27 @@ import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, Home, Building2 } from 'lucide-react';
+import {
+  Search,
+  Plus,
+  Home,
+  Building2,
+  List,
+  LayoutGrid,
+  Clock3,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
-import { EntityStatusCard } from '@/components/dashboard/EntityStatusCard';
+import { AgentListingInventoryCard } from '@/components/agent/AgentListingInventoryCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
@@ -26,6 +43,9 @@ import {
 import { cn } from '@/lib/utils';
 
 type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'archived';
+const PAGE_SIZE = 12;
+type SortOrder = 'newest' | 'oldest' | 'title' | 'price_low' | 'price_high';
+
 type ListingStatusFilter = 'pending_review' | 'draft' | 'rejected';
 
 function listingTabFromLocation(location: string): ListingTab {
@@ -61,6 +81,10 @@ export default function AgentListings() {
     requireDashboardUnlocked: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [view, setView] = useState<'list' | 'grid'>('list');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [page, setPage] = useState(1);
+
   const [activeTab, setActiveTab] = useState<ListingTab>(() => listingTabFromLocation(location));
 
   useEffect(() => {
@@ -179,6 +203,8 @@ export default function AgentListings() {
     title: listing.title,
     address: listing.address,
     city: listing.city,
+    suburb: listing.suburb,
+    province: listing.province,
     price:
       listing.pricing?.askingPrice ||
       listing.pricing?.monthlyRent ||
@@ -228,10 +254,29 @@ export default function AgentListings() {
     listing =>
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      listing.suburb?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.city?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const listingAccessLocked = !statusLoading && !status?.entitlements?.canPublishListings;
+  // The existing APIs return the latest 50 records. Sort and paginate that
+  // loaded set explicitly; do not imply an inventory-wide count or search.
+  const sortedListings = [...(filteredListings ?? [])];
+  if (sortOrder === 'oldest') sortedListings.reverse();
+  if (sortOrder === 'title') sortedListings.sort((a, b) => a.title.localeCompare(b.title));
+  if (sortOrder === 'price_low' || sortOrder === 'price_high') {
+    sortedListings.sort(
+      (a, b) => (Number(a.price) - Number(b.price)) * (sortOrder === 'price_low' ? 1 : -1),
+    );
+  }
+  const pageCount = Math.max(1, Math.ceil(sortedListings.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const pageListings = sortedListings.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const loadedCount = (isDraftOrPending ? draftListings : agentListings)?.length ?? 0;
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, searchQuery, sortOrder]);
+
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
   const startListing = () => {
@@ -242,11 +287,11 @@ export default function AgentListings() {
   return (
     <AgentAppShell>
       {/* Header */}
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-slate-200/80 bg-white/92 px-6 backdrop-blur-xl transition-all duration-300">
+      <header className="sticky top-0 z-10 flex min-h-16 flex-wrap items-center gap-3 border-b border-slate-200/80 bg-white/92 px-4 py-3 backdrop-blur-xl transition-all duration-300 sm:px-6">
         <div className="flex-1">
           <h1 className={agentPageStyles.title}>My Listings</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setLocation('/agent/commercial')}
@@ -317,21 +362,60 @@ export default function AgentListings() {
               </div>
             ) : null}
 
-            {/* Controls */}
-            <div
-              className={cn(
-                agentPageStyles.controls,
-                'flex flex-col items-center justify-between gap-4 sm:flex-row',
-              )}
-            >
-              <div className="relative w-full sm:w-96">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className={cn(agentPageStyles.controls, 'flex flex-wrap items-center gap-3')}>
+              <div className="relative min-w-0 flex-1 basis-60">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
-                  placeholder="Search listings..."
-                  className="rounded-full border-slate-200 bg-[#f7f6f3] pl-10"
+                  aria-label="Search loaded listings"
+                  placeholder="Search by title or location…"
+                  className="rounded-xl border-slate-200 bg-slate-50 pl-10"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
+              </div>
+              <Select value={sortOrder} onValueChange={value => setSortOrder(value as SortOrder)}>
+                <SelectTrigger aria-label="Sort listings" className="w-44 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest first</SelectItem>
+                  <SelectItem value="oldest">Oldest first</SelectItem>
+                  <SelectItem value="title">Title A–Z</SelectItem>
+                  <SelectItem value="price_low">Price: low to high</SelectItem>
+                  <SelectItem value="price_high">Price: high to low</SelectItem>
+                </SelectContent>
+              </Select>
+              <div
+                className="flex rounded-xl border border-slate-200 bg-slate-50 p-1"
+                role="group"
+                aria-label="Listing layout"
+              >
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-pressed={view === 'list'}
+                  className={cn(
+                    'gap-1.5 rounded-lg',
+                    view === 'list' && 'bg-white text-[var(--primary)] shadow-sm',
+                  )}
+                  onClick={() => setView('list')}
+                >
+                  <List className="h-4 w-4" />
+                  List
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-pressed={view === 'grid'}
+                  className={cn(
+                    'gap-1.5 rounded-lg',
+                    view === 'grid' && 'bg-white text-[var(--primary)] shadow-sm',
+                  )}
+                  onClick={() => setView('grid')}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  Grid
+                </Button>
               </div>
             </div>
 
@@ -342,7 +426,10 @@ export default function AgentListings() {
               className="w-full"
             >
               <TabsList
-                className={cn(agentPageStyles.tabsList, 'mb-6 grid w-full max-w-4xl grid-cols-6')}
+                className={cn(
+                  agentPageStyles.tabsList,
+                  'mb-4 flex w-full overflow-x-auto justify-start',
+                )}
               >
                 <TabsTrigger value="active" className={agentPageStyles.tabTrigger}>
                   Active
@@ -366,8 +453,29 @@ export default function AgentListings() {
 
               <TabsContent
                 value={activeTab}
-                className="space-y-6 animate-in fade-in-50 duration-500 slide-in-from-bottom-2"
+                className="space-y-4 animate-in fade-in-50 duration-500 slide-in-from-bottom-2"
               >
+                {activeTab === 'pending' && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>
+                      <span className="font-medium">Awaiting admin review.</span> These listings are
+                      private until approved and published.
+                    </p>
+                  </div>
+                )}
+                {!isLoading && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                    <p role="status">
+                      {sortedListings.length === 0
+                        ? '0 listings'
+                        : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, sortedListings.length)} of ${sortedListings.length} ${loadedCount >= 50 ? 'loaded ' : ''}listings`}
+                    </p>
+                    {loadedCount >= 50 && (
+                      <p>Latest 50 records loaded · search and sort apply to these records.</p>
+                    )}
+                  </div>
+                )}
                 {listingAccessLocked && !isDraftOrPending ? (
                   <AgentFeatureLockedState
                     title={
@@ -421,8 +529,14 @@ export default function AgentListings() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-4">
-                    {filteredListings?.map(listing => {
+                  <div
+                    className={
+                      view === 'grid'
+                        ? 'grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3'
+                        : 'flex flex-col gap-3'
+                    }
+                  >
+                    {pageListings.map(listing => {
                       const privateActionIds = isDraftOrPending
                         ? getPrivateListingActionIds(listing.listingId)
                         : null;
@@ -435,7 +549,9 @@ export default function AgentListings() {
                       const editListingId =
                         privateActionIds?.editListingId ?? publicActionIds?.editListingId ?? null;
                       const deleteId =
-                        privateActionIds?.deleteListingId ?? publicActionIds?.deletePropertyId ?? null;
+                        privateActionIds?.deleteListingId ??
+                        publicActionIds?.deletePropertyId ??
+                        null;
                       const publicPropertyId = publicActionIds?.publicPropertyId ?? null;
                       const editUnavailableLabel =
                         !isDraftOrPending && editListingId == null
@@ -443,26 +559,56 @@ export default function AgentListings() {
                           : undefined;
 
                       return (
-                        <EntityStatusCard
+                        <AgentListingInventoryCard
                           key={listing.id}
-                          type="listing"
-                          data={listing}
-                          readiness={listing.readiness}
-                          editId={editListingId}
-                          deleteId={deleteId}
-                          viewId={publicPropertyId}
+                          listing={listing}
+                          view={view}
                           editUnavailableLabel={editUnavailableLabel}
-                          onEdit={id => setLocation(`/listings/create?id=${id}&edit=true`)}
-                          onDelete={id => handleDelete(id)}
+                          onEdit={
+                            editListingId == null
+                              ? undefined
+                              : () => setLocation(`/listings/create?id=${editListingId}&edit=true`)
+                          }
+                          onDelete={deleteId == null ? undefined : () => handleDelete(deleteId)}
                           onView={
                             publicPropertyId == null
                               ? undefined
-                              : id => setLocation(`/property/${id}`)
+                              : () => setLocation(`/property/${publicPropertyId}`)
                           }
                         />
                       );
                     })}
                   </div>
+                )}
+                {!isLoading && pageCount > 1 && (
+                  <nav
+                    aria-label="Listing pages"
+                    className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4"
+                  >
+                    <p className="text-xs text-slate-500">
+                      Page {currentPage} of {pageCount} · {PAGE_SIZE} per page
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={currentPage === 1}
+                        onClick={() => setPage(currentPage - 1)}
+                      >
+                        <ChevronLeft className="mr-1 h-4 w-4" />
+                        Previous
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={currentPage === pageCount}
+                        onClick={() => setPage(currentPage + 1)}
+                      >
+                        Next
+                        <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </nav>
                 )}
               </TabsContent>
             </Tabs>
