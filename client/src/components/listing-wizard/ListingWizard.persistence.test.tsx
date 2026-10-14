@@ -12,6 +12,7 @@ const harness = vi.hoisted(() => ({
   inventory: vi.fn(),
   read: vi.fn(),
   navigate: vi.fn(),
+  invalidateInventory: vi.fn(),
   realMutations: false,
 }));
 const client = {
@@ -19,7 +20,10 @@ const client = {
 };
 vi.mock('@/lib/trpc', () => ({
   trpc: {
-    useUtils: () => ({ client }),
+    useUtils: () => ({
+      client,
+      listing: { myListings: { invalidate: harness.invalidateInventory } },
+    }),
     listing: {
       create: {
         useMutation: (options?: { retry?: boolean }) => {
@@ -170,6 +174,10 @@ function serverRecord(id = 88, status = 'draft') {
 }
 beforeEach(async () => {
   harness.realMutations = false;
+  harness.navigate.mockClear();
+  harness.invalidateInventory.mockReset();
+  harness.review.mockReset();
+  harness.review.mockResolvedValue({ success: true, status: 'pending_review' });
   queryClient.clear();
   localStorage.clear();
   window.history.replaceState({}, '', '/listings/create');
@@ -573,6 +581,30 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     await waitFor(() => expect(harness.create).toHaveBeenCalledTimes(2));
     expect(harness.update).not.toHaveBeenCalled();
   });
+  it.each(['draft', 'pending_review'] as const)(
+    'returns an agent to Pending and refreshes inventory after submitting a %s listing',
+    async status => {
+      await open();
+      harness.create.mockResolvedValue({ id: 88, status });
+      act(() => {
+        useListingWizardStore.setState({ currentStep: 8, validate: () => true });
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Submit Listing' }));
+      await waitFor(() =>
+        expect(harness.navigate).toHaveBeenCalledWith('/agent/listings?tab=pending'),
+      );
+      expect(harness.invalidateInventory).toHaveBeenCalledOnce();
+      expect(harness.create).toHaveBeenCalledOnce();
+      if (status === 'draft') {
+        expect(harness.review).toHaveBeenCalledOnce();
+        expect(harness.review).toHaveBeenCalledWith({ listingId: 88 });
+      } else {
+        expect(harness.review).not.toHaveBeenCalled();
+      }
+      expect(localStorage.getItem('listing-wizard-server-draft:101')).toBeNull();
+    },
+  );
+
   it('submits the same saved ID and retains it after review denial', async () => {
     harness.realMutations = true;
     await open();
@@ -589,6 +621,8 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
       { timeout: 4000 },
     );
     expect(harness.review).toHaveBeenCalledOnce();
+    expect(harness.navigate).not.toHaveBeenCalled();
+    expect(harness.invalidateInventory).not.toHaveBeenCalled();
     expect(harness.create).toHaveBeenCalledOnce();
     expect(harness.update).toHaveBeenCalledWith(expect.objectContaining({ id: 88 }));
     expect(localStorage.getItem('listing-wizard-server-draft:101')).toBe('88');

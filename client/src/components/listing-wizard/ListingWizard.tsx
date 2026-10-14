@@ -772,7 +772,10 @@ const ListingWizard: React.FC = () => {
         }
 
         // Show success message
-        toast.success('Listing submitted for review successfully!');
+        toast.success('Listing submitted for review', {
+          description: 'It is awaiting admin approval and is not public yet.',
+        });
+        void utils.listing.myListings.invalidate();
 
         // Reset wizard state for next listing
         forgetServerDraft();
@@ -786,6 +789,13 @@ const ListingWizard: React.FC = () => {
 
         if (user?.role === 'agent' && hasSellerProspectHandoff) {
           setLocation('/agent/canvassing');
+          return;
+        }
+
+        // A completed submission belongs in private pending inventory, rather
+        // than whichever page happened to precede the wizard in browser history.
+        if (user?.role === 'agent') {
+          setLocation('/agent/listings?tab=pending');
           return;
         }
 
