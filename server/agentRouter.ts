@@ -45,6 +45,7 @@ import {
   listApprovedAgentsForDiscovery,
   listPublicInventoryForAgent,
   pagePublicInventoryForAgent,
+  listPublicInventoryLocationsForAgent,
   resolveCanonicalAgentAreas,
 } from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
@@ -640,10 +641,7 @@ export const agentRouter = router({
           limit: z.number().int().min(1).max(24).default(6),
           cursor: z.number().int().positive().optional(),
           listingType: z.enum(['sale', 'rent']).optional(),
-          canonicalLocationId: z
-            .string()
-            .regex(CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN)
-            .optional(),
+          canonicalPlaceId: z.string().regex(/^pl-place-01-[0-9a-f]{24}$/).optional(),
           sort: z.enum(['newest', 'oldest']).default('newest'),
         })
         .strict(),
@@ -653,6 +651,14 @@ export const agentRouter = router({
       const agentId = await findApprovedAgentIdBySlug(db, input.slug);
       if (!agentId) return { items: [], nextCursor: null };
       return pagePublicInventoryForAgent(db, agentId, input);
+    }),
+
+  getPublicInventoryLocationsForAgent: publicProcedure
+    .input(z.object({ slug: z.string().min(3) }).strict())
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const agentId = await findApprovedAgentIdBySlug(db, input.slug);
+      return agentId ? listPublicInventoryLocationsForAgent(db, agentId) : [];
     }),
 
   getPublicProfileRouteById: publicProcedure
