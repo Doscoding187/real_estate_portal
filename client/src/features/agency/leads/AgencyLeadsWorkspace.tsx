@@ -537,9 +537,23 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     />
                     {selectedLead.readiness && !selectedLead.readiness.canMoveToOffer ? (
                       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        {selectedLead.readiness.blockers.join(' ')}
+                        <p className="font-semibold">Before moving to Offer</p>
+                        <p className="mt-1 text-xs leading-5">
+                          The buyer’s contact and qualification information must be ready. Review
+                          and resolve the outstanding items below; completing a viewing alone does
+                          not confirm buyer qualification.
+                        </p>
+                        <ul className="mt-2 list-disc space-y-1 pl-4">
+                          {selectedLead.readiness.blockers.map((blocker, index) => (
+                            <li key={`${index}-${blocker}`}>{blocker}</li>
+                          ))}
+                        </ul>
                       </div>
                     ) : null}
+                    <p className="text-xs leading-5 text-slate-500">
+                      Updating the stage changes this CRM record. It does not send an offer document
+                      or confirm a sale.
+                    </p>
                     <Button
                       disabled={busy || draftStatus === selectedLead.status}
                       onClick={() =>
