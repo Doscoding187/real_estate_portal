@@ -38,7 +38,6 @@ import {
   ChevronDown,
   Plus,
   ArrowRight,
-  AlertTriangle,
   Building2,
   CheckCircle2,
   Clock3,
