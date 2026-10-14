@@ -30,13 +30,15 @@
 }
 .agent-site h1,
 .agent-site h2,
-.agent-site h3,
 .agent-site p {
   margin: 0;
 }
 .agent-site h1,
 .agent-site h2,
-.agent-site h3 {
+.as-area-feature h3,
+.as-contact-panel h3,
+.as-professional-details h3,
+.as-portfolio-card h3 {
   line-height: 1.12;
   letter-spacing: -0.025em;
 }
@@ -47,9 +49,6 @@
 }
 .agent-site h2 {
   font-size: clamp(30px, 3.2vw, 44px);
-}
-.agent-site h3 {
-  font-size: 23px;
 }
 .as-shell {
   width: min(1200px, 100%);
