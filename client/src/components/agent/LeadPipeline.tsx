@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { propertyEnquiryMessageText } from '@/lib/propertyEnquiryMessage';
 import { useState, useEffect } from 'react';
+import { OfferReadinessChecklist } from './OfferReadinessChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -144,12 +145,6 @@ function getPipelineStageForLeadStatus(status: string | null | undefined): Pipel
       return 'new';
   }
 }
-
-const READINESS_ITEMS: Array<{ key: keyof AgentLeadOfferReadiness; label: string }> = [
-  { key: 'viewingCompleted', label: 'Viewing completed' },
-  { key: 'feedbackLogged', label: 'Feedback logged' },
-  { key: 'affordabilityConfirmed', label: 'Buyer affordability confirmed' },
-];
 
 const SOURCE_OPTIONS = [
   { value: '', label: 'All Sources' },
@@ -1381,42 +1376,14 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         <span className="text-xs font-semibold text-amber-700">In progress</span>
                       )}
                     </div>
-                    <div className="mt-4 space-y-1.5">
-                      {READINESS_ITEMS.map(item => {
-                        const checked = selectedOfferReadiness[item.key];
-                        return (
-                          <button
-                            key={item.key}
-                            type="button"
-                            disabled={
-                              setLeadOfferReadinessMutation.isPending || offerReadinessLoading
-                            }
-                            onClick={() => toggleReadinessItem(selectedLead.id, item.key)}
-                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition disabled:cursor-wait disabled:opacity-70 ${
-                              checked
-                                ? 'bg-emerald-50 text-emerald-800'
-                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            <span>{item.label}</span>
-                            {checked ? (
-                              <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            ) : (
-                              <span className="h-4 w-4 shrink-0 rounded-full border border-slate-300" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {!offerReadinessLoading && !selectedOfferCanMove ? (
-                      <div className="mt-3 flex gap-2 text-xs leading-5 text-amber-800">
-                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                        <span>
-                          {selectedOfferBlockers[0] ||
-                            'Complete every recorded deal check before moving this lead to Offer.'}
-                        </span>
-                      </div>
-                    ) : null}
+                    <OfferReadinessChecklist
+                      readiness={selectedOfferReadiness}
+                      canMoveToOffer={selectedOfferCanMove}
+                      blockers={selectedOfferBlockers}
+                      isLoading={offerReadinessLoading}
+                      isSaving={setLeadOfferReadinessMutation.isPending}
+                      onToggle={key => toggleReadinessItem(selectedLead.id, key)}
+                    />
                     {selectedLeadStage?.id !== 'offer' && selectedLeadStage?.id !== 'closed' ? (
                       <Button
                         className="mt-4 w-full"
