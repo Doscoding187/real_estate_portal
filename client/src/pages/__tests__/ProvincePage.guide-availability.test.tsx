@@ -93,7 +93,7 @@ describe('Province guide identity and inventory boundaries', () => {
       'data-location-ids',
       'city:18',
     );
-    expect(screen.getByText('Inventory unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Inventory unavailable')).not.toBeInTheDocument();
   });
   it('passes the numeric province record ID to agent recommendations', () => {
     render(<ProvincePage params={{ province: 'gauteng' }} />);

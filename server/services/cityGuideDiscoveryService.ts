@@ -6,7 +6,7 @@ import { PROVINCIAL_CONFIGS } from '../../shared/provincialDiscovery';
 import { getDb } from '../db';
 
 /** Lightweight discovery for existing city guides, independent of property stock. */
-export async function listCityGuides(limit = 12, provinceSlug?: string) {
+export async function listCityGuides(limit = 12, provinceSlug?: string, query?: string) {
   const db = await getDb();
   const editorialOrder = sql`CASE ${sql.join(
     CITY_GUIDE_FEATURES.map(
@@ -15,6 +15,9 @@ export async function listCityGuides(limit = 12, provinceSlug?: string) {
     ),
     sql` `,
   )} ELSE ${CITY_GUIDE_FEATURES.length} END`;
+  const searchPattern = query?.trim()
+    ? `%${query.trim().toLowerCase().replace(/[!%_]/g, '!$&')}%`
+    : undefined;
   const rows = await db
     .select({
       id: cities.id,
@@ -30,6 +33,7 @@ export async function listCityGuides(limit = 12, provinceSlug?: string) {
         eq(cities.status, 'verified'),
         eq(provinces.status, 'verified'),
         provinceSlug ? eq(provinces.slug, provinceSlug) : undefined,
+        searchPattern ? sql`LOWER(${cities.name}) LIKE ${searchPattern} ESCAPE '!'` : undefined,
         sql`CHAR_LENGTH(TRIM(${cities.slug})) > 0`,
         inArray(
           provinces.slug,

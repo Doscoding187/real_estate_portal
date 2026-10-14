@@ -23,13 +23,14 @@ export const locationPagesRouter = router({
     .input(
       z.object({
         limit: z.number().int().min(1).max(24).default(12),
+        query: z.string().trim().min(2).max(100).optional(),
         provinceSlug: z.string().refine(
           slug => Object.values(PROVINCIAL_CONFIGS).some(province => province.slug === slug),
           'Choose a supported province',
         ).optional(),
       }),
     )
-    .query(({ input }) => listCityGuides(input.limit, input.provinceSlug)),
+    .query(({ input }) => listCityGuides(input.limit, input.provinceSlug, input.query)),
   /**
    * Get province data (legacy method - dynamic only)
    */

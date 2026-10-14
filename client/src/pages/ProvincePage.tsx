@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Bell,
@@ -16,7 +17,7 @@ import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { ProvinceGuideHero } from '@/components/provincial/ProvinceGuideHero';
-import { ProvinceAreaTable } from '@/components/provincial/ProvinceAreaTable';
+import { ProvinceCityGuides } from '@/components/provincial/ProvinceCityGuides';
 import { getProvinceGuideCover } from '@/lib/provinceGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { trpc } from '@/lib/trpc';
@@ -117,8 +118,30 @@ export default function ProvincePage({ params }: ProvincePageProps) {
     { locationSlug: provinceSlug, fallbacks: campaignHierarchy.slice(1) },
     { enabled: Boolean(config) },
   );
+  const [citySearch, setCitySearch] = useState('');
+  const [debouncedCitySearch, setDebouncedCitySearch] = useState('');
+  useEffect(() => {
+    setCitySearch('');
+    setDebouncedCitySearch('');
+  }, [provinceSlug]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedCitySearch(citySearch.trim()), 180);
+    return () => window.clearTimeout(timer);
+  }, [citySearch]);
+  const citySearchQuery = trpc.locationPages.getCityGuides.useQuery(
+    {
+      provinceSlug,
+      limit: 12,
+      query: debouncedCitySearch.length >= 2 ? debouncedCitySearch : undefined,
+    },
+    {
+      enabled: Boolean(config) && debouncedCitySearch.length >= 2,
+      retry: false,
+      staleTime: 10 * 60 * 1000,
+    },
+  );
   const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
-    { provinceSlug, limit: 24 },
+    { provinceSlug, limit: 12 },
     { enabled: Boolean(config), retry: false, staleTime: 10 * 60 * 1000 },
   );
 
@@ -235,41 +258,59 @@ export default function ProvincePage({ params }: ProvincePageProps) {
       ) : null}
 
       <main id="main-content" tabIndex={-1} className="provincial-main">
-        <section className="provincial-rail provincial-section" aria-labelledby="markets-heading">
-          <div className="provincial-section__heading">
-            <div>
-              <p className="provincial-eyebrow">Start with a market</p>
-              <h2 id="markets-heading">Explore areas in {data.province.name}</h2>
-              <p>
-                Open an area guide to learn more, or use the search above if you already know where
-                you want to look.
-              </p>
+        <section
+          className="provincial-section provincial-city-guides bg-white"
+          aria-labelledby="markets-heading"
+        >
+          <div className="provincial-rail">
+            <div className="provincial-section__heading">
+              <div>
+                <h2 id="markets-heading">Explore cities in {data.province.name}</h2>
+                <p>
+                  Get to know the neighbourhoods, local insights and property opportunities in our
+                  city guides.
+                </p>
+              </div>
+              <a href="#provincial-composer-title" className="provincial-section__link">
+                Search this province <ArrowRight size={15} aria-hidden="true" />
+              </a>
             </div>
-            <a href="#provincial-composer-title" className="provincial-section__link">
-              Search this province <ArrowRight size={15} aria-hidden="true" />
-            </a>
-          </div>
-          {cityGuidesQuery.isError && (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800"
-            >
-              Some area guides could not be checked.
-              <button
-                type="button"
-                disabled={cityGuidesQuery.isFetching}
-                className="ml-3 min-h-[44px] font-semibold text-[#005ca8] underline"
-                onClick={() => void cityGuidesQuery.refetch()}
+            {cityGuidesQuery.isError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800"
               >
-                {cityGuidesQuery.isFetching ? 'Trying again…' : 'Try again'}
-              </button>
-            </div>
-          )}
-          <ProvinceAreaTable
-            markets={markets}
-            provinceSlug={data.province.slug}
-            guidesLoading={cityGuidesQuery.isLoading}
-          />
+                Some area guides could not be checked.
+                <button
+                  type="button"
+                  disabled={cityGuidesQuery.isFetching}
+                  className="ml-3 min-h-[44px] font-semibold text-[#005ca8] underline"
+                  onClick={() => void cityGuidesQuery.refetch()}
+                >
+                  {cityGuidesQuery.isFetching ? 'Trying again…' : 'Try again'}
+                </button>
+              </div>
+            )}
+            <ProvinceCityGuides
+              markets={markets}
+              provinceSlug={data.province.slug}
+              provinceName={data.province.name}
+              cities={[...guideCities.values()]}
+              guidesLoading={cityGuidesQuery.isLoading}
+              search={{
+                query: citySearch,
+                onChange: setCitySearch,
+                results: (citySearchQuery.data || []).filter(
+                  city => city.provinceSlug === provinceSlug,
+                ),
+                isLoading:
+                  citySearch.trim().length >= 2 &&
+                  (citySearch.trim() !== debouncedCitySearch || citySearchQuery.isFetching),
+                isError: citySearch.trim() === debouncedCitySearch && citySearchQuery.isError,
+                onRetry: () => void citySearchQuery.refetch(),
+              }}
+            />
+          </div>
         </section>
 
         <ProvincialBillboard campaign={heroCampaign} provinceName={data.province.name} />

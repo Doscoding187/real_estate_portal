@@ -65,4 +65,20 @@ describe('Existing city-guide discovery', () => {
     expect(where.params.filter(value => value === 'verified')).toHaveLength(2);
     expect(chain.limit).toHaveBeenCalledWith(24);
   });
+  it('searches verified city names within the province before applying the result limit', async () => {
+    await listCityGuides(12, 'gauteng', '  Springs  ');
+    const where = new MySqlDialect().sqlToQuery(chain.where.mock.calls[0][0] as SQL);
+    expect(where.sql).toContain('LOWER(`cities`.`name`) LIKE ?');
+    expect(where.sql).toContain('`provinces`.`slug` = ?');
+    expect(where.params).toContain('%springs%');
+    expect(where.params).toContain('gauteng');
+    expect(where.params.filter(value => value === 'verified')).toHaveLength(2);
+    expect(chain.limit).toHaveBeenCalledWith(12);
+  });
+  it('treats wildcard characters in a city search as literal text', async () => {
+    await listCityGuides(12, 'gauteng', '50%_Town!');
+    const where = new MySqlDialect().sqlToQuery(chain.where.mock.calls[0][0] as SQL);
+    expect(where.params).toContain('%50!%!_town!!%');
+    expect(where.sql).toContain("ESCAPE '!'");
+  });
 });
