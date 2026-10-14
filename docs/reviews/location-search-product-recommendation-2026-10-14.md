@@ -8,7 +8,7 @@ Workstream: `feat/homepage-ux-review-20261013`
 
 Support broad browsing and precise searching within one consistent journey. Make the geography visible and editable, offer narrowing before or alongside broad results, and expand only when the visitor deliberately changes the area.
 
-Founder decision after reviewing this research: homepage Buy/Rent searches with broad geography clarify the area before navigating. A city-level search remains available through an explicit Browse all choice. Location-only entry continues to exploration. Do not guess a smaller area or make a guide page a mandatory transactional intermediary. Specific governed towns/localities can open directly even when their approved runtime handle is a city ID.
+Founder decision after reviewing this research: homepage Buy/Rent searches with broad geography clarify the area before navigating. A city-level search remains available through an explicit Browse all choice. Location-only entry continues to exploration. Do not guess a smaller area or make a guide page a mandatory transactional intermediary. Follow-up audit: city/town runtime scopes both clarify; a factual town label is not evidence of a small shopping area. Suburb/locality and governed market-area selections retain direct handoff. See `home-metro-scope-audit-2026-10-14.md`.
 
 This recommendation addresses the second homepage section while preserving its visual category cards. It also defines the handoff the hero and results page must share. A section-only change cannot deliver continuity if those surfaces continue to hold unrelated location state.
 

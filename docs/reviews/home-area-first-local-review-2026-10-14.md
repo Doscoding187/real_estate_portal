@@ -7,6 +7,8 @@ Before: `590271b09`
 Preview: http://localhost:3010  
 Artifacts: `/home/edwardspc/Desktop/Dev/review-artifacts/home-area-first-20261014/index.html`
 
+Follow-up: `home-metro-scope-audit-2026-10-14.md` supersedes this first version’s direct-town exemption and records national coverage gaps. This document preserves the initial implementation evidence.
+
 ## Product decision
 
 The founder rejected an immediate, mixed city feed as the default transactional experience. Homepage Buy/Rent searches now clarify broad geography before navigating. Visitors can select an eligible market area or specific factual place, deliberately browse the full selected city/province, or open the existing area exploration page. Location-only searches keep their existing exploration path.

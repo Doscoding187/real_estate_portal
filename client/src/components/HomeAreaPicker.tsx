@@ -85,7 +85,10 @@ export function HomeAreaPicker({
   const browsingRegions = !query.trim() && Boolean(contextName) && marketChoices.length > 0;
   const ordered = browsingRegions
     ? marketChoices
-    : [...marketChoices, ...localityChoices, ...broadChoices];
+    : [...marketChoices, ...localityChoices, ...broadChoices].filter(
+        choice =>
+          query.trim() || !broadLocation || choice.selection.locations[0]?.id !== broadLocation.id,
+      );
   const choose = (index: number) => {
     const choice = ordered[index];
     if (!choice || pending || lookup.isError) return;
@@ -210,7 +213,9 @@ export function HomeAreaPicker({
           </p>
         ) : ordered.length === 0 ? (
           <p role="status" className="py-3 text-sm leading-6 text-muted-foreground">
-            No selectable areas found. Try another name; your search hasn’t been expanded.
+            {broadLocation && !query.trim()
+              ? 'Search a suburb or more specific area above, or choose to browse the full selected area below.'
+              : 'No selectable areas found. Try another name; your search hasn’t been expanded.'}
           </p>
         ) : (
           <div
@@ -260,8 +265,14 @@ export function HomeAreaPicker({
             </Button>
             <p className="text-xs leading-5 text-muted-foreground">
               This includes the full selected{' '}
-              {broadLocation.type === 'province' ? 'province' : 'city'} search area. Choose a more
-              specific area above if you want a closer match.
+              {broadLocation.type === 'province'
+                ? 'province'
+                : broadLocation.factualType === 'town'
+                  ? 'town'
+                  : broadLocation.factualType === 'township'
+                    ? 'township'
+                    : 'city'}{' '}
+              search area. Choose a more specific area above if you want a closer match.
             </p>
             {exploreHref && (
               <button

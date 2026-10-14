@@ -59,17 +59,28 @@ describe('Homepage area identity and handoff', () => {
     ).toBeNull();
     expect(homeAreaFromDiscovery({ ...city, factualLevel: 'suburb' }, 'buy')).toBeNull();
   });
-  it('uses a specific factual town directly without rewriting its city runtime handle', () => {
+  it('clarifies a factual town without rewriting its city runtime handle', () => {
     const selection = homeAreaFromDiscovery(
       { ...city, factualType: 'town', label: 'Rosebank' },
       'buy',
     )!;
-    expect(needsHomeAreaClarification(selection)).toBe(false);
+    expect(needsHomeAreaClarification(selection)).toBe(true);
     const url = new URL(
       buildSelectedDiscoverHref('sale', selection, EMPTY_HOME_SEARCH_FILTERS)!,
       'http://localhost',
     );
     expect(url.searchParams.get('locationId')).toBe('city:12');
+  });
+  it('does not convert municipality context into an executable city scope', () => {
+    for (const factualType of [
+      'local_municipality',
+      'district_municipality',
+      'metropolitan_municipality',
+    ]) {
+      expect(
+        homeAreaFromDiscovery({ ...city, factualType, label: 'Ekurhuleni' }, 'buy'),
+      ).toBeNull();
+    }
   });
   it('preserves category and budget using existing adapters, with one geography authority', () => {
     const selection = homeAreaFromDiscovery(area, 'buy')!;

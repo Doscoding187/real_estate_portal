@@ -6,13 +6,9 @@ import type { HomeAreaSelection } from '@/contexts/HomeSearchContext';
 import { hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
 
 export function isBroadHomeLocation(location: LocationNode) {
-  if (location.type === 'province') return true;
-  if (location.type !== 'city') return false;
-  // Some governed towns/localities project onto city runtime handles. Preserve
-  // that authority while avoiding a second metro prompt for a specific place.
-  return !['town', 'township', 'suburb', 'neighbourhood', 'locality', 'village'].includes(
-    location.factualType || '',
-  );
+  // Factual "town" does not mean a small shopping area. Both cities and towns
+  // can use the metro_city runtime scope; clarify it without changing identity.
+  return location.type === 'province' || location.type === 'city';
 }
 export function needsHomeAreaClarification(selection: HomeAreaSelection) {
   return (
@@ -47,6 +43,12 @@ export function homeAreaFromDiscovery(
       ],
     };
   }
+  if (
+    ['local_municipality', 'district_municipality', 'metropolitan_municipality'].includes(
+      result.factualType || '',
+    )
+  )
+    return null;
   const parsed = parseCanonicalLocationId(result.canonicalLocationId);
   if (!parsed || parsed.level !== result.factualLevel) return null;
   const slug =
