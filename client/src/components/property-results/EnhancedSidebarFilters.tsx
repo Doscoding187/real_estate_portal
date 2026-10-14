@@ -1,3 +1,4 @@
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
 /**
  * Enhanced Sidebar Filters Component
  *
@@ -35,7 +36,6 @@ import {
   Sun,
   Zap,
   Battery,
-  Ruler,
   DollarSign,
   Filter,
   X,
@@ -580,7 +580,7 @@ export function EnhancedSidebarFilters({
         <AccordionItem value="erfSize">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
             <div className="flex items-center gap-2">
-              <Ruler className="h-4 w-4" />
+              <PROPERTY_FACT_ICONS.landSize className="h-4 w-4" />
               Erf Size (m²)
             </div>
           </AccordionTrigger>
@@ -611,7 +611,7 @@ export function EnhancedSidebarFilters({
         <AccordionItem value="floorSize">
           <AccordionTrigger className="text-sm font-bold text-slate-700 hover:no-underline">
             <div className="flex items-center gap-2">
-              <Ruler className="h-4 w-4" />
+              <PROPERTY_FACT_ICONS.residentialSize className="h-4 w-4" />
               Floor Size (m²)
             </div>
           </AccordionTrigger>

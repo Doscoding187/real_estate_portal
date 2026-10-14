@@ -41,6 +41,7 @@ import {
   getPublicAgentListingActionIds,
 } from '@/lib/agentListingActionIds';
 import { cn } from '@/lib/utils';
+import { readCorePropertyInformation } from '@shared/core-property-information';
 
 type ListingTab = 'active' | 'pending' | 'draft' | 'rejected' | 'sold' | 'archived';
 const PAGE_SIZE = 12;
@@ -196,44 +197,46 @@ export default function AgentListings() {
   type DraftListing = NonNullable<typeof draftListings>[number];
   type AgentListing = NonNullable<typeof agentListings>[number];
 
-  const normalizeDraftListing = (listing: DraftListing) => ({
-    id: listing.id,
-    listingId: listing.id,
-    publicPropertyId: null,
-    title: listing.title,
-    action: listing.action,
-    address: listing.address,
-    city: listing.city,
-    suburb: listing.suburb,
-    province: listing.province,
-    price:
-      listing.pricing?.askingPrice ||
-      listing.pricing?.monthlyRent ||
-      listing.pricing?.startingBid ||
-      0,
-    bedrooms: listing.propertyDetails?.bedrooms || 0,
-    bathrooms: listing.propertyDetails?.bathrooms || 0,
-    houseAreaM2:
-      listing.propertyDetails?.houseAreaM2 ||
-      listing.propertyDetails?.unitSizeM2 ||
-      listing.propertyDetails?.floorAreaM2 ||
-      0,
-    primaryImage: listing.primaryImage,
-    status: listing.status === 'pending_review' ? 'pending' : listing.status,
-    approvalStatus: listing.approvalStatus,
-    readinessScore: listing.readinessScore,
-    rejectionReason: listing.rejectionReason,
-    rejectionReasons: listing.rejectionReasons,
-    rejectionNote: listing.rejectionNote,
-    readiness: calculateListingReadiness(listing),
-    views: 0,
-    enquiries: 0,
-  });
+  const normalizeDraftListing = (listing: DraftListing) => {
+    const core = readCorePropertyInformation(listing.propertyType, listing.propertyDetails);
+    return {
+      id: listing.id,
+      listingId: listing.id,
+      publicPropertyId: null,
+      title: listing.title,
+      action: listing.action,
+      address: listing.address,
+      city: listing.city,
+      suburb: listing.suburb,
+      province: listing.province,
+      price:
+        listing.pricing?.askingPrice ||
+        listing.pricing?.monthlyRent ||
+        listing.pricing?.startingBid ||
+        0,
+      bedrooms: core.bedrooms?.status === 'known' ? core.bedrooms.value : null,
+      bathrooms: core.bathrooms?.status === 'known' ? core.bathrooms.value : null,
+      houseAreaM2: core.internalArea?.status === 'known' ? core.internalArea.valueM2 : null,
+      erfSizeM2: core.erfArea?.status === 'known' ? core.erfArea.valueM2 : null,
+      primaryImage: listing.primaryImage,
+      status: listing.status === 'pending_review' ? 'pending' : listing.status,
+      approvalStatus: listing.approvalStatus,
+      readinessScore: listing.readinessScore,
+      rejectionReason: listing.rejectionReason,
+      rejectionReasons: listing.rejectionReasons,
+      rejectionNote: listing.rejectionNote,
+      readiness: calculateListingReadiness(listing),
+      views: 0,
+      enquiries: 0,
+    };
+  };
 
   const normalizeAgentListing = (listing: AgentListing) => ({
     ...listing,
     listingId: listing.sourceListingId == null ? null : Number(listing.sourceListingId),
     publicPropertyId: Number(listing.id),
+    houseAreaM2: listing.internalAreaM2 ?? listing.area,
+    erfSizeM2: listing.erfSizeM2,
     price:
       listing.pricing?.askingPrice ||
       listing.pricing?.monthlyRent ||

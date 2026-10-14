@@ -1,16 +1,6 @@
 import { useState } from 'react';
-import {
-  Bath,
-  BedDouble,
-  Clock3,
-  Edit,
-  Eye,
-  Home,
-  MapPin,
-  MoreHorizontal,
-  Ruler,
-  Trash2,
-} from 'lucide-react';
+import { Clock3, Edit, Eye, Home, MapPin, MoreHorizontal, Trash2 } from 'lucide-react';
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,6 +28,7 @@ export interface InventoryListing {
   bedrooms?: number | string | null;
   bathrooms?: number | string | null;
   houseAreaM2?: number | string | null;
+  erfSizeM2?: number | string | null;
   primaryImage?: string | null;
   status?: string | null;
   approvalStatus?: string | null;
@@ -166,23 +157,56 @@ export function AgentListingInventoryCard({
               {location || 'Location not set'}
             </span>
           </p>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+          <div
+            className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600"
+            aria-label="Property details"
+          >
+            {Number(listing.houseAreaM2) > 0 && (
+              <span
+                className="inline-flex items-center gap-1"
+                aria-label={`Floor size ${listing.houseAreaM2} square metres`}
+              >
+                <PROPERTY_FACT_ICONS.residentialSize
+                  className="h-3.5 w-3.5 text-slate-400"
+                  aria-hidden="true"
+                />
+                {Number(listing.houseAreaM2).toLocaleString('en-ZA')} m² floor
+              </span>
+            )}
             {Number(listing.bedrooms) > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <BedDouble className="h-3.5 w-3.5 text-slate-400" />
-                {listing.bedrooms} beds
+              <span
+                className="inline-flex items-center gap-1"
+                aria-label={`${listing.bedrooms} bedrooms`}
+              >
+                <PROPERTY_FACT_ICONS.bedrooms
+                  className="h-3.5 w-3.5 text-slate-400"
+                  aria-hidden="true"
+                />
+                {listing.bedrooms} {Number(listing.bedrooms) === 1 ? 'bed' : 'beds'}
               </span>
             )}
             {Number(listing.bathrooms) > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Bath className="h-3.5 w-3.5 text-slate-400" />
-                {listing.bathrooms} baths
+              <span
+                className="inline-flex items-center gap-1"
+                aria-label={`${listing.bathrooms} bathrooms`}
+              >
+                <PROPERTY_FACT_ICONS.bathrooms
+                  className="h-3.5 w-3.5 text-slate-400"
+                  aria-hidden="true"
+                />
+                {listing.bathrooms} {Number(listing.bathrooms) === 1 ? 'bath' : 'baths'}
               </span>
             )}
-            {Number(listing.houseAreaM2) > 0 && (
-              <span className="inline-flex items-center gap-1">
-                <Ruler className="h-3.5 w-3.5 text-slate-400" />
-                {listing.houseAreaM2} m²
+            {Number(listing.erfSizeM2) > 0 && (
+              <span
+                className="inline-flex items-center gap-1"
+                aria-label={`Erf or yard size ${listing.erfSizeM2} square metres`}
+              >
+                <PROPERTY_FACT_ICONS.landSize
+                  className="h-3.5 w-3.5 text-slate-400"
+                  aria-hidden="true"
+                />
+                {Number(listing.erfSizeM2).toLocaleString('en-ZA')} m² erf/yard
               </span>
             )}
           </div>

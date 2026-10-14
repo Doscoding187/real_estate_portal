@@ -2,28 +2,22 @@ import React, { useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import {
   ArrowLeft,
-  Bath,
-  BedDouble,
   Building2,
   CalendarDays,
-  CarFront,
   ChevronRight,
   CircleCheckBig,
   Droplets,
   GitCompareArrows,
   Heart,
   House,
-  LandPlot,
   Home,
   MapPin,
   MessageCircle,
   PawPrint,
   ReceiptText,
-  Ruler,
   Share2,
   ShieldCheck,
   SunMedium,
-  Trees,
   Waves,
   Wifi,
   Zap,
@@ -38,7 +32,7 @@ import { useGuestActivity } from '@/contexts/GuestActivityContext';
 import { useComparison } from '@/contexts/ComparisonContext';
 import { cn, formatCurrency } from '@/lib/utils';
 import { PropertyImageGallery } from '@/components/property/PropertyImageGallery';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
 import {
   PropertyMediaTypeSection,
   type PublicPropertyMedia,
@@ -125,13 +119,13 @@ type RelatedPropertyFact = {
 };
 
 const detailIcons: Record<PublicPropertyDetailIcon, React.ElementType> = {
-  area: Ruler,
-  floorSize: HouseMeasureIcon,
-  yardSize: LandPlot,
-  landSize: Trees,
-  bedrooms: BedDouble,
-  bathrooms: Bath,
-  parking: CarFront,
+  area: PROPERTY_FACT_ICONS.residentialSize,
+  floorSize: PROPERTY_FACT_ICONS.residentialSize,
+  yardSize: PROPERTY_FACT_ICONS.landSize,
+  landSize: PROPERTY_FACT_ICONS.landSize,
+  bedrooms: PROPERTY_FACT_ICONS.bedrooms,
+  bathrooms: PROPERTY_FACT_ICONS.bathrooms,
+  parking: PROPERTY_FACT_ICONS.parking,
   property: House,
   electricity: Zap,
   water: Droplets,
@@ -303,9 +297,7 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
     const updateStickyVisibility = () => {
       frameId = null;
       const overview = overviewSectionRef.current;
-      const shouldShow =
-        Boolean(overview) &&
-        (overview?.getBoundingClientRect().bottom || 0) <= 80;
+      const shouldShow = Boolean(overview) && (overview?.getBoundingClientRect().bottom || 0) <= 80;
       setIsStickyNavVisible(current => (current === shouldShow ? current : shouldShow));
     };
     const scheduleUpdate = () => {
@@ -1215,16 +1207,24 @@ export default function PropertyDetailPage({ propertyId: propPropertyId }: Prope
                   const relatedPrice = Number(prop.price || 0);
                   const relatedFactCandidates: Array<RelatedPropertyFact | null> = [
                     Number(prop.bedrooms) > 0
-                      ? { key: 'bedrooms', label: `${Number(prop.bedrooms)} bed`, Icon: BedDouble }
+                      ? {
+                          key: 'bedrooms',
+                          label: `${Number(prop.bedrooms)} bed`,
+                          Icon: PROPERTY_FACT_ICONS.bedrooms,
+                        }
                       : null,
                     Number(prop.bathrooms) > 0
-                      ? { key: 'bathrooms', label: `${Number(prop.bathrooms)} bath`, Icon: Bath }
+                      ? {
+                          key: 'bathrooms',
+                          label: `${Number(prop.bathrooms)} bath`,
+                          Icon: PROPERTY_FACT_ICONS.bathrooms,
+                        }
                       : null,
                     Number(prop.internalAreaM2 ?? prop.area) > 0
                       ? {
                           key: 'floor-size',
                           label: `${Number(prop.internalAreaM2 ?? prop.area).toLocaleString('en-ZA')} m²`,
-                          Icon: HouseMeasureIcon,
+                          Icon: PROPERTY_FACT_ICONS.residentialSize,
                         }
                       : null,
                   ];
