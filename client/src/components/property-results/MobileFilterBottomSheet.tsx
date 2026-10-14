@@ -1,3 +1,4 @@
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
 /**
  * Mobile Filter Bottom Sheet Component
  *
@@ -19,18 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/utils';
 import type { PropertyFilters } from '../../../../shared/types';
-import {
-  Home,
-  Building2,
-  Shield,
-  Heart,
-  Wifi,
-  Sun,
-  Zap,
-  Battery,
-  Ruler,
-  DollarSign,
-} from 'lucide-react';
+import { Home, Building2, Shield, Heart, Wifi, Sun, Zap, Battery, DollarSign } from 'lucide-react';
 
 export interface MobileFilterBottomSheetProps {
   isOpen: boolean;
@@ -634,7 +624,7 @@ export function MobileFilterBottomSheet({
               {/* Erf Size */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Ruler className="h-4 w-4 text-gray-600" />
+                  <PROPERTY_FACT_ICONS.landSize className="h-4 w-4 text-gray-600" />
                   <label className="text-sm font-semibold text-gray-900">Erf Size (m²)</label>
                 </div>
                 <Slider

@@ -1,18 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { HouseMeasureIcon } from '@/components/icons/HouseMeasureIcon';
-import {
-  ArrowRight,
-  Bath,
-  Bed,
-  Building2,
-  Camera,
-  CarFront,
-  GitCompareArrows,
-  Heart,
-  LandPlot,
-  MapPin,
-} from 'lucide-react';
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
+
+import { ArrowRight, Building2, Camera, GitCompareArrows, Heart, MapPin } from 'lucide-react';
 import { Link } from 'wouter';
 import { PROPERTY_IMAGE_FALLBACK, withApiBase } from '@/lib/mediaUtils';
 import { isExplicitRentListing, withRentalPeriod } from '@/lib/rentPresentation';
@@ -20,6 +10,14 @@ import type { SearchCardIdentity } from '@shared/types';
 import type { ListingCardHighlight } from '@shared/listing-highlight-registry';
 import type { PublicPropertyDetailFact } from '@shared/public-property-detail-presentation';
 import { getListingHighlightIcon } from './listingHighlightIcons';
+
+const {
+  residentialSize: FloorSizeIcon,
+  landSize: YardSizeIcon,
+  bedrooms: BedroomIcon,
+  bathrooms: BathroomIcon,
+  parking: ParkingIcon,
+} = PROPERTY_FACT_ICONS;
 
 export interface ListingResultCardData {
   id: string;
@@ -260,19 +258,19 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`Internal area ${data.area} square metres`}
               >
-                <HouseMeasureIcon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <FloorSizeIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                 {data.area}m²
               </span>
             )}
             {typeof data.bedrooms === 'number' && data.bedrooms > 0 && (
               <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
-                <Bed className="h-[18px] w-[18px]" aria-hidden="true" />
+                <BedroomIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                 {data.bedrooms} {data.bedrooms === 1 ? 'bed' : 'beds'}
               </span>
             )}
             {typeof data.bathrooms === 'number' && data.bathrooms > 0 && (
               <span className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
-                <Bath className="h-[18px] w-[18px]" aria-hidden="true" />
+                <BathroomIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                 {data.bathrooms} {data.bathrooms === 1 ? 'bath' : 'baths'}
               </span>
             )}
@@ -281,7 +279,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`${rentalParking.label}: ${rentalParking.value}`}
               >
-                <CarFront className="h-[18px] w-[18px]" aria-hidden="true" />
+                <ParkingIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                 <span className={rentalParking.status === 'known' ? undefined : 'text-slate-500'}>
                   {rentalParking.status === 'known' ? rentalParking.value : 'Parking to confirm'}
                 </span>
@@ -292,7 +290,7 @@ export function ListingResultCard({ data }: { data: ListingResultCardData }) {
                 className="flex items-center gap-1.5 text-[13px] font-medium text-slate-600"
                 aria-label={`Erf or yard area ${data.yardSize} square metres`}
               >
-                <LandPlot className="h-[18px] w-[18px]" aria-hidden="true" />
+                <YardSizeIcon className="h-[18px] w-[18px]" aria-hidden="true" />
                 {data.yardSize}m²
               </span>
             )}

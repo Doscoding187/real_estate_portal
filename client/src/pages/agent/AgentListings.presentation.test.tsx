@@ -8,10 +8,21 @@ const privateListings = Array.from({ length: 50 }, (_, i) => ({
   title: `Fixture home ${String(i + 1).padStart(2, '0')}`,
   status: 'pending_review',
   approvalStatus: 'pending',
+  propertyType: 'house',
   address: 'Example Street',
   suburb: 'Fixture suburb',
   pricing: { askingPrice: 100000 + i * 1000 },
-  propertyDetails: { bedrooms: 3, bathrooms: 2 },
+  propertyDetails: {
+    bedrooms: 3,
+    bathrooms: 2,
+    houseAreaM2: 99,
+    erfSizeM2: 400,
+    corePropertyInformation: {
+      version: 1,
+      internalArea: { status: 'known', valueM2: 70, unit: 'm2' },
+      erfArea: { status: 'known', valueM2: 300, unit: 'm2' },
+    },
+  },
 }));
 vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 1, role: 'agent' } }) }));
 vi.mock('@/components/agent/AgentAppShell', () => ({
@@ -59,6 +70,11 @@ vi.mock('@/lib/trpc', () => ({
               status: 'available',
               price: 500000,
               enquiries: 2,
+              bedrooms: 3,
+              bathrooms: 2,
+              area: 90,
+              internalAreaM2: '100.00',
+              erfSizeM2: '500.00',
             },
           ],
           isLoading: false,
@@ -70,6 +86,7 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 beforeEach(() => {
+  privateListings[0].propertyDetails.corePropertyInformation.erfArea.status = 'known';
   window.history.replaceState({}, '', '/agent/listings?tab=pending');
 });
 describe('agent inventory presentation (mocked frontend data)', () => {
@@ -97,6 +114,28 @@ describe('agent inventory presentation (mocked frontend data)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Grid', exact: true }));
     expect(screen.getAllByText('Private until approved and published')).toHaveLength(12);
   });
+  it('uses canonical floor and yard values in listing order, keeping the two sizes distinct', () => {
+    render(<AgentListings />);
+    const details = within(screen.getByRole('article', { name: 'Fixture home 01' })).getByLabelText(
+      'Property details',
+    );
+    expect(Array.from(details.children).map(item => item.getAttribute('aria-label'))).toEqual([
+      'Floor size 70 square metres',
+      '3 bedrooms',
+      '2 bathrooms',
+      'Erf or yard size 300 square metres',
+    ]);
+    expect(details).toHaveTextContent('70 m² floor');
+    expect(details).toHaveTextContent('300 m² erf/yard');
+    expect(details).not.toHaveTextContent('99 m²');
+    expect(details).not.toHaveTextContent('400 m²');
+  });
+  it('does not show a stale yard alias when the canonical yard size is unknown', () => {
+    privateListings[0].propertyDetails.corePropertyInformation.erfArea.status = 'unknown';
+    render(<AgentListings />);
+    const row = within(screen.getByRole('article', { name: 'Fixture home 01' }));
+    expect(row.queryByLabelText(/Erf or yard size/)).not.toBeInTheDocument();
+  });
   it('edits an active listing through its source ID rather than the public property ID', () => {
     window.history.replaceState({}, '', '/agent/listings');
     render(<AgentListings />);
@@ -104,5 +143,7 @@ describe('agent inventory presentation (mocked frontend data)', () => {
     expect(harness.navigate).toHaveBeenCalledWith('/listings/create?id=217&edit=true');
     expect(screen.getByText('Live')).toBeInTheDocument();
     expect(screen.getByText('2 enquiries')).toBeInTheDocument();
+    expect(screen.getByLabelText('Floor size 100.00 square metres')).toBeInTheDocument();
+    expect(screen.getByLabelText('Erf or yard size 500.00 square metres')).toBeInTheDocument();
   });
 });
