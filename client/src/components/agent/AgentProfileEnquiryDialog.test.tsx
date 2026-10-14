@@ -8,7 +8,17 @@ class ResizeObserverMock {
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 const { mutation, options, state } = vi.hoisted(() => ({
   mutation: vi.fn(),
-  options: { current: null as any },
+  options: {
+    current: null as {
+      onError: (error: { data: { code: string } }) => void;
+      onSuccess: (result: {
+        deliveryStatus: string;
+        leadCustody: string;
+        recipientType: string;
+        recipientId: number;
+      }) => void;
+    } | null,
+  },
   state: { pending: false },
 }));
 vi.mock('@/lib/trpc', () => ({
@@ -16,7 +26,7 @@ vi.mock('@/lib/trpc', () => ({
     leads: {
       create: {
         useMutation: (config: unknown) => {
-          options.current = config;
+          options.current = config as NonNullable<typeof options.current>;
           return { mutate: mutation, isPending: state.pending };
         },
       },
@@ -86,7 +96,7 @@ describe('agent profile inline enquiry', () => {
     fireEvent.click(within(form).getByLabelText(/I agree to be contacted/));
     fireEvent.submit(form.querySelector('form')!);
     const first = mutation.mock.calls[0][0];
-    act(() => options.current.onError({ data: { code: 'INTERNAL_SERVER_ERROR' } }));
+    act(() => options.current!.onError({ data: { code: 'INTERNAL_SERVER_ERROR' } }));
     expect(within(form).getByLabelText(/Your name/)).toHaveValue('Local Preview Visitor');
     expect(within(form).getByRole('alert').textContent).toContain('could not save');
     fireEvent.submit(form.querySelector('form')!);
@@ -126,7 +136,7 @@ describe('agent profile inline enquiry', () => {
     fireEvent.submit(form.querySelector('form')!);
     const firstId = mutation.mock.calls[0][0].captureRequestId;
     act(() =>
-      options.current.onSuccess({
+      options.current!.onSuccess({
         deliveryStatus: 'delivered',
         leadCustody: 'verified_customer_recipient',
         recipientType: 'agent',
