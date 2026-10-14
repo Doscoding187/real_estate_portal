@@ -16,7 +16,8 @@ import {
   closestCorners,
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useDraggable,
   useDroppable,
   useSensor,
@@ -366,8 +367,11 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
   });
   const [openedSearchLeadId, setOpenedSearchLeadId] = useState<number | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 8 },
     }),
     useSensor(KeyboardSensor),
   );
@@ -1613,10 +1617,12 @@ function LeadCard({
       className={cn('min-w-0', isDragging && 'relative z-20 opacity-55')}
     >
       <Card
+        {...listeners}
         tabIndex={0}
         role="button"
         aria-label={`Open lead for ${lead.name || 'unnamed lead'}`}
-        className="relative min-w-0 cursor-pointer overflow-hidden border-slate-200 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        title="Click to open; drag to move stage"
+        className="relative min-w-0 cursor-grab overflow-hidden border-slate-200 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
         onClick={onOpenDetail}
         onKeyDown={event => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -1656,7 +1662,10 @@ function LeadCard({
               </div>
               <span
                 {...attributes}
-                {...listeners}
+                onKeyDown={event => {
+                  event.stopPropagation();
+                  listeners?.onKeyDown?.(event);
+                }}
                 aria-label={`Move ${lead.name || 'lead'} to another stage`}
                 title="Drag to move stage"
                 className="mt-0.5 shrink-0 cursor-grab rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:cursor-grabbing"
