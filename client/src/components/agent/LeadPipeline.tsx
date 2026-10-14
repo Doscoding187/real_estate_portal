@@ -1402,7 +1402,11 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                     {selectedLeadStage?.id !== 'offer' && selectedLeadStage?.id !== 'closed' ? (
                       <Button
                         className="mt-4 w-full"
-                        disabled={!selectedOfferCanMove || offerReadinessLoading || setLeadOfferReadinessMutation.isPending}
+                        disabled={
+                          !selectedOfferCanMove ||
+                          offerReadinessLoading ||
+                          setLeadOfferReadinessMutation.isPending
+                        }
                         onClick={() => moveLeadToStage(selectedLead, 'offer')}
                       >
                         {!selectedOfferCanMove ? (
