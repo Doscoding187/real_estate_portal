@@ -454,7 +454,7 @@ export default function AgentMicrosite() {
               </div>
               <p>Explore the communities in {firstName}'s service area.</p>
             </div>
-            <div className="as-area-layout">
+            <div className={`as-area-layout ${areas.length === 1 ? 'as-one-area' : ''}`}>
               <div className="as-area-picker" role="group" aria-label="Choose a service area">
                 {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
                   <button
