@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { propertyEnquiryMessageText } from '@/lib/propertyEnquiryMessage';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -556,7 +557,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
       listingId: matchedListing ? String(matchedListing.id) : '',
       scheduledAt: defaultDateTime.toISOString().slice(0, 16),
       durationMinutes: '30',
-      notes: lead.message || '',
+      notes: propertyEnquiryMessageText(lead.message),
     });
   };
 
@@ -715,7 +716,9 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
         {
           id: `created-${selectedLead.id}`,
           type: 'lead captured',
-          description: selectedLead.message || 'Lead captured from listing enquiry.',
+          description:
+            propertyEnquiryMessageText(selectedLead.message) ||
+            'Lead captured from listing enquiry.',
           createdAt: selectedLead.createdAt,
           tone: 'bg-slate-50 text-slate-700 border-slate-200',
         },
@@ -1127,7 +1130,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                       Buyer message
                     </p>
                     <p className="mt-1 text-sm leading-6 text-slate-700">
-                      “{selectedLead.message}”
+                      “{propertyEnquiryMessageText(selectedLead.message)}”
                     </p>
                   </div>
                 ) : null}
@@ -1684,7 +1687,9 @@ function LeadCard({
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{lead.property.title}</p>
                   <p className="mt-0.5 truncate text-slate-500">
-                    {lead.property.city} · R{lead.property.price.toLocaleString()}
+                    {[lead.property.city, `R${lead.property.price.toLocaleString()}`]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 </div>
               </div>
@@ -1692,6 +1697,12 @@ function LeadCard({
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-500">
                 No property linked yet
               </div>
+            )}
+
+            {propertyEnquiryMessageText(lead.message) && (
+              <p className="line-clamp-2 text-xs leading-5 text-slate-600">
+                “{propertyEnquiryMessageText(lead.message)}”
+              </p>
             )}
 
             <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">

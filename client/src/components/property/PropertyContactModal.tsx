@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CheckCircle2, Loader2, Send } from 'lucide-react';
+import { CheckCircle2, House, Loader2, Send } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import {
@@ -58,7 +58,10 @@ interface PropertyContactModalProps {
   };
 }
 
-type EnquiryType = 'general' | 'viewing';
+import {
+  defaultPropertyEnquiryMessage,
+  type PropertyEnquiryType as EnquiryType,
+} from '@/lib/propertyEnquiryMessage';
 
 interface ContactFormState {
   name: string;
@@ -91,7 +94,12 @@ export function PropertyContactModal({
     email: '',
     phone: '',
     enquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
-    message: initialMessage || '',
+    message: initialMessage?.trim()
+      ? initialMessage
+      : defaultPropertyEnquiryMessage(
+          propertyTitle,
+          intent === 'viewing_request' ? 'viewing' : 'general',
+        ),
     consentAccepted: false,
     website: '',
   });
@@ -119,7 +127,12 @@ export function PropertyContactModal({
     setFormData(prev => ({
       ...prev,
       enquiryType: intent === 'viewing_request' ? 'viewing' : 'general',
-      message: initialMessage || '',
+      message: initialMessage?.trim()
+        ? initialMessage
+        : defaultPropertyEnquiryMessage(
+            propertyTitle,
+            intent === 'viewing_request' ? 'viewing' : 'general',
+          ),
       consentAccepted: false,
       website: '',
     }));
@@ -127,7 +140,7 @@ export function PropertyContactModal({
     setSuccessAcknowledgement(null);
     setSuccessWhatsAppUrl(null);
     setSubmissionError(null);
-  }, [initialMessage, intent, isOpen]);
+  }, [initialMessage, intent, isOpen, propertyId, propertyTitle]);
 
   const createLeadMutation = trpc.leads.create.useMutation({
     onSuccess: result => {
@@ -187,7 +200,7 @@ export function PropertyContactModal({
       name: formData.name.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
-      message: `[${formData.enquiryType === 'viewing' ? 'VIEWING REQUEST' : 'GENERAL ENQUIRY'}] ${formData.message.trim()}`,
+      message: formData.message.trim(),
       website: formData.website,
       leadType: formData.enquiryType === 'viewing' ? 'viewing_request' : 'inquiry',
       source,
@@ -203,6 +216,31 @@ export function PropertyContactModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleEnquiryTypeChange = (type: EnquiryType) => {
+    setFormData(previous => ({
+      ...previous,
+      enquiryType: type,
+      message:
+        !initialMessage?.trim() &&
+        previous.message === defaultPropertyEnquiryMessage(propertyTitle, previous.enquiryType)
+          ? defaultPropertyEnquiryMessage(propertyTitle, type)
+          : previous.message,
+    }));
+  };
+  const propertySummary = (
+    <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+      <House className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-blue-700">
+          About this property
+        </p>
+        <p className="mt-1 break-words text-sm font-semibold leading-5 text-slate-900">
+          {propertyTitle}
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={open => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-w-[500px] sm:p-6">
@@ -213,14 +251,11 @@ export function PropertyContactModal({
                 <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
               </div>
               <DialogTitle>Enquiry received</DialogTitle>
+              {propertySummary}
               <DialogDescription className="text-sm leading-6 text-slate-600">
                 {successAcknowledgement}
               </DialogDescription>
             </DialogHeader>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-              This confirmation is tied to the property you enquired about. Keep this window open
-              until you have read the custody update above.
-            </div>
             <div className="grid gap-2">
               {successWhatsAppUrl && (
                 <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
@@ -248,28 +283,44 @@ export function PropertyContactModal({
               <DialogDescription>
                 {intent === 'viewing_request'
                   ? `Send a viewing request for ${propertyTitle} to ${agentName}. This does not confirm an appointment; if they can accommodate it, they can contact you to arrange a suitable date and time.`
-                  : `Ask ${agentName} about ${propertyTitle}. Property Listify saves your enquiry before confirming success.`}
+                  : `Send your message to ${agentName}. You can edit the suggested message below.`}
               </DialogDescription>
             </DialogHeader>
 
+            <div className="mt-4">{propertySummary}</div>
             <form onSubmit={handleSubmit} className="mt-4 space-y-4">
               {intent !== 'viewing_request' && (
                 <div className="space-y-2">
-                  <Label htmlFor="enquiryType">Enquiry type</Label>
+                  <Label htmlFor="enquiryType">I'd like to</Label>
                   <Select
                     value={formData.enquiryType}
-                    onValueChange={value => handleChange('enquiryType', value as EnquiryType)}
+                    onValueChange={value => handleEnquiryTypeChange(value as EnquiryType)}
                   >
-                    <SelectTrigger id="enquiryType">
+                    <SelectTrigger id="enquiryType" aria-label="Enquiry purpose">
                       <SelectValue placeholder="Select enquiry type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="general">General enquiry</SelectItem>
+                      <SelectItem value="general">Ask about this property</SelectItem>
                       <SelectItem value="viewing">Request a viewing</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="message">
+                  Message <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="message"
+                  placeholder="I’m interested in this property and would like to know more…"
+                  value={formData.message}
+                  onChange={e => handleChange('message', e.target.value)}
+                  maxLength={5000}
+                  rows={4}
+                  required
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="name">
@@ -309,21 +360,6 @@ export function PropertyContactModal({
                   value={formData.phone}
                   onChange={e => handleChange('phone', e.target.value)}
                   maxLength={50}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message">
-                  Message <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="message"
-                  placeholder="I’m interested in this property and would like to know more…"
-                  value={formData.message}
-                  onChange={e => handleChange('message', e.target.value)}
-                  maxLength={5000}
-                  rows={4}
-                  required
                 />
               </div>
 
