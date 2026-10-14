@@ -18,6 +18,8 @@ import {
   House,
   Mail,
   MapPin,
+  Menu,
+  X,
   MessageCircle,
   Phone,
   Send,
@@ -124,6 +126,11 @@ export default function AgentMicrosite() {
   const [previousCursors, setPreviousCursors] = useState<Array<number | undefined>>([]);
   const [isEnquiryDialogOpen, setIsEnquiryDialogOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
+  const [coverImage, setCoverImage] = useState<{
+    slug: string;
+    image: string | null | undefined;
+  } | null>(null);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const inventoryQuery = trpc.agent.getPublicInventoryPageForAgent.useQuery(
     {
       slug,
@@ -145,6 +152,14 @@ export default function AgentMicrosite() {
     !allProperties && inventoryQuery.data?.nextCursor != null && inventory.length >= 6
       ? inventory.slice(0, 5)
       : inventory;
+  useEffect(() => {
+    if (!profile || !inventoryQuery.data || intent !== 'all' || inventoryArea || cursor) return;
+    setCoverImage(current =>
+      current?.slug === slug
+        ? current
+        : { slug, image: inventory[0] ? publicInventoryCardData(inventory[0]).image : undefined },
+    );
+  }, [profile, inventoryQuery.data, inventory, intent, inventoryArea, cursor, slug]);
   const specializations = parseDelimitedList(profile?.specialization);
   const languages = parseDelimitedList(profile?.languages);
   const socialLinks = parseSocialLinksRecord(profile?.socialLinks);
@@ -164,6 +179,7 @@ export default function AgentMicrosite() {
     setPreviousCursors([]);
     setSelectedAreaId('');
     setShowAllAreas(false);
+    setMobileNavigationOpen(false);
     setIsEnquiryDialogOpen(false);
   }, [slug, allProperties]);
 
@@ -229,7 +245,12 @@ export default function AgentMicrosite() {
   const firstName = profile.firstName || displayName;
   const shortArea = primaryArea?.name.split(',')[0];
   const roleLabel = ROLE_LABELS[profile.role || ''] || 'Property Practitioner';
-  const firstImage = inventory[0] ? publicInventoryCardData(inventory[0]).image : undefined;
+  const firstImage =
+    coverImage?.slug === slug
+      ? coverImage.image
+      : inventory[0]
+        ? publicInventoryCardData(inventory[0]).image
+        : undefined;
   const openEnquiryDialog = (surface: 'header' | 'hero' | 'contact' | 'mobile') => {
     track(AGENT_PROFILE_EVENTS.contactCta, {
       slug: profile.slug,
@@ -281,17 +302,6 @@ export default function AgentMicrosite() {
         <span>Call</span>
       </a>
     ) : null;
-  const email = () =>
-    profile.email ? (
-      <a
-        className="as-contact-link"
-        href={`mailto:${profile.email}`}
-        onClick={() => track(AGENT_PROFILE_EVENTS.emailClick, { slug })}
-      >
-        <Mail size={17} />
-        <span>Email</span>
-      </a>
-    ) : null;
   const hasAbout =
     !!profile.bio?.trim() ||
     !!specializations.length ||
@@ -312,17 +322,15 @@ export default function AgentMicrosite() {
       <header className="as-header">
         <div className="as-shell as-header-inner">
           <Link className="as-brand" href={profileHref}>
-            <span className="as-brand-mark">{initials || <House size={18} />}</span>
-            <span>{displayName}</span>
+            <House size={25} aria-hidden="true" />
+            <span>Property Listify</span>
           </Link>
           <nav className="as-nav" aria-label="Agent page">
-            <Link href={allProperties ? propertiesHref : '#current-properties'}>Properties</Link>
+            <a href={allProperties ? propertiesHref : '#current-properties'}>Properties</a>
             {areas.length > 0 && (
-              <Link href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</Link>
+              <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
             )}
-            {hasAbout && (
-              <Link href={allProperties ? `${profileHref}#about` : '#about'}>About</Link>
-            )}
+            {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
           </nav>
           <div className="as-header-actions">
             <button
@@ -338,10 +346,34 @@ export default function AgentMicrosite() {
               className="as-button as-primary as-header-enquiry"
               onClick={() => openEnquiryDialog('header')}
             >
-              Contact {firstName}
+              Contact agent
+            </button>
+            <button
+              className="as-menu-toggle"
+              aria-label="Agent page menu"
+              aria-expanded={mobileNavigationOpen}
+              aria-controls="agent-mobile-navigation"
+              onClick={() => setMobileNavigationOpen(!mobileNavigationOpen)}
+            >
+              {mobileNavigationOpen ? <X size={21} /> : <Menu size={21} />}
             </button>
           </div>
         </div>
+        {mobileNavigationOpen && (
+          <nav
+            id="agent-mobile-navigation"
+            className="as-mobile-nav"
+            aria-label="Mobile agent page"
+            onClick={() => setMobileNavigationOpen(false)}
+          >
+            <a href={allProperties ? propertiesHref : '#current-properties'}>Agent's listings</a>
+            {areas.length > 0 && (
+              <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
+            )}
+            {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
+            <a href="#contact">Contact agent</a>
+          </nav>
+        )}
         {shareFeedback && (
           <p className="as-share-feedback" role="status">
             {shareFeedback}
@@ -370,7 +402,9 @@ export default function AgentMicrosite() {
               <div className="as-hero-copy">
                 <p className="as-eyebrow">{roleLabel}</p>
                 <h1 data-testid="agent-name">{displayName}</h1>
-                <p className="as-hero-position">Your next move, with {firstName}.</p>
+                <p className="as-hero-position">
+                  Helping you find your place{shortArea ? ` in ${shortArea}` : ''}.
+                </p>
                 {primaryArea && (
                   <p className="as-hero-location">
                     <MapPin size={16} />
@@ -386,21 +420,35 @@ export default function AgentMicrosite() {
                   </p>
                 )}
                 <div className="as-hero-actions" data-testid="hero-contact-actions">
-                  {whatsapp()}
-                  <button
-                    className={`as-button ${whatsappHref ? 'as-light-outline' : 'as-light'}`}
-                    data-testid="send-profile-enquiry"
-                    onClick={() => openEnquiryDialog('hero')}
-                  >
-                    <Send size={17} />
-                    Send enquiry
-                  </button>
-                  <div className="as-direct-actions">
-                    {call()}
-                    {email()}
-                  </div>
+                  {hasInventory && (
+                    <a className="as-button as-light" href="#current-properties">
+                      Explore my properties <ArrowRight size={17} />
+                    </a>
+                  )}
+                  {whatsapp('as-button as-blueprint-whatsapp')}
+                  {(!hasInventory || !whatsappHref) && (
+                    <button
+                      className="as-button as-light-outline"
+                      data-testid="send-profile-enquiry"
+                      onClick={() => openEnquiryDialog('hero')}
+                    >
+                      <Send size={17} />
+                      Send enquiry
+                    </button>
+                  )}
                 </div>
                 <div className="as-trust-strip">
+                  {hasInventory && (
+                    <a href="#current-properties">
+                      <House size={23} />
+                      <span>
+                        Current
+                        <br />
+                        listings
+                      </span>
+                    </a>
+                  )}
+
                   {areas.length > 0 && (
                     <span>
                       <MapPin size={17} />
@@ -437,79 +485,10 @@ export default function AgentMicrosite() {
               )}
             </div>
           </section>
-          <div className="as-intro-bar as-shell">
-            <span>
-              <House size={20} />
-              Find your next property
-            </span>
-            <a className="as-text-link" href="#current-properties">
-              Explore current listings <ArrowRight size={17} />
-            </a>
-          </div>
         </>
       )}
 
       <main className="as-shell as-main">
-        {!allProperties && areas.length > 0 && (
-          <section id="areas" className="as-area-section" data-testid="areas-section">
-            <div className="as-section-heading">
-              <div>
-                <p className="as-eyebrow">Local knowledge</p>
-                <h2>Where {firstName} works</h2>
-              </div>
-              <p>Explore the communities in {firstName}'s service area.</p>
-            </div>
-            <div className={`as-area-layout ${areas.length === 1 ? 'as-one-area' : ''}`}>
-              <div className="as-area-picker" role="group" aria-label="Choose a service area">
-                {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
-                  <button
-                    key={area.canonicalLocationId}
-                    className={`as-area-option ${selectedArea?.canonicalLocationId === area.canonicalLocationId ? 'is-selected' : ''}`}
-                    aria-pressed={selectedArea?.canonicalLocationId === area.canonicalLocationId}
-                    onClick={() => setSelectedAreaId(area.canonicalLocationId)}
-                  >
-                    <MapPin size={18} />
-                    <span>
-                      <strong>{area.name.split(',')[0]}</strong>
-                      <small>
-                        {area.name.split(',').slice(1).join(',').trim() || 'Service area'}
-                      </small>
-                    </span>
-                    <ChevronRight size={16} />
-                  </button>
-                ))}
-                {areas.length > 4 && (
-                  <button
-                    className="as-text-link as-more-areas"
-                    onClick={() => setShowAllAreas(!showAllAreas)}
-                  >
-                    {showAllAreas ? 'Show fewer areas' : `See all ${areas.length} areas`}
-                  </button>
-                )}
-              </div>
-              {selectedArea && (
-                <div className="as-area-feature" data-testid="primary-area-section">
-                  <div className="as-area-emblem" aria-hidden="true">
-                    <MapPin size={62} />
-                  </div>
-                  <p className="as-eyebrow">Area spotlight</p>
-                  <h3>{selectedArea.name.split(',')[0]}</h3>
-                  <p className="as-area-location">{selectedArea.name}</p>
-                  <p>
-                    {selectedArea.url
-                      ? 'Get to know the area through its Property Listify guide, then speak to ' +
-                        firstName +
-                        ' about your next move.'
-                      : firstName +
-                        ' lists this as a service area. Get in touch to discuss property here.'}
-                  </p>
-                  {areaGuide(selectedArea)}
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
         {hasInventory && (
           <section
             id="current-properties"
@@ -520,7 +499,11 @@ export default function AgentMicrosite() {
               <div className="as-section-heading">
                 <div>
                   <p className="as-eyebrow">Current portfolio</p>
-                  <h2>Properties with {firstName}</h2>
+                  <h2>Agent's listings</h2>
+                  <p className="as-section-description">
+                    A selection of current properties represented by {firstName}.<br />
+                    Open a listing for photos, details and enquiry options.
+                  </p>
                 </div>
                 {inventoryQuery.data?.nextCursor != null && (
                   <Link
@@ -610,9 +593,7 @@ export default function AgentMicrosite() {
               </div>
             ) : (
               <>
-                <div
-                  className={`as-property-grid ${inventory.length === 1 && !allProperties ? 'as-single-property' : ''}`}
-                >
+                <div className="as-property-grid">
                   {displayedInventory.map(card => (
                     <div key={card.id} data-testid="inventory-card">
                       <SimpleHomeListingCard
@@ -684,6 +665,59 @@ export default function AgentMicrosite() {
           </section>
         )}
 
+        {!allProperties && areas.length > 0 && (
+          <section id="areas" className="as-area-section" data-testid="areas-section">
+            <div className="as-area-layout">
+              <div className="as-area-intro">
+                <p className="as-eyebrow">Local expertise</p>
+                <h2>Areas I work in</h2>
+                <p>
+                  Explore {firstName}'s service areas and their local guides before your next move.
+                </p>
+              </div>
+              <div className="as-area-picker" role="group" aria-label="Choose a service area">
+                {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
+                  <button
+                    key={area.canonicalLocationId}
+                    className={`as-area-option ${selectedArea?.canonicalLocationId === area.canonicalLocationId ? 'is-selected' : ''}`}
+                    aria-pressed={selectedArea?.canonicalLocationId === area.canonicalLocationId}
+                    onClick={() => setSelectedAreaId(area.canonicalLocationId)}
+                  >
+                    <MapPin size={18} />
+                    <span>
+                      <strong>{area.name.split(',')[0]}</strong>
+                      <small>
+                        {area.name.split(',').slice(1).join(',').trim() || 'Service area'}
+                      </small>
+                    </span>
+                    <ChevronRight size={16} />
+                  </button>
+                ))}
+                {areas.length > 4 && (
+                  <button
+                    className="as-text-link as-more-areas"
+                    onClick={() => setShowAllAreas(!showAllAreas)}
+                  >
+                    {showAllAreas ? 'Show fewer areas' : `See all ${areas.length} areas`}
+                  </button>
+                )}
+              </div>
+              {selectedArea && (
+                <div className="as-area-feature" data-testid="primary-area-section">
+                  <p>
+                    <strong>{selectedArea.name}</strong>
+                    <br />
+                    {selectedArea.url
+                      ? 'Discover the community through its local guide.'
+                      : `${firstName} lists this as a service area. Get in touch to discuss property here.`}
+                  </p>
+                  {areaGuide(selectedArea)}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {!allProperties && hasAbout && (
           <section id="about" className="as-about" data-testid="about-section">
             <div>
@@ -727,38 +761,46 @@ export default function AgentMicrosite() {
         )}
 
         <section id="contact" className="as-contact" data-testid="contact-section">
-          <div>
-            <p className="as-eyebrow">Let's talk property</p>
-            <h2>
-              Your next chapter
-              <br />
-              starts with a conversation.
-            </h2>
+          {firstImage && (
+            <img className="as-contact-image" src={firstImage} alt="" aria-hidden="true" />
+          )}
+          <div className="as-contact-copy">
+            <p className="as-eyebrow">Let's talk</p>
+            <h2>Let's talk.</h2>
             <p>
-              Buying, selling or renting{shortArea ? ` in ${shortArea}` : ''}? Tell {firstName} what
-              you have in mind.
+              Whether you're buying, selling or renting, tell {firstName} what you have in mind.
             </p>
-            <div className="as-direct-actions">
-              {call()}
-              {email()}
-            </div>
-          </div>
-          <div className="as-contact-panel">
-            <MessageCircle size={28} />
-            <h3>Talk to {firstName}</h3>
-            <p>Get in touch directly, or send an enquiry through Property Listify.</p>
             <div className="as-contact-actions" data-testid="contact-actions">
               {whatsapp()}
-              <button
-                className="as-button as-light"
-                data-testid="send-profile-enquiry-contact"
-                onClick={() => openEnquiryDialog('contact')}
-              >
-                <Send size={17} />
-                Send enquiry
-              </button>
+              {call('as-button as-light')}
+              {profile.email && (
+                <a
+                  className="as-button as-light"
+                  href={`mailto:${profile.email}`}
+                  onClick={() => track(AGENT_PROFILE_EVENTS.emailClick, { slug })}
+                >
+                  <Mail size={17} />
+                  Email
+                </a>
+              )}
             </div>
           </div>
+          <AgentProfileEnquiryDialog
+            key={profile.id}
+            onSubmitted={() =>
+              track(AGENT_PROFILE_EVENTS.contactCta, {
+                slug: profile.slug,
+                agentId: profile.id,
+                action: 'send_enquiry',
+                surface: 'contact',
+              })
+            }
+            presentation="inline"
+            open={true}
+            onOpenChange={() => {}}
+            agentId={profile.id}
+            agentName={displayName}
+          />
         </section>
       </main>
 
