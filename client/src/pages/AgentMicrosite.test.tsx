@@ -9,7 +9,16 @@ class ResizeObserverMock {
 
 vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
-const { profileResult, inventoryResult, trackMutate, createLeadMutate } = vi.hoisted(() => ({
+const {
+  profileResult,
+  inventoryResult,
+  trackMutate,
+  createLeadMutate,
+  routeState,
+  inventoryInputs,
+} = vi.hoisted(() => ({
+  routeState: { allProperties: false },
+  inventoryInputs: [] as Array<Record<string, unknown>>,
   profileResult: {
     current: {
       data: null as Record<string, unknown> | null,
@@ -27,7 +36,9 @@ const { profileResult, inventoryResult, trackMutate, createLeadMutate } = vi.hoi
 vi.mock('wouter', async original => ({
   ...(await original<typeof import('wouter')>()),
   useRoute: (pattern: string) =>
-    pattern === '/agents/:slug' ? [true, { slug: 'jane-agent' }] : [false, null],
+    pattern === (routeState.allProperties ? '/agents/:slug/properties' : '/agents/:slug')
+      ? [true, { slug: 'jane-agent' }]
+      : [false, null],
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -46,8 +57,33 @@ vi.mock('@/lib/trpc', () => ({
       getPublicProfileBySlug: {
         useQuery: (_input: unknown, _options: unknown) => profileResult.current,
       },
-      getPublicInventoryForAgent: {
-        useQuery: (_input: unknown, _options: unknown) => inventoryResult.current,
+      getPublicInventoryPageForAgent: {
+        useQuery: (
+          input: {
+            limit: number;
+            listingType?: string;
+            canonicalLocationId?: string;
+            cursor?: number;
+          },
+          _options: unknown,
+        ) => {
+          inventoryInputs.push(input);
+          const matching = inventoryResult.current.data.filter(
+            item => !input.listingType || item.listingType === input.listingType,
+          );
+          const start = input.cursor ? matching.findIndex(item => item.id === input.cursor) + 1 : 0;
+          const items = matching.slice(start, start + input.limit);
+          return {
+            data: {
+              items,
+              nextCursor: matching.length > start + input.limit ? Number(items.at(-1)?.id) : null,
+            },
+            isLoading: false,
+            isError: false,
+            isFetching: false,
+            refetch: vi.fn(),
+          };
+        },
       },
     },
   },
@@ -99,6 +135,8 @@ describe('AgentMicrosite public web presence', () => {
       isLoading: false,
       isError: false,
     };
+    routeState.allProperties = false;
+    inventoryInputs.length = 0;
     inventoryResult.current = { data: [] };
     trackMutate.mockReset();
     createLeadMutate.mockReset();
@@ -126,7 +164,7 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
 
     expect(screen.getByTestId('agent-name').textContent).toBe('Jane Agent');
-    expect(screen.getByText('Principal Property Practitioner')).toBeDefined();
+    expect(screen.getAllByText('Principal Property Practitioner').length).toBeGreaterThan(0);
     expect(screen.getByTestId('agency-affiliation').textContent).toContain('Northline Realty');
     expect(screen.getByTestId('verified-badge')).toBeDefined();
   });
@@ -194,7 +232,10 @@ describe('AgentMicrosite public web presence', () => {
 
     render(<AgentMicrosite />);
 
-    expect(screen.getByText('Property expertise in Bryanston, Sandton, Gauteng')).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Where Jane works' })).toBeDefined();
+    expect(screen.getByTestId('primary-area-section').textContent).toContain(
+      'Bryanston, Sandton, Gauteng',
+    );
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
@@ -264,6 +305,7 @@ describe('AgentMicrosite public web presence', () => {
           bedrooms: 4,
           bathrooms: 2,
           internalAreaM2: 140,
+          propertyType: 'house',
           erfSizeM2: 600,
           mainImage: '/test/property.jpg',
           images: [{ url: '/test/property.jpg' }],
@@ -349,33 +391,128 @@ describe('AgentMicrosite public web presence', () => {
     }
   });
 
-  it('reveals the complete bounded inventory progressively via View All', () => {
+  it('keeps the homepage showcase bounded and links to the agent inventory route', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
     inventoryResult.current = {
-      data: Array.from({ length: 8 }, (_, index) => ({
+      data: Array.from({ length: 25 }, (_, index) => ({
         id: index + 1,
         title: `Listing ${index + 1}`,
         listingType: 'sale',
-        price: '1000000',
-        suburb: 'Bryanston',
-        city: 'Sandton',
-        bedrooms: 3,
-        bathrooms: 2,
-        mainImage: null,
-        images: [],
+        price: 1000000,
       })),
     };
-
     render(<AgentMicrosite />);
+    expect(screen.getAllByTestId('inventory-card')).toHaveLength(5);
+    expect(screen.getByTestId('view-all-properties').getAttribute('href')).toBe(
+      '/agents/jane-agent/properties',
+    );
+    expect(screen.queryByText('25 properties')).toBeNull();
+  });
 
-    const section = screen.getByTestId('inventory-section');
-    expect(section.querySelectorAll('[data-testid="inventory-card"]')).toHaveLength(6);
-    expect(screen.queryByTestId('view-all-properties')).not.toBeNull();
+  it('switches service areas without inventing a guide for an unresolved area', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    render(<AgentMicrosite />);
+    fireEvent.click(screen.getByRole('button', { name: /Fourways/ }));
+    expect(screen.getByTestId('primary-area-section').textContent).toContain('Fourways');
+    expect(screen.queryByTestId('area-guide-link')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Bryanston/ }));
+    expect(screen.getByTestId('area-guide-link').getAttribute('href')).toBe(
+      '/gauteng/sandton/bryanston',
+    );
+  });
 
-    fireEvent.click(screen.getByTestId('view-all-properties'));
+  it('filters rentals in the showcase without affecting area guide selection', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: [
+        { id: 1, title: 'Sale House', listingType: 'sale', price: 1000000 },
+        { id: 2, title: 'Rental Flat', listingType: 'rent', price: 12000 },
+      ],
+    };
+    render(<AgentMicrosite />);
+    fireEvent.click(screen.getByRole('button', { name: 'To rent' }));
+    expect(screen.getAllByTestId('inventory-card')).toHaveLength(1);
+    expect(screen.getByTestId('inventory-card').textContent).toContain('Rental Flat');
+    expect(screen.getByTestId('primary-area-section').textContent).toContain('Bryanston');
+  });
 
-    expect(section.querySelectorAll('[data-testid="inventory-card"]')).toHaveLength(8);
-    expect(screen.queryByTestId('view-all-properties')).toBeNull();
+  it('hides missing biography and professional details instead of exposing filler', () => {
+    profileResult.current = {
+      data: {
+        ...baseProfile,
+        bio: null,
+        languages: null,
+        specialization: null,
+        socialLinks: null,
+        licenseNumber: null,
+        agency: null,
+      },
+      isLoading: false,
+      isError: false,
+    };
+    render(<AgentMicrosite />);
+    expect(screen.queryByTestId('about-section')).toBeNull();
+    expect(screen.queryByText(/has not added a public biography/)).toBeNull();
+    expect(screen.queryByText(/free valuation/i)).toBeNull();
+    expect(screen.queryByText(/PPRA verified/i)).toBeNull();
+  });
+
+  it('collapses long area lists and lets visitors select the remaining canonical areas', () => {
+    const canonicalAreas = Array.from({ length: 7 }, (_, index) => ({
+      canonicalLocationId: `suburb:${index + 1}`,
+      name: `Area ${index + 1}, Gauteng`,
+      type: 'suburb',
+      url: `/gauteng/area-${index + 1}`,
+    }));
+    profileResult.current = {
+      data: { ...baseProfile, canonicalAreas },
+      isLoading: false,
+      isError: false,
+    };
+    render(<AgentMicrosite />);
+    expect(screen.queryByRole('button', { name: /Area 7/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'See all 7 areas' }));
+    fireEvent.click(screen.getByRole('button', { name: /Area 7/ }));
+    expect(screen.getByTestId('area-guide-link').getAttribute('href')).toBe('/gauteng/area-7');
+  });
+
+  it('pages the full inventory and resets the cursor when transaction filters change', () => {
+    routeState.allProperties = true;
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: Array.from({ length: 25 }, (_, index) => ({
+        id: index + 1,
+        title: `Listing ${index + 1}`,
+        listingType: 'sale',
+        price: 1000000,
+      })),
+    };
+    render(<AgentMicrosite />);
+    expect(screen.getAllByTestId('inventory-card')).toHaveLength(12);
+    expect(screen.getByRole('heading', { name: 'Properties with Jane' })).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Page 2')).toBeDefined();
+    expect(screen.getAllByTestId('inventory-card')[0].textContent).toContain('Listing 13');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    expect(screen.getAllByTestId('inventory-card')[0].textContent).toContain('Listing 1');
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'To rent' }));
+    expect(screen.getByText('Page 1')).toBeDefined();
+    expect(screen.getByText('No current properties match these filters.')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
+
+  it('passes exact canonical inventory filters independently of the guide panel', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = { data: [{ id: 1, title: 'Home', listingType: 'sale' }] };
+    render(<AgentMicrosite />);
+    fireEvent.change(screen.getByLabelText('Filter properties by area'), {
+      target: { value: 'suburb:11' },
+    });
+    expect(inventoryInputs[inventoryInputs.length - 1]).toEqual(
+      expect.objectContaining({ canonicalLocationId: 'suburb:11', limit: 6 }),
+    );
   });
 
   it('omits the inventory module entirely when the agent has no public mandates', () => {

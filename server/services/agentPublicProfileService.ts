@@ -1,4 +1,6 @@
-import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, ne, or, sql } from 'drizzle-orm';
+import type { MySql2Database } from 'drizzle-orm/mysql2';
+import type * as canonicalSchema from '../../drizzle/schema';
 
 import {
   agencyAgentMemberships,
@@ -715,4 +717,70 @@ export async function listPublicInventoryForAgent(
     cards.push(toPublicPropertyDetailDto(resolution).property);
   }
   return cards;
+}
+
+export interface AgentPublicInventoryPageOptions {
+  limit: number;
+  cursor?: number;
+  listingType?: 'sale' | 'rent';
+  canonicalLocationId?: string;
+  sort: 'newest' | 'oldest';
+}
+
+/** Keyset pages over one attributed inventory; public eligibility remains the final authority. */
+export async function pagePublicInventoryForAgent(
+  db: MySql2Database<typeof canonicalSchema>,
+  agentId: number,
+  options: AgentPublicInventoryPageOptions,
+) {
+  const limit = Math.max(1, Math.min(24, options.limit));
+  const area = options.canonicalLocationId
+    ? parseCanonicalAgentCoverageLocationId(options.canonicalLocationId)
+    : null;
+  if (options.canonicalLocationId && !area) throw new Error('Invalid canonical area.');
+  const cards: ReturnType<typeof toPublicPropertyDetailDto>['property'][] = [];
+  let cursor = options.cursor;
+  let lastScanned = cursor;
+  // Bound eligibility work per request. A continuation can legitimately have no public rows.
+  for (let batch = 0; batch < 10; batch += 1) {
+    const areaColumn =
+      area?.level === 'suburb'
+        ? properties.suburbId
+        : area?.level === 'city'
+          ? properties.cityId
+          : properties.provinceId;
+    const candidates: Array<{ id: number }> = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .leftJoin(listings, eq(properties.sourceListingId, listings.id))
+      .where(
+        and(
+          or(eq(properties.agentId, agentId), eq(listings.agentId, agentId)),
+          cursor
+            ? options.sort === 'oldest'
+              ? gt(properties.id, cursor)
+              : lt(properties.id, cursor)
+            : undefined,
+          options.listingType ? eq(properties.listingType, options.listingType) : undefined,
+          area ? eq(areaColumn, area.id) : undefined,
+        ),
+      )
+      .orderBy(options.sort === 'oldest' ? asc(properties.id) : desc(properties.id))
+      .limit(60);
+    if (!candidates.length) return { items: cards, nextCursor: null };
+    const ids = candidates.map(row => Number(row.id));
+    const resolutions = await resolvePublicPropertyEligibilities(ids);
+    for (const id of ids) {
+      const resolution = resolutions.get(id);
+      if (resolution) {
+        // Look ahead by one eligible property without skipping it on the next page.
+        if (cards.length === limit) return { items: cards, nextCursor: lastScanned ?? null };
+        cards.push(toPublicPropertyDetailDto(resolution).property);
+      }
+      lastScanned = id;
+    }
+    if (ids.length < 60) return { items: cards, nextCursor: null };
+    cursor = lastScanned;
+  }
+  return { items: cards, nextCursor: lastScanned ?? null };
 }
