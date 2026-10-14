@@ -530,7 +530,11 @@ export function AgentDashboardOverview({
     return showings
       .filter(showing => {
         const scheduled = getScheduleTime(showing);
-        return !!scheduled && scheduled.getTime() > new Date().getTime();
+        return (
+          showing.status === 'scheduled' &&
+          !!scheduled &&
+          scheduled.getTime() > new Date().getTime()
+        );
       })
       .sort((left, right) => {
         const leftTime = getScheduleTime(left)?.getTime() || 0;

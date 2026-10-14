@@ -230,12 +230,20 @@ export default function AgentProductivity() {
     },
   });
 
+  const markNotificationReadMutation = trpc.agent.markNotificationAsRead.useMutation({
+    onSuccess: () => {
+      void utils.agent.getNotifications.invalidate();
+      void utils.agent.getUnreadNotificationCount.invalidate();
+    },
+    onError: error => toast.error(error.message || 'Unable to mark notification as read'),
+  });
+
   const upcomingShowings = useMemo(
     () =>
       [...showingsData]
         .filter(showing => {
           const scheduledAt = showing.scheduledAt;
-          if (!scheduledAt) return false;
+          if (showing.status !== 'scheduled' || !scheduledAt) return false;
           const scheduledDate = parseDatabaseTimestamp(scheduledAt);
           return !Number.isNaN(scheduledDate.getTime()) && scheduledDate.getTime() >= Date.now();
         })
@@ -669,7 +677,9 @@ export default function AgentProductivity() {
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center">
-                        <h3 className="text-lg font-semibold text-slate-900">No follow-ups due</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          No pending follow-ups
+                        </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Schedule follow-ups from a lead record to build your daily action queue.
                         </p>
@@ -689,17 +699,21 @@ export default function AgentProductivity() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Bell className="h-5 w-5 text-amber-600" />
-                      Agent reminders
+                      Notification history
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-500">
+                      Read status tracks whether you have acknowledged an alert. Viewing and
+                      follow-up outcomes are recorded separately.
+                    </p>
                     {notificationsData.length > 0 ? (
                       notificationsData.map(notification => (
                         <div
                           key={notification.id}
                           className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50"
                         >
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="font-semibold text-slate-900">{notification.title}</p>
@@ -709,7 +723,7 @@ export default function AgentProductivity() {
                                     notification.isRead === 1,
                                   )}
                                 >
-                                  {notification.isRead === 1 ? 'Read' : 'Unread'}
+                                  {notification.isRead === 1 ? 'Read' : 'Unread notification'}
                                 </Badge>
                               </div>
                               <p className="mt-1 text-sm text-slate-600">{notification.content}</p>
@@ -717,12 +731,28 @@ export default function AgentProductivity() {
                                 {formatRelativeTime(notification.createdAt)}
                               </p>
                             </div>
+                            {notification.isRead !== 1 && (
+                              <Button
+                                variant="outline"
+                                className="shrink-0"
+                                disabled={markNotificationReadMutation.isPending}
+                                onClick={() =>
+                                  markNotificationReadMutation.mutate({
+                                    notificationId: notification.id,
+                                  })
+                                }
+                              >
+                                Mark as read
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center">
-                        <h3 className="text-lg font-semibold text-slate-900">No reminders yet</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          No notifications yet
+                        </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Follow-up prompts, offer alerts, and showing updates will appear here as
                           soon as the live notification feed has items for this account.
