@@ -501,6 +501,30 @@ describe('private draft wizard orchestration (mocked APIs)', () => {
     expect(harness.create).not.toHaveBeenCalled();
     expect(harness.review).not.toHaveBeenCalled();
   });
+  it('opens a published owned listing at Preview and returns there after a section edit', async () => {
+    harness.read.mockResolvedValue(serverRecord(88, 'published'));
+    window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
+    render(<ListingWizard />);
+    await waitFor(() => expect(useListingWizardStore.getState().currentStep).toBe(8));
+    expect(useListingWizardStore.getState().title).toBe(title);
+    expect(useListingWizardStore.getState().media[0].id).toBe('existing:45');
+    expect(screen.getByText(/Your saved listing is loaded/)).toBeInTheDocument();
+    act(() => useListingWizardStore.getState().prevStep());
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Preview' }));
+    expect(useListingWizardStore.getState().currentStep).toBe(8);
+    expect(harness.create).not.toHaveBeenCalled();
+    expect(harness.update).not.toHaveBeenCalled();
+    expect(harness.review).not.toHaveBeenCalled();
+  });
+  it('opens an incomplete owned draft at the first missing section', async () => {
+    window.history.replaceState({}, '', '/listings/create?id=88&edit=true');
+    render(<ListingWizard />);
+    await waitFor(() => expect(useListingWizardStore.getState().title).toBe(title));
+    expect(useListingWizardStore.getState().currentStep).toBe(3);
+    expect(useListingWizardStore.getState().completedSteps).toEqual([1, 2]);
+    expect(screen.queryByRole('button', { name: 'Return to Preview' })).not.toBeInTheDocument();
+    expect(harness.update).not.toHaveBeenCalled();
+  });
   it('keeps the confirmed ID and visible error on a failed update', async () => {
     harness.realMutations = true;
     await open();
