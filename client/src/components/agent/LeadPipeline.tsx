@@ -555,7 +555,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     setSelectedLead(null);
     setBookingForm({
       listingId: matchedListing ? String(matchedListing.id) : '',
-      scheduledAt: defaultDateTime.toISOString().slice(0, 16),
+      scheduledAt: toDateTimeLocal(defaultDateTime.toISOString()),
       durationMinutes: '30',
       notes: propertyEnquiryMessageText(lead.message),
     });
