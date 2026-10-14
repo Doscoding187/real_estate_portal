@@ -476,7 +476,7 @@ const ListingWizard: React.FC = () => {
       setCreateUncertain(false);
       setIsLoadingExisting(false);
     }
-  }, [isDraftIdentityCurrent, existingListing, draftContextKey]);
+  }, [isDraftIdentityCurrent, existingListing, draftContextKey, isEditMode]);
 
   useEffect(() => {
     if (
@@ -1002,13 +1002,7 @@ const ListingWizard: React.FC = () => {
     }
 
     return steps;
-  }, [
-    stepTitles,
-    validationErrors,
-    canAdvanceFromCurrentStep,
-    canReviewLoadedListing,
-    store,
-  ]);
+  }, [stepTitles, validationErrors, canAdvanceFromCurrentStep, canReviewLoadedListing, store]);
 
   // Calculate readiness
   const readiness = useMemo(() => {
