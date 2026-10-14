@@ -386,6 +386,8 @@ function Router() {
               <AgentReferrals />
             </RequireRole>
           </Route>
+          <Route path="/agents/:slug/properties" component={AgentMicrosite} />
+          <Route path="/a/:slug/properties" component={AgentMicrosite} />
           <Route path="/agents/:slug" component={AgentMicrosite} />
           <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />
