@@ -147,7 +147,10 @@ export default function AgentMicrosite() {
     { enabled: !!slug && !!profile, retry: false, staleTime: 60_000 },
   );
   const inventoryLocations = inventoryLocationsQuery.data || [];
-  const inventory = (inventoryQuery.data?.items || []) as InventoryCard[];
+  const inventory = useMemo<InventoryCard[]>(
+    () => (inventoryQuery.data?.items || []) as InventoryCard[],
+    [inventoryQuery.data?.items],
+  );
   const displayedInventory =
     !allProperties && inventoryQuery.data?.nextCursor != null && inventory.length >= 6
       ? inventory.slice(0, 5)
