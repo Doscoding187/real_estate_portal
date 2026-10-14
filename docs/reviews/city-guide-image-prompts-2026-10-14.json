@@ -1,0 +1,469 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "style": "realistic city scenes, visibly labelled AI city illustration",
+  "purpose": "guide-card cover and existing guide-page banner; no listing stock imagery",
+  "assets": [
+    {
+      "citySlug": "johannesburg",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Johannesburg city-centre skyline with slender Hillbrow telecommunications tower, varied urban towers and green tree canopy; Highveld atmosphere, no ocean or Cape Town mountains.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/johannesburg-480.webp",
+          "sha256": "87215f1bb4c6b08e02ec5862b387ddc0bcfdfd695e8d81ae642b767969a6757a",
+          "bytes": 30988
+        },
+        {
+          "path": "/images/city-guides-v1/johannesburg-960.webp",
+          "sha256": "c775dfc2a5a184b1750970f5f42187555a8209a435d3fab42b74f512bf5847f3",
+          "bytes": 108570
+        },
+        {
+          "path": "/images/city-guides-v1/johannesburg-hero.webp",
+          "sha256": "4aa6b7db56f7d3e2b76157bda88b684eb851a98a8bd6eb99aca3d747b1f10037",
+          "bytes": 283266
+        }
+      ]
+    },
+    {
+      "citySlug": "cape-town",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Cape Town City Bowl below the recognizable flat-topped Table Mountain, green foreground and a glimpse of Atlantic coastline; no Manhattan skyline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/cape-town-480.webp",
+          "sha256": "37395e3ca1462ce7d54f1a7cc9864ed784b3e1f77d6bcf30110aa093928b3130",
+          "bytes": 34978
+        },
+        {
+          "path": "/images/city-guides-v1/cape-town-960.webp",
+          "sha256": "31cb045f9df6d57321b1cc565b0ca7722cd8843f3ffeafba5e62647735498766",
+          "bytes": 128678
+        },
+        {
+          "path": "/images/city-guides-v1/cape-town-hero.webp",
+          "sha256": "d492f64954e1909234f4218116ab6ac5fd3883c39f1893153136f345cc6867ba",
+          "bytes": 348194
+        }
+      ]
+    },
+    {
+      "citySlug": "pretoria",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Pretoria Union Buildings with sandstone wings above terraced gardens, urban greenery and purple jacaranda trees; no ocean or Cape Town mountains.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/pretoria-480.webp",
+          "sha256": "56094dce503cf6f80c3e32a7557bd5129344cc749e22a08f350ad2040a05f0c4",
+          "bytes": 37032
+        },
+        {
+          "path": "/images/city-guides-v1/pretoria-960.webp",
+          "sha256": "13dce976eac0117af6924c0b01cea894f6cb2ced456eda483701e91636ea2d82",
+          "bytes": 141392
+        },
+        {
+          "path": "/images/city-guides-v1/pretoria-hero.webp",
+          "sha256": "68a914cc72425c7184eea9e03ada682053bc8a87aa0c097b646143c9412cf0af",
+          "bytes": 380494
+        }
+      ]
+    },
+    {
+      "citySlug": "durban",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Durban Golden Mile beachfront and promenade, Indian Ocean and golden sandy beach, South African beachfront skyline and palms; no Cape Town mountains or Umhlanga lighthouse.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/durban-480.webp",
+          "sha256": "115c6fd5fb92ee6e2832a76e5950d168b6bc726ade358e11f22b518fed1d0966",
+          "bytes": 29012
+        },
+        {
+          "path": "/images/city-guides-v1/durban-960.webp",
+          "sha256": "386570e63daa4560a19b32a214e4784531a16b497715f2e98b6c8999f4fcdeb1",
+          "bytes": 100758
+        },
+        {
+          "path": "/images/city-guides-v1/durban-hero.webp",
+          "sha256": "1351a8cdea63b0d19d8ce78f9a76e365633deff05c35fea2c824de806fd2d390",
+          "bytes": 263034
+        }
+      ]
+    },
+    {
+      "citySlug": "gqeberha",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Gqeberha/Port Elizabeth and Algoa Bay, beachfront promenade and broad sandy beach, curved coastline and low/mid-rise coastal buildings; no Table Mountain or Durban skyline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/gqeberha-480.webp",
+          "sha256": "731ef8d27484c06ad75a59a3a5f1b8764caff34f67bb15a6b769654dbed6f645",
+          "bytes": 31166
+        },
+        {
+          "path": "/images/city-guides-v1/gqeberha-960.webp",
+          "sha256": "421aa63e1824506de3771bc28a82c0314e1e7656e0be334aa00b4b6d7b2da955",
+          "bytes": 114036
+        },
+        {
+          "path": "/images/city-guides-v1/gqeberha-hero.webp",
+          "sha256": "0ebe5e833f724a7670605f23bf9da490b7223fdd4c83bf5a1f24f5c33525bbe3",
+          "bytes": 297846
+        }
+      ]
+    },
+    {
+      "citySlug": "bloemfontein",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Bloemfontein inland low-rise sandstone civic centre, landscaped gardens and roses, green street trees and gentle Free State hills; no ocean or foreign skyscrapers.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/bloemfontein-480.webp",
+          "sha256": "26ae7c36c43743849c7cd1dbaebc2ab0f359fc0e800e101bca45b286420170d0",
+          "bytes": 37408
+        },
+        {
+          "path": "/images/city-guides-v1/bloemfontein-960.webp",
+          "sha256": "9001b7c2d081d792fbf553df63176e2a65d119a3a30300b922ef48e2e880d986",
+          "bytes": 133254
+        },
+        {
+          "path": "/images/city-guides-v1/bloemfontein-hero.webp",
+          "sha256": "bc4759a88c9439dbf94a68a69b07488017c37721c90a3277d4ff3738c88e4a9a",
+          "bytes": 341372
+        }
+      ]
+    },
+    {
+      "citySlug": "sandton",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Sandton contemporary business district, polished glass office towers and varied modern skyline with green urban trees; no ocean or mountains.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/sandton-480.webp",
+          "sha256": "2c3837a7bd516c5ace9c108bf25727d557842d9a7ee8ce219363e696e3b5bd42",
+          "bytes": 32928
+        },
+        {
+          "path": "/images/city-guides-v1/sandton-960.webp",
+          "sha256": "d26486ad9931126f5f94c94216d2ebfbff6d5e9cd0a50d72456bc7e3ec7d3083",
+          "bytes": 117734
+        },
+        {
+          "path": "/images/city-guides-v1/sandton-hero.webp",
+          "sha256": "dc50594ff1245deee9a0c51c3f3f60e926f11037b9cb64492e2dcb114216dd98",
+          "bytes": 311610
+        }
+      ]
+    },
+    {
+      "citySlug": "midrand",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Midrand modern mixed-use business precinct amid open Highveld greenery, low/mid-rise offices, contemporary buildings and roads; no dense Johannesburg skyline or coastline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/midrand-480.webp",
+          "sha256": "67fa32598bfd93258272676c48cfa17c6396f613edccb0f1e574d4fcc445ae2c",
+          "bytes": 33806
+        },
+        {
+          "path": "/images/city-guides-v1/midrand-960.webp",
+          "sha256": "076b5eb931a7f48d66fc808c9538358f1abe842251dda2d5f6236562a480b200",
+          "bytes": 121604
+        },
+        {
+          "path": "/images/city-guides-v1/midrand-hero.webp",
+          "sha256": "23338ea82aa085fedbb559a91985c5d10212ba72e4fb96ec01661de61df6efe8",
+          "bytes": 327982
+        }
+      ]
+    },
+    {
+      "citySlug": "centurion",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Centurion contemporary inland townscape around a small urban lake, office buildings, green trees and a relaxed Highveld setting; no ocean or foreign landmarks.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/centurion-480.webp",
+          "sha256": "167edd49354d7b9fa153133d0b784cd31d06fb75a0382b10238059c9eeb9d006",
+          "bytes": 31982
+        },
+        {
+          "path": "/images/city-guides-v1/centurion-960.webp",
+          "sha256": "dda5325d7132b6970e42d8dba82f0dcb2a5b420cdd21d368658689dedc5781c0",
+          "bytes": 119066
+        },
+        {
+          "path": "/images/city-guides-v1/centurion-hero.webp",
+          "sha256": "dd825537d5457bd1fefe74a8d4949060976850ea1c4581df1af97a41aaa982de",
+          "bytes": 317196
+        }
+      ]
+    },
+    {
+      "citySlug": "randburg",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Randburg green suburban district with low/mid-rise business buildings and mature tree canopy; no giant skyline or ocean.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/randburg-480.webp",
+          "sha256": "9e6cd2326469aa879d9c2ed6f13fc9d5560ca409e35f141a6b421c80030eace9",
+          "bytes": 38452
+        },
+        {
+          "path": "/images/city-guides-v1/randburg-960.webp",
+          "sha256": "b3ee679dee7c36fcecba9e6c22522a56e85f6f83e709b3bfa8a2ffdf996217bc",
+          "bytes": 140456
+        },
+        {
+          "path": "/images/city-guides-v1/randburg-hero.webp",
+          "sha256": "14c817bf8fa3fe90f3dc65543ab07829965bb9b1fbb77b474afd37968b1dfa41",
+          "bytes": 376874
+        }
+      ]
+    },
+    {
+      "citySlug": "roodepoort",
+      "promptSpecification": "Realistic-looking editorial AI city illustration for a South African local guide; wide landscape composition with the identifying scene centered for a card and banner crop. Calm warm late-afternoon natural light, soft blue sky, restrained natural colours, detailed credible architecture and vegetation. No text, logos, watermarks, borders, collage, unrelated international landmarks or property-listing claims. Representative scene rather than a literal verified photograph. Roodepoort low/mid-rise urban buildings and green residential streets with gently rising rocky Highveld ridges; no coastline or Table Mountain.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/roodepoort-480.webp",
+          "sha256": "214ac34d90c1a9ad596b659b6232677486acd8daaa6cc4044debe45df1329d5c",
+          "bytes": 35660
+        },
+        {
+          "path": "/images/city-guides-v1/roodepoort-960.webp",
+          "sha256": "adb29c63fac40ec1d27394ccbbb343e50283e214f82d4212c8eb2c3c6052e459",
+          "bytes": 128068
+        },
+        {
+          "path": "/images/city-guides-v1/roodepoort-hero.webp",
+          "sha256": "33f75844108b981a6d5c49d9900eb8817649193939e3344a76d3681071f9ad18",
+          "bytes": 340674
+        }
+      ]
+    },
+    {
+      "citySlug": "polokwane",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Polokwane in Limpopo: low-rise and mid-rise inland South African civic cityscape, broad streets and leafy gardens, warm rolling inland landscape. No ocean or giant foreign skyline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/polokwane-480.webp",
+          "sha256": "ce14a16ff3bf781090a2fb0dc0b86dad0c439d642f6f373b87645983c044a62c",
+          "bytes": 36044
+        },
+        {
+          "path": "/images/city-guides-v1/polokwane-960.webp",
+          "sha256": "28c5ab7c0b01a0c26cffbd5b02d2e30cad8f21b7bfb99989733aa99b76b631d8",
+          "bytes": 134912
+        },
+        {
+          "path": "/images/city-guides-v1/polokwane-hero.webp",
+          "sha256": "77c2f97e5776387765a215752c8ca9bf6fc1f89277edbf30044cd79ece354aaa",
+          "bytes": 355110
+        }
+      ]
+    },
+    {
+      "citySlug": "mbombela",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Mbombela in Mpumalanga: modest contemporary low and mid-rise South African urban buildings amid lush subtropical greenery and undulating Lowveld hills. No ocean, no safari animals or invented iconic monument.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/mbombela-480.webp",
+          "sha256": "75f7f25fcd96de688e756491672116e2ac52e0fc630ee13727525e3e99d44210",
+          "bytes": 39436
+        },
+        {
+          "path": "/images/city-guides-v1/mbombela-960.webp",
+          "sha256": "e8852a43c39a7c94e8e7cc82ad858d104fbd3e13c214e9912166eeb0eb7aa0c6",
+          "bytes": 139642
+        },
+        {
+          "path": "/images/city-guides-v1/mbombela-hero.webp",
+          "sha256": "099f8c7e19705999b28ec7640ca16c3b43c45d4f054f7a6284328940518a1c60",
+          "bytes": 360662
+        }
+      ]
+    },
+    {
+      "citySlug": "kimberley",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Kimberley in Northern Cape: representative historic diamond-city scene with the dramatic excavated Big Hole and mining-era town buildings in a dry inland landscape. Render as an interpretive city scene with no invented ocean, tropical gardens or foreign skyscrapers.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/kimberley-480.webp",
+          "sha256": "3e21cf1a765ec8c977b893f78705369231fc1df4ab6c9811a50adcba1851ae56",
+          "bytes": 32698
+        },
+        {
+          "path": "/images/city-guides-v1/kimberley-960.webp",
+          "sha256": "ab82d0e91a77cfe3cdb005c0164c2379feb6a607b02c900db69576351128b023",
+          "bytes": 114332
+        },
+        {
+          "path": "/images/city-guides-v1/kimberley-hero.webp",
+          "sha256": "f824464f5bd7fd74ae15f3b88d4346afab35e6b37f490f3e972bc48091ea53a4",
+          "bytes": 304746
+        }
+      ]
+    },
+    {
+      "citySlug": "mahikeng",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Mahikeng in North West: calm modest inland South African townscape with low-rise civic buildings, warm earth tones and broad leafy streets, open dry grassland beyond. No ocean or fictitious palace.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/mahikeng-480.webp",
+          "sha256": "16ef018743bdc81cb0bef619b40f8ffc13132c2766379856c95d203f39dee4b4",
+          "bytes": 33420
+        },
+        {
+          "path": "/images/city-guides-v1/mahikeng-960.webp",
+          "sha256": "5df0a3db3b19197ad085a9487509778027721a307b273fc99a775b0092a6ea6f",
+          "bytes": 117334
+        },
+        {
+          "path": "/images/city-guides-v1/mahikeng-hero.webp",
+          "sha256": "35f29b4481c343c3e951d7afec384f27d54f9f5e3ab2727e371c52b2832d4912",
+          "bytes": 309018
+        }
+      ]
+    },
+    {
+      "citySlug": "benoni",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Benoni in Gauteng: representative leafy Highveld urban scene, lake water and green park foreground, varied low-rise town buildings beyond. Natural South African inland atmosphere, no resort, no ocean or fictional iconic landmark.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/benoni-480.webp",
+          "sha256": "d39b6eff1366f12ca2b748cb352035dfcf5ed33807f6a41357b773fecd37d882",
+          "bytes": 35752
+        },
+        {
+          "path": "/images/city-guides-v1/benoni-960.webp",
+          "sha256": "d54050f6c58ef2be0ca62fa9b8d49e855808786340fea001ae90f2122d1813d5",
+          "bytes": 132700
+        },
+        {
+          "path": "/images/city-guides-v1/benoni-hero.webp",
+          "sha256": "e4db2f3a64c546a51377e4cbb5dba8494c8fb6da8ab5d1a0d0eedb40bacfc63b",
+          "bytes": 363488
+        }
+      ]
+    },
+    {
+      "citySlug": "boksburg",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Boksburg in Gauteng: representative Highveld town scene with varied low-rise brick city buildings, a calm urban lake and leafy streets, warm inland light. No ocean, no mountains, no fictional monuments.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/boksburg-480.webp",
+          "sha256": "03da4c54e8a06fbe4e5df25c3e616981066613467071825026b5e911ce0b08a4",
+          "bytes": 29302
+        },
+        {
+          "path": "/images/city-guides-v1/boksburg-960.webp",
+          "sha256": "5f689903df730bec2c8824ab96e5d7d7ed4fe98e6b249cf87d626296f33bd338",
+          "bytes": 108682
+        },
+        {
+          "path": "/images/city-guides-v1/boksburg-hero.webp",
+          "sha256": "df4ebd61c3971a8d582b11e2106a451a31f05a07b3a129e0e528d9789a70532f",
+          "bytes": 299536
+        }
+      ]
+    },
+    {
+      "citySlug": "alberton",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Alberton in Gauteng: representative South African urban scene, green residential streets with low-rise town-centre buildings and gentle inland ridges in the distance. Natural warm Highveld light. No foreign skyline or coastline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/alberton-480.webp",
+          "sha256": "871116cea9d82654d8d9f3e6855c647e93d1d35d5fc865625259679e22df1e64",
+          "bytes": 35432
+        },
+        {
+          "path": "/images/city-guides-v1/alberton-960.webp",
+          "sha256": "20ec6d5cff762c6751e02e956dd57e11cec101cb442ce84b70d2d39bb93bd383",
+          "bytes": 131564
+        },
+        {
+          "path": "/images/city-guides-v1/alberton-hero.webp",
+          "sha256": "3e6ea770712ca608261428d770dabf4970fd05020abda0e1e4d74c1473da78cc",
+          "bytes": 354852
+        }
+      ]
+    },
+    {
+      "citySlug": "kempton-park",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Kempton Park in Gauteng: representative South African urban scene with low-rise town buildings, leafy suburbs and contemporary business buildings amid a flat inland Highveld landscape. No aircraft logos, no coastline, no invented iconic monument.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/kempton-park-480.webp",
+          "sha256": "6dfcedf40fb68bf877d3ff4d41bafb0da005a8a1b3752e59e58b34e1b641e4e0",
+          "bytes": 32554
+        },
+        {
+          "path": "/images/city-guides-v1/kempton-park-960.webp",
+          "sha256": "8cde8587703d8134965f19c41fe9fbb53fa161dfaddac273c9655942cd912dd3",
+          "bytes": 119964
+        },
+        {
+          "path": "/images/city-guides-v1/kempton-park-hero.webp",
+          "sha256": "0b0b98a9ea7c54c4659acbd79f4d4892b1276974fba8ec0836a2b7a5ceb5261c",
+          "bytes": 324596
+        }
+      ]
+    },
+    {
+      "citySlug": "soweto",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Soweto, Johannesburg: recognizable brightly mural-painted twin Orlando cooling towers with low-rise neighbourhoods, trees and warm Highveld sky. Respectful lively urban scene, no stereotypes, no slum caricature or foreign landmarks. No readable advertisements on the towers.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/soweto-480.webp",
+          "sha256": "80f98793c94adcc0408c55ff930bf0d8064ae29c9e1b6771ee5178a59487d550",
+          "bytes": 33494
+        },
+        {
+          "path": "/images/city-guides-v1/soweto-960.webp",
+          "sha256": "d48fe4bb7075e59287ecc86bb36066f987b25e30b707c0e9488ad921ce14c2c6",
+          "bytes": 116560
+        },
+        {
+          "path": "/images/city-guides-v1/soweto-hero.webp",
+          "sha256": "f9c77726cedc6451894e7d04fc087e0bd6c5322ca7b943c821e1ab7c3dbdcdbf",
+          "bytes": 308222
+        }
+      ]
+    },
+    {
+      "citySlug": "umhlanga",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Umhlanga in KwaZulu-Natal: recognizable short red-and-white cylindrical lighthouse on rocky shore, a coastal promenade, blue Indian Ocean and tasteful contemporary seaside buildings behind. Natural South African coast. No Cape Town mountains.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/umhlanga-480.webp",
+          "sha256": "eb1630c579af74826c666d584e09479bc412fe23a0b24db669f862c4435677c6",
+          "bytes": 32936
+        },
+        {
+          "path": "/images/city-guides-v1/umhlanga-960.webp",
+          "sha256": "4f3daa6c5bfe951ec4f67932d97c019e3a65b46bff17a1a184db39fcff848acf",
+          "bytes": 117120
+        },
+        {
+          "path": "/images/city-guides-v1/umhlanga-hero.webp",
+          "sha256": "a71743fd79c957f66f94875d71adf0dfe80b2ca396ac4cbf499a01b56cae61c5",
+          "bytes": 313532
+        }
+      ]
+    },
+    {
+      "citySlug": "stellenbosch",
+      "prompt": "Asset: one realistic-looking AI city illustration for a South African local guide, not a literal verified photograph. Match editorial travel-photography aesthetic, late-afternoon natural light and clear blue sky, credible detailed architecture and vegetation, restrained natural colours. Wide landscape 16:9 composition, main scene in central half for a card and panoramic banner crop. No text, watermark, logo, borders, frame, collage or invented property listing. Stellenbosch in Western Cape: historic white Cape Dutch style town buildings with gabled roofs, mature oak trees and modest streets, green vineyard foothills and rugged winelands mountains behind. Calm rich natural colours, no ocean or skyscraper skyline.",
+      "files": [
+        {
+          "path": "/images/city-guides-v1/stellenbosch-480.webp",
+          "sha256": "0b6a869624a1a7f3a5fec138ee7a7270b19f9643b39c48394bdea0645df4580a",
+          "bytes": 41500
+        },
+        {
+          "path": "/images/city-guides-v1/stellenbosch-960.webp",
+          "sha256": "953cc02fe5a599cb6fb28b4454842688518e11d6a96e24da4930a73f3e3ef787",
+          "bytes": 145584
+        },
+        {
+          "path": "/images/city-guides-v1/stellenbosch-hero.webp",
+          "sha256": "9e799bb3bcade21bcdae874406e9422dfcdfc232a2629a1ce6b576d4e8def439",
+          "bytes": 379900
+        }
+      ]
+    }
+  ]
+}

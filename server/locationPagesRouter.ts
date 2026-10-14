@@ -6,6 +6,7 @@ import { getDb } from './db';
 import { heroCampaigns } from '../drizzle/schema';
 import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
+import { listCityGuides } from './services/cityGuideDiscoveryService';
 
 /**
  * Location Pages Router
@@ -17,6 +18,9 @@ import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
  * - Merge static SEO content with dynamic market statistics
  */
 export const locationPagesRouter = router({
+  getCityGuides: publicProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(24).default(12) }))
+    .query(({ input }) => listCityGuides(input.limit)),
   /**
    * Get province data (legacy method - dynamic only)
    */

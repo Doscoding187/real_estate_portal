@@ -1,7 +1,11 @@
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { TopDevelopers } from '@/components/TopDevelopers';
-import { ExploreCities } from '@/components/ExploreCities';
+import {
+  ExploreCities,
+  type CityGuideLocation,
+  type CityGuideRequestState,
+} from '@/components/ExploreCities';
 import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { CTASection } from '@/sections/home/CTASection';
@@ -16,13 +20,8 @@ type HomeDesktopViewProps = {
   onBrowseProperties: () => void;
   onProvinceChange: (province: string) => void;
   onTabChange: (tab: string) => void;
-  popularCities: Array<{
-    name: string;
-    province: string;
-    slug: string;
-    provinceSlug: string;
-    propertyCount: string;
-  }>;
+  cityGuides: CityGuideLocation[];
+  cityGuidesState: CityGuideRequestState;
   selectedProvince: string;
 };
 
@@ -32,7 +31,8 @@ export function HomeDesktopView({
   onBrowseProperties,
   onProvinceChange,
   onTabChange,
-  popularCities,
+  cityGuides,
+  cityGuidesState,
   selectedProvince,
 }: HomeDesktopViewProps) {
   return (
@@ -46,7 +46,14 @@ export function HomeDesktopView({
         />
         <DiscoverProperties withinContentRail />
         <TopDevelopers selectedProvince={selectedProvince} onProvinceChange={onProvinceChange} />
-        <ExploreCities customLocations={popularCities} basePath="" withinContentRail />
+        <ExploreCities
+          customLocations={cityGuides}
+          basePath=""
+          withinContentRail
+          guideCards
+          initialLimit={4}
+          requestState={cityGuidesState}
+        />
         <HomeMarketInsightsSection />
         <HomeJourneySection />
         <ProfessionalEntrySection />

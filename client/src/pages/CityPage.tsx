@@ -35,6 +35,8 @@ import { RecommendedAgenciesCarousel } from '@/components/location/RecommendedAg
 import { LocationTopLocalities } from '@/components/location/LocationTopLocalities';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { encodeCanonicalLocationId } from '@shared/locationAuthority';
+import { getCityGuideImage } from '@/lib/cityGuideImages';
+import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
 export default function CityPage({
   params,
@@ -141,6 +143,10 @@ export default function CityPage({
     );
   }
 
+  const cityGuideImage = getCityGuideImage(provinceSlug, citySlug);
+  const cityHeroImage =
+    cityGuideImage?.hero ||
+    '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg';
   return (
     <>
       <LocationSchema
@@ -169,7 +175,7 @@ export default function CityPage({
         }}
         stats={stats}
         neutralMode={isLocationDiscovery}
-        image="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+        image={toAbsoluteUrl(cityHeroImage)}
       />
 
       <LocationPageLayout
@@ -181,7 +187,9 @@ export default function CityPage({
             locationSlug={`${provinceSlug}/${citySlug}`}
             locationType="city"
             locationId={city.id}
-            backgroundImage="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+            backgroundImage={cityHeroImage}
+            imagePosition={cityGuideImage?.heroPosition}
+            imageLabel={cityGuideImage?.label || 'City guide illustration'}
             listingCount={stats.totalListings}
             campaign={heroCampaign}
             activeTab={heroTab}

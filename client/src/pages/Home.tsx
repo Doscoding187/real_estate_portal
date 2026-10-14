@@ -57,9 +57,10 @@ export default function Home() {
     activeJourney && isHomepageHeroJourneyEnabled(activeJourney)
       ? (activeJourney as HeroTab)
       : 'buy';
-  const { data: popularCitiesData } = trpc.locationPages.getPopularCities.useQuery({
-    limit: 12,
-  });
+  const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
+    { limit: 12 },
+    { retry: false, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false },
+  );
 
   const handleTabChange = (tab: string) => {
     const normalizedTab = normalizeHeroUiTab(tab);
@@ -88,13 +89,12 @@ export default function Home() {
       description: homeDescription,
     }),
   ];
-  const popularCities =
-    popularCitiesData?.map(city => ({
+  const cityGuides =
+    cityGuidesQuery.data?.map(city => ({
       name: city.name,
       province: city.provinceName,
       slug: city.slug,
       provinceSlug: city.provinceSlug,
-      propertyCount: `${city.listingCount.toLocaleString()} Properties`,
     })) ?? [];
 
   return (
@@ -115,7 +115,13 @@ export default function Home() {
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
-              popularCities={popularCities}
+              cityGuides={cityGuides}
+              cityGuidesState={{
+                isLoading: cityGuidesQuery.isLoading,
+                isError: cityGuidesQuery.isError,
+                isFetching: cityGuidesQuery.isFetching,
+                onRetry: () => void cityGuidesQuery.refetch(),
+              }}
               selectedProvince={selectedProvince}
             />
           ) : (
@@ -125,7 +131,13 @@ export default function Home() {
               onBrowseProperties={() => setLocation('/property-for-sale')}
               onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
-              popularCities={popularCities}
+              cityGuides={cityGuides}
+              cityGuidesState={{
+                isLoading: cityGuidesQuery.isLoading,
+                isError: cityGuidesQuery.isError,
+                isFetching: cityGuidesQuery.isFetching,
+                onRetry: () => void cityGuidesQuery.refetch(),
+              }}
               selectedProvince={selectedProvince}
             />
           )}
