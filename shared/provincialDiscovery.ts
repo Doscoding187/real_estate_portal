@@ -100,34 +100,35 @@ const EXPLORE_JOURNEY: ProvincialJourneyConfig = {
   state: 'active',
 };
 
-const COMING_SOON_JOURNEY = (id: ProvincialJourneyId, label: string, reason: string) => ({
-  id,
-  label,
-  shortLabel: label,
-  description: reason,
-  ctaLabel: label,
-  state: 'unavailable' as const,
-  unavailableReason: reason,
-});
-
-function deferredJourneys(): ProvincialJourneyConfig[] {
-  return [
-    COMING_SOON_JOURNEY('land', 'Land & plots', 'Land search is not enabled in this release.'),
-    COMING_SOON_JOURNEY(
-      'commercial',
-      'Commercial',
-      'Commercial inventory is not yet a bounded public journey.',
-    ),
-    COMING_SOON_JOURNEY(
-      'shared_living',
-      'Shared Living',
-      'Shared Living remains a separate journey until its public search contract is ready.',
-    ),
-  ];
-}
+const SPECIALIST_JOURNEYS: readonly ProvincialJourneyConfig[] = [
+  {
+    id: 'land',
+    label: 'Land & plots',
+    shortLabel: 'Plots and land',
+    description: 'Search plots and land in your selected area.',
+    ctaLabel: 'Search land',
+    state: 'active',
+  },
+  {
+    id: 'commercial',
+    label: 'Commercial',
+    shortLabel: 'Commercial leasing',
+    description: 'Find commercial space to lease.',
+    ctaLabel: 'Find commercial space',
+    state: 'active',
+  },
+  {
+    id: 'shared_living',
+    label: 'Shared Living',
+    shortLabel: 'Rooms and small places',
+    description: 'Find rooms, cottages and small places to rent.',
+    ctaLabel: 'Find shared living',
+    state: 'active',
+  },
+];
 
 function standardJourneys(): ProvincialJourneyConfig[] {
-  return [BUY_JOURNEY, RENT_JOURNEY, DEVELOPMENTS_JOURNEY, EXPLORE_JOURNEY, ...deferredJourneys()];
+  return [BUY_JOURNEY, RENT_JOURNEY, DEVELOPMENTS_JOURNEY, EXPLORE_JOURNEY, ...SPECIALIST_JOURNEYS];
 }
 
 function createGenericProvinceConfig(input: {
@@ -175,9 +176,9 @@ function createGenericProvinceConfig(input: {
             'Yes. Choose a canonical city, suburb or locality suggestion. Its existing identity is preserved when you continue into the selected journey.',
         },
         {
-          question: 'Why are some journeys unavailable?',
+          question: 'Can I switch between property journeys?',
           answer:
-            'Only journeys with a real public destination are active. Deferred journeys remain visible with an honest explanation rather than producing a different search.',
+            'Yes. Choose Buy, Rent, Developments, Land, Commercial or Shared Living, or explore an area guide. Each search has its own filters and keeps the area you choose.',
         },
       ],
     },
@@ -195,23 +196,7 @@ export const PROVINCIAL_CONFIGS = {
     heroKicker: 'The province of gold · Johannesburg to Pretoria',
     heroFallbackImage:
       'https://images.unsplash.com/photo-1577931767667-0c58e744d081?auto=format&fit=crop&w=2200&q=85',
-    supportedJourneys: [
-      BUY_JOURNEY,
-      RENT_JOURNEY,
-      DEVELOPMENTS_JOURNEY,
-      EXPLORE_JOURNEY,
-      COMING_SOON_JOURNEY('land', 'Land & plots', 'Land search is not enabled in this release.'),
-      COMING_SOON_JOURNEY(
-        'commercial',
-        'Commercial',
-        'Commercial inventory is not yet a bounded public journey.',
-      ),
-      COMING_SOON_JOURNEY(
-        'shared_living',
-        'Shared Living',
-        'Shared Living remains a separate journey until its public search contract is ready.',
-      ),
-    ],
+    supportedJourneys: standardJourneys(),
     majorMarkets: [
       {
         slug: 'johannesburg',
@@ -260,9 +245,9 @@ export const PROVINCIAL_CONFIGS = {
       {
         id: 'land',
         label: 'Land & plots',
-        description: 'This journey will open when a bounded public destination is ready.',
+        description: 'Explore plots and land in your chosen area.',
         journey: 'land',
-        state: 'unavailable',
+        state: 'active',
       },
     ],
     seo: {
@@ -281,9 +266,9 @@ export const PROVINCIAL_CONFIGS = {
             'No. Inventory totals describe public active listings returned by the live search authority. Pricing statistics are shown only when a defensible public sample is available.',
         },
         {
-          question: 'Why are some journeys not active yet?',
+          question: 'Can I switch between property journeys?',
           answer:
-            'Only journeys with a safe, bounded destination are active. Unavailable paths stay visible only when the explanation helps set an honest expectation.',
+            'Yes. Choose Buy, Rent, Developments, Land, Commercial or Shared Living, or explore an area guide. Each search has its own filters and keeps the area you choose.',
         },
       ],
     },
@@ -298,13 +283,7 @@ export const PROVINCIAL_CONFIGS = {
     heroKicker: 'The southern gateway · Cape Town and beyond',
     heroFallbackImage:
       'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=2200&q=85',
-    supportedJourneys: [
-      BUY_JOURNEY,
-      RENT_JOURNEY,
-      DEVELOPMENTS_JOURNEY,
-      EXPLORE_JOURNEY,
-      ...deferredJourneys(),
-    ],
+    supportedJourneys: standardJourneys(),
     majorMarkets: [
       {
         slug: 'cape-town',
@@ -347,7 +326,7 @@ export const PROVINCIAL_CONFIGS = {
     heroKicker: 'A measured start · Discover what is actually available',
     heroFallbackImage:
       'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2200&q=85',
-    supportedJourneys: [BUY_JOURNEY, RENT_JOURNEY, EXPLORE_JOURNEY, ...deferredJourneys()],
+    supportedJourneys: standardJourneys(),
     majorMarkets: [
       {
         slug: 'kimberley',
@@ -588,6 +567,10 @@ function readJourney(
     areas: 'explore',
     shared_living: 'shared_living',
     shared: 'shared_living',
+    commercial: 'commercial',
+    land: 'land',
+    plot_land: 'land',
+    'plots-and-land': 'land',
   };
   const journey = aliases[raw];
   return journey ? { journey } : { unsupportedJourney: raw };

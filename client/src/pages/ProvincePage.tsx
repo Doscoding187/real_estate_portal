@@ -16,6 +16,7 @@ import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
 import { ProvinceGuideHero } from '@/components/provincial/ProvinceGuideHero';
+import { ProvinceAreaTable } from '@/components/provincial/ProvinceAreaTable';
 import { getProvinceGuideCover } from '@/lib/provinceGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { trpc } from '@/lib/trpc';
@@ -55,14 +56,6 @@ function inventoryStateLabel(state: string) {
   if (state === 'sparse') return 'Small live sample';
   if (state === 'empty') return 'No live inventory yet';
   return 'Inventory unavailable';
-}
-
-function formatDiscoveryLabel(value: string) {
-  return value
-    .split('-')
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 }
 
 function ProvinceLoadingState() {
@@ -272,88 +265,11 @@ export default function ProvincePage({ params }: ProvincePageProps) {
               </button>
             </div>
           )}
-          <div className="provincial-markets">
-            {markets.map(market => {
-              const inventory = market.inventory;
-              const hasCanonicalMarket = Boolean(market.city?.canonicalLocationId);
-              const cityHref =
-                hasCanonicalMarket && market.city
-                  ? `/${data.province.slug}/${market.city.slug}`
-                  : undefined;
-              return (
-                <article key={market.slug} className="provincial-market-card">
-                  <div className="provincial-market-card__body">
-                    <div className="provincial-market-card__top">
-                      <div>
-                        <p className="provincial-market-card__eyebrow">{market.eyebrow}</p>
-                        <h3>{market.name}</h3>
-                      </div>
-                      <span className="provincial-market-card__pill">
-                        {hasCanonicalMarket
-                          ? 'Area guide'
-                          : cityGuidesQuery.isLoading
-                            ? 'Loading guide'
-                            : 'Guide unavailable'}
-                      </span>
-                    </div>
-                    <p className="provincial-market-card__description">{market.description}</p>
-                    <div className="provincial-market-card__stats">
-                      <div className="provincial-market-card__stat">
-                        <strong>
-                          {inventory
-                            ? inventory.total > 0
-                              ? formatCount(inventory.total)
-                              : '—'
-                            : '—'}
-                        </strong>
-                        <span>{inventory ? 'public listings' : 'availability'}</span>
-                      </div>
-                      <div className="provincial-market-card__stat">
-                        <strong>{inventoryStateLabel(market.state)}</strong>
-                        <span>current availability</span>
-                      </div>
-                    </div>
-                    <div
-                      className="provincial-market-card__areas"
-                      aria-label={`Discovery cues for ${market.name}`}
-                    >
-                      {market.areaSlugs.length > 0 ? (
-                        market.areaSlugs.map(area => (
-                          <span key={area} className="provincial-market-card__area">
-                            {formatDiscoveryLabel(area)}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="provincial-market-card__area">
-                          Explore areas from the search field
-                        </span>
-                      )}
-                    </div>
-                    {market.areaSlugs.length > 0 ? (
-                      <p className="provincial-market-card__areas-note">
-                        These areas can help you get your bearings. Choose a city or suburb above to
-                        narrow your property search.
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="provincial-market-card__footer">
-                    <span>
-                      {inventory?.sourceCounts
-                        ? `${formatCount(inventory.sourceCounts.manual)} direct · ${formatCount(inventory.sourceCounts.development)} development`
-                        : 'No public sample yet'}
-                    </span>
-                    {cityHref ? (
-                      <Link href={cityHref}>
-                        Explore {market.name} <ArrowRight size={14} aria-hidden="true" />
-                      </Link>
-                    ) : (
-                      <span>Area guide not available yet</span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <ProvinceAreaTable
+            markets={markets}
+            provinceSlug={data.province.slug}
+            guidesLoading={cityGuidesQuery.isLoading}
+          />
         </section>
 
         <ProvincialBillboard campaign={heroCampaign} provinceName={data.province.name} />

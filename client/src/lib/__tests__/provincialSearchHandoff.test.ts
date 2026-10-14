@@ -56,6 +56,32 @@ function parseHref(href: string) {
 }
 
 describe('provincial journey handoff', () => {
+  it.each(['land', 'commercial', 'shared_living'] as const)(
+    'keeps the exact selected canonical city for %s',
+    journey => {
+      const href = buildProvincialJourneyHref({
+        journey,
+        province,
+        selectedLocations: [sandton],
+        filters: { propertyType: 'house', maxPrice: 2_000_000 },
+      });
+      const url = new URL(href!, 'https://example.com');
+      expect(url.pathname).toBe(
+        journey === 'land'
+          ? '/plots-and-land'
+          : journey === 'commercial'
+            ? '/commercial'
+            : '/shared-living',
+      );
+      expect(url.searchParams.get('locationId') || url.searchParams.getAll('locationIds')[0]).toBe(
+        'suburb:34',
+      );
+      expect(url.searchParams.has('province')).toBe(false);
+      expect(url.searchParams.has('city')).toBe(false);
+      expect(url.searchParams.has('propertyType')).toBe(false);
+      expect(url.searchParams.has('maxPrice')).toBe(false);
+    },
+  );
   it('keeps a neutral province scope until Buy is explicitly chosen', () => {
     const href = buildProvincialJourneyHref({ journey: 'buy', province });
 
@@ -135,13 +161,13 @@ describe('provincial journey handoff', () => {
     });
   });
 
-  it('does not serialize deferred journeys or unsupported Rent controls', () => {
+  it('uses a specialist Shared Living scope and removes unsupported Rent controls', () => {
     expect(
       buildProvincialJourneyHref({
         journey: 'shared_living',
         province,
       }),
-    ).toBeUndefined();
+    ).toBe('/shared-living?locationId=province%3A1');
 
     const href = buildProvincialJourneyHref({
       journey: 'rent',

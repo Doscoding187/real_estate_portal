@@ -18,6 +18,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
 import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
+import { LandPublicLayout } from './components/land/LandPublicLayout';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -53,6 +54,8 @@ const AgentSettings = lazy(() => import('./pages/AgentSettings'));
 const AgentSetup = lazy(() => import('./pages/AgentSetup'));
 const AgentPackageSelection = lazy(() => import('./pages/agent/AgentPackageSelection'));
 const LandDeferred = lazy(() => import('./pages/LandDeferred'));
+const PlotsAndLand = lazy(() => import('./pages/PlotsAndLand'));
+const LandDetail = lazy(() => import('./pages/LandDetail'));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'));
 const ExploreFeed = lazy(() => import('./pages/ExploreFeed'));
 const ExploreHome = lazy(() => import('./pages/ExploreHome'));
@@ -697,8 +700,16 @@ function Router() {
               return <SearchResults />;
             }}
           />
-          <Route path="/plots-and-land" component={LandDeferred} />
-          <Route path="/land/:slug" component={LandDeferred} />
+          <Route path="/plots-and-land">
+            <LandPublicLayout>
+              <PlotsAndLand />
+            </LandPublicLayout>
+          </Route>
+          <Route path="/land/:slug">
+            <LandPublicLayout>
+              <LandDetail />
+            </LandPublicLayout>
+          </Route>
           <Route path="/property-to-rent" component={SearchResults} />
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
 

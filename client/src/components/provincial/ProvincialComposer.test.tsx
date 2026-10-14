@@ -119,14 +119,27 @@ describe('ProvincialComposer', () => {
     useSearchMock.mockReturnValue('');
   });
 
-  it('keeps the neutral route neutral and does not activate unavailable journeys', () => {
+  it('keeps the route neutral while making all released journey choices available', () => {
     render(<ProvincialComposer config={PROVINCIAL_CONFIGS.gauteng} province={province} />);
 
     expect(screen.queryByTestId('active-journey-state')).not.toBeInTheDocument();
     expect(screen.getByTestId('provincial-primary-cta')).toBeDisabled();
     expect(screen.getByRole('tab', { name: /Buy/i })).not.toBeDisabled();
-    expect(screen.getByRole('tab', { name: /Land & plots/i })).toBeDisabled();
-    expect(screen.getByRole('tab', { name: /Shared Living/i })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Land & plots/i })).toBeEnabled();
+    expect(screen.getByRole('tab', { name: /Shared Living/i })).toBeEnabled();
+    expect(screen.getByRole('tab', { name: /Commercial/i })).toBeEnabled();
+  });
+  it.each([
+    ['land', '/plots-and-land?locationId=province%3A1'],
+    ['commercial', '/commercial?locationIds=province%3A1'],
+    ['shared_living', '/shared-living?locationId=province%3A1'],
+  ])('hands %s to its specialist search without a residential filter', (journey, destination) => {
+    useSearchMock.mockReturnValue(`journey=${journey}&propertyType=house&maxPrice=2000000`);
+    render(<ProvincialComposer config={PROVINCIAL_CONFIGS.gauteng} province={province} />);
+    expect(screen.getByTestId('provincial-primary-cta')).toBeEnabled();
+    expect(screen.queryByLabelText('Property type')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('provincial-primary-cta'));
+    expect(navigate).toHaveBeenLastCalledWith(destination);
   });
 
   it('writes Buy intent to the province URL and preserves canonical location selection', () => {

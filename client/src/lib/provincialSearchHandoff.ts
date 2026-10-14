@@ -13,6 +13,8 @@ import {
 } from '../../../shared/searchScope';
 import { sanitizeBuySearchFilters } from '../../../shared/buySearchContract';
 import type { ProvincialJourneyId } from '../../../shared/provincialDiscovery';
+import { buildConsumerJourneyUrl } from './consumerJourneyRouter';
+import { resolveSharedLivingSearchGeography } from '@shared/sharedLivingSearchContract';
 
 export interface ProvincialJourneyFilters {
   propertyType?: unknown;
@@ -146,6 +148,22 @@ export function buildProvincialJourneyHref(
     return selection.locations.length === 1
       ? buildLocationDiscoveryPath(selection.locations[0])
       : undefined;
+  }
+
+  if (['land', 'commercial', 'shared_living'].includes(input.journey)) {
+    const journey = input.journey as 'land' | 'commercial' | 'shared_living';
+    if (journey === 'shared_living') {
+      const ids = selection.locations.map(location => location.canonicalLocationId || location.id);
+      const geography = resolveSharedLivingSearchGeography(
+        ids.length === 1 ? { locationId: ids[0] } : { locationIds: ids },
+      );
+      if (geography.status !== 'canonical') return undefined;
+    }
+    return buildConsumerJourneyUrl({
+      intent: journey === 'land' ? 'buy' : 'rent',
+      journey,
+      selectedLocations: [...selection.locations],
+    });
   }
 
   if (input.journey !== 'buy' && input.journey !== 'rent' && input.journey !== 'developments') {

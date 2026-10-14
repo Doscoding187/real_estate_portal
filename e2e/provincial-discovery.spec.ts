@@ -318,9 +318,9 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByTestId('provincial-primary-cta')).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Choose journey' })).toBeDisabled();
     await expect(page.getByRole('tab', { name: /^Buy/ })).toHaveAttribute('aria-selected', 'false');
-    await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeDisabled();
-    await expect(page.getByRole('tab', { name: /Commercial/ })).toBeDisabled();
-    await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeDisabled();
+    await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeEnabled();
+    await expect(page.getByRole('tab', { name: /Commercial/ })).toBeEnabled();
+    await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeEnabled();
     await expect(page.getByTestId('provincial-billboard')).toHaveCount(0);
 
     await capture(page, 'neutral-gauteng-1440.png');
