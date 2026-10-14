@@ -977,3 +977,16 @@
     transition: none !important;
   }
 }
+
+.as-single-property {
+  justify-content: center;
+}
+.as-one-area {
+  grid-template-columns: 1fr;
+}
+.as-one-area .as-area-picker {
+  display: none;
+}
+.as-one-area .as-area-feature {
+  min-height: 0;
+}
