@@ -55,6 +55,7 @@ import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { requireUser } from './_core/requireUser';
 import { resolveOperatingIdentity } from './_core/identityResolver';
 import { composeResidentialHomeFeedItems } from './services/homeFeedComposition';
+import { hasHomePropertyPhoto } from '../shared/homePropertyPhoto';
 import { validatePersistedSubmissionReadiness } from './services/developmentSubmissionReadiness';
 import { buildDevelopmentHomeInventory } from './services/developmentInventorySummary';
 import { buildDevelopmentHomeAttention } from './services/developmentHomeAttention';
@@ -131,7 +132,8 @@ async function assertDeveloperMediaScope(input: {
   }
 
   const dbConn = await db.getDb();
-  if (!dbConn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable.' });
+  if (!dbConn)
+    throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable.' });
   const [development] = await dbConn
     .select({ id: developments.id })
     .from(developments)
@@ -143,7 +145,10 @@ async function assertDeveloperMediaScope(input: {
     )
     .limit(1);
   if (!development) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found for this Developer organisation.' });
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Development not found for this Developer organisation.',
+    });
   }
 
   if (input.unitId !== null) {
@@ -153,7 +158,10 @@ async function assertDeveloperMediaScope(input: {
       .where(and(eq(unitTypes.id, input.unitId), eq(unitTypes.developmentId, input.developmentId)))
       .limit(1);
     if (!unit) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'Unit type does not belong to this development.' });
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Unit type does not belong to this development.',
+      });
     }
   }
 }
@@ -873,6 +881,7 @@ export const developerRouter = router({
         yardSize?: number | null;
         unitSize?: number | null;
         parkingCount?: number | null;
+        parkingType?: string | null;
         propertyType?: string | null;
         developmentName?: string | null;
         developmentKey?: string | null;
@@ -1104,6 +1113,8 @@ export const developerRouter = router({
         bathrooms: Number(item.bathrooms || 0) || null,
         unitSize: Number(item.floorSize || 0) || null,
         yardSize: Number(item.erfSize || 0) || null,
+        parkingCount: typeof item.parkingCount === 'number' ? item.parkingCount : null,
+        parkingType: item.parkingType || null,
         propertyType: item.propertyType || null,
         developmentName: String(item.development?.name || '').trim() || null,
         developmentKey:
@@ -1140,7 +1151,7 @@ export const developerRouter = router({
             1,
             poolLimit,
             undefined,
-            { publicOnly: true },
+            { publicOnly: true, requirePhoto: true },
           ),
           developmentDerivedListingService.searchListings(
             {
@@ -1148,6 +1159,9 @@ export const developerRouter = router({
               city: locationFilter.city,
               suburb: locationFilter.suburb ? [locationFilter.suburb] : undefined,
               listingType,
+              propertyType: ['house', 'apartment', 'townhouse'],
+              requireUnitPhoto: true,
+              requireAvailableStock: true,
             },
             'date_desc',
             1,
@@ -1158,10 +1172,12 @@ export const developerRouter = router({
         const listingCardsById = new Map(
           (listingResults.cards || []).map(card => [String(card.id), card]),
         );
-        const listingItems = (listingResults.properties || []).map(prop =>
-          mapListing(prop, listingCardsById.get(String(prop.id))),
-        );
-        const developmentUnitItems = (derivedDevelopmentListings.items || []).map(mapUnitListing);
+        const listingItems = (listingResults.properties || [])
+          .map(prop => mapListing(prop, listingCardsById.get(String(prop.id))))
+          .filter(item => hasHomePropertyPhoto(item.image));
+        const developmentUnitItems = (derivedDevelopmentListings.items || [])
+          .map(mapUnitListing)
+          .filter(item => hasHomePropertyPhoto(item.image));
         const { items, source } = composeResidentialHomeFeedItems(
           listingItems,
           developmentUnitItems,

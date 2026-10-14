@@ -50,6 +50,7 @@ import { PUBLIC_PROPERTY_QUERY_BATCH_SIZE } from './approvedPublicPropertyServic
 import { buildManualPropertyCardHighlights } from '../../shared/listing-highlight-registry';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { normalizeRentalTerms } from '../../shared/rental-terms-contract';
+import { hasHomePropertyPhoto } from '../../shared/homePropertyPhoto';
 import {
   buildPublicPropertyParkingFact,
   buildPublicRentalEssentials,
@@ -65,6 +66,8 @@ type LoadSheddingSolution = Property['loadSheddingSolutions'][number];
 export interface PropertySearchOptions {
   /** Apply the canonical approved source-listing public contract. */
   publicOnly?: boolean;
+  /** Require approved photo media before public pagination (homepage rail). */
+  requirePhoto?: boolean;
   /** One request uses the same validated graph for scope membership and labels. */
   placeProjection?: CanonicalPlaceSearchProjection;
   /** Fresh province membership is checked against filtered inventory assignments. */
@@ -412,6 +415,9 @@ export class PropertySearchService {
     queryBoundary?: PublicSearchQueryBoundary,
     options: PropertySearchOptions = {},
   ): Promise<SearchResults> {
+    if (options.requirePhoto && !options.publicOnly) {
+      throw new Error('Photo eligibility requires the approved public-property contract');
+    }
     if (
       (filters.canonicalPlaceIds !== undefined || options.provincePlaceId) &&
       (queryBoundary ||
@@ -632,7 +638,14 @@ export class PropertySearchService {
       const eligibleIds = candidateRows
         .filter(row => !row.canonicalPlaceId || placeLabels.has(row.canonicalPlaceId))
         .map(row => Number(row.id))
-        .filter(propertyId => publicResolutionById.has(propertyId));
+        .filter(propertyId => {
+          const resolution = publicResolutionById.get(propertyId);
+          return (
+            resolution &&
+            (!options.requirePhoto ||
+              resolution.images.some(image => hasHomePropertyPhoto(image.url || image.imageUrl)))
+          );
+        });
       total = eligibleIds.length;
       eligiblePageIds = eligibleIds.slice(offset, offset + pageSize);
     } else {
@@ -753,11 +766,15 @@ export class PropertySearchService {
     const propertyIds = results.map((p: any) => Number(p.id));
     const images = options.publicOnly
       ? propertyIds.flatMap(propertyId =>
-          (publicResolutionById.get(propertyId)?.images || []).map(image => ({
-            propertyId,
-            imageUrl: image.imageUrl || image.url,
-            isPrimary: image.isPrimary,
-          })),
+          (publicResolutionById.get(propertyId)?.images || [])
+            .filter(
+              image => !options.requirePhoto || hasHomePropertyPhoto(image.url || image.imageUrl),
+            )
+            .map(image => ({
+              propertyId,
+              imageUrl: image.imageUrl || image.url,
+              isPrimary: image.isPrimary,
+            })),
         )
       : propertyIds.length > 0
         ? await db

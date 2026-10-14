@@ -17,6 +17,8 @@ export interface SimpleHomeListingCardProps {
   image?: string | null;
   href: string;
   price: number | null;
+  pricePrefix?: 'From';
+  onImageUnavailable?: () => void;
   bedrooms?: number | null;
   bathrooms?: number | null;
   area?: number | null;
@@ -39,6 +41,8 @@ export function SimpleHomeListingCard({
   image,
   href,
   price,
+  pricePrefix,
+  onImageUnavailable,
   bedrooms,
   bathrooms,
   area,
@@ -82,14 +86,23 @@ export function SimpleHomeListingCard({
             </div>
           )}
 
-          {resolvedImage && (
-            <FallbackImage
-              src={resolvedImage}
-              alt={title}
-              loading="lazy"
-              className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-          )}
+          {resolvedImage &&
+            (onImageUnavailable ? (
+              <img
+                src={resolvedImage}
+                alt={title}
+                loading="lazy"
+                onError={onImageUnavailable}
+                className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            ) : (
+              <FallbackImage
+                src={resolvedImage}
+                alt={title}
+                loading="lazy"
+                className="absolute inset-0 z-10 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            ))}
 
           <div className="absolute left-2.5 top-2.5 z-20">
             <span className="rounded-full bg-white/95 px-2.5 py-1 text-[9px] font-semibold text-slate-700 shadow-sm">
@@ -100,6 +113,7 @@ export function SimpleHomeListingCard({
 
         <div className="p-4">
           <div className="mb-2 text-lg font-bold text-[#1e1b4b] sm:text-xl">
+            {pricePrefix && price !== null && price > 0 ? `${pricePrefix} ` : ''}
             {withRentalPeriod(priceLabel, listingType)}
           </div>
 
