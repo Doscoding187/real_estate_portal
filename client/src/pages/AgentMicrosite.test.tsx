@@ -24,7 +24,8 @@ const { profileResult, inventoryResult, trackMutate, createLeadMutate } = vi.hoi
   createLeadMutate: vi.fn(),
 }));
 
-vi.mock('wouter', () => ({
+vi.mock('wouter', async original => ({
+  ...(await original<typeof import('wouter')>()),
   useRoute: (pattern: string) =>
     pattern === '/agents/:slug' ? [true, { slug: 'jane-agent' }] : [false, null],
 }));
@@ -76,9 +77,7 @@ const baseProfile = {
   socialLinks: null,
   licenseNumber: null,
   yearsExperience: 12,
-  areasServed: [
-    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
-  ],
+  areasServed: [{ canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' }],
   languages: 'English',
   isVerified: 1,
   agency: { name: 'Northline Realty' },
@@ -245,10 +244,95 @@ describe('AgentMicrosite public web presence', () => {
 
     const section = screen.getByTestId('inventory-section');
     expect(section.textContent).toContain('Bryanston Family Home');
-    const card = screen.getByTestId('inventory-card') as HTMLAnchorElement;
-    expect(card.getAttribute('href')).toBe('/property/7');
+    const card = screen.getByTestId('inventory-card');
+    expect(
+      within(card)
+        .getByRole('link', { name: 'View property: Bryanston Family Home' })
+        .getAttribute('href'),
+    ).toBe('/property/7');
   });
 
+  it('uses the shared public card with approved location, sizes and identity', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: [
+        {
+          id: 7,
+          title: 'Bryanston Family Home',
+          listingType: 'sale',
+          price: 2500000,
+          bedrooms: 4,
+          bathrooms: 2,
+          internalAreaM2: 140,
+          erfSizeM2: 600,
+          mainImage: '/test/property.jpg',
+          images: [{ url: '/test/property.jpg' }],
+          publicIdentity: { role: 'agent', provenance: 'agent', name: 'Jane Agent' },
+          detailPresentation: {
+            location: { label: 'Bryanston, Sandton, Gauteng' },
+            media: { photoCount: 12 },
+          },
+        },
+      ],
+    };
+    render(<AgentMicrosite />);
+    const card = screen.getByTestId('inventory-card');
+    expect(card.querySelector('article')).not.toBeNull();
+    expect(within(card).getByLabelText('Internal area 140 square metres')).toBeInTheDocument();
+    expect(card.textContent).toContain('600m²');
+    expect(card.textContent).toContain('4 beds');
+    expect(card.textContent).toContain('2 baths');
+    expect(card.textContent).toContain('Bryanston, Sandton, Gauteng');
+    expect(card.textContent).toContain('Jane Agent');
+    expect(card.textContent).not.toContain('South Africa');
+    fireEvent.click(
+      within(card).getByRole('link', { name: 'View property: Bryanston Family Home' }),
+    );
+    expect(trackMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: 'agent_profile_listing_click',
+        properties: expect.objectContaining({ propertyId: 7, agentId: 42 }),
+      }),
+    );
+  });
+  it('retains rental price and tenancy semantics in the shared card', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: [
+        {
+          id: 9,
+          title: 'Rental Apartment',
+          listingType: 'rent',
+          price: 12000,
+          bedrooms: 2,
+          bathrooms: 1,
+          internalAreaM2: 70,
+          city: 'Sandton',
+          images: [],
+        },
+      ],
+    };
+    render(<AgentMicrosite />);
+    expect(screen.getByTestId('inventory-card').textContent).toContain('/ month');
+    expect(screen.getByTestId('inventory-card').textContent).toContain('Parking to confirm');
+  });
+  it('does not override an explicit pricing contract with a loose public price', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: [
+        {
+          id: 9,
+          title: 'Rental Apartment',
+          listingType: 'rent',
+          price: 12000,
+          pricingContract: { version: 1, intent: 'rent', deposit: { status: 'unknown' } },
+        },
+      ],
+    };
+    render(<AgentMicrosite />);
+    expect(screen.getByTestId('inventory-card').textContent).toContain('Price on request');
+    expect(screen.getByTestId('inventory-card').textContent).not.toContain('12,000');
+  });
   it('never emits contact PII in analytics payloads', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
 

@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
+import {
+  ListingResultCard,
+  type ListingResultCardData,
+} from '@/components/property-results/ListingResultCard';
+import { normalizePublicPropertyCard } from '@/lib/property';
+import type { PublicPropertyDetailPresentation } from '@shared/public-property-detail-presentation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
@@ -8,8 +14,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Award,
-  Bath,
-  BedDouble,
   Building2,
   CheckCircle2,
   Facebook,
@@ -44,55 +48,42 @@ interface CanonicalAreaLink {
   url: string | null;
 }
 
-interface InventoryCard {
+interface InventoryCard extends Record<string, unknown> {
   id: number;
   title: string;
-  listingType?: string | null;
-  displayPrice?: unknown;
-  price?: unknown;
-  suburb?: unknown;
-  city?: unknown;
-  bedrooms?: unknown;
-  bathrooms?: unknown;
-  mainImage?: unknown;
-  images?: Array<{ url?: string }> | null;
+  detailPresentation?: PublicPropertyDetailPresentation;
 }
 
-const zarFormat = new Intl.NumberFormat('en-ZA', {
-  style: 'currency',
-  currency: 'ZAR',
-  maximumFractionDigits: 0,
-});
-
-function formatPropertyPrice(card: InventoryCard): string | null {
-  const display = typeof card.displayPrice === 'string' ? card.displayPrice.trim() : '';
-  if (display) return display;
-  const numeric = Number(card.price);
-  return Number.isFinite(numeric) && numeric > 0 ? zarFormat.format(numeric) : null;
-}
-
-function propertyLocationLine(card: InventoryCard): string {
-  return [card.suburb, card.city]
-    .filter(part => typeof part === 'string' && part.trim())
-    .map(part => String(part).trim())
-    .join(', ');
-}
-
-function primaryImageUrl(card: InventoryCard): string | null {
-  if (typeof card.mainImage === 'string' && card.mainImage.trim()) return card.mainImage;
-  return card.images?.find(image => typeof image?.url === 'string' && image.url)?.url || null;
-}
-
-function listingTypeLabel(card: InventoryCard): string | null {
-  const value = String(card.listingType || '').toLowerCase();
-  if (value === 'sale') return 'For Sale';
-  if (value === 'rent') return 'To Rent';
-  return null;
-}
-
-function countLabel(value: unknown): number | null {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+function publicInventoryCardData(card: InventoryCard): ListingResultCardData {
+  // The public inventory DTO exposes one price; the shared normalizer accepts
+  // intent-specific price fields. Embedded pricing contracts retain precedence.
+  const normalized = normalizePublicPropertyCard({
+    ...card,
+    ...(card.listingType === 'rent' ? { monthlyRent: card.price } : { askingPrice: card.price }),
+  });
+  const detail = card.detailPresentation;
+  return {
+    id: normalized.id,
+    href: normalized.href,
+    title: normalized.title,
+    location: detail?.location?.label || normalized.location,
+    price: normalized.price,
+    image: normalized.image,
+    imageCount: detail?.media?.photoCount ?? normalized.imageCount,
+    area: normalized.area,
+    yardSize: normalized.yardSize,
+    bedrooms: normalized.bedrooms,
+    bathrooms: normalized.bathrooms,
+    parking: detail?.heroFacts?.find(fact => fact.key === 'parking'),
+    rentalSnapshot: detail?.rentalEssentials,
+    listingType: normalized.listingType,
+    listingSource: normalized.listingSource,
+    listerType: normalized.listerType,
+    contactRole: normalized.contactRole,
+    identity: normalized.identity,
+    development: normalized.development,
+    propertyId: normalized.propertyId,
+  };
 }
 
 function toAbsoluteUrl(value?: string | null): string | undefined {
@@ -486,81 +477,27 @@ export default function AgentMicrosite() {
                 Current properties represented by {profile.firstName}
               </h2>
               <p className="mt-3 text-slate-600 max-w-2xl">
-                Live mandates from the Property Listify network. Each listing is maintained on the
-                canonical Property Listify marketplace.
+                Browse current listings and open a property to see its full details or send an
+                enquiry.
               </p>
             </div>
 
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleInventory.map(card => {
-                const price = formatPropertyPrice(card);
-                const location = propertyLocationLine(card);
-                const image = primaryImageUrl(card);
-                const beds = countLabel(card.bedrooms);
-                const baths = countLabel(card.bathrooms);
-                const badge = listingTypeLabel(card);
-                return (
-                  <a
-                    key={card.id}
-                    href={`/property/${card.id}`}
-                    onClick={() =>
-                      track(AGENT_PROFILE_EVENTS.listingClick, {
-                        slug: profile.slug,
-                        agentId: profile.id,
-                        propertyId: card.id,
-                      })
-                    }
-                    className="group block"
-                    data-testid="inventory-card"
-                  >
-                    <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100 border border-slate-200 relative">
-                      {image ? (
-                        <img
-                          src={image}
-                          alt={card.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-400">
-                          <Building2 className="h-10 w-10" />
-                        </div>
-                      )}
-                      {badge && (
-                        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#0F4C75] shadow-sm">
-                          {badge}
-                        </span>
-                      )}
-                    </div>
-                    <div className="pt-4">
-                      <h3 className="font-semibold leading-snug group-hover:text-[#0F4C75] transition-colors line-clamp-2">
-                        {card.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500 flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{location || 'South Africa'}</span>
-                      </p>
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        {price && <p className="font-bold text-[#0F4C75]">{price}</p>}
-                        <p className="text-xs text-slate-500 ml-auto flex items-center gap-3">
-                          {beds !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <BedDouble className="h-3.5 w-3.5" />
-                              {beds}
-                            </span>
-                          )}
-                          {baths !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <Bath className="h-3.5 w-3.5" />
-                              {baths}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
+            <div className="space-y-5">
+              {visibleInventory.map(card => (
+                <div key={card.id} data-testid="inventory-card">
+                  <ListingResultCard
+                    data={{
+                      ...publicInventoryCardData(card),
+                      onOpen: () =>
+                        track(AGENT_PROFILE_EVENTS.listingClick, {
+                          slug: profile.slug,
+                          agentId: profile.id,
+                          propertyId: card.id,
+                        }),
+                    }}
+                  />
+                </div>
+              ))}
             </div>
 
             {inventory.length > INVENTORY_PREVIEW_COUNT && !showAllInventory && (
