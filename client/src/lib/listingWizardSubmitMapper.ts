@@ -10,6 +10,7 @@ import {
 import { buildPricingContract } from '../../../shared/pricing-contract';
 import { buildCanonicalListingLocationPayload } from '../../../shared/canonicalListingLocation';
 import { buildPropertyPresentationForMedia } from '../../../shared/property-presentation';
+import { normalizeWizardPhotoOrder } from './listingPhotoOrder';
 import {
   createDefaultRentalTerms,
   normalizeRentalTerms,
@@ -228,11 +229,10 @@ export const buildListingWizardSubmitPayload = (
   state: ListingWizardSubmitState,
 ): ListingWizardSubmitPayload => {
   const pricing = normalizePricingForSubmit(state.pricing, state.action);
-  const mediaIds = state.media.map(getMediaId);
-  const media = buildTypedMediaManifest(state.media);
-  const mainMediaId =
-    state.mainMediaId?.toString() ||
-    (state.media.length > 0 ? getMediaId(state.media[0]) : undefined);
+  const ordered = normalizeWizardPhotoOrder(state.media);
+  const mediaIds = ordered.media.map(getMediaId);
+  const media = buildTypedMediaManifest(ordered.media);
+  const mainMediaId = ordered.mainMediaId;
 
   return {
     action: state.action!,
