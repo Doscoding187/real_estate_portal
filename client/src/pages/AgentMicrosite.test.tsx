@@ -186,8 +186,11 @@ describe('AgentMicrosite public web presence', () => {
 
     const heroActions = screen.getByTestId('hero-contact-actions');
     const whatsapp = heroActions.querySelector('a[href*="wa.me"]') as HTMLAnchorElement;
-    const call = heroActions.querySelector('a[href^="tel:"]') as HTMLAnchorElement;
-    const email = heroActions.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
+    const contactActions = screen.getByTestId('contact-actions');
+    const call = contactActions.querySelector('a[href^="tel:"]') as HTMLAnchorElement;
+    const email = contactActions.querySelector('a[href^="mailto:"]') as HTMLAnchorElement;
+    expect(heroActions.querySelector('a[href^="tel:"]')).toBeNull();
+    expect(heroActions.querySelector('a[href^="mailto:"]')).toBeNull();
 
     expect(whatsapp.getAttribute('href')).toContain('wa.me/27820000000');
     expect(call.getAttribute('href')).toBe('tel:082 000 0000');
@@ -242,7 +245,7 @@ describe('AgentMicrosite public web presence', () => {
 
     render(<AgentMicrosite />);
 
-    expect(screen.getByRole('heading', { name: 'Where Jane works' })).toBeDefined();
+    expect(screen.getByRole('heading', { name: 'Areas I work in' })).toBeDefined();
     expect(screen.getByTestId('primary-area-section').textContent).toContain(
       'Bryanston, Sandton, Gauteng',
     );
@@ -526,6 +529,22 @@ describe('AgentMicrosite public web presence', () => {
         limit: 6,
       }),
     );
+  });
+
+  it('retains the cover photo when a rental filter has no results', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    inventoryResult.current = {
+      data: [
+        { id: 1, title: 'House', listingType: 'sale', mainImage: '/property.jpg', images: [] },
+      ],
+    };
+    const { container } = render(<AgentMicrosite />);
+    const image = container.querySelector('.as-hero-image');
+    expect(image).not.toBeNull();
+    const source = image!.getAttribute('src');
+    fireEvent.click(screen.getByRole('button', { name: 'To rent' }));
+    expect(container.querySelector('.as-hero-image')?.getAttribute('src')).toBe(source);
+    expect(screen.getByText('No current properties match these filters.')).toBeDefined();
   });
 
   it('omits the inventory module entirely when the agent has no public mandates', () => {
