@@ -1,11 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryBuilder } from 'drizzle-orm/mysql-core';
-const { resolve, getDb } = vi.hoisted(() => ({ resolve: vi.fn(), getDb: vi.fn() }));
+const { resolve, getDb, projection } = vi.hoisted(() => ({
+  resolve: vi.fn(),
+  getDb: vi.fn(),
+  projection: vi.fn(),
+}));
 vi.mock('../services/publicPropertyEligibilityService', () => ({
   resolvePublicPropertyEligibilities: resolve,
 }));
+vi.mock('../services/canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: projection,
+  canonicalPlaceSearchMembers: (execution: { placeId: string }) => [execution.placeId],
+}));
 vi.mock('../db', () => ({ getDb }));
-import { pagePublicInventoryForAgent } from '../services/agentPublicProfileService';
+import {
+  pagePublicInventoryForAgent,
+  listPublicInventoryLocationsForAgent,
+} from '../services/agentPublicProfileService';
 import { agentRouter } from '../agentRouter';
 import { properties } from '../../drizzle/schema';
 
@@ -17,6 +28,7 @@ function publicResolution(id: number) {
       listingType: 'sale',
       price: 1000000,
       propertyType: 'house',
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
     },
     images: [],
     media: [],
@@ -72,6 +84,12 @@ const defaults = { limit: 12, sort: 'newest' as const };
 describe('agent public inventory pages', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projection.mockImplementation(async (_db: unknown, options: { placeIds: string[] }) => ({
+      executions: new Map(options.placeIds.map(id => [id, { placeId: id, scope: 'locality' }])),
+      labels: new Map(
+        options.placeIds.map(id => [id, { label: 'Sandton, Johannesburg, Gauteng' }]),
+      ),
+    }));
     resolve.mockImplementation(
       async (ids: number[]) => new Map(ids.map(id => [id, publicResolution(id)])),
     );
@@ -106,10 +124,11 @@ describe('agent public inventory pages', () => {
     const { db, conditions } = candidateDb([9]);
     await pagePublicInventoryForAgent(db, 42, {
       ...defaults,
-      canonicalLocationId: 'suburb:11',
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       listingType: 'rent',
     });
-    expect(conditions[0]).toContain('`properties`.`suburbId` = ?');
+    expect(conditions[0]).toContain('`properties`.`canonical_place_id` in (?)');
+    expect(conditions[0]).not.toContain('`properties`.`suburbId`');
     expect(conditions[0]).toContain('`properties`.`listingType` = ?');
     expect(conditions[0]).toContain('`properties`.`agentId` = ? or `listings`.`agentId` = ?');
   });
@@ -133,6 +152,34 @@ describe('agent public inventory pages', () => {
     expect(limits).toHaveLength(10);
     expect(page.nextCursor).toBe(201);
   });
+  it('derives location choices only from eligible public inventory and authoritative labels', async () => {
+    resolve.mockImplementation(
+      async (ids: number[]) =>
+        new Map(ids.filter(id => id === 7).map(id => [id, publicResolution(id)])),
+    );
+    const { db } = candidateDb([7, 8]);
+    expect(await listPublicInventoryLocationsForAgent(db, 42)).toEqual([
+      {
+        canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+        label: 'Sandton, Johannesburg, Gauteng',
+      },
+    ]);
+    expect(projection).toHaveBeenCalledWith(db, {
+      placeIds: ['pl-place-01-dee61758ef3bda7cd1a258ad'],
+    });
+  });
+  it('refuses a place without an executable scope instead of widening to display text', async () => {
+    projection.mockResolvedValue({ executions: new Map(), labels: new Map() });
+    const { db, conditions } = candidateDb([7]);
+    expect(
+      await pagePublicInventoryForAgent(db, 42, {
+        ...defaults,
+        canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      }),
+    ).toEqual({ items: [], nextCursor: null });
+    expect(conditions).toEqual([]);
+    expect(resolve).not.toHaveBeenCalled();
+  });
   it('returns no inventory for an unavailable agent and rejects mixed/display geography inputs', async () => {
     const query: any = {};
     for (const name of ['select', 'from', 'where']) query[name] = () => query;
@@ -143,12 +190,12 @@ describe('agent public inventory pages', () => {
       caller.getPublicInventoryPageForAgent({ slug: 'unavailable-agent' }),
     ).resolves.toEqual({ items: [], nextCursor: null });
     await expect(
-      caller.getPublicInventoryPageForAgent({ slug: 'jane-agent', canonicalLocationId: 'Sandton' }),
+      caller.getPublicInventoryPageForAgent({ slug: 'jane-agent', canonicalPlaceId: 'Sandton' }),
     ).rejects.toThrow();
     await expect(
       caller.getPublicInventoryPageForAgent({
         slug: 'jane-agent',
-        canonicalLocationId: 'suburb:11',
+        canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
         city: 'Sandton',
       } as never),
     ).rejects.toThrow();

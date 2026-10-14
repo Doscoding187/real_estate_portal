@@ -130,11 +130,16 @@ export default function AgentMicrosite() {
       limit: allProperties ? 12 : 6,
       cursor,
       listingType: intent === 'all' ? undefined : intent,
-      canonicalLocationId: inventoryArea || undefined,
+      canonicalPlaceId: inventoryArea || undefined,
       sort,
     },
     { enabled: !!slug && !!profile, retry: false },
   );
+  const inventoryLocationsQuery = trpc.agent.getPublicInventoryLocationsForAgent.useQuery(
+    { slug },
+    { enabled: !!slug && !!profile, retry: false, staleTime: 60_000 },
+  );
+  const inventoryLocations = inventoryLocationsQuery.data || [];
   const inventory = (inventoryQuery.data?.items || []) as InventoryCard[];
   const displayedInventory =
     !allProperties && inventoryQuery.data?.nextCursor != null && inventory.length >= 6
@@ -551,7 +556,7 @@ export default function AgentMicrosite() {
                 ))}
               </div>
               <div className="as-selects">
-                {areas.length > 0 && (
+                {inventoryLocations.length > 0 && (
                   <label>
                     <span className="sr-only">Filter properties by area</span>
                     <select
@@ -563,13 +568,11 @@ export default function AgentMicrosite() {
                       }}
                     >
                       <option value="">All areas</option>
-                      {areas
-                        .filter(area => area.type)
-                        .map(area => (
-                          <option key={area.canonicalLocationId} value={area.canonicalLocationId}>
-                            {area.name}
-                          </option>
-                        ))}
+                      {inventoryLocations.map(location => (
+                        <option key={location.canonicalPlaceId} value={location.canonicalPlaceId}>
+                          {location.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 )}

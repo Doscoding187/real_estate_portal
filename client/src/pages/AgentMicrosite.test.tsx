@@ -57,12 +57,22 @@ vi.mock('@/lib/trpc', () => ({
       getPublicProfileBySlug: {
         useQuery: (_input: unknown, _options: unknown) => profileResult.current,
       },
+      getPublicInventoryLocationsForAgent: {
+        useQuery: () => ({
+          data: [
+            {
+              canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+              label: 'Sandton, Johannesburg, Gauteng',
+            },
+          ],
+        }),
+      },
       getPublicInventoryPageForAgent: {
         useQuery: (
           input: {
             limit: number;
             listingType?: string;
-            canonicalLocationId?: string;
+            canonicalPlaceId?: string;
             cursor?: number;
           },
           _options: unknown,
@@ -508,10 +518,13 @@ describe('AgentMicrosite public web presence', () => {
     inventoryResult.current = { data: [{ id: 1, title: 'Home', listingType: 'sale' }] };
     render(<AgentMicrosite />);
     fireEvent.change(screen.getByLabelText('Filter properties by area'), {
-      target: { value: 'suburb:11' },
+      target: { value: 'pl-place-01-dee61758ef3bda7cd1a258ad' },
     });
     expect(inventoryInputs[inventoryInputs.length - 1]).toEqual(
-      expect.objectContaining({ canonicalLocationId: 'suburb:11', limit: 6 }),
+      expect.objectContaining({
+        canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+        limit: 6,
+      }),
     );
   });
 
