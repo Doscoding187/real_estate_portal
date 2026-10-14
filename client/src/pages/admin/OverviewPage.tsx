@@ -135,9 +135,10 @@ const OverviewPage: React.FC = () => {
             ) : hasActions ? (
               <>
                 {(actions?.pendingAgentApprovals || 0) > 0 && (
-                  <div
-                    onClick={() => setLocation('/admin/approvals')}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/admin/approvals?tab=agents')}
+                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-amber-500" />
@@ -146,12 +147,13 @@ const OverviewPage: React.FC = () => {
                       </span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </div>
+                  </button>
                 )}
                 {(actions?.pendingListingApprovals || 0) > 0 && (
-                  <div
-                    onClick={() => setLocation('/admin/approvals')}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/admin/approvals?tab=listings')}
+                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-amber-500" />
@@ -160,12 +162,13 @@ const OverviewPage: React.FC = () => {
                       </span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </div>
+                  </button>
                 )}
                 {(actions?.pendingDevelopmentApprovals || 0) > 0 && (
-                  <div
-                    onClick={() => setLocation('/admin/approvals')}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/admin/approvals?tab=developments')}
+                    className="w-full text-left flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100 hover:bg-slate-100 cursor-pointer transition-all group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-2 w-2 rounded-full bg-amber-500" />
@@ -174,7 +177,7 @@ const OverviewPage: React.FC = () => {
                       </span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-600 transition-colors" />
-                  </div>
+                  </button>
                 )}
               </>
             ) : (

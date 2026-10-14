@@ -7,7 +7,11 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
-import { ADMIN_NAV_GROUPS, getAdminNavGroupForPath } from '@/pages/admin/adminRouteRegistry';
+import {
+  ADMIN_NAV_GROUPS,
+  getAdminNavGroupForPath,
+  getAdminNavItemForPath,
+} from '@/pages/admin/adminRouteRegistry';
 
 const SidebarNavigation: React.FC = () => {
   const [location, setLocation] = useLocation();
@@ -38,7 +42,7 @@ const SidebarNavigation: React.FC = () => {
             <AccordionContent className="pt-1 pb-2">
               <div className="flex flex-col gap-1 ml-4 border-l border-primary/20 pl-4 mt-1">
                 {group.items.map(item => {
-                  const isActive = location === item.path || location.startsWith(`${item.path}/`);
+                  const isActive = getAdminNavItemForPath(location) === item.path;
                   return (
                     <button
                       key={item.label}
