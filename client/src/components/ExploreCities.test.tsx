@@ -101,7 +101,7 @@ describe('Guide discovery presentation', () => {
     const image = screen.getByRole('img', { name: 'AI-generated city scene of Johannesburg' });
     expect(image).toHaveAttribute('srcset', expect.stringContaining('960.webp 960w'));
     expect(image).toHaveAttribute('loading', 'lazy');
-    expect(screen.getByText('AI city illustration')).toBeInTheDocument();
+    expect(screen.getByText('City scenes are AI illustrations.')).toBeInTheDocument();
     expect(screen.queryByText('24 Properties')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'View All Locations' })).not.toBeInTheDocument();
   });
@@ -168,6 +168,6 @@ describe('Guide discovery presentation', () => {
       'href',
       '/gauteng/johannesburg',
     );
-    expect(screen.getByText('City guide')).toBeInTheDocument();
+    expect(screen.getByText('City scenes are AI illustrations.')).toBeInTheDocument();
   });
 });

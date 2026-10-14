@@ -39,12 +39,12 @@ function CityScene({ city }: { city: CityGuideLocation }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [artwork?.thumbnail]);
   return (
-    <div className="relative aspect-video overflow-hidden bg-slate-100">
+    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
       {artwork && !failed ? (
         <img
           src={artwork.thumbnail}
           srcSet={artwork.srcSet}
-          sizes="(min-width: 1280px) 300px, (min-width: 640px) 45vw, 78vw"
+          sizes="64px"
           alt={`AI-generated city scene of ${city.name}`}
           width={480}
           height={270}
@@ -58,9 +58,6 @@ function CityScene({ city }: { city: CityGuideLocation }) {
           <Building className="h-10 w-10 text-blue-600" aria-hidden="true" />
         </div>
       )}
-      <span className="absolute bottom-2 left-2 rounded-md bg-slate-950/80 px-2 py-1 text-[10px] font-semibold text-white">
-        {artwork && !failed ? artwork.label : 'City guide'}
-      </span>
     </div>
   );
 }
@@ -89,6 +86,9 @@ export function ExploreCities({
     (guideCards
       ? 'Get to know the neighbourhoods, local insights and property opportunities in our city guides.'
       : 'Use local guides to explore areas, listings and neighbourhood insights.');
+  const gridClassName = guideCards
+    ? 'home-card-grid scrollbar-hide -mx-4 grid grid-flow-col grid-rows-3 auto-cols-[78vw] snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-2 sm:grid-rows-none sm:overflow-visible sm:px-0 lg:grid-cols-4'
+    : 'home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4';
   const cityHref = (city: CityGuideLocation) => {
     if (basePath === '/property-for-sale' || basePath === '/property-to-rent') {
       const params = new URLSearchParams(queryParams.replace(/^[?&]/, ''));
@@ -113,13 +113,9 @@ export function ExploreCities({
           {guideCards && <ProvinceGuideBrowser />}
         </div>
         {requestState?.isLoading ? (
-          <div
-            role="status"
-            aria-label="Loading city guides"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {[0, 1, 2, 3].map(index => (
-              <Skeleton key={index} className="h-64 rounded-xl" />
+          <div role="status" aria-label="Loading city guides" className={gridClassName}>
+            {Array.from({ length: initialLimit }, (_, index) => (
+              <Skeleton key={index} className="h-[104px] rounded-xl" />
             ))}
           </div>
         ) : requestState?.isError ? (
@@ -142,21 +138,21 @@ export function ExploreCities({
           </div>
         ) : displayedCities.length ? (
           <>
-            <div className="home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+            <div className={gridClassName}>
               {displayedCities.map(city => (
                 <Link
                   key={`${city.provinceSlug}/${city.slug}`}
                   href={cityHref(city)}
-                  className={`group flex-none snap-start rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2774AE] ${guideCards ? 'w-[78vw] max-w-[300px] overflow-hidden border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md sm:w-auto sm:max-w-none' : 'w-[75vw] max-w-[236px] sm:w-auto'}`}
+                  className={`group flex-none snap-start rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2774AE] ${guideCards ? 'min-w-0 transition-colors hover:bg-slate-50' : 'w-[75vw] max-w-[236px] sm:w-auto'}`}
                 >
-                  {guideCards && <CityScene city={city} />}
                   <div
                     className={
                       guideCards
-                        ? 'p-4'
+                        ? 'flex h-full items-start gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:gap-4 sm:border-transparent sm:bg-transparent'
                         : 'flex h-full items-start gap-3 rounded-xl border border-slate-200 p-3 sm:gap-4 sm:border-transparent sm:hover:bg-slate-50'
                     }
                   >
+                    {guideCards && <CityScene city={city} />}
                     {!guideCards && (
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-600 sm:h-16 sm:w-16">
                         <Building className="h-6 w-6 sm:h-8 sm:w-8" aria-hidden="true" />
@@ -174,7 +170,7 @@ export function ExploreCities({
                         {city.province}
                       </p>
                       {guideCards && (
-                        <span className="mt-3 flex min-h-[28px] items-center justify-between gap-2 text-sm font-semibold text-[#2774AE]">
+                        <span className="mt-1.5 inline-flex min-h-[24px] items-center gap-1.5 text-xs font-semibold text-[#2774AE]">
                           Explore guide{' '}
                           <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
                         </span>
@@ -184,6 +180,9 @@ export function ExploreCities({
                 </Link>
               ))}
             </div>
+            {guideCards && (
+              <p className="mt-3 text-xs text-slate-500">City scenes are AI illustrations.</p>
+            )}
             {remainingCount > 0 && (
               <div className="mt-5 flex justify-center">
                 <Button

@@ -51,7 +51,7 @@ export function HomeMobileView({
           basePath=""
           withinContentRail
           guideCards
-          initialLimit={4}
+          initialLimit={12}
           requestState={cityGuidesState}
         />
         <HomeMarketInsightsSection />
