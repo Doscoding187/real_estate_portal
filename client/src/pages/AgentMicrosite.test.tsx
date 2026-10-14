@@ -246,7 +246,7 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
 
     expect(screen.getByRole('heading', { name: 'Areas I work in' })).toBeDefined();
-    expect(screen.getByRole('article', {name:'Bryanston, Sandton, Gauteng'})).toBeDefined();
+    expect(screen.getByRole('article', { name: 'Bryanston, Sandton, Gauteng' })).toBeDefined();
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
