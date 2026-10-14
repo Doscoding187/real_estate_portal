@@ -115,10 +115,7 @@ export default function AgentMicrosite() {
     areas.find(area => area.type === 'suburb' && area.url) ||
     areas.find(area => area.url) ||
     areas[0];
-  const [selectedAreaId, setSelectedAreaId] = useState('');
   const [showAllAreas, setShowAllAreas] = useState(false);
-  const selectedArea =
-    areas.find(area => area.canonicalLocationId === selectedAreaId) || primaryArea;
   const [intent, setIntent] = useState<'all' | 'sale' | 'rent'>('all');
   const [inventoryArea, setInventoryArea] = useState('');
   const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
@@ -180,7 +177,6 @@ export default function AgentMicrosite() {
     setSort('newest');
     setCursor(undefined);
     setPreviousCursors([]);
-    setSelectedAreaId('');
     setShowAllAreas(false);
     setMobileNavigationOpen(false);
     setIsEnquiryDialogOpen(false);
@@ -266,7 +262,8 @@ export default function AgentMicrosite() {
   const areaGuide = (area: CanonicalAreaLink) =>
     area.url ? (
       <a
-        className="as-button as-primary"
+        className="as-area-guide-action"
+        aria-label={`Explore guide for ${area.name}`}
         data-testid="area-guide-link"
         href={area.url}
         onClick={() =>
@@ -278,7 +275,7 @@ export default function AgentMicrosite() {
           })
         }
       >
-        Explore the area guide <ArrowRight size={17} />
+        Explore this area <ArrowRight size={14} />
       </a>
     ) : null;
   const whatsapp = (className = 'as-button as-whatsapp') =>
@@ -671,30 +668,35 @@ export default function AgentMicrosite() {
         {!allProperties && areas.length > 0 && (
           <section id="areas" className="as-area-section" data-testid="areas-section">
             <div className="as-area-layout">
-              <div className="as-area-intro">
+              <div className="as-area-intro" data-testid="area-guides-intro">
                 <p className="as-eyebrow">Local expertise</p>
                 <h2>Areas I work in</h2>
                 <p>
                   Explore {firstName}'s service areas and their local guides before your next move.
                 </p>
+                <a className="as-button as-primary as-all-area-guides" href="/tools/area-guides">
+                  Explore all area guides <ArrowRight size={16} />
+                </a>
               </div>
-              <div className="as-area-picker" role="group" aria-label="Choose a service area">
+              <div className="as-area-picker" role="group" aria-label="Service area guides">
                 {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
-                  <button
+                  <article
                     key={area.canonicalLocationId}
-                    className={`as-area-option ${selectedArea?.canonicalLocationId === area.canonicalLocationId ? 'is-selected' : ''}`}
-                    aria-pressed={selectedArea?.canonicalLocationId === area.canonicalLocationId}
-                    onClick={() => setSelectedAreaId(area.canonicalLocationId)}
+                    className="as-area-option"
+                    data-testid="area-guide-card"
+                    aria-label={area.name}
                   >
-                    <MapPin size={18} />
-                    <span>
-                      <strong>{area.name.split(',')[0]}</strong>
-                      <small>
-                        {area.name.split(',').slice(1).join(',').trim() || 'Service area'}
-                      </small>
-                    </span>
-                    <ChevronRight size={16} />
-                  </button>
+                    <MapPin size={18} aria-hidden="true" />
+                    <div className="as-area-card-body">
+                      <h3>{area.name.split(',')[0]}</h3>
+                      <p>{area.name.split(',').slice(1).join(',').trim() || 'Service area'}</p>
+                      {area.url ? (
+                        areaGuide(area)
+                      ) : (
+                        <p className="as-area-guide-unavailable">Guide not available yet</p>
+                      )}
+                    </div>
+                  </article>
                 ))}
                 {areas.length > 4 && (
                   <button
@@ -705,18 +707,6 @@ export default function AgentMicrosite() {
                   </button>
                 )}
               </div>
-              {selectedArea && (
-                <div className="as-area-feature" data-testid="primary-area-section">
-                  <p>
-                    <strong>{selectedArea.name}</strong>
-                    <br />
-                    {selectedArea.url
-                      ? 'Discover the community through its local guide.'
-                      : `${firstName} lists this as a service area. Get in touch to discuss property here.`}
-                  </p>
-                  {areaGuide(selectedArea)}
-                </div>
-              )}
             </div>
           </section>
         )}

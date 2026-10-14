@@ -246,9 +246,7 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
 
     expect(screen.getByRole('heading', { name: 'Areas I work in' })).toBeDefined();
-    expect(screen.getByTestId('primary-area-section').textContent).toContain(
-      'Bryanston, Sandton, Gauteng',
-    );
+    expect(screen.getByRole('article', {name:'Bryanston, Sandton, Gauteng'})).toBeDefined();
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
@@ -422,16 +420,22 @@ describe('AgentMicrosite public web presence', () => {
     expect(screen.queryByText('25 properties')).toBeNull();
   });
 
-  it('switches service areas without inventing a guide for an unresolved area', () => {
+  it('places the all-guides action with the intro and each individual guide inside its own card', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
     render(<AgentMicrosite />);
-    fireEvent.click(screen.getByRole('button', { name: /Fourways/ }));
-    expect(screen.getByTestId('primary-area-section').textContent).toContain('Fourways');
-    expect(screen.queryByTestId('area-guide-link')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /Bryanston/ }));
-    expect(screen.getByTestId('area-guide-link').getAttribute('href')).toBe(
-      '/gauteng/sandton/bryanston',
-    );
+    const intro = screen.getByTestId('area-guides-intro');
+    expect(
+      within(intro).getByRole('link', { name: 'Explore all area guides' }).getAttribute('href'),
+    ).toBe('/tools/area-guides');
+    const bryanston = screen.getByRole('article', { name: 'Bryanston, Sandton, Gauteng' });
+    expect(
+      within(bryanston)
+        .getByRole('link', { name: 'Explore guide for Bryanston, Sandton, Gauteng' })
+        .getAttribute('href'),
+    ).toBe('/gauteng/sandton/bryanston');
+    const fourways = screen.getByRole('article', { name: 'Fourways, Sandton, Gauteng' });
+    expect(within(fourways).queryByRole('link')).toBeNull();
+    expect(within(fourways).getByText('Guide not available yet')).toBeDefined();
   });
 
   it('filters rentals in the showcase without affecting area guide selection', () => {
@@ -446,7 +450,7 @@ describe('AgentMicrosite public web presence', () => {
     fireEvent.click(screen.getByRole('button', { name: 'To rent' }));
     expect(screen.getAllByTestId('inventory-card')).toHaveLength(1);
     expect(screen.getByTestId('inventory-card').textContent).toContain('Rental Flat');
-    expect(screen.getByTestId('primary-area-section').textContent).toContain('Bryanston');
+    expect(screen.getByTestId('areas-section').textContent).toContain('Bryanston');
   });
 
   it('hides missing biography and professional details instead of exposing filler', () => {
@@ -483,10 +487,13 @@ describe('AgentMicrosite public web presence', () => {
       isError: false,
     };
     render(<AgentMicrosite />);
-    expect(screen.queryByRole('button', { name: /Area 7/ })).toBeNull();
+    expect(screen.queryByRole('article', { name: /Area 7/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'See all 7 areas' }));
-    fireEvent.click(screen.getByRole('button', { name: /Area 7/ }));
-    expect(screen.getByTestId('area-guide-link').getAttribute('href')).toBe('/gauteng/area-7');
+    expect(
+      within(screen.getByRole('article', { name: 'Area 7, Gauteng' }))
+        .getByRole('link')
+        .getAttribute('href'),
+    ).toBe('/gauteng/area-7');
   });
 
   it('pages the full inventory and resets the cursor when transaction filters change', () => {

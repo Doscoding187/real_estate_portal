@@ -476,7 +476,7 @@
   gap: 24px 36px;
   align-items: start;
 }
-.as-area-intro > p:last-child {
+.as-area-intro > p:not(.as-eyebrow) {
   margin-top: 18px;
   font-size: 13px;
   color: var(--as-muted);
@@ -512,31 +512,20 @@
   color: #376b65;
   margin: 0;
 }
-.as-area-option > span {
+.as-area-card-body {
   display: block;
-  padding: 13px 11px 23px;
+  padding: 13px 11px 12px;
 }
-.as-area-option strong {
+.as-area-card-body h3 {
   display: block;
   font-size: 13px;
 }
-.as-area-option small {
+.as-area-card-body > p {
   display: block;
   font-size: 10px;
   line-height: 1.4;
   margin-top: 5px;
   color: var(--as-muted);
-}
-.as-area-option > svg:last-child {
-  position: absolute;
-  bottom: 8px;
-  right: 10px;
-  width: 13px;
-  height: 13px;
-}
-.as-area-option.is-selected {
-  border-color: #739b90;
-  box-shadow: 0 3px 9px #173e4210;
 }
 .as-more-areas {
   grid-column: 1/-1;
@@ -547,27 +536,33 @@
   min-height: 44px;
   justify-self: start;
 }
-.as-area-feature {
-  grid-column: 2;
-  display: flex;
-  padding: 18px 0 0;
-  border-top: 1px solid #d8e3dc;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-.as-area-feature > p {
-  max-width: 400px;
-  font-size: 13px;
-  color: var(--as-muted);
-}
-.as-area-feature strong {
-  color: var(--as-ink);
-}
-.as-area-feature .as-button {
-  margin: 0;
-  flex: none;
+.as-all-area-guides {
+  margin-top: 22px;
   font-size: 12px;
+}
+.as-area-card-body h3 {
+  margin: 0;
+  color: var(--as-ink);
+  font-family: inherit;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.as-area-guide-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 8px;
+  color: var(--as-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+.as-area-guide-action:hover {
+  text-decoration: underline;
+}
+.as-area-guide-unavailable {
+  padding-top: 9px;
 }
 .as-about {
   display: grid;
@@ -989,12 +984,6 @@
   .as-area-option > svg:first-child {
     height: 108px;
     padding: 34px;
-  }
-  .as-area-feature {
-    grid-column: 1;
-    flex-direction: column;
-    align-items: start;
-    gap: 14px;
   }
   .as-area-intro h2 {
     font-size: 30px;
