@@ -49,6 +49,20 @@ const openDay = () =>
   fireEvent.click(screen.getByRole('button', { name: /15 October 2026, 1 viewing$/ }));
 
 describe('showings calendar interaction', () => {
+  it('opens the selected date directly from an overview appointment link', () => {
+    render(<ShowingsCalendar initialDate={new Date(2026, 9, 15)} />);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Sandton house')).toBeInTheDocument();
+    expect(within(dialog).getByText('Edward Test')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Complete', exact: true })).toBeEnabled();
+  });
+  it('opens the booking form from the overview add-appointment shortcut', () => {
+    render(<ShowingsCalendar initialDate={new Date(2026, 9, 15)} initialBookingOpen />);
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Book Showing' })).toBeInTheDocument();
+    expect(dialog.querySelector('input[type="datetime-local"]')).toHaveValue('2026-10-15T09:00');
+    expect(bookingMutation).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 14, 10));

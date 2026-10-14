@@ -17,6 +17,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
+import { calendarDateFromSearch } from '@/lib/agentCalendar';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
 import { toast } from 'sonner';
 
@@ -144,7 +145,8 @@ function leadWorkspaceHref(leadId: number) {
 
 export default function AgentProductivity() {
   const [, setLocation] = useLocation();
-  const activeTab = productivityTabFromSearch(useSearch());
+  const search = useSearch();
+  const activeTab = productivityTabFromSearch(search);
   const setActiveTab = useCallback(
     (tab: string) => {
       setLocation(`/agent/productivity?tab=${tab}`, { replace: true });
@@ -374,7 +376,7 @@ export default function AgentProductivity() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-              <Card className={agentPageStyles.statCard}>
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
@@ -393,7 +395,7 @@ export default function AgentProductivity() {
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
@@ -414,7 +416,7 @@ export default function AgentProductivity() {
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
@@ -433,7 +435,7 @@ export default function AgentProductivity() {
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
                 <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
@@ -536,7 +538,11 @@ export default function AgentProductivity() {
               </TabsContent>
 
               <TabsContent value="calendar">
-                <ShowingsCalendar />
+                <ShowingsCalendar
+                  key={search}
+                  initialDate={calendarDateFromSearch(search)}
+                  initialBookingOpen={new URLSearchParams(search).get('book') === '1'}
+                />
               </TabsContent>
 
               <TabsContent value="showings" className="space-y-4">

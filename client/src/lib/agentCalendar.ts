@@ -38,3 +38,15 @@ export function calendarDateRange(currentDate: Date, view: CalendarViewMode) {
   end.setHours(23, 59, 59, 999);
   return { start: start.toISOString(), end: end.toISOString() };
 }
+
+export function calendarDateFromSearch(search: string): Date | null {
+  const value = new URLSearchParams(search).get('date');
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return calendarDayKey(date) === value ? date : null;
+}
+
+export function calendarDayHref(date: Date): string {
+  return `/agent/productivity?tab=calendar&date=${calendarDayKey(date)}`;
+}

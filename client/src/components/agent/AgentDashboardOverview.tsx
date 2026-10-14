@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { calendarTimestamp, calendarDayHref, calendarDateRange } from '@/lib/agentCalendar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
@@ -72,6 +73,7 @@ type ListingItem = {
 
 type AuthoredListingItem = {
   id: number;
+  city?: string | null;
   title: string;
   status: string;
   createdAt?: string | Date;
@@ -82,6 +84,7 @@ type ShowingItem = {
   id: number;
   listingId?: number | null;
   visitorName?: string | null;
+  leadId?: number | null;
   status: string;
   scheduledAt?: string | Date;
 };
@@ -180,7 +183,7 @@ function formatPropertyType(value: string | null | undefined): string {
 }
 
 function getScheduleTime(showing: ShowingItem): Date | null {
-  return toDate(showing.scheduledAt);
+  return calendarTimestamp(showing.scheduledAt);
 }
 
 function getLeadStage(status: string): PipelineStage {
@@ -382,14 +385,8 @@ export function AgentDashboardOverview({
     );
 
   const calendarRange = useMemo(() => {
-    return {
-      startDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
-        .toISOString()
-        .split('T')[0],
-      endDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0)
-        .toISOString()
-        .split('T')[0],
-    };
+    const range = calendarDateRange(calendarMonth, 'month');
+    return { startDate: range.start, endDate: range.end };
   }, [calendarMonth]);
 
   const { data: showingsData = [] } = trpc.agent.getMyShowings.useQuery(
@@ -483,11 +480,6 @@ export function AgentDashboardOverview({
           (toDate(left.updatedAt ?? left.createdAt)?.getTime() || 0),
       )[0] || null,
     [draftListings],
-  );
-
-  const listingsById = useMemo(
-    () => new Map(activeListings.map(listing => [listing.id, listing])),
-    [activeListings],
   );
 
   const listingsTableRows = useMemo(() => {
@@ -1019,9 +1011,17 @@ export function AgentDashboardOverview({
                   const Icon = metric.icon;
 
                   return (
-                    <div
+                    <Link
+                      href={
+                        metric.label === 'Appointments Today'
+                          ? calendarDayHref(today)
+                          : metric.label === 'Unread Alerts'
+                            ? '/agent/productivity?tab=reminders'
+                            : '/agent/listings'
+                      }
+                      aria-label={`Open ${metric.label.toLowerCase()}`}
                       key={metric.label}
-                      className="grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 py-[11px]"
+                      className="grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 rounded-md py-[11px] transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -1059,7 +1059,7 @@ export function AgentDashboardOverview({
                           {metric.status}
                         </Badge>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -1092,7 +1092,9 @@ export function AgentDashboardOverview({
 
               <div className="mt-4 grid gap-[6px] md:grid-cols-5">
                 {PIPELINE_CONFIG.map(stage => (
-                  <div
+                  <Link
+                    href="/agent/leads"
+                    aria-label={`Open CRM for ${stage.label.toLowerCase()} leads`}
                     key={stage.key}
                     className={cn(
                       'rounded-[9px] border px-3 py-[9px] transition duration-200 hover:-translate-y-0.5 hover:shadow-soft',
@@ -1110,7 +1112,7 @@ export function AgentDashboardOverview({
                         {pipeline[stage.key].length}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
@@ -1127,7 +1129,12 @@ export function AgentDashboardOverview({
                         .toUpperCase();
 
                       return (
-                        <div key={lead.id} className="flex items-center gap-3 py-[9px]">
+                        <Link
+                          href={`/agent/leads?leadId=${lead.id}`}
+                          aria-label={`Open lead for ${lead.name}`}
+                          key={lead.id}
+                          className="flex items-center gap-3 rounded-lg py-[9px] transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
                           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#5a9bd6] to-[var(--primary)] text-[10px] font-semibold text-white shadow-[0_8px_24px_rgba(0,92,168,0.2)]">
                             {initials}
                           </span>
@@ -1154,7 +1161,7 @@ export function AgentDashboardOverview({
                             {PIPELINE_CONFIG.find(item => item.key === stage)?.label ||
                               formatStatus(lead.status)}
                           </Badge>
-                        </div>
+                        </Link>
                       );
                     })}
 
@@ -1250,9 +1257,12 @@ export function AgentDashboardOverview({
                                   )}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                  <Link
+                                    href={`/property/${listing.id}`}
+                                    className="block truncate text-sm font-semibold text-slate-900 hover:text-primary hover:underline"
+                                  >
                                     {listing.title}
-                                  </p>
+                                  </Link>
                                   <p className="truncate text-xs text-slate-500">{listing.city}</p>
                                 </div>
                               </div>
@@ -1376,7 +1386,7 @@ export function AgentDashboardOverview({
                   }
                   description={
                     needsProfileCompletion
-                    ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
+                      ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
                       : journeyAction.description
                   }
                   actionLabel={
@@ -1509,11 +1519,17 @@ export function AgentDashboardOverview({
                     selectedDayShowings.map(showing => {
                       const scheduled = getScheduleTime(showing);
                       const listing = showing.listingId
-                        ? listingsById.get(showing.listingId)
+                        ? authoredListings.find(listing => listing.id === showing.listingId)
                         : undefined;
 
                       return (
-                        <div
+                        <Link
+                          href={
+                            scheduled
+                              ? calendarDayHref(scheduled)
+                              : '/agent/productivity?tab=calendar'
+                          }
+                          aria-label={`Open viewing for ${listing?.title || `viewing ${showing.id}`}`}
                           key={showing.id}
                           className={cn(
                             'flex items-start gap-3 rounded-[9px] border px-3 py-[10px]',
@@ -1544,7 +1560,9 @@ export function AgentDashboardOverview({
                               {listing?.title || `Viewing #${showing.id}`}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-slate-500">
-                              {showing.visitorName || 'Prospective client'}
+                              {allLeads.find(lead => lead.id === showing.leadId)?.name ||
+                                showing.visitorName ||
+                                'Prospective client'}
                             </p>
                             {listing?.city && (
                               <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
@@ -1562,7 +1580,7 @@ export function AgentDashboardOverview({
                           >
                             {formatStatus(showing.status)}
                           </Badge>
-                        </div>
+                        </Link>
                       );
                     })
                   ) : (
@@ -1582,11 +1600,17 @@ export function AgentDashboardOverview({
                     upcomingShowings.map(showing => {
                       const scheduled = getScheduleTime(showing);
                       const listing = showing.listingId
-                        ? listingsById.get(showing.listingId)
+                        ? authoredListings.find(listing => listing.id === showing.listingId)
                         : undefined;
 
                       return (
-                        <div
+                        <Link
+                          href={
+                            scheduled
+                              ? calendarDayHref(scheduled)
+                              : '/agent/productivity?tab=calendar'
+                          }
+                          aria-label={`Open upcoming viewing for ${listing?.title || `viewing ${showing.id}`}`}
                           key={`upcoming-${showing.id}`}
                           className="flex items-center gap-3 rounded-[9px] border border-slate-200 bg-slate-50/80 px-3 py-[9px]"
                         >
@@ -1615,7 +1639,7 @@ export function AgentDashboardOverview({
                                 : 'Time to be confirmed'}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })
                   ) : (
@@ -1629,7 +1653,7 @@ export function AgentDashboardOverview({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setLocation('/agent/productivity')}
+                onClick={() => setLocation('/agent/productivity?tab=calendar&book=1')}
                 className="mt-3 h-10 w-full rounded-[9px] border-dashed border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-transparent text-[12px] font-medium text-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]"
               >
                 <CalendarPlus className="mr-2 h-4 w-4" />
