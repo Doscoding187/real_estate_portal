@@ -41,6 +41,10 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { normalizePlaceQuery, PLACE_NAME_NORMALIZATION_VERSION } from '../../shared/placeAuthority.ts';
+import {
+  nonGeographicSourceCodes,
+  PLACE_SOURCE_GEOGRAPHY_POLICY,
+} from '../../shared/placeSourceGeographyEligibility.ts';
 
 import {
   loadPlaceAdmissionTerritoryRegistry,
@@ -599,7 +603,8 @@ for (const group of groups) {
   const licensing = licensingOf(group.members);
   const { type, alternatives } = chooseType(group.members, primary);
   const verificationStatus = verificationOf(group.members, licensing);
-  const searchScope = D1_SCOPE_BY_TYPE[type] ?? null;
+  const nonGeographicCodes = nonGeographicSourceCodes(group.members);
+  const searchScope = nonGeographicCodes.length ? null : D1_SCOPE_BY_TYPE[type] ?? null;
 
   // A container is administrative context, never a searchable scope (D1).
   const searchEligible = verificationStatus !== 'candidate' && searchScope != null ? 1 : 0;
@@ -625,6 +630,13 @@ for (const group of groups) {
     search_eligible: searchEligible,
     search_scope: searchScope,
     licensing_classification: licensing,
+    ...(nonGeographicCodes.length ? {
+      search_eligibility_refusal: {
+        policy: PLACE_SOURCE_GEOGRAPHY_POLICY,
+        reason: 'source_classifies_a_facility_or_spot_feature_without_independent_geographic_area_evidence',
+        source_feature_codes: nonGeographicCodes,
+      },
+    } : {}),
     // Provenance back to the source identities that were adjudicated into this
     // Place. The Place is the identity; these are the evidence anchors.
     primary_source_identity_id: primary.canonical_location_id,
@@ -1277,7 +1289,7 @@ const assertInvariant = (condition, message) => { if (!condition) problems.push(
   // No municipality may be re-typed as a city or town to occupy the metro tier.
   for (const row of placeRows) {
     assertInvariant(
-      row.place_type !== 'city' && row.place_type !== 'town'
+      row.search_scope == null || (row.place_type !== 'city' && row.place_type !== 'town')
         ? true
         : row.scope_establishment?.evidenced_scoped_ancestors?.includes('province') === true,
       `a metro_city scope must be backed by an evidenced province context: ${row.place_id}`,
@@ -1337,6 +1349,11 @@ for (const row of placeRows) {
   assertInvariant(
     row.lifecycle_status !== 'retired' || (row.publication_eligible === 0 && row.search_eligible === 0),
     'retired Places carry no eligibility',
+  );
+  assertInvariant(
+    !row.search_eligibility_refusal ||
+      (row.search_scope == null && row.search_eligible === 0 && row.publication_eligible === 0),
+    'non-geographic source evidence cannot authorize a search scope',
   );
   if (row.search_scope != null) {
     assertInvariant(row.search_eligible === 1 && row.lifecycle_status === 'active', 'scope requires an active searchable Place');
@@ -1549,6 +1566,7 @@ const manifest = {
     one_containment_parent_per_place: true,
     search_scope_authorization_in_slice_2: 0,
     place_id_allocation: 'assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity',
+    source_geography_eligibility: PLACE_SOURCE_GEOGRAPHY_POLICY,
   },
   counts: {
     source_identities: identities.length,

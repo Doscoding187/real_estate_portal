@@ -17,7 +17,7 @@ export function legalRuntimeGrantPlan(root = process.cwd()) {
   const manifest = loadAndValidateMigrationManifest({
     migrationsDirectory: resolve(root, 'server/migrations'),
   });
-  if (manifest.document.expectedHead !== '0114_user_legal_acceptances.sql')
+  if (manifest.document.expectedHead !== '0115_non_geographic_place_search_eligibility.sql')
     throw new Error('B15 grant preparation head changed; review the next authority');
   const full = buildIsolatedCiGrantPlan({
     tables: ['legal_releases', 'legal_active_release', 'user_legal_acceptances'],

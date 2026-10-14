@@ -22,9 +22,9 @@ import { loadAndValidateMigrationManifest } from '../../migrations/migrationMani
 import { acquireMigrationLock } from '../../migrations/runSqlMigrations';
 
 const DATABASE = 'propertylistify_database';
-const HEAD = '0114_user_legal_acceptances.sql';
+const HEAD = '0115_non_geographic_place_search_eligibility.sql';
 const MODEL_DIGEST = '65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721';
-const MANIFEST_DIGEST = '7c5a7c8f514ea9be21ec668a9953a7de428ecf5719b746876ef64aae78b0dc9c';
+const MANIFEST_DIGEST = 'd8de4ef20bb2e9f8ddf1ae366320c85a12c0a1d12b1d60c6283c644c481a2ba1';
 const fingerprint = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -46,7 +46,7 @@ export function legalRuntimeGrantExecutionPlan(root = process.cwd()) {
     database: delta.database,
     identity: delta.identity,
     expectedHead: HEAD,
-    expectedMigrationCount: 115,
+    expectedMigrationCount: 116,
     expectedModelDigest: MODEL_DIGEST,
     manifestDigest: MANIFEST_DIGEST,
     previousGrantDigest: delta.previousGrantDigest,
@@ -208,7 +208,7 @@ export async function applyLegalRuntimeGrants(input: {
   if (
     manifest.document.expectedHead !== HEAD ||
     manifest.manifestDigest !== MANIFEST_DIGEST ||
-    manifest.orderedMigrations.length !== 115 ||
+    manifest.orderedMigrations.length !== 116 ||
     desired.digest !== MODEL_DIGEST
   ) {
     throw new Error('Legal runtime grant refused: accepted schema source changed.');

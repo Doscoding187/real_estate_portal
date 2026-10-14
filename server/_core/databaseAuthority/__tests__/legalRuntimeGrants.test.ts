@@ -60,7 +60,7 @@ describe('canonical legal runtime grant release', () => {
     expect(plan.statements.filter(statement => statement.includes('INSERT'))).toEqual([
       expect.stringContaining('`user_legal_acceptances`'),
     ]);
-    expect(plan.expectedHead).toBe('0114_user_legal_acceptances.sql');
+    expect(plan.expectedHead).toBe('0115_non_geographic_place_search_eligibility.sql');
   });
 
   it.each([
