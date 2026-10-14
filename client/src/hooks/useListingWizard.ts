@@ -35,11 +35,8 @@ import {
   buildCanonicalListingLocationPayload,
   canonicalListingLocationEvidenceIssues,
 } from '../../../shared/canonicalListingLocation';
-import {
-  getPrimaryListingImage,
-  isCompletedListingImage,
-  normalizeListingMediaPrimary,
-} from '../../../shared/listing-media';
+import { getPrimaryListingImage, isCompletedListingImage } from '../../../shared/listing-media';
+import { normalizeWizardPhotoOrder } from '@/lib/listingPhotoOrder';
 import { trpc } from '@/lib/trpc';
 import { useLocation } from 'wouter';
 
@@ -566,14 +563,7 @@ export const useListingWizardStore = create<ListingWizardStore>()(
       // Step 5: Media
       addMedia: media => {
         const currentMedia = get().media;
-        const normalized = normalizeListingMediaPrimary(
-          [...currentMedia, { ...media, displayOrder: currentMedia.length }],
-          get().mainMediaId,
-        );
-        set({
-          media: normalized.media as MediaFile[],
-          mainMediaId: normalized.primaryId,
-        });
+        set(normalizeWizardPhotoOrder([...currentMedia, media]));
       },
 
       removeMedia: index => {
@@ -584,19 +574,26 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           ...m,
           displayOrder: i,
         }));
-        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
-        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
+        set(normalizeWizardPhotoOrder(reorderedMedia));
       },
 
       updateMedia: (index, updates) => {
         const currentMedia = get().media;
         const newMedia = currentMedia.map((m, i) => (i === index ? { ...m, ...updates } : m));
-        const normalized = normalizeListingMediaPrimary(newMedia, get().mainMediaId);
-        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
+        set(normalizeWizardPhotoOrder(newMedia));
       },
 
       reorderMedia: (fromIndex, toIndex) => {
         const currentMedia = get().media;
+        if (
+          !Number.isInteger(fromIndex) ||
+          !Number.isInteger(toIndex) ||
+          fromIndex < 0 ||
+          toIndex < 0 ||
+          fromIndex >= currentMedia.length ||
+          toIndex >= currentMedia.length
+        )
+          return;
         const newMedia = [...currentMedia];
         const [removed] = newMedia.splice(fromIndex, 1);
         newMedia.splice(toIndex, 0, removed);
@@ -607,13 +604,11 @@ export const useListingWizardStore = create<ListingWizardStore>()(
           displayOrder: i,
         }));
 
-        const normalized = normalizeListingMediaPrimary(reorderedMedia, get().mainMediaId);
-        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
+        set(normalizeWizardPhotoOrder(reorderedMedia));
       },
 
       setMedia: media => {
-        const normalized = normalizeListingMediaPrimary(media, get().mainMediaId);
-        set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
+        set(normalizeWizardPhotoOrder(media));
       },
 
       setMainMedia: mediaId => {
@@ -621,9 +616,8 @@ export const useListingWizardStore = create<ListingWizardStore>()(
         const mainMedia = media.find(m => m.id === mediaId);
 
         if (mainMedia && isCompletedListingImage(mainMedia)) {
-          // Update all media to mark only one as primary
-          const normalized = normalizeListingMediaPrimary(media, mediaId);
-          set({ media: normalized.media as MediaFile[], mainMediaId: normalized.primaryId });
+          // Existing listing loaders can retain their saved cover by putting it first.
+          set(normalizeWizardPhotoOrder([mainMedia, ...media.filter(m => m.id !== mediaId)]));
         }
       },
 
@@ -834,5 +828,9 @@ export async function hydrateListingWizardForUser(userId: number | null): Promis
     useListingWizardStore.setState(emptyPrivateDraft(userId));
     suppressListingWizardPersistence = false;
     window.localStorage.removeItem(LISTING_WIZARD_STORAGE_KEY);
+  } else if (useListingWizardStore.getState().media.length > 0) {
+    useListingWizardStore.setState(
+      normalizeWizardPhotoOrder(useListingWizardStore.getState().media),
+    );
   }
 }
