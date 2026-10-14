@@ -28,6 +28,8 @@ export interface InventoryListing {
   id: number;
   listingId: number | null;
   title: string;
+  action?: string | null;
+  listingType?: string | null;
   address?: string | null;
   city?: string | null;
   suburb?: string | null;
@@ -106,6 +108,7 @@ export function AgentListingInventoryCard({
   ].join(', ');
   const image = withApiBase(listing.primaryImage);
   const price = Number(listing.price);
+  const isRental = listing.action === 'rent' || listing.listingType === 'rent';
   const reasons = rejectionMessages(listing);
   const grid = view === 'grid';
   return (
@@ -207,6 +210,9 @@ export function AgentListingInventoryCard({
         >
           <p className="whitespace-nowrap text-base font-semibold text-slate-900">
             {Number.isFinite(price) && price > 0 ? formatCurrency(price) : 'Price not set'}
+            {isRental && price > 0 && (
+              <span className="ml-1 text-xs font-normal text-slate-500">/ month</span>
+            )}
           </p>
           <div className="space-y-1">
             <Badge className={cn('border font-medium hover:bg-inherit', badge.style)}>
