@@ -1,0 +1,82 @@
+[
+  {
+    "province": "gauteng",
+    "commit": "60a7383cc",
+    "source": "client/public/province_hero_assets/gauteng-hero-desktop.png",
+    "sourceSha256": "bc4c4fde3d0486e16124c10ed77a4c9071ebb4c39bb43a4336dd585f3df27ba2",
+    "file": "gauteng-desktop.webp",
+    "bytes": 97480
+  },
+  {
+    "province": "western-cape",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/western-cape-hero.png",
+    "sourceSha256": "7d9a0517470cd40d62afac173c5eb9b526511466d54b2a0404236cba686847e9",
+    "file": "western-cape-desktop.webp",
+    "bytes": 109456
+  },
+  {
+    "province": "kwazulu-natal",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/kwazulu-natal-hero.png",
+    "sourceSha256": "d0d3fbfde662733a0b3486ed2dfd1364f125d4fd5155b527aee10dc9c0503983",
+    "file": "kwazulu-natal-desktop.webp",
+    "bytes": 130812
+  },
+  {
+    "province": "eastern-cape",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/eastern-cape-hero.png",
+    "sourceSha256": "228d97dc5a66ee8d6e67a2556594ce7024a7f5dd562d32db1d0b28078dc4944c",
+    "file": "eastern-cape-desktop.webp",
+    "bytes": 99066
+  },
+  {
+    "province": "mpumalanga",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/mpumalanga-hero.png",
+    "sourceSha256": "54fae9505623f6f28debc5f045f8f87538314123404a13021cfab89e75cb26f6",
+    "file": "mpumalanga-desktop.webp",
+    "bytes": 90666
+  },
+  {
+    "province": "limpopo",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/limpopo-hero.png",
+    "sourceSha256": "0f04212c048b96981691ea58c4e8b06dc28ed7b839627438ac69ff3bbe87ffeb",
+    "file": "limpopo-desktop.webp",
+    "bytes": 121682
+  },
+  {
+    "province": "north-west",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/north-west-hero.png",
+    "sourceSha256": "28da3ec14f00932e51fe6791b905ae309bdf6de86357677e53db5b4060161b5b",
+    "file": "north-west-desktop.webp",
+    "bytes": 122096
+  },
+  {
+    "province": "free-state",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/free-state-hero.png",
+    "sourceSha256": "f91791b11013f3aea0c813078780984d4df4c00641ba5a18e07b913e2aee392d",
+    "file": "free-state-desktop.webp",
+    "bytes": 114232
+  },
+  {
+    "province": "northern-cape",
+    "commit": "0e274577e",
+    "source": "client/public/province_hero_assets/northern-cape-hero.png",
+    "sourceSha256": "97374ad09f9d9d4c7ee00d92e0ca0093aa1524c989b4f5211ace583f316301d7",
+    "file": "northern-cape-desktop.webp",
+    "bytes": 91428
+  },
+  {
+    "province": "gauteng",
+    "commit": "60a7383cc",
+    "source": "client/public/province_hero_assets/gauteng-hero-mobile.png",
+    "sourceSha256": "9876db04102ad1d5f95f37fd7da564c4453f9e5e7402ac531d9d6c829edfb30e",
+    "file": "gauteng-mobile.webp",
+    "bytes": 61140
+  }
+]

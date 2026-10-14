@@ -352,19 +352,19 @@ export function ProvincialComposer({
     !(activeJourney?.id === 'explore' && selectedLocations.length > 1);
   const locationHelper =
     selectedLocations.length > 1
-      ? 'Explicit OR: these locations stay separate in the results.'
+      ? 'Results will include any of your selected areas.'
       : selectedLocations.length === 1
-        ? 'Canonical location preserved for your next journey.'
+        ? 'Your selected area will stay with your search.'
         : hasValidScope
           ? 'Or keep the whole province selected.'
-          : 'Province-wide search is unavailable until canonical geography is configured.';
+          : 'Province-wide search is unavailable here. Choose a city or suburb to continue.';
 
   return (
     <section className="provincial-composer" aria-labelledby="provincial-composer-title">
       <div className="provincial-composer__topline">
         <div>
-          <p className="provincial-eyebrow">Choose your next move</p>
-          <h2 id="provincial-composer-title">Start with intent, then refine the place.</h2>
+          <p className="provincial-eyebrow">Find your place</p>
+          <h2 id="provincial-composer-title">What would you like to explore?</h2>
         </div>
         {activeJourney ? (
           <span className="provincial-composer__state" data-testid="active-journey-state">
