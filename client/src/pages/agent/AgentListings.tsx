@@ -201,6 +201,7 @@ export default function AgentListings() {
     listingId: listing.id,
     publicPropertyId: null,
     title: listing.title,
+    action: listing.action,
     address: listing.address,
     city: listing.city,
     suburb: listing.suburb,
