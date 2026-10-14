@@ -3,8 +3,8 @@ import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight, MapPin, ChevronDown, Building } from 'lucide-react';
-import { getCityGuideImage } from '@/lib/cityGuideImages';
-import { ProvinceGuideBrowser } from '@/components/location/ProvinceGuideBrowser';
+import { getCityGuideImage, getProvinceGuideImage } from '@/lib/cityGuideImages';
+import { HOME_PROVINCE_OPTIONS } from '@/lib/homeProvinceOptions';
 
 export interface CityGuideLocation {
   name: string;
@@ -21,6 +21,11 @@ export interface CityGuideRequestState {
   isFetching?: boolean;
   onRetry: () => void;
 }
+export interface CityGuideProvinceSelection {
+  name: string;
+  slug: string;
+  onChange: (province: string) => void;
+}
 interface ExploreCitiesProps {
   provinceSlug?: string;
   title?: string;
@@ -32,25 +37,42 @@ interface ExploreCitiesProps {
   withinContentRail?: boolean;
   guideCards?: boolean;
   requestState?: CityGuideRequestState;
+  selectedGuideProvince?: string;
+  onGuideProvinceChange?: (province: string) => void;
 }
 
 function CityScene({ city }: { city: CityGuideLocation }) {
-  const artwork = getCityGuideImage(city.provinceSlug, city.slug);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [artwork?.thumbnail]);
+  const candidates = [
+    getCityGuideImage(city.provinceSlug, city.slug),
+    getProvinceGuideImage(city.provinceSlug),
+    {
+      thumbnail:
+        '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg',
+      srcSet: undefined,
+      scope: 'general',
+      alt: 'City guide illustration',
+    },
+  ].filter(
+    (image, index, images) =>
+      image && images.findIndex(other => other?.thumbnail === image.thumbnail) === index,
+  );
+  const [failedCount, setFailedCount] = useState(0);
+  useEffect(() => setFailedCount(0), [city.provinceSlug, city.slug]);
+  const artwork = candidates[failedCount];
   return (
     <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-      {artwork && !failed ? (
+      {artwork ? (
         <img
           src={artwork.thumbnail}
           srcSet={artwork.srcSet}
           sizes="64px"
-          alt={`AI-generated city scene of ${city.name}`}
+          alt={artwork.alt || `AI-generated city scene of ${city.name}`}
+          data-image-scope={artwork.scope}
           width={480}
           height={270}
           loading="lazy"
           decoding="async"
-          onError={() => setFailed(true)}
+          onError={() => setFailedCount(count => count + 1)}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
         />
       ) : (
@@ -73,8 +95,11 @@ export function ExploreCities({
   withinContentRail = false,
   guideCards = false,
   requestState,
+  selectedGuideProvince,
+  onGuideProvinceChange,
 }: ExploreCitiesProps = {}) {
   const [visibleCount, setVisibleCount] = useState(initialLimit);
+  useEffect(() => setVisibleCount(initialLimit), [provinceSlug, initialLimit]);
   const allCities = (customLocations ?? []).filter(
     city => !provinceSlug || city.provinceSlug === provinceSlug,
   );
@@ -86,8 +111,11 @@ export function ExploreCities({
     (guideCards
       ? 'Get to know the neighbourhoods, local insights and property opportunities in our city guides.'
       : 'Use local guides to explore areas, listings and neighbourhood insights.');
+  const mobileRows = ['grid-rows-1', 'grid-rows-2', 'grid-rows-3'][
+    Math.min(3, displayedCities.length || initialLimit) - 1
+  ];
   const gridClassName = guideCards
-    ? 'home-card-grid scrollbar-hide -mx-4 grid grid-flow-col grid-rows-3 auto-cols-[78vw] snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-2 sm:grid-rows-none sm:overflow-visible sm:px-0 lg:grid-cols-4'
+    ? `home-card-grid scrollbar-hide -mx-4 grid grid-flow-col ${mobileRows} auto-cols-[78vw] snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-2 sm:grid-rows-none sm:overflow-visible sm:px-0 lg:grid-cols-4`
     : 'home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4';
   const cityHref = (city: CityGuideLocation) => {
     if (basePath === '/property-for-sale' || basePath === '/property-to-rent') {
@@ -110,8 +138,28 @@ export function ExploreCities({
               {displayDescription}
             </p>
           </div>
-          {guideCards && <ProvinceGuideBrowser />}
         </div>
+        {guideCards && selectedGuideProvince && onGuideProvinceChange && (
+          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div
+              role="group"
+              aria-label="City guide province"
+              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
+            >
+              {HOME_PROVINCE_OPTIONS.map(province => (
+                <button
+                  key={province}
+                  type="button"
+                  aria-pressed={selectedGuideProvince === province}
+                  onClick={() => onGuideProvinceChange(province)}
+                  className={`min-h-[44px] whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${selectedGuideProvince === province ? 'bg-[#2774AE] text-white shadow-sm' : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'}`}
+                >
+                  {province}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {requestState?.isLoading ? (
           <div role="status" aria-label="Loading city guides" className={gridClassName}>
             {Array.from({ length: initialLimit }, (_, index) => (
@@ -125,7 +173,9 @@ export function ExploreCities({
           >
             <h3 className="font-semibold text-slate-900">City guides could not be loaded</h3>
             <p className="mt-2 text-sm text-slate-600">
-              Please try again, or explore the province guides above.
+              {selectedGuideProvince
+                ? 'Choose another province or try again.'
+                : 'Please try again.'}
             </p>
             <Button
               variant="outline"
@@ -181,7 +231,9 @@ export function ExploreCities({
               ))}
             </div>
             {guideCards && (
-              <p className="mt-3 text-xs text-slate-500">City scenes are AI illustrations.</p>
+              <p className="mt-3 text-xs text-slate-500">
+                AI illustrations. Cities without their own cover use a province scene.
+              </p>
             )}
             {remainingCount > 0 && (
               <div className="mt-5 flex justify-center">
@@ -200,11 +252,15 @@ export function ExploreCities({
           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
             <Building className="mx-auto h-8 w-8 text-slate-500" aria-hidden="true" />
             <h3 className="mt-3 font-semibold text-slate-900">
-              {guideCards ? 'No city guides to show yet' : 'No locations to explore here yet'}
+              {guideCards
+                ? selectedGuideProvince
+                  ? `No city guides in ${selectedGuideProvince} yet`
+                  : 'No city guides to show yet'
+                : 'No locations to explore here yet'}
             </h3>
             {guideCards && (
               <p className="mt-2 text-sm text-slate-600">
-                You can still explore cities and areas through the province guides above.
+                Choose another province to explore its city guides.
               </p>
             )}
           </div>

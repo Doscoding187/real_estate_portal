@@ -7,6 +7,7 @@ import { heroCampaigns } from '../drizzle/schema';
 import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { listCityGuides } from './services/cityGuideDiscoveryService';
+import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 /**
  * Location Pages Router
@@ -19,8 +20,16 @@ import { listCityGuides } from './services/cityGuideDiscoveryService';
  */
 export const locationPagesRouter = router({
   getCityGuides: publicProcedure
-    .input(z.object({ limit: z.number().int().min(1).max(24).default(12) }))
-    .query(({ input }) => listCityGuides(input.limit)),
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(24).default(12),
+        provinceSlug: z.string().refine(
+          slug => Object.values(PROVINCIAL_CONFIGS).some(province => province.slug === slug),
+          'Choose a supported province',
+        ).optional(),
+      }),
+    )
+    .query(({ input }) => listCityGuides(input.limit, input.provinceSlug)),
   /**
    * Get province data (legacy method - dynamic only)
    */

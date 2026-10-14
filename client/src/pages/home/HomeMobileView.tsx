@@ -5,6 +5,7 @@ import {
   ExploreCities,
   type CityGuideLocation,
   type CityGuideRequestState,
+  type CityGuideProvinceSelection,
 } from '@/components/ExploreCities';
 import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
@@ -22,6 +23,7 @@ type HomeMobileViewProps = {
   onTabChange: (tab: string) => void;
   cityGuides: CityGuideLocation[];
   cityGuidesState: CityGuideRequestState;
+  cityGuideProvince: CityGuideProvinceSelection;
   selectedProvince: string;
 };
 
@@ -33,6 +35,7 @@ export function HomeMobileView({
   onTabChange,
   cityGuides,
   cityGuidesState,
+  cityGuideProvince,
   selectedProvince,
 }: HomeMobileViewProps) {
   return (
@@ -53,6 +56,10 @@ export function HomeMobileView({
           guideCards
           initialLimit={12}
           requestState={cityGuidesState}
+          provinceSlug={cityGuideProvince.slug}
+          selectedGuideProvince={cityGuideProvince.name}
+          onGuideProvinceChange={cityGuideProvince.onChange}
+          description={`Get to know the cities, neighbourhoods and local property opportunities in ${cityGuideProvince.name}.`}
         />
         <HomeMarketInsightsSection />
         <HomeJourneySection />

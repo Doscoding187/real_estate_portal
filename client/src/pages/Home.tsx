@@ -21,12 +21,17 @@ import {
   toAbsoluteUrl,
 } from '@/lib/seo/structuredData';
 import { VITE_APP_LOGO } from '@/const';
+import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const isMobile = useIsMobile();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
+  const [selectedCityGuideProvince, setSelectedCityGuideProvince] = useState('Gauteng');
+  const cityGuideProvince = Object.values(PROVINCIAL_CONFIGS).find(
+    province => province.name === selectedCityGuideProvince,
+  )!;
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
@@ -58,7 +63,7 @@ export default function Home() {
       ? (activeJourney as HeroTab)
       : 'buy';
   const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
-    { limit: 12 },
+    { limit: 24, provinceSlug: cityGuideProvince.slug },
     { retry: false, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false },
   );
 
@@ -116,6 +121,11 @@ export default function Home() {
               onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
               cityGuides={cityGuides}
+              cityGuideProvince={{
+                name: cityGuideProvince.name,
+                slug: cityGuideProvince.slug,
+                onChange: setSelectedCityGuideProvince,
+              }}
               cityGuidesState={{
                 isLoading: cityGuidesQuery.isLoading,
                 isError: cityGuidesQuery.isError,
@@ -132,6 +142,11 @@ export default function Home() {
               onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
               cityGuides={cityGuides}
+              cityGuideProvince={{
+                name: cityGuideProvince.name,
+                slug: cityGuideProvince.slug,
+                onChange: setSelectedCityGuideProvince,
+              }}
               cityGuidesState={{
                 isLoading: cityGuidesQuery.isLoading,
                 isError: cityGuidesQuery.isError,

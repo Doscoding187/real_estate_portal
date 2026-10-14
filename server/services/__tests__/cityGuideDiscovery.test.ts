@@ -57,4 +57,12 @@ describe('Existing city-guide discovery', () => {
     database.mockRejectedValue(new Error('read unavailable'));
     await expect(listCityGuides()).rejects.toThrow('read unavailable');
   });
+  it('filters by the chosen canonical province before ordering and limiting', async () => {
+    await listCityGuides(24, 'western-cape');
+    const where = new MySqlDialect().sqlToQuery(chain.where.mock.calls[0][0] as SQL);
+    expect(where.sql).toContain('`provinces`.`slug` = ?');
+    expect(where.params.filter(value => value === 'western-cape')).toHaveLength(2);
+    expect(where.params.filter(value => value === 'verified')).toHaveLength(2);
+    expect(chain.limit).toHaveBeenCalledWith(24);
+  });
 });

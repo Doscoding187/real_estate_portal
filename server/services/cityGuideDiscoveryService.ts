@@ -6,7 +6,7 @@ import { PROVINCIAL_CONFIGS } from '../../shared/provincialDiscovery';
 import { getDb } from '../db';
 
 /** Lightweight discovery for existing city guides, independent of property stock. */
-export async function listCityGuides(limit = 12) {
+export async function listCityGuides(limit = 12, provinceSlug?: string) {
   const db = await getDb();
   const editorialOrder = sql`CASE ${sql.join(
     CITY_GUIDE_FEATURES.map(
@@ -29,6 +29,7 @@ export async function listCityGuides(limit = 12) {
       and(
         eq(cities.status, 'verified'),
         eq(provinces.status, 'verified'),
+        provinceSlug ? eq(provinces.slug, provinceSlug) : undefined,
         sql`CHAR_LENGTH(TRIM(${cities.slug})) > 0`,
         inArray(
           provinces.slug,
