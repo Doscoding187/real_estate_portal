@@ -59,6 +59,8 @@ interface Showing {
 
 interface CalendarViewProps {
   className?: string;
+  initialDate?: Date | null;
+  initialBookingOpen?: boolean;
 }
 
 const VIEW_MODES = [
@@ -91,20 +93,28 @@ function formatShowingDateTime(showing: Showing) {
   return date ? date.toLocaleString() : 'Scheduling pending';
 }
 
-export function ShowingsCalendar({ className }: CalendarViewProps) {
+export function ShowingsCalendar({
+  className,
+  initialDate,
+  initialBookingOpen = false,
+}: CalendarViewProps) {
   const [, setLocation] = useLocation();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(initialDate || new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    initialBookingOpen ? null : initialDate || null,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
   >('');
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(initialBookingOpen);
+  const bookingDate = new Date(initialDate || currentDate);
+  bookingDate.setHours(9, 0, 0, 0);
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
     visitorName: '',
-    scheduledAt: '',
+    scheduledAt: initialBookingOpen ? calendarDateTimeInput(bookingDate) : '',
     durationMinutes: '30',
     notes: '',
   });
@@ -460,7 +470,15 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            {selectedDate &&
+            {isLoading && <p className="text-muted-foreground">Loading viewings...</p>}
+            {showingsError && (
+              <p className="text-muted-foreground">
+                Unable to load viewings. Close this window and retry.
+              </p>
+            )}
+            {!isLoading &&
+              !showingsError &&
+              selectedDate &&
               getShowingsForDate(selectedDate).map(showing => (
                 <ShowingCard
                   key={showing.id}
@@ -469,11 +487,14 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                   isUpdating={updateShowingStatusMutation.isPending}
                 />
               ))}
-            {selectedDate && getShowingsForDate(selectedDate).length === 0 && (
-              <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
-                No viewings for this date.
-              </p>
-            )}
+            {!isLoading &&
+              !showingsError &&
+              selectedDate &&
+              getShowingsForDate(selectedDate).length === 0 && (
+                <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+                  No viewings for this date.
+                </p>
+              )}
             <Button
               variant="outline"
               onClick={() => {

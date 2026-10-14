@@ -5,9 +5,29 @@ import {
   calendarDateTimeInput,
   calendarDays,
   calendarDateRange,
+  calendarDateFromSearch,
+  calendarDayHref,
 } from './agentCalendar';
 
 describe('agent calendar dates', () => {
+  it('links an overview appointment to its exact local calendar date', () => {
+    const href = calendarDayHref(new Date(2026, 9, 15, 21));
+    expect(href).toBe('/agent/productivity?tab=calendar&date=2026-10-15');
+    const date = calendarDateFromSearch(href.slice(href.indexOf('?')));
+    expect(date && calendarDayKey(date)).toBe('2026-10-15');
+    expect(date?.getHours()).toBe(0);
+  });
+  it('rejects malformed or impossible date links instead of rolling into another date', () => {
+    for (const search of [
+      '',
+      '?date=invalid',
+      '?date=2026-02-30',
+      '?date=2026-13-15',
+      '?date=2026-10-15T21:00',
+    ]) {
+      expect(calendarDateFromSearch(search)).toBeNull();
+    }
+  });
   it('interprets offset-free database timestamps as UTC', () => {
     expect(calendarTimestamp('2026-10-15 19:00:00')?.toISOString()).toBe(
       '2026-10-15T19:00:00.000Z',
