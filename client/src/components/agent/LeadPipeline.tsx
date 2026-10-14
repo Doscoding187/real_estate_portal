@@ -1685,7 +1685,12 @@ function LeadCard({
               <div className="flex min-w-0 items-start gap-2 rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-xs">
                 <Home className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-900">{lead.property.title}</p>
+                  <p
+                    className="line-clamp-3 font-medium leading-5 text-slate-900"
+                    title={lead.property.title}
+                  >
+                    {lead.property.title}
+                  </p>
                   <p className="mt-0.5 truncate text-slate-500">
                     {[lead.property.city, `R${lead.property.price.toLocaleString()}`]
                       .filter(Boolean)
