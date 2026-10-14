@@ -1004,8 +1004,6 @@ const ListingWizard: React.FC = () => {
     return steps;
   }, [
     stepTitles,
-    store.currentStep,
-    store.completedSteps,
     validationErrors,
     canAdvanceFromCurrentStep,
     canReviewLoadedListing,
@@ -1235,7 +1233,7 @@ const ListingWizard: React.FC = () => {
               <div className="mb-5 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-slate-600">
                   {store.currentStep === 8
-                    ? 'Your saved listing is loaded. Select a section above to edit it, then return to Preview to review your changes.'
+                    ? 'Your saved listing is loaded. Select a section to edit it, then return to Preview to review your changes.'
                     : 'Editing your saved listing. Your other sections stay filled in; review your changes in Preview before submitting.'}
                 </p>
                 <select
