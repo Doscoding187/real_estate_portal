@@ -532,7 +532,7 @@ export default function AgentListings() {
                   <div
                     className={
                       view === 'grid'
-                        ? 'grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3'
+                        ? 'grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'
                         : 'flex flex-col gap-3'
                     }
                   >
