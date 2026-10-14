@@ -8,8 +8,9 @@ vi.mock('@/components/location/CanonicalPlaceSelector', async original => {
   const actual = await original<typeof import('@/components/location/CanonicalPlaceSelector')>();
   return {
     ...actual,
-    CanonicalPlaceSelector: ({ value, onChange }: any) => (
+    CanonicalPlaceSelector: ({ value, onChange, ...props }: any) => (
       <actual.CanonicalPlaceSelectorView
+        {...props}
         value={value}
         onChange={onChange}
         query="North Riding"
@@ -68,6 +69,31 @@ beforeEach(() => {
   useListingWizardStore.getState().setPropertyType('house');
 });
 describe('North Riding private house authoring', () => {
+  it('explains why a typed street cannot be confirmed until an area result is selected', () => {
+    render(<LocationStep />);
+    fireEvent.change(screen.getByLabelText(/Street name/), {
+      target: { value: 'Bridge Road' },
+    });
+    expect(screen.getByRole('combobox')).toHaveAccessibleName(
+      'Area (suburb, locality, city or town)',
+    );
+    expect(screen.getByRole('combobox')).toHaveAccessibleDescription(
+      expect.stringContaining('Typing a name alone does not select an area.'),
+    );
+    expect(screen.getByRole('button', { name: 'Confirm location' })).toBeDisabled();
+    expect(
+      screen.getByText(
+        'Select an area from the search results above; entering text alone is not enough.',
+      ),
+    ).toBeVisible();
+    fireEvent.focus(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('option', { name: /North Riding suburb/ }));
+    expect(screen.getByRole('button', { name: 'Confirm location' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm location' }));
+    expect(useListingWizardStore.getState().canAdvanceFromStep(6)).toBe(true);
+    expect(useListingWizardStore.getState().location?.privateAddress?.streetNumber).toBeUndefined();
+  });
+
   it('requires explicit locality selection and preserves street/postal evidence without inventing a city', () => {
     render(<LocationStep />);
     fireEvent.focus(screen.getByRole('combobox'));
