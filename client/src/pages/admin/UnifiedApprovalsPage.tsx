@@ -1,4 +1,4 @@
-import React from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AgentApprovals from './AgentApprovals';
 import ListingOversight from './ListingOversight';
@@ -6,6 +6,10 @@ import DevelopmentOversight from './DevelopmentOversight';
 import { CheckCircle } from 'lucide-react';
 
 const UnifiedApprovalsPage = () => {
+  const [, setLocation] = useLocation();
+  const requestedTab = new URLSearchParams(useSearch()).get('tab');
+  const activeTab =
+    requestedTab === 'agents' || requestedTab === 'developments' ? requestedTab : 'listings';
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -16,7 +20,11 @@ const UnifiedApprovalsPage = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="agents" className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={tab => setLocation(`/admin/approvals?tab=${tab}`)}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-3 max-w-2xl">
           <TabsTrigger value="agents">Agent Approvals</TabsTrigger>
           <TabsTrigger value="listings">Listing Approvals</TabsTrigger>
