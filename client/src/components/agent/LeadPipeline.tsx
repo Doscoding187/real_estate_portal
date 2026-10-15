@@ -48,6 +48,10 @@ import {
   MapPin,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import {
+  formatLeadActivityDate,
+  getLeadActivityPresentation,
+} from '@/lib/leadActivityPresentation';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -1139,8 +1143,10 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                     ) : (
                       <div className="divide-y divide-slate-100">
                         {communicationTimeline.map((activity: any, index) => {
-                          const ActivityIcon =
-                            activity.type === 'whatsapp'
+                          const presentation = getLeadActivityPresentation(activity);
+                          const ActivityIcon = presentation.isFollowUpCompletion
+                            ? CheckCircle2
+                            : activity.type === 'whatsapp'
                               ? MessageCircle
                               : activity.type === 'email'
                                 ? Mail
@@ -1168,15 +1174,24 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                                  <p className="text-sm font-semibold capitalize text-slate-800">
-                                    {String(activity.type).replace(/_/g, ' ')}
+                                  <p
+                                    className={cn(
+                                      'text-sm font-semibold',
+                                      presentation.isFollowUpCompletion
+                                        ? 'text-emerald-700'
+                                        : 'capitalize text-slate-800',
+                                    )}
+                                  >
+                                    {presentation.label}
                                   </p>
                                   <time className="shrink-0 text-xs text-slate-400">
-                                    {new Date(activity.createdAt).toLocaleString()}
+                                    {presentation.isFollowUpCompletion
+                                      ? `on ${formatLeadActivityDate(activity.createdAt)}`
+                                      : new Date(activity.createdAt).toLocaleString()}
                                   </time>
                                 </div>
                                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                                  {activity.description}
+                                  {presentation.description}
                                 </p>
                               </div>
                             </div>

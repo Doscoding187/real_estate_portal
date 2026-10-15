@@ -24,6 +24,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  formatLeadActivityDate,
+  getLeadActivityPresentation,
+} from '@/lib/leadActivityPresentation';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { SourcePerformancePanel } from '../growth/GrowthPanels';
@@ -474,21 +478,37 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                   <CardContent>
                     {selectedLead.activities?.length ? (
                       <div className="space-y-3">
-                        {selectedLead.activities.map(activity => (
-                          <div key={activity.id} className="rounded-lg border border-slate-200 p-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <Badge variant="outline" className="capitalize">
-                                {activity.type.replace(/_/g, ' ')}
-                              </Badge>
-                              <span className="text-xs text-slate-500">
-                                {formatDate(activity.createdAt)}
-                              </span>
+                        {selectedLead.activities.map(activity => {
+                          const presentation = getLeadActivityPresentation(activity);
+
+                          return (
+                            <div
+                              key={activity.id}
+                              className="rounded-lg border border-slate-200 p-3"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'capitalize',
+                                    presentation.isFollowUpCompletion &&
+                                      'border-emerald-200 text-emerald-700',
+                                  )}
+                                >
+                                  {presentation.label}
+                                </Badge>
+                                <span className="text-xs text-slate-500">
+                                  {presentation.isFollowUpCompletion
+                                    ? `on ${formatLeadActivityDate(activity.createdAt)}`
+                                    : formatDate(activity.createdAt)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                                {presentation.description}
+                              </p>
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-slate-700">
-                              {activity.description || 'Activity recorded.'}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <EmptyPanel
