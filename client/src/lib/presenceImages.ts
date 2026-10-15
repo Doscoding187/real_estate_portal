@@ -15,11 +15,28 @@ const placeholders = new Set([
   '/placeholder.jpg',
   '/assets/placeholder-home.jpg',
 ]);
-const identity = (url: string) => url.split(/[?#]/)[0];
+const identity = (url: string) => {
+  let parsed: URL;
+  try {
+    parsed = new URL(url, 'https://presence.invalid');
+  } catch {
+    return url;
+  }
+  parsed.hash = '';
+  // Ignore signing changes, but preserve media-proxy keys that identify the
+  // actual photo. Different ?key= or ?path= values are different images.
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (/^(x-amz-|x-goog-|signature$|expires$|policy$|key-pair-id$|token$)/i.test(key)) {
+      parsed.searchParams.delete(key);
+    }
+  }
+  parsed.searchParams.sort();
+  return parsed.href;
+};
 
 /** Consume the public DTO only; PDFs, floorplans and videos aren't photos. */
 export function selectPresenceImages(portfolio: PublicPortfolioPhotos[]) {
-  const usable = (url: string) => !!url && !placeholders.has(identity(url));
+  const usable = (url: string) => !!url && !placeholders.has(url.split(/[?#]/)[0]);
   const primaries = portfolio
     .map(
       item =>

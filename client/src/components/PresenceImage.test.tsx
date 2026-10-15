@@ -49,6 +49,16 @@ describe('shared presence image selection and fallback', () => {
     ).toBe(AREA_IMAGE_FALLBACK);
   });
 
+  it('retains the distinct image keys of a shared media-proxy endpoint', () => {
+    const hero = '/api/media?key=front.jpg&signature=one';
+    const contact = '/api/media?key=garden.jpg&signature=two';
+    expect(selectPresenceImages([{ primary: hero, images: [{ url: contact }] }])).toEqual({
+      hero,
+      contact,
+      hasListingPhoto: true,
+    });
+  });
+
   it('recovers from broken media, stops after the bundled fallback and recovers when a new source arrives', () => {
     const view = render(
       <PresenceImage
