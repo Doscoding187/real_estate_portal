@@ -16,6 +16,7 @@ import {
   LocationTrendingFeedSection,
   type FeedTab,
 } from '@/components/location/LocationTrendingFeedSection';
+import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
 import { trpc } from '@/lib/trpc';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
@@ -50,7 +51,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const isSandton =
     provinceSlug === 'gauteng' && citySlug === 'johannesburg' && suburbSlug === 'sandton';
   const path = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
-  const [activeTab, setActiveTab] = useState<FeedTab>('buy');
+  const [activeTab, setActiveTab] = useState<FeedTab>('developments');
   const [areaSearch, setAreaSearch] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
   const suburbQuery = trpc.locationPages.getSuburbData.useQuery(
@@ -176,8 +177,8 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     saleAndRentCount > 0 ? (Number(stats?.saleCount || 0) / saleAndRentCount) * 100 : 0;
   const rentShare = saleAndRentCount > 0 ? 100 - saleShare : 0;
   const availableSecondaryTabs: FeedTab[] = [
-    ...(isHomepageHeroJourneyEnabled('rent') ? (['rent'] as const) : []),
     ...(isHomepageHeroJourneyEnabled('developments') ? (['developments'] as const) : []),
+    ...(isHomepageHeroJourneyEnabled('rent') ? (['rent'] as const) : []),
   ];
   const hasSecondaryPropertyJourneys = availableSecondaryTabs.length > 0;
 
@@ -488,9 +489,10 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             <div className="suburb-guide-section-heading">
               <div>
                 <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">MORE IN THIS AREA</p>
-                <h2>Rentals and new developments</h2>
+                <h2>New developments and rentals</h2>
                 <p>
-                  Switch journeys to see currently published opportunities in {verifiedSuburb.name}.
+                  Explore published projects, their listed publishers and available opportunities in{' '}
+                  {verifiedSuburb.name}.
                 </p>
               </div>
             </div>
@@ -512,11 +514,17 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
               requirePhotoReadyDevelopments
             />
             <p className="suburb-guide-inventory-note">
-              Off-plan units displayed as homes to buy or rent keep the same property-card format;
-              open a unit to see its development details.
+              Project cards show the available public project details and publisher when supplied.
+              Off-plan units shown in property journeys use the same home-card format as resale
+              listings; open a unit to see its development details.
             </p>
           </section>
         ) : null}
+
+        <SuburbLocalProfessionals
+          suburbId={Number(verifiedSuburb.id)}
+          suburbName={verifiedSuburb.name}
+        />
 
         <section className="suburb-guide-areas" aria-labelledby="suburb-guide-areas-title">
           <div className="suburb-guide-section-heading">

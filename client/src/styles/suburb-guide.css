@@ -451,6 +451,172 @@
   line-height: 1.55;
 }
 
+.suburb-guide-professionals {
+  border-top: 1px solid #e0e7ee;
+  padding-top: clamp(1.8rem, 3vw, 2.7rem);
+}
+
+.suburb-guide-professionals__carousel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0.25rem;
+}
+
+.suburb-guide-professionals__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.suburb-guide-professional-card {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid #e0e8ef;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  box-shadow: 0 7px 22px rgb(15 42 65 / 4%);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.suburb-guide-professional-card[href]:hover {
+  transform: translateY(-2px);
+  border-color: #b8d2e4;
+  box-shadow: 0 12px 28px rgb(15 42 65 / 9%);
+}
+
+.suburb-guide-professional-card__portrait {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #e2eaf0;
+  border-radius: 50%;
+  background: #edf5fb;
+  color: #2774ae;
+}
+
+.suburb-guide-professional-card__portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.suburb-guide-professional-card__copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.suburb-guide-professional-card__name {
+  display: flex;
+  align-items: center;
+  gap: 0.32rem;
+  overflow: hidden;
+  color: #1a354f;
+  font-size: 0.91rem;
+  font-weight: 760;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suburb-guide-professional-card__name svg {
+  flex: 0 0 auto;
+  color: #2774ae;
+}
+
+.suburb-guide-professional-card__agency {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.32rem;
+  margin-top: 0.28rem;
+  overflow: hidden;
+  color: #718195;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suburb-guide-professional-card__agency img {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  object-fit: contain;
+}
+
+.suburb-guide-professional-card__agency svg {
+  flex: 0 0 auto;
+}
+
+.suburb-guide-professional-card__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.6rem;
+  color: #216b9f;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.suburb-guide-professional-card--loading {
+  min-height: 112px;
+  border-color: transparent;
+  background: linear-gradient(100deg, #e7edf2 20%, #f4f7f9 40%, #e7edf2 60%);
+  background-size: 200% 100%;
+  animation: suburb-guide-shimmer 1.3s ease-in-out infinite;
+}
+
+.suburb-guide-professionals__state {
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  border: 1px dashed #d5e0e8;
+  border-radius: 0.85rem;
+  background: #fff;
+  padding: 1rem 1.25rem;
+  color: #65788b;
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.suburb-guide-professionals__state p {
+  margin: 0;
+}
+
+.suburb-guide-professionals__state a,
+.suburb-guide-professionals__state button {
+  display: inline-flex;
+  min-height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid #d3e1eb;
+  border-radius: 0.55rem;
+  background: #fff;
+  padding: 0.45rem 0.7rem;
+  color: #1d5d8a;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .suburb-guide-card-rail,
 .suburb-guide-area-carousel {
   position: relative;
@@ -926,6 +1092,14 @@
     align-items: flex-start;
   }
 
+  .suburb-guide-professionals__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .suburb-guide-professionals__state {
+    flex-wrap: wrap;
+  }
+
   .suburb-guide-scope-note {
     margin-top: 0.1rem;
     font-size: 0.73rem;
@@ -958,6 +1132,12 @@
 
   .suburb-guide-section-heading {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .suburb-guide-professionals__grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1010,13 +1190,18 @@
   .suburb-guide-hero__action,
   .suburb-guide-area-card a,
   .suburb-guide-market__metric,
-  .suburb-guide-neighbour-card {
+  .suburb-guide-neighbour-card,
+  .suburb-guide-professional-card {
     transition: none;
   }
 
   .suburb-guide-loading__hero,
   .suburb-guide-loading__line,
   .suburb-guide-loading__panel {
+    animation: none;
+  }
+
+  .suburb-guide-professional-card--loading {
     animation: none;
   }
 }
