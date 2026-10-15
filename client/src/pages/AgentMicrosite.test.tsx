@@ -215,6 +215,9 @@ describe('AgentMicrosite public web presence', () => {
     fireEvent.change(within(dialog).getByLabelText(/Email address/i), {
       target: { value: 'buyer@example.test' },
     });
+    fireEvent.change(within(dialog).getByLabelText(/Phone number/i), {
+      target: { value: '082 123 4567' },
+    });
     fireEvent.change(within(dialog).getByLabelText(/How can Jane Agent help/i), {
       target: { value: 'I am looking for a two-bedroom apartment.' },
     });

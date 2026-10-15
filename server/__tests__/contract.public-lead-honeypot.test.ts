@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockCapturePublicLead, mockCheckRateLimit, mockGetClientIp, mockGetDb } = vi.hoisted(() => ({
-  mockCapturePublicLead: vi.fn(),
-  mockCheckRateLimit: vi.fn(),
-  mockGetClientIp: vi.fn(),
-  mockGetDb: vi.fn(),
-}));
+const { mockCapturePublicLead, mockCheckRateLimit, mockGetClientIp, mockGetDb } = vi.hoisted(
+  () => ({
+    mockCapturePublicLead: vi.fn(),
+    mockCheckRateLimit: vi.fn(),
+    mockGetClientIp: vi.fn(),
+    mockGetDb: vi.fn(),
+  }),
+);
 
 vi.mock('../services/publicLeadCaptureService', () => ({
   capturePublicLead: mockCapturePublicLead,
@@ -121,5 +123,58 @@ describe('public lead honeypot contract', () => {
     expect(mockGetClientIp).not.toHaveBeenCalled();
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, '', '   ', 'abc', '123', '1234567890123456'])(
+    'rejects an unusable direct-agent phone %j before capture',
+    async phone => {
+      const caller = leadsRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
+      await expect(
+        caller.create({
+          name: 'Profile Visitor',
+          email: 'visitor@example.test',
+          agentId: 42,
+          phone,
+          captureRequestId: 'profile-phone-test-001',
+          consent: { accepted: true, version: '2026-08-02' },
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(mockCapturePublicLead).not.toHaveBeenCalled();
+      expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['082 123 4567', '+27 (82) 123-4567', '+44 20 7946 0958'])(
+    'accepts a formatted profile phone %s without changing its routing',
+    async phone => {
+      mockCapturePublicLead.mockResolvedValue({ success: true, leadId: 1 });
+      const caller = leadsRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
+      await caller.create({
+        name: 'Profile Visitor',
+        email: 'visitor@example.test',
+        agentId: 42,
+        phone,
+        captureRequestId: 'profile-phone-test-001',
+        consent: { accepted: true, version: '2026-08-02' },
+      });
+      expect(mockCapturePublicLead).toHaveBeenCalledWith(
+        expect.objectContaining({ agentId: 42, phone }),
+      );
+    },
+  );
+
+  it('preserves optional phone numbers on property enquiries', async () => {
+    mockCapturePublicLead.mockResolvedValue({ success: true, leadId: 1 });
+    const caller = leadsRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
+    await caller.create({
+      name: 'Property Visitor',
+      email: 'visitor@example.test',
+      propertyId: 501,
+      captureRequestId: 'property-phone-test-001',
+      consent: { accepted: true, version: '2026-08-02' },
+    });
+    expect(mockCapturePublicLead).toHaveBeenCalledWith(
+      expect.objectContaining({ propertyId: 501 }),
+    );
   });
 });

@@ -878,6 +878,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     const captured = await publicCaller().leads.create({
       agentId,
       name: 'Direct profile prospect',
+      phone: '+27 82 123 4567',
       email: `direct-profile-${randomUUID()}@example.test`,
       message: 'Please contact me about your services.',
       source: 'agent_profile',
@@ -924,6 +925,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
       publicCaller().leads.create({
         agentId,
         name: 'Suspended membership prospect',
+        phone: '+27 82 123 4567',
         email: `suspended-profile-${randomUUID()}@example.test`,
         message: 'Please contact me about your services.',
         source: 'agent_profile',
