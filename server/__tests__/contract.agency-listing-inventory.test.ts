@@ -58,6 +58,19 @@ const baseRow = (overrides: Record<string, unknown> = {}) => ({
 });
 
 describe('agency listing inventory contract', () => {
+  it('includes the selected property thumbnail without exposing the full media collection', () => {
+    const listing = mapAgencyListingRow(
+      baseRow({ thumbnailUrl: 'https://example.com/property-thumb.jpg' }),
+      19,
+    );
+    expect(listing.media).toEqual({
+      total: 2,
+      images: 2,
+      thumbnailUrl: 'https://example.com/property-thumb.jpg',
+    });
+    expect(mapAgencyListingRow(baseRow({ thumbnailUrl: null }), 19).media.thumbnailUrl).toBeNull();
+  });
+
   it('keeps private listings distinct from unavailable performance data', () => {
     const listing = mapAgencyListingRow(
       baseRow({

@@ -47,6 +47,7 @@ import {
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -1083,7 +1084,9 @@ function parseAgencyViewingDate(value: string) {
 
   const [, dateKey, hour, minute, suppliedSecond] = localMatch;
   const second = suppliedSecond || '00';
-  const parsedDate = new Date(`${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  const parsedDate = new Date(
+    `${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`,
+  );
   if (
     Number.isNaN(parsedDate.getTime()) ||
     formatAgencyDateKey(parsedDate) !== dateKey ||
@@ -2078,6 +2081,7 @@ function mapAgencyListingRow(row: any, agencyId: number) {
     media: {
       total: Number(row.mediaCount || 0),
       images: Number(row.imageCount || 0),
+      thumbnailUrl: resolveMediaDeliveryUrl(row.thumbnailUrl),
     },
     performance: {
       views: publicViews,
@@ -2175,6 +2179,17 @@ function agencyListingSelectFields() {
       FROM listing_media lm
       WHERE lm.listingId = ${listings.id}
         AND lm.mediaType = 'image'
+    )`,
+    thumbnailUrl: sql<string | null>`(
+      SELECT COALESCE(NULLIF(TRIM(lm.thumbnailUrl), ''),
+                      NULLIF(TRIM(lm.processedUrl), ''),
+                      NULLIF(TRIM(lm.originalUrl), ''))
+      FROM listing_media lm
+      WHERE lm.listingId = ${listings.id}
+        AND lm.mediaType = 'image'
+        AND lm.processingStatus = 'completed'
+      ORDER BY lm.isPrimary DESC, lm.displayOrder ASC, lm.id ASC
+      LIMIT 1
     )`,
     publicPropertyId: sql<number | null>`(
       SELECT p.id
@@ -4903,7 +4918,10 @@ export const agencyRouter = router({
         if (!agent) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Approved agent profile required.' });
         }
-        const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+        const currentMembership = await resolveCurrentAgencyMembershipForAgent(
+          db,
+          Number(agent.id),
+        );
         if (!currentMembership || Number(currentMembership.agencyId) !== Number(user.agencyId)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
