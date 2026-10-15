@@ -6,7 +6,6 @@ import {
   Building2,
   CheckCircle2,
   ClipboardCheck,
-  Eye,
   FileText,
   Home,
   Image,
@@ -37,6 +36,7 @@ import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrim
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, formatAge, numberLabel } from '../workspace/utils';
 import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@shared/listing-workflow-types';
+import { AgencyListingActions, AgencyListingStatus } from './AgencyListingPresentation';
 
 type InventoryStatus =
   | 'all'
@@ -89,12 +89,11 @@ const ATTENTION_OPTIONS: Array<{ value: AttentionFilter; label: string }> = [
 ];
 
 function queryNumber(location: string, key: string) {
-  const search =
-    location.includes('?')
-      ? location.split('?')[1] || ''
-      : typeof window !== 'undefined'
-        ? window.location.search.replace(/^\?/, '')
-        : '';
+  const search = location.includes('?')
+    ? location.split('?')[1] || ''
+    : typeof window !== 'undefined'
+      ? window.location.search.replace(/^\?/, '')
+      : '';
   const params = new URLSearchParams(search);
   const value = Number(params.get(key));
   return Number.isFinite(value) && value > 0 ? value : undefined;
@@ -325,10 +324,10 @@ function ListingBadges({ listing }: { listing: any }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       <Badge className={authoringBadgeClass(listing.authoringStatus)}>
-        {labelize(listing.authoringStatus)}
+        Authoring: {labelize(listing.authoringStatus)}
       </Badge>
       <Badge className={publicationBadgeClass(listing.publicationState)}>
-        {labelize(listing.publicationState)}
+        Public visibility: {labelize(listing.publicationState)}
       </Badge>
       <Badge className={healthBadgeClass(listing)}>{healthLabel(listing)}</Badge>
     </div>
@@ -355,36 +354,19 @@ function ListingActions({
   onPublic: () => void;
 }) {
   return (
-    <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-      <Button variant="outline" size="sm" onClick={onOpen}>
-        <Eye className="h-4 w-4" />
-        Detail
-      </Button>
-      {canEdit ? (
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <Pencil className="h-4 w-4" />
-          Edit
-        </Button>
-      ) : null}
-      {listing.publicUrl ? (
-        <Button variant="outline" size="sm" onClick={onPublic}>
-          <ArrowUpRight className="h-4 w-4" />
-          Public
-        </Button>
-      ) : null}
-      {actionSupported(listing, 'submit') ? (
-        <Button size="sm" disabled={busy} onClick={onSubmit}>
-          <ClipboardCheck className="h-4 w-4" />
-          Submit
-        </Button>
-      ) : null}
-      {actionSupported(listing, 'archive') ? (
-        <Button variant="outline" size="sm" disabled={busy} onClick={onArchive}>
-          <Archive className="h-4 w-4" />
-          Archive
-        </Button>
-      ) : null}
-    </div>
+    <AgencyListingActions
+      title={listing.title || `Listing ${listing.id}`}
+      busy={busy}
+      canEdit={canEdit}
+      canSubmit={actionSupported(listing, 'submit')}
+      canArchive={actionSupported(listing, 'archive')}
+      hasPublicPage={!!listing.publicUrl}
+      onOpen={onOpen}
+      onEdit={onEdit}
+      onSubmit={onSubmit}
+      onArchive={onArchive}
+      onPublic={onPublic}
+    />
   );
 }
 
@@ -410,6 +392,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
   const [transactionType, setTransactionType] = useState<TransactionFilter>('all');
   const [attention, setAttention] = useState<AttentionFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
 
@@ -493,6 +476,8 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
 
   const mutationBusy =
     assignListing.isPending || submitListing.isPending || archiveListing.isPending;
+  const extraFilterCount =
+    Number(assignment !== 'all') + Number(transactionType !== 'all') + Number(attention !== 'all');
 
   const handleAssign = (listingId: number, agentId: number | null) => {
     assignListing.mutate({ listingId, agentId });
@@ -589,10 +574,30 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
       <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <SummaryMetric label="Published" value={summary.published} tone="emerald" icon={Home} />
         <SummaryMetric label="Ready" value={summary.readyToSubmit} tone="sky" icon={CheckCircle2} />
-        <SummaryMetric label="Unassigned" value={summary.unassigned} tone="amber" icon={UserRoundCheck} />
-        <SummaryMetric label="Inactive agent" value={summary.inactiveAgent} tone="rose" icon={ShieldAlert} />
-        <SummaryMetric label="Private edits" value={summary.privatePendingEdits} tone="slate" icon={Pencil} />
-        <SummaryMetric label="Needs attention" value={summary.needsAttention} tone="amber" icon={ListFilter} />
+        <SummaryMetric
+          label="Unassigned"
+          value={summary.unassigned}
+          tone="amber"
+          icon={UserRoundCheck}
+        />
+        <SummaryMetric
+          label="Inactive agent"
+          value={summary.inactiveAgent}
+          tone="rose"
+          icon={ShieldAlert}
+        />
+        <SummaryMetric
+          label="Private edits"
+          value={summary.privatePendingEdits}
+          tone="slate"
+          icon={Pencil}
+        />
+        <SummaryMetric
+          label="Needs attention"
+          value={summary.needsAttention}
+          tone="amber"
+          icon={ListFilter}
+        />
       </div>
 
       <Card className="border-slate-200 bg-white shadow-sm">
@@ -638,24 +643,30 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
           {ownerUserId ? (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
               <span>Team member inventory filter is active.</span>
-              <Button variant="outline" size="sm" onClick={() => props.setLocation('/agency/listings')}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => props.setLocation('/agency/listings')}
+              >
                 Clear
               </Button>
             </div>
           ) : null}
 
-          <div className="grid gap-3 xl:grid-cols-[minmax(180px,1fr)_150px_140px_160px_130px_160px]">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_160px_200px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <Input
                 value={search}
                 onChange={event => setSearch(event.target.value)}
                 placeholder="Search title, address, city"
+                aria-label="Search listings"
                 className="pl-9"
               />
             </div>
             <select
               value={status}
+              aria-label="Filter by listing status"
               onChange={event => setStatus(event.target.value as InventoryStatus)}
               className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
             >
@@ -666,16 +677,8 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
               ))}
             </select>
             <select
-              value={assignment}
-              onChange={event => setAssignment(event.target.value as AssignmentFilter)}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-            >
-              <option value="all">All assignment</option>
-              <option value="unassigned">Unassigned</option>
-              <option value="inactive">Inactive agent</option>
-            </select>
-            <select
               value={assignedAgentId}
+              aria-label="Filter by assigned agent"
               onChange={event => setAssignedAgentId(event.target.value)}
               className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
             >
@@ -686,32 +689,72 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                 </option>
               ))}
             </select>
-            <select
-              value={transactionType}
-              onChange={event => setTransactionType(event.target.value as TransactionFilter)}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              aria-expanded={showFilters}
+              aria-controls="agency-listing-filters"
             >
-              <option value="all">All deals</option>
-              <option value="sell">Sale</option>
-              <option value="rent">Rental</option>
-              <option value="auction">Auction</option>
-            </select>
-            <select
-              value={attention}
-              onChange={event => setAttention(event.target.value as AttentionFilter)}
-              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
-            >
-              {ATTENTION_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <ListFilter className="h-4 w-4" /> Filters
+              {extraFilterCount ? ` (${extraFilterCount})` : ''}
+            </Button>
           </div>
+          {showFilters && (
+            <div
+              id="agency-listing-filters"
+              className="grid gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-2 xl:grid-cols-4"
+            >
+              <select
+                value={assignment}
+                aria-label="Filter by assignment status"
+                onChange={event => setAssignment(event.target.value as AssignmentFilter)}
+                className="h-10 min-w-0 rounded-md border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="all">All assignments</option>
+                <option value="unassigned">Unassigned</option>
+                <option value="inactive">Inactive agent</option>
+              </select>
+              <select
+                value={transactionType}
+                aria-label="Filter by transaction type"
+                onChange={event => setTransactionType(event.target.value as TransactionFilter)}
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+              >
+                <option value="all">All deals</option>
+                <option value="sell">Sale</option>
+                <option value="rent">Rental</option>
+                <option value="auction">Auction</option>
+              </select>
+              <select
+                value={attention}
+                aria-label="Filter by attention reason"
+                onChange={event => setAttention(event.target.value as AttentionFilter)}
+                className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+              >
+                {ATTENTION_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setAssignment('all');
+                  setTransactionType('all');
+                  setAttention('all');
+                }}
+              >
+                Clear extra filters
+              </Button>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {inventoryQuery.error ? <ErrorPanel title="Listing inventory could not be loaded" /> : null}
+          {inventoryQuery.error ? (
+            <ErrorPanel title="Listing inventory could not be loaded" />
+          ) : null}
           {inventoryQuery.isLoading ? (
             <div className="h-56 animate-pulse rounded-lg bg-slate-100" />
           ) : null}
@@ -719,20 +762,19 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
           {!inventoryQuery.isLoading && listings.length ? (
             viewMode === 'table' ? (
               <div className="overflow-hidden rounded-lg border border-slate-200">
-                <div className="hidden bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(160px,1.4fr)_minmax(130px,0.85fr)_minmax(140px,1fr)_90px_120px_80px_minmax(160px,0.9fr)]">
+                <div className="hidden gap-4 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[minmax(240px,2fr)_minmax(140px,1fr)_minmax(160px,1.1fr)_130px_108px]">
                   <span>Listing</span>
-                  <span>State</span>
+                  <span>Status</span>
                   <span>Agent</span>
-                  <span>Readiness</span>
-                  <span>Performance</span>
-                  <span>Updated</span>
+                  <span>Activity</span>
                   <span className="text-right">Actions</span>
                 </div>
                 <div className="divide-y divide-slate-200">
                   {listings.map((listing: any) => (
                     <div
                       key={listing.id}
-                      className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(160px,1.4fr)_minmax(130px,0.85fr)_minmax(140px,1fr)_90px_120px_80px_minmax(160px,0.9fr)] xl:items-center"
+                      data-testid="agency-listing-row"
+                      className="grid gap-4 px-4 py-4 hover:bg-slate-50/60 xl:grid-cols-[minmax(240px,2fr)_minmax(140px,1fr)_minmax(160px,1.1fr)_130px_108px] xl:items-center"
                     >
                       <button
                         type="button"
@@ -745,26 +787,25 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                           {compactCurrency(Number(listing.price || 0))}
                         </p>
                       </button>
-                      <ListingBadges listing={listing} />
-                      <AssignmentSelect
-                        listing={listing}
-                        agents={assignableAgents}
-                        busy={mutationBusy}
-                        onAssign={handleAssign}
-                      />
-                      <div>
-                        <p className="font-semibold text-slate-950">{listing.readinessScore}%</p>
-                        <p className="text-xs text-slate-500">{listing.media.total} media items</p>
-                      </div>
+                      <AgencyListingStatus listing={listing} />
+                      <button
+                        type="button"
+                        onClick={() => openDetail(listing.id)}
+                        aria-label={`Manage assigned agent for ${listing.title || `listing ${listing.id}`}`}
+                        className="min-w-0 text-left text-sm text-slate-600 hover:text-slate-950 hover:underline"
+                      >
+                        <span className="block truncate">{assignmentLabel(listing)}</span>
+                      </button>
                       <div>
                         <p className="font-semibold text-slate-950">
                           {performanceLabel(listing.performance.views)} views
                         </p>
                         <p className="text-xs text-slate-500">
-                          {performanceLabel(listing.performance.enquiries)} enquiries
+                          {listing.performance.enquiries == null
+                            ? 'Enquiries unavailable'
+                            : `${numberLabel(listing.performance.enquiries)} enquiries`}
                         </p>
                       </div>
-                      <p className="text-sm text-slate-500">{formatAge(listing.timestamps.updatedAt)}</p>
                       <ListingActions
                         listing={listing}
                         busy={mutationBusy}
@@ -791,21 +832,26 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                       >
                         <ListingTitle listing={listing} />
                       </button>
-                      <ListingBadges listing={listing} />
+                      <AgencyListingStatus listing={listing} />
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <MiniMetric label="Readiness" value={`${listing.readinessScore}%`} />
-                      <MiniMetric label="Media" value={listing.media.total} />
-                      <MiniMetric label="Views" value={performanceLabel(listing.performance.views)} />
-                      <MiniMetric label="Enquiries" value={performanceLabel(listing.performance.enquiries)} />
+                      <MiniMetric
+                        label="Views"
+                        value={performanceLabel(listing.performance.views)}
+                      />
+                      <MiniMetric
+                        label="Enquiries"
+                        value={performanceLabel(listing.performance.enquiries)}
+                      />
                     </div>
                     <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                      <AssignmentSelect
-                        listing={listing}
-                        agents={assignableAgents}
-                        busy={mutationBusy}
-                        onAssign={handleAssign}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => openDetail(listing.id)}
+                        className="min-w-0 text-left text-sm text-slate-600 hover:underline"
+                      >
+                        {assignmentLabel(listing)}
+                      </button>
                       <ListingActions
                         listing={listing}
                         busy={mutationBusy}
@@ -836,7 +882,12 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
               Page {page} of {maxPage} · {numberLabel(Number(inventory?.total || 0))} records
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page <= 1 || busy} onClick={() => setPage(page - 1)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1 || busy}
+                onClick={() => setPage(page - 1)}
+              >
                 Previous
               </Button>
               <Button
@@ -847,7 +898,12 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
               >
                 Next
               </Button>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => inventoryQuery.refetch()}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy}
+                onClick={() => inventoryQuery.refetch()}
+              >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
               </Button>
@@ -863,7 +919,8 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
               <SheetHeader>
                 <SheetTitle>{selectedListing.title || `Listing #${selectedListing.id}`}</SheetTitle>
                 <SheetDescription>
-                  Canonical listing #{selectedListing.id} · Agency #{selectedListing.agencyId || 'inferred'}
+                  Canonical listing #{selectedListing.id} · Agency #
+                  {selectedListing.agencyId || 'inferred'}
                 </SheetDescription>
               </SheetHeader>
               <div className="space-y-5 px-4 pb-6">
@@ -874,8 +931,14 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                 <div className="grid gap-3 md:grid-cols-3">
                   <DetailBlock label="Assigned agent" value={assignmentLabel(selectedListing)} />
                   <DetailBlock label="Creator" value={selectedListing.creator?.name || 'Unknown'} />
-                  <DetailBlock label="Next action" value={selectedListing.nextAction || 'Review listing'} />
+                  <DetailBlock
+                    label="Next action"
+                    value={selectedListing.nextAction || 'Review listing'}
+                  />
                 </div>
+                <p className="text-xs text-slate-500">
+                  Last updated {formatAge(selectedListing.timestamps.updatedAt)}
+                </p>
 
                 <div className="rounded-lg border border-slate-200 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -921,9 +984,18 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                 )}
 
                 <div className="grid gap-3 md:grid-cols-4">
-                  <DetailBlock label="Views" value={performanceLabel(selectedListing.performance.views)} />
-                  <DetailBlock label="Enquiries" value={performanceLabel(selectedListing.performance.enquiries)} />
-                  <DetailBlock label="Days live" value={selectedListing.performance.daysLive ?? 'Private'} />
+                  <DetailBlock
+                    label="Views"
+                    value={performanceLabel(selectedListing.performance.views)}
+                  />
+                  <DetailBlock
+                    label="Enquiries"
+                    value={performanceLabel(selectedListing.performance.enquiries)}
+                  />
+                  <DetailBlock
+                    label="Days live"
+                    value={selectedListing.performance.daysLive ?? 'Private'}
+                  />
                   <DetailBlock label="Conversion" value={conversionLabel(selectedListing)} />
                 </div>
                 <p className="text-xs text-slate-500">
@@ -933,13 +1005,24 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                 <div className="rounded-lg border border-slate-200 p-4">
                   <p className="font-semibold text-slate-950">Review state</p>
                   <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <DetailBlock label="Submitted" value={dateLabel(selectedListing.review?.submittedAt)} />
-                    <DetailBlock label="Reviewed" value={dateLabel(selectedListing.review?.reviewedAt)} />
-                    <DetailBlock label="Review status" value={labelize(selectedListing.review?.status)} />
+                    <DetailBlock
+                      label="Submitted"
+                      value={dateLabel(selectedListing.review?.submittedAt)}
+                    />
+                    <DetailBlock
+                      label="Reviewed"
+                      value={dateLabel(selectedListing.review?.reviewedAt)}
+                    />
+                    <DetailBlock
+                      label="Review status"
+                      value={labelize(selectedListing.review?.status)}
+                    />
                   </div>
                   {selectedListing.rejection?.reason || selectedListing.rejection?.note ? (
                     <div className="mt-3 rounded-md bg-rose-50 p-3 text-sm text-rose-900">
-                      <p className="font-semibold">{selectedListing.rejection.reason || 'Rejected'}</p>
+                      <p className="font-semibold">
+                        {selectedListing.rejection.reason || 'Rejected'}
+                      </p>
                       {selectedListing.rejection.note ? (
                         <p className="mt-1 leading-6">{selectedListing.rejection.note}</p>
                       ) : null}
@@ -952,13 +1035,18 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                     <p className="font-semibold text-slate-950">Media summary</p>
                     <div className="mt-3 grid gap-2 md:grid-cols-2">
                       {detailQuery.data.mediaItems.slice(0, 6).map((item: any) => (
-                        <div key={item.id} className="flex items-center gap-3 rounded-md bg-slate-50 p-2">
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-3 rounded-md bg-slate-50 p-2"
+                        >
                           <Image className="h-4 w-4 text-slate-500" />
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-slate-950">
                               {labelize(item.mediaType)} {item.isPrimary ? 'primary' : ''}
                             </p>
-                            <p className="text-xs text-slate-500">{labelize(item.processingStatus)}</p>
+                            <p className="text-xs text-slate-500">
+                              {labelize(item.processingStatus)}
+                            </p>
                           </div>
                         </div>
                       ))}
@@ -971,12 +1059,19 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                     <p className="font-semibold text-slate-950">Activity</p>
                     <div className="mt-3 space-y-2">
                       {detailQuery.data.reviewHistory.map((item: any) => (
-                        <div key={item.id} className="flex items-start justify-between gap-3 rounded-md bg-slate-50 p-3">
+                        <div
+                          key={item.id}
+                          className="flex items-start justify-between gap-3 rounded-md bg-slate-50 p-3"
+                        >
                           <div>
                             <p className="font-medium text-slate-950">{labelize(item.status)}</p>
-                            <p className="text-sm text-slate-500">{item.reviewNotes || item.rejectionReason || 'Review queue update'}</p>
+                            <p className="text-sm text-slate-500">
+                              {item.reviewNotes || item.rejectionReason || 'Review queue update'}
+                            </p>
                           </div>
-                          <p className="shrink-0 text-xs text-slate-500">{dateLabel(item.submittedAt)}</p>
+                          <p className="shrink-0 text-xs text-slate-500">
+                            {dateLabel(item.submittedAt)}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -1027,7 +1122,11 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
             </div>
           ) : (
             <div className="px-4">
-              <EmptyPanel icon={XCircle} title="Listing not found" text="This record is not available to your agency." />
+              <EmptyPanel
+                icon={XCircle}
+                title="Listing not found"
+                text="This record is not available to your agency."
+              />
             </div>
           )}
         </SheetContent>
