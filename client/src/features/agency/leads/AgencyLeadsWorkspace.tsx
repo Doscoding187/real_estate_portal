@@ -326,7 +326,9 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
             leadsTotal={Math.max(props.conversion.total, props.filteredLeads.length, 1)}
             onNavigate={props.onNavigate}
           />
-          <SourcePerformancePanel data={props.sourceEfficiencyData} />
+          <div className="min-w-0 overflow-hidden rounded-lg">
+            <SourcePerformancePanel data={props.sourceEfficiencyData} />
+          </div>
         </div>
       </section>
 
