@@ -8,6 +8,7 @@ import {
 import { normalizePublicPropertyCard } from '@/lib/property';
 import type { PublicPropertyDetailPresentation } from '@shared/public-property-detail-presentation';
 import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
+import { AgentInsightsSection } from '@/components/agent/AgentInsightsSection';
 import {
   ArrowLeft,
   ArrowRight,
@@ -330,6 +331,7 @@ export default function AgentMicrosite() {
             {areas.length > 0 && (
               <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
             )}
+            <a href={allProperties ? `${profileHref}#insights` : '#insights'}>Advice</a>
             {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
           </nav>
           <div className="as-header-actions">
@@ -370,6 +372,7 @@ export default function AgentMicrosite() {
             {areas.length > 0 && (
               <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
             )}
+            <a href={allProperties ? `${profileHref}#insights` : '#insights'}>Advice</a>
             {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
             <a href="#contact">Contact agent</a>
           </nav>
@@ -710,6 +713,8 @@ export default function AgentMicrosite() {
             </div>
           </section>
         )}
+
+        {!allProperties && <AgentInsightsSection area={primaryArea} />}
 
         {!allProperties && hasAbout && (
           <section id="about" className="as-about" data-testid="about-section">
