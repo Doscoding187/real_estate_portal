@@ -49,6 +49,7 @@ import {
   resolveCanonicalAgentAreas,
 } from './services/agentPublicProfileService';
 import { recordAgentOsEvent } from './services/agentOsEventService';
+import { listPublicVideosForAgent } from './services/agentPublicVideoService';
 import {
   deriveLeadReadiness,
   leadStatusTimestamps,
@@ -659,6 +660,26 @@ export const agentRouter = router({
       const db = await getDb();
       const agentId = await findApprovedAgentIdBySlug(db, input.slug);
       return agentId ? listPublicInventoryLocationsForAgent(db, agentId) : [];
+    }),
+
+  getPublicVideosForAgent: publicProcedure
+    .input(
+      z
+        .object({
+          slug: z.string().min(3),
+          limit: z.number().int().min(1).max(12).default(6),
+          cursor: z.number().int().positive().optional(),
+          // tRPC adds this field to forward infinite-query requests.
+          direction: z.literal('forward').optional(),
+        })
+        .strict(),
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      const agentId = await findApprovedAgentIdBySlug(db, input.slug);
+      return agentId
+        ? listPublicVideosForAgent(db, agentId, input)
+        : { items: [], nextCursor: null };
     }),
 
   getPublicProfileRouteById: publicProcedure
