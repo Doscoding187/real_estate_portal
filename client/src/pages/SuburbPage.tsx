@@ -32,8 +32,27 @@ import { ArrowRight } from 'lucide-react';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { buildPropertySearchUrl } from '@/lib/heroJourneySearch';
 import { normalizeCoordinatePair } from '@shared/location-contract';
+import SuburbGuidePage from './SuburbGuidePage';
 
 export default function SuburbPage({
+  params,
+}: {
+  params: { province: string; city: string; suburb: string; action?: string; locationId?: string };
+}) {
+  const [location] = useLocation();
+  const isNeutralSuburbGuide =
+    !location.startsWith('/property-for-sale') &&
+    !location.startsWith('/property-to-rent') &&
+    Boolean(params.province && params.city && params.suburb);
+
+  if (isNeutralSuburbGuide) {
+    return <SuburbGuidePage params={params} />;
+  }
+
+  return <LegacySuburbPage params={params} />;
+}
+
+function LegacySuburbPage({
   params,
 }: {
   params: { province: string; city: string; suburb: string; action?: string; locationId?: string };

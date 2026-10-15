@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
 import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
@@ -31,6 +32,11 @@ interface LocationTrendingFeedSectionProps {
   activeTab?: FeedTab | null;
   onTabChange?: (tab: FeedTab) => void;
   neutralMode?: boolean;
+  visibleTabs?: readonly FeedTab[];
+  viewAllHref?: Partial<Record<FeedTab, string>>;
+  standardizeDevelopmentUnitCards?: boolean;
+  cardLayout?: 'carousel' | 'wide';
+  requirePhotoReadyDevelopments?: boolean;
 }
 
 type TrendingFeedItem = {
@@ -103,13 +109,17 @@ export function LocationTrendingFeedSection({
   activeTab: controlledActiveTab,
   onTabChange,
   neutralMode = false,
+  visibleTabs,
+  viewAllHref,
+  standardizeDevelopmentUnitCards = false,
+  cardLayout = 'carousel',
+  requirePhotoReadyDevelopments = false,
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
   // Public search entry does not release generic development inventory.
-  const landJourneyEnabled =
-    isHomepageHeroJourneyEnabled('plot_land') && isLandVerticalAvailable();
+  const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land') && isLandVerticalAvailable();
   const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
   const activeTab =
     requestedActiveTab === 'rent' && !rentJourneyEnabled
@@ -118,16 +128,17 @@ export function LocationTrendingFeedSection({
         ? null
         : requestedActiveTab === 'plot_land' && !landJourneyEnabled
           ? null
-        : requestedActiveTab;
+          : requestedActiveTab;
   const visibleFeedTabs = FEED_TABS.filter(
     tab =>
+      (!visibleTabs || visibleTabs.includes(tab.value)) &&
       (tab.value !== 'rent' || rentJourneyEnabled) &&
       (tab.value !== 'developments' || developmentsJourneyEnabled) &&
       (tab.value !== 'plot_land' || landJourneyEnabled),
   );
   const sharedLivingHandsOff = activeTab === 'shared_living';
 
-  const { data: feedData } = trpc.developer.getHomeTrendingFeed.useQuery(
+  const feedQuery = trpc.developer.getHomeTrendingFeed.useQuery(
     {
       tab: activeTab || 'buy',
       province,
@@ -138,7 +149,22 @@ export function LocationTrendingFeedSection({
     { enabled: Boolean(activeTab) && !sharedLivingHandsOff },
   );
 
-  const items = ((feedData?.items || []) as TrendingFeedItem[]).slice(0, maxItems);
+  const sourceItems = (feedQuery.data?.items || []) as TrendingFeedItem[];
+  const eligibleItems = sourceItems.filter(
+    item =>
+      !requirePhotoReadyDevelopments ||
+      item.kind !== 'development' ||
+      Boolean(getPrimaryDevelopmentImageUrl(item.image)),
+  );
+  const items = eligibleItems.slice(0, maxItems);
+  const visibleCardCount = cardLayout === 'wide' ? 2 : 4;
+  const hasCarouselOverflow = items.length > visibleCardCount;
+  const carouselItemBasis =
+    cardLayout === 'wide'
+      ? items.length === 1
+        ? 'basis-full md:basis-full lg:basis-3/4'
+        : 'basis-full md:basis-1/2'
+      : 'basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4';
 
   const copy = activeTab
     ? TAB_COPY[activeTab]
@@ -150,13 +176,34 @@ export function LocationTrendingFeedSection({
 
   return (
     <section className="py-10 bg-white rounded-2xl border border-slate-200/80 px-4 md:px-6">
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-slate-900">{title}</h2>
-        <p className="text-sm text-slate-600 mt-1">{copy.subtitle}</p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900">{title}</h2>
+          <p className="text-sm text-slate-600 mt-1">{copy.subtitle}</p>
+        </div>
+        {activeTab && viewAllHref?.[activeTab] ? (
+          <Link
+            href={viewAllHref[activeTab]}
+            className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 transition hover:border-[#2774AE] hover:text-[#2774AE] sm:self-auto"
+          >
+            {activeTab === 'buy'
+              ? 'View all homes'
+              : activeTab === 'rent'
+                ? 'View all rentals'
+                : activeTab === 'developments'
+                  ? 'View all developments'
+                  : 'View all'}
+            <span aria-hidden="true">→</span>
+          </Link>
+        ) : null}
       </div>
 
       <div className="flex justify-start mb-7 overflow-x-auto pb-2 scrollbar-hide">
-        <div className="inline-flex flex-nowrap justify-start gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-200">
+        <div
+          className="inline-flex flex-nowrap justify-start gap-2"
+          role="group"
+          aria-label={`${locationName} property type`}
+        >
           {visibleFeedTabs.map(tab => (
             <button
               key={tab.value}
@@ -171,12 +218,12 @@ export function LocationTrendingFeedSection({
                 }
                 onTabChange?.(tab.value);
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${
                 activeTab === tab.value
-                  ? 'bg-[#2774AE] text-white shadow-sm'
+                  ? 'bg-[#2774AE] border-[#2774AE] text-white shadow-sm'
                   : neutralMode && tab.value !== 'buy'
-                    ? 'text-slate-400 cursor-not-allowed'
-                    : 'text-slate-600 hover:text-[#2774AE] hover:bg-white'
+                    ? 'border-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-[#2774AE] hover:text-[#2774AE]'
               }`}
             >
               {tab.label}
@@ -185,99 +232,166 @@ export function LocationTrendingFeedSection({
         </div>
       </div>
 
-      {!activeTab ? (
-        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
-          Choose a supported journey to view published opportunities in this area.
-        </div>
-      ) : sharedLivingHandsOff ? (
-        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-600">
-          <p>
-            Shared Living uses its own canonical location search rather than this display location.
-          </p>
-          <a
-            href="/shared-living"
-            className="mt-4 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+      <div id="location-trending-feed-panel" aria-live="polite" aria-busy={feedQuery.isLoading}>
+        {!activeTab ? (
+          <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
+            Choose a supported journey to view published opportunities in this area.
+          </div>
+        ) : sharedLivingHandsOff ? (
+          <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-600">
+            <p>
+              Shared Living uses its own canonical location search rather than this display
+              location.
+            </p>
+            <a
+              href="/shared-living"
+              className="mt-4 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700"
+            >
+              Browse Shared Living
+            </a>
+          </div>
+        ) : feedQuery.isLoading ? (
+          <div
+            className={`grid grid-cols-1 gap-4 ${cardLayout === 'wide' ? 'md:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-4'}`}
+            role="status"
+            aria-label={`Loading ${copy.title.toLowerCase()}`}
           >
-            Browse Shared Living
-          </a>
-        </div>
-      ) : items.length > 0 ? (
-        <div className="group/carousel relative w-full max-w-[1240px]">
-          <Carousel opts={{ align: 'start', loop: items.length > 4 }} className="w-full">
-            <CarouselContent className="-ml-3 pb-2 justify-start">
-              {items.map(item => (
-                <CarouselItem
-                  key={item.id}
-                  className="pl-3 basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-                >
-                  <div className="relative">
-                    {item.kind === 'listing' ? (
-                      <SimpleHomeListingCard
-                        id={item.id}
-                        title={item.title}
-                        city={item.city}
-                        suburb={item.suburb}
-                        image={item.image || ''}
-                        href={item.href}
-                        price={item.priceFrom}
-                        bedrooms={item.bedrooms}
-                        bathrooms={item.bathrooms}
-                        area={item.area}
-                        yardSize={item.yardSize}
-                        propertyType={item.propertyType}
-                        listingType={item.listingType}
-                        badgeLabel={item.listingType === 'rent' ? 'Property listing' : 'Resale'}
-                      />
-                    ) : item.kind === 'unit' ? (
-                      <SimpleDevelopmentUnitCard
-                        id={item.id}
-                        title={item.title}
-                        developmentName={item.developmentName || 'Featured Development'}
-                        city={item.city}
-                        suburb={item.suburb}
-                        image={item.image || ''}
-                        href={item.href}
-                        priceFrom={item.priceFrom}
-                        priceTo={item.priceTo}
-                        listingType={item.listingType}
-                        bedrooms={item.bedrooms}
-                        bathrooms={item.bathrooms}
-                        unitSize={item.unitSize}
-                        yardSize={item.yardSize}
-                        badgeLabel="New development"
-                      />
-                    ) : (
-                      <SimpleDevelopmentCard
-                        id={item.id}
-                        title={item.title}
-                        city={item.city}
-                        suburb={item.suburb}
-                        priceRange={{ min: item.priceFrom, max: item.priceTo }}
-                        image={getPrimaryDevelopmentImageUrl(item.image) || ''}
-                        slug={item.kind === 'development' ? item.id : undefined}
-                        href={item.href}
-                        isHotSelling
-                        bedrooms={item.bedrooms}
-                        bedroomRange={item.bedroomRange}
-                        listingType={item.listingType}
-                        status={item.status}
-                        availabilityState={item.availabilityState}
-                        publisherName={item.publisherName}
-                      />
-                    )}
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
-            <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
-          </Carousel>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
-          No published inventory found for this location yet.
-        </div>
-      )}
+            {Array.from({ length: Math.min(maxItems, visibleCardCount) }, (_, index) => (
+              <div key={index} className="h-[300px] animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : feedQuery.isError ? (
+          <div
+            className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-8 text-center text-slate-700"
+            role="alert"
+          >
+            <p>We couldn’t load this area’s published opportunities.</p>
+            <button
+              type="button"
+              className="mt-3 rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-800 hover:bg-rose-100"
+              onClick={() => void feedQuery.refetch()}
+            >
+              Try again
+            </button>
+          </div>
+        ) : items.length > 0 ? (
+          <div className="group/carousel relative w-full max-w-[1240px]">
+            <Carousel opts={{ align: 'start', loop: hasCarouselOverflow }} className="w-full">
+              <CarouselContent className="-ml-3 pb-2 justify-start">
+                {items.map(item => (
+                  <CarouselItem key={item.id} className={`pl-3 ${carouselItemBasis}`}>
+                    <div className="relative">
+                      {item.kind === 'listing' ? (
+                        <SimpleHomeListingCard
+                          id={item.id}
+                          title={item.title}
+                          city={item.city}
+                          suburb={item.suburb}
+                          image={item.image || ''}
+                          href={item.href}
+                          price={item.priceFrom}
+                          bedrooms={item.bedrooms}
+                          bathrooms={item.bathrooms}
+                          area={item.area}
+                          yardSize={item.yardSize}
+                          propertyType={item.propertyType}
+                          listingType={item.listingType}
+                          badgeLabel={
+                            standardizeDevelopmentUnitCards
+                              ? item.listingType === 'rent'
+                                ? 'For rent'
+                                : 'For sale'
+                              : item.listingType === 'rent'
+                                ? 'Property listing'
+                                : 'Resale'
+                          }
+                        />
+                      ) : item.kind === 'unit' ? (
+                        standardizeDevelopmentUnitCards ? (
+                          <SimpleHomeListingCard
+                            id={item.id}
+                            title={item.title}
+                            city={item.city}
+                            suburb={item.suburb}
+                            image={item.image || ''}
+                            href={item.href}
+                            price={item.priceFrom}
+                            bedrooms={item.bedrooms}
+                            bathrooms={item.bathrooms}
+                            area={item.unitSize}
+                            yardSize={item.yardSize}
+                            listingType={item.listingType}
+                            propertyType={item.propertyType}
+                            badgeLabel={
+                              item.listingType === 'rent' ? 'For rent' : 'For sale · Off-plan'
+                            }
+                          />
+                        ) : (
+                          <SimpleDevelopmentUnitCard
+                            id={item.id}
+                            title={item.title}
+                            developmentName={item.developmentName || 'Featured Development'}
+                            city={item.city}
+                            suburb={item.suburb}
+                            image={item.image || ''}
+                            href={item.href}
+                            priceFrom={item.priceFrom}
+                            priceTo={item.priceTo}
+                            listingType={item.listingType}
+                            bedrooms={item.bedrooms}
+                            bathrooms={item.bathrooms}
+                            unitSize={item.unitSize}
+                            yardSize={item.yardSize}
+                            badgeLabel="New development"
+                          />
+                        )
+                      ) : (
+                        <SimpleDevelopmentCard
+                          id={item.id}
+                          title={item.title}
+                          city={item.city}
+                          suburb={item.suburb}
+                          priceRange={{ min: item.priceFrom, max: item.priceTo }}
+                          image={getPrimaryDevelopmentImageUrl(item.image) || ''}
+                          slug={item.kind === 'development' ? item.id : undefined}
+                          href={item.href}
+                          bedrooms={item.bedrooms}
+                          bedroomRange={item.bedroomRange}
+                          listingType={item.listingType}
+                          status={item.status}
+                          availabilityState={item.availabilityState}
+                          publisherName={item.publisherName}
+                        />
+                      )}
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {hasCarouselOverflow ? (
+                <>
+                  <CarouselPrevious className="-left-4 lg:left-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 translate-x-1/2" />
+                  <CarouselNext className="-right-4 lg:right-0 opacity-0 group-hover/carousel:opacity-100 transition-all duration-300 bg-white/95 shadow-lg border-gray-100 -translate-x-1/2" />
+                </>
+              ) : null}
+            </Carousel>
+          </div>
+        ) : (
+          <div
+            className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500"
+            role="status"
+          >
+            {activeTab === 'developments' && sourceItems.length > 0 && items.length === 0
+              ? `No photo-ready public developments are listed in ${locationName} right now.`
+              : activeTab === 'buy'
+                ? `No photo-ready homes or available development units for sale are listed in ${locationName} right now.`
+                : activeTab === 'rent'
+                  ? `No photo-ready homes or available development units for rent are listed in ${locationName} right now.`
+                  : activeTab === 'developments'
+                    ? `No public residential developments are listed in ${locationName} right now.`
+                    : 'No published inventory found for this location yet.'}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
