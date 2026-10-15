@@ -571,7 +571,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <SummaryMetric label="Published" value={summary.published} tone="emerald" icon={Home} />
         <SummaryMetric label="Ready" value={summary.readyToSubmit} tone="sky" icon={CheckCircle2} />
         <SummaryMetric
@@ -606,7 +606,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
             <SectionTitle
               icon={Home}
               title="Inventory"
-              eyebrow={`${numberLabel(Number(inventory?.total || 0))} canonical listing records`}
+              eyebrow={`${numberLabel(Number(inventory?.total || 0))} listings`}
               action={
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => props.setLocation('/agency/commercial')}>
@@ -774,12 +774,12 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                     <div
                       key={listing.id}
                       data-testid="agency-listing-row"
-                      className="grid gap-4 px-4 py-4 hover:bg-slate-50/60 xl:grid-cols-[minmax(240px,2fr)_minmax(140px,1fr)_minmax(160px,1.1fr)_130px_108px] xl:items-center"
+                      className="grid grid-cols-2 gap-4 px-4 py-4 hover:bg-slate-50/60 xl:grid-cols-[minmax(240px,2fr)_minmax(140px,1fr)_minmax(160px,1.1fr)_130px_108px] xl:items-center"
                     >
                       <button
                         type="button"
                         onClick={() => openDetail(listing.id)}
-                        className="min-w-0 text-left"
+                        className="col-span-2 min-w-0 text-left xl:col-span-1"
                       >
                         <ListingTitle listing={listing} />
                         <p className="mt-1 text-sm text-slate-500">
@@ -834,7 +834,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                       </button>
                       <AgencyListingStatus listing={listing} />
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="mt-4 grid grid-cols-2 gap-3">
                       <MiniMetric
                         label="Views"
                         value={performanceLabel(listing.performance.views)}
