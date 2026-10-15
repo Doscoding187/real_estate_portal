@@ -36,7 +36,11 @@ import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrim
 import type { WorkspaceContentProps } from '../workspace/types';
 import { compactCurrency, formatAge, numberLabel } from '../workspace/utils';
 import { LISTING_SUBMISSION_READINESS_THRESHOLD } from '@shared/listing-workflow-types';
-import { AgencyListingActions, AgencyListingStatus } from './AgencyListingPresentation';
+import {
+  AgencyListingActions,
+  AgencyListingIdentity,
+  AgencyListingStatus,
+} from './AgencyListingPresentation';
 
 type InventoryStatus =
   | 'all'
@@ -306,17 +310,19 @@ function AssignmentSelect({
   );
 }
 
-function ListingTitle({ listing }: { listing: any }) {
+function ListingTitle({ listing, showSummary = false }: { listing: any; showSummary?: boolean }) {
   const location = [listing.suburb, listing.city, listing.province].filter(Boolean).join(', ');
   return (
-    <div className="min-w-0">
-      <p className="truncate font-semibold text-slate-950">
-        {listing.title || listing.address || `Listing #${listing.id}`}
-      </p>
-      <p className="mt-1 truncate text-sm text-slate-500">
-        {location || listing.address || 'Location pending'}
-      </p>
-    </div>
+    <AgencyListingIdentity
+      title={listing.title || listing.address || `Listing #${listing.id}`}
+      location={location || listing.address || 'Location pending'}
+      thumbnailUrl={listing.media.thumbnailUrl}
+      summary={
+        showSummary
+          ? `${labelize(listing.transactionType)} · ${labelize(listing.propertyType)} · ${compactCurrency(Number(listing.price || 0))}`
+          : undefined
+      }
+    />
   );
 }
 
@@ -781,11 +787,7 @@ export function AgencyListingsWorkspace(props: WorkspaceContentProps) {
                         onClick={() => openDetail(listing.id)}
                         className="col-span-2 min-w-0 text-left xl:col-span-1"
                       >
-                        <ListingTitle listing={listing} />
-                        <p className="mt-1 text-sm text-slate-500">
-                          {labelize(listing.transactionType)} · {labelize(listing.propertyType)} ·{' '}
-                          {compactCurrency(Number(listing.price || 0))}
-                        </p>
+                        <ListingTitle listing={listing} showSummary />
                       </button>
                       <AgencyListingStatus listing={listing} />
                       <button

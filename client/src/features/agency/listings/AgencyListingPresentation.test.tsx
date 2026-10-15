@@ -1,8 +1,50 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AgencyListingActions, AgencyListingStatus } from './AgencyListingPresentation';
+import {
+  AgencyListingActions,
+  AgencyListingIdentity,
+  AgencyListingStatus,
+} from './AgencyListingPresentation';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 
 afterEach(cleanup);
+
+describe('agency listing thumbnail', () => {
+  it('shows the supplied photo with its listing identity and switches to the shared fallback on error', () => {
+    const view = render(
+      <AgencyListingIdentity
+        title="Sandton home"
+        location="Sandton"
+        summary="Sale · House"
+        thumbnailUrl="https://example.com/home.jpg"
+      />,
+    );
+    const image = view.container.querySelector('img')!;
+    expect(image).toHaveAttribute('src', 'https://example.com/home.jpg');
+    expect(screen.getByText('Sandton home')).toBeDefined();
+    expect(screen.getByText('Sale · House')).toBeDefined();
+    fireEvent.error(image);
+    expect(image).toHaveAttribute('src', PROPERTY_IMAGE_FALLBACK);
+    fireEvent.error(image);
+    expect(image).toHaveAttribute('src', PROPERTY_IMAGE_FALLBACK);
+  });
+
+  it('shows a fallback when no photo exists and updates when the listing photo changes', () => {
+    const view = render(<AgencyListingIdentity title="Sandton home" location="Sandton" />);
+    expect(view.container.querySelector('img')).toHaveAttribute('src', PROPERTY_IMAGE_FALLBACK);
+    view.rerender(
+      <AgencyListingIdentity
+        title="Sandton home"
+        location="Sandton"
+        thumbnailUrl="https://example.com/new.jpg"
+      />,
+    );
+    expect(view.container.querySelector('img')).toHaveAttribute(
+      'src',
+      'https://example.com/new.jpg',
+    );
+  });
+});
 
 describe('agency listing status summary', () => {
   it('shows one Live status for matching publication states without repeated clear/readiness badges', () => {

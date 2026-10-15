@@ -1,5 +1,7 @@
 import { Archive, ArrowUpRight, ClipboardCheck, Eye, MoreHorizontal, Pencil } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { FallbackImage } from '@/components/FallbackImage';
+import { withApiBase } from '@/lib/mediaUtils';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -8,6 +10,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+export function AgencyListingIdentity({
+  title,
+  location,
+  summary,
+  thumbnailUrl,
+}: {
+  title: string;
+  location: string;
+  summary?: string;
+  thumbnailUrl?: string | null;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <FallbackImage
+        src={withApiBase(thumbnailUrl)}
+        alt=""
+        width={64}
+        height={56}
+        decoding="async"
+        className="h-14 w-16 shrink-0 rounded-md border border-slate-200 bg-slate-100 object-cover"
+      />
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-slate-950">{title}</p>
+        <p className="mt-1 truncate text-sm text-slate-500">{location}</p>
+        {summary && <p className="mt-1 text-sm text-slate-500">{summary}</p>}
+      </div>
+    </div>
+  );
+}
 
 interface ListingState {
   authoringStatus?: string;
