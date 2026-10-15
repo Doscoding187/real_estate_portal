@@ -13,6 +13,7 @@ import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
+import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 
 const affordabilityDataSchema = z
   .object({
@@ -119,6 +120,16 @@ export const leadsRouter = router({
           consent: leadConsentSchema.optional(),
         })
         .superRefine((input, refinementContext) => {
+          if (input.agentId && !input.listingId && resolveOwner(input).ownerType === 'agent') {
+            const phoneError = agentProfilePhoneError(input.phone);
+            if (phoneError) {
+              refinementContext.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['phone'],
+                message: phoneError,
+              });
+            }
+          }
           if (input.commercialAvailabilityId && !input.listingId) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,

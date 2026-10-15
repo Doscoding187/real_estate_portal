@@ -42,6 +42,9 @@ function fill(container: HTMLElement) {
   fireEvent.change(within(container).getByLabelText(/Email address/), {
     target: { value: 'preview@example.test' },
   });
+  fireEvent.change(within(container).getByLabelText(/Phone number/), {
+    target: { value: '082 123 4567' },
+  });
   fireEvent.change(within(container).getByLabelText(/Message|How can Jane help/), {
     target: { value: 'Please tell me more about your current listings.' },
   });
@@ -52,6 +55,33 @@ describe('agent profile inline enquiry', () => {
     state.pending = false;
   });
   afterEach(cleanup);
+  it.each(['inline', 'dialog'] as const)('requires a phone number in the %s form', presentation => {
+    render(
+      <AgentProfileEnquiryDialog
+        agentId={42}
+        agentName="Jane"
+        presentation={presentation}
+        open
+        onOpenChange={() => {}}
+      />,
+    );
+    const form = screen.getByTestId(`agent-profile-enquiry-${presentation}`);
+    fill(form);
+    fireEvent.click(within(form).getByLabelText(/I agree to be contacted/));
+    const phone = within(form).getByLabelText(/Phone number/);
+    expect(phone).toBeRequired();
+    fireEvent.change(phone, { target: { value: '   ' } });
+    fireEvent.submit(form.querySelector('form')!);
+    expect(mutation).not.toHaveBeenCalled();
+    expect(within(form).getByRole('alert').textContent).toContain('enter your phone number');
+    fireEvent.change(phone, { target: { value: 'not a number' } });
+    fireEvent.submit(form.querySelector('form')!);
+    expect(mutation).not.toHaveBeenCalled();
+    expect(within(form).getByRole('alert').textContent).toContain('valid phone number');
+    fireEvent.change(phone, { target: { value: ' +27 (82) 123-4567 ' } });
+    fireEvent.submit(form.querySelector('form')!);
+    expect(mutation).toHaveBeenCalledWith(expect.objectContaining({ phone: '+27 (82) 123-4567' }));
+  });
   it('requires consent before sending a correctly routed inline enquiry', () => {
     render(
       <AgentProfileEnquiryDialog

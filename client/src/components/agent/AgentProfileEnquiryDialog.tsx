@@ -20,6 +20,7 @@ import {
   publicLeadConsent,
 } from '@/lib/leadCapture';
 import { trpc } from '@/lib/trpc';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 type AgentProfileEnquiryDialogProps = {
   agentId: number;
@@ -122,6 +123,13 @@ export function AgentProfileEnquiryDialog({
       return;
     }
 
+    const phoneError = agentProfilePhoneError(form.phone);
+    if (phoneError) {
+      setSubmissionError(phoneError);
+      toast.error(phoneError);
+      return;
+    }
+
     if (!form.consentAccepted) {
       const message = 'Please agree to be contacted about this enquiry.';
       setSubmissionError(message);
@@ -206,16 +214,24 @@ export function AgentProfileEnquiryDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor={`${fieldPrefix}-phone`}>Phone number</Label>
+              <Label htmlFor={`${fieldPrefix}-phone`}>
+                Phone number <span className="text-destructive">*</span>
+              </Label>
               <Input
                 id={`${fieldPrefix}-phone`}
                 type="tel"
                 value={form.phone}
                 onChange={event => update('phone', event.target.value)}
-                placeholder="+27 12 345 6789"
+                placeholder="082 123 4567"
                 maxLength={50}
                 autoComplete="tel"
+                required
+                aria-invalid={!!submissionError && !!agentProfilePhoneError(form.phone)}
+                aria-describedby={`${fieldPrefix}-phone-help`}
               />
+              <p id={`${fieldPrefix}-phone-help`} className="text-xs text-slate-500">
+                The agent can use this number to follow up about your enquiry.
+              </p>
             </div>
 
             <div className="space-y-2">
