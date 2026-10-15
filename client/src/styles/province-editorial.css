@@ -1,4 +1,6 @@
 .province-editorial {
+  --guide-section-space: 3rem;
+  --guide-related-space: 1.5rem;
   background: #fff;
 }
 .province-editorial :where(main) h2,
@@ -98,7 +100,7 @@
   border-color: #005ca8;
 }
 .guide-section {
-  padding-block: 2.25rem;
+  padding-block: var(--guide-section-space);
 }
 .guide-eyebrow {
   display: flex;
@@ -151,7 +153,7 @@
   text-underline-offset: 3px;
 }
 #insights {
-  padding-top: 0;
+  padding-bottom: var(--guide-related-space);
 }
 .guide-market {
   display: grid;
@@ -239,7 +241,7 @@
   display: flex;
   align-items: center;
   gap: 1.6rem;
-  padding-block: 0.4rem 1.8rem;
+  padding-block: 0 var(--guide-related-space);
   border-bottom: 1px solid #e1eaf1;
 }
 .province-editorial .guide-priority-strip h2 {
@@ -269,6 +271,9 @@
 .guide-band {
   background: #f5f8fb;
   border-block: 1px solid #e5edf3;
+}
+.province-editorial .provincial-billboard-section {
+  padding-block: 0 var(--guide-section-space);
 }
 .guide-practical {
   display: grid;
@@ -400,6 +405,10 @@
   }
 }
 @media (max-width: 640px) {
+  .province-editorial {
+    --guide-section-space: 2rem;
+    --guide-related-space: 1.25rem;
+  }
   .guide-top-search {
     padding-bottom: 1rem;
   }
@@ -413,9 +422,6 @@
   .guide-jump-nav > div > span {
     display: none;
   }
-  .guide-section {
-    padding-block: 1.6rem;
-  }
   .guide-small-label {
     display: none;
   }
@@ -427,9 +433,6 @@
   .guide-live-counts > div {
     grid-template-columns: 55px minmax(0, 1fr) 30px;
     gap: 0.6rem;
-  }
-  .guide-priority-strip {
-    padding-bottom: 1.4rem;
   }
   .guide-priority-strip > div {
     gap: 0.5rem;
