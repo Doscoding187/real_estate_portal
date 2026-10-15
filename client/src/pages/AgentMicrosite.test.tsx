@@ -54,6 +54,9 @@ vi.mock('@/lib/trpc', () => ({
       },
     },
     agent: {
+      getPublicVideosForAgent: {
+        useInfiniteQuery: () => ({ data: { pages: [{ items: [], nextCursor: null }] } }),
+      },
       getPublicProfileBySlug: {
         useQuery: (_input: unknown, _options: unknown) => profileResult.current,
       },

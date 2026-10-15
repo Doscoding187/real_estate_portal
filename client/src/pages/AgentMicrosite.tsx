@@ -9,6 +9,7 @@ import { normalizePublicPropertyCard } from '@/lib/property';
 import type { PublicPropertyDetailPresentation } from '@shared/public-property-detail-presentation';
 import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
 import { AgentInsightsSection } from '@/components/agent/AgentInsightsSection';
+import { AgentVideoSection } from '@/components/agent/AgentVideoSection';
 import {
   ArrowLeft,
   ArrowRight,
@@ -715,6 +716,7 @@ export default function AgentMicrosite() {
         )}
 
         {!allProperties && <AgentInsightsSection area={primaryArea} />}
+        {!allProperties && <AgentVideoSection key={slug} slug={slug} agentName={displayName} />}
 
         {!allProperties && hasAbout && (
           <section id="about" className="as-about" data-testid="about-section">
