@@ -12,12 +12,11 @@ import {
 } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
-import {
-  APPROVED_AGENT,
-  buildAgentPublicSlug,
-} from '../services/agentPublicProfileService';
+import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
 import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
+
+import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
 
 const router = Router();
 
@@ -185,11 +184,24 @@ router.get('/sitemap.xml', (req, res) => {
       '/sitemap-developments.xml',
       '/sitemap-agents.xml',
       '/sitemap-static.xml',
+      '/sitemap-guides.xml',
     ],
     resolveBaseUrl(req),
   );
 
   sendXml(res, xml);
+});
+
+// Editorial publication, not inventory presence, determines guide sitemap eligibility.
+router.get('/sitemap-guides.xml', (req, res) => {
+  sendXml(
+    res,
+    buildUrlSet(
+      getPublishedProvinceGuides().map(guide => ({
+        loc: toAbsoluteUrl(`/${guide.slug}`, resolveBaseUrl(req)),
+      })),
+    ),
+  );
 });
 
 router.get('/sitemap-agents.xml', async (_req, res, next) => {

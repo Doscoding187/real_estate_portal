@@ -1,3 +1,5 @@
+import { PROVINCE_GUIDE_CONTENT, getProvinceGuideContent } from './shared/provinceGuideContent';
+import { injectSeoHead } from './server/_core/seoHead';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -39,7 +41,41 @@ function developmentSupersessionDevMiddleware(): Plugin {
   };
 }
 
-const plugins = [developmentSupersessionDevMiddleware(), react(), tailwindcss()];
+function provinceGuideEditorialHtml(): Plugin {
+  return {
+    name: 'province-guide-editorial-html',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, context) {
+        const requestUrl = context.originalUrl || context.path;
+        const slug = new URL(requestUrl, 'http://localhost').pathname.replace(/^\/|\/$/g, '');
+        return getProvinceGuideContent(slug) ? injectSeoHead(html, requestUrl) : html;
+      },
+    },
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const template = bundle['index.html'];
+        if (!template || template.type !== 'asset')
+          throw new Error('Guide HTML requires the built application shell');
+        for (const guide of PROVINCE_GUIDE_CONTENT) {
+          this.emitFile({
+            type: 'asset',
+            fileName: `${guide.slug}/index.html`,
+            source: injectSeoHead(String(template.source), `/${guide.slug}`),
+          });
+        }
+      },
+    },
+  };
+}
+
+const plugins = [
+  provinceGuideEditorialHtml(),
+  developmentSupersessionDevMiddleware(),
+  react(),
+  tailwindcss(),
+];
 const buildGitSha =
   process.env.BUILD_SHA ||
   process.env.VERCEL_GIT_COMMIT_SHA ||

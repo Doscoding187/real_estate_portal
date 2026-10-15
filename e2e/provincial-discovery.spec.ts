@@ -258,6 +258,20 @@ async function installProvincialFixture(
     }
 
     const results = procedures.map(procedure => {
+      if (procedure === 'locationPages.getProvinceGuidePlaces') {
+        return trpcResult({ province: fixture.province, cities: fixture.cities });
+      }
+      if (procedure === 'locationPages.getProvinceGuideInventory') {
+        return trpcResult({
+          sale: { state: 'ready', total: fixture.journeyCounts.buy.total },
+          rent: { state: 'ready', total: fixture.journeyCounts.rent.total },
+          observedAt: fixture.generatedAt,
+          scope: fixture.province.canonicalLocationId,
+        });
+      }
+      if (procedure === 'locationPages.getCityGuides') {
+        return trpcResult(fixture.cities);
+      }
       if (procedure === 'locationPages.getProvincialDiscoveryData') {
         return trpcResult(fixture);
       }
@@ -433,12 +447,14 @@ test.describe('Gauteng provincial discovery', () => {
   }) => {
     await page.goto('/gauteng', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByText('Small live sample').first()).toBeVisible();
-    await expect(page.getByTestId('market-statistics-unavailable')).toBeVisible();
-    await expect(page.getByText('Not published yet')).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'What’s available on the platform?' }),
+    ).toBeVisible();
+    await expect(page.getByText(/They describe our current inventory/)).toBeVisible();
+    await expect(page.getByText(/Regional price comparisons/)).toBeVisible();
     await expect(page.getByText('R0')).toHaveCount(0);
 
-    await page.getByTestId('market-statistics-unavailable').scrollIntoViewIfNeeded();
+    await page.locator('.guide-market').scrollIntoViewIfNeeded();
     await capture(page, 'sparse-unavailable-market-data-1440.png', false);
   });
 
@@ -536,9 +552,9 @@ test.describe('Provincial discovery Phase 2 commercial presentation', () => {
       );
 
       const sectionOrder = await page.evaluate(() => {
-        const marketSection = document.getElementById('markets-heading')?.closest('section');
+        const marketSection = document.getElementById('cities-heading')?.closest('section');
         const billboardSection = document.querySelector('[data-testid="provincial-billboard"]');
-        const needsSection = document.getElementById('needs-heading')?.closest('section');
+        const needsSection = document.getElementById('living-heading')?.closest('section');
         return [marketSection, billboardSection, needsSection].map(node =>
           node ? Array.from(document.querySelectorAll('main section')).indexOf(node) : -1,
         );

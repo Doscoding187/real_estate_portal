@@ -1,3 +1,6 @@
+import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
+import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
+
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const DEFAULT_SITE_NAME = 'Property Listify';
 const DEFAULT_TITLE = 'Property Listify | South African Property Search and New Developments';
@@ -21,12 +24,7 @@ function titleCase(value: string): string {
 }
 
 function humanizeSegment(value: string): string {
-  return titleCase(
-    decodeURIComponent(value)
-      .replace(/[-_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim(),
-  );
+  return titleCase(decodeURIComponent(value).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim());
 }
 
 function normalizePathname(pathname: string): string {
@@ -47,7 +45,10 @@ function absoluteUrl(pathname: string): string {
   return new URL(pathname, CANONICAL_PUBLIC_ORIGIN).toString();
 }
 
-function buildAreaSeoData(transactionLabel: 'Sale' | 'Rent', segments: string[]): SeoPageData | null {
+function buildAreaSeoData(
+  transactionLabel: 'Sale' | 'Rent',
+  segments: string[],
+): SeoPageData | null {
   const [province, city, suburb] = segments.map(humanizeSegment);
   const canonicalPath = `/${
     transactionLabel === 'Sale' ? 'property-for-sale' : 'property-to-rent'
@@ -91,6 +92,17 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   const pathname = normalizePathname(parsedUrl.pathname);
   const pathSegments = pathname.split('/').filter(Boolean);
 
+  const guide = pathSegments.length === 1 ? getProvinceGuideContent(pathSegments[0]) : undefined;
+  if (guide)
+    return {
+      title: guide.title,
+      description: guide.description,
+      canonicalUrl: absoluteUrl(`/${guide.slug}`),
+      robots:
+        guide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+
   if (pathname === '/') {
     return {
       title: DEFAULT_TITLE,
@@ -105,7 +117,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     return {
       title: 'Advertise With Us | Property Listify',
       description:
-        "Explore advertising and acquisition opportunities for agents, developers, agencies, and property brands on Property Listify South Africa.",
+        'Explore advertising and acquisition opportunities for agents, developers, agencies, and property brands on Property Listify South Africa.',
       canonicalUrl: absoluteUrl(pathname),
       robots: 'index, follow',
       siteName: DEFAULT_SITE_NAME,
@@ -238,8 +250,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     pathSegments.length === 2 &&
     Boolean(pathSegments[1])
   ) {
-    const canonicalPath =
-      pathSegments[0] === 'a' ? `/agents/${pathSegments[1]}` : pathname;
+    const canonicalPath = pathSegments[0] === 'a' ? `/agents/${pathSegments[1]}` : pathname;
     return {
       title: `Property Practitioner Profile | ${DEFAULT_SITE_NAME}`,
       description:
@@ -261,8 +272,15 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
 
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
+  const initialHtml = provinceGuideInitialHtml(requestUrl);
+  const document = initialHtml
+    ? template.replace(
+        /<div id="root">[\s\S]*?<\/div>/,
+        () => `<div id="root">${initialHtml}</div>`,
+      )
+    : template;
 
-  return template
+  return document
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,

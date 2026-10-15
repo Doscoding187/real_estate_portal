@@ -41,7 +41,10 @@ function makeRes(capture: SendCapture) {
   return res;
 }
 
-async function requestAgentsSitemap(rows: Array<Record<string, unknown>>): Promise<SendCapture> {
+async function requestAgentsSitemap(
+  rows: Array<Record<string, unknown>>,
+  path = '/sitemap-agents.xml',
+): Promise<SendCapture> {
   getDbMock.mockResolvedValue(makeFakeDb(rows));
   const capture: SendCapture = { headers: {} };
   await new Promise<void>((resolve, reject) => {
@@ -65,15 +68,17 @@ async function requestAgentsSitemap(rows: Array<Record<string, unknown>>): Promi
       }
       finish();
     };
-    (sitemapRouter as unknown as (
-      req: unknown,
-      res: unknown,
-      next: (error?: unknown) => void,
-    ) => void)(
+    (
+      sitemapRouter as unknown as (
+        req: unknown,
+        res: unknown,
+        next: (error?: unknown) => void,
+      ) => void
+    )(
       {
         method: 'GET',
-        url: '/sitemap-agents.xml',
-        originalUrl: '/sitemap-agents.xml',
+        url: path,
+        originalUrl: path,
         headers: {},
         get: (name: string) => (name === 'host' ? 'www.propertylistifysa.co.za' : undefined),
       },
@@ -103,5 +108,19 @@ describe('agents sitemap contract', () => {
     const capture = await requestAgentsSitemap([]);
     expect(String(capture.body)).toContain('<urlset');
     expect(String(capture.body)).not.toContain('<loc>');
+  });
+});
+
+describe('province editorial sitemap readiness', () => {
+  it('registers a guide sitemap without depending on inventory', async () => {
+    const capture = await requestAgentsSitemap([], '/sitemap.xml');
+    expect(capture.body).toContain('/sitemap-guides.xml');
+    expect(getDbMock).not.toHaveBeenCalled();
+  });
+  it('excludes local review drafts instead of publishing every verified place', async () => {
+    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
+    expect(capture.body).toContain('<urlset');
+    expect(capture.body).not.toContain('<loc>');
+    expect(getDbMock).not.toHaveBeenCalled();
   });
 });
