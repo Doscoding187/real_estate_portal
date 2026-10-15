@@ -728,6 +728,7 @@ export class GooglePlacesService {
     lng: number,
     radius: number, // in meters
     type: string,
+    options: { throwOnUnavailable?: boolean } = {},
   ): Promise<any[]> {
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:nearby:${lat.toFixed(4)},${lng.toFixed(4)}:${radius}:${type}`;
@@ -798,6 +799,7 @@ export class GooglePlacesService {
       return results;
     } catch (error) {
       this.handleAPIError(error, 'place_details', undefined, startTime);
+      if (options.throwOnUnavailable) throw error;
       return [];
     }
   }

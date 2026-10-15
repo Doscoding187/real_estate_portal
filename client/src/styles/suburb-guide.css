@@ -1026,9 +1026,337 @@
 
 .suburb-guide-development-panel {
   border-color: #d8e6ed;
-  background:
-    linear-gradient(115deg, rgb(238 247 251 / 70%), transparent 44%),
-    #fff;
+  background: linear-gradient(115deg, rgb(238 247 251 / 70%), transparent 44%), #fff;
+}
+
+.suburb-guide-insights,
+.suburb-guide-local-area {
+  scroll-margin-top: 5.5rem;
+  border: 1px solid #e0e8ef;
+  border-radius: 1rem;
+  background: #fff;
+  padding: clamp(1.15rem, 2.5vw, 1.8rem);
+  box-shadow: 0 12px 32px rgb(15 42 65 / 5%);
+}
+
+.suburb-guide-insights__heading {
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+.suburb-guide-insights__tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.4rem;
+  border: 1px solid #e1e8ef;
+  border-radius: 0.8rem;
+  background: #f5f8fa;
+  padding: 0.3rem;
+}
+
+.suburb-guide-insights__tabs button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: 1px solid transparent;
+  border-radius: 0.6rem;
+  background: transparent;
+  padding: 0.45rem 0.7rem;
+  color: #536a7e;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.suburb-guide-insights__tabs button[aria-pressed='true'] {
+  border-color: #d5e5f0;
+  background: #fff;
+  color: #1d659b;
+  box-shadow: 0 2px 6px rgb(15 42 65 / 7%);
+}
+
+.suburb-guide-insights__tabs button span {
+  display: inline-grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #edf4f8;
+  padding-inline: 0.2rem;
+  color: #47657e;
+  font-size: 0.68rem;
+}
+
+.suburb-guide-insights__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(180px, 0.72fr);
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.suburb-guide-insights__metric {
+  display: flex;
+  min-width: 0;
+  min-height: 138px;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 1px solid #e5ebf0;
+  border-radius: 0.8rem;
+  background: #fbfcfd;
+  padding: 1rem;
+  color: #586d80;
+  font-size: 0.77rem;
+  font-weight: 650;
+}
+
+.suburb-guide-insights__metric-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  margin-bottom: 0.55rem;
+  border-radius: 0.55rem;
+  background: #eaf3f9;
+  color: #2774ae;
+}
+
+.suburb-guide-insights__metric strong {
+  margin-top: 0.18rem;
+  color: #17344f;
+  font-size: clamp(1.3rem, 2.3vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.suburb-guide-insights__metric--median strong {
+  font-size: clamp(1.05rem, 2vw, 1.55rem);
+  letter-spacing: -0.025em;
+}
+
+.suburb-guide-insights__metric small {
+  margin-top: auto;
+  padding-top: 0.45rem;
+  color: #7b8b99;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.suburb-guide-insights__browse {
+  display: flex;
+  min-height: 138px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid #d9e8f1;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #f0f7fb, #fff 80%);
+  padding: 1rem;
+  color: #205f8f;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.suburb-guide-insights__browse:hover {
+  border-color: #9fc3dc;
+  background: #f0f7fb;
+}
+
+.suburb-guide-insights__detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.8rem;
+}
+
+.suburb-guide-insights__chart-panel,
+.suburb-guide-insights__table-panel {
+  min-width: 0;
+  border: 1px solid #e7edf1;
+  border-radius: 0.8rem;
+  background: #fff;
+  padding: 1rem;
+}
+
+.suburb-guide-insights__panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.suburb-guide-insights__panel-heading h3 {
+  margin: 0;
+  color: #193750;
+  font-size: 0.98rem;
+  font-weight: 780;
+}
+
+.suburb-guide-insights__panel-heading p {
+  margin: 0.22rem 0 0;
+  color: #7a8997;
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.suburb-guide-insights__type-list {
+  display: grid;
+  gap: 0.8rem;
+  padding-block: 0.35rem;
+}
+
+.suburb-guide-insights__type-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.85fr) minmax(60px, 1.8fr) 32px;
+  align-items: center;
+  gap: 0.6rem;
+  color: #52677a;
+  font-size: 0.75rem;
+}
+
+.suburb-guide-insights__type-row strong {
+  color: #1c3850;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.suburb-guide-insights__type-copy {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.suburb-guide-insights__type-copy strong {
+  overflow: hidden;
+  font-size: 0.75rem;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+.suburb-guide-insights__type-copy small {
+  color: #83909c;
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.suburb-guide-insights__bar-track {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f5;
+}
+
+.suburb-guide-insights__bar-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4a9bd0, #2774ae);
+}
+
+.suburb-guide-insights__table-scroll {
+  overflow-x: auto;
+}
+
+.suburb-guide-insights__table-panel table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #506679;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.suburb-guide-insights__table-panel th,
+.suburb-guide-insights__table-panel td {
+  border-bottom: 1px solid #edf1f4;
+  padding: 0.62rem 0.45rem;
+  white-space: nowrap;
+}
+
+.suburb-guide-insights__table-panel thead th {
+  color: #82909c;
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+.suburb-guide-insights__table-panel tbody th {
+  color: #314d63;
+  font-weight: 700;
+}
+
+.suburb-guide-insights__table-panel td:last-child {
+  color: #1d659b;
+  font-weight: 750;
+}
+
+.suburb-guide-insights__empty {
+  display: grid;
+  min-height: 100px;
+  place-items: center;
+  border: 1px dashed #e0e8ee;
+  border-radius: 0.65rem;
+  background: #fbfcfd;
+  padding: 1rem;
+  color: #748391;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.suburb-guide-insights__note,
+.suburb-guide-local-area__note {
+  margin: 0.85rem 0 0;
+  color: #7a8996;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.suburb-guide-local-area__scope {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #e1eaf0;
+  border-radius: 999px;
+  background: #f8fbfd;
+  padding: 0.45rem 0.7rem;
+  color: #577086;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.suburb-guide-local-area__note {
+  margin: -0.45rem 0 1rem;
+}
+
+.suburb-guide-local-area__map .leaflet-container {
+  height: 370px !important;
+  overflow: hidden;
+  border: 1px solid #e4ebef;
+  border-radius: 0.8rem;
+}
+
+.suburb-guide-local-area__map > .space-y-4 > div:last-child {
+  border-color: #e6edf1;
+  border-radius: 0.8rem;
+  box-shadow: none;
+}
+
+.suburb-guide-local-area--unavailable {
+  min-height: 170px;
+}
+
+.suburb-guide-insights__tabs button:focus-visible,
+.suburb-guide-insights__browse:focus-visible {
+  outline: 3px solid #78b5df;
+  outline-offset: 2px;
 }
 
 .suburb-guide-source {
@@ -1252,6 +1580,23 @@
     align-items: flex-start;
   }
 
+  .suburb-guide-insights__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .suburb-guide-insights__browse {
+    min-height: 64px;
+    grid-column: 1 / -1;
+  }
+
+  .suburb-guide-insights__detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suburb-guide-insights__heading {
+    align-items: flex-start;
+  }
+
   .suburb-guide-professionals__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1343,6 +1688,31 @@
   .suburb-guide-section-link {
     min-height: 36px;
     font-size: 0.75rem;
+  }
+
+  .suburb-guide-insights__summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .suburb-guide-insights__metric {
+    min-height: 116px;
+  }
+
+  .suburb-guide-insights__tabs {
+    width: 100%;
+  }
+
+  .suburb-guide-insights__tabs button {
+    flex: 1 1 50%;
+  }
+
+  .suburb-guide-local-area__scope {
+    align-self: flex-start;
+    white-space: normal;
+  }
+
+  .suburb-guide-local-area__map .leaflet-container {
+    height: 310px !important;
   }
 }
 

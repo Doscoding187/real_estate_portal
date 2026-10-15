@@ -51,6 +51,52 @@ These are interface patterns, not evidence that a particular arrangement will
 improve Property Listify conversion. Product analytics should validate the
 result after broader rollout.
 
+## Section-by-section reference review
+
+The supplied screenshots make the intended page a decision workspace: compact
+market evidence, place context, transaction discovery, and trustworthy local
+connections. They do not call for a long-form article template.
+
+| Reference pattern                                | Current Property Listify state                                                                                                                                                                              | Decision                                                                                                                                                                               |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Area identity and jump navigation                | The suburb hero identifies the canonical area; a horizontal anchor rail jumps to page sections.                                                                                                             | Keep. The selected suburb remains explicit throughout.                                                                                                                                 |
+| Sale and rent market panels                      | The top snapshot reports current eligible inventory. A new panel separates sale and rent, charts current supply by property type, and compares available medians by type and bedroom band.                 | Added. Asking-price medians use eligible offers, show the calculation date, and stay hidden below ten priced examples per group.                                                       |
+| Price history, growth and completed transactions | No governed historic time series or completed-sale transaction source is exposed to this page.                                                                                                              | Do not imitate the chart with current asking prices. Add only after a dated source and calculation contract exist.                                                                     |
+| Sale, rental and project discovery               | Separate exact-suburb sale, rental and residential-project carousels are already present. Project cards show their publisher where available; eligible development units can appear in the sale/rent cards. | Keep the rails separate. A project is not a transaction type.                                                                                                                          |
+| Map and nearby amenities                         | The guide uses the canonical suburb centre and a two-kilometre search radius. Provider failures are separate from a successful search with no results.                                                        | Added with explicit boundary and approximate-centre language. The map is orientation only; a provider outage does not claim that the area has no amenities.                            |
+| Nearby areas and comparison                      | A searchable carousel links to other verified suburbs under the selected city and reports current listing counts when supplied. It is inventory-ranked, not a distance or search-popularity ranking.        | Keep the scope statement. A later comparison table can reuse per-area medians only after the same sample rules are applied.                                                            |
+| Regional and local character                     | Sandton has one sourced Region E passage. Other suburb routes do not yet have reviewed local editorial profiles.                                                                                            | Preserve source attribution. Do not clone the Sandton passage across unrelated suburbs.                                                                                                |
+| Resident reviews and lifestyle scores            | No governed, verified resident-review or lifestyle-score source is available here. The legacy location-insights adapter is not a source for public claims.                                                  | Do not add generated reviews, ratings, safety scores, commute promises or demographic profiles.                                                                                        |
+| Agents and developers                            | Public agent profiles can be resolved by the canonical suburb. Published projects show their publisher on the project card. The monetized featured-developer procedure is not implemented.                  | Keep organic, exact-area agent profiles and publishers attached to real projects. Do not present paid placements or “top” rankings without an approved authority and ranking evidence. |
+| FAQs and practical guide content                 | No suburb-specific reviewed FAQ/content set is wired into this page.                                                                                                                                        | Add authored answers with sources and review dates before using them as SEO content.                                                                                                   |
+
+The new modules follow the visual pattern in the supplied realestate.com.au
+and Property Finder screenshots while keeping the facts narrower than those
+portals' licensed market datasets. REA's Market Explorer describes sale and
+rental medians, supply/demand comparisons, performance trends and surrounding
+suburbs, with monthly refreshes; Property Finder's Palm Jumeirah guide combines
+market insights and transactions with mapped amenities, schools, transport,
+resident reviews and local experts. These patterns inform information
+architecture only; their third-party statistics are not transferable to our
+inventory. See [REA Market Explorer](https://help.realestate.com.au/hc/en-us/articles/9073367896345-How-to-use-the-Market-Explorer),
+[Property Finder: Palm Jumeirah](https://www.propertyfinder.ae/en/area-insights/dubai/palm-jumeirah),
+and [Redfin: Chicago neighbourhood guides](https://www.redfin.com/blog/neighborhoods/chicago/).
+
+## Data prerequisites still open
+
+- A historical asking-price series or trusted transaction feed is required for
+  price movement, growth, sold counts, days on market, rental yield or demand.
+- A governed locality-cluster hierarchy is required before nesting Morningside,
+  Sandhurst and other Johannesburg neighbourhoods under a marketing label such
+  as “Sandton”. The current canonical hierarchy resolves suburbs under a city;
+  this page does not infer a second parent from text.
+- Reviewed suburb profiles, source records, authorship and update policy are
+  required before wider indexability. Generic suburb shells remain noindex;
+  the local preview's data coverage is not proof of SEO readiness.
+- A public local-developer directory and a ranking rule are required before a
+  “top developers in this suburb” section. The disabled monetized placement
+  endpoint is not an acceptable substitute.
+
 ## Current presentation
 
 - The page has a page-level jump rail, not transaction tabs inside the project
@@ -75,8 +121,11 @@ result after broader rollout.
 - The suburb record is resolved through the current province → city → suburb
   hierarchy. A mismatched route does not fall through to an unverified place.
 - The existing location summary counts eligible property records; those counts
-  are shown separately from the photo-ready feed previews. No median, average,
-  price range or trend is shown on this page.
+  are shown separately from the photo-ready feed previews. The median panel
+  uses eligible exact-suburb offers, splits sale from rent, and suppresses each
+  median unless at least ten priced examples support that group. It labels
+  asking prices and does not claim to represent completed sales or the whole
+  suburb market. No historical price trend is available.
 - Buy and Rent use the existing public home feed. It requires photo-ready
   listings and, for development-derived units, available stock. Development
   units appear in the same card style as other homes, labelled by transaction
@@ -93,12 +142,11 @@ The preview database for this worktree contains canonical geography but no
 property listings, published developments, or public agent inventory. Its
 zero counts and empty rails are therefore the real empty state, not seeded
 fictional data. It cannot validate populated card appearance or market
-statistics. The current suburb service's blended average does not distinguish
-sale prices from rents, and the legacy analytics record is not scoped to a
-reliable current sample here; neither is exposed as a price insight. A future
-market module needs transaction-specific, property-type-aware statistics,
-sample thresholds and a visible calculation date before showing median prices,
-price bands or trends. Auction inventory also remains outside this UI change.
+statistics. The local Places provider currently returns `REQUEST_DENIED`; the
+guide reports that as an availability error rather than claiming there are no
+nearby amenities. A separate historical or completed-transaction source is
+still required for price changes, sold counts, days on market, rental yield or
+demand. Auction inventory also remains outside this UI change.
 
 ## Pilot boundary
 

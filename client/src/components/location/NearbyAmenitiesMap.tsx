@@ -33,6 +33,7 @@ interface Amenity {
 interface NearbyAmenitiesMapProps {
   center?: [number, number];
   radius?: number;
+  mapHeight?: number;
   showControls?: boolean;
   onAmenitySelect?: (amenity: Amenity) => void;
   className?: string;
@@ -63,6 +64,7 @@ const amenityColors = {
 export function NearbyAmenitiesMap({
   center = [-26.2041, 28.0473], // Johannesburg default
   radius = 2,
+  mapHeight = 500,
   showControls = true,
   onAmenitySelect,
   className,
@@ -90,7 +92,7 @@ export function NearbyAmenitiesMap({
       .filter(([_, enabled]) => enabled)
       .map(([type]) => type),
     limit: 50,
-  });
+  }, { retry: false });
 
   // Handle map move
   const handleMapMove = useCallback((newCenter: [number, number]) => {
@@ -226,7 +228,7 @@ export function NearbyAmenitiesMap({
           <MapContainer
             center={mapCenter}
             zoom={13}
-            style={{ height: '500px', width: '100%' }}
+            style={{ height: `${mapHeight}px`, width: '100%' }}
             className="z-0"
           >
             <TileLayer
@@ -348,6 +350,24 @@ export function NearbyAmenitiesMap({
             <p className="text-sm text-muted-foreground mt-1">
               Try increasing the search radius or enabling more amenity types.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {getNearbyAmenities.isError && (
+        <Card role="alert">
+          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
+            <Info className="h-8 w-8 text-muted-foreground" />
+            <div>
+              <p className="font-medium">Nearby places are unavailable right now.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                The map still shows the area, but we couldn’t load amenity details. Please try
+                again shortly.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => getNearbyAmenities.refetch()}>
+              Try again
+            </Button>
           </CardContent>
         </Card>
       )}

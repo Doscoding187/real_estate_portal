@@ -429,7 +429,9 @@ export const locationRouter = router({
         // Fetch specific place types in parallel (Google Places API 'type' parameter takes one type mostly for strict filtering or keyword)
         // We will fetch for each type requested to ensure good coverage
         const promises = types.map(type =>
-          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type),
+          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type, {
+            throwOnUnavailable: true,
+          }),
         );
 
         const results = await Promise.all(promises);

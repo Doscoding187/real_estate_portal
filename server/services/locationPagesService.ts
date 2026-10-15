@@ -15,7 +15,8 @@ import {
   resolvePublicPropertyEligibilities,
   type PublicPropertyEligibilityResolution,
 } from './publicPropertyEligibilityService';
-import { toPublicPropertyDetailDto } from './publicPropertyDto';
+import { getPublicPropertyMarketFact, toPublicPropertyDetailDto } from './publicPropertyDto';
+import { buildSuburbMarketInsights } from './suburbMarketInsights';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -554,6 +555,9 @@ export const locationPagesService = {
     ).length;
     const saleCount = eligibleProperties.filter(property => property.listingType === 'sale').length;
     const averagePrice = averagePropertyPrice(eligibleProperties);
+    const marketInsights = buildSuburbMarketInsights(
+      eligibleProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
+    );
 
     // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
     let localProperties: any[] = [];
@@ -601,6 +605,7 @@ export const locationPagesService = {
         rentalCount,
         saleCount,
       },
+      marketInsights,
       listings: localProperties,
       analytics: analytics || null,
       insights,

@@ -16,6 +16,8 @@ import {
   type FeedTab,
 } from '@/components/location/LocationTrendingFeedSection';
 import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
+import { NearbyAmenitiesMap } from '@/components/location/NearbyAmenitiesMap';
+import { SuburbMarketInsights } from '@/components/location/SuburbMarketInsights';
 import { trpc } from '@/lib/trpc';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
@@ -67,6 +69,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     suburb.provinceSlug === provinceSlug;
   const verifiedSuburb = isCanonicalSuburb ? suburb : undefined;
   const stats = suburbQuery.data?.stats;
+  const marketInsights = suburbQuery.data?.marketInsights;
   const otherAreas = useMemo(() => {
     const rows = (cityQuery.data as any)?.suburbs;
     if (!Array.isArray(rows)) return [];
@@ -130,6 +133,22 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const cityGuide = getCityGuideContent(provinceSlug, citySlug);
   const context = isSandton ? cityGuide?.regions.find(region => region.id === 'e') : undefined;
   const cityImage = getCityGuideImage(provinceSlug, citySlug);
+  const suburbCenter = useMemo(() => {
+    if (!verifiedSuburb?.latitude || !verifiedSuburb.longitude) return null;
+    const latitude = Number(verifiedSuburb.latitude);
+    const longitude = Number(verifiedSuburb.longitude);
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return null;
+    }
+    return [latitude, longitude] as [number, number];
+  }, [verifiedSuburb]);
 
   const location = useMemo<LocationNode | undefined>(() => {
     if (!verifiedSuburb) return undefined;
@@ -174,7 +193,9 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
       ? [{ id: 'new-developments', label: 'Developments' }]
       : []),
     { id: 'area-snapshot', label: 'Area snapshot' },
+    { id: 'market-insights', label: 'Market insights' },
     ...(context ? [{ id: 'city-context', label: 'City context' }] : []),
+    ...(suburbCenter ? [{ id: 'local-area', label: 'Local area' }] : []),
     { id: 'city-areas', label: 'Explore more areas' },
     { id: 'local-experts', label: 'Local agents' },
   ];
@@ -417,6 +438,15 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           </div>
         </section>
 
+        {marketInsights ? (
+          <SuburbMarketInsights
+            suburbName={verifiedSuburb.name}
+            data={marketInsights}
+            buyHref={viewAllHref.buy || '#for-sale'}
+            rentHref={viewAllHref.rent || '#for-rent'}
+          />
+        ) : null}
+
         {buyJourneyEnabled ? (
           <div id="suburb-inventory">
             <LocationTrendingFeedSection
@@ -516,6 +546,41 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 </a>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {suburbCenter ? (
+          <section
+            id="local-area"
+            className="suburb-guide-local-area"
+            aria-labelledby="suburb-guide-local-area-title"
+          >
+            <div className="suburb-guide-section-heading">
+              <div>
+                <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                  LOCATION & EVERYDAY AMENITIES
+                </p>
+                <h2 id="suburb-guide-local-area-title">What’s around {verifiedSuburb.name}?</h2>
+                <p>
+                  Explore mapped schools, healthcare, shopping and transport around the suburb
+                  centre.
+                </p>
+              </div>
+              <span className="suburb-guide-local-area__scope">
+                <MapPin size={15} aria-hidden="true" /> About 2 km from the area centre
+              </span>
+            </div>
+            <p className="suburb-guide-local-area__note">
+              Nearby places are measured from the suburb’s mapped centre and may sit outside its
+              boundary. The map is for orientation; it does not show property addresses.
+            </p>
+            <NearbyAmenitiesMap
+              center={suburbCenter}
+              radius={2}
+              mapHeight={370}
+              showControls={false}
+              className="suburb-guide-local-area__map"
+            />
           </section>
         ) : null}
 

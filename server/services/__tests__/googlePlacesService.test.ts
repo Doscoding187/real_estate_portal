@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { fc } from '@fast-check/vitest';
+import axios from 'axios';
 import {
   GooglePlacesService,
   extractHierarchy,
@@ -25,6 +26,23 @@ describe('GooglePlacesService', () => {
 
   afterEach(() => {
     service.destroy();
+    vi.restoreAllMocks();
+  });
+
+  it('can propagate nearby-provider failures so callers do not mislabel them as empty results', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({ data: { status: 'REQUEST_DENIED' } } as never);
+
+    await expect(
+      service.getNearbyPlaces(-26.1076, 28.0567, 2000, 'school', {
+        throwOnUnavailable: true,
+      }),
+    ).rejects.toThrow('Nearby Search API error: REQUEST_DENIED');
+  });
+
+  it('keeps the legacy empty fallback for nearby-provider callers that do not opt in', async () => {
+    vi.spyOn(axios, 'get').mockResolvedValue({ data: { status: 'REQUEST_DENIED' } } as never);
+
+    await expect(service.getNearbyPlaces(-26.1076, 28.0567, 2000, 'school')).resolves.toEqual([]);
   });
 
   it('cancels housekeeping and session-removal timers during repeated cleanup', () => {
