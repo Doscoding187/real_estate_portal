@@ -246,7 +246,7 @@ describe('AgentMicrosite public web presence', () => {
     render(<AgentMicrosite />);
 
     expect(screen.getByRole('heading', { name: 'Areas I work in' })).toBeDefined();
-    expect(screen.getByRole('article', {name:'Bryanston, Sandton, Gauteng'})).toBeDefined();
+    expect(screen.getByRole('article', { name: 'Bryanston, Sandton, Gauteng' })).toBeDefined();
     expect(screen.queryByText("Jane's Bryanston")).toBeNull();
   });
 
@@ -436,6 +436,52 @@ describe('AgentMicrosite public web presence', () => {
     const fourways = screen.getByRole('article', { name: 'Fourways, Sandton, Gauteng' });
     expect(within(fourways).queryByRole('link')).toBeNull();
     expect(within(fourways).getByText('Guide not available yet')).toBeDefined();
+  });
+
+  it('places three real platform resources after the area guides and before About', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    render(<AgentMicrosite />);
+
+    const section = screen.getByRole('region', { name: 'Local Insights & Advice' });
+    const cards = section.querySelectorAll('.as-insight-card');
+    expect(cards).toHaveLength(3);
+    expect(cards[0].getAttribute('href')).toBe('/gauteng/sandton/bryanston');
+    expect(cards[0].textContent).toContain('Living in Bryanston');
+    expect(cards[1].getAttribute('href')).toBe('/guides/buying-property');
+    expect(cards[2].getAttribute('href')).toBe('/explore/shorts');
+    expect(within(section).getByText('Resources from Property Listify')).toBeDefined();
+    expect(
+      within(section).getByRole('link', { name: 'Explore more stories' }).getAttribute('href'),
+    ).toBe('/explore/feed');
+    expect(screen.getByTestId('areas-section').nextElementSibling).toBe(section);
+    expect(section.nextElementSibling).toBe(screen.getByTestId('about-section'));
+  });
+
+  it('uses the guide directory when no public canonical service area is available', () => {
+    profileResult.current = {
+      data: {
+        ...baseProfile,
+        canonicalAreas: [{ ...baseProfile.canonicalAreas[1], name: 'Unresolved area' }],
+      },
+      isLoading: false,
+      isError: false,
+    };
+    render(<AgentMicrosite />);
+
+    const section = screen.getByTestId('insights-section');
+    const firstCard = section.querySelector('.as-insight-card');
+    expect(firstCard?.getAttribute('href')).toBe('/tools/area-guides');
+    expect(firstCard?.textContent).toContain('Find your next neighbourhood');
+    expect(section.textContent).not.toContain('Unresolved area');
+    expect(section.textContent).not.toContain('Market 2025');
+    expect(section.textContent).not.toContain('Suburb Tour');
+  });
+
+  it('keeps editorial resources off the dedicated property results page', () => {
+    profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
+    routeState.allProperties = true;
+    render(<AgentMicrosite />);
+    expect(screen.queryByTestId('insights-section')).toBeNull();
   });
 
   it('filters rentals in the showcase without affecting area guide selection', () => {
