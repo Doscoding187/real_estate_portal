@@ -31,7 +31,9 @@ import { PIPELINE_STAGES } from '../workspace/constants';
 import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrimitives';
 import { PipelineSnapshot } from '../workspace/WorkspacePanels';
 import type { AgencyLead, WorkspaceContentProps } from '../workspace/types';
-import { formatAge, formatDate, numberLabel, sourceLabel, toneClasses } from '../workspace/utils';
+import { formatAge, formatDate, numberLabel, sourceLabel } from '../workspace/utils';
+
+import { AgencyLeadBoard } from './AgencyLeadBoard';
 
 const STATUS_OPTIONS = PIPELINE_STAGES.map(stage => stage.key);
 const STATUS_LABELS = new Map(PIPELINE_STAGES.map(stage => [stage.key, stage.label]));
@@ -118,7 +120,9 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
       utils.agency.getDashboardStats.invalidate(),
       utils.agency.getLeadConversionStats.invalidate(),
       utils.agency.getAgentLeaderboard.invalidate(),
-      selectedLeadId ? utils.agency.getLeadDetail.invalidate({ leadId: selectedLeadId }) : Promise.resolve(),
+      selectedLeadId
+        ? utils.agency.getLeadDetail.invalidate({ leadId: selectedLeadId })
+        : Promise.resolve(),
     ]);
   };
 
@@ -287,8 +291,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
         </CardContent>
       </Card>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="border-slate-200 bg-white shadow-sm">
+      <section className="min-w-0 space-y-5">
+        <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
             <SectionTitle
               icon={MessageSquare}
@@ -302,7 +306,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
               <div className="h-44 animate-pulse rounded-lg bg-slate-100" />
             ) : null}
             {!props.isLoading.leads && props.leadView === 'kanban' ? (
-              <KanbanLeads leads={props.filteredLeads} onOpen={openLead} />
+              <AgencyLeadBoard leads={props.filteredLeads} onOpen={openLead} />
             ) : null}
             {!props.isLoading.leads && props.leadView === 'table' ? (
               <>
@@ -316,7 +320,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
             ) : null}
           </CardContent>
         </Card>
-        <div className="space-y-5">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
           <PipelineSnapshot
             conversion={props.conversion}
             leadsTotal={Math.max(props.conversion.total, props.filteredLeads.length, 1)}
@@ -326,7 +330,10 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
         </div>
       </section>
 
-      <Dialog open={Boolean(selectedLeadId)} onOpenChange={open => !open && setSelectedLeadId(null)}>
+      <Dialog
+        open={Boolean(selectedLeadId)}
+        onOpenChange={open => !open && setSelectedLeadId(null)}
+      >
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{selectedLead?.name || 'Lead detail'}</DialogTitle>
@@ -345,7 +352,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
 
                 <Card className="border-slate-200">
                   <CardHeader className="pb-2">
-                    <SectionTitle icon={Phone} title="Record buyer contact" eyebrow="Keep the next action explicit" />
+                    <SectionTitle
+                      icon={Phone}
+                      title="Record buyer contact"
+                      eyebrow="Keep the next action explicit"
+                    />
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -356,7 +367,9 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
                         {['call', 'whatsapp', 'email', 'sms', 'other'].map(channel => (
-                          <option key={channel} value={channel}>{channel.replace(/_/g, ' ')}</option>
+                          <option key={channel} value={channel}>
+                            {channel.replace(/_/g, ' ')}
+                          </option>
                         ))}
                       </select>
                       <select
@@ -365,8 +378,20 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                         onChange={event => setContactOutcome(event.target.value)}
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
-                        {['reached', 'replied', 'no_answer', 'voicemail', 'viewing_booked', 'follow_up_required', 'not_interested', 'invalid_contact', 'other'].map(outcome => (
-                          <option key={outcome} value={outcome}>{outcome.replace(/_/g, ' ')}</option>
+                        {[
+                          'reached',
+                          'replied',
+                          'no_answer',
+                          'voicemail',
+                          'viewing_booked',
+                          'follow_up_required',
+                          'not_interested',
+                          'invalid_contact',
+                          'other',
+                        ].map(outcome => (
+                          <option key={outcome} value={outcome}>
+                            {outcome.replace(/_/g, ' ')}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -396,7 +421,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       disabled={
                         busy ||
                         !contactSummary.trim() ||
-                        (!['not_interested', 'invalid_contact'].includes(contactOutcome) && !contactNextAction.trim()) ||
+                        (!['not_interested', 'invalid_contact'].includes(contactOutcome) &&
+                          !contactNextAction.trim()) ||
                         (contactOutcome === 'follow_up_required' && !contactFollowUpAt)
                       }
                       onClick={() =>
@@ -717,7 +743,11 @@ function LeadContextCard({ lead }: { lead: AgencyLead }) {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <InfoBlock label="Contact" value={lead.email || lead.phone || 'No contact'} icon={Phone} />
+          <InfoBlock
+            label="Contact"
+            value={lead.email || lead.phone || 'No contact'}
+            icon={Phone}
+          />
           <InfoBlock
             label="Listing"
             value={commercial?.listingTitle || lead.property?.title || 'No listing context'}
@@ -775,72 +805,7 @@ function InfoBlock({
   );
 }
 
-function KanbanLeads({
-  leads,
-  onOpen,
-}: {
-  leads: AgencyLead[];
-  onOpen: (lead: AgencyLead) => void;
-}) {
-  return (
-    <div className="grid gap-3 overflow-x-auto pb-2 xl:grid-cols-4">
-      {PIPELINE_STAGES.slice(0, 6).map(stage => {
-        const stageLeads = leads.filter(lead => (lead.status || 'new') === stage.key).slice(0, 8);
-        const classes = toneClasses(stage.tone);
-        return (
-          <div key={stage.key} className="min-w-64 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <span className={cn('h-2 w-2 rounded-full', classes.dot)} />
-                {stage.label}
-              </span>
-              <Badge variant="outline" className="bg-white">
-                {stageLeads.length}
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              {stageLeads.map(lead => (
-                <button
-                  key={lead.id}
-                  type="button"
-                  onClick={() => onOpen(lead)}
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-teal-300 hover:bg-teal-50/40"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-950">{lead.name}</p>
-                    {lead.overdueFollowUp ? <Clock3 className="h-4 w-4 text-rose-500" /> : null}
-                  </div>
-                  <p className="mt-1 truncate text-xs text-slate-500">
-                    {lead.email || lead.phone || 'No contact'}
-                  </p>
-                  {lead.commercial ? (
-                    <p className="mt-2 truncate text-xs font-medium text-emerald-700">
-                      Commercial · {lead.commercial.listingTitle} · {lead.commercial.spaceIdentifier}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 truncate text-xs text-slate-500">
-                    {lead.agent?.name || 'Unassigned'} · {sourceLabel(lead.leadSource || lead.source)}
-                  </p>
-                </button>
-              ))}
-              {!stageLeads.length ? (
-                <p className="py-6 text-center text-sm text-slate-400">No leads</p>
-              ) : null}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function LeadTable({
-  leads,
-  onOpen,
-}: {
-  leads: AgencyLead[];
-  onOpen: (lead: AgencyLead) => void;
-}) {
+function LeadTable({ leads, onOpen }: { leads: AgencyLead[]; onOpen: (lead: AgencyLead) => void }) {
   if (!leads.length) {
     return (
       <EmptyPanel
@@ -865,18 +830,28 @@ function LeadTable({
           className="grid gap-2 border-t border-slate-200 px-4 py-3 text-sm lg:grid-cols-[minmax(180px,1fr)_150px_150px_140px_120px] lg:items-center"
         >
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
+            <p className="truncate font-semibold text-slate-950">
+              {lead.name || `Lead #${lead.id}`}
+            </p>
             <p className="truncate text-xs text-slate-500">
-              {lead.commercial?.listingTitle || lead.property?.title || lead.email || lead.phone || 'No context'}
+              {lead.commercial?.listingTitle ||
+                lead.property?.title ||
+                lead.email ||
+                lead.phone ||
+                'No context'}
             </p>
           </div>
-          <span className={cn('truncate text-slate-500', !lead.agentId && 'font-medium text-amber-700')}>
+          <span
+            className={cn('truncate text-slate-500', !lead.agentId && 'font-medium text-amber-700')}
+          >
             {lead.agent?.name || 'Unassigned'}
           </span>
           <Badge variant="outline" className="w-fit border-slate-200 capitalize text-slate-600">
             {statusLabel(lead.status)}
           </Badge>
-          <span className={cn('text-slate-500', lead.overdueFollowUp && 'font-medium text-rose-600')}>
+          <span
+            className={cn('text-slate-500', lead.overdueFollowUp && 'font-medium text-rose-600')}
+          >
             {lead.nextFollowUp ? formatDate(lead.nextFollowUp) : lead.nextAction || 'Review'}
           </span>
           <Button variant="outline" size="sm" onClick={() => onOpen(lead)}>
@@ -941,7 +916,10 @@ export function LeadRow({ lead }: { lead: AgencyLead }) {
       <div className="min-w-0">
         <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
         <p className="truncate text-sm text-slate-500">
-          {lead.commercial?.listingTitle || lead.property?.title || lead.message || 'No listing context'}
+          {lead.commercial?.listingTitle ||
+            lead.property?.title ||
+            lead.message ||
+            'No listing context'}
         </p>
       </div>
       <Badge variant="outline" className="w-fit capitalize">
