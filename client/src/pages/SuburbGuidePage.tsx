@@ -4,7 +4,6 @@ import { ArrowRight, Building2, Home, KeyRound, MapPin, Search } from 'lucide-re
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { MetaControl } from '@/components/seo/MetaControl';
-import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import {
   Carousel,
   CarouselContent,
@@ -28,7 +27,6 @@ import { getCityGuideImage } from '@/lib/cityGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { encodeCanonicalLocationId } from '@shared/locationAuthority';
 import { getCityGuideContent } from '@shared/cityGuideContent';
-import { hasHomePropertyPhoto } from '@shared/homePropertyPhoto';
 import type { LocationNode } from '@/types/location';
 import '@/styles/suburb-guide.css';
 
@@ -51,7 +49,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const isSandton =
     provinceSlug === 'gauteng' && citySlug === 'johannesburg' && suburbSlug === 'sandton';
   const path = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
-  const [activeTab, setActiveTab] = useState<FeedTab>('developments');
   const [areaSearch, setAreaSearch] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
   const suburbQuery = trpc.locationPages.getSuburbData.useQuery(
@@ -70,19 +67,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     suburb.provinceSlug === provinceSlug;
   const verifiedSuburb = isCanonicalSuburb ? suburb : undefined;
   const stats = suburbQuery.data?.stats;
-  const listedProperties = useMemo(() => {
-    const rows = (suburbQuery.data as any)?.listings;
-    if (!Array.isArray(rows)) return [];
-
-    return rows
-      .filter((property: any) => {
-        const listingType = String(property?.listingType || property?.transactionType || '')
-          .trim()
-          .toLowerCase();
-        return listingType === 'sale' && hasHomePropertyPhoto(getListingImage(property));
-      })
-      .slice(0, 10);
-  }, [suburbQuery.data]);
   const otherAreas = useMemo(() => {
     const rows = (cityQuery.data as any)?.suburbs;
     if (!Array.isArray(rows)) return [];
@@ -176,11 +160,24 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const saleShare =
     saleAndRentCount > 0 ? (Number(stats?.saleCount || 0) / saleAndRentCount) * 100 : 0;
   const rentShare = saleAndRentCount > 0 ? 100 - saleShare : 0;
-  const availableSecondaryTabs: FeedTab[] = [
-    ...(isHomepageHeroJourneyEnabled('developments') ? (['developments'] as const) : []),
-    ...(isHomepageHeroJourneyEnabled('rent') ? (['rent'] as const) : []),
+  const buyJourneyEnabled = isHomepageHeroJourneyEnabled('buy');
+  const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
+  const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
+  const guideJourneyLinks = [
+    ...(buyJourneyEnabled
+      ? [{ id: 'for-sale', label: 'For sale', count: Number(stats?.saleCount || 0) }]
+      : []),
+    ...(rentJourneyEnabled
+      ? [{ id: 'for-rent', label: 'Rentals', count: Number(stats?.rentalCount || 0) }]
+      : []),
+    ...(developmentsJourneyEnabled
+      ? [{ id: 'new-developments', label: 'Developments' }]
+      : []),
+    { id: 'area-snapshot', label: 'Area snapshot' },
+    ...(context ? [{ id: 'city-context', label: 'City context' }] : []),
+    { id: 'city-areas', label: 'Explore more areas' },
+    { id: 'local-experts', label: 'Local agents' },
   ];
-  const hasSecondaryPropertyJourneys = availableSecondaryTabs.length > 0;
 
   const guideUrl = cityGuide
     ? `/${cityGuide.provinceSlug}/${cityGuide.slug}`
@@ -312,18 +309,36 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             </span>
           </div>
           <a className="suburb-guide-hero__action" href="#suburb-inventory">
-            Browse property in {verifiedSuburb.name} <ArrowRight size={16} aria-hidden="true" />
+            Explore homes in {verifiedSuburb.name} <ArrowRight size={16} aria-hidden="true" />
           </a>
         </div>
       </header>
 
+      <nav className="suburb-guide-quick-nav" aria-label={`Explore ${verifiedSuburb.name}`}>
+        <div className="suburb-guide-rail suburb-guide-quick-nav__inner">
+          <span className="suburb-guide-quick-nav__label">Explore this area</span>
+          {guideJourneyLinks.map(item => (
+            <a key={item.id} href={`#${item.id}`}>
+              {item.label}
+              {'count' in item && typeof item.count === 'number' && item.count > 0 ? (
+                <span>{item.count.toLocaleString('en-ZA')}</span>
+              ) : null}
+            </a>
+          ))}
+        </div>
+      </nav>
+
       <main key="content" className="suburb-guide-main suburb-guide-rail">
-        <section className="suburb-guide-market" aria-labelledby="suburb-guide-market-title">
+        <section
+          id="area-snapshot"
+          className="suburb-guide-market"
+          aria-labelledby="suburb-guide-market-title"
+        >
           <div className="suburb-guide-market__heading">
             <div>
-              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">AREA PULSE</p>
-              <h2 id="suburb-guide-market-title">What’s listed in {verifiedSuburb.name}</h2>
-              <p>Published Property Listify inventory for this exact area.</p>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">LOCAL MARKET SNAPSHOT</p>
+              <h2 id="suburb-guide-market-title">What’s available in {verifiedSuburb.name}</h2>
+              <p>Current Property Listify inventory for this exact area.</p>
             </div>
             <span className="suburb-guide-scope-note">
               <MapPin size={15} aria-hidden="true" /> {verifiedSuburb.name} only
@@ -369,7 +384,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
               aria-label="Published listing mix by transaction type"
             >
               <div className="suburb-guide-market__mix-heading">
-                <span>Current listing mix</span>
+                <span>Sale and rental availability</span>
                 <span>{saleAndRentCount.toLocaleString('en-ZA')} listings</span>
               </div>
               {saleAndRentCount > 0 ? (
@@ -395,147 +410,138 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 </p>
               )}
               <p className="suburb-guide-market__fineprint">
-                Counts include eligible published property listings. Photo previews appear below;
-                off-plan project pages are shown separately.
+                This is current published supply on Property Listify, not a measure of all homes or
+                buyer demand in {verifiedSuburb.name}. Project pages are shown separately below.
               </p>
             </div>
           </div>
         </section>
 
-        <section
-          id="suburb-inventory"
-          className="suburb-guide-inventory"
-          aria-label={`Live property in ${verifiedSuburb.name}`}
-        >
-          <div className="suburb-guide-section-heading">
-            <div>
-              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">RECENTLY LISTED</p>
-              <h2>Homes for sale in {verifiedSuburb.name}</h2>
-              <p>
-                Browse the latest photo-ready listings in this area, then open the full results.
-              </p>
-            </div>
-            <Link className="suburb-guide-section-link" href={buyHref}>
-              View all homes <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          </div>
-
-          {listedProperties.length > 0 ? (
-            <div className="suburb-guide-card-rail group/suburb-recent">
-              <Carousel
-                className="w-full min-w-0"
-                opts={{ align: 'start', loop: listedProperties.length > 4 }}
-              >
-                <CarouselContent className="-ml-4 pb-2">
-                  {listedProperties.map((property: any) => {
-                    const image = getListingImage(property);
-                    return (
-                      <CarouselItem
-                        key={property.id}
-                        className="basis-full pl-4 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-                      >
-                        <SimpleHomeListingCard
-                          id={String(property.id)}
-                          title={getListingTitle(property)}
-                          city={String(property.city || verifiedSuburb.cityName)}
-                          suburb={String(property.suburb || verifiedSuburb.name)}
-                          image={image}
-                          href={`/property/${property.id}`}
-                          price={Number(property.price) || null}
-                          bedrooms={Number(property.bedrooms) || null}
-                          bathrooms={Number(property.bathrooms) || null}
-                          area={Number(property.internalAreaM2 || property.area) || null}
-                          yardSize={Number(property.erfSizeM2) || null}
-                          propertyType={String(property.propertyType || '')}
-                          listingType="sale"
-                          badgeLabel="For sale"
-                        />
-                      </CarouselItem>
-                    );
-                  })}
-                </CarouselContent>
-                {listedProperties.length > 4 ? (
-                  <>
-                    <CarouselPrevious className="suburb-guide-carousel-arrow -left-3" />
-                    <CarouselNext className="suburb-guide-carousel-arrow -right-3" />
-                  </>
-                ) : null}
-              </Carousel>
-            </div>
-          ) : (
-            <div className="suburb-guide-empty-rail" role="status">
-              <Home size={19} aria-hidden="true" />
-              <p>
-                No photo-ready homes for sale are available to preview in {verifiedSuburb.name}{' '}
-                right now.
-              </p>
-              <Link href={buyHref}>
-                Browse all sale listings <ArrowRight size={14} aria-hidden="true" />
-              </Link>
-            </div>
-          )}
-
-          <p className="suburb-guide-inventory-note">
-            The carousel shows the newest eligible sale listings that have property photos. Listing
-            counts above include published inventory without photos too.
-          </p>
-        </section>
-
-        {hasSecondaryPropertyJourneys ? (
-          <section
-            className="suburb-guide-more-inventory"
-            aria-label={`More property options in ${verifiedSuburb.name}`}
-          >
-            <div className="suburb-guide-section-heading">
-              <div>
-                <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">MORE IN THIS AREA</p>
-                <h2>New developments and rentals</h2>
-                <p>
-                  Explore published projects, their listed publishers and available opportunities in{' '}
-                  {verifiedSuburb.name}.
-                </p>
-              </div>
-            </div>
+        {buyJourneyEnabled ? (
+          <div id="suburb-inventory">
             <LocationTrendingFeedSection
+              sectionId="for-sale"
               locationName={verifiedSuburb.name}
               province={verifiedSuburb.provinceName}
               city={verifiedSuburb.cityName}
               suburb={verifiedSuburb.name}
-              maxItems={10}
-              activeTab={
-                availableSecondaryTabs.includes(activeTab) ? activeTab : availableSecondaryTabs[0]
-              }
-              onTabChange={setActiveTab}
+              maxItems={8}
+              activeTab="buy"
               neutralMode={false}
-              visibleTabs={availableSecondaryTabs}
+              visibleTabs={['buy']}
               viewAllHref={viewAllHref}
               standardizeDevelopmentUnitCards
               cardLayout="carousel"
-              requirePhotoReadyDevelopments
+              showTabs={false}
+              sectionClassName="suburb-guide-feed-panel"
+              headingEyebrow="FOR SALE · RECENTLY LISTED"
+              headingTitle={`Homes for sale in ${verifiedSuburb.name}`}
+              headingDescription="Browse available homes and off-plan units in this selected area."
             />
-            <p className="suburb-guide-inventory-note">
-              Project cards show the available public project details and publisher when supplied.
-              Off-plan units shown in property journeys use the same home-card format as resale
-              listings; open a unit to see its development details.
-            </p>
+          </div>
+        ) : null}
+
+        {rentJourneyEnabled ? (
+          <LocationTrendingFeedSection
+            sectionId="for-rent"
+            locationName={verifiedSuburb.name}
+            province={verifiedSuburb.provinceName}
+            city={verifiedSuburb.cityName}
+            suburb={verifiedSuburb.name}
+            maxItems={8}
+            activeTab="rent"
+            neutralMode={false}
+            visibleTabs={['rent']}
+            viewAllHref={viewAllHref}
+            standardizeDevelopmentUnitCards
+            cardLayout="carousel"
+            showTabs={false}
+            sectionClassName="suburb-guide-feed-panel"
+            headingEyebrow="FOR RENT · RECENTLY LISTED"
+            headingTitle={`Homes to rent in ${verifiedSuburb.name}`}
+            headingDescription="Browse rentals and available rental units in this selected area."
+          />
+        ) : null}
+
+        {developmentsJourneyEnabled ? (
+          <LocationTrendingFeedSection
+            sectionId="new-developments"
+            locationName={verifiedSuburb.name}
+            province={verifiedSuburb.provinceName}
+            city={verifiedSuburb.cityName}
+            suburb={verifiedSuburb.name}
+            maxItems={8}
+            activeTab="developments"
+            neutralMode={false}
+            visibleTabs={['developments']}
+            viewAllHref={viewAllHref}
+            cardLayout="carousel"
+            requirePhotoReadyDevelopments
+            showTabs={false}
+            sectionClassName="suburb-guide-feed-panel suburb-guide-development-panel"
+            headingEyebrow="PROJECTS IN THIS AREA"
+            headingTitle={`New developments in ${verifiedSuburb.name}`}
+            headingDescription="Browse projects separately from resale homes. Open a project to see its published unit offers—sale, rental or auction terms where available."
+          />
+        ) : null}
+
+        {context ? (
+          <section
+            id="city-context"
+            className="suburb-guide-context"
+            aria-labelledby="suburb-guide-context-title"
+          >
+            <div className="suburb-guide-context__copy">
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                {verifiedSuburb.cityName} · {context.label}
+              </p>
+              <h2 id="suburb-guide-context-title">Where {verifiedSuburb.name} fits in the city</h2>
+              <p>{context.text}</p>
+              <p>{context.consider}</p>
+              <p className="suburb-guide-context__scope">
+                This regional context helps explain the wider city. Property results above stay
+                scoped to {verifiedSuburb.name}; they do not silently include other suburbs in the
+                region.
+              </p>
+              {localSources.map(source => (
+                <a
+                  key={source.id}
+                  href={source.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="suburb-guide-source"
+                >
+                  Source: {source.title.split(' · ')[0]} <ArrowRight size={13} aria-hidden="true" />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              ))}
+            </div>
           </section>
         ) : null}
 
-        <SuburbLocalProfessionals
-          suburbId={Number(verifiedSuburb.id)}
-          suburbName={verifiedSuburb.name}
-        />
+        <div id="local-experts">
+          <SuburbLocalProfessionals
+            suburbId={Number(verifiedSuburb.id)}
+            suburbName={verifiedSuburb.name}
+          />
+        </div>
 
-        <section className="suburb-guide-areas" aria-labelledby="suburb-guide-areas-title">
+        <section
+          id="city-areas"
+          className="suburb-guide-areas"
+          aria-labelledby="suburb-guide-areas-title"
+        >
           <div className="suburb-guide-section-heading">
             <div>
               <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
-                EXPLORE THE WIDER CITY
+                EXPLORE MORE AREAS
               </p>
-              <h2 id="suburb-guide-areas-title">Explore suburbs in {verifiedSuburb.cityName}</h2>
+              <h2 id="suburb-guide-areas-title">
+                More suburbs to compare in {verifiedSuburb.cityName}
+              </h2>
               <p>
-                Compare other suburb guides in {verifiedSuburb.cityName}, or search the verified
-                directory.
+                Open another suburb guide or search the verified city directory. Areas with more
+                current published listings appear first when inventory is available.
               </p>
             </div>
             <Link className="suburb-guide-section-link" href={guideUrl}>
@@ -620,6 +626,13 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                               : 'No eligible listings yet'
                             : 'Open verified suburb guide'}
                         </span>
+                        {area.propertiesForSale != null || area.propertiesForRent != null ? (
+                          <span className="suburb-guide-neighbour-card__mix">
+                            {Number(area.propertiesForSale || 0).toLocaleString('en-ZA')} for sale
+                            <span aria-hidden="true"> · </span>
+                            {Number(area.propertiesForRent || 0).toLocaleString('en-ZA')} to rent
+                          </span>
+                        ) : null}
                         <span className="suburb-guide-neighbour-card__action">
                           Explore guide <ArrowRight size={14} aria-hidden="true" />
                         </span>
@@ -644,59 +657,9 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           )}
         </section>
 
-        {context ? (
-          <section className="suburb-guide-context" aria-labelledby="suburb-guide-context-title">
-            <div className="suburb-guide-context__copy">
-              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
-                {context
-                  ? `${verifiedSuburb.cityName} · ${context.label}`
-                  : `${verifiedSuburb.cityName} · AREA GUIDE`}
-              </p>
-              <h2 id="suburb-guide-context-title">
-                {context
-                  ? `${verifiedSuburb.name} in the wider city`
-                  : `Explore ${verifiedSuburb.cityName}`}
-              </h2>
-              <p>
-                {context?.text ||
-                  `This guide keeps property results focused on ${verifiedSuburb.name}. Use the ${verifiedSuburb.cityName} guide to compare other areas before changing your search.`}
-              </p>
-              {context?.consider ? <p>{context.consider}</p> : null}
-              {localSources.map(source => (
-                <a
-                  key={source.id}
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="suburb-guide-source"
-                >
-                  Source: {source.title.split(' · ')[0]} <ArrowRight size={13} aria-hidden="true" />
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ))}
-            </div>
-          </section>
-        ) : null}
       </main>
     </SuburbGuideShell>
   );
-}
-
-function getListingImage(property: any): string | undefined {
-  const images = Array.isArray(property?.images) ? property.images : [];
-  const primary = images.find((image: any) => Number(image?.isPrimary) === 1) || images[0];
-  const value =
-    (typeof primary === 'string' ? primary : primary?.url || primary?.imageUrl) ||
-    property?.mainImage;
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
-}
-
-function getListingTitle(property: any): string {
-  const title = String(property?.title || '').trim();
-  if (title && title.toLowerCase() !== 'property listing') return title;
-  const bedrooms = Number(property?.bedrooms || 0);
-  const type = String(property?.propertyType || 'Property').replace(/_/g, ' ');
-  return bedrooms > 0 ? `${bedrooms} bedroom ${type}` : type;
 }
 
 function SuburbGuideShell({ children }: { children: ReactNode }) {

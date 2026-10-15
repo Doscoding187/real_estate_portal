@@ -158,9 +158,77 @@
   background: #eaf4fb;
 }
 
+.suburb-guide-quick-nav {
+  border-bottom: 1px solid #e4eaf0;
+  background: #fff;
+}
+
+.suburb-guide-quick-nav__inner {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding-block: 0.65rem;
+  scrollbar-width: none;
+}
+
+.suburb-guide-quick-nav__inner::-webkit-scrollbar {
+  display: none;
+}
+
+.suburb-guide-quick-nav__label {
+  flex: 0 0 auto;
+  margin-right: 0.25rem;
+  color: #7a8998;
+  font-size: 0.69rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.suburb-guide-quick-nav a {
+  display: inline-flex;
+  min-height: 36px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid #dce5ec;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.45rem 0.78rem;
+  color: #27445d;
+  font-size: 0.77rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.suburb-guide-quick-nav a:hover {
+  border-color: #9fc3dc;
+  background: #f3f9fd;
+  color: #1d6398;
+}
+
+.suburb-guide-quick-nav a span {
+  display: inline-grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #eaf3fa;
+  padding-inline: 0.22rem;
+  color: #1f679d;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
 .suburb-guide-main {
   display: grid;
-  gap: clamp(2rem, 4vw, 3.25rem);
+  gap: clamp(2.2rem, 4vw, 3.5rem);
   padding-block: clamp(2rem, 4vw, 3.5rem) 4rem;
 }
 
@@ -361,6 +429,10 @@
   color: #7a8998;
   font-size: 0.69rem;
   line-height: 1.45;
+}
+
+.suburb-guide-market__fineprint {
+  max-width: 440px;
 }
 
 .suburb-guide-market__empty {
@@ -786,6 +858,13 @@
   font-size: 0.74rem;
 }
 
+.suburb-guide-neighbour-card__mix {
+  margin-top: 0.4rem;
+  color: #4f6b81;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .suburb-guide-neighbour-card__action {
   display: inline-flex;
   align-items: center;
@@ -877,6 +956,79 @@
   color: #52667a;
   font-size: 0.98rem;
   line-height: 1.7;
+}
+
+.suburb-guide-context__scope {
+  max-width: 760px;
+  border-left: 3px solid #6ea7ce;
+  background: #f3f8fc;
+  padding: 0.8rem 1rem;
+  color: #37556e !important;
+  font-size: 0.86rem !important;
+}
+
+.suburb-guide-feed-panel {
+  scroll-margin-top: 5.5rem;
+  border: 1px solid #e0e8ef;
+  border-radius: 1rem;
+  background: #fff;
+  padding: clamp(1.15rem, 2.5vw, 1.8rem);
+  box-shadow: 0 12px 32px rgb(15 42 65 / 5%);
+}
+
+.suburb-guide-feed-panel > div:first-child {
+  margin-bottom: 1.2rem;
+}
+
+.suburb-guide-feed-panel h2 {
+  margin: 0;
+  color: #17344f;
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+  font-weight: 760;
+  letter-spacing: -0.035em;
+  line-height: 1.16;
+}
+
+.suburb-guide-feed-panel h2 + p {
+  margin-top: 0.4rem;
+  color: #64778b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.suburb-guide-feed-panel [aria-live='polite'] > div[role='status'] {
+  min-height: 112px;
+  display: grid;
+  place-items: center;
+  border-color: #e1e9ef;
+  border-radius: 0.8rem;
+  background: #fbfcfd;
+  padding: 1.25rem;
+  color: #62768a;
+  font-size: 0.87rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.suburb-guide-feed-panel [aria-live='polite'] > div[role='status'] p {
+  margin: 0;
+}
+
+.suburb-guide-feed-panel [aria-live='polite'] > div[role='status'] a {
+  color: #216b9f;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.suburb-guide-feed-panel [aria-live='polite'] > div[role='status'] a:hover {
+  text-decoration: underline;
+}
+
+.suburb-guide-development-panel {
+  border-color: #d8e6ed;
+  background:
+    linear-gradient(115deg, rgb(238 247 251 / 70%), transparent 44%),
+    #fff;
 }
 
 .suburb-guide-source {
@@ -1088,6 +1240,14 @@
     font-size: 0.98rem;
   }
 
+  .suburb-guide-quick-nav__inner {
+    min-height: 58px;
+  }
+
+  .suburb-guide-quick-nav__label {
+    display: none;
+  }
+
   .suburb-guide-section-heading {
     align-items: flex-start;
   }
@@ -1192,6 +1352,10 @@
   .suburb-guide-market__metric,
   .suburb-guide-neighbour-card,
   .suburb-guide-professional-card {
+    transition: none;
+  }
+
+  .suburb-guide-quick-nav a {
     transition: none;
   }
 

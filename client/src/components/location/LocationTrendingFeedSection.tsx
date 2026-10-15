@@ -24,6 +24,7 @@ export type FeedTab =
   | 'commercial';
 
 interface LocationTrendingFeedSectionProps {
+  sectionId?: string;
   locationName: string;
   province?: string;
   city?: string;
@@ -37,6 +38,11 @@ interface LocationTrendingFeedSectionProps {
   standardizeDevelopmentUnitCards?: boolean;
   cardLayout?: 'carousel' | 'wide';
   requirePhotoReadyDevelopments?: boolean;
+  showTabs?: boolean;
+  sectionClassName?: string;
+  headingEyebrow?: string;
+  headingTitle?: string;
+  headingDescription?: string;
 }
 
 type TrendingFeedItem = {
@@ -101,6 +107,7 @@ const TAB_COPY: Record<FeedTab, { title: string; subtitle: string }> = {
 };
 
 export function LocationTrendingFeedSection({
+  sectionId,
   locationName,
   province,
   city,
@@ -114,6 +121,11 @@ export function LocationTrendingFeedSection({
   standardizeDevelopmentUnitCards = false,
   cardLayout = 'carousel',
   requirePhotoReadyDevelopments = false,
+  showTabs = true,
+  sectionClassName,
+  headingEyebrow,
+  headingTitle,
+  headingDescription,
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
@@ -172,14 +184,31 @@ export function LocationTrendingFeedSection({
         title: `Explore ${locationName}`,
         subtitle: 'Choose a supported journey to see local opportunities in this area.',
       };
-  const title = activeTab ? `${copy.title} in ${locationName}` : copy.title;
+  const title = headingTitle || (activeTab ? `${copy.title} in ${locationName}` : copy.title);
+  const description = headingDescription || copy.subtitle;
 
   return (
-    <section className="py-10 bg-white rounded-2xl border border-slate-200/80 px-4 md:px-6">
+    <section
+      id={sectionId}
+      className={
+        sectionClassName || 'py-10 bg-white rounded-2xl border border-slate-200/80 px-4 md:px-6'
+      }
+      aria-labelledby={sectionId ? `${sectionId}-title` : undefined}
+    >
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xl md:text-2xl font-bold text-slate-900">{title}</h2>
-          <p className="text-sm text-slate-600 mt-1">{copy.subtitle}</p>
+          {headingEyebrow ? (
+            <p className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.13em] text-[#2774AE]">
+              {headingEyebrow}
+            </p>
+          ) : null}
+          <h2
+            id={sectionId ? `${sectionId}-title` : undefined}
+            className="text-xl md:text-2xl font-bold text-slate-900"
+          >
+            {title}
+          </h2>
+          <p className="text-sm text-slate-600 mt-1">{description}</p>
         </div>
         {activeTab && viewAllHref?.[activeTab] ? (
           <Link
@@ -198,41 +227,47 @@ export function LocationTrendingFeedSection({
         ) : null}
       </div>
 
-      <div className="flex justify-start mb-7 overflow-x-auto pb-2 scrollbar-hide">
-        <div
-          className="inline-flex flex-nowrap justify-start gap-2"
-          role="group"
-          aria-label={`${locationName} property type`}
-        >
-          {visibleFeedTabs.map(tab => (
-            <button
-              key={tab.value}
-              type="button"
-              disabled={neutralMode && tab.value !== 'buy'}
-              aria-disabled={neutralMode && tab.value !== 'buy'}
-              aria-pressed={activeTab === tab.value}
-              onClick={() => {
-                if (neutralMode && tab.value !== 'buy') return;
-                if (controlledActiveTab === undefined) {
-                  setInternalTab(tab.value);
-                }
-                onTabChange?.(tab.value);
-              }}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all border ${
-                activeTab === tab.value
-                  ? 'bg-[#2774AE] border-[#2774AE] text-white shadow-sm'
-                  : neutralMode && tab.value !== 'buy'
-                    ? 'border-slate-200 text-slate-400 cursor-not-allowed'
-                    : 'border-slate-200 bg-white text-slate-700 hover:border-[#2774AE] hover:text-[#2774AE]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {showTabs ? (
+        <div className="mb-7 flex justify-start overflow-x-auto pb-2 scrollbar-hide">
+          <div
+            className="inline-flex flex-nowrap justify-start gap-2"
+            role="group"
+            aria-label={`${locationName} property type`}
+          >
+            {visibleFeedTabs.map(tab => (
+              <button
+                key={tab.value}
+                type="button"
+                disabled={neutralMode && tab.value !== 'buy'}
+                aria-disabled={neutralMode && tab.value !== 'buy'}
+                aria-pressed={activeTab === tab.value}
+                onClick={() => {
+                  if (neutralMode && tab.value !== 'buy') return;
+                  if (controlledActiveTab === undefined) {
+                    setInternalTab(tab.value);
+                  }
+                  onTabChange?.(tab.value);
+                }}
+                className={`rounded-full border px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+                  activeTab === tab.value
+                    ? 'border-[#2774AE] bg-[#2774AE] text-white shadow-sm'
+                    : neutralMode && tab.value !== 'buy'
+                      ? 'cursor-not-allowed border-slate-200 text-slate-400'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-[#2774AE] hover:text-[#2774AE]'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <div id="location-trending-feed-panel" aria-live="polite" aria-busy={feedQuery.isLoading}>
+      <div
+        id={sectionId ? `${sectionId}-panel` : 'location-trending-feed-panel'}
+        aria-live="polite"
+        aria-busy={feedQuery.isLoading}
+      >
         {!activeTab ? (
           <div className="rounded-xl border border-slate-100 border-dashed bg-white py-10 text-center text-slate-500">
             Choose a supported journey to view published opportunities in this area.
