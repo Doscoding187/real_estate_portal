@@ -1,3 +1,4 @@
+import { CITY_GUIDE_CONTENT, getCityGuideContent } from './shared/cityGuideContent';
 import { PROVINCE_GUIDE_CONTENT, getProvinceGuideContent } from './shared/provinceGuideContent';
 import { injectSeoHead } from './server/_core/seoHead';
 import tailwindcss from '@tailwindcss/vite';
@@ -49,7 +50,11 @@ function provinceGuideEditorialHtml(): Plugin {
       handler(html, context) {
         const requestUrl = context.originalUrl || context.path;
         const slug = new URL(requestUrl, 'http://localhost').pathname.replace(/^\/|\/$/g, '');
-        return getProvinceGuideContent(slug) ? injectSeoHead(html, requestUrl) : html;
+        const parts = slug.split('/');
+        return getProvinceGuideContent(slug) ||
+          (parts.length === 2 && getCityGuideContent(parts[0], parts[1]))
+          ? injectSeoHead(html, requestUrl)
+          : html;
       },
     },
     generateBundle: {
@@ -58,11 +63,14 @@ function provinceGuideEditorialHtml(): Plugin {
         const template = bundle['index.html'];
         if (!template || template.type !== 'asset')
           throw new Error('Guide HTML requires the built application shell');
-        for (const guide of PROVINCE_GUIDE_CONTENT) {
+        for (const guide of [
+          ...PROVINCE_GUIDE_CONTENT.map(guide => ({ path: guide.slug })),
+          ...CITY_GUIDE_CONTENT.map(guide => ({ path: `${guide.provinceSlug}/${guide.slug}` })),
+        ]) {
           this.emitFile({
             type: 'asset',
-            fileName: `${guide.slug}/index.html`,
-            source: injectSeoHead(String(template.source), `/${guide.slug}`),
+            fileName: `${guide.path}/index.html`,
+            source: injectSeoHead(String(template.source), `/${guide.path}`),
           });
         }
       },

@@ -53,7 +53,7 @@ export function GuideSourceLinks({
   );
 }
 
-function DiscoveryTabs({
+export function DiscoveryTabs({
   items,
   active,
   onChange,
@@ -204,7 +204,7 @@ function PlaceCard({
   );
 }
 
-function PlaceRow({
+export function PlaceRow({
   children,
   label,
   refreshKey,

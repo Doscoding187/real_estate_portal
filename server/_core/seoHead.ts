@@ -1,3 +1,5 @@
+import { cityGuideInitialHtml } from '../../shared/cityGuideHtml';
+import { getCityGuideContent } from '../../shared/cityGuideContent';
 import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
 import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
 
@@ -100,6 +102,18 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
       canonicalUrl: absoluteUrl(`/${guide.slug}`),
       robots:
         guide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+
+  const cityGuide =
+    pathSegments.length === 2 ? getCityGuideContent(pathSegments[0], pathSegments[1]) : undefined;
+  if (cityGuide)
+    return {
+      title: cityGuide.title,
+      description: cityGuide.description,
+      canonicalUrl: absoluteUrl(`/${cityGuide.provinceSlug}/${cityGuide.slug}`),
+      robots:
+        cityGuide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
       siteName: DEFAULT_SITE_NAME,
     };
 
@@ -272,7 +286,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
 
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
-  const initialHtml = provinceGuideInitialHtml(requestUrl);
+  const initialHtml = provinceGuideInitialHtml(requestUrl) || cityGuideInitialHtml(requestUrl);
   const document = initialHtml
     ? template.replace(
         /<div id="root">[\s\S]*?<\/div>/,
