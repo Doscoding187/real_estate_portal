@@ -525,7 +525,10 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 EXPLORE THE WIDER CITY
               </p>
               <h2 id="suburb-guide-areas-title">Explore suburbs in {verifiedSuburb.cityName}</h2>
-              <p>Browse active areas or search the full verified suburb directory.</p>
+              <p>
+                Compare other suburb guides in {verifiedSuburb.cityName}, or search the verified
+                directory.
+              </p>
             </div>
             <Link className="suburb-guide-section-link" href={guideUrl}>
               Open city guide <ArrowRight size={15} aria-hidden="true" />
