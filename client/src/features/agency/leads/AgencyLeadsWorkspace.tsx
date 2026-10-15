@@ -493,6 +493,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                                     'capitalize',
                                     presentation.isFollowUpCompletion &&
                                       'border-emerald-200 text-emerald-700',
+                                    presentation.isViewingScheduled &&
+                                      'border-sky-200 text-sky-700',
                                   )}
                                 >
                                   {presentation.label}

@@ -1144,8 +1144,10 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                       <div className="divide-y divide-slate-100">
                         {communicationTimeline.map((activity: any, index) => {
                           const presentation = getLeadActivityPresentation(activity);
-                          const ActivityIcon = presentation.isFollowUpCompletion
-                            ? CheckCircle2
+                          const ActivityIcon = presentation.isViewingScheduled
+                            ? Calendar
+                            : presentation.isFollowUpCompletion
+                              ? CheckCircle2
                             : activity.type === 'whatsapp'
                               ? MessageCircle
                               : activity.type === 'email'
@@ -1179,7 +1181,9 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                                       'text-sm font-semibold',
                                       presentation.isFollowUpCompletion
                                         ? 'text-emerald-700'
-                                        : 'capitalize text-slate-800',
+                                        : presentation.isViewingScheduled
+                                          ? 'text-sky-700'
+                                          : 'capitalize text-slate-800',
                                     )}
                                   >
                                     {presentation.label}

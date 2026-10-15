@@ -9,10 +9,41 @@ export function getLeadActivityPresentation(activity: LeadActivityLike) {
     activity.type === 'note' && /^Follow-up completed(?:\.|\s|$)/i.test(description);
 
   if (!isFollowUpCompletion) {
+    const agencyViewing =
+      activity.type === 'meeting'
+        ? description.match(/^Viewing (requested|awaiting_confirmation|confirmed) for (.+)$/i)
+        : null;
+    const agentViewing =
+      activity.type === 'status_change' ? description.match(/^Showing booked for (.+)$/i) : null;
+
+    if (agencyViewing) {
+      const status = agencyViewing[1].replace(/_/g, ' ');
+      const scheduledAt = agencyViewing[2].replace(/\.$/, '').trim();
+
+      return {
+        label: 'Viewing scheduled',
+        description: `${status[0].toUpperCase()}${status.slice(1)} for ${scheduledAt}`,
+        isFollowUpCompletion: false,
+        isViewingScheduled: true,
+      };
+    }
+
+    if (agentViewing) {
+      const scheduledAt = agentViewing[1].replace(/\.$/, '').trim();
+
+      return {
+        label: 'Viewing scheduled',
+        description: `Booked for ${scheduledAt}`,
+        isFollowUpCompletion: false,
+        isViewingScheduled: true,
+      };
+    }
+
     return {
       label: String(activity.type || 'activity').replace(/_/g, ' '),
       description: description || 'Activity recorded.',
       isFollowUpCompletion: false,
+      isViewingScheduled: false,
     };
   }
 
@@ -27,6 +58,7 @@ export function getLeadActivityPresentation(activity: LeadActivityLike) {
     label: 'Followed up',
     description: details,
     isFollowUpCompletion: true,
+    isViewingScheduled: false,
   };
 }
 

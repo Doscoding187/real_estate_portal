@@ -15,6 +15,7 @@ describe('lead activity presentation', () => {
       label: 'Followed up',
       description: 'Buyer contacted and viewing discussed.',
       isFollowUpCompletion: true,
+      isViewingScheduled: false,
     });
   });
 
@@ -28,6 +29,27 @@ describe('lead activity presentation', () => {
       label: 'note',
       description: 'Buyer asked for the rates estimate.',
       isFollowUpCompletion: false,
+      isViewingScheduled: false,
+    });
+  });
+
+  it.each([
+    {
+      type: 'meeting',
+      description: 'Viewing confirmed for 2026-10-16 10:30:00.',
+      expectedDescription: 'Confirmed for 2026-10-16 10:30:00',
+    },
+    {
+      type: 'status_change',
+      description: 'Showing booked for 10/16/2026, 10:30:00 AM',
+      expectedDescription: 'Booked for 10/16/2026, 10:30:00 AM',
+    },
+  ])('identifies scheduled viewings from $type activities', activity => {
+    expect(getLeadActivityPresentation(activity)).toEqual({
+      label: 'Viewing scheduled',
+      description: activity.expectedDescription,
+      isFollowUpCompletion: false,
+      isViewingScheduled: true,
     });
   });
 
