@@ -21,6 +21,7 @@ export function PresenceImage({
     <img
       {...props}
       src={source}
+      data-image-fallback={source === fallbackSrc || !source}
       alt={source === src ? alt : fallbackAlt}
       style={source ? style : { ...style, visibility: 'hidden' }}
       onError={() => {
