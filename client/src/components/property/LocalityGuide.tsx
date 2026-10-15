@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { PresenceImage } from '@/components/PresenceImage';
 
 interface LocalityGuideProps {
   suburb: string;
@@ -11,9 +12,6 @@ interface LocalityGuideProps {
   images?: string[];
 }
 
-const DEFAULT_GUIDE_IMAGE =
-  '/placeholders/urban-illustration-with-large-buildings-with-cars-and-trees-city-activities-vector.jpg';
-
 export function LocalityGuide({
   suburb,
   city,
@@ -22,12 +20,7 @@ export function LocalityGuide({
   images = [],
 }: LocalityGuideProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [activeImage, setActiveImage] = useState(() => {
-    const firstValidImage = images.find(
-      image => typeof image === 'string' && image.trim().length > 0,
-    );
-    return firstValidImage || DEFAULT_GUIDE_IMAGE;
-  });
+  const activeImage = images.find(image => typeof image === 'string' && image.trim().length > 0);
   const fallbackDescription = `${suburb} is a suburb in ${city}${province ? `, ${province}` : ''}. Explore local amenities, transport links, and lifestyle highlights to understand what makes this area a great place to live.`;
   const resolvedDescription = description?.trim() ? description : fallbackDescription;
 
@@ -55,15 +48,11 @@ export function LocalityGuide({
         {/* Image */}
         <div className="mb-6">
           <div className="h-[240px] rounded-xl overflow-hidden bg-slate-100 w-full">
-            <img
+            <PresenceImage
               src={activeImage}
               alt={`${suburb} locality`}
+              fallbackAlt="Neighbourhood illustration"
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              onError={() => {
-                if (activeImage !== DEFAULT_GUIDE_IMAGE) {
-                  setActiveImage(DEFAULT_GUIDE_IMAGE);
-                }
-              }}
             />
           </div>
         </div>
