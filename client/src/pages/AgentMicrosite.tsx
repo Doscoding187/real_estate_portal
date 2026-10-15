@@ -10,6 +10,9 @@ import type { PublicPropertyDetailPresentation } from '@shared/public-property-d
 import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
 import { AgentInsightsSection } from '@/components/agent/AgentInsightsSection';
 import { AgentVideoSection } from '@/components/agent/AgentVideoSection';
+import { PresenceImage } from '@/components/PresenceImage';
+import { selectPresenceImages } from '@/lib/presenceImages';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import {
   ArrowLeft,
   ArrowRight,
@@ -52,6 +55,7 @@ interface InventoryCard extends Record<string, unknown> {
   id: number;
   title: string;
   detailPresentation?: PublicPropertyDetailPresentation;
+  images?: Array<{ url: string; isPrimary?: number; displayOrder?: number }>;
 }
 function publicInventoryCardData(card: InventoryCard): SimpleHomeListingCardProps {
   // The public inventory DTO exposes one price; the shared normalizer accepts
@@ -125,10 +129,9 @@ export default function AgentMicrosite() {
   const [previousCursors, setPreviousCursors] = useState<Array<number | undefined>>([]);
   const [isEnquiryDialogOpen, setIsEnquiryDialogOpen] = useState(false);
   const [shareFeedback, setShareFeedback] = useState('');
-  const [coverImage, setCoverImage] = useState<{
-    slug: string;
-    image: string | null | undefined;
-  } | null>(null);
+  const [coverImages, setCoverImages] = useState<
+    ({ slug: string } & ReturnType<typeof selectPresenceImages>) | null
+  >(null);
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
   const inventoryQuery = trpc.agent.getPublicInventoryPageForAgent.useQuery(
     {
@@ -154,14 +157,27 @@ export default function AgentMicrosite() {
     !allProperties && inventoryQuery.data?.nextCursor != null && inventory.length >= 6
       ? inventory.slice(0, 5)
       : inventory;
+  const portfolioImages = useMemo(
+    () =>
+      selectPresenceImages(
+        inventory.map(card => ({
+          primary: publicInventoryCardData(card).image,
+          images: card.images || [],
+        })),
+      ),
+    [inventory],
+  );
   useEffect(() => {
     if (!profile || !inventoryQuery.data || intent !== 'all' || inventoryArea || cursor) return;
-    setCoverImage(current =>
-      current?.slug === slug
+    setCoverImages(current =>
+      current?.slug === slug &&
+      current.hero === portfolioImages.hero &&
+      current.contact === portfolioImages.contact &&
+      current.hasListingPhoto === portfolioImages.hasListingPhoto
         ? current
-        : { slug, image: inventory[0] ? publicInventoryCardData(inventory[0]).image : undefined },
+        : { slug, ...portfolioImages },
     );
-  }, [profile, inventoryQuery.data, inventory, intent, inventoryArea, cursor, slug]);
+  }, [profile, inventoryQuery.data, portfolioImages, intent, inventoryArea, cursor, slug]);
   const specializations = parseDelimitedList(profile?.specialization);
   const languages = parseDelimitedList(profile?.languages);
   const socialLinks = parseSocialLinksRecord(profile?.socialLinks);
@@ -246,12 +262,7 @@ export default function AgentMicrosite() {
   const firstName = profile.firstName || displayName;
   const shortArea = primaryArea?.name.split(',')[0];
   const roleLabel = ROLE_LABELS[profile.role || ''] || 'Property Practitioner';
-  const firstImage =
-    coverImage?.slug === slug
-      ? coverImage.image
-      : inventory[0]
-        ? publicInventoryCardData(inventory[0]).image
-        : undefined;
+  const pageImages = coverImages?.slug === slug ? coverImages : portfolioImages;
   const openEnquiryDialog = (surface: 'header' | 'hero' | 'contact' | 'mobile') => {
     track(AGENT_PROFILE_EVENTS.contactCta, {
       slug: profile.slug,
@@ -397,10 +408,14 @@ export default function AgentMicrosite() {
         </section>
       ) : (
         <>
-          <section className={`as-hero ${firstImage ? 'as-hero-with-image' : ''}`}>
-            {firstImage && (
-              <img className="as-hero-image" src={firstImage} alt="" aria-hidden="true" />
-            )}
+          <section className="as-hero as-hero-with-image">
+            <PresenceImage
+              className="as-hero-image"
+              src={pageImages.hero}
+              fallbackSrc={PROPERTY_IMAGE_FALLBACK}
+              alt=""
+              aria-hidden="true"
+            />
             <div className="as-hero-shade" />
             <div className="as-shell as-hero-inner">
               <div className="as-hero-copy">
@@ -482,7 +497,7 @@ export default function AgentMicrosite() {
                   </>
                 )}
               </div>
-              {firstImage && (
+              {pageImages.hasListingPhoto && (
                 <span className="as-hero-caption">
                   A property currently represented by {firstName}
                 </span>
@@ -690,7 +705,14 @@ export default function AgentMicrosite() {
                     data-testid="area-guide-card"
                     aria-label={area.name}
                   >
-                    <MapPin size={18} aria-hidden="true" />
+                    <PresenceImage
+                      className="as-area-image"
+                      alt=""
+                      loading="lazy"
+                      width={320}
+                      height={180}
+                      aria-hidden="true"
+                    />
                     <div className="as-area-card-body">
                       <h3>{area.name.split(',')[0]}</h3>
                       <p>{area.name.split(',').slice(1).join(',').trim() || 'Service area'}</p>
@@ -761,9 +783,13 @@ export default function AgentMicrosite() {
         )}
 
         <section id="contact" className="as-contact" data-testid="contact-section">
-          {firstImage && (
-            <img className="as-contact-image" src={firstImage} alt="" aria-hidden="true" />
-          )}
+          <PresenceImage
+            className="as-contact-image"
+            src={pageImages.contact}
+            alt=""
+            loading="lazy"
+            aria-hidden="true"
+          />
           <div className="as-contact-copy">
             <p className="as-eyebrow">Let's talk</p>
             <h2>Let's talk.</h2>

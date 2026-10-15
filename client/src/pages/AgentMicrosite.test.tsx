@@ -591,15 +591,30 @@ describe('AgentMicrosite public web presence', () => {
     profileResult.current = { data: baseProfile as never, isLoading: false, isError: false };
     inventoryResult.current = {
       data: [
-        { id: 1, title: 'House', listingType: 'sale', mainImage: '/property.jpg', images: [] },
+        {
+          id: 1,
+          title: 'House',
+          listingType: 'sale',
+          mainImage: '/property.jpg',
+          images: [
+            { url: '/property.jpg', isPrimary: 1 },
+            { url: '/garden.jpg', displayOrder: 1 },
+          ],
+        },
       ],
     };
     const { container } = render(<AgentMicrosite />);
     const image = container.querySelector('.as-hero-image');
     expect(image).not.toBeNull();
     const source = image!.getAttribute('src');
+    expect(source).toBe('/property.jpg');
+    expect(container.querySelector('.as-contact-image')?.getAttribute('src')).toBe('/garden.jpg');
+    expect(container.querySelector('.as-area-image')?.getAttribute('src')).toContain(
+      '/placeholders/urban-illustration',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'To rent' }));
     expect(container.querySelector('.as-hero-image')?.getAttribute('src')).toBe(source);
+    expect(container.querySelector('.as-contact-image')?.getAttribute('src')).toBe('/garden.jpg');
     expect(screen.getByText('No current properties match these filters.')).toBeDefined();
   });
 
