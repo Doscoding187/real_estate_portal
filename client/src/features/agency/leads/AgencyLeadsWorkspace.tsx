@@ -320,7 +320,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
             ) : null}
           </CardContent>
         </Card>
-        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
           <PipelineSnapshot
             conversion={props.conversion}
             leadsTotal={Math.max(props.conversion.total, props.filteredLeads.length, 1)}
