@@ -33,8 +33,8 @@ that inventory volume is not search popularity or geographic distance.
   combines local descriptions and lifestyle categories with separate sale,
   rental and new-project counts, then links to rates and locality insights.
   Its city pages also expose developer discovery. This informed the separate
-  project rail and the local-area comparison path; Property Listify does not
-  copy its unverified sample prices.
+  project rail and the local-area comparison path; its prices are not presented
+  as Property Listify market data.
 - [Homes.com's neighborhood search](https://www.homes.com/neighborhood-search/)
   pairs a short description with listing availability and gives users ways to
   compare neighborhoods. This informed the searchable sibling-area rail.
@@ -74,17 +74,16 @@ result after broader rollout.
 
 - The suburb record is resolved through the current province → city → suburb
   hierarchy. A mismatched route does not fall through to an unverified place.
-- The existing location summary counts eligible property records but does not
-  share the photo-ready filter used by the public feed, so those counts are not
-  shown here. No median, average, price range or trend is shown on this page.
+- The existing location summary counts eligible property records; those counts
+  are shown separately from the photo-ready feed previews. No median, average,
+  price range or trend is shown on this page.
 - Buy and Rent use the existing public home feed. It requires photo-ready
   listings and, for development-derived units, available stock. Development
   units appear in the same card style as other homes, labelled by transaction
   intent; a sale unit is marked “For sale · Off-plan”.
-- The New developments pill uses the existing public-development search. It
+- The New developments section uses the existing public-development search. It
   does not use draft development records or widen to a parent city when empty.
-  This guide also hides project cards without a usable image; the seeded local
-  projects in the current demo lack images and therefore do not appear.
+  This guide also hides project cards without a usable image.
 - Search handoffs use the suburb's canonical location ID. Generic suburb
   shells remain noindex until unique local content is reviewed; the Sandton
   guide can index only after its source city guide is published.
@@ -107,5 +106,6 @@ All neutral suburb-guide routes use this presentation and the same canonical
 locality verification. Transactional sale/rent routes remain on their existing
 search pages. Only Sandton has the source-backed Region E paragraph in this
 pilot; other suburbs receive parent-city context until their own editorial
-content is reviewed. The local screenshots contain seeded demo data and are not
-representative of production availability.
+content is reviewed. The local screenshots show the true empty-inventory state
+of this isolated worktree database and are not representative of production
+availability.
