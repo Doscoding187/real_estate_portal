@@ -34,17 +34,26 @@ The retained hero artwork is decorative orientation imagery. It is not a boundar
 
 ## Section contract and implemented design
 
-1. **Hero:** keep Explore Gauteng and the approved map-cover artwork. Short orientation, no sales metric or manufactured video button.
-2. **In this guide:** sticky, keyboard-accessible section anchors; horizontal scrolling on mobile.
-3. **Province orientation:** explain three metros/two districts and distinguish familiar labels. Five compact regional jump links.
-4. **Five region chapters:** original geographic context, two useful paragraphs, practical consideration and source links. An adjacent compact rail links verified city/town destinations. Only the first three chapters use existing city imagery; no invented West Rand/Vaal image presented as a specific place.
-5. **Find your starting point:** priorities for a daily destination, property setting and home type. These are transparent research starting points, not personalised recommendations or unsupported “best area” rankings.
-6. **City directory:** reuse the approved homepage-style entries; twelve maximum, then search. Loading, failure and genuinely empty data are distinct. Existing routes are place destinations, not a claim that every city article is editorially complete.
-7. **Optional sponsorship:** existing billboard contract, distinctly labelled and separated from guide content. It never chooses a search location or alters editorial ordering.
-8. **Everyday life:** transport connections and practical questions about destinations, services and running costs. No unsubstantiated safety/school-quality rankings or commute-time promises.
-9. **Platform availability:** separate sale/rent counts, canonical province scope, observed date, explicit platform-only coverage. Secondary Buy/Rent handoffs retain canonical location authority.
-10. **FAQs and sources:** Gauteng-specific geographic questions, asking versus sale prices, limits of platform data; official source links and actual source-check date. No fabricated reviewer or automatically refreshed editorial date.
-11. **Property journey handoff:** existing seven pill tabs/composer, moved below editorial content. Existing filters, URLs, specialist journeys and access gates remain authoritative.
+The approved discovery prototype is preserved at `/home/edwardspc/Desktop/Dev/review-artifacts/gauteng-discovery-tabs-concept-20261015/`. The integrated page uses its balanced tabs and image rows while keeping the substantive guide content.
+
+1. **Hero and journey composer:** keep Explore Gauteng and the approved map-cover artwork. Restore the existing seven journey pills/composer directly beneath the hero. Existing location identities, filters, specialist journeys and access gates remain authoritative.
+2. **In this guide:** sticky, keyboard-accessible anchors to discovery, regions/districts, insights, cities, practical living and questions; horizontal scrolling on mobile.
+3. **Discover your side of Gauteng:** independent, content-width icon tabs for City living, Green spaces, Connected living, East Rand towns, Town & country and Around the Vaal. Each has an original short description, compact image cards and expandable sourced context. These are editorial starting points, not popularity, affordability, safety or proximity rankings.
+4. **Province orientation and five full regional guides:** retain the three-metro/two-district explanation and the full province introduction. Region pills expose one complete chapter at a time, including both original paragraphs, source links, place cards and practical considerations. All five chapters remain in the document and initial HTML. West Rand and Sedibeng are equal navigable districts; no content is discarded because their city destinations are missing.
+5. **Canonical links and unavailable destinations:** city cards link only when the existing verified city read models supply canonical identities. Lifestyle cards without a city destination lead to the matching region chapter through a hash anchor; regional cards label those places as context. No city route is fabricated from a plausible name. Source and guide links use real anchors.
+6. **Platform availability:** separate sale/rent counts and labelled bars, canonical province scope and observation date. These are available platform listings, not regional market prices or concluded sales. A zero has no filled bar; unavailable data never becomes zero.
+7. **City directory:** approved homepage-style entries, twelve maximum, then search. Loading, failure and genuinely empty data remain distinct. No popularity claim or expanding “show more” grid.
+8. **Optional sponsorship:** retain the existing separately labelled billboard contract. It never chooses geography or changes the guide order.
+9. **Everyday life:** retain the full practical transport, daily-destination and running-cost guidance in compact adjacent panels. No unsubstantiated safety/school rankings or commute-time promises.
+10. **FAQs and sources:** retain all province-specific questions and original sources, add the outdoor-destination sources, and keep the genuine fixed source-check date. No manufactured reviewer, market rating or refresh date.
+
+### Collection evidence and geography
+
+Green spaces names actual reference points: Johannesburg Botanical Garden/Emmarentia Dam, Pretoria National Botanical Garden, and Walter Sisulu National Botanical Garden in Poortview, Roodepoort. JCPZ and SANBI sources support those references. A city image is a city illustration, not a purported garden photograph. City-guide links provide broader context; collection membership does not claim every neighbourhood is green or near a park.
+
+Connected living names the commuter-network reference points and directs readers to check the complete home-to-destination trip. Town & country and Around the Vaal link back to the existing regional context when city guides cannot be verified. These curated memberships are not new Search Areas or runtime query boundaries. No inference is made about an individual property's setting, access, suitability or value.
+
+Both selector rows support normal keyboard tab focus plus arrow/Home/End navigation. Selection is local and independent: changing lifestyle does not reset a region or the property journey. Region hash links select the correct chapter before scrolling. Native Back/Forward and existing composer URL reconstruction remain part of validation.
 
 ## Market intelligence: defined but not manufactured
 
@@ -65,7 +74,7 @@ Suppress unsupported estimates; do not fill them with zero or fictional data. Av
 
 ## Content and sources
 
-The source register lives beside the text. Source check is 15 October 2026. Sources include CoGTA, Johannesburg, Tshwane, Ekurhuleni, West Rand, Sedibeng, Metsimaholo and Gautrain. Older municipal documents are used for stable geographic structure, not current population, prices, service quality or unimplemented plans. A West Rand draft is explicitly identified as a draft. Practical checklists are advice, not claimed local rankings.
+The source register lives beside the text. Source check is 15 October 2026. Sources include CoGTA, Johannesburg, Tshwane, Ekurhuleni, West Rand, Sedibeng, Metsimaholo, Gautrain, JCPZ and SANBI. Older municipal documents are used for stable geographic structure, not current population, prices, service quality or unimplemented plans. A West Rand draft is explicitly identified as a draft. Practical checklists are advice, not claimed local rankings.
 
 Before public editorial publication: human review of region descriptions and source mappings; check source changes; verify place destinations against the release database; decide ownership/review cadence; approve only substantive city/suburb articles as they are completed. A verified place record alone is not a published article.
 

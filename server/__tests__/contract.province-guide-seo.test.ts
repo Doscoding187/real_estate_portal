@@ -37,3 +37,27 @@ describe('Province editorial SEO contract', () => {
     expect(html).not.toContain('50,000');
   });
 });
+
+it('retains complete region chapters and adds sourced discovery context to the initial document', () => {
+  const guide = getProvinceGuideContent('gauteng')!;
+  const html = provinceGuideInitialHtml('/gauteng')!;
+  const escape = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  for (const region of guide.regions)
+    for (const paragraph of region.paragraphs) expect(html).toContain(escape(paragraph));
+  for (const collection of guide.collections) {
+    expect(html).toContain(escape(collection.context));
+    for (const id of collection.sourceIds)
+      expect(guide.sources.some(source => source.id === id)).toBe(true);
+    for (const place of collection.places)
+      expect(guide.regions.some(region => region.id === place.regionId)).toBe(true);
+  }
+  expect(guide.regions).toHaveLength(5);
+  expect(guide.collections).toHaveLength(6);
+  expect(html).toContain('Emmarentia Dam');
+});

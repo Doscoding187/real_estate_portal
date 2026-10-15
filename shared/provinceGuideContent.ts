@@ -11,6 +11,21 @@ export interface ProvinceGuideRegion {
   places: readonly { name: string; citySlug: string }[];
   sourceIds: readonly string[];
 }
+export interface ProvinceDiscoveryPlace {
+  name: string;
+  citySlug: string;
+  regionId: string;
+  caption: string;
+}
+export interface ProvinceDiscoveryCollection {
+  id: string;
+  label: string;
+  icon: 'city' | 'leaf' | 'train' | 'home' | 'trees' | 'water';
+  description: string;
+  context: string;
+  places: readonly ProvinceDiscoveryPlace[];
+  sourceIds: readonly string[];
+}
 export interface ProvinceGuideContent {
   slug: string;
   name: string;
@@ -20,6 +35,7 @@ export interface ProvinceGuideContent {
   description: string;
   introduction: string;
   regions: readonly ProvinceGuideRegion[];
+  collections: readonly ProvinceDiscoveryCollection[];
   sources: readonly { id: string; title: string; url: string; note?: string }[];
   practical: readonly { id: string; title: string; text: string; sourceIds: readonly string[] }[];
   faqs: readonly { question: string; answer: string }[];
@@ -143,6 +159,218 @@ const gauteng: ProvinceGuideContent = {
       sourceIds: ['sedibeng', 'metsimaholo'],
     },
   ],
+  collections: [
+    {
+      id: 'city-living',
+      label: 'City living',
+      icon: 'city',
+      description: 'Discover city centres, established neighbourhoods and the places between them.',
+      context:
+        'Start with a city guide, then compare the neighbourhoods around your everyday destinations. These are editorial starting points, not a ranking of the best places to live.',
+      sourceIds: ['joburg', 'tshwane'],
+      places: [
+        {
+          name: 'Johannesburg',
+          citySlug: 'johannesburg',
+          regionId: 'johannesburg',
+          caption: 'Explore the city’s many sides',
+        },
+        {
+          name: 'Pretoria',
+          citySlug: 'pretoria',
+          regionId: 'tshwane',
+          caption: 'Look closer at the capital city',
+        },
+        {
+          name: 'Randburg',
+          citySlug: 'randburg',
+          regionId: 'johannesburg',
+          caption: 'Explore the local neighbourhoods',
+        },
+        {
+          name: 'Midrand',
+          citySlug: 'midrand',
+          regionId: 'johannesburg',
+          caption: 'Between Johannesburg and Pretoria',
+        },
+        {
+          name: 'Centurion',
+          citySlug: 'centurion',
+          regionId: 'tshwane',
+          caption: 'A different starting point in Tshwane',
+        },
+      ],
+    },
+    {
+      id: 'green-spaces',
+      label: 'Green spaces',
+      icon: 'leaf',
+      description: 'Explore around botanical gardens and established outdoor destinations.',
+      context:
+        'Johannesburg Botanical Garden and Emmarentia Dam, Pretoria National Botanical Garden and Walter Sisulu National Botanical Garden offer concrete places to investigate. Open the city guide for broader context, then check the exact neighbourhood and the route to the garden. These links do not mean that every home in the city is close to a park.',
+      sourceIds: ['joburg-gardens', 'pretoria-garden', 'walter-sisulu'],
+      places: [
+        {
+          name: 'Johannesburg',
+          citySlug: 'johannesburg',
+          regionId: 'johannesburg',
+          caption: 'Botanical Garden & Emmarentia Dam',
+        },
+        {
+          name: 'Pretoria',
+          citySlug: 'pretoria',
+          regionId: 'tshwane',
+          caption: 'Pretoria National Botanical Garden',
+        },
+        {
+          name: 'Roodepoort',
+          citySlug: 'roodepoort',
+          regionId: 'johannesburg',
+          caption: 'Walter Sisulu National Botanical Garden',
+        },
+      ],
+    },
+    {
+      id: 'connected-living',
+      label: 'Connected living',
+      icon: 'train',
+      description: 'Use the Gautrain corridor as a starting point for your daily journey.',
+      context:
+        'Park, Midrand, Centurion, Pretoria and Hatfield are stations on the commuter network. Compare the complete trip, including the distance between a home and a station; a city guide is not a promise of walkable rail access. Confirm current routes with Gautrain.',
+      sourceIds: ['gautrain'],
+      places: [
+        {
+          name: 'Johannesburg',
+          citySlug: 'johannesburg',
+          regionId: 'johannesburg',
+          caption: 'Start with the Park Station corridor',
+        },
+        {
+          name: 'Midrand',
+          citySlug: 'midrand',
+          regionId: 'johannesburg',
+          caption: 'Explore around the Midrand connection',
+        },
+        {
+          name: 'Centurion',
+          citySlug: 'centurion',
+          regionId: 'tshwane',
+          caption: 'Compare your door-to-door journey',
+        },
+        {
+          name: 'Pretoria',
+          citySlug: 'pretoria',
+          regionId: 'tshwane',
+          caption: 'Pretoria & Hatfield connections',
+        },
+      ],
+    },
+    {
+      id: 'east-rand',
+      label: 'East Rand towns',
+      icon: 'home',
+      description: 'Get to know Ekurhuleni one town at a time.',
+      context:
+        'The towns within Ekurhuleni have different relationships to the airport, the mining belt and surrounding employment areas. Start with the town you mean, then explore specific neighbourhoods rather than treating the East Rand as one search area.',
+      sourceIds: ['ekurhuleni'],
+      places: [
+        {
+          name: 'Benoni',
+          citySlug: 'benoni',
+          regionId: 'ekurhuleni',
+          caption: 'Explore a different East Rand town',
+        },
+        {
+          name: 'Boksburg',
+          citySlug: 'boksburg',
+          regionId: 'ekurhuleni',
+          caption: 'Get to know the town and its areas',
+        },
+        {
+          name: 'Alberton',
+          citySlug: 'alberton',
+          regionId: 'ekurhuleni',
+          caption: 'A southern starting point',
+        },
+        {
+          name: 'Kempton Park',
+          citySlug: 'kempton-park',
+          regionId: 'ekurhuleni',
+          caption: 'Explore the airport-side town',
+        },
+        {
+          name: 'Germiston',
+          citySlug: 'germiston',
+          regionId: 'ekurhuleni',
+          caption: 'Look closer at the local context',
+        },
+      ],
+    },
+    {
+      id: 'town-country',
+      label: 'Town & country',
+      icon: 'trees',
+      description: 'Explore the towns and surrounding landscapes west and south of the metros.',
+      context:
+        'Use West Rand and Sedibeng as regional context before choosing a town or a particular property setting. A town home, smallholding and rural property can have different access, land-use and service arrangements; check the specific address.',
+      sourceIds: ['west-rand', 'sedibeng'],
+      places: [
+        {
+          name: 'Krugersdorp',
+          citySlug: 'krugersdorp',
+          regionId: 'west-rand',
+          caption: 'A starting point in Mogale City',
+        },
+        {
+          name: 'Randfontein',
+          citySlug: 'randfontein',
+          regionId: 'west-rand',
+          caption: 'Explore Rand West City',
+        },
+        {
+          name: 'Magaliesburg',
+          citySlug: 'magaliesburg',
+          regionId: 'west-rand',
+          caption: 'Look beyond a suburban setting',
+        },
+        {
+          name: 'Meyerton',
+          citySlug: 'meyerton',
+          regionId: 'sedibeng',
+          caption: 'Get to know the Midvaal side',
+        },
+      ],
+    },
+    {
+      id: 'around-vaal',
+      label: 'Around the Vaal',
+      icon: 'water',
+      description: 'Find your bearings in the southern part of Gauteng.',
+      context:
+        'Vereeniging, Vanderbijlpark and Meyerton are different entry points into Sedibeng. The wider Vaal region also reaches beyond Gauteng. A town’s place in this collection does not imply that every property is riverfront or dam-side.',
+      sourceIds: ['sedibeng', 'metsimaholo'],
+      places: [
+        {
+          name: 'Vereeniging',
+          citySlug: 'vereeniging',
+          regionId: 'sedibeng',
+          caption: 'Discover southern Gauteng',
+        },
+        {
+          name: 'Vanderbijlpark',
+          citySlug: 'vanderbijlpark',
+          regionId: 'sedibeng',
+          caption: 'Explore the Vaal side',
+        },
+        {
+          name: 'Meyerton',
+          citySlug: 'meyerton',
+          regionId: 'sedibeng',
+          caption: 'A starting point in Midvaal',
+        },
+      ],
+    },
+  ],
   practical: [
     {
       id: 'transport',
@@ -233,6 +461,23 @@ const gauteng: ProvinceGuideContent = {
       id: 'metsimaholo',
       title: 'Metsimaholo · Sasolburg and the Vaal River',
       url: 'https://www.metsimaholo.gov.za/',
+    },
+    {
+      id: 'joburg-gardens',
+      title: 'Johannesburg City Parks & Zoo · Botanical Garden and Emmarentia Dam',
+      url: 'https://www.jhbcityparksandzoo.com/services-facilities/botanical-gardens/plan-your-visit',
+      note: 'Named outdoor destinations, not a citywide proximity or safety rating.',
+    },
+    {
+      id: 'pretoria-garden',
+      title: 'SANBI · Pretoria National Botanical Garden',
+      url: 'https://www.sanbi.org/gardens/pretoria/',
+    },
+    {
+      id: 'walter-sisulu',
+      title: 'SANBI · Walter Sisulu National Botanical Garden',
+      url: 'https://www.sanbi.org/gardens/walter-sisulu/visitor-information/information/',
+      note: 'Garden location in Poortview, Roodepoort. Not a claim about every western neighbourhood.',
     },
     {
       id: 'gautrain',
