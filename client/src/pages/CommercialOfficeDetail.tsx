@@ -6,6 +6,7 @@ import {
   publicLeadCaptureAcknowledgement,
   publicLeadConsent,
 } from '@/lib/leadCapture';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 const money = (minor?: number | null) =>
   minor == null
@@ -51,6 +52,7 @@ export default function CommercialOfficeDetail() {
   const enquiry = trpc.leads.create.useMutation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [consent, setConsent] = useState(false);
   const [captureRequestId] = useState(createLeadCaptureRequestId);
@@ -100,7 +102,10 @@ export default function CommercialOfficeDetail() {
   const media = (Array.isArray(space.media) ? space.media : []).filter((item: any) =>
     Boolean(mediaUrl(item)),
   );
-  const enquiryReady = Boolean(name.trim() && validEmail(email) && consent && !enquiry.isPending);
+  const phoneError = agentProfilePhoneError(phone);
+  const enquiryReady = Boolean(
+    name.trim() && validEmail(email) && !phoneError && consent && !enquiry.isPending,
+  );
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
@@ -358,6 +363,21 @@ export default function CommercialOfficeDetail() {
           value={email}
           onChange={event => setEmail(event.target.value)}
         />
+        <input
+          className="mt-2 block w-full max-w-md border p-2"
+          placeholder="Phone number *"
+          aria-label="Phone number"
+          type="tel"
+          required
+          value={phone}
+          onChange={event => setPhone(event.target.value)}
+          aria-invalid={Boolean(phone.trim() && phoneError)}
+        />
+        {phone.trim() && phoneError ? (
+          <p role="alert" className="mt-1 text-sm text-rose-700">
+            {phoneError}
+          </p>
+        ) : null}
         <textarea
           className="mt-2 block w-full border p-2"
           placeholder="Tell the advertiser about your space, term and operational requirements"
@@ -383,6 +403,7 @@ export default function CommercialOfficeDetail() {
               {
                 name,
                 email,
+                phone: phone.trim(),
                 message,
                 listingId: space.listingId,
                 commercialAvailabilityId: space.availability.id,
@@ -402,6 +423,7 @@ export default function CommercialOfficeDetail() {
                   );
                   setName('');
                   setEmail('');
+                  setPhone('');
                   setMessage('');
                   setConsent(false);
                 },
@@ -418,7 +440,7 @@ export default function CommercialOfficeDetail() {
           Request information
         </button>
         <p id="commercial-enquiry-requirements" className="mt-2 text-xs text-slate-500">
-          Enter your name, a valid email address and consent to enable the enquiry.
+          Enter your name, a valid email address, phone number and consent to enable the enquiry.
         </p>
         {acknowledgement ? (
           <p

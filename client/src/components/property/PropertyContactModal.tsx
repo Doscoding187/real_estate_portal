@@ -21,6 +21,7 @@ import {
 import { CheckCircle2, House, Loader2, Send } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 import {
   createLeadCaptureRequestId,
   hasVerifiedPublicLeadRecipient,
@@ -178,10 +179,21 @@ export function PropertyContactModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
-      const message = 'Please complete your name, email address and message.';
+    if (
+      !formData.name.trim() ||
+      !formData.email.trim() ||
+      !formData.phone.trim() ||
+      !formData.message.trim()
+    ) {
+      const message = 'Please complete your name, email address, phone number and message.';
       setSubmissionError(message);
       toast.error(message);
+      return;
+    }
+    const phoneError = agentProfilePhoneError(formData.phone);
+    if (phoneError) {
+      setSubmissionError(phoneError);
+      toast.error(phoneError);
       return;
     }
     if (!formData.consentAccepted) {
@@ -352,7 +364,9 @@ export function PropertyContactModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
+                <Label htmlFor="phone">
+                  Phone Number <span className="text-destructive">*</span>
+                </Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -360,6 +374,7 @@ export function PropertyContactModal({
                   value={formData.phone}
                   onChange={e => handleChange('phone', e.target.value)}
                   maxLength={50}
+                  required
                 />
               </div>
 

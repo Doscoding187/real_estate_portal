@@ -99,7 +99,11 @@ export const leadsRouter = router({
           unitBathrooms: z.number().nonnegative().optional(),
           name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
           email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
-          phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+          phone: z
+            .string()
+            .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
+            .trim()
+            .min(1, 'Please enter your phone number.'),
           message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
           leadType: z.enum(['inquiry', 'viewing_request', 'offer', 'callback']).optional(),
           source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
@@ -120,15 +124,13 @@ export const leadsRouter = router({
           consent: leadConsentSchema.optional(),
         })
         .superRefine((input, refinementContext) => {
-          if (input.agentId && !input.listingId && resolveOwner(input).ownerType === 'agent') {
-            const phoneError = agentProfilePhoneError(input.phone);
-            if (phoneError) {
-              refinementContext.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['phone'],
-                message: phoneError,
-              });
-            }
+          const phoneError = agentProfilePhoneError(input.phone);
+          if (phoneError) {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['phone'],
+              message: phoneError,
+            });
           }
           if (input.commercialAvailabilityId && !input.listingId) {
             refinementContext.addIssue({

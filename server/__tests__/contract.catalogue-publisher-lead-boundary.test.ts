@@ -36,6 +36,7 @@ const validInput = () => ({
   developmentId: 77,
   name: 'Jane Buyer',
   email: 'jane@example.test',
+  phone: '0821234567',
   captureRequestId: 'catalogue-lead-request-001',
   consent: {
     accepted: true as const,
@@ -114,6 +115,14 @@ describe('catalogue publisher public lead boundary', () => {
 
     expect(mockGetClientIp).not.toHaveBeenCalled();
     expect(mockCheckRateLimit).not.toHaveBeenCalled();
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+  });
+
+  it('requires a usable buyer phone number before lead persistence', async () => {
+    await expect(
+      callerForAnonymous().captureLead({ ...validInput(), phone: '' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockGetClientIp).not.toHaveBeenCalled();
     expect(mockCapturePublicLead).not.toHaveBeenCalled();
   });
 });

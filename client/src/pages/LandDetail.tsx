@@ -6,6 +6,7 @@ import {
   publicLeadCaptureAcknowledgement,
   publicLeadConsent,
 } from '@/lib/leadCapture';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 const label = (value: string) => value.replace(/_/g, ' ').replace(/^\w/, x => x.toUpperCase());
 
@@ -13,11 +14,13 @@ export default function LandDetail() {
   const [, params] = useRoute('/land/:slug');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [captureRequestId] = useState(() => createLeadCaptureRequestId());
   const detail = trpc.landPublic.detail.useQuery({ slug: params?.slug || '' }, { enabled: Boolean(params?.slug) });
   const enquiry = trpc.leads.create.useMutation();
+  const phoneError = agentProfilePhoneError(phone);
   const land = detail.data;
   if (!land) return <main className="p-8">Land listing unavailable.</main>;
 
@@ -43,12 +46,15 @@ export default function LandDetail() {
       <p className="m-1 text-sm text-slate-600">Property Listify sends this enquiry directly only while the approved Land marketing representative remains verified and deliverable.</p>
       <input className="m-1 border p-2" placeholder="Your name" value={name} onChange={event => setName(event.target.value)} />
       <input className="m-1 border p-2" placeholder="Email" value={email} onChange={event => setEmail(event.target.value)} />
+      <label htmlFor="land-contact-phone" className="m-1 block text-sm font-medium">Phone number *</label>
+      <input id="land-contact-phone" className="m-1 border p-2" placeholder="082 123 4567" type="tel" value={phone} onChange={event => setPhone(event.target.value)} required aria-invalid={Boolean(phone.trim() && phoneError)} />
+      {phone.trim() && phoneError && <p role="alert" className="m-1 text-sm text-rose-700">{phoneError}</p>}
       <textarea className="m-1 block w-full border p-2" placeholder="Request information or a site visit" value={message} onChange={event => setMessage(event.target.value)} />
       <label className="m-1 flex items-start gap-2 text-sm text-slate-700">
         <input type="checkbox" checked={consentAccepted} onChange={event => setConsentAccepted(event.target.checked)} />
         <span>I agree that Property Listify may share this enquiry with the approved marketing representative for this land.</span>
       </label>
-      <button className="m-1 rounded bg-slate-900 px-3 py-2 text-white disabled:opacity-50" disabled={!consentAccepted || enquiry.isPending} onClick={() => enquiry.mutate({ name, email, message, listingId: land.listingId, leadType: 'inquiry', source: 'plots_and_land', sourceSurface: 'land_detail', captureRequestId, consent: publicLeadConsent('land_detail_enquiry') })}>Request information</button>
+      <button className="m-1 rounded bg-slate-900 px-3 py-2 text-white disabled:opacity-50" disabled={!name.trim() || !email.trim() || !phone.trim() || Boolean(phoneError) || !consentAccepted || enquiry.isPending} onClick={() => enquiry.mutate({ name, email, phone: phone.trim(), message, listingId: land.listingId, leadType: 'inquiry', source: 'plots_and_land', sourceSurface: 'land_detail', captureRequestId, consent: publicLeadConsent('land_detail_enquiry') })}>Request information</button>
       {enquiry.isSuccess && <p role="status" className="m-1 text-sm text-emerald-700">{publicLeadCaptureAcknowledgement(enquiry.data, 'Your enquiry has been recorded and sent to the approved Land marketing representative.')}</p>}
       {enquiry.error && <p role="alert" className="m-1 text-sm text-rose-700">{enquiry.error.message}</p>}
     </section>

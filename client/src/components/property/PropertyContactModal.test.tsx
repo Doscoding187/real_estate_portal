@@ -195,6 +195,9 @@ describe('PropertyContactModal recipient-action custody', () => {
     fireEvent.change(screen.getByLabelText(/Email Address/), {
       target: { value: 'buyer@example.com' },
     });
+    fireEvent.change(screen.getByLabelText(/Phone Number/), {
+      target: { value: '082 123 4567' },
+    });
     fireEvent.change(screen.getByLabelText(/Message/), {
       target: { value: 'Please share more details.' },
     });
@@ -205,6 +208,7 @@ describe('PropertyContactModal recipient-action custody', () => {
     const payload = testState.mutate.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(payload).toMatchObject({
       propertyId: 502,
+      phone: '082 123 4567',
       message: 'Please share more details.',
       leadType: 'inquiry',
     });
@@ -231,6 +235,37 @@ describe('PropertyContactModal recipient-action custody', () => {
     expect(screen.queryByText('+27 82 000 0000')).not.toBeInTheDocument();
     expect(screen.queryByText('agency@example.com')).not.toBeInTheDocument();
     expect(screen.getByRole('dialog')).toHaveClass('max-h-[calc(100dvh-1rem)]', 'overflow-y-auto');
+    expect(screen.getByLabelText(/Phone Number/)).toBeRequired();
+  });
+
+  it('requires a valid phone number before submitting a property enquiry', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={507}
+        propertyTitle="Phone-required listing"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Your Name/), {
+      target: { value: 'Prospective Buyer' },
+    });
+    fireEvent.change(screen.getByLabelText(/Email Address/), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'Please share more details.' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+
+    expect(testState.mutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('phone number');
+
+    fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '082 123 4567' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+    expect(testState.mutate).toHaveBeenCalledTimes(1);
   });
 
   it('presents a viewing as a delivered request rather than a guaranteed appointment or follow-up', () => {
@@ -308,6 +343,9 @@ describe('PropertyContactModal recipient-action custody', () => {
     fireEvent.change(screen.getByLabelText(/Your Name/), { target: { value: 'Test buyer' } });
     fireEvent.change(screen.getByLabelText(/Email Address/), {
       target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone Number/), {
+      target: { value: '082 123 4567' },
     });
     fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
     expect(testState.mutate).not.toHaveBeenCalled();

@@ -48,6 +48,7 @@ describe('public lead honeypot contract', () => {
     const result = await caller.create({
       name: 'Bot Prospect',
       email: 'bot@example.test',
+      phone: '0821234567',
       website: 'https://bot.example.test',
       propertyId: 501,
       captureRequestId: 'honeypot-request-001',
@@ -91,6 +92,7 @@ describe('public lead honeypot contract', () => {
       caller.create({
         name: 'Buyer Prospect',
         email: 'buyer@example.test',
+        phone: '0821234567',
         propertyId: 501,
         captureRequestId: 'lead-boundary-request-001',
         consent: { accepted: true, version: '2026-08-02', source: 'lead-boundary-test' },
@@ -116,6 +118,7 @@ describe('public lead honeypot contract', () => {
       caller.create({
         name: 'Commercial Prospect',
         email: 'prospect@example.test',
+        phone: '0821234567',
         commercialAvailabilityId: 901,
       }),
     ).rejects.toThrow('Commercial enquiries require the matching marketing listing.');
@@ -163,18 +166,33 @@ describe('public lead honeypot contract', () => {
     },
   );
 
-  it('preserves optional phone numbers on property enquiries', async () => {
-    mockCapturePublicLead.mockResolvedValue({ success: true, leadId: 1 });
+  it('requires a usable phone number on property enquiries', async () => {
     const caller = leadsRouter.createCaller({ req: { headers: {} }, res: {}, user: null } as any);
+    await expect(
+      caller.create({
+        name: 'Property Visitor',
+        email: 'visitor@example.test',
+        propertyId: 501,
+        captureRequestId: 'property-phone-test-001',
+        consent: { accepted: true, version: '2026-08-02' },
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockCapturePublicLead).not.toHaveBeenCalled();
+
+    mockCapturePublicLead.mockResolvedValue({ success: true, leadId: 1 });
     await caller.create({
       name: 'Property Visitor',
       email: 'visitor@example.test',
       propertyId: 501,
+      phone: '082 123 4567',
       captureRequestId: 'property-phone-test-001',
       consent: { accepted: true, version: '2026-08-02' },
     });
     expect(mockCapturePublicLead).toHaveBeenCalledWith(
-      expect.objectContaining({ propertyId: 501 }),
+      expect.objectContaining({
+        propertyId: 501,
+        phone: '082 123 4567',
+      }),
     );
   });
 });

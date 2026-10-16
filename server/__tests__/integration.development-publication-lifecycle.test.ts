@@ -359,7 +359,9 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       .limit(1);
     expect(projection).toMatchObject({ approvalStatus: 'approved', isPublished: 1 });
 
-    expect(await developmentService.getPublicDevelopmentBySlug(String(developmentId))).toMatchObject({
+    expect(
+      await developmentService.getPublicDevelopmentBySlug(String(developmentId)),
+    ).toMatchObject({
       salesMetrics: {
         totalUnits: 10,
         availableUnits: 7,
@@ -519,6 +521,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       developmentId,
       name: 'Accepted before expiry',
       email: `accepted-before-expiry-${Date.now()}@example.com`,
+      phone: '+27 82 123 4567',
       message: 'Please send the current availability schedule.',
       sourceSurface: 'development_detail',
       leadSource: 'development_detail',
@@ -544,6 +547,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         developmentId,
         name: 'Rejected after expiry',
         email: `rejected-after-expiry-${Date.now()}@example.com`,
+        phone: '+27 82 123 4567',
         message: 'This must not become a new paid enquiry.',
         sourceSurface: 'development_detail',
         leadSource: 'development_detail',
@@ -575,7 +579,10 @@ describeWithDb('Developer development publication lifecycle integration', () => 
 
     const db = await getDb();
     const [privateProjection] = await db!
-      .select({ approvalStatus: developments.approvalStatus, isPublished: developments.isPublished })
+      .select({
+        approvalStatus: developments.approvalStatus,
+        isPublished: developments.isPublished,
+      })
       .from(developments)
       .where(eq(developments.id, developmentId));
     expect(privateProjection).toMatchObject({ approvalStatus: 'approved', isPublished: 0 });
