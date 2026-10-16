@@ -63,6 +63,29 @@ afterEach(() => {
 });
 
 describe('Developer preparation navigation', () => {
+  it('distinguishes an available private workspace from public Launch Access', () => {
+    window.history.pushState({}, '', '/developer/dashboard');
+    onboardingStatusMock.mockReturnValue({
+      status: { hasProfile: true, profileRejected: false, profileStatus: 'approved' },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(createElement(DeveloperRoutes));
+
+    expect(screen.getByText('Private Developer Workspace')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /your private workspace is available for drafts, development details, and enquiries/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/public marketplace publication requires active Launch Access/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Overview')).toBeInTheDocument();
+  });
+
   it.each(['/developer/subscription', '/developer/settings/subscription'])(
     'keeps a pending organisation on the safe preparation route for %s',
     pathname => {
