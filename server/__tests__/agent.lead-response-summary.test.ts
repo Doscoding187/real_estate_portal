@@ -32,7 +32,13 @@ function getTableName(table: any): string {
 
 function createSelectDbMock(data: {
   agents?: Array<Record<string, unknown>>;
-  leadRows?: Array<{ status: string; createdAt: string; firstRespondedAt: string | null }>;
+  leadRows?: Array<{
+    id: number;
+    status: string;
+    createdAt: string;
+    firstRespondedAt: string | null;
+  }>;
+  attemptRows?: Array<{ leadId: number; firstAttemptAt: string }>;
 }) {
   const select = vi.fn((shape?: Record<string, unknown>) => {
     let tableName = '';
@@ -45,6 +51,7 @@ function createSelectDbMock(data: {
         if (wantsCount) throw new Error('Unexpected count selection on leads');
         return data.leadRows || [];
       }
+      if (tableName === 'lead_activities') return data.attemptRows || [];
       return [];
     };
 
@@ -53,12 +60,11 @@ function createSelectDbMock(data: {
         tableName = getTableName(table);
         return builder;
       },
-      where: () => {
-        const limited: any = { limit: () => Promise.resolve(rowsForSelection()) };
-        return Object.assign(Promise.resolve(rowsForSelection()), {
-          limit: limited.limit,
-        });
-      },
+      where: () => builder,
+      groupBy: () => builder,
+      limit: () => Promise.resolve(rowsForSelection()),
+      then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) =>
+        Promise.resolve(rowsForSelection()).then(resolve, reject),
     };
     return builder;
   });
@@ -85,49 +91,65 @@ describe('agent.getLeadResponseSummary', () => {
     expect(result).toEqual({
       windowDays: 30,
       totalLeads: 0,
-      respondedLeads: 0,
-      awaitingFirstResponse: 0,
-      medianHoursToFirstResponse: null,
+      outreachAttemptedLeads: 0,
+      awaitingFirstOutreach: 0,
+      medianHoursToFirstOutreach: null,
+      connectedLeads: 0,
+      awaitingTwoWayConnection: 0,
+      medianHoursToConnection: null,
     });
   });
 
-  it('computes median first-response hours and awaiting counts from recorded timestamps', async () => {
+  it('separates logged outreach attempts from two-way connections', async () => {
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
         agents: [{ id: 77 }],
         leadRows: [
-          { status: 'new', createdAt: hoursAgo(50), firstRespondedAt: hoursAgo(49) },
-          { status: 'contacted', createdAt: hoursAgo(40), firstRespondedAt: hoursAgo(37) },
-          { status: 'viewing_scheduled', createdAt: hoursAgo(30), firstRespondedAt: hoursAgo(23) },
-          { status: 'new', createdAt: hoursAgo(2), firstRespondedAt: null },
-          { status: 'lost', createdAt: hoursAgo(20), firstRespondedAt: null },
+          { id: 1, status: 'new', createdAt: hoursAgo(50), firstRespondedAt: hoursAgo(49) },
+          { id: 2, status: 'contacted', createdAt: hoursAgo(40), firstRespondedAt: hoursAgo(37) },
+          { id: 3, status: 'viewing_scheduled', createdAt: hoursAgo(30), firstRespondedAt: hoursAgo(23) },
+          { id: 4, status: 'new', createdAt: hoursAgo(2), firstRespondedAt: null },
+          { id: 5, status: 'lost', createdAt: hoursAgo(20), firstRespondedAt: null },
+          { id: 6, status: 'new', createdAt: hoursAgo(20), firstRespondedAt: null },
+        ],
+        attemptRows: [
+          { leadId: 1, firstAttemptAt: hoursAgo(49.5) },
+          // An unanswered attempt is outreach, but not a two-way connection.
+          { leadId: 6, firstAttemptAt: hoursAgo(19) },
         ],
       }) as any,
     );
 
     const result = await createAgentCaller().getLeadResponseSummary();
 
-    expect(result.totalLeads).toBe(5);
-    expect(result.respondedLeads).toBe(3);
-    // Lost leads are terminal, not pending work.
-    expect(result.awaitingFirstResponse).toBe(1);
-    // Responded deltas: 1h, 3h, 7h -> lower median 3h.
-    expect(result.medianHoursToFirstResponse).toBe(3);
+    expect(result.totalLeads).toBe(6);
+    expect(result.outreachAttemptedLeads).toBe(4);
+    // Only active leads with no attempt or connection need first outreach.
+    expect(result.awaitingFirstOutreach).toBe(1);
+    // Attempt deltas: 0.5h, 1h, 3h (legacy connection fallback), 7h -> lower median 1h.
+    expect(result.medianHoursToFirstOutreach).toBe(1);
+    expect(result.connectedLeads).toBe(3);
+    // The unanswered attempt still awaits a two-way conversation; lost is terminal.
+    expect(result.awaitingTwoWayConnection).toBe(2);
+    expect(result.medianHoursToConnection).toBe(3);
   });
 
-  it('reports no median while no enquiry has been answered yet', async () => {
+  it('reports distinct empty medians when no attempt or connection exists', async () => {
     mockGetDb.mockResolvedValue(
       createSelectDbMock({
         agents: [{ id: 77 }],
-        leadRows: [{ status: 'new', createdAt: hoursAgo(3), firstRespondedAt: null }],
+        leadRows: [{ id: 7, status: 'new', createdAt: hoursAgo(3), firstRespondedAt: null }],
       }) as any,
     );
 
     const result = await createAgentCaller().getLeadResponseSummary();
 
     expect(result.totalLeads).toBe(1);
-    expect(result.respondedLeads).toBe(0);
-    expect(result.awaitingFirstResponse).toBe(1);
-    expect(result.medianHoursToFirstResponse).toBeNull();
+    expect(result.outreachAttemptedLeads).toBe(0);
+    expect(result.awaitingFirstOutreach).toBe(1);
+    expect(result.medianHoursToFirstOutreach).toBeNull();
+    expect(result.connectedLeads).toBe(0);
+    expect(result.awaitingTwoWayConnection).toBe(1);
+    expect(result.medianHoursToConnection).toBeNull();
   });
 });

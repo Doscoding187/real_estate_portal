@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import {
-  formatLeadActivityDate,
-  getLeadActivityPresentation,
-} from './leadActivityPresentation';
+import { formatLeadActivityDate, getLeadActivityPresentation } from './leadActivityPresentation';
 
 describe('lead activity presentation', () => {
+  it('shows the contact channel and outcome without implying a stage move', () => {
+    expect(
+      getLeadActivityPresentation({
+        type: 'contact_attempt',
+        description: 'Called buyer; no answer.',
+        metadata: JSON.stringify({ channel: 'call', outcome: 'no_answer', status: 'new' }),
+      }),
+    ).toEqual({
+      label: 'Call · No answer',
+      description: 'Called buyer; no answer.',
+      isFollowUpCompletion: false,
+      isViewingScheduled: false,
+    });
+  });
+
   it('shows completed follow-ups with their saved note', () => {
     expect(
       getLeadActivityPresentation({
@@ -54,8 +66,6 @@ describe('lead activity presentation', () => {
   });
 
   it('formats the completion timestamp with a date and time', () => {
-    expect(formatLeadActivityDate('2026-10-15T10:30:00.000Z')).toMatch(
-      /15 Oct 2026/,
-    );
+    expect(formatLeadActivityDate('2026-10-15T10:30:00.000Z')).toMatch(/15 Oct 2026/);
   });
 });

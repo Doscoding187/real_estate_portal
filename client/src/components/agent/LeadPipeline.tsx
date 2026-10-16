@@ -79,6 +79,7 @@ interface Lead {
     lastError: string | null;
   };
   notes?: string | null;
+  nextAction?: string | null;
   nextFollowUp?: string | null;
   createdAt: string;
   property?: {
@@ -115,10 +116,12 @@ interface PipelineColumnState {
 
 const PIPELINE_STAGES = [
   { id: 'new', title: 'New Leads', color: 'bg-blue-500' },
-  { id: 'contacted', title: 'Contacted', color: 'bg-yellow-500' },
+  { id: 'contacted', title: 'Connected', color: 'bg-teal-500' },
   { id: 'viewing', title: 'Viewing', color: 'bg-purple-500' },
   { id: 'offer', title: 'Offer', color: 'bg-orange-500' },
-  { id: 'closed', title: 'Closed', color: 'bg-green-500' },
+  { id: 'won', title: 'Won', color: 'bg-green-500' },
+  { id: 'closed', title: 'Closed', color: 'bg-slate-500' },
+  { id: 'lost', title: 'Lost', color: 'bg-rose-500' },
 ];
 
 type PipelineStageId = (typeof PIPELINE_STAGES)[number]['id'];
@@ -128,7 +131,9 @@ const LEAD_STATUS_BY_STAGE: Record<PipelineStageId, string> = {
   contacted: 'contacted',
   viewing: 'viewing_scheduled',
   offer: 'offer_sent',
+  won: 'converted',
   closed: 'closed',
+  lost: 'lost',
 };
 
 function getPipelineStageForLeadStatus(status: string | null | undefined): PipelineStageId {
@@ -139,11 +144,13 @@ function getPipelineStageForLeadStatus(status: string | null | undefined): Pipel
     case 'viewing_scheduled':
       return 'viewing';
     case 'offer_sent':
-    case 'converted':
       return 'offer';
+    case 'converted':
+      return 'won';
     case 'closed':
-    case 'lost':
       return 'closed';
+    case 'lost':
+      return 'lost';
     default:
       return 'new';
   }
@@ -345,10 +352,12 @@ interface LeadPipelineProps {
 export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipelineProps) {
   const [pipeline, setPipeline] = useState<Record<string, PipelineColumnState>>({
     new: { id: 'new', title: 'New Leads', leads: [], color: 'bg-blue-500' },
-    contacted: { id: 'contacted', title: 'Contacted', leads: [], color: 'bg-yellow-500' },
+    contacted: { id: 'contacted', title: 'Connected', leads: [], color: 'bg-teal-500' },
     viewing: { id: 'viewing', title: 'Viewing', leads: [], color: 'bg-purple-500' },
     offer: { id: 'offer', title: 'Offer', leads: [], color: 'bg-orange-500' },
-    closed: { id: 'closed', title: 'Closed', leads: [], color: 'bg-green-500' },
+    won: { id: 'won', title: 'Won', leads: [], color: 'bg-green-500' },
+    closed: { id: 'closed', title: 'Closed', leads: [], color: 'bg-slate-500' },
+    lost: { id: 'lost', title: 'Lost', leads: [], color: 'bg-rose-500' },
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -357,6 +366,10 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
   const [leadToSchedule, setLeadToSchedule] = useState<Lead | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [newActivityNote, setNewActivityNote] = useState('');
+  const [contactChannel, setContactChannel] = useState('call');
+  const [contactOutcome, setContactOutcome] = useState('no_answer');
+  const [contactNextAction, setContactNextAction] = useState('Try again or use another channel');
+  const [contactNextFollowUp, setContactNextFollowUp] = useState('');
   const [followUpForm, setFollowUpForm] = useState({ nextFollowUp: '', note: '' });
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
@@ -454,6 +467,19 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
       toast.error(error.message || 'Failed to add CRM note');
     },
   });
+  const recordLeadContactAttemptMutation = trpc.agent.recordLeadContactAttempt.useMutation({
+    onSuccess: async (_result, input) => {
+      toast.success('Contact activity recorded; lead stage unchanged');
+      setNewActivityNote('');
+      await Promise.all([
+        utils.agent.getLeadActivities.invalidate({ leadId: input.leadId }),
+        utils.agent.getLeadsPipeline.invalidate(),
+        utils.agent.getMyFollowUps.invalidate(),
+        utils.agent.getDashboardStats.invalidate(),
+      ]);
+    },
+    onError: error => toast.error(error.message || 'Contact activity could not be recorded'),
+  });
   const setLeadOfferReadinessMutation = trpc.agent.setLeadOfferReadiness.useMutation({
     onSuccess: (_result, input) => {
       toast.success('Offer readiness saved to the lead record');
@@ -479,13 +505,18 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     },
   });
   const completeLeadFollowUpMutation = trpc.agent.completeLeadFollowUp.useMutation({
-    onSuccess: () => {
+    onSuccess: async (_result, input) => {
       toast.success('Follow-up completed');
-      setSelectedLead(current => (current ? { ...current, nextFollowUp: null } : current));
+      setSelectedLead(current =>
+        current ? { ...current, nextFollowUp: null, nextAction: input.note } : current,
+      );
       setFollowUpForm(current => ({ ...current, nextFollowUp: '' }));
-      void utils.agent.getLeadsPipeline.invalidate();
-      void utils.agent.getMyFollowUps.invalidate();
-      void utils.agent.getActivationMilestones.invalidate();
+      await Promise.all([
+        utils.agent.getLeadActivities.invalidate({ leadId: input.leadId }),
+        utils.agent.getLeadsPipeline.invalidate(),
+        utils.agent.getMyFollowUps.invalidate(),
+        utils.agent.getActivationMilestones.invalidate(),
+      ]);
     },
     onError: error => {
       toast.error(error.message || 'Failed to complete follow-up');
@@ -499,9 +530,9 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
         new: { id: 'new', title: 'New Leads', leads: pipelineData.new || [], color: 'bg-blue-500' },
         contacted: {
           id: 'contacted',
-          title: 'Contacted',
+          title: 'Connected',
           leads: pipelineData.contacted || [],
-          color: 'bg-yellow-500',
+          color: 'bg-teal-500',
         },
         viewing: {
           id: 'viewing',
@@ -515,11 +546,23 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
           leads: pipelineData.offer || [],
           color: 'bg-orange-500',
         },
+        won: {
+          id: 'won',
+          title: 'Won',
+          leads: pipelineData.won || [],
+          color: 'bg-green-500',
+        },
         closed: {
           id: 'closed',
           title: 'Closed',
           leads: pipelineData.closed || [],
-          color: 'bg-green-500',
+          color: 'bg-slate-500',
+        },
+        lost: {
+          id: 'lost',
+          title: 'Lost',
+          leads: pipelineData.lost || [],
+          color: 'bg-rose-500',
         },
       });
     }
@@ -634,7 +677,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
   };
 
   const canMoveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
-    if (targetStage !== 'offer') return true;
+    if (!['offer', 'won'].includes(targetStage)) return true;
     if (['offer_sent', 'converted', 'closed'].includes(lead.status)) return true;
     return selectedLead?.id === lead.id && Boolean(offerReadiness?.canMoveToOffer);
   };
@@ -645,16 +688,16 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
     sourceStage?: PipelineStageId,
   ) => {
     if (!canMoveLeadToStage(lead, targetStage)) {
-      if (targetStage === 'offer') {
+      if (targetStage === 'offer' || targetStage === 'won') {
         if (selectedLead?.id !== lead.id) {
           openLeadDetail(lead);
-          toast.info('Open the lead checks before moving it to Offer.');
+          toast.info('Open the lead checks before moving it to Offer or Won.');
         } else if (offerReadinessLoading) {
           toast.info('Checking the lead record before moving it to Offer.');
         } else {
           toast.error(
             offerReadiness?.blockers?.[0] ||
-              'Complete the recorded offer checks before moving this lead to Offer.',
+              `Complete the recorded offer checks before moving this lead to ${targetStage === 'won' ? 'Won' : 'Offer'}.`,
           );
         }
         return;
@@ -669,13 +712,25 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
 
     if (!currentStage || currentStage === targetStage) return;
 
+    const lostReason =
+      targetStage === 'lost'
+        ? window.prompt('Why is this lead being marked as lost?')?.trim()
+        : undefined;
+    if (targetStage === 'lost' && !lostReason) {
+      toast.info('A reason is required before marking a lead as lost.');
+      return;
+    }
+
     updateLeadStatusMutation.mutate({
       leadId: lead.id,
-      targetStage: targetStage as any,
+      targetStage,
+      lostReason,
       notes:
         targetStage === 'offer'
           ? 'Moved to offer after recorded readiness checks were completed'
-          : `Moved to ${targetStage}`,
+          : targetStage === 'contacted'
+            ? 'Moved to Connected after a two-way buyer conversation'
+            : `Moved to ${targetStage}`,
     });
   };
 
@@ -726,6 +781,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
           id: `activity-${activity.id}`,
           type: activity.type,
           description: activity.description,
+          metadata: activity.metadata,
           createdAt: activity.createdAt,
           tone: 'bg-white text-gray-700 border-gray-100',
         })),
@@ -747,8 +803,8 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
       <div className={`space-y-4 ${className}`}>
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-5 gap-4">
-            {[...Array(5)].map((_, i) => (
+          <div className="grid grid-cols-7 gap-4">
+            {[...Array(7)].map((_, i) => (
               <div key={i} className="h-96 bg-gray-200 rounded"></div>
             ))}
           </div>
@@ -818,7 +874,8 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
 
       <div className="flex flex-col gap-1">
         <p className="text-xs text-slate-500">
-          Click a lead to work the full record. Use the grip to move it between pipeline stages.
+          Record outreach outcomes separately. Move a lead to Connected only after a buyer replies
+          or a two-way conversation happens. Use the grip to change stages; Lost requires a reason.
         </p>
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
           {/* The board owns horizontal scrolling; the page and CRM summary do not. */}
@@ -826,7 +883,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
             className="max-w-full overflow-x-auto overscroll-x-contain pb-3"
             aria-label="Lead pipeline board"
           >
-            <div className="grid min-w-[1360px] grid-cols-5 gap-4 pr-1">
+            <div className="grid min-w-[1900px] grid-cols-7 gap-4 pr-1">
               {PIPELINE_STAGES.map(stage => {
                 const column = pipeline[stage.id];
                 const leads = filteredLeads(column.leads);
@@ -1148,15 +1205,15 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                             ? Calendar
                             : presentation.isFollowUpCompletion
                               ? CheckCircle2
-                            : activity.type === 'whatsapp'
-                              ? MessageCircle
-                              : activity.type === 'email'
-                                ? Mail
-                                : activity.type === 'phone'
-                                  ? Phone
-                                  : activity.type === 'status_change'
-                                    ? CheckCircle2
-                                    : Clock3;
+                              : activity.type === 'whatsapp'
+                                ? MessageCircle
+                                : activity.type === 'email'
+                                  ? Mail
+                                  : activity.type === 'phone'
+                                    ? Phone
+                                    : activity.type === 'status_change'
+                                      ? CheckCircle2
+                                      : Clock3;
 
                           return (
                             <div
@@ -1223,27 +1280,87 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                       className="mt-4 min-h-28 border-slate-200 bg-slate-50/60 focus-visible:bg-white"
                       value={newActivityNote}
                       onChange={e => setNewActivityNote(e.target.value)}
-                      placeholder="Log the real contact outcome, buyer feedback, a reminder, or context another team member needs."
+                      placeholder="What happened? Record the buyer response, no answer, voicemail, or other useful context."
                     />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <select
+                        aria-label="Contact channel"
+                        value={contactChannel}
+                        onChange={event => setContactChannel(event.target.value)}
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {['call', 'whatsapp', 'email', 'sms', 'other'].map(channel => (
+                          <option key={channel} value={channel}>
+                            {channel.replace(/_/g, ' ')}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        aria-label="Contact outcome"
+                        value={contactOutcome}
+                        onChange={event => setContactOutcome(event.target.value)}
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+                      >
+                        {[
+                          'reached',
+                          'replied',
+                          'no_answer',
+                          'voicemail',
+                          'viewing_booked',
+                          'follow_up_required',
+                          'not_interested',
+                          'invalid_contact',
+                          'other',
+                        ].map(outcome => (
+                          <option key={outcome} value={outcome}>
+                            {outcome.replace(/_/g, ' ')}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        aria-label="Next buyer action"
+                        value={contactNextAction}
+                        onChange={event => setContactNextAction(event.target.value)}
+                        placeholder="What should happen next?"
+                      />
+                      <Input
+                        aria-label="Next buyer follow-up date"
+                        type="datetime-local"
+                        value={contactNextFollowUp}
+                        onChange={event => setContactNextFollowUp(event.target.value)}
+                      />
+                    </div>
                     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-xs leading-5 text-slate-500">
-                        Recording a contact outcome also updates this lead’s first-response
-                        evidence.
+                        Attempts are recorded separately. Move the stage to Connected only after a
+                        real reply or two-way conversation.
                       </p>
                       <div className="flex shrink-0 flex-wrap gap-2">
                         <Button
                           variant="outline"
-                          disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
+                          disabled={
+                            recordLeadContactAttemptMutation.isPending ||
+                            !newActivityNote.trim() ||
+                            !contactNextAction.trim() ||
+                            (contactOutcome === 'follow_up_required' && !contactNextFollowUp)
+                          }
                           onClick={() =>
-                            addLeadActivityMutation.mutate({
+                            recordLeadContactAttemptMutation.mutate({
                               leadId: selectedLead.id,
-                              activityType: selectedLead.phone ? 'call' : 'email',
-                              description: newActivityNote.trim(),
+                              channel: contactChannel as any,
+                              outcome: contactOutcome as any,
+                              summary: newActivityNote.trim(),
+                              nextAction: contactNextAction.trim(),
+                              nextFollowUp: contactNextFollowUp
+                                ? new Date(contactNextFollowUp).toISOString()
+                                : undefined,
                             })
                           }
                         >
                           <Phone className="mr-2 h-4 w-4" />
-                          {addLeadActivityMutation.isPending ? 'Saving…' : 'Record contact'}
+                          {recordLeadContactAttemptMutation.isPending
+                            ? 'Saving…'
+                            : 'Record attempt'}
                         </Button>
                         <Button
                           disabled={addLeadActivityMutation.isPending || !newActivityNote.trim()}
@@ -1332,7 +1449,7 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         onChange={event =>
                           setFollowUpForm(current => ({ ...current, note: event.target.value }))
                         }
-                        placeholder="What should happen next?"
+                        placeholder="When completing: what happened and what should happen next?"
                       />
                       <Button
                         className="w-full"
@@ -1356,7 +1473,9 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
                         <Button
                           variant="outline"
                           className="w-full border-slate-200"
-                          disabled={completeLeadFollowUpMutation.isPending}
+                          disabled={
+                            completeLeadFollowUpMutation.isPending || !followUpForm.note.trim()
+                          }
                           onClick={() =>
                             completeLeadFollowUpMutation.mutate({
                               leadId: selectedLead.id,

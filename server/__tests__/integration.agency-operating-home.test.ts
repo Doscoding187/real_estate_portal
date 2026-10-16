@@ -9,6 +9,7 @@ const describeWithDb: typeof describe = process.env.DATABASE_URL
 
 import { db } from '../db';
 import {
+  agents,
   agencies,
   agencyBranding,
   billableAccounts,
@@ -26,6 +27,7 @@ const created = {
   planIds: [] as number[],
   subscriptionIds: [] as number[],
   leadIds: [] as number[],
+  agentIds: [] as number[],
 };
 
 async function insertId(result: any): Promise<number> {
@@ -47,6 +49,7 @@ beforeAll(async () => {
 afterAll(async () => {
   if (!process.env.DATABASE_URL) return;
   for (const id of created.leadIds) await db.delete(leads).where(eq(leads.id, id)).catch(() => undefined);
+  for (const id of created.agentIds) await db.delete(agents).where(eq(agents.id, id)).catch(() => undefined);
   for (const id of created.subscriptionIds) await db.delete(subscriptions).where(eq(subscriptions.id, id)).catch(() => undefined);
   for (const id of created.planIds) {
     await db.delete(planEntitlements).where(eq(planEntitlements.planId, id)).catch(() => undefined);
@@ -173,9 +176,9 @@ describeWithDb('agency operating home brief', () => {
     const home = await caller.agency.getOperatingHome();
 
     expect(home.ready).toBe(false);
-    expect(home.brief.leads.firstResponseOverdueCount).toBe(1);
+    expect(home.brief.leads.firstOutreachOverdueCount).toBe(1);
     expect(home.actions[0]).toMatchObject({
-      code: 'respond_sla_breach',
+      code: 'first_outreach_overdue',
       severity: 'critical',
       href: '/agency/leads',
     });
@@ -186,6 +189,92 @@ describeWithDb('agency operating home brief', () => {
     const freshHome = await callerFor(fresh.ownerUserId, fresh.agencyId).agency.getOperatingHome();
     expect(freshHome.ready).toBe(true);
     expect(freshHome.actions).toHaveLength(0);
+  });
+
+  it('groups overdue scheduled follow-ups by agency agent and keeps unassigned work visible', async () => {
+    const { agencyId, ownerUserId } = await seedAgency({ verified: 1, daysRemaining: 60 });
+    const [firstAgentResult] = await db.insert(agents).values({
+      agencyId,
+      firstName: 'Lerato',
+      lastName: 'Mokoena',
+      displayName: 'Lerato Mokoena',
+      isVerified: 1,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    const firstAgentId = await insertId(firstAgentResult);
+    created.agentIds.push(firstAgentId);
+
+    const [secondAgentResult] = await db.insert(agents).values({
+      agencyId,
+      firstName: 'Thabo',
+      lastName: 'Nkosi',
+      displayName: 'Thabo Nkosi',
+      isVerified: 1,
+      isFeatured: 0,
+      status: 'approved',
+    } as any);
+    const secondAgentId = await insertId(secondAgentResult);
+    created.agentIds.push(secondAgentId);
+
+    const now = Date.now();
+    const pastOne = new Date(now - 4 * 60 * 60_000).toISOString().slice(0, 19).replace('T', ' ');
+    const pastTwo = new Date(now - 2 * 60 * 60_000).toISOString().slice(0, 19).replace('T', ' ');
+    const future = new Date(now + 24 * 60 * 60_000).toISOString().slice(0, 19).replace('T', ' ');
+    const leadRows = [
+      { agentId: firstAgentId, status: 'contacted', nextFollowUp: pastOne },
+      { agentId: firstAgentId, status: 'contacted', nextFollowUp: pastTwo },
+      { agentId: secondAgentId, status: 'qualified', nextFollowUp: pastOne },
+      { agentId: null, status: 'new', nextFollowUp: pastOne },
+      { agentId: firstAgentId, status: 'contacted', nextFollowUp: future },
+      { agentId: firstAgentId, status: 'lost', nextFollowUp: pastOne },
+    ];
+
+    for (const [index, row] of leadRows.entries()) {
+      const [result] = await db.insert(leads).values({
+        name: `Follow-up buyer ${index}`,
+        email: `follow-up-${index}-${randomUUID().slice(0, 8)}@example.test`,
+        phone: '+27110000002',
+        source: 'property_detail',
+        agencyId,
+        agentId: row.agentId,
+        status: row.status as any,
+        nextFollowUp: row.nextFollowUp,
+        firstRespondedAt: new Date(now - 5 * 60 * 60_000).toISOString().slice(0, 19).replace('T', ' '),
+      } as any);
+      created.leadIds.push(await insertId(result));
+    }
+
+    const home = await callerFor(ownerUserId, agencyId).agency.getOperatingHome();
+
+    expect(home.brief.leads.followUpsOverdueCount).toBe(4);
+    expect(home.brief.team.workloadByAgent).toEqual(
+      expect.arrayContaining([
+        { agentId: firstAgentId, agentName: 'Lerato Mokoena', activeLeadCount: 3, overdueFollowUpCount: 2 },
+        { agentId: secondAgentId, agentName: 'Thabo Nkosi', activeLeadCount: 1, overdueFollowUpCount: 1 },
+        { agentId: null, agentName: 'Unassigned', activeLeadCount: 1, overdueFollowUpCount: 1 },
+      ]),
+    );
+
+    const firstAgentQueue = await callerFor(ownerUserId, agencyId).agency.getLeads({
+      status: 'all',
+      agentId: firstAgentId,
+      overdueOnly: true,
+      limit: 200,
+    });
+    expect(firstAgentQueue).toHaveLength(2);
+    expect(firstAgentQueue.every(lead => lead.agentId === firstAgentId && lead.overdueFollowUp)).toBe(
+      true,
+    );
+
+    const unassignedQueue = await callerFor(ownerUserId, agencyId).agency.getLeads({
+      status: 'all',
+      unassignedOnly: true,
+      overdueOnly: true,
+      limit: 200,
+    });
+    expect(unassignedQueue).toHaveLength(1);
+    expect(unassignedQueue[0].agentId).toBeNull();
   });
 
   it('surfaces unverified agencies as the top critical action', async () => {

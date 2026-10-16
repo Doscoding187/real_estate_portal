@@ -370,11 +370,12 @@ describeWithDb('agent dashboard showings smoke', () => {
     ]);
 
     const [scheduledLead] = await db!
-      .select({ nextFollowUp: leads.nextFollowUp })
+      .select({ nextFollowUp: leads.nextFollowUp, nextAction: leads.nextAction })
       .from(leads)
       .where(eq(leads.id, createdLeadId))
       .limit(1);
     expect(scheduledLead?.nextFollowUp).toBe(toDbTimestamp(followUpAt));
+    expect(scheduledLead?.nextAction).toBe('Call the buyer to confirm a viewing time.');
 
     expect(await otherCaller.getMyFollowUps({ limit: 10 })).toEqual([]);
     await expect(
@@ -383,11 +384,12 @@ describeWithDb('agent dashboard showings smoke', () => {
         nextFollowUp: followUpAt.toISOString(),
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
-    await expect(otherCaller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject(
-      {
-        code: 'NOT_FOUND',
-      },
-    );
+    await expect(
+      otherCaller.completeLeadFollowUp({
+        leadId: createdLeadId,
+        note: 'Attempted call; no answer. Try again tomorrow.',
+      }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
     await db!.update(leads).set({ status: 'converted' }).where(eq(leads.id, createdLeadId));
     expect(await caller.getMyFollowUps({ limit: 10 })).toEqual([]);
@@ -397,9 +399,12 @@ describeWithDb('agent dashboard showings smoke', () => {
         nextFollowUp: followUpAt.toISOString(),
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
-    await expect(caller.completeLeadFollowUp({ leadId: createdLeadId })).rejects.toMatchObject({
-      code: 'BAD_REQUEST',
-    });
+    await expect(
+      caller.completeLeadFollowUp({
+        leadId: createdLeadId,
+        note: 'Attempted call; no answer. Try again tomorrow.',
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await db!.update(leads).set({ status: 'new' }).where(eq(leads.id, createdLeadId));
 
     const showingsResult = await caller.getMyShowings({
@@ -442,6 +447,14 @@ describeWithDb('agent dashboard showings smoke', () => {
       .limit(1);
 
     expect(updatedShowing?.status).toBe('completed');
+
+    await caller.recordLeadContactAttempt({
+      leadId: createdLeadId,
+      channel: 'call',
+      outcome: 'reached',
+      summary: 'Buyer confirmed the viewing by phone.',
+      nextAction: 'Prepare for the scheduled viewing.',
+    });
 
     const completedFollowUp = await caller.completeLeadFollowUp({
       leadId: createdLeadId,

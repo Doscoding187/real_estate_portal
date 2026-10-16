@@ -1,17 +1,18 @@
-import { and, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
-import { leads, listings } from '../../drizzle/schema';
+import { and, asc, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { agents, leads, listings } from '../../drizzle/schema';
 import {
   evaluateAgencyPublicationReadiness,
   type AgencyPublicationReadiness,
 } from './listingPublicationEntitlementService';
 import { getAgencyValueScorecard, type AgencyValueScorecard } from './agencyPerformanceService';
+import { firstOutreachOverdueSql } from './leadTransitionService';
 
 export type AgencyOperatingActionSeverity = 'critical' | 'warning' | 'clear';
 
 export type AgencyOperatingActionCode =
   | 'resolve_publication_blocker'
   | 'renew_launch_access'
-  | 'respond_sla_breach'
+  | 'first_outreach_overdue'
   | 'chase_overdue_follow_up'
   | 'assign_new_leads'
   | 'fix_rejected_listings'
@@ -33,10 +34,18 @@ export type AgencyOperatingHomeInputs = {
   leads: {
     newToday: number;
     unassigned: number;
-    firstResponseOverdueCount: number;
+    firstOutreachOverdueCount: number;
     oldestOverdueWaitingMinutes: number | null;
     followUpsOverdueCount: number;
     oldestOverdueFollowUpName: string | null;
+  };
+  team: {
+    workloadByAgent: Array<{
+      agentId: number | null;
+      agentName: string;
+      activeLeadCount: number;
+      overdueFollowUpCount: number;
+    }>;
   };
   listings: {
     pendingReviewCount: number;
@@ -54,6 +63,7 @@ export type AgencyOperatingHome = {
   ready: boolean;
   brief: {
     leads: AgencyOperatingHomeInputs['leads'];
+    team: AgencyOperatingHomeInputs['team'];
     listings: AgencyOperatingHomeInputs['listings'];
     publication: AgencyPublicationReadiness['facts'];
     performance?: AgencyValueScorecard;
@@ -75,9 +85,7 @@ const SUBSCRIPTION_BLOCKERS = new Set([
  * Pure ranking/copy layer. Database access lives in getAgencyOperatingHome so
  * this stays unit-testable and the query composition mirrors getMyDay.
  */
-export function buildAgencyOperatingHome(
-  inputs: AgencyOperatingHomeInputs,
-): AgencyOperatingHome {
+export function buildAgencyOperatingHome(inputs: AgencyOperatingHomeInputs): AgencyOperatingHome {
   const now = inputs.now ?? new Date();
   const actions: AgencyOperatingAction[] = [];
   let rank = 0;
@@ -120,7 +128,8 @@ export function buildAgencyOperatingHome(
 
   const completenessBlocker = inputs.publication.blockers.find(
     blocker =>
-      blocker.reason === 'agency_profile_incomplete' || blocker.reason === 'agency_branding_incomplete',
+      blocker.reason === 'agency_profile_incomplete' ||
+      blocker.reason === 'agency_branding_incomplete',
   );
   if (completenessBlocker) {
     add(
@@ -132,16 +141,16 @@ export function buildAgencyOperatingHome(
     );
   }
 
-  // 2. Lead responsiveness — the platform's public promise.
-  if (inputs.leads.firstResponseOverdueCount > 0) {
+  // 2. Leads that have not received a recorded first outreach attempt.
+  if (inputs.leads.firstOutreachOverdueCount > 0) {
     const waiting =
       inputs.leads.oldestOverdueWaitingMinutes !== null
         ? `${inputs.leads.oldestOverdueWaitingMinutes} min`
         : '';
     add(
-      'respond_sla_breach',
+      'first_outreach_overdue',
       'critical',
-      `${inputs.leads.firstResponseOverdueCount} enquiries past the 15-minute first-response promise`,
+      `${inputs.leads.firstOutreachOverdueCount} enquiries without a first outreach attempt within 15 minutes`,
       waiting ? `Oldest waiting ${waiting}` : '',
       '/agency/leads',
     );
@@ -221,6 +230,7 @@ export function buildAgencyOperatingHome(
       inputs.publication.ready,
     brief: {
       leads: inputs.leads,
+      team: inputs.team,
       listings: inputs.listings,
       publication: inputs.publication.facts,
       ...(inputs.performance ? { performance: inputs.performance } : {}),
@@ -256,13 +266,16 @@ export async function getAgencyOperatingHome(input: {
     .replace('T', ' ');
 
   const ACTIVE_WORK = ['new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent'];
+  const nowDb = now.toISOString().slice(0, 19).replace('T', ' ');
 
   const [leadStats] = await database
     .select({
       newToday: sql<number>`SUM(CASE WHEN ${leads.status} = 'new' AND ${leads.createdAt} >= ${dayStartDb} THEN 1 ELSE 0 END)`,
       unassigned: sql<number>`SUM(CASE WHEN ${leads.agentId} IS NULL AND ${leads.status} IN ('new','contacted','qualified','viewing_scheduled','offer_sent') THEN 1 ELSE 0 END)`,
-      slaOverdue: sql<number>`SUM(CASE WHEN ${leads.firstRespondedAt} IS NULL AND ${leads.status} IN ('new','contacted','qualified','viewing_scheduled','offer_sent') AND ${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL 15 MINUTE) THEN 1 ELSE 0 END)`,
-      oldestSlaMinutes: sql<number | null>`MAX(CASE WHEN ${leads.firstRespondedAt} IS NULL AND ${leads.status} IN ('new','contacted','qualified','viewing_scheduled','offer_sent') AND ${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL 15 MINUTE) THEN TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, NOW()) ELSE NULL END)`,
+      slaOverdue: sql<number>`SUM(${firstOutreachOverdueSql()})`,
+      oldestSlaMinutes: sql<
+        number | null
+      >`MAX(CASE WHEN ${firstOutreachOverdueSql()} = 1 THEN TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, NOW()) ELSE NULL END)`,
       followUpsOverdue: sql<number>`SUM(CASE WHEN ${leads.nextFollowUp} IS NOT NULL AND ${leads.nextFollowUp} < NOW() AND ${leads.status} IN ('new','contacted','qualified','viewing_scheduled','offer_sent') THEN 1 ELSE 0 END)`,
     })
     .from(leads)
@@ -274,9 +287,7 @@ export async function getAgencyOperatingHome(input: {
     .where(
       and(
         eq(leads.agencyId, input.agencyId),
-        inArray(leads.status, ACTIVE_WORK as any),
-        isNull(leads.firstRespondedAt),
-        lt(leads.createdAt, new Date(now.getTime() - 15 * 60_000).toISOString().slice(0, 19).replace('T', ' ')),
+        sql`${firstOutreachOverdueSql()} = 1`,
       ),
     )
     .orderBy(leads.createdAt)
@@ -295,10 +306,39 @@ export async function getAgencyOperatingHome(input: {
     .orderBy(leads.nextFollowUp)
     .limit(1);
 
+  const workloadByAgent = await database
+    .select({
+      agentId: agents.id,
+      agentName: sql<string>`COALESCE(NULLIF(${agents.displayName}, ''), CONCAT(${agents.firstName}, ' ', ${agents.lastName}), 'Unassigned')`,
+      activeLeadCount: sql<number>`COUNT(*)`,
+      overdueFollowUpCount: sql<number>`SUM(CASE WHEN ${leads.nextFollowUp} IS NOT NULL AND ${leads.nextFollowUp} < ${nowDb} THEN 1 ELSE 0 END)`,
+    })
+    .from(leads)
+    .leftJoin(
+      agents,
+      and(eq(agents.id, leads.agentId), eq(agents.agencyId, input.agencyId)),
+    )
+    .where(
+      and(
+        eq(leads.agencyId, input.agencyId),
+        inArray(leads.status, ACTIVE_WORK as any),
+      ),
+    )
+    .groupBy(agents.id, agents.displayName, agents.firstName, agents.lastName)
+    .orderBy(
+      desc(sql`SUM(CASE WHEN ${leads.nextFollowUp} IS NOT NULL AND ${leads.nextFollowUp} < ${nowDb} THEN 1 ELSE 0 END)`),
+      desc(sql`COUNT(*)`),
+      asc(agents.displayName),
+      asc(agents.id),
+    )
+    .limit(12);
+
   const [listingStats] = await database
     .select({
       pendingReview: sql<number>`SUM(CASE WHEN ${listings.status} = 'pending_review' THEN 1 ELSE 0 END)`,
-      oldestPendingAge: sql<number | null>`MAX(CASE WHEN ${listings.status} = 'pending_review' THEN DATEDIFF(NOW(), COALESCE(${listings.updatedAt}, ${listings.createdAt})) ELSE NULL END)`,
+      oldestPendingAge: sql<
+        number | null
+      >`MAX(CASE WHEN ${listings.status} = 'pending_review' THEN DATEDIFF(NOW(), COALESCE(${listings.updatedAt}, ${listings.createdAt})) ELSE NULL END)`,
       rejected: sql<number>`SUM(CASE WHEN ${listings.status} = 'rejected' THEN 1 ELSE 0 END)`,
       unassigned: sql<number>`SUM(CASE WHEN ${listings.agentId} IS NULL AND ${listings.agencyId} = ${input.agencyId} THEN 1 ELSE 0 END)`,
       stalePublic: sql<number>`SUM(CASE WHEN ${listings.status} IN ('published','approved') AND ${listings.updatedAt} <= ${twentyOneDaysAgoDb} THEN 1 ELSE 0 END)`,
@@ -322,11 +362,19 @@ export async function getAgencyOperatingHome(input: {
     leads: {
       newToday: num(leadStats?.newToday),
       unassigned: num(leadStats?.unassigned),
-      firstResponseOverdueCount: num(leadStats?.slaOverdue),
+      firstOutreachOverdueCount: num(leadStats?.slaOverdue),
       oldestOverdueWaitingMinutes:
         leadStats?.oldestSlaMinutes != null ? num(leadStats.oldestSlaMinutes) : null,
       followUpsOverdueCount: num(leadStats?.followUpsOverdue),
       oldestOverdueFollowUpName: oldestOverdueFollowUp?.name ?? null,
+    },
+    team: {
+      workloadByAgent: workloadByAgent.map(row => ({
+        agentId: row.agentId == null ? null : Number(row.agentId),
+        agentName: row.agentName || 'Unassigned',
+        activeLeadCount: num(row.activeLeadCount),
+        overdueFollowUpCount: num(row.overdueFollowUpCount),
+      })),
     },
     listings: {
       pendingReviewCount: num(listingStats?.pendingReview),

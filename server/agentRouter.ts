@@ -52,6 +52,7 @@ import { recordAgentOsEvent } from './services/agentOsEventService';
 import { listPublicVideosForAgent } from './services/agentPublicVideoService';
 import {
   deriveLeadReadiness,
+  isTwoWayContactOutcome,
   leadStatusTimestamps,
   validateLeadTransition,
 } from './services/leadTransitionService';
@@ -202,7 +203,7 @@ function mapCanonicalShowingStatusToAgent(status: unknown): AgentShowingStatus {
 }
 
 // Pipeline stages for Kanban board
-const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'closed'] as const;
+const PIPELINE_STAGES = ['new', 'contacted', 'viewing', 'offer', 'won', 'closed', 'lost'] as const;
 export type PipelineStage = (typeof PIPELINE_STAGES)[number];
 
 // Notification types
@@ -284,9 +285,7 @@ function buildAgentLeadCustodyConditions(workspace: AgentLeadWorkspace): SQL[] {
   if (workspace.currentAgencyId) {
     // A member can retain independently-originated custody, but may only see
     // agency custody for their single current canonical affiliation.
-    conditions.push(
-      or(isNull(leads.agencyId), eq(leads.agencyId, workspace.currentAgencyId))!,
-    );
+    conditions.push(or(isNull(leads.agencyId), eq(leads.agencyId, workspace.currentAgencyId))!);
   } else {
     conditions.push(isNull(leads.agencyId));
   }
@@ -642,7 +641,10 @@ export const agentRouter = router({
           limit: z.number().int().min(1).max(24).default(6),
           cursor: z.number().int().positive().optional(),
           listingType: z.enum(['sale', 'rent']).optional(),
-          canonicalPlaceId: z.string().regex(/^pl-place-01-[0-9a-f]{24}$/).optional(),
+          canonicalPlaceId: z
+            .string()
+            .regex(/^pl-place-01-[0-9a-f]{24}$/)
+            .optional(),
           sort: z.enum(['newest', 'oldest']).default('newest'),
         })
         .strict(),
@@ -749,7 +751,9 @@ export const agentRouter = router({
         [newLeadsResult] = await db
           .select({ count: count() })
           .from(leads)
-          .where(and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, weekAgo)));
+          .where(
+            and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, weekAgo)),
+          );
       }
 
       if (agentId) {
@@ -778,9 +782,9 @@ export const agentRouter = router({
   ),
 
   /**
-   * Operational response-discipline summary for the signed-in agent.
-   * Computed only from recorded lead timestamps (no new collection):
-   * how quickly enquiries receive their first response in the last 30 days.
+   * Operational contact summary for the signed-in agent. Outreach attempts and
+   * two-way connections are measured separately so an unanswered call does not
+   * appear as a connected buyer.
    */
   getLeadResponseSummary: agentProcedure.query(async ({ ctx }) => {
     const db = await getDb();
@@ -789,9 +793,12 @@ export const agentRouter = router({
     const emptySummary = {
       windowDays: 30,
       totalLeads: 0,
-      respondedLeads: 0,
-      awaitingFirstResponse: 0,
-      medianHoursToFirstResponse: null as number | null,
+      outreachAttemptedLeads: 0,
+      awaitingFirstOutreach: 0,
+      medianHoursToFirstOutreach: null as number | null,
+      connectedLeads: 0,
+      awaitingTwoWayConnection: 0,
+      medianHoursToConnection: null as number | null,
     };
 
     const [agentRecord] = await db
@@ -811,14 +818,63 @@ export const agentRouter = router({
     const sinceIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const rows = await db
       .select({
+        id: leads.id,
         status: leads.status,
         createdAt: leads.createdAt,
         firstRespondedAt: leads.firstRespondedAt,
       })
       .from(leads)
-      .where(and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, sinceIso)));
+      .where(
+        and(...buildAgentLeadCustodyConditions(leadWorkspace), gte(leads.createdAt, sinceIso)),
+      );
 
-    const respondedHours = rows
+    const leadIds = rows.map(row => Number(row.id));
+    const firstAttemptRows = leadIds.length
+      ? await db
+          .select({
+            leadId: leadActivities.leadId,
+            firstAttemptAt: sql<string>`MIN(${leadActivities.createdAt})`,
+          })
+          .from(leadActivities)
+          .where(
+            and(
+              inArray(leadActivities.leadId, leadIds),
+              eq(leadActivities.type, 'contact_attempt'),
+            ),
+          )
+          .groupBy(leadActivities.leadId)
+      : [];
+    const firstAttemptByLead = new Map(
+      firstAttemptRows.map(row => [Number(row.leadId), row.firstAttemptAt]),
+    );
+    const activeStatuses = new Set([
+      'new',
+      'contacted',
+      'qualified',
+      'viewing_scheduled',
+      'offer_sent',
+    ]);
+    const outreachHours = rows
+      .map(row => {
+        const attemptAt = firstAttemptByLead.get(Number(row.id));
+        // A manual move to a connected stage can predate structured activity
+        // history. Keep that recorded connection as the fallback evidence.
+        const firstOutreachAt = [attemptAt, row.firstRespondedAt]
+          .filter(Boolean)
+          .map(String)
+          .sort((left, right) => new Date(left).getTime() - new Date(right).getTime())[0];
+        return firstOutreachAt
+          ? Math.max(
+              0,
+              (new Date(firstOutreachAt).getTime() - new Date(row.createdAt).getTime()) /
+                (60 * 60 * 1000),
+            )
+          : null;
+      })
+      .filter((hours): hours is number => hours !== null)
+      .sort((left, right) => left - right);
+
+    const connectionHours = rows
       .filter(row => Boolean(row.firstRespondedAt))
       .map(row => {
         const created = new Date(row.createdAt).getTime();
@@ -827,18 +883,27 @@ export const agentRouter = router({
       })
       .sort((left, right) => left - right);
 
-    const median =
-      respondedHours.length > 0
-        ? respondedHours[Math.floor((respondedHours.length - 1) / 2)]
+    const median = (values: number[]) =>
+      values.length > 0
+        ? Math.round(values[Math.floor((values.length - 1) / 2)] * 10) / 10
         : null;
 
     return {
       windowDays: 30,
       totalLeads: rows.length,
-      respondedLeads: respondedHours.length,
-      awaitingFirstResponse: rows.filter(row => !row.firstRespondedAt && row.status !== 'lost')
-        .length,
-      medianHoursToFirstResponse: median === null ? null : Math.round(median * 10) / 10,
+      outreachAttemptedLeads: outreachHours.length,
+      awaitingFirstOutreach: rows.filter(
+        row =>
+          activeStatuses.has(String(row.status)) &&
+          !firstAttemptByLead.has(Number(row.id)) &&
+          !row.firstRespondedAt,
+      ).length,
+      medianHoursToFirstOutreach: median(outreachHours),
+      connectedLeads: connectionHours.length,
+      awaitingTwoWayConnection: rows.filter(
+        row => activeStatuses.has(String(row.status)) && !row.firstRespondedAt,
+      ).length,
+      medianHoursToConnection: median(connectionHours),
     };
   }),
 
@@ -1058,7 +1123,9 @@ export const agentRouter = router({
         contacted: [],
         viewing: [],
         offer: [],
+        won: [],
         closed: [],
+        lost: [],
       };
 
       leadsList.forEach(({ lead, property }) => {
@@ -1080,12 +1147,16 @@ export const agentRouter = router({
             stage = 'viewing';
             break;
           case 'offer_sent':
-          case 'converted':
             stage = 'offer';
             break;
+          case 'converted':
+            stage = 'won';
+            break;
           case 'closed':
-          case 'lost':
             stage = 'closed';
+            break;
+          case 'lost':
+            stage = 'lost';
             break;
           default:
             stage = 'new';
@@ -1105,7 +1176,9 @@ export const agentRouter = router({
             source: lead.consentSource || null,
           },
           delivery: {
-            status: currentDelivery ? publicStatusForDelivery(currentDelivery) : lead.deliveryStatus,
+            status: currentDelivery
+              ? publicStatusForDelivery(currentDelivery)
+              : lead.deliveryStatus,
             attempts: deliverySnapshot?.attempts || [],
             lastAttemptAt: latestAttempt?.attemptedAt || lead.deliveryLastAttemptAt || null,
             lastError: latestAttempt?.lastError || lead.deliveryLastError || null,
@@ -1135,8 +1208,9 @@ export const agentRouter = router({
     .input(
       z.object({
         leadId: z.number(),
-        targetStage: z.enum(['new', 'contacted', 'viewing', 'offer', 'closed']),
+        targetStage: z.enum(['new', 'contacted', 'viewing', 'offer', 'won', 'closed', 'lost']),
         notes: z.string().optional(),
+        lostReason: z.string().trim().max(1000).optional(),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -1164,13 +1238,19 @@ export const agentRouter = router({
         case 'offer':
           newStatus = 'offer_sent';
           break;
+        case 'won':
+          newStatus = 'converted';
+          break;
         case 'closed':
           newStatus = 'closed';
+          break;
+        case 'lost':
+          newStatus = 'lost';
           break;
       }
 
       const needsOfferReadiness =
-        input.targetStage === 'offer' &&
+        ['offer', 'won'].includes(input.targetStage) &&
         !['offer_sent', 'converted', 'closed'].includes(String(lead.status));
       const offerReadiness = needsOfferReadiness ? await getAgentOfferReadiness(db, lead) : null;
       if (offerReadiness && !offerReadiness.canMoveToOffer) {
@@ -1181,6 +1261,7 @@ export const agentRouter = router({
       }
 
       validateLeadTransition(lead, newStatus as any, {
+        lostReason: input.lostReason,
         qualificationConfirmed: Boolean(offerReadiness?.readiness.affordabilityConfirmed),
       });
       const now = nowAsDbTimestamp();
@@ -1190,7 +1271,7 @@ export const agentRouter = router({
         .set({
           status: newStatus,
           updatedAt: now,
-          ...leadStatusTimestamps(lead, newStatus as any, now),
+          ...leadStatusTimestamps(lead, newStatus as any, now, { lostReason: input.lostReason }),
         })
         .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)));
 
@@ -1199,7 +1280,12 @@ export const agentRouter = router({
         action: 'agent.lead_stage_move',
         targetType: 'lead',
         targetId: input.leadId,
-        metadata: { previousStatus: lead.status, nextStatus: newStatus, agentId: agentRecord.id },
+        metadata: {
+          previousStatus: lead.status,
+          nextStatus: newStatus,
+          lostReason: input.lostReason,
+          agentId: agentRecord.id,
+        },
         req: ctx.req,
       });
 
@@ -1768,6 +1854,7 @@ export const agentRouter = router({
           .update(leads)
           .set({
             nextFollowUp,
+            nextAction: input.note?.trim() || lead.nextAction || 'Follow up with buyer',
             updatedAt: now,
           })
           .where(
@@ -1814,7 +1901,7 @@ export const agentRouter = router({
     .input(
       z.object({
         leadId: z.number().int().positive(),
-        note: z.string().trim().max(1000).optional(),
+        note: z.string().trim().min(1).max(1000),
       }),
     )
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
@@ -1835,8 +1922,7 @@ export const agentRouter = router({
           .update(leads)
           .set({
             nextFollowUp: null,
-            lastContactedAt: now,
-            firstRespondedAt: lead.firstRespondedAt || now,
+            nextAction: input.note,
             updatedAt: now,
           })
           .where(
@@ -1857,7 +1943,8 @@ export const agentRouter = router({
           leadId: lead.id,
           userId: user.id,
           type: 'note',
-          description: input.note ? `Follow-up completed. ${input.note}` : 'Follow-up completed.',
+          description: `Follow-up completed. ${input.note}`,
+          metadata: JSON.stringify({ kind: 'follow_up_completion', outcome: input.note }),
         });
       });
 
@@ -1873,6 +1960,112 @@ export const agentRouter = router({
       });
 
       return { success: true };
+    }),
+
+  /** Record an outreach attempt without changing the lead's sales stage. */
+  recordLeadContactAttempt: agentProcedure
+    .input(
+      z
+        .object({
+          leadId: z.number().int().positive(),
+          channel: z.enum(['call', 'whatsapp', 'email', 'sms', 'other']),
+          outcome: z.enum([
+            'reached',
+            'replied',
+            'no_answer',
+            'voicemail',
+            'viewing_booked',
+            'follow_up_required',
+            'not_interested',
+            'invalid_contact',
+            'other',
+          ]),
+          summary: z.string().trim().min(1).max(2000),
+          nextAction: z.string().trim().min(1).max(255),
+          nextFollowUp: z.string().trim().min(1).optional().nullable(),
+        })
+        .superRefine((input, context) => {
+          if (input.outcome === 'follow_up_required' && !input.nextFollowUp) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['nextFollowUp'],
+              message: 'Schedule the required follow-up.',
+            });
+          }
+        }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      const user = requireUser(ctx);
+      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
+      const parsedFollowUp = input.nextFollowUp ? new Date(input.nextFollowUp) : null;
+      if (parsedFollowUp && Number.isNaN(parsedFollowUp.getTime())) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid.' });
+      }
+
+      const nextFollowUp = parsedFollowUp
+        ? toDbTimestampRequired(parsedFollowUp)
+        : input.nextFollowUp === null
+          ? null
+          : lead.nextFollowUp;
+      const connected = isTwoWayContactOutcome(input.outcome);
+      const recordedAt = nowAsDbTimestamp();
+
+      await db.transaction(async tx => {
+        await tx
+          .update(leads)
+          .set({
+            nextFollowUp,
+            nextAction: input.nextAction,
+            ...(connected
+              ? {
+                  firstRespondedAt: lead.firstRespondedAt || recordedAt,
+                  lastContactedAt: recordedAt,
+                }
+              : {}),
+            updatedAt: recordedAt,
+          })
+          .where(and(eq(leads.id, lead.id), ...buildAgentLeadCustodyConditions(workspace)));
+
+        await tx.insert(leadActivities).values({
+          leadId: lead.id,
+          userId: user.id,
+          type: 'contact_attempt',
+          description: input.summary,
+          metadata: JSON.stringify({
+            channel: input.channel,
+            outcome: input.outcome,
+            previousStatus: lead.status,
+            status: lead.status,
+            nextAction: input.nextAction,
+            nextFollowUp,
+          }),
+        });
+      });
+
+      await logAudit({
+        userId: user.id,
+        action: 'agent.lead_contact_attempt_recorded',
+        targetType: 'lead',
+        targetId: lead.id,
+        metadata: {
+          agentId: workspace.agent.id,
+          channel: input.channel,
+          outcome: input.outcome,
+          status: lead.status,
+        },
+        req: ctx.req,
+      });
+
+      await recordAgentOsEvent({
+        userId: user.id,
+        eventType: 'agent_crm_action_logged',
+        eventData: { leadId: lead.id, activityType: 'contact_attempt', outcome: input.outcome },
+        req: ctx.req,
+        requestId: ctx.requestId,
+      });
+
+      return { success: true, status: lead.status, nextAction: input.nextAction };
     }),
 
   /**
@@ -1902,10 +2095,24 @@ export const agentRouter = router({
       const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
       const agentRecord = workspace.agent;
 
+      const needsOfferReadiness =
+        ['offer_sent', 'converted'].includes(input.status) && input.status !== lead.status;
+      validateLeadTransition(lead, input.status, {
+        lostReason: input.lostReason,
+        qualificationConfirmed: needsOfferReadiness,
+      });
+
+      const offerReadiness = needsOfferReadiness ? await getAgentOfferReadiness(db, lead) : null;
+      if (offerReadiness && !offerReadiness.canMoveToOffer) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: offerReadiness.blockers.join(' '),
+        });
+      }
+
       // Canonical transition rules, timestamps and lost-reason handling are
-      // identical to the Agency surface so first-response measurement stays
-      // truthful regardless of which app performed the update.
-      validateLeadTransition(lead, input.status, { lostReason: input.lostReason });
+      // identical to the Agency surface so first-outreach measurement stays
+      // consistent regardless of which app performed the update.
       const now = nowAsDbTimestamp();
 
       await db
@@ -2065,17 +2272,16 @@ export const agentRouter = router({
     .mutation(async ({ ctx, input }): Promise<{ success: boolean }> => {
       const db = await getDb();
       const user = requireUser(ctx);
-      const { workspace, lead } = await requireAgentCustodiedLead(db, user.id, input.leadId);
+      const { workspace } = await requireAgentCustodiedLead(db, user.id, input.leadId);
 
       const activityType =
         input.activityType === 'viewing_scheduled' || input.activityType === 'offer_sent'
           ? 'status_change'
           : input.activityType;
-      const isRecordedContact = ['call', 'email', 'meeting'].includes(input.activityType);
       const now = nowAsDbTimestamp();
 
-      // A concrete contact outcome is both an immutable CRM activity and the
-      // canonical first/last-response evidence used by the offer gate.
+      // Unstructured call/email/meeting notes are activity records only. The
+      // structured contact-attempt mutation records outcomes and response timing.
       await db.transaction(async tx => {
         await tx.insert(leadActivities).values({
           leadId: input.leadId,
@@ -2089,9 +2295,6 @@ export const agentRouter = router({
           .update(leads)
           .set({
             updatedAt: now,
-            ...(isRecordedContact
-              ? { lastContactedAt: now, firstRespondedAt: lead.firstRespondedAt || now }
-              : {}),
           })
           .where(and(eq(leads.id, input.leadId), ...buildAgentLeadCustodyConditions(workspace)));
       });
@@ -2323,12 +2526,14 @@ export const agentRouter = router({
 
       if (leadRecord) {
         const persistedLead = leadRecord;
+        const stageUpdatedAt = nowAsDbTimestamp();
 
         await db
           .update(leads)
           .set({
             status: 'viewing_scheduled',
-            updatedAt: nowAsDbTimestamp(),
+            updatedAt: stageUpdatedAt,
+            ...leadStatusTimestamps(persistedLead, 'viewing_scheduled', stageUpdatedAt),
           })
           .where(
             and(eq(leads.id, persistedLead.id), ...buildAgentLeadCustodyConditions(workspace)),

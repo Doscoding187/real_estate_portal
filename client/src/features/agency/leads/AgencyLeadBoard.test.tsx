@@ -24,19 +24,27 @@ describe('agency lead board', () => {
         name: `Buyer ${index + 1}`,
         status: 'new',
       })),
-      { id: 12, name: 'Closed buyer', status: 'closed' },
-      { id: 13, name: 'Lost buyer', status: 'lost' },
+      { id: 12, name: 'Qualified buyer', status: 'qualified' },
+      { id: 13, name: 'Won buyer', status: 'converted' },
+      { id: 14, name: 'Closed buyer', status: 'closed' },
+      { id: 15, name: 'Lost buyer', status: 'lost' },
     ];
     render(<AgencyLeadBoard leads={leads} onOpen={vi.fn()} />);
-    expect(screen.getAllByTestId('agency-lead-stage')).toHaveLength(8);
-    const newStage = screen.getByRole('region', { name: 'New', exact: true });
+    expect(screen.getAllByTestId('agency-lead-stage')).toHaveLength(7);
+    const newStage = screen.getByRole('region', { name: 'New' });
     expect(within(newStage).getAllByRole('button')).toHaveLength(11);
     expect(within(newStage).getByText('11', { exact: true })).toBeDefined();
     expect(
-      within(screen.getByRole('region', { name: 'Closed', exact: true })).getByText('Closed buyer'),
+      within(screen.getByRole('region', { name: 'Connected' })).getByText('Qualified buyer'),
     ).toBeDefined();
     expect(
-      within(screen.getByRole('region', { name: 'Lost', exact: true })).getByText('Lost buyer'),
+      within(screen.getByRole('region', { name: 'Won' })).getByText('Won buyer'),
+    ).toBeDefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Closed' })).getByText('Closed buyer'),
+    ).toBeDefined();
+    expect(
+      within(screen.getByRole('region', { name: 'Lost' })).getByText('Lost buyer'),
     ).toBeDefined();
   });
 
@@ -53,10 +61,10 @@ describe('agency lead board', () => {
   it('treats a missing status as New and preserves the empty-stage guidance', () => {
     render(<AgencyLeadBoard leads={[{ id: 1, name: 'New buyer' }]} onOpen={vi.fn()} />);
     expect(
-      within(screen.getByRole('region', { name: 'New', exact: true })).getByText('New buyer'),
+      within(screen.getByRole('region', { name: 'New' })).getByText('New buyer'),
     ).toBeDefined();
     expect(
-      within(screen.getByRole('region', { name: 'Offer', exact: true })).getByText('No leads'),
+      within(screen.getByRole('region', { name: 'Offer' })).getByText('No leads'),
     ).toBeDefined();
   });
 

@@ -43,6 +43,7 @@ const STATUS_OPTIONS = PIPELINE_STAGES.map(stage => stage.key);
 const STATUS_LABELS = new Map(PIPELINE_STAGES.map(stage => [stage.key, stage.label]));
 
 function statusLabel(status?: string | null) {
+  if (status === 'qualified') return 'Qualified (existing record)';
   return STATUS_LABELS.get(String(status || 'new')) || String(status || 'new').replace(/_/g, ' ');
 }
 
@@ -97,6 +98,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     null;
   const assignableAgents = assignableAgentsQuery.data || [];
   const selectedAgentId = selectedLead?.agentId ? String(selectedLead.agentId) : 'unassigned';
+  const statusOptions =
+    selectedLead?.status === 'qualified' ? [...STATUS_OPTIONS, 'qualified'] : STATUS_OPTIONS;
 
   useEffect(() => {
     if (!selectedLead || selectedLead.id === draftLeadId) return;
@@ -224,7 +227,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     <section className="space-y-5">
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardContent className="p-4">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px_180px_190px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_170px_190px_190px_180px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -245,6 +248,29 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
               {PIPELINE_STAGES.map(stage => (
                 <option key={stage.key} value={stage.key}>
                   {stage.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by agent"
+              value={props.leadOwner}
+              onChange={event => props.setLeadOwner(event.target.value)}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="all">All agents</option>
+              <option value="unassigned">Unassigned</option>
+              {props.leadOwner !== 'all' &&
+              props.leadOwner !== 'unassigned' &&
+              !assignableAgents.some(agent => String(agent.id) === props.leadOwner) ? (
+                <option value={props.leadOwner}>
+                  {props.leads.find(lead => String(lead.agentId) === props.leadOwner)?.agent
+                    ?.name ||
+                    `Agent #${props.leadOwner}`}
+                </option>
+              ) : null}
+              {assignableAgents.map(agent => (
+                <option key={agent.id} value={String(agent.id)}>
+                  {agent.name}
                 </option>
               ))}
             </select>
@@ -407,28 +433,29 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       onChange={event => setContactSummary(event.target.value)}
                       placeholder="What happened?"
                     />
-                    {!['not_interested', 'invalid_contact'].includes(contactOutcome) ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Input
-                          aria-label="Buyer contact next action"
-                          value={contactNextAction}
-                          onChange={event => setContactNextAction(event.target.value)}
-                          placeholder="Required next action"
-                        />
-                        <Input
-                          aria-label="Buyer contact next follow-up"
-                          type="datetime-local"
-                          value={contactFollowUpAt}
-                          onChange={event => setContactFollowUpAt(event.target.value)}
-                        />
-                      </div>
-                    ) : null}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input
+                        aria-label="Buyer contact next action"
+                        value={contactNextAction}
+                        onChange={event => setContactNextAction(event.target.value)}
+                        placeholder={
+                          ['not_interested', 'invalid_contact'].includes(contactOutcome)
+                            ? 'Review and decide whether to mark lost'
+                            : 'Required next action'
+                        }
+                      />
+                      <Input
+                        aria-label="Buyer contact next follow-up"
+                        type="datetime-local"
+                        value={contactFollowUpAt}
+                        onChange={event => setContactFollowUpAt(event.target.value)}
+                      />
+                    </div>
                     <Button
                       disabled={
                         busy ||
                         !contactSummary.trim() ||
-                        (!['not_interested', 'invalid_contact'].includes(contactOutcome) &&
-                          !contactNextAction.trim()) ||
+                        !contactNextAction.trim() ||
                         (contactOutcome === 'follow_up_required' && !contactFollowUpAt)
                       }
                       onClick={() =>
@@ -437,9 +464,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                           channel: contactChannel as any,
                           outcome: contactOutcome as any,
                           summary: contactSummary.trim(),
-                          nextAction: ['not_interested', 'invalid_contact'].includes(contactOutcome)
-                            ? undefined
-                            : contactNextAction.trim(),
+                          nextAction: contactNextAction.trim(),
                           nextFollowUp: contactFollowUpAt || undefined,
                         })
                       }
@@ -566,12 +591,22 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       onChange={event => setDraftStatus(event.target.value)}
                       className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                     >
-                      {STATUS_OPTIONS.map(status => (
-                        <option key={status} value={status}>
-                          {statusLabel(status)}
+                      {statusOptions.map(status => (
+                        <option
+                          key={status}
+                          value={status}
+                          disabled={selectedLead.status === 'qualified' && status === 'contacted'}
+                        >
+                          {status === 'qualified'
+                            ? 'Qualified (existing record)'
+                            : statusLabel(status)}
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs leading-5 text-slate-500">
+                      A call or message attempt does not change the stage. Use Connected only after
+                      the buyer replies or a two-way conversation happens.
+                    </p>
                     {draftStatus === 'lost' ? (
                       <Input
                         value={lostReason}
@@ -635,7 +670,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     <Textarea
                       value={followUpNote}
                       onChange={event => setFollowUpNote(event.target.value)}
-                      placeholder="Follow-up note"
+                      placeholder="What happened, and what should happen next?"
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -653,11 +688,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       </Button>
                       <Button
                         variant="outline"
-                        disabled={busy || !selectedLead.nextFollowUp}
+                        disabled={busy || !selectedLead.nextFollowUp || !followUpNote.trim()}
                         onClick={() =>
                           completeFollowUp.mutate({
                             leadId: selectedLead.id,
-                            note: 'Follow-up completed from agency workspace.',
+                            note: followUpNote.trim(),
                           })
                         }
                       >

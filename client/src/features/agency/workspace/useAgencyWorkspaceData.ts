@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearch } from 'wouter';
 import {
   CheckCircle2,
@@ -20,7 +20,6 @@ import {
   EMPTY_COMMISSION,
   EMPTY_CONVERSION,
   EMPTY_STATS,
-  PIPELINE_STAGES,
 } from './constants';
 import type {
   AgencyLead,
@@ -54,10 +53,20 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     // so operating-home actions land on a precise view.
     return searchParams.get('status') || 'all';
   });
+  const [leadOwner, setLeadOwner] = useState(() => searchParams.get('owner') || 'all');
   const [leadSource, setLeadSource] = useState('all');
   const [leadPage, setLeadPage] = useState(1);
   const [selectedMetric, setSelectedMetric] = useState<'leads' | 'listings' | 'sales'>('leads');
   const [selectedReportMonth, setSelectedReportMonth] = useState<string | null>(null);
+
+  const queryLeadStatus = searchParams.get('status') || 'all';
+  const queryLeadOwner = searchParams.get('owner') || 'all';
+
+  useEffect(() => {
+    setLeadStatus(queryLeadStatus);
+    setLeadOwner(queryLeadOwner);
+    setLeadPage(1);
+  }, [queryLeadOwner, queryLeadStatus]);
   const { user } = useAuth();
   const {
     status,
@@ -77,6 +86,8 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const needsCommission = ['overview', 'transactions', 'commission'].includes(workspace);
   const needsSettlementWork = ['commission', 'attention'].includes(workspace);
   const needsTeam = ['overview', 'team'].includes(workspace);
+  const ownerAgentId =
+    /^\d+$/.test(leadOwner) && Number(leadOwner) > 0 ? Number(leadOwner) : undefined;
 
   const statsQuery = trpc.agency.getDashboardStats.useQuery(undefined, { enabled: dashboardReady });
   const recentLeadsQuery = trpc.agency.getRecentLeads.useQuery(
@@ -84,8 +95,25 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     { enabled: dashboardReady },
   );
   const leadsQuery = trpc.agency.getLeads.useQuery(
-    { status: 'all', limit: 100 },
+    {
+      status: 'all',
+      agentId: ownerAgentId,
+      unassignedOnly: leadOwner === 'unassigned',
+      limit: 200,
+    },
     { enabled: dashboardReady && needsDetailedLeads },
+  );
+  const overdueLeadsQuery = trpc.agency.getLeads.useQuery(
+    {
+      status: 'all',
+      agentId: ownerAgentId,
+      unassignedOnly: leadOwner === 'unassigned',
+      overdueOnly: true,
+      limit: 200,
+    },
+    {
+      enabled: dashboardReady && workspace === 'leads' && leadStatus === 'overdue',
+    },
   );
   const listingsQuery = trpc.agency.getRecentListings.useQuery(
     { limit: workspace === 'listings' ? 60 : 20 },
@@ -118,6 +146,10 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
   const recentLeads = (recentLeadsQuery.data || []) as AgencyLead[];
   const detailLeads = (leadsQuery.data || []) as AgencyLead[];
   const leads = detailLeads.length ? detailLeads : recentLeads;
+  const visibleLeads = useMemo(
+    () => (leadStatus === 'overdue' ? ((overdueLeadsQuery.data || []) as AgencyLead[]) : leads),
+    [leadStatus, leads, overdueLeadsQuery.data],
+  );
   const listings = (listingsQuery.data || []) as AgencyListing[];
   const performance = (performanceQuery.data || []) as PerformanceDatum[];
   const conversion = (conversionQuery.data || EMPTY_CONVERSION) as ConversionStats;
@@ -168,7 +200,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       if (!lastTouch || Number.isNaN(lastTouch.getTime())) return false;
       return (Date.now() - lastTouch.getTime()) / 86_400_000 >= 3;
     }).length;
-    const firstResponseOverdueCount = source.filter(lead => lead.firstResponseOverdue).length;
+    const firstOutreachOverdueCount = source.filter(lead => lead.firstOutreachOverdue).length;
     const viewingCount = source.filter(lead =>
       ['viewing_scheduled', 'viewing'].includes(String(lead.status || '')),
     ).length;
@@ -180,7 +212,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       newLeadCount,
       unassignedCount,
       contactedFollowUpCount,
-      firstResponseOverdueCount,
+      firstOutreachOverdueCount,
       viewingCount,
       offerCount,
     };
@@ -197,8 +229,10 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     const staleRisk = listings.filter(listing => {
       const created = listing.createdAt ? new Date(listing.createdAt) : null;
       if (!created || Number.isNaN(created.getTime())) return false;
-      return (Date.now() - created.getTime()) / 86_400_000 > 21 &&
-        (listing.status === 'published' || listing.status === 'approved');
+      return (
+        (Date.now() - created.getTime()) / 86_400_000 > 21 &&
+        (listing.status === 'published' || listing.status === 'approved')
+      );
     }).length;
 
     return [
@@ -239,7 +273,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     }
     if (leadSignals.newLeadCount > 0) {
       items.push({
-        title: 'New enquiries need first response',
+        title: 'New enquiries need first outreach',
         detail: 'Fresh leads are waiting in the agency lead queue.',
         value: String(leadSignals.newLeadCount),
         tone: 'rose',
@@ -248,11 +282,11 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         action: 'Work leads',
       });
     }
-    if (leadSignals.firstResponseOverdueCount > 0) {
+    if (leadSignals.firstOutreachOverdueCount > 0) {
       items.push({
-        title: 'Buyer enquiries have missed first-response SLA',
-        detail: 'These active leads have not received a recorded first response within 15 minutes.',
-        value: String(leadSignals.firstResponseOverdueCount),
+        title: 'Buyer enquiries have no first outreach attempt',
+        detail: 'These active leads have no recorded human outreach attempt within 15 minutes.',
+        value: String(leadSignals.firstOutreachOverdueCount),
         tone: 'rose',
         icon: Clock3,
         route: 'leads',
@@ -305,12 +339,16 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         action: 'Open performance',
       });
     }
-    const financialExceptions = settlements.filter(item =>
-      Boolean(item.overdue) || ['disputed', 'reconciliation_required'].includes(String(item.status || '')),
+    const financialExceptions = settlements.filter(
+      item =>
+        Boolean(item.overdue) ||
+        ['disputed', 'reconciliation_required'].includes(String(item.status || '')),
     );
     if (financialExceptions.length) {
       const amount = financialExceptions.reduce(
-        (sum, item) => sum + Math.max(0, Number(item.expectedCommission || 0) - Number(item.amountReceived || 0)),
+        (sum, item) =>
+          sum +
+          Math.max(0, Number(item.expectedCommission || 0) - Number(item.amountReceived || 0)),
         0,
       );
       items.push({
@@ -380,20 +418,21 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
 
     leads.forEach(lead => {
       const rawSource = String(lead.leadSource || lead.source || 'web');
-      const existing =
-        groups.get(rawSource) || {
-          source: sourceLabel(rawSource),
-          leads: 0,
-          converted: 0,
-          hot: 0,
-        };
+      const existing = groups.get(rawSource) || {
+        source: sourceLabel(rawSource),
+        leads: 0,
+        converted: 0,
+        hot: 0,
+      };
       existing.leads += 1;
       existing.converted += ['converted', 'closed'].includes(String(lead.status || '')) ? 1 : 0;
       existing.hot += lead.temperature?.label === 'hot' ? 1 : 0;
       groups.set(rawSource, existing);
     });
 
-    return Array.from(groups.values()).sort((a, b) => b.leads - a.leads).slice(0, 6);
+    return Array.from(groups.values())
+      .sort((a, b) => b.leads - a.leads)
+      .slice(0, 6);
   }, [leads]);
 
   const suburbHeatmapData = useMemo<SuburbHeatmapDatum[]>(() => {
@@ -405,17 +444,22 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       existing.leads += Number(listing.enquiries || 0);
       groups.set(suburb, existing);
     });
-    return Array.from(groups.values()).sort((a, b) => b.views - a.views).slice(0, 8);
+    return Array.from(groups.values())
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 8);
   }, [listings]);
 
   const filteredLeads = useMemo(() => {
     const query = leadSearch.trim().toLowerCase();
-    return leads.filter(lead => {
+    return visibleLeads.filter(lead => {
       const statusMatches =
         leadStatus === 'all' ||
         (leadStatus === 'unassigned' ? !lead.agentId : false) ||
         (leadStatus === 'overdue' ? Boolean(lead.overdueFollowUp) : false) ||
         lead.status === leadStatus;
+      const ownerMatches =
+        leadOwner === 'all' ||
+        (leadOwner === 'unassigned' ? !lead.agentId : String(lead.agentId || '') === leadOwner);
       const sourceMatches =
         leadSource === 'all' || lead.source === leadSource || lead.leadSource === leadSource;
       const searchMatches =
@@ -431,9 +475,9 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
         ]
           .filter(Boolean)
           .some(value => String(value).toLowerCase().includes(query));
-      return statusMatches && sourceMatches && searchMatches;
+      return statusMatches && ownerMatches && sourceMatches && searchMatches;
     });
-  }, [leadSearch, leadSource, leadStatus, leads]);
+  }, [leadOwner, leadSearch, leadSource, leadStatus, visibleLeads]);
 
   const pageSize = 12;
   const pagedLeads = filteredLeads.slice((leadPage - 1) * pageSize, leadPage * pageSize);
@@ -476,6 +520,11 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
       setLeadStatus(value);
       setLeadPage(1);
     },
+    leadOwner,
+    setLeadOwner: value => {
+      setLeadOwner(value);
+      setLeadPage(1);
+    },
     leadSource,
     setLeadSource: value => {
       setLeadSource(value);
@@ -488,7 +537,7 @@ export function useAgencyWorkspaceData(workspace: WorkspaceId) {
     isLoading: {
       stats: statsQuery.isLoading,
       recentLeads: recentLeadsQuery.isLoading,
-      leads: leadsQuery.isLoading,
+      leads: leadStatus === 'overdue' ? overdueLeadsQuery.isLoading : leadsQuery.isLoading,
       listings: listingsQuery.isLoading,
       performance: performanceQuery.isLoading,
       conversion: conversionQuery.isLoading,

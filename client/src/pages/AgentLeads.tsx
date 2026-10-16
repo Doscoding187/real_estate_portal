@@ -69,7 +69,9 @@ type PipelineData = {
   contacted: LeadPipelineItem[];
   viewing: LeadPipelineItem[];
   offer: LeadPipelineItem[];
+  won: LeadPipelineItem[];
   closed: LeadPipelineItem[];
+  lost: LeadPipelineItem[];
 };
 
 const STAGE_META: Array<{
@@ -78,10 +80,12 @@ const STAGE_META: Array<{
   tone: string;
 }> = [
   { key: 'new', label: 'New', tone: 'bg-blue-100 text-blue-700' },
-  { key: 'contacted', label: 'Contacted', tone: 'bg-amber-100 text-amber-700' },
+  { key: 'contacted', label: 'Connected', tone: 'bg-teal-100 text-teal-700' },
   { key: 'viewing', label: 'Viewing', tone: 'bg-violet-100 text-violet-700' },
   { key: 'offer', label: 'Offer', tone: 'bg-orange-100 text-orange-700' },
-  { key: 'closed', label: 'Closed', tone: 'bg-emerald-100 text-emerald-700' },
+  { key: 'won', label: 'Won', tone: 'bg-emerald-100 text-emerald-700' },
+  { key: 'closed', label: 'Closed', tone: 'bg-slate-100 text-slate-700' },
+  { key: 'lost', label: 'Lost', tone: 'bg-rose-100 text-rose-700' },
 ];
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -140,9 +144,12 @@ function EmptyPanel({ title, description }: { title: string; description: string
 type LeadResponseSummary = {
   windowDays: number;
   totalLeads: number;
-  respondedLeads: number;
-  awaitingFirstResponse: number;
-  medianHoursToFirstResponse: number | null;
+  outreachAttemptedLeads: number;
+  awaitingFirstOutreach: number;
+  medianHoursToFirstOutreach: number | null;
+  connectedLeads: number;
+  awaitingTwoWayConnection: number;
+  medianHoursToConnection: number | null;
 };
 
 /**
@@ -154,51 +161,69 @@ function LeadResponseSummaryPanel({ summary }: { summary?: LeadResponseSummary }
     return (
       <EmptyPanel
         title="No enquiries in the last 30 days"
-        description="When enquiries arrive, this panel reports how quickly each one received its first response, using the timestamps already recorded on the lead."
+        description="When enquiries arrive, this panel reports time to the first recorded human outreach attempt. An attempt does not prove a two-way conversation."
       />
     );
   }
 
-  const respondedShare = Math.round((summary.respondedLeads / summary.totalLeads) * 100);
+  const outreachShare = Math.round(
+    (summary.outreachAttemptedLeads / summary.totalLeads) * 100,
+  );
+  const connectionShare = Math.round((summary.connectedLeads / summary.totalLeads) * 100);
+  const formatHours = (hours: number | null) =>
+    hours === null ? '—' : hours < 24 ? `${hours} h` : `${Math.round(hours / 24)} d`;
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-            Median first response
+            Median time to first outreach
           </p>
           <p className="mt-1 text-xl font-semibold text-slate-900">
-            {summary.medianHoursToFirstResponse === null
-              ? '—'
-              : summary.medianHoursToFirstResponse < 24
-                ? `${summary.medianHoursToFirstResponse} h`
-                : `${Math.round(summary.medianHoursToFirstResponse / 24)} d`}
+            {formatHours(summary.medianHoursToFirstOutreach)}
           </p>
         </div>
         <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-            Responded
+            First outreach logged
           </p>
           <p className="mt-1 text-xl font-semibold text-slate-900">
-            {summary.respondedLeads}
+            {summary.outreachAttemptedLeads}
             <span className="ml-1 text-xs font-normal text-slate-500">
-              of {summary.totalLeads} ({respondedShare}%)
+              of {summary.totalLeads} ({outreachShare}%)
             </span>
           </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {summary.awaitingFirstOutreach} awaiting first outreach
+          </p>
         </div>
         <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
-            Awaiting first response
+            Median time to connection
           </p>
           <p className="mt-1 text-xl font-semibold text-slate-900">
-            {summary.awaitingFirstResponse}
+            {formatHours(summary.medianHoursToConnection)}
+          </p>
+        </div>
+        <div className="rounded-[14px] border border-slate-200 bg-white px-4 py-3">
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
+            Two-way connections
+          </p>
+          <p className="mt-1 text-xl font-semibold text-slate-900">
+            {summary.connectedLeads}
+            <span className="ml-1 text-xs font-normal text-slate-500">
+              of {summary.totalLeads} ({connectionShare}%)
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {summary.awaitingTwoWayConnection} awaiting connection
           </p>
         </div>
       </div>
       <p className="text-xs text-slate-500">
-        Computed from the last {summary.windowDays} days of recorded enquiry timestamps on leads
-        assigned to you.
+        Last {summary.windowDays} days of enquiries assigned to you. An outreach attempt includes
+        calls or messages logged without a reply; a connection requires a recorded two-way outcome.
       </p>
     </div>
   );
@@ -284,7 +309,9 @@ export default function AgentLeads() {
         contacted: [],
         viewing: [],
         offer: [],
+        won: [],
         closed: [],
+        lost: [],
       }) as PipelineData,
     [pipelineData],
   );
@@ -296,13 +323,15 @@ export default function AgentLeads() {
         ...pipeline.contacted,
         ...pipeline.viewing,
         ...pipeline.offer,
+        ...pipeline.won,
         ...pipeline.closed,
+        ...pipeline.lost,
       ] as LeadPipelineItem[],
     [pipeline],
   );
 
   const activeLeadCount = allLeads.filter(
-    lead => lead.status !== 'closed' && lead.status !== 'lost',
+    lead => !['converted', 'closed', 'lost'].includes(lead.status),
   ).length;
   const propertyLinkedCount = allLeads.filter(lead =>
     Boolean(lead.property || lead.commercial),

@@ -4,10 +4,15 @@ import { leads } from '../../drizzle/schema';
 
 export const FIRST_RESPONSE_SLA_MINUTES = 15;
 
+/** Outcomes that confirm a two-way buyer interaction, rather than an outreach attempt only. */
+export function isTwoWayContactOutcome(outcome: string) {
+  return ['reached', 'replied', 'viewing_booked', 'not_interested'].includes(outcome);
+}
+
 /**
  * Single source of truth for lead lifecycle rules. Both the Agency workspace
  * and the Agent pipeline enforce these transitions, timestamps and readiness
- * gates so first-response measurement cannot be corrupted by whichever
+ * gates so first-outreach measurement cannot be corrupted by whichever
  * surface performed the update.
  */
 
@@ -42,6 +47,23 @@ export function firstResponseOverdueSql() {
   END`;
 }
 
+/** A live first-outreach queue: a recorded attempt clears it, even without a reply. */
+export function firstOutreachOverdueSql() {
+  return sql<number>`CASE
+    WHEN ${leads.status} IN ('new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent')
+      AND ${leads.firstRespondedAt} IS NULL
+      AND ${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL ${FIRST_RESPONSE_SLA_MINUTES} MINUTE)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM lead_activities AS outreach_activity
+        WHERE outreach_activity.leadId = leads.id
+          AND outreach_activity.type = 'contact_attempt'
+      )
+    THEN 1
+    ELSE 0
+  END`;
+}
+
 type LeadRow = typeof leads.$inferSelect;
 
 export function deriveLeadReadiness(lead: LeadRow) {
@@ -52,7 +74,7 @@ export function deriveLeadReadiness(lead: LeadRow) {
   const qualificationStatus = String(lead.qualificationStatus || 'pending');
 
   if (!hasAssignee) blockers.push('Lead must be assigned before offer work.');
-  if (!hasContact) blockers.push('Lead must be contacted before offer work.');
+  if (!hasContact) blockers.push('A two-way buyer contact must be recorded before offer work.');
   if (qualificationScore < 60 && qualificationStatus !== 'qualified') {
     blockers.push('Qualification must be recorded before offer work.');
   }
@@ -121,8 +143,10 @@ export function validateLeadTransition(
 }
 
 /**
- * Timestamp block shared by every lead-status mutation: first response on
- * the first contact-grade touch, last contact, conversion and lost reason.
+ * Timestamp block shared by every lead-status mutation: first recorded human
+ * outreach, last two-way contact, conversion and lost reason. Moving to Viewing
+ * records an actual two-way interaction because the stage represents a booked
+ * appointment, not an attempted message.
  */
 export function leadStatusTimestamps(
   lead: LeadRow,
@@ -130,13 +154,16 @@ export function leadStatusTimestamps(
   now: string,
   input: { lostReason?: string | null } = {},
 ) {
+  const confirmsConversation =
+    targetStatus === 'contacted' ||
+    targetStatus === 'qualified' ||
+    targetStatus === 'viewing_scheduled';
+  const firstRespondedAt =
+    confirmsConversation && !lead.firstRespondedAt ? now : lead.firstRespondedAt;
+
   return {
-    lastContactedAt:
-      targetStatus === 'contacted' || targetStatus === 'qualified' ? now : lead.lastContactedAt,
-    firstRespondedAt:
-      (targetStatus === 'contacted' || targetStatus === 'qualified') && !lead.firstRespondedAt
-        ? now
-        : lead.firstRespondedAt,
+    lastContactedAt: confirmsConversation ? now : lead.lastContactedAt,
+    firstRespondedAt,
     convertedAt: targetStatus === 'converted' || targetStatus === 'closed' ? now : lead.convertedAt,
     lostReason: targetStatus === 'lost' ? input.lostReason || lead.lostReason : lead.lostReason,
     funnelStage: mapStatusToFunnelStage(targetStatus, lead.funnelStage) as any,

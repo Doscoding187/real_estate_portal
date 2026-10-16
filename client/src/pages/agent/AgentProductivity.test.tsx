@@ -21,6 +21,7 @@ const {
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/agent/productivity', setLocationMock],
+  useSearch: () => '',
 }));
 
 vi.mock('@/components/agent/AgentAppShell', () => ({
@@ -42,10 +43,12 @@ vi.mock('@/lib/trpc', () => ({
         getActivationMilestones: { invalidate: vi.fn() },
         getLeadsPipeline: { invalidate: vi.fn() },
         getMyFollowUps: { invalidate: vi.fn() },
+        getNotifications: { invalidate: vi.fn() },
       },
     }),
     agent: {
       completeLeadFollowUp: { useMutation: () => completeFollowUpMutationMock() },
+      markNotificationAsRead: { useMutation: () => ({ mutate: vi.fn(), isPending: false }) },
       getMyFollowUps: { useQuery: (...args: unknown[]) => getFollowUpsQueryMock(...args) },
       getMyShowings: { useQuery: (...args: unknown[]) => getShowingsQueryMock(...args) },
       getNotifications: { useQuery: (...args: unknown[]) => getNotificationsQueryMock(...args) },

@@ -665,9 +665,19 @@ export default function AgentProductivity() {
                               </Button>
                               <Button
                                 disabled={completeFollowUpMutation.isPending}
-                                onClick={() =>
-                                  completeFollowUpMutation.mutate({ leadId: followUp.id })
-                                }
+                                onClick={() => {
+                                  const note = window
+                                    .prompt(
+                                      'What happened with this buyer and what should happen next?',
+                                    )
+                                    ?.trim();
+                                  if (note) {
+                                    completeFollowUpMutation.mutate({
+                                      leadId: followUp.id,
+                                      note,
+                                    });
+                                  }
+                                }}
                               >
                                 {completeFollowUpMutation.isPending ? 'Completing...' : 'Complete'}
                               </Button>

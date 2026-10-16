@@ -83,7 +83,11 @@ export function AgencyLeadBoard({
         className="flex min-w-0 snap-x snap-proximity gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 motion-reduce:scroll-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
       >
         {PIPELINE_STAGES.map(stage => {
-          const stageLeads = leads.filter(lead => (lead.status || 'new') === stage.key);
+          const stageLeads = leads.filter(lead =>
+            stage.key === 'contacted'
+              ? ['contacted', 'qualified'].includes(lead.status || 'new')
+              : (lead.status || 'new') === stage.key,
+          );
           const classes = toneClasses(stage.tone);
           return (
             <section

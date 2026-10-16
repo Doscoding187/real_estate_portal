@@ -1,12 +1,43 @@
 type LeadActivityLike = {
   type?: string | null;
   description?: string | null;
+  metadata?: string | Record<string, unknown> | null;
 };
+
+function activityMetadata(value: LeadActivityLike['metadata']): Record<string, unknown> | null {
+  if (value && typeof value === 'object') return value;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function titleCase(value: unknown) {
+  const text = String(value || '')
+    .replace(/_/g, ' ')
+    .trim();
+  return text ? text[0].toUpperCase() + text.slice(1) : '';
+}
 
 export function getLeadActivityPresentation(activity: LeadActivityLike) {
   const description = String(activity.description || '').trim();
   const isFollowUpCompletion =
     activity.type === 'note' && /^Follow-up completed(?:\.|\s|$)/i.test(description);
+
+  if (activity.type === 'contact_attempt') {
+    const metadata = activityMetadata(activity.metadata);
+    const channel = titleCase(metadata?.channel);
+    const outcome = titleCase(metadata?.outcome);
+    return {
+      label: [channel, outcome].filter(Boolean).join(' · ') || 'Contact attempt',
+      description: description || 'Contact attempt recorded.',
+      isFollowUpCompletion: false,
+      isViewingScheduled: false,
+    };
+  }
 
   if (!isFollowUpCompletion) {
     const agencyViewing =
@@ -47,9 +78,7 @@ export function getLeadActivityPresentation(activity: LeadActivityLike) {
     };
   }
 
-  const completionNote = description
-    .replace(/^Follow-up completed\.?\s*/i, '')
-    .trim();
+  const completionNote = description.replace(/^Follow-up completed\.?\s*/i, '').trim();
   const details = /^from agency workspace\.?$/i.test(completionNote)
     ? 'Completed in the agency workspace.'
     : completionNote || 'Follow-up marked complete.';
