@@ -38,7 +38,7 @@ export type DevelopmentHomeInventoryUnitType = {
   totalUnits: number;
   availableUnits: number;
   reservedUnits: number;
-  derivedSoldUnits: number;
+  unclassifiedRemainderUnits: number;
 };
 
 export type DevelopmentHomeInventoryWarning = {
@@ -61,7 +61,7 @@ export type DevelopmentHomeInventory = {
   totalUnits: number | null;
   availableUnits: number | null;
   reservedUnits: number | null;
-  derivedSoldUnits: number | null;
+  unclassifiedRemainderUnits: number | null;
   auctionTermsConfiguredCount: number;
   pricing:
     | { kind: 'sale' | 'rent'; from: number | null; to: number | null }
@@ -262,14 +262,14 @@ export function buildDevelopmentHomeInventory(
         totalUnits,
         availableUnits,
         reservedUnits,
-        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+        unclassifiedRemainderUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
       };
     }),
     activeUnitTypeCount: active.length,
     totalUnits: quantities?.total ?? null,
     availableUnits: quantities?.available ?? null,
     reservedUnits: quantities?.reserved ?? null,
-    derivedSoldUnits: quantities
+    unclassifiedRemainderUnits: quantities
       ? quantities.total - quantities.available - quantities.reserved
       : null,
     pricing,
