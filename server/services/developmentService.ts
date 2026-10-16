@@ -19,6 +19,7 @@ import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligi
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
+import { AuditActions } from '../_core/auditLog';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { publicDevelopmentDetailService } from './publicDevelopmentDetailService';
 import {
@@ -37,6 +38,7 @@ import {
   developmentDrafts,
   developmentApprovalQueue,
   developmentSupersessions,
+  managerialAuditLogs,
   leads,
   locations,
   distributionPrograms,
@@ -2135,6 +2137,7 @@ export async function updateDeveloperUnitAvailability(
   unitTypeId: string,
   userId: number,
   availableUnits: number,
+  reason: string,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -2143,6 +2146,14 @@ export async function updateDeveloperUnitAvailability(
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Available units must be a non-negative whole number.',
+    });
+  }
+
+  const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (normalizedReason.length < 10 || normalizedReason.length > 500) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Enter a reason between 10 and 500 characters.',
     });
   }
 
@@ -2215,10 +2226,32 @@ export async function updateDeveloperUnitAvailability(
       });
     }
 
+    const previousAvailableUnits = Math.max(0, Number(unit.availableUnits || 0));
+    if (availableUnits === previousAvailableUnits) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Choose a different availability count before saving.',
+      });
+    }
+
     await tx
       .update(unitTypes)
       .set({ availableUnits, updatedAt: mysqlDateTime() })
       .where(and(eq(unitTypes.id, unitTypeId), eq(unitTypes.developmentId, developmentId)));
+
+    await tx.insert(managerialAuditLogs).values({
+      actorUserId: userId,
+      action: AuditActions.DEVELOPER_UNIT_AVAILABILITY_UPDATED,
+      targetType: 'development',
+      targetId: developmentId,
+      beforeData: { availableUnits: previousAvailableUnits },
+      afterData: { availableUnits },
+      metadata: {
+        unitTypeId: unit.id,
+        unitTypeName: unit.name,
+        reason: normalizedReason,
+      },
+    });
 
     return {
       success: true as const,

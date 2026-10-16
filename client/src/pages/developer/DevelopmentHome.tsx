@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { formatReviewEventStatus } from '@/lib/developerStatusVocabulary';
 import { toast } from 'sonner';
@@ -164,12 +165,14 @@ export default function DevelopmentHome() {
   );
   const [editingInventoryUnitId, setEditingInventoryUnitId] = useState<string | null>(null);
   const [availableUnitsDraft, setAvailableUnitsDraft] = useState('');
+  const [availabilityReasonDraft, setAvailabilityReasonDraft] = useState('');
 
   const updateUnitAvailability = trpc.developer.updateUnitAvailability.useMutation({
     onSuccess: async result => {
       toast.success(`${result.unitType.name} availability updated.`);
       setEditingInventoryUnitId(null);
       setAvailableUnitsDraft('');
+      setAvailabilityReasonDraft('');
       await homeQuery.refetch();
     },
     onError: error => toast.error(error.message || 'Could not update availability.'),
@@ -203,6 +206,7 @@ export default function DevelopmentHome() {
   const openInventoryEditor = (unit: (typeof inventory.unitTypes)[number]) => {
     setEditingInventoryUnitId(unit.id);
     setAvailableUnitsDraft(String(unit.availableUnits));
+    setAvailabilityReasonDraft('');
   };
   const saveUnitAvailability = () => {
     if (!editingInventoryUnit) return;
@@ -212,14 +216,24 @@ export default function DevelopmentHome() {
       toast.error('Available units must be a non-negative whole number.');
       return;
     }
+    if (availableUnits === editingInventoryUnit.availableUnits) {
+      toast.error('Choose a different availability count before saving.');
+      return;
+    }
     if (availableUnits > maximumAvailable) {
       toast.error(`Available units cannot exceed ${maximumAvailable} for this unit type.`);
+      return;
+    }
+    const reason = availabilityReasonDraft.trim();
+    if (reason.length < 10 || reason.length > 500) {
+      toast.error('Enter a reason between 10 and 500 characters.');
       return;
     }
     updateUnitAvailability.mutate({
       developmentId: development.id,
       unitTypeId: editingInventoryUnit.id,
       availableUnits,
+      reason,
     });
   };
   const openLeads = (params: Record<string, string | number | undefined> = {}) => {
@@ -572,6 +586,37 @@ export default function DevelopmentHome() {
               ))}
             </ul>
           )}
+          <div className="space-y-2 border-t border-slate-100 pt-4">
+            <div>
+              <p className="text-sm font-medium text-slate-900">Recent availability changes</p>
+              <p className="text-sm text-slate-600">
+                The latest changes show who updated stock and the reason recorded.
+              </p>
+            </div>
+            {homeQuery.data.availabilityHistory.length > 0 ? (
+              <ol className="space-y-2" aria-label="Recent availability changes">
+                {homeQuery.data.availabilityHistory.map(event => (
+                  <li
+                    key={event.id}
+                    className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <p className="font-medium text-slate-900">
+                      {event.unitTypeName}: {event.previousAvailableUnits} → {event.availableUnits}{' '}
+                      available
+                    </p>
+                    <p className="text-slate-600">
+                      {event.actorName} · {formatTimestamp(event.createdAt)}
+                    </p>
+                    <p className="text-slate-700">{event.reason}</p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="rounded-md border border-dashed border-slate-200 px-3 py-2 text-sm text-slate-600">
+                No availability changes have been recorded yet.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -581,6 +626,7 @@ export default function DevelopmentHome() {
           if (!open && !updateUnitAvailability.isPending) {
             setEditingInventoryUnitId(null);
             setAvailableUnitsDraft('');
+            setAvailabilityReasonDraft('');
           }
         }}
       >
@@ -616,6 +662,19 @@ export default function DevelopmentHome() {
                   value={availableUnitsDraft}
                   onChange={event => setAvailableUnitsDraft(event.target.value)}
                 />
+              </label>
+              <label className="space-y-2 text-sm font-medium text-slate-900">
+                Reason for this change
+                <Textarea
+                  value={availabilityReasonDraft}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="For example, phase 1 stock was reconciled after a sale."
+                  onChange={event => setAvailabilityReasonDraft(event.target.value)}
+                />
+                <span className="block text-xs font-normal text-slate-500">
+                  Use 10–500 characters. This will appear in the development history.
+                </span>
               </label>
               {updateUnitAvailability.error ? (
                 <p role="alert" className="text-sm text-rose-700">

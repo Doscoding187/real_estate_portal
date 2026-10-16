@@ -70,6 +70,9 @@ export const AuditActions = {
   APPROVE_PROPERTY: 'approve_property',
   REJECT_PROPERTY: 'reject_property',
 
+  // Developer operations
+  DEVELOPER_UNIT_AVAILABILITY_UPDATED: 'developer_unit_availability_updated',
+
   // Agency admin actions
   INVITE_AGENT: 'invite_agent',
   APPROVE_JOIN_REQUEST: 'approve_join_request',
