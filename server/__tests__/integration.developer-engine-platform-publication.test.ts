@@ -673,7 +673,9 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
   it('updates live inventory and records the actor, unit, before/after values and reason', async () => {
     const developerUserId = await insertUser('property_developer');
     const developerIdentity = await insertDeveloperIdentity(developerUserId);
-    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId);
+    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId, {
+      images: [],
+    });
     const db = await database();
     await db
       .update(developments)

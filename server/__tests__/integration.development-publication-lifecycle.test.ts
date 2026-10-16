@@ -337,6 +337,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       developmentId,
       unitTypeId: unit.id,
       availableUnits: 7,
+      reason: 'Reconciled available stock after confirming a contracted unit.',
     });
 
     expect(result).toMatchObject({
@@ -375,6 +376,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         developmentId,
         unitTypeId: unit.id,
         availableUnits: 6,
+        reason: 'Attempted update by a developer outside this development.',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
