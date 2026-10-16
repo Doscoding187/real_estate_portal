@@ -19,6 +19,7 @@ import {
   developerOrganisations,
   developments,
   leads,
+  managerialAuditLogs,
   notifications,
   subscriptions,
   unitTypes,
@@ -167,6 +168,9 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       if (fixture.developerContext) {
         await deleteDeveloperTestContext(fixture.developerContext);
       }
+      await db
+        .delete(managerialAuditLogs)
+        .where(eq(managerialAuditLogs.actorUserId, fixture.userId));
       await db.delete(users).where(eq(users.id, fixture.userId));
     }
   });
@@ -337,6 +341,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       developmentId,
       unitTypeId: unit.id,
       availableUnits: 7,
+      reason: 'Reconciled available stock after confirming a contracted unit.',
     });
 
     expect(result).toMatchObject({
@@ -375,6 +380,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         developmentId,
         unitTypeId: unit.id,
         availableUnits: 6,
+        reason: 'Attempted update by a developer outside this development.',
       }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 

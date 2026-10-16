@@ -136,6 +136,7 @@ function homeData(overrides: Record<string, unknown> = {}) {
       eligiblePartnerCount: null,
       manageHref: null,
     },
+    availabilityHistory: [],
     range: '30d',
   };
 }
@@ -240,6 +241,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
 
     expect(screen.getByText('Live availability by unit type')).toBeInTheDocument();
     expect(screen.getByText('4 available of 10 · 2 reserved · 4 sold')).toBeInTheDocument();
+    expect(screen.getByText('No availability changes have been recorded yet.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Update availability' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
@@ -249,11 +251,47 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     fireEvent.change(input, { target: { value: '3' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save availability' }));
 
+    expect(updateUnitAvailabilityMutationMock.mutate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole('textbox', { name: /^Reason for this change/ }), {
+      target: { value: 'Reconciled phase one availability after a confirmed sale.' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save availability' }));
+
     expect(updateUnitAvailabilityMutationMock.mutate).toHaveBeenCalledWith({
       developmentId: 42,
       unitTypeId: 'unit-type-1',
       availableUnits: 3,
+      reason: 'Reconciled phase one availability after a confirmed sale.',
     });
+  });
+
+  it('shows the actor, inventory change and recorded reason in the development history', () => {
+    homeQueryMock.mockReturnValue({
+      data: {
+        ...homeData(),
+        availabilityHistory: [
+          {
+            id: 17,
+            actorName: 'Edward Banda',
+            createdAt: '2026-10-16T08:30:00.000Z',
+            unitTypeId: 'unit-type-1',
+            unitTypeName: 'Two Bedroom Apartment',
+            previousAvailableUnits: 4,
+            availableUnits: 3,
+            reason: 'Reconciled stock after a confirmed sale.',
+          },
+        ],
+      },
+      error: null,
+      isLoading: false,
+      refetch: refetchMock,
+    });
+
+    render(<DevelopmentHome />);
+    expect(screen.getByText('Two Bedroom Apartment: 4 → 3 available')).toBeInTheDocument();
+    expect(screen.getByText(/^Edward Banda · /)).toBeInTheDocument();
+    expect(screen.getByText('Reconciled stock after a confirmed sale.')).toBeInTheDocument();
   });
 
   it('shows per-unit-type auction configuration without inventing an auction window or reserve', () => {
