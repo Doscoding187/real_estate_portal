@@ -43,6 +43,7 @@ import {
   developerOrganisations,
   users,
   unitTypes,
+  managerialAuditLogs,
 } from '../drizzle/schema';
 import { eq, desc, and, or, sql } from 'drizzle-orm';
 import {
@@ -74,6 +75,7 @@ import {
   type DeveloperOperatingHomeScope,
 } from './services/developerOperatingHome';
 import { getDeveloperPublicationAccess } from './services/developerPublicationAccess';
+import { AuditActions } from './_core/auditLog';
 import type { DeveloperPublicationAccess } from './services/developerPublicationAccess';
 import {
   confirmDeveloperMediaUpload,
@@ -109,6 +111,13 @@ export const DevelopmentHomeInputSchema = z
     range: z.enum(['7d', '30d', '90d']),
   })
   .strict();
+
+export const UpdateUnitAvailabilityInputSchema = z.object({
+  developmentId: z.number().int().positive(),
+  unitTypeId: z.string().min(1).max(36),
+  availableUnits: z.number().int().min(0),
+  reason: z.string().trim().min(10).max(500),
+});
 
 export const DeveloperOperatingHomeInputSchema = z
   .object({
@@ -1883,13 +1892,7 @@ export const developerRouter = router({
     }),
 
   updateUnitAvailability: protectedProcedure
-    .input(
-      z.object({
-        developmentId: z.number().int().positive(),
-        unitTypeId: z.string().min(1).max(36),
-        availableUnits: z.number().int().min(0),
-      }),
-    )
+    .input(UpdateUnitAvailabilityInputSchema)
     .mutation(async ({ ctx, input }) => {
       await resolveOperatingIdentity(ctx, { mode: 'developer' });
       return await developmentService.updateDeveloperUnitAvailability(
@@ -1897,6 +1900,7 @@ export const developerRouter = router({
         input.unitTypeId,
         requireUser(ctx).id,
         input.availableUnits,
+        input.reason,
       );
     }),
 
@@ -2090,6 +2094,71 @@ export const developerRouter = router({
         db: dbConn,
         developmentId: row.id,
       });
+      const availabilityAuditRows = await dbConn
+        .select({
+          id: managerialAuditLogs.id,
+          beforeData: managerialAuditLogs.beforeData,
+          afterData: managerialAuditLogs.afterData,
+          metadata: managerialAuditLogs.metadata,
+          createdAt: managerialAuditLogs.createdAt,
+          actorName: users.name,
+        })
+        .from(managerialAuditLogs)
+        .leftJoin(users, eq(managerialAuditLogs.actorUserId, users.id))
+        .where(
+          and(
+            eq(managerialAuditLogs.action, AuditActions.DEVELOPER_UNIT_AVAILABILITY_UPDATED),
+            eq(managerialAuditLogs.targetType, 'development'),
+            eq(managerialAuditLogs.targetId, row.id),
+          ),
+        )
+        .orderBy(desc(managerialAuditLogs.createdAt), desc(managerialAuditLogs.id))
+        .limit(20);
+      const availabilityHistory = availabilityAuditRows.flatMap(event => {
+        try {
+          const toJsonRecord = (value: unknown): Record<string, unknown> | null => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+              return value as Record<string, unknown>;
+            }
+            if (typeof value !== 'string') return null;
+            const parsed: unknown = JSON.parse(value);
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+              ? (parsed as Record<string, unknown>)
+              : null;
+          };
+          const metadata = toJsonRecord(event.metadata);
+          const beforeData = toJsonRecord(event.beforeData);
+          const afterData = toJsonRecord(event.afterData);
+          if (
+            !metadata ||
+            !beforeData ||
+            !afterData ||
+            typeof metadata.unitTypeId !== 'string' ||
+            typeof metadata.unitTypeName !== 'string' ||
+            typeof metadata.reason !== 'string' ||
+            typeof beforeData.availableUnits !== 'number' ||
+            !Number.isInteger(beforeData.availableUnits) ||
+            typeof afterData.availableUnits !== 'number' ||
+            !Number.isInteger(afterData.availableUnits)
+          ) {
+            return [];
+          }
+          return [
+            {
+              id: event.id,
+              actorName: event.actorName || 'Workspace operator',
+              createdAt: event.createdAt,
+              unitTypeId: metadata.unitTypeId,
+              unitTypeName: metadata.unitTypeName,
+              previousAvailableUnits: beforeData.availableUnits,
+              availableUnits: afterData.availableUnits,
+              reason: metadata.reason,
+            },
+          ];
+        } catch {
+          return [];
+        }
+      });
 
       return {
         development: {
@@ -2123,6 +2192,7 @@ export const developerRouter = router({
         demand: leadSummary.demand,
         funnel: leadSummary.funnel,
         inventory,
+        availabilityHistory,
         attention,
         publication: {
           publicEligible: isDevelopmentHomePublicEligible({ ...row, commercialEligible }),

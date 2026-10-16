@@ -1,9 +1,10 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
+  managerialAuditLogs,
   developerOrganisationMemberships,
   developerOrganisations,
   developmentApprovalQueue,
@@ -15,6 +16,7 @@ import {
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import { developerIdentityService } from '../services/developerIdentityService';
 import { developmentService } from '../services/developmentService';
+import { AuditActions } from '../_core/auditLog';
 import { capturePublicLead } from '../services/publicLeadCaptureService';
 import {
   acquireDevelopmentIntegrationMutex,
@@ -310,6 +312,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
 
     const userIds = uniqueNumbers(createdState.userIds);
     if (userIds.length) {
+      await db.delete(managerialAuditLogs).where(inArray(managerialAuditLogs.actorUserId, userIds));
       await db.delete(users).where(inArray(users.id, userIds));
     }
 
@@ -655,6 +658,7 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
         unit.id,
         developerUserId,
         Math.max(0, Number(unit.availableUnits) - 1),
+        'Availability correction submitted for the land rejection test.',
       ),
     ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
 
@@ -664,6 +668,77 @@ describeWithDb('Developer Engine platform-curated publication authority integrat
       .where(eq(unitTypes.id, unit.id))
       .limit(1);
     expect(after).toEqual(unit);
+  });
+
+  it('updates live inventory and records the actor, unit, before/after values and reason', async () => {
+    const developerUserId = await insertUser('property_developer');
+    const developerIdentity = await insertDeveloperIdentity(developerUserId);
+    const developmentId = await insertDevelopment(developerUserId, developerIdentity.publisherId);
+    const db = await database();
+    await db
+      .update(developments)
+      .set({
+        approvalStatus: 'approved',
+        isPublished: 1,
+        publishedAt: '2026-09-15 12:00:00',
+      })
+      .where(eq(developments.id, developmentId));
+    const [unit] = await db
+      .select({ id: unitTypes.id, name: unitTypes.name, availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(eq(unitTypes.developmentId, developmentId))
+      .limit(1);
+    if (!unit) throw new Error('Expected the development fixture to contain one active unit type');
+
+    const nextAvailability = Number(unit.availableUnits) - 1;
+    await expect(
+      developmentService.updateDeveloperUnitAvailability(
+        developmentId,
+        unit.id,
+        developerUserId,
+        nextAvailability,
+        'Reconciled availability after confirming a contracted unit.',
+      ),
+    ).resolves.toMatchObject({ success: true, unitType: { availableUnits: nextAvailability } });
+
+    const [updatedUnit] = await db
+      .select({ availableUnits: unitTypes.availableUnits })
+      .from(unitTypes)
+      .where(eq(unitTypes.id, unit.id))
+      .limit(1);
+    const events = await db
+      .select()
+      .from(managerialAuditLogs)
+      .where(
+        and(
+          eq(managerialAuditLogs.action, AuditActions.DEVELOPER_UNIT_AVAILABILITY_UPDATED),
+          eq(managerialAuditLogs.targetType, 'development'),
+          eq(managerialAuditLogs.targetId, developmentId),
+          eq(managerialAuditLogs.actorUserId, developerUserId),
+        ),
+      );
+
+    expect(Number(updatedUnit.availableUnits)).toBe(nextAvailability);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      beforeData: { availableUnits: Number(unit.availableUnits) },
+      afterData: { availableUnits: nextAvailability },
+      metadata: {
+        unitTypeId: unit.id,
+        unitTypeName: unit.name,
+        reason: 'Reconciled availability after confirming a contracted unit.',
+      },
+    });
+
+    await expect(
+      developmentService.updateDeveloperUnitAvailability(
+        developmentId,
+        unit.id,
+        developerUserId,
+        nextAvailability,
+        'No further change was required for this unit type.',
+      ),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 
   it('completes one legacy curated submission through privileged publication without duplicating audit history', async () => {
