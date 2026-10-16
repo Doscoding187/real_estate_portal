@@ -94,6 +94,7 @@ export default function DeveloperRoutes() {
   });
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
+  const developerApproved = status?.profileStatus === 'approved';
   const commercialAvailability = useCommercialProductAvailability('developer_launch_access');
   const hasPublisherContext = !!publisherContext?.cataloguePublisherId;
   const pathname =
@@ -182,13 +183,19 @@ export default function DeveloperRoutes() {
         <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="font-semibold">
             {commercialAvailability.isAvailable
-              ? 'Developer Launch Access is available after organisation approval'
-              : 'Prepare your development portfolio'}
+              ? developerApproved
+                ? 'Launch Access is available'
+                : 'Launch Access is available after organisation approval'
+              : developerApproved
+                ? 'Private Developer Workspace'
+                : 'Prepare your development portfolio'}
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             {commercialAvailability.isAvailable
-              ? 'Launch Access uses a once-off R1,499 invoice for 90 days with no automatic renewal. Organisation approval and verified finance payment still determine entitlement.'
-              : 'Save private drafts and return to continue preparing your inventory. Marketplace publishing requires profile approval and the required commercial activation.'}
+              ? 'Launch Access uses a once-off R1,499 invoice for 90 days with no automatic renewal. Organisation approval and verified finance payment still determine public publication eligibility.'
+              : developerApproved
+                ? 'Your private workspace is available for drafts, development details, and enquiries. Public marketplace publication requires active Launch Access.'
+                : 'Save private drafts and return to continue preparing your inventory. Public marketplace publication requires organisation approval and active Launch Access.'}
           </p>
           <div className="mt-3 flex gap-4 text-sm font-semibold underline">
             <a href="/developer/create-development">Prepare a development</a>
