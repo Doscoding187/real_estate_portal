@@ -650,8 +650,6 @@ describeWithDb('agency deal engine persisted workflow', () => {
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
-    const db = await getDb();
-    if (!db) throw new Error('Database not available');
     const [transaction] = await db
       .select()
       .from(agencyTransactions)
