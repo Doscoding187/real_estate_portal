@@ -19,6 +19,7 @@ import {
   developerOrganisations,
   developments,
   leads,
+  managerialAuditLogs,
   notifications,
   subscriptions,
   unitTypes,
@@ -167,6 +168,9 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       if (fixture.developerContext) {
         await deleteDeveloperTestContext(fixture.developerContext);
       }
+      await db
+        .delete(managerialAuditLogs)
+        .where(eq(managerialAuditLogs.actorUserId, fixture.userId));
       await db.delete(users).where(eq(users.id, fixture.userId));
     }
   });
