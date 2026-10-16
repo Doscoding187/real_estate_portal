@@ -307,4 +307,54 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       }
     }
   });
+
+  it('keeps phase records out of aggregate writes without allowing array replacement', async () => {
+    if (skipTests) return;
+
+    let developerContext: DeveloperTestContext | null = null;
+
+    try {
+      const developer = await createTestDeveloper(Math.floor(Math.random() * 10000));
+      developerContext = developer;
+
+      await expect(
+        developmentService.createDevelopment(developer.userId, {
+          name: 'Rejected phase payload',
+          developmentType: 'residential',
+          city: 'Test City',
+          province: 'Test Province',
+          phases: [{ name: 'Phase 1', phaseNumber: 1 }],
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+      const development = await developmentService.createDevelopment(developer.userId, {
+        name: 'Phase preservation test',
+        developmentType: 'residential',
+        city: 'Test City',
+        province: 'Test Province',
+      });
+      const phase = await developmentService.createPhase(development.id, developer.userId, {
+        name: 'Phase 1',
+        phaseNumber: 1,
+        status: 'planning',
+      });
+
+      await developmentService.updateDevelopment(development.id, developer.userId, { phases: [] });
+      await expect(
+        developmentService.updateDevelopment(development.id, developer.userId, {
+          phases: [{ id: phase.id, name: 'Replaced phase', phaseNumber: 1 }],
+        }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
+      const afterRejectedUpdate = await developmentService.getDevelopmentWithPhases(development.id);
+      expect(
+        afterRejectedUpdate?.phases.map((existingPhase: { id: number }) => existingPhase.id),
+      ).toEqual([phase.id]);
+      expect(afterRejectedUpdate?.phases[0]).not.toHaveProperty('media');
+    } finally {
+      if (developerContext) {
+        await cleanupTestData(developerContext);
+      }
+    }
+  });
 });

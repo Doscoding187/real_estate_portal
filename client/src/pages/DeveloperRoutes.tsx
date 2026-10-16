@@ -4,7 +4,6 @@ import { DeveloperLayout } from '@/components/developer/DeveloperLayout';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { usePublisherContext } from '@/hooks/usePublisherContext';
 import { useDeveloperOnboardingStatus } from '@/hooks/useDeveloperOnboardingStatus';
-import { useCommercialProductAvailability } from '@/hooks/useCommercialProductAvailability';
 import { getAccountAuthHref } from '@/lib/publicNavigation';
 
 // Import content components
@@ -94,7 +93,6 @@ export default function DeveloperRoutes() {
   });
   const isSuperAdmin = user?.role === 'super_admin';
   const isDeveloper = user?.role === 'property_developer';
-  const commercialAvailability = useCommercialProductAvailability('developer_launch_access');
   const hasPublisherContext = !!publisherContext?.cataloguePublisherId;
   const pathname =
     typeof window !== 'undefined' ? window.location.pathname : '/developer/dashboard';
@@ -178,27 +176,6 @@ export default function DeveloperRoutes() {
 
   return (
     <DeveloperLayout>
-      {isDeveloper ? (
-        <section className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
-          <h2 className="font-semibold">
-            {commercialAvailability.isAvailable
-              ? 'Developer Launch Access is available after organisation approval'
-              : 'Prepare your development portfolio'}
-          </h2>
-          <p className="mt-1 text-sm text-slate-600">
-            {commercialAvailability.isAvailable
-              ? 'Launch Access uses a once-off R1,499 invoice for 90 days with no automatic renewal. Organisation approval and verified finance payment still determine entitlement.'
-              : 'Save private drafts and return to continue preparing your inventory. Marketplace publishing requires profile approval and the required commercial activation.'}
-          </p>
-          <div className="mt-3 flex gap-4 text-sm font-semibold underline">
-            <a href="/developer/create-development">Prepare a development</a>
-            <a href="/developer/drafts">Resume drafts</a>
-            {commercialAvailability.isAvailable ? (
-              <a href="/developer/plans">Open Launch Access</a>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
       <Switch>
         {/* Main */}
         <Route path="/developer" component={Overview} />

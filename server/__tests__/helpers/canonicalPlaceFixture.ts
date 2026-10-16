@@ -33,7 +33,7 @@ export async function canonicalPlaceFixtureLocation(address = '1 Integration Fix
     identities[0].lifecycleStatus !== 'active'
   ) {
     throw new Error(
-      'Required admitted North Riding Place fixture is missing or inactive; run governed za-gp Place prepare and verify.',
+      'Canonical North Riding Place data is missing or inactive in this disposable database; run governed za-gp Place prepare and verify.',
     );
   }
   const street = /^(\S+)\s+(.+)$/.exec(address);
@@ -59,7 +59,7 @@ export async function canonicalPlaceFixtureLocation(address = '1 Integration Fix
     assignment.labels.province !== 'Gauteng'
   ) {
     throw new Error(
-      'Required admitted North Riding fixture has unexpected governed identity or containment.',
+      'Canonical North Riding Place resolved to an unexpected identity or locality/province scope.',
     );
   }
   return location;
