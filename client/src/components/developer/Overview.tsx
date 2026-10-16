@@ -264,19 +264,41 @@ export default function Overview() {
       )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <StatCard label="Developments" value={portfolio.developmentCount} icon={<Building2 />} />
+        <StatCard
+          label="Developments"
+          value={portfolio.developmentCount}
+          icon={<Building2 />}
+          actionLabel="Open all developments"
+          onClick={() => setLocation('/developer/developments')}
+        />
         <StatCard
           label="Ready to progress"
           value={portfolio.readiness.readyDevelopmentCount}
           icon={<CheckCircle2 />}
+          actionLabel="Open developments ready to progress"
+          onClick={() => setLocation('/developer/developments?filter=ready')}
         />
         <StatCard
           label="Units available"
           value={portfolio.inventory.availableUnits}
           icon={<PackageOpen />}
+          actionLabel="Open developments with available inventory"
+          onClick={() => setLocation('/developer/developments?filter=available')}
         />
-        <StatCard label="Open leads" value={portfolio.leads.openLeadCount} icon={<Users />} />
-        <StatCard label="Attention items" value={portfolio.attentionCount} icon={<Clock3 />} />
+        <StatCard
+          label="Open leads"
+          value={portfolio.leads.openLeadCount}
+          icon={<Users />}
+          actionLabel="Open developer leads"
+          onClick={() => setLocation('/developer/leads')}
+        />
+        <StatCard
+          label="Attention items"
+          value={portfolio.attentionCount}
+          icon={<Clock3 />}
+          actionLabel="Open developments needing attention"
+          onClick={() => setLocation('/developer/developments?filter=attention')}
+        />
       </div>
 
       <Card>
@@ -373,21 +395,32 @@ function StatCard({
   label,
   value,
   icon,
+  actionLabel,
+  onClick,
 }: {
   label: string;
   value: number | null | undefined;
   icon: ReactNode;
+  actionLabel: string;
+  onClick: () => void;
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between p-4">
-        <div>
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className="mt-1 text-2xl font-semibold">{formatNumber(value)}</p>
-        </div>
-        <span className="text-blue-600">{icon}</span>
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      className="group w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+      aria-label={`${label}: ${formatNumber(value)}. ${actionLabel}.`}
+      onClick={onClick}
+    >
+      <Card className="h-full transition-colors group-hover:border-blue-300 group-focus-visible:border-blue-500">
+        <CardContent className="flex items-center justify-between p-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="mt-1 text-2xl font-semibold">{formatNumber(value)}</p>
+          </div>
+          <span className="text-blue-600">{icon}</span>
+        </CardContent>
+      </Card>
+    </button>
   );
 }
 

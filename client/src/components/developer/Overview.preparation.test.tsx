@@ -87,4 +87,24 @@ describe('Developer workspace preparation boundary', () => {
 
     expect(state.setLocation).toHaveBeenCalledWith('/developer/developments');
   });
+
+  it('opens the relevant work from portfolio summary metrics', () => {
+    render(<Overview />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Ready to progress: 1/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Units available: 12/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Open leads: 0/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Attention items: 0/ }));
+
+    expect(state.setLocation).toHaveBeenNthCalledWith(1, '/developer/developments?filter=ready');
+    expect(state.setLocation).toHaveBeenNthCalledWith(
+      2,
+      '/developer/developments?filter=available',
+    );
+    expect(state.setLocation).toHaveBeenNthCalledWith(3, '/developer/leads');
+    expect(state.setLocation).toHaveBeenNthCalledWith(
+      4,
+      '/developer/developments?filter=attention',
+    );
+  });
 });
