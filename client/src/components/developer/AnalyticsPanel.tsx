@@ -182,6 +182,92 @@ export default function AnalyticsPanel() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Lead progress by development</CardTitle>
+          <CardDescription>
+            Counts cover enquiries captured during the selected period. CRM stages show their
+            current recorded state; “Marked won” is a lead outcome, not a completed property sale.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-left text-sm">
+              <thead>
+                <tr className="border-b text-xs uppercase tracking-wide text-muted-foreground">
+                  <th scope="col" className="pb-3 pr-4 font-medium">
+                    Development
+                  </th>
+                  <th scope="col" className="pb-3 px-3 font-medium">
+                    Enquiries
+                  </th>
+                  <th scope="col" className="pb-3 px-3 font-medium">
+                    Open leads
+                  </th>
+                  <th scope="col" className="pb-3 px-3 font-medium">
+                    SLA attention
+                  </th>
+                  <th scope="col" className="pb-3 px-3 font-medium">
+                    Marked won
+                  </th>
+                  <th scope="col" className="pb-3 pl-3 text-right font-medium">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {home.developments.map(development => {
+                  const developmentLeads = development.leads;
+                  const slaAttentionCount =
+                    developmentLeads.slaWarningCount + developmentLeads.slaBreachCount;
+
+                  return (
+                    <tr key={development.identity.id} className="border-b last:border-0">
+                      <th scope="row" className="py-3 pr-4 font-medium text-slate-950">
+                        <span className="block">{development.identity.name}</span>
+                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                          {development.identity.location.city},{' '}
+                          {development.identity.location.province}
+                        </span>
+                      </th>
+                      <td className="px-3 py-3 tabular-nums">
+                        {formatNumber(developmentLeads.capturedLeadCount)}
+                      </td>
+                      <td className="px-3 py-3 tabular-nums">
+                        {formatNumber(developmentLeads.openLeadCount)}
+                      </td>
+                      <td className="px-3 py-3 tabular-nums">
+                        <span className="block">{formatNumber(slaAttentionCount)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatNumber(developmentLeads.slaBreachCount)} overdue
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 tabular-nums">
+                        {formatNumber(developmentLeads.stageCounts.closedWon)}
+                      </td>
+                      <td className="py-3 pl-3 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label={`View leads for ${development.identity.name}`}
+                          onClick={() =>
+                            setLocation(
+                              `/developer/leads?developmentId=${development.identity.id}&range=${timeRange}`,
+                            )
+                          }
+                        >
+                          View leads <ArrowUpRight className="ml-2 h-3.5 w-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
