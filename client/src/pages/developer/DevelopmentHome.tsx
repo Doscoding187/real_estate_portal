@@ -486,12 +486,16 @@ export default function DevelopmentHome() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-600">Derived aggregate sold</dt>
+                  <dt className="text-slate-600">Unclassified remainder</dt>
                   <dd className="font-semibold text-slate-950">
-                    {inventory.derivedSoldUnits ?? 'Not available'}
+                    {inventory.unclassifiedRemainderUnits ?? 'Not available'}
                   </dd>
                 </div>
               </dl>
+              <p className="text-xs text-slate-600">
+                This is total inventory minus units marked available or reserved. It may include
+                sold, withdrawn, or otherwise unavailable units; it is not a sales count.
+              </p>
               {inventory.availableUnits === 0 && (
                 <p className="text-sm text-amber-800">0 aggregate units are marked available.</p>
               )}
@@ -541,7 +545,8 @@ export default function DevelopmentHome() {
                           <p className="font-medium text-slate-900">{unit.name}</p>
                           <p className="text-sm text-slate-600">
                             {unit.availableUnits} available of {unit.totalUnits} ·{' '}
-                            {unit.reservedUnits} reserved · {unit.derivedSoldUnits} sold
+                            {unit.reservedUnits} reserved · {unit.unclassifiedRemainderUnits}{' '}
+                            unclassified
                           </p>
                         </div>
                         {lifecycleState === 'live' && unit.id ? (

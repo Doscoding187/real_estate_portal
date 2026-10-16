@@ -345,7 +345,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
         id: unit.id,
         availableUnits: 7,
         reservedUnits: 1,
-        derivedSoldUnits: 2,
+        unclassifiedRemainderUnits: 2,
       },
     });
 

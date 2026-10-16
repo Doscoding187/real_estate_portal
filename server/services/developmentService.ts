@@ -2222,7 +2222,7 @@ export async function updateDeveloperUnitAvailability(
         totalUnits,
         availableUnits,
         reservedUnits,
-        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+        unclassifiedRemainderUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
       },
     };
   });
