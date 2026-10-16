@@ -124,6 +124,7 @@ import {
   leadStatusTimestamps,
   validateLeadTransition,
 } from './services/leadTransitionService';
+import { requireAgentLeadOfferReadiness } from './services/agentLeadOfferReadinessService';
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
@@ -386,7 +387,7 @@ const createOfferVersionInputSchema = z.object({
   dealId: z.number().int().positive(),
   actor: offerActorSchema.default('buyer'),
   eventType: offerEventTypeSchema.default('buyer_counter'),
-  status: offerStatusSchema.default('draft'),
+  status: z.enum(['draft', 'submitted']).default('draft'),
   parentOfferVersionId: z.number().int().positive().optional().nullable(),
   terms: offerTermsInputSchema,
   note: z.string().trim().max(2000).optional(),
@@ -5043,7 +5044,17 @@ export const agencyRouter = router({
       }
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
-      validateLeadTransition(lead, input.status, { lostReason: input.lostReason });
+      const needsOfferReadiness =
+        input.status !== lead.status &&
+        (input.status === 'offer_sent' ||
+          (input.status === 'converted' && lead.status !== 'offer_sent'));
+      const offerReadiness = needsOfferReadiness
+        ? await requireAgentLeadOfferReadiness(db, lead)
+        : null;
+      validateLeadTransition(lead, input.status, {
+        lostReason: input.lostReason,
+        qualificationConfirmed: Boolean(offerReadiness?.readiness.affordabilityConfirmed),
+      });
       const now = nowAsDbTimestamp();
 
       await db
@@ -6238,7 +6249,6 @@ export const agencyRouter = router({
       });
     }
 
-    const now = nowAsDbTimestamp();
     let dealId = 0;
     let offerVersionId: number | null = null;
     const stage = input.terms ? 'draft_offer' : 'interest';
@@ -6282,20 +6292,10 @@ export const agencyRouter = router({
         offerVersionId = insertResultId(offerInsert);
       }
 
-      await tx
-        .update(leads)
-        .set({
-          status: 'offer_sent',
-          funnelStage: 'offer',
-          updatedAt: now,
-          lastContactedAt: context.lead.lastContactedAt || now,
-        } as any)
-        .where(and(eq(leads.id, context.lead.id), eq(leads.agencyId, agencyId)));
-
       await tx.insert(leadActivities).values({
         leadId: context.lead.id,
         userId: user.id,
-        type: 'status_change',
+        type: 'note',
         description:
           input.notes ||
           `Deal opened from ${context.sourceViewing ? 'completed viewing' : 'agency lead'} with ${input.interestStatus.replace(/_/g, ' ')} interest.`,
@@ -6339,13 +6339,54 @@ export const agencyRouter = router({
         });
       }
 
-      const versionNumber = await getNextOfferVersionNumber(db, agencyId, deal.id);
       const nextDeadline = input.terms.offerExpiry
         ? parseOptionalDbTimestamp(input.terms.offerExpiry)
         : deal.nextDeadline;
+      let versionNumber = 0;
       let offerVersionId = 0;
 
       await db.transaction(async tx => {
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
+        versionNumber = await getNextOfferVersionNumber(tx, agencyId, deal.id);
+
+        let leadStatusChangedFrom: string | null = null;
+        if (input.status === 'submitted' && deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+
+          if (lead.status !== 'offer_sent') {
+            const offerReadiness = await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'offer_sent', {
+              qualificationConfirmed: offerReadiness.readiness.affordabilityConfirmed,
+            });
+            const now = nowAsDbTimestamp();
+            await tx
+              .update(leads)
+              .set({
+                status: 'offer_sent',
+                updatedAt: now,
+                ...leadStatusTimestamps(lead, 'offer_sent', now),
+              })
+              .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
+            leadStatusChangedFrom = String(lead.status);
+          }
+        }
+
         if (versionNumber > 1 && input.eventType.includes('counter')) {
           await tx
             .update(agencyDealOfferVersions)
@@ -6390,10 +6431,11 @@ export const agencyRouter = router({
           await tx.insert(leadActivities).values({
             leadId: deal.leadId,
             userId: user.id,
-            type: 'note',
-            description:
-              input.note ||
-              `Offer V${versionNumber} recorded: ${input.eventType.replace(/_/g, ' ')}.`,
+            type: leadStatusChangedFrom ? 'status_change' : 'note',
+            description: leadStatusChangedFrom
+              ? `Lead moved from ${leadStatusChangedFrom} to offer_sent when Offer V${versionNumber} was submitted.`
+              : input.note ||
+                `Offer V${versionNumber} recorded: ${input.eventType.replace(/_/g, ' ')}.`,
           });
         }
       });
@@ -6429,13 +6471,73 @@ export const agencyRouter = router({
       }
 
       const now = nowAsDbTimestamp();
+      let leadStatusChangedFrom: string | null = null;
       await db.transaction(async tx => {
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
+        const [submittedOffer] = await tx
+          .select()
+          .from(agencyDealOfferVersions)
+          .where(
+            and(
+              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+              eq(agencyDealOfferVersions.dealId, deal.id),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        if (!submittedOffer) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Offer version not found' });
+        }
+        if (!['draft', 'countered'].includes(String(submittedOffer.status || ''))) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only draft or countered offer versions can be submitted.',
+          });
+        }
+
+        if (deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+
+          if (lead.status !== 'offer_sent') {
+            const offerReadiness = await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'offer_sent', {
+              qualificationConfirmed: offerReadiness.readiness.affordabilityConfirmed,
+            });
+            await tx
+              .update(leads)
+              .set({
+                status: 'offer_sent',
+                updatedAt: now,
+                ...leadStatusTimestamps(lead, 'offer_sent', now),
+              })
+              .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
+            leadStatusChangedFrom = String(lead.status);
+          }
+        }
+
         await tx
           .update(agencyDealOfferVersions)
           .set({ status: 'submitted', submittedAt: now, updatedAt: now } as any)
           .where(
             and(
-              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.id, submittedOffer.id),
               eq(agencyDealOfferVersions.agencyId, agencyId),
             ),
           );
@@ -6444,7 +6546,7 @@ export const agencyRouter = router({
           .set({
             stage: 'submitted',
             nextAction: 'Record seller decision or counter-offer',
-            nextDeadline: offer.offerExpiry,
+            nextDeadline: submittedOffer.offerExpiry,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6453,8 +6555,10 @@ export const agencyRouter = router({
           await tx.insert(leadActivities).values({
             leadId: deal.leadId,
             userId: user.id,
-            type: 'status_change',
-            description: input.note || `Offer V${offer.versionNumber} submitted for decision.`,
+            type: leadStatusChangedFrom ? 'status_change' : 'note',
+            description: leadStatusChangedFrom
+              ? `Lead moved from ${leadStatusChangedFrom} to offer_sent when Offer V${submittedOffer.versionNumber} was submitted.`
+              : input.note || `Offer V${submittedOffer.versionNumber} submitted for decision.`,
           });
         }
       });
@@ -6492,10 +6596,10 @@ export const agencyRouter = router({
         };
       }
 
-      if (['rejected', 'withdrawn', 'expired'].includes(String(offer.status || ''))) {
+      if (!['submitted', 'under_review'].includes(String(offer.status || ''))) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Rejected, withdrawn, or expired offer versions cannot be accepted.',
+          message: 'Only submitted or under-review offer versions can be accepted.',
         });
       }
 
@@ -6513,12 +6617,21 @@ export const agencyRouter = router({
       const now = nowAsDbTimestamp();
       let transactionId = 0;
       let idempotentAcceptance = false;
+      let lockedLead: typeof leads.$inferSelect | null = null;
 
       await db.transaction(async tx => {
         // Serialize acceptance on the deal row. The preflight read above is
         // advisory; concurrent acceptors must re-check the unique transaction
         // authority while holding the same lock before mutating offer state.
-        await tx.execute(sql`SELECT id FROM agency_deals WHERE id = ${deal.id} FOR UPDATE`);
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
         const [existingTransactionInLock] = await tx
           .select({ id: agencyTransactions.id })
           .from(agencyTransactions)
@@ -6530,6 +6643,23 @@ export const agencyRouter = router({
           transactionId = Number(existingTransactionInLock.id);
           idempotentAcceptance = true;
           return;
+        }
+
+        if (deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+          lockedLead = lead;
+          if (lead.status !== 'offer_sent' && lead.status !== 'converted') {
+            await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'converted');
+          }
         }
 
         await tx
@@ -6636,10 +6766,9 @@ export const agencyRouter = router({
           })) as any,
         );
 
-        if (deal.leadId) {
-          const [lead] = await tx.select().from(leads).where(eq(leads.id, deal.leadId)).limit(1);
-          if (lead) {
-            await tx.insert(agencyTransactionParties).values({
+        if (deal.leadId && lockedLead) {
+          const lead = lockedLead;
+          await tx.insert(agencyTransactionParties).values({
               agencyId,
               transactionId,
               role: deal.transactionType === 'rental' ? 'tenant' : 'buyer',
@@ -6648,25 +6777,25 @@ export const agencyRouter = router({
               phone: lead.phone,
             } as any);
 
-            await tx
-              .update(leads)
-              .set({
-                status: 'converted',
-                funnelStage: 'sale',
-                convertedAt: now,
-                updatedAt: now,
-              } as any)
-              .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)));
+          await tx
+            .update(leads)
+            .set({
+              status: 'converted',
+              funnelStage: 'sale',
+              convertedAt: now,
+              updatedAt: now,
+            } as any)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)));
 
-            await tx.insert(leadActivities).values({
-              leadId: deal.leadId,
-              userId: user.id,
-              type: 'status_change',
-              description:
-                input.note ||
-                `Offer V${offer.versionNumber} accepted and transaction #${transactionId} opened.`,
-            });
-          }
+          await tx.insert(leadActivities).values({
+            leadId: deal.leadId,
+            userId: user.id,
+            type: 'status_change',
+            metadata: JSON.stringify({ previousStatus: lead.status, nextStatus: 'converted' }),
+            description:
+              input.note ||
+              `Offer V${offer.versionNumber} accepted and transaction #${transactionId} opened.`,
+          });
         }
 
         if (deal.responsibleAgentId) {

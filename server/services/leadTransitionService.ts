@@ -92,7 +92,8 @@ export function mapStatusToFunnelStage(
 ) {
   if (status === 'qualified') return 'qualification';
   if (status === 'viewing_scheduled') return 'viewing';
-  if (status === 'offer_sent' || status === 'converted' || status === 'closed') {
+  if (status === 'offer_sent') return 'offer';
+  if (status === 'converted' || status === 'closed') {
     return fallback || 'conversion';
   }
   if (status === 'lost') return fallback || 'conversion';

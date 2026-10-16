@@ -28,7 +28,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  like,
   notInArray,
   or,
 } from 'drizzle-orm';
@@ -51,11 +50,16 @@ import {
 import { recordAgentOsEvent } from './services/agentOsEventService';
 import { listPublicVideosForAgent } from './services/agentPublicVideoService';
 import {
-  deriveLeadReadiness,
   isTwoWayContactOutcome,
   leadStatusTimestamps,
   validateLeadTransition,
 } from './services/leadTransitionService';
+import {
+  describeAgentOfferReadiness as describeOfferReadiness,
+  getAgentLeadOfferReadiness as getAgentOfferReadiness,
+  requireAgentLeadOfferReadiness as requireOfferReadiness,
+} from './services/agentLeadOfferReadinessService';
+import type { AgentOfferReadinessSummary } from './services/agentLeadOfferReadinessService';
 import { logAudit } from './_core/auditLog';
 import { getAgentEntitlementsForUserId } from './services/agentEntitlementService';
 import { loadAgentPresenceSummary } from './services/agentPresenceSummaryService';
@@ -78,11 +82,6 @@ import {
 } from './services/commercialLeadContextService';
 import type { CommercialLeadOperationalContext } from './services/commercialLeadContextService';
 import {
-  AGENT_LEAD_OFFER_READINESS_METADATA_KIND,
-  AGENT_LEAD_OFFER_READINESS_METADATA_VERSION,
-  DEFAULT_AGENT_LEAD_OFFER_READINESS,
-  isAgentLeadOfferReadinessComplete,
-  parseAgentLeadOfferReadiness,
   serializeAgentLeadOfferReadiness,
   type AgentLeadOfferReadiness,
 } from '../shared/agentLeadOfferReadiness';
@@ -101,83 +100,6 @@ import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembers
 type AgentShowingStatus = 'scheduled' | 'completed' | 'cancelled' | 'no_show';
 
 type CanonicalAgentShowingStorageStatus = 'confirmed' | 'completed' | 'cancelled' | 'no_show';
-
-const OFFER_READINESS_QUALIFICATION_BLOCKER = 'Qualification must be recorded before offer work.';
-const OFFER_READINESS_METADATA_PATTERN = `%"kind":"${AGENT_LEAD_OFFER_READINESS_METADATA_KIND}","version":${AGENT_LEAD_OFFER_READINESS_METADATA_VERSION}%`;
-
-const OFFER_READINESS_CHECKS: Array<{
-  key: keyof AgentLeadOfferReadiness;
-  missingMessage: string;
-  completedLabel: string;
-}> = [
-  {
-    key: 'viewingCompleted',
-    missingMessage: 'Record that the viewing is complete before sending an offer.',
-    completedLabel: 'Viewing completed',
-  },
-  {
-    key: 'feedbackLogged',
-    missingMessage: 'Log the buyer feedback before sending an offer.',
-    completedLabel: 'Buyer feedback logged',
-  },
-  {
-    key: 'affordabilityConfirmed',
-    missingMessage: 'Confirm buyer affordability or qualification before sending an offer.',
-    completedLabel: 'Affordability or qualification confirmed',
-  },
-];
-
-type AgentOfferReadinessSummary = {
-  readiness: AgentLeadOfferReadiness;
-  canMoveToOffer: boolean;
-  blockers: string[];
-};
-
-function describeOfferReadiness(readiness: AgentLeadOfferReadiness) {
-  const completed = OFFER_READINESS_CHECKS.filter(item => readiness[item.key]).map(
-    item => item.completedLabel,
-  );
-  return completed.length
-    ? `Offer readiness updated: ${completed.join(', ')}.`
-    : 'Offer readiness reset. Complete the checks before sending an offer.';
-}
-
-async function getAgentOfferReadiness(
-  db: Awaited<ReturnType<typeof getDb>>,
-  lead: typeof leads.$inferSelect,
-): Promise<AgentOfferReadinessSummary> {
-  const activities = await db
-    .select({ metadata: leadActivities.metadata })
-    .from(leadActivities)
-    .where(
-      and(
-        eq(leadActivities.leadId, lead.id),
-        like(leadActivities.metadata, OFFER_READINESS_METADATA_PATTERN),
-      ),
-    )
-    .orderBy(desc(leadActivities.createdAt), desc(leadActivities.id))
-    .limit(1);
-
-  const persistedReadiness =
-    activities
-      .map(activity => parseAgentLeadOfferReadiness(activity.metadata))
-      .find((readiness): readiness is AgentLeadOfferReadiness => readiness !== null) ||
-    DEFAULT_AGENT_LEAD_OFFER_READINESS;
-  const canonicalReadiness = deriveLeadReadiness(lead);
-  const canonicalBlockers = canonicalReadiness.blockers.filter(
-    blocker => blocker !== OFFER_READINESS_QUALIFICATION_BLOCKER,
-  );
-  const checklistBlockers = OFFER_READINESS_CHECKS.filter(
-    item => !persistedReadiness[item.key],
-  ).map(item => item.missingMessage);
-
-  return {
-    readiness: persistedReadiness,
-    canMoveToOffer:
-      canonicalBlockers.length === 0 && isAgentLeadOfferReadinessComplete(persistedReadiness),
-    blockers: [...canonicalBlockers, ...checklistBlockers],
-  };
-}
 
 export const __agentOfferReadinessTestHooks = {
   getAgentOfferReadiness,
@@ -1250,15 +1172,9 @@ export const agentRouter = router({
       }
 
       const needsOfferReadiness =
-        ['offer', 'won'].includes(input.targetStage) &&
-        !['offer_sent', 'converted', 'closed'].includes(String(lead.status));
-      const offerReadiness = needsOfferReadiness ? await getAgentOfferReadiness(db, lead) : null;
-      if (offerReadiness && !offerReadiness.canMoveToOffer) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: offerReadiness.blockers.join(' '),
-        });
-      }
+        newStatus !== lead.status &&
+        (newStatus === 'offer_sent' || (newStatus === 'converted' && lead.status !== 'offer_sent'));
+      const offerReadiness = needsOfferReadiness ? await requireOfferReadiness(db, lead) : null;
 
       validateLeadTransition(lead, newStatus as any, {
         lostReason: input.lostReason,
@@ -2096,19 +2012,15 @@ export const agentRouter = router({
       const agentRecord = workspace.agent;
 
       const needsOfferReadiness =
-        ['offer_sent', 'converted'].includes(input.status) && input.status !== lead.status;
+        input.status !== lead.status &&
+        (input.status === 'offer_sent' ||
+          (input.status === 'converted' && lead.status !== 'offer_sent'));
       validateLeadTransition(lead, input.status, {
         lostReason: input.lostReason,
         qualificationConfirmed: needsOfferReadiness,
       });
 
-      const offerReadiness = needsOfferReadiness ? await getAgentOfferReadiness(db, lead) : null;
-      if (offerReadiness && !offerReadiness.canMoveToOffer) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: offerReadiness.blockers.join(' '),
-        });
-      }
+      if (needsOfferReadiness) await requireOfferReadiness(db, lead);
 
       // Canonical transition rules, timestamps and lost-reason handling are
       // identical to the Agency surface so first-outreach measurement stays
