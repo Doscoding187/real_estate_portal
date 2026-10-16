@@ -745,7 +745,7 @@ future workspace feature.
 | --- | --- |
 | Issue ID | LRC-LAND-001; supplement only, original publication finding remains open |
 | Date observed | 2026-10-14; local verification continued 2026-10-15 |
-| Exact Git SHA | Parent `90d46bcef`; implementation is the successor local commit on `feat/homepage-ux-review-20261013` |
+| Exact Git SHA | Parent `90d46bcef`; saved implementation tip `43243be47`; reconciliation candidate `846f0b540` |
 | Page or journey | Homepage and province consumer journey selection; public specialist Land search/detail |
 | URL | `/:province?journey=land`, `/plots-and-land`, `/land/:slug` |
 | User role | Anonymous consumer |
@@ -756,9 +756,9 @@ future workspace feature.
 | Severity | L0 publication boundary retained; presentation change |
 | Owning engine | Land / public discovery / province UX |
 | Launch decision | Enable public search entry per Edward's 14 October request; retain first-cohort publication containment and hosted journey-release manifest requirements |
-| Approved implementation branch/worktree | `feat/homepage-ux-review-20261013` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-ux-review-20261013` |
-| Pull request or commit | Local successor to `90d46bcef`; no push or PR |
-| Integrated verification | Pending; isolated local review only |
+| Approved implementation branch/worktree | Original `feat/homepage-ux-review-20261013`; reconciled on `reconcile/homepage-ux-review-20261016` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-reconciliation-20261016` |
+| Pull request or commit | [PR #632](https://github.com/Doscoding187/real_estate_portal/pull/632); candidate merge commit `846f0b540` |
+| Integrated verification | Pending merge; local candidate checks are recorded in PR #632. |
 | Production verification | Pending; no deployment or protected operation |
 | Status | in progress |
 | Notes | `isLandPublicDiscoveryAvailable` governs consumer entry separately from unchanged `isLandVerticalAvailable`. Existing server containment tests continue to pass. No schema, runtime query, seed, fixture, payment or publication change. This supplement does not close the original publication finding or authorize Land stock publication. |
