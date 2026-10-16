@@ -5,12 +5,15 @@ type FallbackImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'>
   src?: string | null;
   fallbackSrc?: string;
   timeoutMs?: number;
+  hideWhenUnavailable?: boolean;
 };
 
 export function FallbackImage({
   src,
   fallbackSrc = PROPERTY_IMAGE_FALLBACK,
   timeoutMs = 12000,
+  hideWhenUnavailable = false,
+  style,
   loading = 'lazy',
   onLoad,
   onError,
@@ -19,11 +22,13 @@ export function FallbackImage({
   const imgRef = useRef<HTMLImageElement>(null);
   const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   const [isInView, setIsInView] = useState(loading === 'eager');
 
   useEffect(() => {
     setCurrentSrc(src || fallbackSrc);
     setIsLoaded(false);
+    setUnavailable(false);
     setIsInView(loading === 'eager');
   }, [fallbackSrc, loading, src]);
 
@@ -62,13 +67,20 @@ export function FallbackImage({
       ref={imgRef}
       src={currentSrc}
       loading={loading}
+      style={{
+        ...style,
+        visibility: hideWhenUnavailable && unavailable ? 'hidden' : style?.visibility,
+      }}
       onLoad={event => {
         setIsLoaded(true);
+        setUnavailable(false);
         onLoad?.(event);
       }}
       onError={event => {
         if (currentSrc !== fallbackSrc) {
           setCurrentSrc(fallbackSrc);
+        } else {
+          setUnavailable(true);
         }
         onError?.(event);
       }}

@@ -1,7 +1,7 @@
-import { useLocation } from 'wouter';
+import { Link } from 'wouter';
+import { Building2, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Building2, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
@@ -11,24 +11,20 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { trpc } from '@/lib/trpc';
+import { developerDiscoveryHref } from '@shared/developerDiscovery';
+import { HOME_PROVINCE_OPTIONS } from '@/lib/homeProvinceOptions';
 
 type TopDevelopersProps = {
   selectedProvince: string;
+  onProvinceChange?: (province: string) => void;
+};
+const projectCount = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? Math.trunc(number) : null;
 };
 
-export function TopDevelopers({ selectedProvince }: TopDevelopersProps) {
-  const [, setLocation] = useLocation();
-  const displayCount = (value: unknown, fallback = '—') => {
-    const num = Number(value);
-    return Number.isFinite(num) && num > 0 ? String(num) : fallback;
-  };
-  const hasNumericValue = (value: unknown) => {
-    const num = Number(value);
-    return Number.isFinite(num) && num > 0;
-  };
-
-  // This is organic local discovery. Visibility and publisher tier do not
-  // imply a promoted placement.
+export function TopDevelopers({ selectedProvince, onProvinceChange }: TopDevelopersProps) {
   const {
     data: developers,
     isError,
@@ -39,49 +35,64 @@ export function TopDevelopers({ selectedProvince }: TopDevelopersProps) {
     province: selectedProvince,
     limit: 12,
   });
-  const hasDevelopers = Boolean(developers && developers.length > 0);
-  const compactDevelopers = developers?.slice(0, 10) ?? [];
-
+  const profiles = developers?.slice(0, 10) ?? [];
+  const directoryHref = developerDiscoveryHref('/developers', selectedProvince);
   return (
     <section className="home-section bg-white">
       <div className="home-section-content">
-        {/* Section Header */}
-        <div className="home-section-header">
-          <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
-            Developers building in {selectedProvince}
-          </h2>
-          <p className="text-slate-600 max-w-3xl leading-relaxed text-xs md:text-sm">
-            Explore developers with approved, published projects in {selectedProvince}.
-          </p>
+        <div className="home-section-header flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="home-section-title text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
+              Developers with projects in {selectedProvince}
+            </h2>
+            <p className="max-w-3xl text-xs leading-relaxed text-slate-600 md:text-sm">
+              Explore developers with approved, published projects in {selectedProvince}.
+            </p>
+          </div>
         </div>
-
+        {onProvinceChange && (
+          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div
+              role="group"
+              aria-label="Developer project province"
+              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
+            >
+              {HOME_PROVINCE_OPTIONS.map(province => (
+                <button
+                  key={province}
+                  type="button"
+                  aria-pressed={selectedProvince === province}
+                  onClick={() => onProvinceChange(province)}
+                  className={`min-h-[44px] whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${
+                    selectedProvince === province
+                      ? 'bg-[#2774AE] text-white shadow-sm'
+                      : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'
+                  }`}
+                >
+                  {province}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {isLoading ? (
           <div
-            className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
             data-testid="developer-feed-loading"
             role="status"
-            aria-label={`Loading developers building in ${selectedProvince}`}
+            aria-label={`Loading developers with projects in ${selectedProvince}`}
+            className="-mx-4 overflow-hidden px-4 sm:mx-0 sm:px-0"
           >
             <div className="flex gap-2">
               {[0, 1, 2].map(index => (
                 <Card
                   key={index}
-                  className="min-w-0 flex-[0_0_78%] border-slate-200 sm:flex-[0_0_56%] md:flex-[0_0_48%] lg:flex-[0_0_24%]"
                   data-testid="developer-profile-skeleton"
+                  className="min-w-0 flex-[0_0_78%] border-slate-200 sm:flex-[0_0_56%] md:flex-[0_0_48%] lg:flex-[0_0_24%]"
                 >
-                  <CardContent className="p-3.5 sm:p-4">
-                    <div className="mb-3 flex gap-3">
-                      <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
-                      <div className="flex-1 space-y-2 pt-1">
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-3 w-1/2" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Skeleton className="h-12 w-full rounded-lg" />
-                      <Skeleton className="h-12 w-full rounded-lg" />
-                    </div>
-                    <Skeleton className="mt-3 h-9 w-full rounded-lg" />
+                  <CardContent className="p-4">
+                    <Skeleton className="mb-4 h-12 w-full rounded-lg" />
+                    <Skeleton className="h-14 w-full rounded-lg" />
+                    <Skeleton className="mt-4 h-11 w-full rounded-lg" />
                   </CardContent>
                 </Card>
               ))}
@@ -90,183 +101,127 @@ export function TopDevelopers({ selectedProvince }: TopDevelopersProps) {
           </div>
         ) : isError ? (
           <div
-            className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-8 text-center"
             role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-6 text-center"
           >
-            <Building2 className="mx-auto h-9 w-9 text-amber-500" />
+            <Building2 className="mx-auto h-8 w-8 text-amber-700" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-bold text-slate-900">
               Developer profiles could not be loaded
             </h3>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
-              This is a temporary loading problem, not an empty developer catalogue. Try again or
-              browse the developer directory.
+              Please try again. Your selected province is still here.
             </p>
             <Button
-              type="button"
               variant="outline"
-              className="mt-4 border-amber-300 bg-white"
+              className="mt-4 min-h-[44px] bg-white"
               disabled={isFetching}
               onClick={() => void refetch()}
             >
               {isFetching ? 'Trying again…' : 'Try again'}
             </Button>
           </div>
-        ) : hasDevelopers ? (
-          /* Developers Carousel */
-          <div className="relative group/carousel">
-            <Carousel
-              opts={{
-                align: 'start',
-                loop: false,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2">
-                {compactDevelopers.map(developer => (
+        ) : profiles.length ? (
+          <Carousel opts={{ align: 'start', loop: false }} className="w-full">
+            <CarouselContent className="-ml-2">
+              {profiles.map(developer => {
+                const count = projectCount(developer.localStats?.activeDevelopments);
+                const selling = projectCount(developer.localStats?.sellingNow);
+                const launching = projectCount(developer.localStats?.launchingSoon);
+                const profilePath = `/developer/${developer.slug}`;
+                return (
                   <CarouselItem
                     key={developer.id}
-                    className="pl-2 basis-[78%] sm:basis-[56%] md:basis-1/2 lg:basis-1/4"
+                    className="basis-[78%] pl-2 sm:basis-[56%] md:basis-1/2 lg:basis-1/4"
                   >
-                    <Card className="h-full border border-slate-200 hover:border-slate-300 transition-colors bg-white rounded-xl shadow-sm hover:shadow-md">
-                      <CardContent className="p-3.5 sm:p-4">
-                        {/* Header: Logo & Identity */}
-                        <div className="flex gap-3 mb-3">
-                          <div className="w-12 h-12 flex-shrink-0 bg-white border border-slate-100 rounded-lg p-2 flex items-center justify-center">
+                    <Card className="h-full rounded-xl border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300 hover:shadow-md">
+                      <CardContent className="flex h-full flex-col p-3.5 sm:p-4">
+                        <div className="mb-3 flex items-center gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-slate-100 bg-white p-2">
                             {developer.logoUrl ? (
                               <img
                                 src={developer.logoUrl}
-                                alt={developer.brandName}
-                                className="max-w-full max-h-full object-contain"
+                                alt={`${developer.brandName} logo`}
+                                className="max-h-full max-w-full object-contain"
                               />
                             ) : (
-                              <Building2 className="h-5 w-5 text-slate-300" />
+                              <Building2 className="h-5 w-5 text-slate-500" aria-hidden="true" />
                             )}
                           </div>
-                          <div className="flex flex-col justify-center min-w-0">
-                            <h3 className="mb-0.5 line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-slate-900">
+                          <div className="min-w-0">
+                            <h3 className="line-clamp-2 min-h-[2.5rem] text-[15px] font-bold leading-tight text-slate-900">
                               {developer.brandName}
                             </h3>
-                            <p className="text-xs text-slate-500 font-medium truncate">
-                              {developer.headOfficeLocation || 'Developer profile'}
-                            </p>
+                            {developer.headOfficeLocation && (
+                              <p className="mt-1 truncate text-xs text-slate-600">
+                                Head office: {developer.headOfficeLocation}
+                              </p>
+                            )}
                           </div>
                         </div>
-
-                        {/* Stats Row */}
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                            <span
-                              className={`block font-bold text-slate-900 ${
-                                hasNumericValue(developer.localStats?.activeDevelopments)
-                                  ? 'text-lg'
-                                  : 'text-sm'
-                              }`}
+                        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-3">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {count !== null
+                              ? `${count} published ${count === 1 ? 'project' : 'projects'}`
+                              : 'Published projects'}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-600">In {selectedProvince}</p>
+                        </div>
+                        <div className="mt-3 flex min-h-5 flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+                          {selling !== null && selling > 0 && <span>{selling} selling now</span>}
+                          {launching !== null && launching > 0 && (
+                            <span>{launching} launching soon</span>
+                          )}
+                          {!selling && !launching && (
+                            <span>Check project details for availability</span>
+                          )}
+                        </div>
+                        <div className="mt-auto pt-4">
+                          <Button
+                            asChild
+                            className="min-h-[44px] w-full bg-slate-900 text-xs text-white hover:bg-slate-800"
+                          >
+                            <Link
+                              href={developerDiscoveryHref(profilePath, selectedProvince, true)}
                             >
-                              {displayCount(developer.localStats?.activeDevelopments, '0')}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                              Active in {selectedProvince}
-                            </span>
-                          </div>
-
-                          <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-right">
-                            <span
-                              className={`block font-bold text-slate-900 ${
-                                hasNumericValue(developer.localStats?.sellingNow)
-                                  ? 'text-lg'
-                                  : 'text-sm'
-                              }`}
-                            >
-                              {displayCount(developer.localStats?.sellingNow, '0')}
-                            </span>
-                            <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wide">
-                              Selling now
-                            </span>
-                          </div>
+                              View projects <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                            </Link>
+                          </Button>
+                          <Link
+                            href={developerDiscoveryHref(profilePath, selectedProvince)}
+                            className="mt-1 flex min-h-[44px] items-center justify-center rounded-md text-xs font-semibold text-[#2774AE] hover:underline focus-visible:outline focus-visible:outline-2"
+                          >
+                            Developer profile
+                          </Link>
                         </div>
-
-                        {/* Status Links (Interactive Rows) */}
-                        <div className="space-y-2">
-                          <button
-                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                            onClick={() =>
-                              setLocation(`/developer/${developer.slug}`)
-                            }
-                          >
-                            <span className="text-xs text-slate-700 font-medium truncate">
-                              Active developments
-                            </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.localStats?.activeDevelopments, '0')}
-                            </span>
-                          </button>
-
-                          <button
-                            className="w-full flex items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                            onClick={() =>
-                              setLocation(`/developer/${developer.slug}`)
-                            }
-                          >
-                            <span className="text-xs text-slate-700 font-medium truncate">
-                              Launching soon
-                            </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.localStats?.launchingSoon, '0')}
-                            </span>
-                          </button>
-
-                          <button
-                            className="hidden sm:flex w-full items-center justify-between p-2 rounded-lg border border-slate-100 hover:bg-slate-50 group transition-colors"
-                            onClick={() =>
-                              setLocation(`/developer/${developer.slug}`)
-                            }
-                          >
-                            <span className="text-xs text-slate-700 font-medium truncate">
-                              View local projects
-                            </span>
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              {displayCount(developer.localStats?.activeDevelopments, '0')}
-                            </span>
-                          </button>
-                        </div>
-
-                        <button
-                          className="mt-3 flex w-full items-center justify-between rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-slate-800"
-                          onClick={() => setLocation(`/developer/${developer.slug}`)}
-                        >
-                          <span>View Developer</span>
-                          <ChevronRight className="h-3.5 w-3.5 text-white/80" />
-                        </button>
                       </CardContent>
                     </Card>
                   </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="hidden md:flex -left-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
-              <CarouselNext className="hidden md:flex -right-4 bg-white shadow-md border-slate-200 text-slate-600 hover:text-slate-900" />
-            </Carousel>
-          </div>
+                );
+              })}
+            </CarouselContent>
+            <CarouselPrevious className="-left-4 hidden border-slate-200 bg-white shadow-md disabled:hidden md:flex" />
+            <CarouselNext className="-right-4 hidden border-slate-200 bg-white shadow-md disabled:hidden md:flex" />
+          </Carousel>
         ) : (
-          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
-            <Building2 className="mx-auto h-9 w-9 text-slate-300" />
+          <div className="rounded-xl border border-dashed border-slate-200 px-5 py-8 text-center">
+            <Building2 className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
             <h3 className="mt-3 text-sm font-bold text-slate-900">
-              No developers are currently building in {selectedProvince}
+              No developers with published projects in {selectedProvince} yet
             </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-              We will show developers here when they have approved, published projects in this
-              province.
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-600">
+              Choose another province or browse the developer directory.
             </p>
           </div>
         )}
-
-        {/* View All Footer */}
-        <div className="mt-8">
+        <div className="mt-6">
           <Button
-            onClick={() => setLocation('/developers')}
-            className="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium outline-none text-white rounded-md gap-2 h-12 px-8 bg-gradient-to-r from-[#2774AE] to-[#2D68C4] hover:from-[#2D68C4] hover:to-[#2774AE] shadow-lg hover:shadow-xl transition-all duration-300 group"
+            asChild
+            className="min-h-[44px] bg-gradient-to-r from-[#2774AE] to-[#2D68C4] px-6 text-white"
           >
-            Explore All Developers
-            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            <Link href={directoryHref}>
+              Explore developers in {selectedProvince}{' '}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </Button>
         </div>
       </div>

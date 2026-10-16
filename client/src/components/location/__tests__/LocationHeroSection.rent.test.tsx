@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { LocationHeroSection } from '../LocationHeroSection';
 
+const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
+
 vi.mock('wouter', () => ({
-  useLocation: () => ['/gauteng/johannesburg', vi.fn()],
+  useLocation: () => ['/gauteng/johannesburg', navigate],
 }));
 
 vi.mock('@/components/LocationAutosuggest', () => ({
@@ -36,7 +38,7 @@ describe('LocationHeroSection Rent controls', () => {
     expect(screen.queryByText('Furnished Only')).not.toBeInTheDocument();
   });
 
-  it('does not expose the deferred Land journey or Land filters', () => {
+  it('opens specialist Land search without exposing residential Land filters', () => {
     render(
       <LocationHeroSection
         locationName="Johannesburg"
@@ -48,7 +50,8 @@ describe('LocationHeroSection Rent controls', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: 'Plot & Land' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Plot & Land' }));
+    expect(navigate).toHaveBeenCalledWith('/plots-and-land?locationId=city%3A12');
     fireEvent.click(screen.getByRole('button', { name: 'Buy' }));
     expect(screen.queryByText('Land & Plots')).not.toBeInTheDocument();
   });

@@ -158,6 +158,7 @@ This index is for navigation and programme oversight. Its **Full record** column
 | LRC-COMMERCIAL-001 | 2026-09-15 | Commercial lead generic viewing boundary | L1 | Agency lead workflow / Commercial | Fix now; retain dedicated workflow | in progress | [Record](#lrc-commercial-001) |
 | LRC-LEAD-001    | 2026-09-14    | Platform-custody recovery audit     | L1       | Lead delivery / operations             | Fix now                                     | in progress | [Record](#lrc-lead-001)    |
 | LRC-LAND-001    | 2026-09-13    | Land public visibility containment | L0       | Land / commercial-publication boundary | Contain now; defer from pre-payment cohort and public exposure | in progress | [Record](#lrc-land-001)    |
+| LRC-LAND-001 | 2026-10-14 | Public specialist search entry | L0 boundary retained | Land / public discovery | Enable consumer search UI; retain publication containment | in progress | [Supplement](#lrc-land-001-public-search-entry-supplement--2026-10-14) |
 | LRC-SUPPORT-001 | 2026-09-13    | Assisted support and disclosures   | L1       | Stakeholder operations                 | Implement bounded intake; fix before controlled real-world onboarding | in progress | [Record](#lrc-support-001) |
 
 ## Complete per-finding record
@@ -737,6 +738,30 @@ future workspace feature.
 | Production verification                 | Pending; no protected system, provider, or deployment accessed. |
 | Status                                  | in progress |
 | Notes                                   | The corrections preserve LRC-PAY-001’s commercial gate and existing Land records, geography contract, and four central public classifications. The generic Developer row supplement rejects new/retained Land authoring and public transitions while preserving rows for a separately authorized Land decision. The draft supplement rejects both supported payload shapes before writes and preserves retained draft records by preventing an update/relabel bypass. Neither correction adds a migration, deletion, payment activation, entitlement mutation, provider change, free publishing policy, or live onboarding route. An isolated paid-entitlement fixture remains test-only. |
+
+### LRC-LAND-001 public search entry supplement — 2026-10-14
+
+| Field | Record |
+| --- | --- |
+| Issue ID | LRC-LAND-001; supplement only, original publication finding remains open |
+| Date observed | 2026-10-14; local verification continued 2026-10-15 |
+| Exact Git SHA | Parent `90d46bcef`; saved implementation tip `43243be47`; reconciliation candidate `846f0b540` |
+| Page or journey | Homepage and province consumer journey selection; public specialist Land search/detail |
+| URL | `/:province?journey=land`, `/plots-and-land`, `/land/:slug` |
+| User role | Anonymous consumer |
+| Viewport or device | Chromium desktop 1440/1024 and mobile 390/320; scoped component accessibility audit |
+| Current behaviour | Edward requested activation of already implemented consumer choices during the local UX review. The previous shared first-cohort gate also hid search entry and mounted a deferred page. |
+| Expected behaviour | Land search opens its specialist UI with a single canonical geography authority. Public search entry does not change authoring, review, payment, entitlements, lead custody or inventory publication. Generic development feeds cannot substitute for specialist Land inventory. |
+| Evidence reference | [Local review](../../reviews/province-journeys-area-table-2026-10-15.md); task-owned screenshot gallery and verification logs identified there |
+| Severity | L0 publication boundary retained; presentation change |
+| Owning engine | Land / public discovery / province UX |
+| Launch decision | Enable public search entry per Edward's 14 October request; retain first-cohort publication containment and hosted journey-release manifest requirements |
+| Approved implementation branch/worktree | Original `feat/homepage-ux-review-20261013`; reconciled on `reconcile/homepage-ux-review-20261016` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-reconciliation-20261016` |
+| Pull request or commit | [PR #632](https://github.com/Doscoding187/real_estate_portal/pull/632); candidate merge commit `846f0b540` |
+| Integrated verification | Pending merge; local candidate checks are recorded in PR #632. |
+| Production verification | Pending; no deployment or protected operation |
+| Status | in progress |
+| Notes | `isLandPublicDiscoveryAvailable` governs consumer entry separately from unchanged `isLandVerticalAvailable`. Existing server containment tests continue to pass. No schema, runtime query, seed, fixture, payment or publication change. This supplement does not close the original publication finding or authorize Land stock publication. |
 
 ### LRC-SUPPORT-001
 

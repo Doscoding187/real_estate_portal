@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Check, ChevronDown, Compass, Home, KeyRound, MapPin } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Compass,
+  Home,
+  KeyRound,
+  MapPin,
+  BriefcaseBusiness,
+  Users,
+  LandPlot,
+} from 'lucide-react';
+import { getPublicHeroJourney } from '@/lib/publicNavigation';
+import { SHARED_LIVING_LOCATION_SELECTION_MAX } from '@shared/sharedLivingSearchContract';
 import { useLocation, useSearch } from 'wouter';
 import { LocationAutosuggest } from '@/components/LocationAutosuggest';
 import { buildLocationDiscoveryPath, hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
@@ -35,9 +48,9 @@ const JOURNEY_ICONS = {
   rent: KeyRound,
   developments: Compass,
   explore: MapPin,
-  land: Compass,
-  commercial: Compass,
-  shared_living: Compass,
+  land: LandPlot,
+  commercial: BriefcaseBusiness,
+  shared_living: Users,
 } satisfies Record<ProvincialJourneyId, typeof Home>;
 
 const PROPERTY_TYPES = [
@@ -163,7 +176,12 @@ export function ProvincialComposer({
 
   const state = useMemo(() => resolveProvincialQueryState(new URLSearchParams(search)), [search]);
   const requestedJourney = journeyFromConfig(config, state.journey);
-  const activeJourney = requestedJourney?.state === 'active' ? requestedJourney : undefined;
+  const journeyEnabled = (journey: ProvincialJourneyConfig) =>
+    journey.state === 'active' &&
+    (journey.id === 'explore' ||
+      getPublicHeroJourney(journey.id === 'land' ? 'plot_land' : journey.id).homepageEnabled);
+  const activeJourney =
+    requestedJourney && journeyEnabled(requestedJourney) ? requestedJourney : undefined;
   const hasLocationQuery = Boolean(state.locationId || state.locationIds?.length);
   const selectedLocationsFromQuery = useMemo(
     () =>
@@ -206,7 +224,7 @@ export function ProvincialComposer({
   };
 
   const selectJourney = (journey: ProvincialJourneyConfig) => {
-    if (journey.state !== 'active') return;
+    if (!journeyEnabled(journey)) return;
     setLocationError('');
     updateQuery({ journey: journey.id });
   };
@@ -352,26 +370,25 @@ export function ProvincialComposer({
     !(activeJourney?.id === 'explore' && selectedLocations.length > 1);
   const locationHelper =
     selectedLocations.length > 1
-      ? 'Explicit OR: these locations stay separate in the results.'
+      ? 'Results will include any of your selected areas.'
       : selectedLocations.length === 1
-        ? 'Canonical location preserved for your next journey.'
+        ? 'Your selected area will stay with your search.'
         : hasValidScope
           ? 'Or keep the whole province selected.'
-          : 'Province-wide search is unavailable until canonical geography is configured.';
+          : 'Province-wide search is unavailable here. Choose a city or suburb to continue.';
 
   return (
     <section className="provincial-composer" aria-labelledby="provincial-composer-title">
       <div className="provincial-composer__topline">
         <div>
-          <p className="provincial-eyebrow">Choose your next move</p>
-          <h2 id="provincial-composer-title">Start with intent, then refine the place.</h2>
+          <h2 id="provincial-composer-title">What would you like to explore?</h2>
         </div>
         {activeJourney ? (
           <span className="provincial-composer__state" data-testid="active-journey-state">
             <Check aria-hidden="true" size={15} /> {activeJourney.label} selected
           </span>
         ) : requestedJourney?.state === 'unavailable' ? (
-          <span className="provincial-composer__hint">This journey is not active yet</span>
+          <span className="provincial-composer__hint">This option is currently unavailable</span>
         ) : state.unsupportedJourney ? (
           <span className="provincial-composer__hint">Choose an available journey below</span>
         ) : (
@@ -382,8 +399,8 @@ export function ProvincialComposer({
       <div className="provincial-journeys" role="tablist" aria-label="Property journeys">
         {config.supportedJourneys.map(journey => {
           const Icon = JOURNEY_ICONS[journey.id];
-          const isActive = activeJourney?.id === journey.id && journey.state === 'active';
-          const unavailable = journey.state !== 'active';
+          const isActive = activeJourney?.id === journey.id && journeyEnabled(journey);
+          const unavailable = !journeyEnabled(journey);
           return (
             <button
               key={`${journey.id}-${journey.label}`}
@@ -399,31 +416,31 @@ export function ProvincialComposer({
               <span className="provincial-journey__icon">
                 <Icon aria-hidden="true" size={17} />
               </span>
-              <span>
-                <strong>{journey.label}</strong>
-                <small>{unavailable ? 'Coming later' : journey.shortLabel}</small>
-              </span>
+              <strong>{journey.label}</strong>
             </button>
           );
         })}
       </div>
 
-      <div className="provincial-composer__fields">
+      <div
+        className={`provincial-composer__fields ${activeJourney && !isTransactional ? 'is-specialist' : ''}`}
+      >
         <div className="provincial-field provincial-field--location">
           <label htmlFor="provincial-location-input">Where in {province.name}?</label>
           <div className="provincial-location-control">
-            <MapPin aria-hidden="true" size={18} />
             <LocationAutosuggest
               placeholder={`Search a city, suburb or area`}
               inputId="provincial-location-input"
               selectedLocations={selectedLocations}
               onSelect={selectLocation}
               onRemove={removeLocation}
-              maxLocations={10}
+              maxLocations={
+                activeJourney?.id === 'shared_living' ? SHARED_LIVING_LOCATION_SELECTION_MAX : 10
+              }
               inputAriaDescribedBy={locationError ? 'provincial-location-error' : undefined}
               className="provincial-location-autosuggest"
               inputClassName="provincial-location-input"
-              showIcon={false}
+              showIcon
             />
           </div>
           <p className="provincial-field__helper" data-testid="provincial-location-helper">
@@ -436,48 +453,49 @@ export function ProvincialComposer({
           )}
         </div>
 
-        <div className="provincial-field">
-          <label htmlFor="provincial-property-type">Property type</label>
-          <div className="provincial-select-wrap">
-            <select
-              id="provincial-property-type"
-              value={state.filters.propertyType || 'all'}
-              disabled={!isTransactional}
-              onChange={event => updateFilter('propertyType', event.target.value)}
-            >
-              <option value="all">Any type</option>
-              {PROPERTY_TYPES.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown aria-hidden="true" size={16} />
-          </div>
-          <p className="provincial-field__helper">Optional refinement</p>
-        </div>
+        {(isTransactional || !activeJourney) && (
+          <>
+            <div className="provincial-field">
+              <label htmlFor="provincial-property-type">Property type</label>
+              <div className="provincial-select-wrap">
+                <select
+                  id="provincial-property-type"
+                  value={state.filters.propertyType || 'all'}
+                  disabled={!isTransactional}
+                  onChange={event => updateFilter('propertyType', event.target.value)}
+                >
+                  <option value="all">Any type</option>
+                  {PROPERTY_TYPES.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" size={16} />
+              </div>
+            </div>
 
-        <div className="provincial-field">
-          <label htmlFor="provincial-budget">Budget</label>
-          <div className="provincial-select-wrap">
-            <select
-              id="provincial-budget"
-              value={state.filters.maxPrice?.toString() || 'all'}
-              disabled={!isTransactional}
-              onChange={event => updateFilter('maxPrice', event.target.value)}
-            >
-              <option value="all">Any budget</option>
-              {budgets.map(option => (
-                <option key={option.value} value={option.value}>
-                  Up to {option.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown aria-hidden="true" size={16} />
-          </div>
-          <p className="provincial-field__helper">Optional refinement</p>
-        </div>
-
+            <div className="provincial-field">
+              <label htmlFor="provincial-budget">Budget</label>
+              <div className="provincial-select-wrap">
+                <select
+                  id="provincial-budget"
+                  value={state.filters.maxPrice?.toString() || 'all'}
+                  disabled={!isTransactional}
+                  onChange={event => updateFilter('maxPrice', event.target.value)}
+                >
+                  <option value="all">Any budget</option>
+                  {budgets.map(option => (
+                    <option key={option.value} value={option.value}>
+                      Up to {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" size={16} />
+              </div>
+            </div>
+          </>
+        )}
         <button
           type="button"
           className="provincial-composer__cta"
@@ -490,7 +508,7 @@ export function ProvincialComposer({
               ? canContinue
                 ? activeJourney.ctaLabel
                 : 'Province scope unavailable'
-              : 'Choose a journey above'}
+              : 'Search'}
           </span>
           <ArrowRight aria-hidden="true" size={18} />
         </button>

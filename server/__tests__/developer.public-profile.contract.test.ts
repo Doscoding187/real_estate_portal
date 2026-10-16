@@ -51,7 +51,6 @@ const publicPlatformBrand = {
   isVisible: 1,
   authorityKind: 'platform_reference',
   developerOrganisationId: null,
-  linkedDeveloperAccountId: null,
 };
 
 describe('developer public profile contract', () => {
@@ -87,6 +86,8 @@ describe('developer public profile contract', () => {
       isClaimable: false,
       stats: {
         isVerified: true,
+        isContactVerified: true,
+        isOrganisationVerified: false,
         isTrusted: false,
         establishedYear: 2004,
       },
@@ -102,11 +103,44 @@ describe('developer public profile contract', () => {
 
     await expect(
       caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44 }),
-    ).resolves.toEqual([
-      expect.objectContaining({ id: 77, slug: 'acme-sandton' }),
-    ]);
+    ).resolves.toEqual([expect.objectContaining({ id: 77, slug: 'acme-sandton' })]);
 
     expect(mockListPublicDevelopments).toHaveBeenCalledWith({ cataloguePublisherId: 44 });
+  });
+
+  it('passes province and page boundaries to the same governed public project service', async () => {
+    const caller = developerRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+    await caller.getPublicDevelopmentsForPublisher({
+      cataloguePublisherId: 44,
+      province: 'Gauteng',
+      limit: 13,
+      offset: 12,
+    });
+    expect(mockListPublicDevelopments).toHaveBeenCalledWith({
+      cataloguePublisherId: 44,
+      province: 'Gauteng',
+      limit: 13,
+      offset: 12,
+    });
+  });
+
+  it('rejects unsupported provinces and invalid pagination before querying projects', async () => {
+    const caller = developerRouter.createCaller({
+      req: { headers: {} },
+      res: {},
+      user: null,
+    } as any);
+    await expect(
+      caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44, province: 'Atlantis' }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44, offset: -1 }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockListPublicDevelopments).not.toHaveBeenCalled();
   });
 
   it('does not expose an invisible brand', async () => {

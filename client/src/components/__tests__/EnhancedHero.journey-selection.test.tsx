@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 const { setLocation, searchDiscoveryQuery } = vi.hoisted(() => ({
   setLocation: vi.fn(),
@@ -272,12 +273,17 @@ describe('EnhancedHero explicit journey selection', () => {
     expect(setLocation).toHaveBeenCalledWith('/commercial?locationIds=city%3A12');
   });
 
-  it('does not expose Plots & Land filters while the first-cohort disposition is deferred', () => {
+  it('opens public Land search while keeping Land publication deferred', () => {
     render(<EnhancedHero activeTab="plot_land" />);
 
-    expect(screen.queryByText('Land type')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Plots & Land' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Browse plots and land')).not.toBeInTheDocument();
+    expect(isLandPublicDiscoveryAvailable()).toBe(true);
+    expect(isLandVerticalAvailable()).toBe(false);
+    expect(screen.getByText('Land type')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('select-johannesburg'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Search', exact: true })[0]);
+
+    expect(setLocation).toHaveBeenCalledWith('/plots-and-land?locationId=city%3A12');
   });
 
   it('exposes Commercial Office filters that map to tenant decisions', () => {

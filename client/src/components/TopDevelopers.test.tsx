@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const testState = vi.hoisted(() => ({
@@ -31,6 +32,11 @@ vi.mock('@/lib/trpc', () => ({
 
 vi.mock('wouter', () => ({
   useLocation: () => ['/', vi.fn()],
+  Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 import { TopDevelopers } from './TopDevelopers';
@@ -77,9 +83,60 @@ describe('TopDevelopers request states', () => {
 
     render(<TopDevelopers selectedProvince="Gauteng" />);
 
-    expect(screen.getByText('No developers are currently building in Gauteng')).toBeInTheDocument();
+    expect(
+      screen.getByText('No developers with published projects in Gauteng yet'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByTestId('developer-feed-loading')).not.toBeInTheDocument();
+  });
+
+  it('changes project province with one pill click and carries it through discovery links', () => {
+    testState.query = {
+      ...testState.query,
+      data: [{ id: 1, slug: 'local-builder', brandName: 'Local Builder' }],
+    };
+    function HomepageSection() {
+      const [province, setProvince] = useState('Gauteng');
+      return <TopDevelopers selectedProvince={province} onProvinceChange={setProvince} />;
+    }
+    render(<HomepageSection />);
+    const pills = within(screen.getByRole('group', { name: 'Developer project province' }));
+    expect(pills.getAllByRole('button').map(button => button.textContent)).toEqual([
+      'Gauteng',
+      'Western Cape',
+      'KwaZulu-Natal',
+      'Eastern Cape',
+      'Mpumalanga',
+      'Limpopo',
+      'North West',
+      'Free State',
+      'Northern Cape',
+    ]);
+    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+
+    fireEvent.click(pills.getByRole('button', { name: 'Western Cape' }));
+
+    expect(pills.getByRole('button', { name: 'Western Cape' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(pills.getByRole('button', { name: 'Gauteng' })).toHaveAttribute('aria-pressed', 'false');
+    expect(testState.queryInput).toEqual({ province: 'Western Cape', limit: 12 });
+    expect(
+      screen.getByRole('heading', { name: 'Developers with projects in Western Cape' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Western+Cape#developments',
+    );
+    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Western+Cape',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Explore developers in Western Cape' }),
+    ).toHaveAttribute('href', '/developers?province=Western+Cape');
   });
 
   it('uses the selected province and presents local evidence, not a featured claim', () => {
@@ -100,9 +157,21 @@ describe('TopDevelopers request states', () => {
     render(<TopDevelopers selectedProvince="Gauteng" />);
 
     expect(testState.queryInput).toEqual({ province: 'Gauteng', limit: 12 });
-    expect(screen.getByRole('heading', { name: 'Developers building in Gauteng' })).toBeInTheDocument();
-    expect(screen.getByText('Active in Gauteng')).toBeInTheDocument();
-    expect(screen.getByText('Selling now')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Developers with projects in Gauteng' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('3 published projects')).toBeInTheDocument();
+    expect(screen.getByText('2 selling now')).toBeInTheDocument();
+    expect(screen.getByText('1 launching soon')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View projects' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Gauteng#developments',
+    );
+    expect(screen.getByRole('link', { name: 'Developer profile' })).toHaveAttribute(
+      'href',
+      '/developer/local-builder?province=Gauteng',
+    );
+    expect(screen.queryByRole('button', { name: /Active developments/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/featured/i)).not.toBeInTheDocument();
   });
 });

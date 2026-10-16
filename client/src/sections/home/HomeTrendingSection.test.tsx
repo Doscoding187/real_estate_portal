@@ -161,7 +161,7 @@ describe('HomeTrendingSection request states', () => {
       suburb: 'Sandton',
       priceFrom: 3_850_000,
       priceTo: 3_850_000,
-      image: '',
+      image: '/media/home.jpg',
       href: `/property/${index + 1}`,
       listingType: 'sale' as const,
       bedrooms: 4,
@@ -213,7 +213,7 @@ describe('HomeTrendingSection request states', () => {
             suburb: 'Sandton',
             priceFrom: 3_850_000,
             priceTo: 3_850_000,
-            image: '',
+            image: '/media/home.jpg',
             href: '/property/41',
             listingType: 'sale',
             bedrooms: 3,
@@ -233,7 +233,7 @@ describe('HomeTrendingSection request states', () => {
     expect(testState.mutateFavorite).toHaveBeenCalledWith({ propertyId: 41, saved: true });
   });
 
-  it('takes an unauthenticated user to sign-in without losing their current location', () => {
+  it('asks guests to sign in while keeping them on the homepage', () => {
     testState.query = {
       ...testState.query,
       data: {
@@ -246,7 +246,7 @@ describe('HomeTrendingSection request states', () => {
             suburb: 'Sandton',
             priceFrom: 3_850_000,
             priceTo: 3_850_000,
-            image: '',
+            image: '/media/home.jpg',
             href: '/property/42',
             listingType: 'sale',
             bedrooms: 3,
@@ -264,7 +264,92 @@ describe('HomeTrendingSection request states', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save property' }));
 
     expect(testState.mutateFavorite).not.toHaveBeenCalled();
-    expect(testState.setLocation).toHaveBeenCalledWith('/login?redirect=%2F');
+    expect(testState.setLocation).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login?mode=signin&next=%2F',
+    );
+    expect(screen.getByRole('link', { name: 'Create an account' })).toHaveAttribute(
+      'href',
+      '/login?mode=register&next=%2F',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Keep browsing' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(testState.setLocation).not.toHaveBeenCalled();
+  });
+
+  it('uses the resale card facts and sale badge for a development unit', () => {
+    testState.query = {
+      data: {
+        items: [
+          {
+            id: 'dev-1-unit-a',
+            kind: 'unit',
+            title: 'Three-bedroom townhouse',
+            city: 'Johannesburg',
+            suburb: 'Sandton',
+            image: '/media/unit-photo.jpg',
+            href: '/development/project/unit/unit-a',
+            listingType: 'sale',
+            priceFrom: 2000000,
+            unitSize: 120,
+            bedrooms: 3,
+            bathrooms: 2,
+            yardSize: null,
+            parkingCount: 2,
+            propertyType: 'townhouse',
+          },
+        ],
+      },
+    };
+    renderSection();
+    expect(screen.getByText('For sale')).toBeInTheDocument();
+    expect(screen.queryByText('New development')).not.toBeInTheDocument();
+    expect(screen.getByText('120 m²')).toBeInTheDocument();
+    expect(screen.getByText('3 Bed')).toBeInTheDocument();
+    expect(screen.getByText('2 Bath')).toBeInTheDocument();
+    expect(screen.getByText('2 Parking')).toBeInTheDocument();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/development/project/unit/unit-a');
+  });
+
+  it('omits cards without photos and removes a card when its photo fails', () => {
+    testState.query = {
+      data: {
+        items: [
+          {
+            id: '1',
+            kind: 'listing',
+            title: 'No photo',
+            image: '',
+            city: 'Johannesburg',
+            href: '/property/1',
+          },
+          {
+            id: '2',
+            kind: 'unit',
+            title: 'Placeholder',
+            image: '/placeholder-property.jpg',
+            city: 'Johannesburg',
+            href: '/development/project/unit/2',
+          },
+          {
+            id: '3',
+            kind: 'listing',
+            title: 'Photo available',
+            image: '/media/photo.jpg',
+            city: 'Johannesburg',
+            href: '/property/3',
+          },
+        ],
+      },
+    };
+    renderSection();
+    expect(screen.queryByText('No photo')).not.toBeInTheDocument();
+    expect(screen.queryByText('Placeholder')).not.toBeInTheDocument();
+    fireEvent.error(screen.getByRole('img', { name: 'Photo available' }));
+    expect(screen.queryByText('Photo available')).not.toBeInTheDocument();
+    expect(screen.getByText('No published matches in Gauteng yet')).toBeInTheDocument();
   });
 
   it('does not expose a Land handoff while the first-cohort disposition is deferred', () => {

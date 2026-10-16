@@ -45,7 +45,7 @@ vi.mock('@/pages/home/HomeMobileView', () => ({
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     locationPages: {
-      getPopularCities: {
+      getCityGuides: {
         useQuery: () => ({ data: [] }),
       },
     },

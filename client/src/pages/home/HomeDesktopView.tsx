@@ -1,7 +1,12 @@
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { DiscoverProperties } from '@/components/DiscoverProperties';
 import { TopDevelopers } from '@/components/TopDevelopers';
-import { ExploreCities } from '@/components/ExploreCities';
+import {
+  ExploreCities,
+  type CityGuideLocation,
+  type CityGuideRequestState,
+  type CityGuideProvinceSelection,
+} from '@/components/ExploreCities';
 import { ContentRail } from '@/components/layout/ContentRail';
 import { HomeTrendingSection } from '@/sections/home/HomeTrendingSection';
 import { CTASection } from '@/sections/home/CTASection';
@@ -16,13 +21,9 @@ type HomeDesktopViewProps = {
   onBrowseProperties: () => void;
   onProvinceChange: (province: string) => void;
   onTabChange: (tab: string) => void;
-  popularCities: Array<{
-    name: string;
-    province: string;
-    slug: string;
-    provinceSlug: string;
-    propertyCount: string;
-  }>;
+  cityGuides: CityGuideLocation[];
+  cityGuidesState: CityGuideRequestState;
+  cityGuideProvince: CityGuideProvinceSelection;
   selectedProvince: string;
 };
 
@@ -32,7 +33,9 @@ export function HomeDesktopView({
   onBrowseProperties,
   onProvinceChange,
   onTabChange,
-  popularCities,
+  cityGuides,
+  cityGuidesState,
+  cityGuideProvince,
   selectedProvince,
 }: HomeDesktopViewProps) {
   return (
@@ -45,8 +48,19 @@ export function HomeDesktopView({
           activeHeroTab={activeHeroTab}
         />
         <DiscoverProperties withinContentRail />
-        <TopDevelopers selectedProvince={selectedProvince} />
-        <ExploreCities customLocations={popularCities} basePath="" withinContentRail />
+        <TopDevelopers selectedProvince={selectedProvince} onProvinceChange={onProvinceChange} />
+        <ExploreCities
+          customLocations={cityGuides}
+          basePath=""
+          withinContentRail
+          guideCards
+          initialLimit={12}
+          requestState={cityGuidesState}
+          provinceSlug={cityGuideProvince.slug}
+          selectedGuideProvince={cityGuideProvince.name}
+          onGuideProvinceChange={cityGuideProvince.onChange}
+          description={`Get to know the cities, neighbourhoods and local property opportunities in ${cityGuideProvince.name}.`}
+        />
         <HomeMarketInsightsSection />
         <HomeJourneySection />
         <ProfessionalEntrySection />

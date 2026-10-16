@@ -1,8 +1,8 @@
-import { formatPriceRangeCompact } from '@/lib/utils';
+import { cn, formatPriceRangeCompact } from '@/lib/utils';
 import { withRentalPeriod } from '@/lib/rentPresentation';
 import { Link } from 'wouter';
 import { withApiBase } from '@/lib/mediaUtils';
-import { Building2, MapPin } from 'lucide-react';
+import { ArrowRight, Building2, MapPin } from 'lucide-react';
 import { FallbackImage } from './FallbackImage';
 
 export interface SimpleDevelopmentCardProps {
@@ -25,6 +25,8 @@ export interface SimpleDevelopmentCardProps {
   availabilityState?: 'available' | 'sold_out' | 'not_stated';
   publisherName?: string | null;
   href?: string;
+  className?: string;
+  actionLabel?: string;
 }
 
 export function SimpleDevelopmentCard({
@@ -44,6 +46,8 @@ export function SimpleDevelopmentCard({
   availabilityState,
   publisherName,
   href,
+  className,
+  actionLabel,
 }: SimpleDevelopmentCardProps) {
   // Location display
   const locationLabel = suburb ? `${suburb}, ${city}` : city;
@@ -93,7 +97,10 @@ export function SimpleDevelopmentCard({
   return (
     <Link
       href={href || `/development/${slug || id}`}
-      className="group relative block w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg"
+      className={cn(
+        'group relative block w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-lg',
+        className,
+      )}
     >
       {/* Image Frame - Fixed Aspect Ratio */}
       <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
@@ -104,7 +111,7 @@ export function SimpleDevelopmentCard({
             Development Listing
           </span>
           <Building2 className="w-12 h-12" />
-          <span className="text-[11px] font-medium text-slate-500">No image provided</span>
+          <span className="text-[11px] font-medium text-slate-500">Image unavailable</span>
         </div>
 
         {/* Image Layer - Hides on Error to reveal placeholder */}
@@ -114,6 +121,7 @@ export function SimpleDevelopmentCard({
             alt={title}
             loading="lazy"
             timeoutMs={12000}
+            hideWhenUnavailable
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 z-10"
           />
         )}
@@ -138,14 +146,24 @@ export function SimpleDevelopmentCard({
       </div>
 
       {/* Content - Compact Layout */}
-      <div className="p-4 pt-5">
+      <div className={cn('p-4 pt-5', actionLabel && 'flex flex-1 flex-col')}>
         {/* Title */}
-        <h3 className="mb-1 line-clamp-2 text-fluid-sm font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]">
+        <h3
+          className={cn(
+            'mb-1 line-clamp-2 font-semibold leading-tight text-slate-900 transition-colors group-hover:text-[#2774AE]',
+            actionLabel ? 'text-base' : 'text-fluid-sm',
+          )}
+        >
           {title}
         </h3>
 
         {/* Location */}
-        <div className="mb-3 flex items-center gap-1 text-xs text-slate-500">
+        <div
+          className={cn(
+            'mb-3 flex items-center gap-1 text-slate-500',
+            actionLabel ? 'text-sm' : 'text-xs',
+          )}
+        >
           <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
           <span className="truncate">{locationLabel}</span>
         </div>
@@ -157,7 +175,12 @@ export function SimpleDevelopmentCard({
         {/* Bedrooms - Badge Style */}
         {bedroomLabel && (
           <div className="mb-3 flex items-center gap-1">
-            <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-medium px-2 py-1 rounded-md">
+            <span
+              className={cn(
+                'inline-block rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-600',
+                actionLabel ? 'text-xs' : 'text-[10px]',
+              )}
+            >
               {bedroomLabel}
             </span>
           </div>
@@ -175,8 +198,18 @@ export function SimpleDevelopmentCard({
               Sold out · Register interest
             </span>
           ) : null}
-          <p className="font-bold text-[#2774AE] text-fluid-sm">{priceLabel}</p>
+          <p
+            className={cn('font-bold text-[#2774AE]', actionLabel ? 'text-base' : 'text-fluid-sm')}
+          >
+            {priceLabel}
+          </p>
         </div>
+        {actionLabel && (
+          <span className="mt-auto flex min-h-[44px] items-center justify-between gap-2 pt-3 text-sm font-semibold text-[#2774AE]">
+            {actionLabel}
+            <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </span>
+        )}
       </div>
     </Link>
   );

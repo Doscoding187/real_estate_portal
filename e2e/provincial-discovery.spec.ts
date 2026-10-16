@@ -318,9 +318,9 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByTestId('provincial-primary-cta')).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Choose journey' })).toBeDisabled();
     await expect(page.getByRole('tab', { name: /^Buy/ })).toHaveAttribute('aria-selected', 'false');
-    await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeDisabled();
-    await expect(page.getByRole('tab', { name: /Commercial/ })).toBeDisabled();
-    await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeDisabled();
+    await expect(page.getByRole('tab', { name: /Land & plots/ })).toBeEnabled();
+    await expect(page.getByRole('tab', { name: /Commercial/ })).toBeEnabled();
+    await expect(page.getByRole('tab', { name: /Shared Living/ })).toBeEnabled();
     await expect(page.getByTestId('provincial-billboard')).toHaveCount(0);
 
     await capture(page, 'neutral-gauteng-1440.png');
@@ -416,7 +416,7 @@ test.describe('Gauteng provincial discovery', () => {
     await expect(page.getByRole('button', { name: 'Remove Sandton' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Remove Rosebank' })).toBeVisible();
     await expect(page.getByTestId('provincial-location-helper')).toHaveText(
-      /Explicit OR: these locations stay separate/,
+      /Results will include any of your selected areas/,
     );
 
     await capture(page, 'rent-multi-location-or-1440.png');
@@ -669,7 +669,7 @@ test.describe('Western Cape provincial discovery acceptance', () => {
 
     await expect(page.getByRole('button', { name: 'Remove Cape Town' })).toBeVisible();
     await expect(page.getByTestId('provincial-location-helper')).toHaveText(
-      /Canonical location preserved/,
+      /Your selected area will stay with your search/,
     );
     await page.evaluate(() => window.scrollTo(0, 0));
     await capture(page, 'western-cape-rent-cape-town-1440.png');

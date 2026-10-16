@@ -1,4 +1,6 @@
+import { buildPropertySearchUrl, buildDevelopmentsSearchUrl } from '@/lib/heroJourneySearch';
 import { CITY_PROVINCE_MAP, normalizeLocationKey } from '@/lib/locationUtils';
+import type { HomeAreaSelection, HomeSearchFilters } from '@/contexts/HomeSearchContext';
 
 export type DiscoverListingType = 'sale' | 'rent' | 'developments';
 
@@ -79,4 +81,40 @@ export function buildDiscoverCardHref(
   }
 
   return withQuery(listingType === 'rent' ? '/property-to-rent' : '/property-for-sale', params);
+}
+
+/** Homepage category handoff uses the selected authority, never a display city name. */
+export function buildSelectedDiscoverHref(
+  listingType: DiscoverListingType,
+  selection: HomeAreaSelection,
+  filters: HomeSearchFilters,
+  propertyLabel?: string,
+): string | null {
+  if (!selection.locations.length && !selection.searchArea) return null;
+  const propertyType = propertyLabel
+    ? DISCOVER_PROPERTY_TYPE_BY_LABEL[propertyLabel as keyof typeof DISCOVER_PROPERTY_TYPE_BY_LABEL]
+    : filters.propertyType;
+  if (listingType === 'developments') {
+    if (selection.searchArea) return null;
+    return buildDevelopmentsSearchUrl({
+      selectedLocations: selection.locations,
+      developmentType: filters.developmentType,
+      developmentStatus: filters.developmentStatus,
+      minPrice: filters.priceMin,
+      maxPrice: filters.priceMax,
+    });
+  }
+  return buildPropertySearchUrl({
+    transactionType: listingType === 'rent' ? 'to-rent' : 'for-sale',
+    selectedLocations: selection.searchArea ? [] : selection.locations,
+    searchScope: selection.searchArea
+      ? { kind: 'search_area', searchAreaId: selection.searchArea.searchAreaId }
+      : undefined,
+    searchAreaAvailability: selection.searchArea?.availability,
+    propertyType,
+    minPrice: listingType === 'sale' ? filters.priceMin : undefined,
+    maxPrice: listingType === 'rent' ? filters.budgetMax : filters.priceMax,
+    minBedrooms: listingType === 'sale' ? filters.minBedrooms : undefined,
+    minBathrooms: listingType === 'sale' ? filters.minBathrooms : undefined,
+  });
 }
