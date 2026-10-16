@@ -414,7 +414,7 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
       totalUnits: 10,
       availableUnits: 4,
       reservedUnits: 2,
-      derivedSoldUnits: 4,
+      unclassifiedRemainderUnits: 4,
       pricing: { kind: 'sale', from: 1000000, to: 1000000 },
     });
     const query = developmentHomeQuerySource();
@@ -574,7 +574,9 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query).toContain(
       "operatingAs.publisherType !== 'developer' && operatingAs.publisherType !== 'hybrid'",
     );
-    expect(query).toContain('eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId)');
+    expect(query).toContain(
+      'eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId)',
+    );
     expect(query).not.toContain('input.developerId');
     expect(query).not.toContain('input.brandId');
     expect(query).not.toContain('input.ownerId');

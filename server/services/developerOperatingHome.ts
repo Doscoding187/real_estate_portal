@@ -112,6 +112,7 @@ export type DeveloperOperatingDevelopmentSummary = {
     openLeadCount: number;
     slaWarningCount: number;
     slaBreachCount: number;
+    stageCounts: DeveloperOperatingLeadSummary['funnel']['stages'];
   };
   attention: DevelopmentHomeAttention;
   publication: {
@@ -142,6 +143,7 @@ export type DeveloperOperatingHome = {
       openLeadCount: number;
       slaWarningCount: number;
       slaBreachCount: number;
+      stageCounts: DeveloperOperatingLeadSummary['funnel']['stages'];
     };
     attentionCount: number;
     nextAction:
@@ -420,6 +422,7 @@ export function buildDevelopmentOperatingSummary(input: {
       openLeadCount: input.leadSummary.funnel.openLeadCount,
       slaWarningCount: input.leadSummary.funnel.slaWarningCount,
       slaBreachCount: input.leadSummary.funnel.slaBreachCount,
+      stageCounts: input.leadSummary.funnel.stages,
     },
     attention,
     publication: {
@@ -471,6 +474,16 @@ export function buildDeveloperOperatingHome(input: {
   let openLeadCount = 0;
   let slaWarningCount = 0;
   let slaBreachCount = 0;
+  const leadStageCounts: DeveloperOperatingLeadSummary['funnel']['stages'] = {
+    new: 0,
+    contacted: 0,
+    qualified: 0,
+    viewing: 0,
+    offer: 0,
+    dealInProgress: 0,
+    closedWon: 0,
+    closedLost: 0,
+  };
   let readyDevelopmentCount = 0;
   let blockedDevelopmentCount = 0;
   let attentionCount = 0;
@@ -483,6 +496,9 @@ export function buildDeveloperOperatingHome(input: {
     openLeadCount += development.leads.openLeadCount;
     slaWarningCount += development.leads.slaWarningCount;
     slaBreachCount += development.leads.slaBreachCount;
+    for (const stage of Object.keys(leadStageCounts) as Array<keyof typeof leadStageCounts>) {
+      leadStageCounts[stage] += development.leads.stageCounts[stage];
+    }
     attentionCount += development.attention.totalCount;
   }
 
@@ -541,7 +557,13 @@ export function buildDeveloperOperatingHome(input: {
         trackedDevelopmentCount: trackedInventory.length,
         configuredDevelopmentCount,
       },
-      leads: { capturedLeadCount, openLeadCount, slaWarningCount, slaBreachCount },
+      leads: {
+        capturedLeadCount,
+        openLeadCount,
+        slaWarningCount,
+        slaBreachCount,
+        stageCounts: leadStageCounts,
+      },
       attentionCount,
       nextAction: actionCandidates[0] ?? null,
     },
