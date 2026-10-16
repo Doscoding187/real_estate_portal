@@ -1,243 +1,300 @@
-/**
- * Developer Directory Page
- *
- * Lists all visible developer Catalogue Publishers with filters.
- * SEO-friendly page for brand discovery.
- */
-
-import React, { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useSearch } from 'wouter';
+import { Building2, MapPin, Search, ArrowRight } from 'lucide-react';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { DeveloperProvinceSelect } from '@/components/development/DeveloperProvinceSelect';
 import { trpc } from '@/lib/trpc';
-import { Loader2, Search, Building2, MapPin, ChevronRight, Home } from 'lucide-react';
+import { developerDiscoveryHref, readDeveloperProvince } from '@shared/developerDiscovery';
 
+const PAGE_SIZE = 24;
 export default function DeveloperDirectoryPage() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const scope = readDeveloperProvince(search);
   const [searchQuery, setSearchQuery] = useState('');
-  const [tierFilter, setTierFilter] = useState<string>('all');
-
-  // Fetch Catalogue Publishers
-  const { data: profiles, isLoading } = trpc.cataloguePublisher.listPublishers.useQuery({
-    search: searchQuery || undefined,
-    brandTier:
-      tierFilter !== 'all' ? (tierFilter as 'national' | 'regional' | 'boutique') : undefined,
-    isVisible: true,
-    limit: 50,
-  });
-
-  const tierLabel: Record<string, string> = {
-    national: 'National Developer',
-    regional: 'Regional Developer',
-    boutique: 'Boutique Developer',
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [tierFilter, setTierFilter] = useState<'all' | 'national' | 'regional' | 'boutique'>('all');
+  const [page, setPage] = useState(0);
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 200);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+  useEffect(() => setPage(0), [debouncedSearch, tierFilter, scope.province, scope.invalid]);
+  const query = trpc.cataloguePublisher.listPublishers.useQuery(
+    {
+      search: debouncedSearch || undefined,
+      brandTier: tierFilter === 'all' ? undefined : tierFilter,
+      province: scope.province,
+      limit: PAGE_SIZE + 1,
+      offset: page * PAGE_SIZE,
+    },
+    { enabled: !scope.invalid, retry: false },
+  );
+  const pending = query.isLoading || query.isFetching || searchQuery.trim() !== debouncedSearch;
+  const profiles = query.data?.slice(0, PAGE_SIZE) ?? [];
+  const hasMore = (query.data?.length ?? 0) > PAGE_SIZE;
+  const clearFilters = () => {
+    setSearchQuery('');
+    setTierFilter('all');
+    setPage(0);
   };
-
-  const tierBadgeColor: Record<string, string> = {
-    national: 'bg-indigo-100 text-indigo-700',
-    regional: 'bg-blue-100 text-blue-700',
-    boutique: 'bg-emerald-100 text-emerald-700',
+  const changeProvince = (province?: string) => {
+    setPage(0);
+    setLocation(developerDiscoveryHref('/developers', province));
   };
-
+  const retry = () => void query.refetch();
   return (
     <div className="min-h-screen bg-slate-50">
       <ListingNavbar />
-
-      {/* Hero Section */}
-      <div className="bg-gradient-to-b from-indigo-900 to-indigo-800 text-white pt-24 pb-12">
+      <div className="bg-gradient-to-b from-indigo-900 to-indigo-800 pb-8 pt-24 text-white">
         <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl font-bold mb-4">Recognised Developers</h1>
-            <p className="text-indigo-200 text-lg mb-8">
-              Discover trusted property developers across South Africa. Browse developments, view
-              track records, and find your next investment.
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="mb-3 text-3xl font-bold md:text-4xl">Developer directory</h1>
+            <p className="mb-6 text-base leading-relaxed text-indigo-100">
+              {scope.province
+                ? `Discover developers with published projects in ${scope.province}.`
+                : 'Explore developer profiles and their published projects across South Africa.'}
             </p>
-
-            {/* Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
-                <Input
-                  placeholder="Search developers..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-indigo-200 focus:bg-white focus:text-slate-900 focus:placeholder:text-slate-400"
-                />
+            <div className="grid gap-3 text-left sm:grid-cols-[minmax(0,1fr)_12rem_9rem]">
+              <div>
+                <label
+                  htmlFor="developer-name-search"
+                  className="mb-1.5 block text-xs font-semibold"
+                >
+                  Developer name
+                </label>
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-500"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    id="developer-name-search"
+                    placeholder="Search developers"
+                    maxLength={200}
+                    value={searchQuery}
+                    onChange={event => {
+                      setSearchQuery(event.target.value);
+                      setPage(0);
+                    }}
+                    className="min-h-[44px] border-slate-300 bg-white pl-9 text-slate-900 placeholder:text-slate-500"
+                  />
+                </div>
               </div>
-              <Select value={tierFilter} onValueChange={setTierFilter}>
-                <SelectTrigger className="w-full sm:w-48 h-12 bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="All Developers" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Developers</SelectItem>
-                  <SelectItem value="national">National</SelectItem>
-                  <SelectItem value="regional">Regional</SelectItem>
-                  <SelectItem value="boutique">Boutique</SelectItem>
-                </SelectContent>
-              </Select>
+              <DeveloperProvinceSelect
+                province={scope.province}
+                invalid={scope.invalid}
+                onChange={changeProvince}
+              />
+              <div>
+                <label
+                  htmlFor="developer-brand-tier"
+                  className="mb-1.5 block text-xs font-semibold"
+                >
+                  Developer reach
+                </label>
+                <select
+                  id="developer-brand-tier"
+                  value={tierFilter}
+                  onChange={event => {
+                    setTierFilter(event.target.value as typeof tierFilter);
+                    setPage(0);
+                  }}
+                  className="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800"
+                >
+                  <option value="all">All developers</option>
+                  <option value="national">National</option>
+                  <option value="regional">Regional</option>
+                  <option value="boutique">Boutique</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Results Section */}
-      <div className="container py-12">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+      <div className="container py-8">
+        {scope.invalid ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"
+          >
+            <h2 className="font-semibold text-slate-900">Choose a supported province</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              This location could not be used. Select a project province above to continue.
+            </p>
           </div>
-        ) : profiles && profiles.length > 0 ? (
-          <>
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-slate-600">
-                Showing <span className="font-semibold text-slate-900">{profiles.length}</span>{' '}
-                developers
-              </p>
-            </div>
-
-            {/* Developer Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {profiles.map(profile => (
-                <Card
-                  key={profile.id}
-                  className="group border-slate-200 hover:border-indigo-300 hover:shadow-lg transition-all cursor-pointer"
-                  onClick={() => setLocation(`/developer/${profile.slug}`)}
-                >
-                  <CardContent className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start gap-4 mb-4">
-                      {/* Logo */}
-                      <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden border border-slate-200 shrink-0 group-hover:border-indigo-300 transition-colors">
-                        {profile.logoUrl ? (
-                          <img
-                            src={profile.logoUrl}
-                            alt={profile.brandName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-indigo-600 text-white text-xl font-bold">
-                            {profile.brandName.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                          {profile.brandName}
-                        </h3>
-
-                        {profile.brandTier && (
-                          <Badge
-                            className={`mt-1 border-0 text-xs ${tierBadgeColor[profile.brandTier] || 'bg-slate-100 text-slate-700'}`}
-                          >
-                            {tierLabel[profile.brandTier] || profile.brandTier}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Location */}
-                    {profile.headOfficeLocation && (
-                      <div className="flex items-center gap-1.5 text-sm text-slate-500 mb-3">
-                        <MapPin className="h-4 w-4" />
-                        <span className="truncate">{profile.headOfficeLocation}</span>
-                      </div>
-                    )}
-
-                    {/* About */}
-                    {profile.about && (
-                      <p className="text-sm text-slate-600 line-clamp-2 mb-4">{profile.about}</p>
-                    )}
-
-                    {/* Property Focus Tags */}
-                    {profile.propertyFocus && profile.propertyFocus.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {profile.propertyFocus.slice(0, 3).map((focus: string) => (
-                          <Badge
-                            key={focus}
-                            variant="secondary"
-                            className="bg-slate-100 text-slate-600 border-0 text-xs capitalize"
-                          >
-                            {focus.replace(/_/g, ' ')}
-                          </Badge>
-                        ))}
-                        {profile.propertyFocus.length > 3 && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-slate-100 text-slate-600 border-0 text-xs"
-                          >
-                            +{profile.propertyFocus.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Stats / CTA */}
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-                      {profile.totalLeadsReceived && profile.totalLeadsReceived > 0 ? (
-                        <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                          <Home className="h-4 w-4" />
-                          <span>{profile.totalLeadsReceived} buyer enquiries</span>
-                        </div>
-                      ) : (
-                        <div />
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 -mr-2"
-                      >
-                        View Profile
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-20">
-            <Building2 className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No Developers Found</h3>
-            <p className="text-slate-500 mb-6">
-              {searchQuery
-                ? `No developers match "${searchQuery}". Try a different search.`
-                : 'No developers are currently listed in the directory.'}
+        ) : query.isError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"
+          >
+            <h2 className="font-semibold text-slate-900">
+              Developer directory could not be loaded
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Your filters are still here. Please try again.
             </p>
             <Button
               variant="outline"
-              onClick={() => {
-                setSearchQuery('');
-                setTierFilter('all');
-              }}
+              disabled={query.isFetching}
+              onClick={retry}
+              className="mt-4 min-h-[44px] bg-white"
             >
-              Clear Filters
+              {query.isFetching ? 'Trying again…' : 'Try again'}
+            </Button>
+          </div>
+        ) : pending ? (
+          <div role="status" aria-label="Loading developer profiles">
+            <p className="mb-4 text-sm text-slate-600">Finding developers…</p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {[0, 1, 2].map(index => (
+                <Skeleton key={index} className="h-64 rounded-xl" />
+              ))}
+            </div>
+          </div>
+        ) : profiles.length ? (
+          <>
+            <p className="mb-4 text-sm text-slate-600" aria-live="polite">
+              Showing {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + profiles.length} developers
+              {scope.province ? ` with published projects in ${scope.province}` : ''}
+            </p>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {profiles.map(profile => {
+                const href = developerDiscoveryHref(`/developer/${profile.slug}`, scope.province);
+                return (
+                  <Card
+                    key={profile.id}
+                    className="h-full rounded-xl border-slate-200 bg-white transition-colors hover:border-indigo-300 hover:shadow-md"
+                  >
+                    <CardContent className="flex h-full flex-col p-5">
+                      <div className="mb-4 flex items-start gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                          {profile.logoUrl ? (
+                            <img
+                              src={profile.logoUrl}
+                              alt={`${profile.brandName} logo`}
+                              className="h-full w-full object-contain p-1"
+                            />
+                          ) : (
+                            <Building2 className="h-6 w-6 text-indigo-600" aria-hidden="true" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="text-base font-bold leading-snug text-slate-900">
+                            <Link href={href} className="hover:text-indigo-700 hover:underline">
+                              {profile.brandName}
+                            </Link>
+                          </h2>
+                          {profile.brandTier && (
+                            <Badge className="mt-2 border-0 bg-indigo-50 text-xs capitalize text-indigo-700">
+                              {profile.brandTier}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      {profile.headOfficeLocation && (
+                        <p className="mb-3 flex items-start gap-1.5 text-sm text-slate-600">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                          <span>Head office: {profile.headOfficeLocation}</span>
+                        </p>
+                      )}
+                      {profile.about && (
+                        <p className="mb-4 line-clamp-3 text-sm leading-relaxed text-slate-600">
+                          {profile.about}
+                        </p>
+                      )}
+                      {Array.isArray(profile.propertyFocus) && profile.propertyFocus.length > 0 && (
+                        <div className="mb-4 flex flex-wrap gap-1.5">
+                          {profile.propertyFocus
+                            .filter((focus: unknown): focus is string => typeof focus === 'string')
+                            .slice(0, 3)
+                            .map((focus: string) => (
+                              <Badge
+                                key={focus}
+                                variant="secondary"
+                                className="border-0 bg-slate-100 text-xs capitalize text-slate-600"
+                              >
+                                {focus.replace(/_/g, ' ')}
+                              </Badge>
+                            ))}
+                        </div>
+                      )}
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                        <Link
+                          href={developerDiscoveryHref(
+                            `/developer/${profile.slug}`,
+                            scope.province,
+                            true,
+                          )}
+                          className="inline-flex min-h-[44px] items-center gap-2 rounded-md text-sm font-semibold text-[#2774AE] hover:underline"
+                        >
+                          View projects
+                          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                        </Link>
+                        <Link
+                          href={href}
+                          className="inline-flex min-h-[44px] items-center rounded-md text-sm text-slate-600 hover:underline"
+                        >
+                          Developer profile
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-white px-5 py-10 text-center">
+            <Building2 className="mx-auto h-10 w-10 text-slate-400" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-slate-900">
+              {page ? 'No more developer profiles' : 'No matching developers found'}
+            </h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-600">
+              {scope.province
+                ? `There are no matching developer profiles with published projects in ${scope.province}. You can change province or clear the name and reach filters.`
+                : 'Try another developer name or clear the filters.'}
+            </p>
+            <Button variant="outline" onClick={clearFilters} className="mt-4 min-h-[44px]">
+              Clear name and reach filters
             </Button>
           </div>
         )}
+        {!scope.invalid && !query.isError && !pending && (page > 0 || hasMore) && (
+          <nav
+            aria-label="Developer directory pages"
+            className="mt-6 flex flex-wrap items-center justify-between gap-3"
+          >
+            <Button
+              variant="outline"
+              disabled={page === 0}
+              onClick={() => setPage(value => Math.max(0, value - 1))}
+              className="min-h-[44px]"
+            >
+              Previous developers
+            </Button>
+            <span className="text-sm text-slate-600">Page {page + 1}</span>
+            <Button
+              variant="outline"
+              disabled={!hasMore}
+              onClick={() => setPage(value => value + 1)}
+              className="min-h-[44px]"
+            >
+              Next developers
+            </Button>
+          </nav>
+        )}
       </div>
-
-      {/* Legal Disclaimer */}
-      <div className="bg-slate-100 py-8">
-        <div className="container">
-          <p className="text-center text-sm text-slate-500 max-w-2xl mx-auto">
-            Developer names and logos are used for identification purposes only and do not imply
-            partnership or endorsement. Information is provided for reference and may not reflect
-            current status.
-          </p>
-        </div>
+      <div className="bg-slate-100 py-6">
+        <p className="container text-center text-xs leading-relaxed text-slate-600">
+          Developer names and logos identify the publisher. Individual verification information is
+          shown on the developer profile.
+        </p>
       </div>
     </div>
   );

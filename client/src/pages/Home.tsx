@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
+import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
 import { normalizeHeroUiTab, type HeroTab } from '@/types/hero';
 import {
@@ -20,12 +21,17 @@ import {
   toAbsoluteUrl,
 } from '@/lib/seo/structuredData';
 import { VITE_APP_LOGO } from '@/const';
+import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const isMobile = useIsMobile();
   const [selectedProvince, setSelectedProvince] = useState('Gauteng');
+  const [selectedCityGuideProvince, setSelectedCityGuideProvince] = useState('Gauteng');
+  const cityGuideProvince = Object.values(PROVINCIAL_CONFIGS).find(
+    province => province.name === selectedCityGuideProvince,
+  )!;
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
@@ -56,9 +62,10 @@ export default function Home() {
     activeJourney && isHomepageHeroJourneyEnabled(activeJourney)
       ? (activeJourney as HeroTab)
       : 'buy';
-  const { data: popularCitiesData } = trpc.locationPages.getPopularCities.useQuery({
-    limit: 12,
-  });
+  const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
+    { limit: 24, provinceSlug: cityGuideProvince.slug },
+    { retry: false, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false },
+  );
 
   const handleTabChange = (tab: string) => {
     const normalizedTab = normalizeHeroUiTab(tab);
@@ -87,13 +94,12 @@ export default function Home() {
       description: homeDescription,
     }),
   ];
-  const popularCities =
-    popularCitiesData?.map(city => ({
+  const cityGuides =
+    cityGuidesQuery.data?.map(city => ({
       name: city.name,
       province: city.provinceName,
       slug: city.slug,
       provinceSlug: city.provinceSlug,
-      propertyCount: `${city.listingCount.toLocaleString()} Properties`,
     })) ?? [];
 
   return (
@@ -105,29 +111,53 @@ export default function Home() {
         image={toAbsoluteUrl(VITE_APP_LOGO)}
         structuredData={homeStructuredData}
       />
-      <PageFrame contained={false}>
-        {isMobile ? (
-          <HomeMobileView
-            activeHeroTab={effectiveHeroTab}
-            heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/property-for-sale')}
-            onProvinceChange={setSelectedProvince}
-            onTabChange={handleTabChange}
-            popularCities={popularCities}
-            selectedProvince={selectedProvince}
-          />
-        ) : (
-          <HomeDesktopView
-            activeHeroTab={effectiveHeroTab}
-            heroTabValue={heroTabValue}
-            onBrowseProperties={() => setLocation('/property-for-sale')}
-            onProvinceChange={setSelectedProvince}
-            onTabChange={handleTabChange}
-            popularCities={popularCities}
-            selectedProvince={selectedProvince}
-          />
-        )}
-      </PageFrame>
+      <HomeSearchProvider journey={heroTabValue} onJourneyChange={handleTabChange}>
+        <PageFrame contained={false}>
+          {isMobile ? (
+            <HomeMobileView
+              activeHeroTab={effectiveHeroTab}
+              heroTabValue={heroTabValue}
+              onBrowseProperties={() => setLocation('/property-for-sale')}
+              onProvinceChange={setSelectedProvince}
+              onTabChange={handleTabChange}
+              cityGuides={cityGuides}
+              cityGuideProvince={{
+                name: cityGuideProvince.name,
+                slug: cityGuideProvince.slug,
+                onChange: setSelectedCityGuideProvince,
+              }}
+              cityGuidesState={{
+                isLoading: cityGuidesQuery.isLoading,
+                isError: cityGuidesQuery.isError,
+                isFetching: cityGuidesQuery.isFetching,
+                onRetry: () => void cityGuidesQuery.refetch(),
+              }}
+              selectedProvince={selectedProvince}
+            />
+          ) : (
+            <HomeDesktopView
+              activeHeroTab={effectiveHeroTab}
+              heroTabValue={heroTabValue}
+              onBrowseProperties={() => setLocation('/property-for-sale')}
+              onProvinceChange={setSelectedProvince}
+              onTabChange={handleTabChange}
+              cityGuides={cityGuides}
+              cityGuideProvince={{
+                name: cityGuideProvince.name,
+                slug: cityGuideProvince.slug,
+                onChange: setSelectedCityGuideProvince,
+              }}
+              cityGuidesState={{
+                isLoading: cityGuidesQuery.isLoading,
+                isError: cityGuidesQuery.isError,
+                isFetching: cityGuidesQuery.isFetching,
+                onRetry: () => void cityGuidesQuery.refetch(),
+              }}
+              selectedProvince={selectedProvince}
+            />
+          )}
+        </PageFrame>
+      </HomeSearchProvider>
     </HomeLayout>
   );
 }

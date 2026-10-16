@@ -187,9 +187,8 @@ function farmLocationQuery(selectedLocations: readonly LocationNode[], searchSco
 
 export function buildConsumerJourneyUrl(input: ConsumerJourneySearchInput): string {
   const definition = resolveConsumerJourney(input.intent, input.journey);
-  // A stale saved intent or manually constructed handoff must reach the
-  // explicit deferred route, never construct a Land search or silently widen
-  // the request into Homes.
+  // Unavailable specialist intent stays on its own destination; it must
+  // never silently widen the request into Homes.
   if (!definition) return input.journey === 'land' ? '/plots-and-land' : '/';
 
   if (input.journey === 'residential') {

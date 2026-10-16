@@ -26,6 +26,16 @@ function extractBalancedCalls(source: string, expression: string): string[] {
 }
 
 describe('public Buy entry eligibility contract', () => {
+  it('checks approved photos before selecting the homepage candidate page', () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), 'server/services/propertySearchService.ts'),
+      'utf8',
+    );
+    const photoCheck = source.indexOf('resolution.images.some');
+    const pageSelection = source.indexOf('eligiblePageIds = eligibleIds.slice');
+    expect(photoCheck).toBeGreaterThan(0);
+    expect(pageSelection).toBeGreaterThan(photoCheck);
+  });
   it('keeps every manual homepage feed branch on canonical public-only search', () => {
     const source = readFileSync(path.resolve(process.cwd(), 'server/developerRouter.ts'), 'utf8');
     const start = source.indexOf('getHomeTrendingFeed: publicProcedure');
@@ -38,7 +48,8 @@ describe('public Buy entry eligibility contract', () => {
 
     expect(manualSearchCalls.length).toBeGreaterThanOrEqual(1);
     manualSearchCalls.forEach(call => {
-      expect(call).toContain('{ publicOnly: true }');
+      expect(call).toContain('publicOnly: true');
+      expect(call).toContain('requirePhoto: true');
     });
   });
 

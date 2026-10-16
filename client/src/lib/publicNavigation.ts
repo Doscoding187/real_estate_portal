@@ -7,7 +7,7 @@ import {
 import { PROVINCE_SLUGS } from '@/lib/locationUtils';
 import { parseDeployEnv } from './env.contract';
 import { COMMERCIAL_SEARCH_QUERY_KEYS } from '@shared/commercialSearchContract';
-import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import { isLandPublicDiscoveryAvailable } from '@shared/landLaunchPolicy';
 
 export type PublicNavigationCapabilityStatus =
   | 'LAUNCH_READY'
@@ -238,9 +238,8 @@ export const PUBLIC_HERO_JOURNEYS: readonly PublicHeroJourneyDefinition[] = [
     mobileLabel: 'Plots & Land',
     kind: 'property-search',
     destination: '/plots-and-land',
-    // The specialist implementation remains available for a separately
-    // accepted release, but the first-cohort disposition is deferred by the
-    // shared Land launch policy.
+    // Public specialist search is available. Authoring, review and inventory
+    // publication remain governed separately by the shared Land policy.
     productHomepageVisible: true,
     productHomepageEnabled: true,
     supportedFields: ['location', 'landType', 'sizeMin', 'sizeMax', 'minPrice', 'maxPrice'],
@@ -304,14 +303,12 @@ export function getPublicHeroJourney(
     PUBLIC_HERO_JOURNEY_BY_KEY.get(DEFAULT_PUBLIC_HERO_JOURNEY)!;
   const released = isPublicHeroJourneyReleased(journey.key, releaseContext);
   const productDispositionAllowsExposure =
-    journey.key !== 'plot_land' || isLandVerticalAvailable();
+    journey.key !== 'plot_land' || isLandPublicDiscoveryAvailable();
 
   return {
     ...journey,
-    homepageVisible:
-      journey.productHomepageVisible && released && productDispositionAllowsExposure,
-    homepageEnabled:
-      journey.productHomepageEnabled && released && productDispositionAllowsExposure,
+    homepageVisible: journey.productHomepageVisible && released && productDispositionAllowsExposure,
+    homepageEnabled: journey.productHomepageEnabled && released && productDispositionAllowsExposure,
   };
 }
 

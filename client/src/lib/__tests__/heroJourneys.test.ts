@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isLandPublicDiscoveryAvailable, isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 import {
   buildHomepageJourneyUrl,
   getPublicHeroJourney,
@@ -26,6 +27,13 @@ describe('hero journey authority', () => {
     expect(getPublicHeroJourney('buy').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('rent').homepageEnabled).toBe(true);
     expect(getPublicHeroJourney('developments').homepageEnabled).toBe(true);
+    expect(getPublicHeroJourney('plot_land')).toMatchObject({
+      destination: '/plots-and-land',
+      productHomepageVisible: true,
+      productHomepageEnabled: true,
+      homepageVisible: true,
+      homepageEnabled: true,
+    });
     expect(getPublicHeroJourney('commercial')).toMatchObject({
       destination: '/commercial',
       productHomepageVisible: true,
@@ -39,6 +47,7 @@ describe('hero journey authority', () => {
       'rent',
       'developments',
       'shared_living',
+      'plot_land',
       'commercial',
       'find_agent',
     ]);
@@ -106,23 +115,26 @@ describe('hero journey authority', () => {
     ]);
   });
 
-  it('requires the product disposition as well as an explicit hosted manifest', () => {
+  it('exposes public Land search through the manifest while publication stays deferred', () => {
     const hostedRelease = resolvePublicJourneyReleaseContext({
       PROD: true,
       VITE_DEPLOY_ENV: 'production',
       VITE_PUBLIC_JOURNEY_RELEASES: 'shared_living,plot_land,commercial',
     });
 
-    // Shared Living and Commercial are explicitly released. Land remains
-    // deferred even when a stale manifest names it.
+    expect(isLandPublicDiscoveryAvailable()).toBe(true);
+    expect(isLandVerticalAvailable()).toBe(false);
+
+    // Consumer search is separately authorized; inventory publication stays
+    // deferred under the Land vertical policy.
     expect(getPublicHeroJourney('shared_living', hostedRelease)).toMatchObject({
       homepageVisible: true,
       homepageEnabled: true,
       destination: '/shared-living',
     });
     expect(getPublicHeroJourney('plot_land', hostedRelease)).toMatchObject({
-      homepageVisible: false,
-      homepageEnabled: false,
+      homepageVisible: true,
+      homepageEnabled: true,
       destination: '/plots-and-land',
     });
     expect(getPublicHeroJourney('commercial', hostedRelease)).toMatchObject({

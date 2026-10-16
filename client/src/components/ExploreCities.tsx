@@ -1,28 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { MapPin, ChevronRight, ChevronDown, Building } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { MapPin, ChevronDown, Building } from 'lucide-react';
+import { HOME_PROVINCE_OPTIONS } from '@/lib/homeProvinceOptions';
 
-interface City {
-  name: string;
-  province: string;
-  slug: string;
-  provinceSlug: string;
-  image?: string;
-  propertyCount?: string;
-  featured?: boolean;
+export type { CityGuideLocation } from './CityGuideEntry';
+import { CityGuideEntry, type CityGuideLocation } from './CityGuideEntry';
+export interface CityGuideRequestState {
+  isLoading: boolean;
+  isError: boolean;
+  isFetching?: boolean;
+  onRetry: () => void;
 }
-
+export interface CityGuideProvinceSelection {
+  name: string;
+  slug: string;
+  onChange: (province: string) => void;
+}
 interface ExploreCitiesProps {
   provinceSlug?: string;
   title?: string;
   description?: string;
-  customLocations?: City[];
+  customLocations?: CityGuideLocation[];
   basePath?: string;
   queryParams?: string;
   initialLimit?: number;
-  /** Use the full homepage content rail rather than adding a second container. */
   withinContentRail?: boolean;
+  guideCards?: boolean;
+  requestState?: CityGuideRequestState;
+  selectedGuideProvince?: string;
+  onGuideProvinceChange?: (province: string) => void;
 }
 
 export function ExploreCities({
@@ -34,253 +42,170 @@ export function ExploreCities({
   queryParams = '',
   initialLimit = 12,
   withinContentRail = false,
+  guideCards = false,
+  requestState,
+  selectedGuideProvince,
+  onGuideProvinceChange,
 }: ExploreCitiesProps = {}) {
   const [visibleCount, setVisibleCount] = useState(initialLimit);
-
-  const cities: City[] = [
-    // Gauteng
-    {
-      name: 'Johannesburg',
-      province: 'Gauteng',
-      slug: 'johannesburg',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1577948000111-9c9707350061?w=800&q=80',
-    },
-    {
-      name: 'Pretoria',
-      province: 'Gauteng',
-      slug: 'pretoria',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1624638760980-cb05d15a5198?w=800&q=80',
-    },
-    {
-      name: 'Sandton',
-      province: 'Gauteng',
-      slug: 'sandton',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1576485290814-1c72aa4bbb8e?w=800&q=80',
-    },
-    {
-      name: 'Midrand',
-      province: 'Gauteng',
-      slug: 'midrand',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1575517111478-7f60e971579f?w=800&q=80',
-    },
-    {
-      name: 'Centurion',
-      province: 'Gauteng',
-      slug: 'centurion',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=800&q=80',
-    },
-    {
-      name: 'Randburg',
-      province: 'Gauteng',
-      slug: 'randburg',
-      provinceSlug: 'gauteng',
-      image: 'https://images.unsplash.com/photo-1628191011993-4350f555e09f?w=800&q=80',
-    },
-    {
-      name: 'Roodepoort',
-      province: 'Gauteng',
-      slug: 'roodepoort',
-      provinceSlug: 'gauteng',
-    },
-    {
-      name: 'Benoni',
-      province: 'Gauteng',
-      slug: 'benoni',
-      provinceSlug: 'gauteng',
-    },
-    {
-      name: 'Boksburg',
-      province: 'Gauteng',
-      slug: 'boksburg',
-      provinceSlug: 'gauteng',
-    },
-    {
-      name: 'Alberton',
-      province: 'Gauteng',
-      slug: 'alberton',
-      provinceSlug: 'gauteng',
-    },
-    {
-      name: 'Kempton Park',
-      province: 'Gauteng',
-      slug: 'kempton-park',
-      provinceSlug: 'gauteng',
-    },
-    {
-      name: 'Soweto',
-      province: 'Gauteng',
-      slug: 'soweto',
-      provinceSlug: 'gauteng',
-    },
-    // Other Provinces (for Homepage)
-    {
-      name: 'Cape Town',
-      province: 'Western Cape',
-      slug: 'cape-town',
-      provinceSlug: 'western-cape',
-      image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
-    },
-    {
-      name: 'Durban',
-      province: 'KwaZulu-Natal',
-      slug: 'durban',
-      provinceSlug: 'kwazulu-natal',
-      image: 'https://images.unsplash.com/photo-1549297136-1c4b7b25055b?w=800&q=80',
-    },
-    {
-      name: 'Umhlanga',
-      province: 'KwaZulu-Natal',
-      slug: 'umhlanga',
-      provinceSlug: 'kwazulu-natal',
-      image: 'https://images.unsplash.com/photo-1516029272338-782f9c5220c8?w=800&q=80',
-    },
-    {
-      name: 'Stellenbosch',
-      province: 'Western Cape',
-      slug: 'stellenbosch',
-      provinceSlug: 'western-cape',
-      image: 'https://images.unsplash.com/photo-1518182170546-0766cac6cf66?w=800&q=80',
-    },
-    {
-      name: 'Gqeberha',
-      province: 'Eastern Cape',
-      slug: 'gqeberha',
-      provinceSlug: 'eastern-cape',
-      image: 'https://images.unsplash.com/photo-1577909384666-382559639556?w=800&q=80',
-    },
-    {
-      name: 'Bloemfontein',
-      province: 'Free State',
-      slug: 'bloemfontein',
-      provinceSlug: 'free-state',
-      image: 'https://images.unsplash.com/photo-1549487950-8b0933580434?w=800&q=80',
-    },
-  ];
-
-  const homepageCityOrder = [
-    'johannesburg',
-    'cape-town',
-    'durban',
-    'pretoria',
-    'gqeberha',
-    'bloemfontein',
-    'polokwane',
-    'mbombela',
-    'mahikeng',
-  ];
-  const nationalFallbackCities = [...cities].sort((left, right) => {
-    const leftPriority = homepageCityOrder.indexOf(left.slug);
-    const rightPriority = homepageCityOrder.indexOf(right.slug);
-    if (leftPriority === -1 && rightPriority === -1) return left.name.localeCompare(right.name);
-    if (leftPriority === -1) return 1;
-    if (rightPriority === -1) return -1;
-    return leftPriority - rightPriority;
-  });
-
-  const allCities =
-    customLocations && customLocations.length > 0
-      ? customLocations
-      : provinceSlug
-        ? cities.filter(city => city.provinceSlug.toLowerCase() === provinceSlug.toLowerCase())
-        : nationalFallbackCities;
-
+  useEffect(() => setVisibleCount(initialLimit), [provinceSlug, initialLimit]);
+  const allCities = (customLocations ?? []).filter(
+    city => !provinceSlug || city.provinceSlug === provinceSlug,
+  );
   const displayedCities = allCities.slice(0, visibleCount);
-  const remainingCount = allCities.length - visibleCount;
-
+  const remainingCount = Math.max(0, allCities.length - visibleCount);
   const displayTitle = title || 'Explore property by city';
   const displayDescription =
     description ||
-    'Use city pages as a starting point for local listings, suburb research, and market discovery.';
-  const viewAllPath = basePath === '' || basePath === '/' ? '/' : '/property-for-sale';
-  const cityHref = (city: City) => {
+    (guideCards
+      ? 'Get to know the neighbourhoods, local insights and property opportunities in our city guides.'
+      : 'Use local guides to explore areas, listings and neighbourhood insights.');
+  const mobileRows = ['grid-rows-1', 'grid-rows-2', 'grid-rows-3'][
+    Math.min(3, displayedCities.length || initialLimit) - 1
+  ];
+  const gridClassName = guideCards
+    ? `home-card-grid scrollbar-hide -mx-4 grid grid-flow-col ${mobileRows} auto-cols-[78vw] snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-2 sm:grid-rows-none sm:overflow-visible sm:px-0 lg:grid-cols-4`
+    : 'home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4';
+  const cityHref = (city: CityGuideLocation) => {
     if (basePath === '/property-for-sale' || basePath === '/property-to-rent') {
       const params = new URLSearchParams(queryParams.replace(/^[?&]/, ''));
       params.set('province', city.provinceSlug);
       params.set('city', city.slug);
-      const query = params.toString();
-      return `${basePath}${query ? `?${query}` : ''}`;
+      return `${basePath}?${params.toString()}`;
     }
-
     return `${basePath}/${city.provinceSlug}/${city.slug}${queryParams}`.replace(/\/\//g, '/');
   };
-
   return (
     <section className="home-section bg-white">
       <div className={withinContentRail ? 'home-section-content' : 'container'}>
-        {/* Section Header */}
-        <div className="home-section-header flex flex-col items-start gap-3 text-left">
-          <div className="max-w-3xl text-left">
-            <h2 className="home-section-title text-[1.125rem] sm:text-xl md:text-[26px] font-bold text-slate-900">
+        <div className="home-section-header flex flex-wrap items-end justify-between gap-4 text-left">
+          <div className="max-w-3xl">
+            <h2 className="home-section-title text-[1.125rem] font-bold text-slate-900 sm:text-xl md:text-[26px]">
               {displayTitle}
             </h2>
-            <p className="max-w-3xl text-[13px] leading-5 text-slate-500 md:text-sm md:leading-6">
+            <p className="max-w-3xl text-[13px] leading-5 text-slate-600 md:text-sm md:leading-6">
               {displayDescription}
             </p>
           </div>
-
-          <Link href={viewAllPath}>
-            <Button
-              variant="ghost"
-              className="group h-9 justify-start rounded-full border border-slate-200 px-3.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 hover:text-blue-700 md:h-auto md:rounded-md md:border-0 md:px-0 md:text-sm"
-            >
-              View All Locations{' '}
-              <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
         </div>
-
-        {/* Grid Layout */}
-        <div className="relative">
-          <div className="home-card-grid scrollbar-hide -mx-4 flex snap-x overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
-            {displayedCities.map(city => (
-              <Link
-                key={city.slug}
-                href={cityHref(city)}
-                className="w-[75vw] max-w-[236px] flex-none snap-start sm:w-auto"
-              >
-                <div className="group h-full cursor-pointer">
-                  <div className="flex h-full items-start gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-300 group-hover:-translate-y-0.5 group-hover:border-slate-300 group-hover:shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:gap-4 sm:rounded-xl sm:border-transparent sm:bg-transparent sm:p-3 sm:shadow-none sm:hover:border-slate-100 sm:hover:bg-slate-50">
-                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-500 shadow-sm sm:h-16 sm:w-16 sm:rounded-lg">
-                      <Building className="h-6 w-6 opacity-90 sm:h-8 sm:w-8" />
-                    </div>
-
-                    <div className="min-w-0 flex-1 py-0.5">
-                      <h3 className="truncate text-[15px] font-bold text-slate-900 transition-colors group-hover:text-blue-600 sm:text-lg">
-                        {city.name}
-                      </h3>
-
-                      {city.propertyCount && (
-                        <p className="mb-1 truncate text-sm text-slate-500">{city.propertyCount}</p>
-                      )}
-
-                      <div className="flex items-center gap-1 text-xs text-slate-400">
-                        <MapPin className="h-3 w-3" />
-                        <span className="truncate">{city.province}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+        {guideCards && selectedGuideProvince && onGuideProvinceChange && (
+          <div className="home-section-tabs scrollbar-hide -mx-4 flex justify-start overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+            <div
+              role="group"
+              aria-label="City guide province"
+              className="inline-flex h-auto flex-nowrap justify-start gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5"
+            >
+              {HOME_PROVINCE_OPTIONS.map(province => (
+                <button
+                  key={province}
+                  type="button"
+                  aria-pressed={selectedGuideProvince === province}
+                  onClick={() => onGuideProvinceChange(province)}
+                  className={`min-h-[44px] whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-[13px] font-semibold transition-all md:px-4 md:text-sm ${selectedGuideProvince === province ? 'bg-[#2774AE] text-white shadow-sm' : 'bg-transparent text-slate-600 hover:text-[#2774AE] hover:bg-white'}`}
+                >
+                  {province}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {requestState?.isLoading ? (
+          <div role="status" aria-label="Loading city guides" className={gridClassName}>
+            {Array.from({ length: initialLimit }, (_, index) => (
+              <Skeleton key={index} className="h-[104px] rounded-xl" />
             ))}
           </div>
-        </div>
-
-        {/* Show More Button */}
-        {remainingCount > 0 && (
-          <div className="mt-6 flex justify-center md:mt-8">
+        ) : requestState?.isError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"
+          >
+            <h3 className="font-semibold text-slate-900">City guides could not be loaded</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {selectedGuideProvince
+                ? 'Choose another province or try again.'
+                : 'Please try again.'}
+            </p>
             <Button
               variant="outline"
-              onClick={() => setVisibleCount(prev => prev + 12)}
-              className="min-w-[220px] rounded-full border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              className="mt-4 min-h-[44px] bg-white"
+              disabled={requestState.isFetching}
+              onClick={requestState.onRetry}
             >
-              Show More Locations ({remainingCount})
-              <ChevronDown className="ml-2 h-4 w-4" />
+              {requestState.isFetching ? 'Trying again…' : 'Try again'}
             </Button>
+          </div>
+        ) : displayedCities.length ? (
+          <>
+            <div className={gridClassName}>
+              {displayedCities.map(city =>
+                guideCards ? (
+                  <CityGuideEntry
+                    key={`${city.provinceSlug}/${city.slug}`}
+                    city={city}
+                    href={cityHref(city)}
+                    className="flex-none snap-start"
+                  />
+                ) : (
+                  <Link
+                    key={`${city.provinceSlug}/${city.slug}`}
+                    href={cityHref(city)}
+                    className="group w-[75vw] max-w-[236px] flex-none snap-start rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2774AE] sm:w-auto"
+                  >
+                    <div className="flex h-full items-start gap-3 rounded-xl border border-slate-200 p-3 sm:gap-4 sm:border-transparent sm:hover:bg-slate-50">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-blue-600 sm:h-16 sm:w-16">
+                        <Building className="h-6 w-6 sm:h-8 sm:w-8" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-[15px] font-bold leading-snug text-slate-900 group-hover:text-[#2774AE] sm:text-base">
+                          {city.name}
+                        </h3>
+                        {city.propertyCount && (
+                          <p className="mt-1 text-sm text-slate-600">{city.propertyCount}</p>
+                        )}
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-600">
+                          <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          {city.province}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
+                ),
+              )}
+            </div>
+            {guideCards && (
+              <p className="mt-3 text-xs text-slate-500">
+                AI illustrations. Cities without their own cover use a province scene.
+              </p>
+            )}
+            {remainingCount > 0 && (
+              <div className="mt-5 flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleCount(count => count + initialLimit)}
+                  className="min-h-[44px] rounded-full border-slate-200 bg-white text-slate-700"
+                >
+                  {guideCards ? 'Show more city guides' : 'Show more locations'}{' '}
+                  <ChevronDown className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+            <Building className="mx-auto h-8 w-8 text-slate-500" aria-hidden="true" />
+            <h3 className="mt-3 font-semibold text-slate-900">
+              {guideCards
+                ? selectedGuideProvince
+                  ? `No city guides in ${selectedGuideProvince} yet`
+                  : 'No city guides to show yet'
+                : 'No locations to explore here yet'}
+            </h3>
+            {guideCards && (
+              <p className="mt-2 text-sm text-slate-600">
+                Choose another province to explore its city guides.
+              </p>
+            )}
           </div>
         )}
       </div>

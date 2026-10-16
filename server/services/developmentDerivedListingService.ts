@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ne, sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
@@ -19,8 +19,12 @@ import {
 } from './searchAreaQueryBoundary';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { buildDevelopmentCardHighlights } from '../../shared/listing-highlight-registry';
+import { hasHomePropertyPhoto } from '../../shared/homePropertyPhoto';
 
 interface DevelopmentDerivedListingFilters {
+  /** Homepage units must have their own representative photos and available stock. */
+  requireUnitPhoto?: boolean;
+  requireAvailableStock?: boolean;
   province?: string;
   city?: string;
   suburb?: string[];
@@ -185,6 +189,7 @@ function parseBaseMedia(value: unknown): Record<string, any> {
 }
 
 function toNumberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
 }
@@ -331,7 +336,6 @@ function mapStructuralTypeToPropertyType(
 
   if (devType === 'land' || structural.includes('plot')) return 'plot';
   if (devType === 'commercial' || structural.includes('office')) return 'commercial';
-  if (structural.includes('house')) return 'house';
   if (
     structural.includes('townhouse') ||
     structural.includes('simplex') ||
@@ -339,6 +343,7 @@ function mapStructuralTypeToPropertyType(
   ) {
     return 'townhouse';
   }
+  if (structural.includes('house')) return 'house';
   return 'apartment';
 }
 
@@ -362,6 +367,20 @@ function getPrimaryImage(unitBaseMedia: unknown, developmentImages: unknown): st
   }
 
   return null;
+}
+
+function getUnitPhoto(unitBaseMedia: unknown): string | null {
+  const gallery = parseBaseMedia(unitBaseMedia).gallery;
+  if (!Array.isArray(gallery)) return null;
+  const photo = gallery.find(item => {
+    const category = item?.category;
+    return (
+      (!category || ['photo', 'interior', 'exterior'].includes(category)) &&
+      (!item?.type || item.type === 'image') &&
+      hasHomePropertyPhoto(item?.url || item?.imageUrl)
+    );
+  });
+  return photo ? String(photo.url || photo.imageUrl).trim() : null;
 }
 
 function getMediaSignals(
@@ -693,10 +712,13 @@ export class DevelopmentDerivedListingService {
   ): Promise<DevelopmentDerivedListingSearchResults> {
     const db = await getDb();
     if (!db) {
-      return { items: [], cards: [], total: 0, page, pageSize, hasMore: false };
+      throw new Error('Database unavailable');
     }
 
     const conditions = [publicDevelopmentEligibilityConditions(), eq(unitTypes.isActive, 1)];
+    if (filters.requireAvailableStock) {
+      conditions.push(gt(unitTypes.availableUnits, 0), ne(developments.status, 'sold-out'));
+    }
 
     const targetTransactionType =
       filters.listingType === 'rent'
@@ -782,6 +804,13 @@ export class DevelopmentDerivedListingService {
 
     const mapped = rows
       .map(row => {
+        const unitPhoto = filters.requireUnitPhoto ? getUnitPhoto(row.unitBaseMedia) : null;
+        if (filters.requireUnitPhoto && !unitPhoto) return null;
+        if (
+          filters.requireAvailableStock &&
+          (!(Number(row.availableUnits) > 0) || row.developmentStatus === 'sold-out')
+        )
+          return null;
         if (!isWithinBounds(row, filters.bounds)) {
           return null;
         }
@@ -873,6 +902,7 @@ export class DevelopmentDerivedListingService {
 
         const listedDate = new Date(row.unitCreatedAt || row.developmentCreatedAt || new Date());
         const mediaSignals = getMediaSignals(row.unitBaseMedia, row.developmentImages);
+        if (unitPhoto) mediaSignals.image = unitPhoto;
         const stageBadge = deriveStageBadge({
           legacyStatus: row.legacyStatus,
           constructionPhase: row.constructionPhase,
@@ -924,6 +954,8 @@ export class DevelopmentDerivedListingService {
           bathrooms,
           floorSize: normalizedFloorSize,
           erfSize: normalizedErfSize,
+          parkingCount: toNumberOrNull(row.unitParkingBays) ?? undefined,
+          parkingType: typeof row.unitParkingType === 'string' ? row.unitParkingType : undefined,
           description,
           highlights,
           image: mediaSignals.image,

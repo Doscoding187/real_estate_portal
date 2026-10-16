@@ -20,14 +20,14 @@ function makeUnits(count: number, developmentCount: number = count) {
 }
 
 describe('homeFeedComposition', () => {
-  it('caps units at three when listings are plentiful on a 10-card rail', () => {
+  it('caps units at four when listings are plentiful on a 10-card rail', () => {
     const result = composeResidentialHomeFeedItems(makeListings(10), makeUnits(10), 10);
 
-    expect(getBaseHomeUnitCap(10)).toBe(3);
+    expect(getBaseHomeUnitCap(10)).toBe(4);
     expect(result.source).toBe('mixed');
     expect(result.items).toHaveLength(10);
-    expect(result.items.filter(item => item.kind === 'unit')).toHaveLength(3);
-    expect(result.items.filter(item => item.kind === 'listing')).toHaveLength(7);
+    expect(result.items.filter(item => item.kind === 'unit')).toHaveLength(4);
+    expect(result.items.filter(item => item.kind === 'listing')).toHaveLength(6);
     expect(result.items.slice(0, 3).map(item => item.kind)).toEqual(['listing', 'listing', 'unit']);
   });
 

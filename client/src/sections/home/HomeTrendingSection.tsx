@@ -1,12 +1,15 @@
+import { HOME_PROVINCE_OPTIONS as PROVINCES } from '@/lib/homeProvinceOptions';
+import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
-import { SimpleDevelopmentUnitCard } from '@/components/SimpleDevelopmentUnitCard';
+import { SavePropertyPrompt } from '@/components/SavePropertyPrompt';
 import { SimpleHomeListingCard } from '@/components/SimpleHomeListingCard';
 import { SimpleSharedLivingCard } from '@/components/SimpleSharedLivingCard';
 import { getPrimaryDevelopmentImageUrl } from '@/lib/mediaUtils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
+import { hasHomePropertyPhoto } from '@shared/homePropertyPhoto';
 import {
   Carousel,
   CarouselContent,
@@ -17,7 +20,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { HeroTab } from '@/types/hero';
-import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 
 type HomeTrendingSectionProps = {
@@ -44,6 +46,7 @@ type TrendingItem = {
   yardSize?: number | null;
   unitSize?: number | null;
   parkingCount?: number | null;
+  parkingType?: string | null;
   propertyType?: string | null;
   developmentName?: string | null;
   transactionType?: 'for_sale' | 'for_rent';
@@ -59,18 +62,6 @@ type TrendingItem = {
     billsIncluded: { electricity: boolean; water: boolean; wifi: boolean };
   };
 };
-
-const PROVINCES = [
-  'Gauteng',
-  'Western Cape',
-  'KwaZulu-Natal',
-  'Eastern Cape',
-  'Mpumalanga',
-  'Limpopo',
-  'North West',
-  'Free State',
-  'Northern Cape',
-];
 
 const TAB_COPY: Record<HeroTab, { titleBase: string; subtitleBase: string }> = {
   buy: {
@@ -115,8 +106,10 @@ export function HomeTrendingSection({
   onProvinceChange,
   activeHeroTab,
 }: HomeTrendingSectionProps) {
-  const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const [savePromptOpen, setSavePromptOpen] = useState(false);
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  const [saveTrigger, setSaveTrigger] = useState<HTMLElement | null>(null);
   const utils = trpc.useUtils();
   const { data: favorites = [] } = trpc.properties.getFavorites.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -244,13 +237,16 @@ export function HomeTrendingSection({
     );
   }
 
-  const trendingItems = ((trendingData?.items || []) as TrendingItem[]).slice(0, railLimit);
+  const trendingItems = ((trendingData?.items || []) as TrendingItem[])
+    .filter(item => {
+      if (item.kind !== 'listing' && item.kind !== 'unit') return true;
+      return hasHomePropertyPhoto(item.image) && !failedImages.has(item.image);
+    })
+    .slice(0, railLimit);
   const handleFavorite = (propertyId: number) => {
     if (!isAuthenticated) {
-      toast.info('Sign in to save this property to your account.');
-      setLocation(
-        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
-      );
+      setSaveTrigger(document.activeElement instanceof HTMLElement ? document.activeElement : null);
+      setSavePromptOpen(true);
       return;
     }
     if (setFavoriteMutation.isPending) return;
@@ -359,8 +355,8 @@ export function HomeTrendingSection({
                   key={item.id}
                   className="basis-[77%] pl-3.5 sm:basis-[64%] md:basis-1/2 lg:basis-1/4"
                 >
-                  <div className="relative">
-                    {item.kind === 'listing' ? (
+                  <div className="relative h-full">
+                    {item.kind === 'listing' || item.kind === 'unit' ? (
                       <SimpleHomeListingCard
                         id={item.id}
                         title={item.title}
@@ -369,11 +365,13 @@ export function HomeTrendingSection({
                         image={item.image || ''}
                         href={item.href}
                         price={item.priceFrom}
+                        pricePrefix={item.kind === 'unit' ? 'From' : undefined}
                         bedrooms={item.bedrooms}
                         bathrooms={item.bathrooms}
-                        area={item.area}
+                        area={item.area ?? item.unitSize}
                         yardSize={item.yardSize}
                         parkingCount={item.parkingCount}
+                        parkingType={item.parkingType}
                         propertyType={item.propertyType}
                         listingType={item.listingType}
                         badgeLabel={item.listingType === 'rent' ? 'To rent' : 'For sale'}
@@ -382,7 +380,14 @@ export function HomeTrendingSection({
                           setFavoriteMutation.isPending &&
                           Number(setFavoriteMutation.variables?.propertyId) === Number(item.id)
                         }
-                        onFavoriteClick={() => handleFavorite(Number(item.id))}
+                        onFavoriteClick={
+                          item.kind === 'listing'
+                            ? () => handleFavorite(Number(item.id))
+                            : undefined
+                        }
+                        onImageUnavailable={() =>
+                          setFailedImages(previous => new Set(previous).add(item.image))
+                        }
                       />
                     ) : item.kind === 'land' ? (
                       <SimpleHomeListingCard
@@ -407,24 +412,6 @@ export function HomeTrendingSection({
                         bathroomAccess={item.sharedLiving.bathroomAccess}
                         furnishedState={item.sharedLiving.furnishedState}
                         billsIncluded={item.sharedLiving.billsIncluded}
-                      />
-                    ) : item.kind === 'unit' ? (
-                      <SimpleDevelopmentUnitCard
-                        id={item.id}
-                        title={item.title}
-                        developmentName={item.developmentName || 'Featured Development'}
-                        city={item.city}
-                        suburb={item.suburb}
-                        image={item.image || ''}
-                        href={item.href}
-                        priceFrom={item.priceFrom}
-                        priceTo={item.priceTo}
-                        bedrooms={item.bedrooms}
-                        bathrooms={item.bathrooms}
-                        unitSize={item.unitSize}
-                        yardSize={item.yardSize}
-                        listingType={item.listingType}
-                        badgeLabel="New development"
                       />
                     ) : (
                       <SimpleDevelopmentCard
@@ -479,6 +466,12 @@ export function HomeTrendingSection({
           </a>
         </div>
       )}
+      <SavePropertyPrompt
+        open={savePromptOpen}
+        onOpenChange={setSavePromptOpen}
+        returnPath={window.location.pathname + window.location.search}
+        returnFocusTo={saveTrigger}
+      />
     </section>
   );
 }

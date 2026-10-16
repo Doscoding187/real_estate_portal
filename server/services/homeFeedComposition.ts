@@ -37,7 +37,7 @@ function diversifyUnitsByDevelopment<
 }
 
 export function getBaseHomeUnitCap(limit: number): number {
-  return limit >= 10 ? 3 : Math.min(2, Math.max(1, Math.floor(limit / 2)));
+  return limit >= 10 ? 4 : Math.min(2, Math.max(1, Math.floor(limit / 2)));
 }
 
 export function composeResidentialHomeFeedItems<

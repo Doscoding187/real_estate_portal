@@ -12,6 +12,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 
 export type FeedTab =
   | 'buy'
@@ -106,7 +107,9 @@ export function LocationTrendingFeedSection({
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
-  const landJourneyEnabled = isHomepageHeroJourneyEnabled('plot_land');
+  // Public search entry does not release generic development inventory.
+  const landJourneyEnabled =
+    isHomepageHeroJourneyEnabled('plot_land') && isLandVerticalAvailable();
   const requestedActiveTab = controlledActiveTab !== undefined ? controlledActiveTab : internalTab;
   const activeTab =
     requestedActiveTab === 'rent' && !rentJourneyEnabled

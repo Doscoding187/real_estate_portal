@@ -4,6 +4,8 @@ export interface LocationNode {
   canonicalLocationId?: string;
   /** Durable factual identity retained when the runtime row is only a handle. */
   factualLocationId?: string;
+  /** Factual type guides UI clarification; it does not change the runtime identity. */
+  factualType?: string;
   slug: string; // URL-safe slug
   name: string; // Display name
   type: 'province' | 'city' | 'suburb' | 'area';

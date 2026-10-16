@@ -6,41 +6,99 @@ import {
 } from '@/lib/consumerJourneyRouter';
 
 const sandton = {
-  id: 'suburb:34', canonicalLocationId: 'suburb:34', type: 'suburb' as const,
-  name: 'Sandton', slug: 'sandton', provinceSlug: 'gauteng', citySlug: 'johannesburg',
+  id: 'suburb:34',
+  canonicalLocationId: 'suburb:34',
+  type: 'suburb' as const,
+  name: 'Sandton',
+  slug: 'sandton',
+  provinceSlug: 'gauteng',
+  citySlug: 'johannesburg',
 };
 const johannesburg = {
-  id: 'city:12', canonicalLocationId: 'city:12', type: 'city' as const,
-  name: 'Johannesburg', slug: 'johannesburg', provinceSlug: 'gauteng', citySlug: 'johannesburg',
+  id: 'city:12',
+  canonicalLocationId: 'city:12',
+  type: 'city' as const,
+  name: 'Johannesburg',
+  slug: 'johannesburg',
+  provinceSlug: 'gauteng',
+  citySlug: 'johannesburg',
 };
 const capeTown = {
-  id: 'city:21', canonicalLocationId: 'city:21', type: 'city' as const,
-  name: 'Cape Town', slug: 'cape-town', provinceSlug: 'western-cape', citySlug: 'cape-town',
+  id: 'city:21',
+  canonicalLocationId: 'city:21',
+  type: 'city' as const,
+  name: 'Cape Town',
+  slug: 'cape-town',
+  provinceSlug: 'western-cape',
+  citySlug: 'cape-town',
 };
 const pretoria = {
-  id: 'city:13', canonicalLocationId: 'city:13', type: 'city' as const,
-  name: 'Pretoria', slug: 'pretoria', provinceSlug: 'gauteng', citySlug: 'pretoria',
+  id: 'city:13',
+  canonicalLocationId: 'city:13',
+  type: 'city' as const,
+  name: 'Pretoria',
+  slug: 'pretoria',
+  provinceSlug: 'gauteng',
+  citySlug: 'pretoria',
 };
 
 describe('consumer journey router', () => {
   it('exposes only executable Buy choices', () => {
-    expect(getConsumerJourneys('buy').map(item => item.key)).toEqual(['residential', 'farm']);
+    expect(getConsumerJourneys('buy').map(item => item.key)).toEqual([
+      'residential',
+      'land',
+      'farm',
+    ]);
     expect(resolveConsumerJourney('buy', 'commercial')).toBeUndefined();
-    expect(resolveConsumerJourney('buy', 'land')).toBeUndefined();
+    expect(resolveConsumerJourney('buy', 'land')?.destination).toBe('/plots-and-land');
   });
 
   it('keeps residential Buy semantics in the existing search authority', () => {
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'residential', selectedLocations: [sandton], propertyType: 'house', minBedrooms: 3 })).toContain('/property-for-sale');
-    expect(buildConsumerJourneyUrl({ intent: 'buy', journey: 'residential', selectedLocations: [sandton], propertyType: 'house', minBedrooms: 3 })).toContain('minBedrooms=3');
+    expect(
+      buildConsumerJourneyUrl({
+        intent: 'buy',
+        journey: 'residential',
+        selectedLocations: [sandton],
+        propertyType: 'house',
+        minBedrooms: 3,
+      }),
+    ).toContain('/property-for-sale');
+    expect(
+      buildConsumerJourneyUrl({
+        intent: 'buy',
+        journey: 'residential',
+        selectedLocations: [sandton],
+        propertyType: 'house',
+        minBedrooms: 3,
+      }),
+    ).toContain('minBedrooms=3');
   });
 
-  it('hands every stale Land request to the contained direct route without forwarding geography or filters', () => {
+  it('preserves one canonical Land geography authority and rejects mixed authorities', () => {
     const requests = [
-      { intent: 'buy' as const, journey: 'land' as const, selectedLocations: [capeTown], landClassification: 'residential_stand' },
-      { intent: 'buy' as const, journey: 'land' as const, selectedLocations: [johannesburg], landClassification: 'Agricultural' },
+      {
+        intent: 'buy' as const,
+        journey: 'land' as const,
+        selectedLocations: [capeTown],
+        landClassification: 'residential_stand',
+      },
+      {
+        intent: 'buy' as const,
+        journey: 'land' as const,
+        selectedLocations: [johannesburg],
+        landClassification: 'Agricultural',
+      },
       { intent: 'buy' as const, journey: 'land' as const, selectedLocations: [sandton] },
-      { intent: 'buy' as const, journey: 'land' as const, selectedLocations: [johannesburg, pretoria] },
-      { intent: 'buy' as const, journey: 'land' as const, searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' } },
+      {
+        intent: 'buy' as const,
+        journey: 'land' as const,
+        selectedLocations: [johannesburg, pretoria],
+      },
+      {
+        intent: 'buy' as const,
+        journey: 'land' as const,
+        searchScope: { kind: 'search_area' as const, searchAreaId: 'area-1' },
+      },
       {
         intent: 'buy' as const,
         journey: 'land' as const,
@@ -49,16 +107,30 @@ describe('consumer journey router', () => {
       },
     ];
 
-    for (const request of requests) {
-      expect(buildConsumerJourneyUrl(request)).toBe('/plots-and-land');
-    }
+    expect(buildConsumerJourneyUrl(requests[0])).toBe(
+      '/plots-and-land?locationId=city%3A21&classification=residential_stand',
+    );
+    expect(buildConsumerJourneyUrl(requests[1])).toBe('/plots-and-land?locationId=city%3A12');
+    expect(buildConsumerJourneyUrl(requests[2])).toBe('/plots-and-land?locationId=suburb%3A34');
+    const siblings = new URL(buildConsumerJourneyUrl(requests[3]), 'https://example.com');
+    expect(siblings.searchParams.getAll('locationIds')).toEqual(['city:12', 'city:13']);
+    expect(siblings.searchParams.has('city')).toBe(false);
+    expect(buildConsumerJourneyUrl(requests[4])).toBe('/plots-and-land?searchAreaId=area-1');
+    expect(buildConsumerJourneyUrl(requests[5])).toBe(
+      '/plots-and-land?searchError=unsupported-location-scope',
+    );
   });
 
   it('routes Farms & Smallholdings to its dedicated specialist journey', () => {
     expect(resolveConsumerJourney('buy', 'farm')?.status).toBe('E2E_READY');
     expect(resolveConsumerJourney('rent', 'farm')?.destination).toBe('/farms-and-smallholdings');
 
-    const href = buildConsumerJourneyUrl({ intent: 'buy', journey: 'farm', selectedLocations: [sandton], minSize: 10000 });
+    const href = buildConsumerJourneyUrl({
+      intent: 'buy',
+      journey: 'farm',
+      selectedLocations: [sandton],
+      minSize: 10000,
+    });
     expect(href).toContain('/farms-and-smallholdings');
     expect(href).toContain('listingType=sale');
     expect(href).toContain('locationId=suburb%3A34');
@@ -74,7 +146,13 @@ describe('consumer journey router', () => {
 
   it('exposes Commercial only for the executable rental authority', () => {
     expect(resolveConsumerJourney('buy', 'commercial')).toBeUndefined();
-    expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton] })).toBe('/commercial?locationIds=suburb%3A34');
+    expect(
+      buildConsumerJourneyUrl({
+        intent: 'rent',
+        journey: 'commercial',
+        selectedLocations: [sandton],
+      }),
+    ).toBe('/commercial?locationIds=suburb%3A34');
     const commercialSiblingScope = buildConsumerJourneyUrl({
       intent: 'rent',
       journey: 'commercial',
@@ -104,6 +182,13 @@ describe('consumer journey router', () => {
   });
 
   it('continues to reject unsupported Commercial search-area handoffs', () => {
-    expect(buildConsumerJourneyUrl({ intent: 'rent', journey: 'commercial', selectedLocations: [sandton], searchScope: { kind: 'search_area', searchAreaId: 'area-1' } })).toContain('searchError=unsupported-location-scope');
+    expect(
+      buildConsumerJourneyUrl({
+        intent: 'rent',
+        journey: 'commercial',
+        selectedLocations: [sandton],
+        searchScope: { kind: 'search_area', searchAreaId: 'area-1' },
+      }),
+    ).toContain('searchError=unsupported-location-scope');
   });
 });
