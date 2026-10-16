@@ -23,6 +23,7 @@ import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 // Lazy load drafts page if needed, or import directly
 import { lazy, Suspense } from 'react';
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
+const ProjectLibrary = lazy(() => import('@/pages/developer/ProjectLibrary'));
 
 const getRoleHomePath = (role?: string | null) => {
   switch (role) {
@@ -188,6 +189,11 @@ export default function DeveloperRoutes() {
         <Route path="/developer/developments/:developmentId" component={DevelopmentHome} />
         <Route path="/developer/developments" component={DevelopmentsList} />
         <Route path="/developer/create-development" component={CreateDevelopment} />
+        <Route path="/developer/documents">
+          <Suspense fallback={<LoadingSpinner />}>
+            <ProjectLibrary />
+          </Suspense>
+        </Route>
 
         {/* Drafts */}
         <Route path="/developer/drafts">
