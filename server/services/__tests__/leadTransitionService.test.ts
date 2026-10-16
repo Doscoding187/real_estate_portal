@@ -73,4 +73,19 @@ describe('lead stage timestamps', () => {
       funnelStage: 'viewing',
     });
   });
+
+  it('records the offer funnel stage when a submitted offer advances the lead', () => {
+    const timestamps = leadStatusTimestamps(
+      {
+        status: 'viewing_scheduled',
+        firstRespondedAt: '2026-10-14 09:00:00',
+        lastContactedAt: '2026-10-14 09:00:00',
+        funnelStage: 'viewing',
+      } as unknown as Parameters<typeof leadStatusTimestamps>[0],
+      'offer_sent',
+      '2026-10-15 09:00:00',
+    );
+
+    expect(timestamps.funnelStage).toBe('offer');
+  });
 });

@@ -678,7 +678,12 @@ export function LeadPipeline({ className, propertyId, selectedLeadId }: LeadPipe
 
   const canMoveLeadToStage = (lead: Lead, targetStage: PipelineStageId) => {
     if (!['offer', 'won'].includes(targetStage)) return true;
-    if (['offer_sent', 'converted', 'closed'].includes(lead.status)) return true;
+    if (
+      (targetStage === 'offer' && lead.status === 'offer_sent') ||
+      (targetStage === 'won' && ['offer_sent', 'converted'].includes(lead.status))
+    ) {
+      return true;
+    }
     return selectedLead?.id === lead.id && Boolean(offerReadiness?.canMoveToOffer);
   };
 

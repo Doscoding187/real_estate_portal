@@ -248,6 +248,9 @@ describeWithDb('agent lead transitions follow canonical rules', () => {
       .where(eq(leads.id, leadId));
 
     const caller = agentCaller(userId);
+    await expect(caller.agent.moveLeadToStage({ leadId, targetStage: 'offer' })).rejects.toThrow(
+      /Record that the viewing is complete before sending an offer/i,
+    );
     await expect(caller.agent.updateLeadStatus({ leadId, status: 'offer_sent' })).rejects.toThrow(
       /Record that the viewing is complete before sending an offer/i,
     );
@@ -262,8 +265,16 @@ describeWithDb('agent lead transitions follow canonical rules', () => {
         affordabilityConfirmed: true,
       },
     });
-    await caller.agent.updateLeadStatus({ leadId, status: 'offer_sent' });
-    await caller.agent.updateLeadStatus({ leadId, status: 'converted' });
+    await caller.agent.moveLeadToStage({ leadId, targetStage: 'offer' });
+    await caller.agent.setLeadOfferReadiness({
+      leadId,
+      readiness: {
+        viewingCompleted: false,
+        feedbackLogged: false,
+        affordabilityConfirmed: false,
+      },
+    });
+    await caller.agent.moveLeadToStage({ leadId, targetStage: 'won' });
 
     const [won] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
     expect(won.status).toBe('converted');
