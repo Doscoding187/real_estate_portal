@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
-  getAgentDashboardJourneyAction,
+  getAgentDashboardJourneyPresentation,
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
@@ -565,7 +565,7 @@ export function AgentDashboardOverview({
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
-  const dashboardJourneyAction = getAgentDashboardJourneyAction(journeyAction);
+  const dashboardJourney = getAgentDashboardJourneyPresentation(journeyAction);
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
@@ -687,23 +687,19 @@ export function AgentDashboardOverview({
   const hasDraftInventory = draftCount > 0;
   const workspaceAction = !canPublishListings
     ? {
-        eyebrow: journeyAction.waiting ? 'Verification in progress' : 'Workspace activation',
+        eyebrow: journeyAction.waiting
+          ? 'Verification in progress'
+          : onboardingStatus?.recommendedNextStep === 'dashboard'
+            ? 'Business overview'
+            : 'Workspace setup',
         title: needsProfileCompletion
           ? 'Finish setting up your professional presence.'
-          : journeyAction.title,
+          : dashboardJourney.title,
         description: needsProfileCompletion
           ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-          : journeyAction.description,
-        actionLabel: journeyAction.waiting
-          ? null
-          : needsProfileCompletion
-            ? 'Continue setup'
-            : dashboardJourneyAction.label,
-        actionHref: journeyAction.waiting
-          ? null
-          : needsProfileCompletion
-            ? '/agent/setup'
-            : dashboardJourneyAction.href,
+          : dashboardJourney.description,
+        actionLabel: needsProfileCompletion ? 'Continue setup' : dashboardJourney.label,
+        actionHref: needsProfileCompletion ? '/agent/setup' : dashboardJourney.href,
       }
     : !hasPublishedInventory && hasPendingReviewInventory
       ? {
@@ -733,7 +729,7 @@ export function AgentDashboardOverview({
               eyebrow: 'Launch your business',
               title: 'Get your first property live.',
               description:
-                'Your Agent workspace is ready. Publishing a listing is the first step towards discovery, enquiries and a working pipeline.',
+                'Add your first listing to start building marketplace visibility, enquiries and a working pipeline.',
               actionLabel: 'Add your first listing',
               actionHref: '/listings/create',
             }
@@ -989,17 +985,17 @@ export function AgentDashboardOverview({
                 <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">{journeyAction.title}.</p>
-                      <p className="mt-1 text-sm text-amber-800">{journeyAction.description}</p>
+                      <p className="font-semibold">{dashboardJourney.title}.</p>
+                      <p className="mt-1 text-sm text-amber-800">{dashboardJourney.description}</p>
                     </div>
-                    {!journeyAction.waiting ? (
+                    {dashboardJourney.href && dashboardJourney.label ? (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setLocation(journeyAction.href)}
+                        onClick={() => setLocation(dashboardJourney.href!)}
                         className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
                       >
-                        {journeyAction.label}
+                        {dashboardJourney.label}
                       </Button>
                     ) : null}
                   </div>
@@ -1388,25 +1384,24 @@ export function AgentDashboardOverview({
                   title={
                     needsProfileCompletion
                       ? 'Listing publishing is still locked'
-                      : journeyAction.title
+                      : onboardingStatus?.recommendedNextStep === 'dashboard'
+                        ? 'Listing publishing is unavailable'
+                        : dashboardJourney.title
                   }
                   description={
                     needsProfileCompletion
                       ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-                      : journeyAction.description
+                      : onboardingStatus?.recommendedNextStep === 'dashboard'
+                        ? 'Your business overview is available. Listing publishing will appear here when this account has publishing access.'
+                        : dashboardJourney.description
                   }
-                  actionLabel={
-                    journeyAction.waiting
-                      ? null
-                      : needsProfileCompletion
-                        ? 'Finish setup'
-                        : journeyAction.label
-                  }
+                  actionLabel={needsProfileCompletion ? 'Finish setup' : dashboardJourney.label}
                   onAction={
-                    journeyAction.waiting
-                      ? undefined
-                      : () =>
-                          setLocation(needsProfileCompletion ? '/agent/setup' : journeyAction.href)
+                    needsProfileCompletion
+                      ? () => setLocation('/agent/setup')
+                      : dashboardJourney.href
+                        ? () => setLocation(dashboardJourney.href!)
+                        : undefined
                   }
                 />
               ) : null}

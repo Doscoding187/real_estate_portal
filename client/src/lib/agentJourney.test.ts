@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  getAgentDashboardJourneyAction,
+  getAgentDashboardJourneyPresentation,
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
 } from './agentJourney';
@@ -50,23 +50,35 @@ describe('Agent journey support handoff', () => {
     });
   });
 
-  it('routes a dashboard-ready action to a useful workspace instead of back to itself', () => {
+  it('presents the dashboard as the landing page without a self-link or a second ready handoff', () => {
     const action = getAgentJourneyAction({ recommendedNextStep: 'dashboard' });
 
-    expect(getAgentDashboardJourneyAction(action)).toMatchObject({
-      href: '/agent/listings',
-      label: 'Open listings',
-      title: 'Your Agent workspace is ready',
+    expect(getAgentDashboardJourneyPresentation(action)).toMatchObject({
+      href: null,
+      label: null,
+      title: 'Your business overview',
+      description: 'Review your listings, enquiries and appointments from this overview.',
     });
   });
 
-  it('preserves a waiting dashboard handoff', () => {
+  it('keeps a waiting status visible without offering a self-link from the dashboard', () => {
     const action = getAgentJourneyAction({ recommendedNextStep: 'await_payment_review' });
 
-    expect(getAgentDashboardJourneyAction(action)).toMatchObject({
-      href: '/agent/dashboard',
-      label: 'Return to dashboard',
+    expect(getAgentDashboardJourneyPresentation(action)).toMatchObject({
+      href: null,
+      label: null,
+      title: 'Your payment notice is under review',
       waiting: true,
+    });
+  });
+
+  it('preserves useful actions that lead to a different dashboard task', () => {
+    const action = getAgentJourneyAction({ recommendedNextStep: 'complete_profile_basics' });
+
+    expect(getAgentDashboardJourneyPresentation(action)).toMatchObject({
+      href: '/agent/setup',
+      label: 'Finish setup',
+      title: 'Complete your professional profile',
     });
   });
 });

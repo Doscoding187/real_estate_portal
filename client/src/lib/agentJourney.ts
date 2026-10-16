@@ -155,13 +155,31 @@ export function getAgentJourneyAction(
   }
 }
 
+export type AgentDashboardJourneyPresentation = Omit<AgentJourneyAction, 'href' | 'label'> & {
+  href: string | null;
+  label: string | null;
+};
+
 /**
- * Dashboard cards must not offer an action that navigates back to the page
- * the agent is already viewing. A ready workspace can continue in Listings.
+ * Dashboard surfaces describe the current state without offering a button back
+ * to the dashboard itself. The dashboard-ready handoff belongs before entry;
+ * on the dashboard, the page content is the workspace.
  */
-export function getAgentDashboardJourneyAction(action: AgentJourneyAction): AgentJourneyAction {
-  if (action.waiting || action.href !== '/agent/dashboard') return action;
-  return { ...action, href: '/agent/listings', label: 'Open listings' };
+export function getAgentDashboardJourneyPresentation(
+  action: AgentJourneyAction,
+): AgentDashboardJourneyPresentation {
+  const isDashboardHandoff = action.href === '/agent/dashboard';
+  const isReadyHandoff = action.title === 'Your Agent workspace is ready';
+
+  return {
+    ...action,
+    href: action.waiting || isDashboardHandoff ? null : action.href,
+    label: action.waiting || isDashboardHandoff ? null : action.label,
+    title: isReadyHandoff ? 'Your business overview' : action.title,
+    description: isReadyHandoff
+      ? 'Review your listings, enquiries and appointments from this overview.'
+      : action.description,
+  };
 }
 
 export function isAgentProfileJourneyStep(
