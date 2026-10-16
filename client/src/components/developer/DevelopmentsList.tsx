@@ -10,6 +10,37 @@ import { Input } from '@/components/ui/input';
 import { invalidateDeveloperOperatingHomeRanges } from '@/lib/developmentHomeInvalidation';
 import { trpc } from '@/lib/trpc';
 
+type DevelopmentFilter = 'all' | 'ready' | 'available' | 'attention';
+
+const DEVELOPMENT_FILTERS: Array<{ value: DevelopmentFilter; label: string }> = [
+  { value: 'all', label: 'All developments' },
+  { value: 'ready', label: 'Ready to progress' },
+  { value: 'available', label: 'Available inventory' },
+  { value: 'attention', label: 'Needs attention' },
+];
+
+function matchesDevelopmentFilter(
+  development: {
+    readiness: { status: string };
+    inventory: { availableUnits: number | null };
+    attention: { totalCount: number };
+  },
+  filter: DevelopmentFilter,
+): boolean {
+  if (filter === 'ready') return development.readiness.status === 'ready';
+  if (filter === 'available') return (development.inventory.availableUnits ?? 0) > 0;
+  if (filter === 'attention') return development.attention.totalCount > 0;
+  return true;
+}
+
+function getDevelopmentFilter(location: string): DevelopmentFilter {
+  const search = location.includes('?') ? location.slice(location.indexOf('?') + 1) : '';
+  const candidate = new URLSearchParams(search).get('filter');
+  return DEVELOPMENT_FILTERS.some(filter => filter.value === candidate)
+    ? (candidate as DevelopmentFilter)
+    : 'all';
+}
+
 function lifecycleLabel(state: string): string {
   return (
     {
@@ -36,7 +67,7 @@ function numberLabel(value: number | null | undefined): string {
 }
 
 export default function DevelopmentsList() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const utils = trpc.useUtils();
   const [searchTerm, setSearchTerm] = useState('');
   const homeQuery = trpc.developer.getOperatingHome.useQuery(
@@ -57,16 +88,37 @@ export default function DevelopmentsList() {
 
   const developmentRows = homeQuery.data?.developments;
   const developments = useMemo(() => developmentRows ?? [], [developmentRows]);
+  const activeFilter = getDevelopmentFilter(location);
+  const setFilter = (filter: DevelopmentFilter) => {
+    setLocation(
+      filter === 'all' ? '/developer/developments' : `/developer/developments?filter=${filter}`,
+    );
+  };
   const filteredDevelopments = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return developments;
     return developments.filter(development => {
+      if (!matchesDevelopmentFilter(development, activeFilter)) return false;
+      if (!query) return true;
       const location = development.identity.location;
       return [development.identity.name, location.city, location.province]
         .filter(Boolean)
         .some(value => value.toLowerCase().includes(query));
     });
-  }, [developments, searchTerm]);
+  }, [activeFilter, developments, searchTerm]);
+  const filterCounts = useMemo(
+    () => ({
+      all: developments.length,
+      ready: developments.filter(development => matchesDevelopmentFilter(development, 'ready'))
+        .length,
+      available: developments.filter(development =>
+        matchesDevelopmentFilter(development, 'available'),
+      ).length,
+      attention: developments.filter(development =>
+        matchesDevelopmentFilter(development, 'attention'),
+      ).length,
+    }),
+    [developments],
+  );
 
   const handleDelete = (id: number, name: string) => {
     if (
@@ -135,6 +187,24 @@ export default function DevelopmentsList() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter developments">
+        {DEVELOPMENT_FILTERS.map(filter => (
+          <Button
+            key={filter.value}
+            type="button"
+            size="sm"
+            variant={activeFilter === filter.value ? 'default' : 'outline'}
+            aria-pressed={activeFilter === filter.value}
+            onClick={() => setFilter(filter.value)}
+          >
+            {filter.label}{' '}
+            <span aria-label={`${filterCounts[filter.value]} matching`}>
+              ({filterCounts[filter.value]})
+            </span>
+          </Button>
+        ))}
+      </div>
 
       <div className="space-y-4">
         {filteredDevelopments.map(development => (
@@ -221,7 +291,9 @@ export default function DevelopmentsList() {
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {developments.length === 0
               ? 'No developments yet. Create a private draft to get started.'
-              : 'No developments match your search.'}
+              : activeFilter !== 'all'
+                ? `No developments match “${DEVELOPMENT_FILTERS.find(filter => filter.value === activeFilter)?.label}” and your search.`
+                : 'No developments match your search.'}
           </CardContent>
         </Card>
       )}

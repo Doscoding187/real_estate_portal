@@ -72,6 +72,25 @@ describe('Developer preparation navigation', () => {
 
       expect(screen.getByText('Billing preparation')).toBeInTheDocument();
       expect(screen.queryByText('Overview')).not.toBeInTheDocument();
+      expect(screen.queryByText('Prepare your development portfolio')).not.toBeInTheDocument();
     },
   );
+
+  it('does not repeat preparation messaging above the requested developer page', () => {
+    onboardingStatusMock.mockReturnValue({
+      status: { hasProfile: true, profileRejected: false, profileStatus: 'approved' },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    window.history.pushState({}, '', '/developer/leads');
+
+    render(createElement(DeveloperRoutes));
+
+    expect(screen.getByText('Leads')).toBeInTheDocument();
+    expect(screen.queryByText('Prepare your development portfolio')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Developer Launch Access is available after organisation approval'),
+    ).not.toBeInTheDocument();
+  });
 });
