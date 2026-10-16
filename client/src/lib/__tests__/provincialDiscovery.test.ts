@@ -59,22 +59,22 @@ describe('provincial discovery contract', () => {
 
   it('removes unsupported Buy filters and records unsupported journeys without activating them', () => {
     const filters = resolveProvincialQueryState(
-      new URLSearchParams('journey=commercial&propertyType=plot&minPrice=2000000&maxPrice=1000000'),
+      new URLSearchParams(
+        'journey=unsupported&propertyType=plot&minPrice=2000000&maxPrice=1000000',
+      ),
     );
 
     expect(filters.journey).toBeUndefined();
-    expect(filters.unsupportedJourney).toBe('commercial');
+    expect(filters.unsupportedJourney).toBe('unsupported');
     expect(filters.filters).toEqual({});
   });
 
-  it('keeps Shared Living independent and deferred rather than treating it as Rent', () => {
+  it('keeps Shared Living active and independent rather than treating it as Rent', () => {
     const state = resolveProvincialQueryState(new URLSearchParams('journey=shared_living'));
 
     expect(state.journey).toBe('shared_living');
     expect(PROVINCIAL_CONFIGS.gauteng.supportedJourneys).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'shared_living', state: 'unavailable' }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ id: 'shared_living', state: 'active' })]),
     );
     expect(
       PROVINCIAL_CONFIGS.gauteng.supportedJourneys.find(journey => journey.id === 'rent')?.state,
@@ -114,6 +114,11 @@ describe('provincial discovery contract', () => {
         expect.arrayContaining([
           expect.objectContaining({ id: 'buy', state: 'active' }),
           expect.objectContaining({ id: 'rent', state: 'active' }),
+          expect.objectContaining({ id: 'developments', state: 'active' }),
+          expect.objectContaining({ id: 'explore', state: 'active' }),
+          expect.objectContaining({ id: 'land', state: 'active' }),
+          expect.objectContaining({ id: 'commercial', state: 'active' }),
+          expect.objectContaining({ id: 'shared_living', state: 'active' }),
         ]),
       );
 

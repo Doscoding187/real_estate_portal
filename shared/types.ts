@@ -927,6 +927,8 @@ export interface DevelopmentDerivedListing {
   bathrooms?: number;
   floorSize?: number;
   erfSize?: number;
+  parkingCount?: number;
+  parkingType?: string;
   description?: string;
   highlights?: string[];
   image?: string | null;

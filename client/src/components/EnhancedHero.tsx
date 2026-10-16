@@ -28,6 +28,14 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
+import { HomeAreaPicker } from '@/components/HomeAreaPicker';
+import {
+  useHomeSearch,
+  EMPTY_HOME_SEARCH_FILTERS,
+  type HomeSearchFilters,
+  type HomeAreaSelection,
+} from '@/contexts/HomeSearchContext';
+import { needsHomeAreaClarification } from '@/lib/homeAreaSelection';
 import { LocationAutosuggest } from './LocationAutosuggest';
 import { trpc } from '@/lib/trpc';
 import { VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED } from '@/const';
@@ -75,23 +83,7 @@ export interface EnhancedHeroProps {
   activeTab?: string;
   onTabChange?: (tab: string) => void;
 }
-type HeroFilters = {
-  propertyType: string;
-  priceMin: string;
-  priceMax: string;
-  minBedrooms: string;
-  minBathrooms: string;
-  budgetMax: string;
-  developmentType: string;
-  developmentStatus: string;
-  market: string;
-  maxPrice: string;
-  classification: string;
-  commercialMinAreaM2: string;
-  commercialMaxMonthlyBudget: string;
-  commercialAvailability: string;
-  commercialMinParkingBays: string;
-};
+type HeroFilters = HomeSearchFilters;
 type FilterKey = keyof HeroFilters;
 type FilterDefinition = {
   key: FilterKey;
@@ -118,6 +110,15 @@ const PRICE_OPTIONS = [
   { value: '2500000', label: 'R2.5m' },
   { value: '5000000', label: 'R5m' },
   { value: '10000000', label: 'R10m+' },
+] as const;
+const RENT_BUDGET_OPTIONS = [
+  { value: '5000', label: 'R5k' },
+  { value: '7500', label: 'R7.5k' },
+  { value: '10000', label: 'R10k' },
+  { value: '15000', label: 'R15k' },
+  { value: '20000', label: 'R20k' },
+  { value: '30000', label: 'R30k' },
+  { value: '50000', label: 'R50k' },
 ] as const;
 const FILTER_TRIGGER_CLASS =
   'min-w-0 h-11 data-[size=default]:!h-11 gap-2 rounded-lg border border-slate-200 bg-blue-50/45 px-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50 focus:ring-2 focus:ring-blue-600 focus:ring-offset-1';
@@ -190,7 +191,7 @@ const JOURNEY_PRESENTATION: Partial<
         label: 'Monthly budget',
         emptyLabel: 'Any budget',
         icon: CircleDollarSign,
-        options: PRICE_OPTIONS,
+        options: RENT_BUDGET_OPTIONS,
       },
     ],
   },
@@ -355,6 +356,7 @@ function FilterControl({
       </Label>
       <Select value={value || 'any'} onValueChange={next => onChange(next === 'any' ? '' : next)}>
         <SelectTrigger
+          aria-label={definition.label}
           className={`${FILTER_TRIGGER_CLASS} w-full lg:w-fit`}
           onPointerDown={onInteractionStart}
           onFocus={onInteractionStart}
@@ -432,7 +434,10 @@ function PriceRangeControl({
                 value={filters.priceMin || 'any'}
                 onValueChange={value => onChange('priceMin', value === 'any' ? '' : value)}
               >
-                <SelectTrigger className={`${FILTER_TRIGGER_CLASS} w-full`}>
+                <SelectTrigger
+                  aria-label="Minimum price"
+                  className={`${FILTER_TRIGGER_CLASS} w-full`}
+                >
                   <SelectValue placeholder="No min" />
                 </SelectTrigger>
                 <SelectContent data-price-range-menu>
@@ -459,7 +464,10 @@ function PriceRangeControl({
                 value={filters.priceMax || 'any'}
                 onValueChange={value => onChange('priceMax', value === 'any' ? '' : value)}
               >
-                <SelectTrigger className={`${FILTER_TRIGGER_CLASS} w-full`}>
+                <SelectTrigger
+                  aria-label="Maximum price"
+                  className={`${FILTER_TRIGGER_CLASS} w-full`}
+                >
                   <SelectValue placeholder="No max" />
                 </SelectTrigger>
                 <SelectContent data-price-range-menu>
@@ -501,30 +509,23 @@ export function EnhancedHero({
   const [, setLocation] = useLocation();
   const [internalTab, setInternalTab] = useState('');
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-  const [selectedLocations, setSelectedLocations] = useState<LocationNode[]>([]);
-  const [selectedSearchArea, setSelectedSearchArea] = useState<SearchAreaDiscoveryResult | null>(
-    null,
-  );
+  const homeSearch = useHomeSearch();
+  const [areaPickerOpen, setAreaPickerOpen] = useState(false);
+  const [localConfirmedBroadId, setLocalConfirmedBroadId] = useState<string | null>(null);
+  const confirmedBroadId = homeSearch?.confirmedBroadId ?? localConfirmedBroadId;
+  const setConfirmedBroadId = homeSearch?.setConfirmedBroadId ?? setLocalConfirmedBroadId;
+  const [localLocations, setLocalLocations] = useState<LocationNode[]>([]);
+  const selectedLocations = homeSearch?.locations ?? localLocations;
+  const setSelectedLocations = homeSearch?.setLocations ?? setLocalLocations;
+  const [localSearchArea, setLocalSearchArea] = useState<SearchAreaDiscoveryResult | null>(null);
+  const selectedSearchArea = homeSearch?.searchArea ?? localSearchArea;
+  const setSelectedSearchArea = homeSearch?.setSearchArea ?? setLocalSearchArea;
   const [showIntentResolver, setShowIntentResolver] = useState(false);
   const [locationSelectionNotice, setLocationSelectionNotice] = useState<string | null>(null);
   const [priceRangeOpen, setPriceRangeOpen] = useState(false);
-  const [filters, setFilters] = useState<HeroFilters>({
-    propertyType: '',
-    priceMin: '',
-    priceMax: '',
-    minBedrooms: '',
-    minBathrooms: '',
-    budgetMax: '',
-    developmentType: '',
-    developmentStatus: '',
-    market: '',
-    maxPrice: '',
-    classification: '',
-    commercialMinAreaM2: '',
-    commercialMaxMonthlyBudget: '',
-    commercialAvailability: '',
-    commercialMinParkingBays: '',
-  });
+  const [localFilters, setLocalFilters] = useState<HeroFilters>(EMPTY_HOME_SEARCH_FILTERS);
+  const filters = homeSearch?.filters ?? localFilters;
+  const setFilters = homeSearch?.setFilters ?? setLocalFilters;
   const inputRef = useRef<HTMLInputElement | null>(null);
   const activeTab = controlledTab || internalTab;
   const requestedJourney = activeTab ? normalizePublicHeroJourney(activeTab) : null;
@@ -594,6 +595,7 @@ export function EnhancedHero({
     setShowIntentResolver(false);
   };
   const selectCanonicalLocation = (location: LocationNode) => {
+    setConfirmedBroadId(null);
     const resolution = resolveCanonicalLocationSelection(selectedLocations, location, 5);
     setSearchQuery('');
     setSelectedSearchArea(null);
@@ -609,14 +611,12 @@ export function EnhancedHero({
             : null,
     );
   };
-  const submitSearch = () => {
+  const runSearch = (locations = selectedLocations, area = selectedSearchArea) => {
     setPriceRangeOpen(false);
-    if (!canSubmitSearch || priceRangeError) return;
+    if ((!locations.length && !area) || priceRangeError) return;
     if (!journey) {
       const path =
-        !selectedSearchArea && selectedLocations.length === 1
-          ? buildLocationDiscoveryPath(selectedLocations[0])
-          : undefined;
+        !area && locations.length === 1 ? buildLocationDiscoveryPath(locations[0]) : undefined;
       if (path) {
         setLocation(path);
         return;
@@ -624,16 +624,16 @@ export function EnhancedHero({
       setShowIntentResolver(true);
       return;
     }
-    const searchScope = selectedSearchArea
-      ? { kind: 'search_area' as const, searchAreaId: selectedSearchArea.searchAreaId }
+    const searchScope = area
+      ? { kind: 'search_area' as const, searchAreaId: area.searchAreaId }
       : undefined;
     if (journey === 'buy') {
       setLocation(
         buildBuySearchUrl({
           searchQuery,
-          selectedLocations: selectedSearchArea ? [] : selectedLocations,
+          selectedLocations: area ? [] : locations,
           searchScope,
-          searchAreaAvailability: selectedSearchArea?.availability,
+          searchAreaAvailability: area?.availability,
           propertyType: filters.propertyType,
           minPrice: filters.priceMin,
           maxPrice: filters.priceMax,
@@ -648,9 +648,9 @@ export function EnhancedHero({
         buildPropertySearchUrl({
           transactionType: 'to-rent',
           searchQuery,
-          selectedLocations: selectedSearchArea ? [] : selectedLocations,
+          selectedLocations: area ? [] : locations,
           searchScope,
-          searchAreaAvailability: selectedSearchArea?.availability,
+          searchAreaAvailability: area?.availability,
           propertyType: filters.propertyType,
           maxPrice: filters.budgetMax,
         }),
@@ -660,7 +660,7 @@ export function EnhancedHero({
     if (journey === 'developments') {
       setLocation(
         buildDevelopmentsSearchUrl({
-          selectedLocations,
+          selectedLocations: locations,
           developmentType: filters.developmentType,
           developmentStatus: filters.developmentStatus,
           minPrice: filters.priceMin,
@@ -676,7 +676,7 @@ export function EnhancedHero({
         buildConsumerJourneyUrl({
           intent: 'rent',
           journey,
-          selectedLocations,
+          selectedLocations: locations,
           commercialFilters: {
             minAreaM2: filters.commercialMinAreaM2
               ? Number(filters.commercialMinAreaM2)
@@ -700,7 +700,7 @@ export function EnhancedHero({
         buildConsumerJourneyUrl({
           intent: 'buy',
           journey: 'land',
-          selectedLocations: selectedSearchArea ? [] : selectedLocations,
+          selectedLocations: area ? [] : locations,
           searchScope,
           landClassification: filters.classification,
           maxPrice: filters.maxPrice,
@@ -713,13 +713,13 @@ export function EnhancedHero({
       // Pass geography + any active SL-specific filter selections so the
       // discovery page receives them as URL params.
       const search = new URLSearchParams();
-      if (selectedSearchArea) {
-        search.set('searchAreaId', selectedSearchArea.searchAreaId);
-      } else if (selectedLocations.length === 1) {
-        const id = selectedLocations[0].canonicalLocationId || selectedLocations[0].id;
+      if (area) {
+        search.set('searchAreaId', area.searchAreaId);
+      } else if (locations.length === 1) {
+        const id = locations[0].canonicalLocationId || locations[0].id;
         if (id) search.set('locationId', id);
-      } else if (selectedLocations.length > 1) {
-        selectedLocations.forEach(loc => {
+      } else if (locations.length > 1) {
+        locations.forEach(loc => {
           const id = loc.canonicalLocationId || loc.id;
           if (id) search.append('locationIds', id);
         });
@@ -732,6 +732,24 @@ export function EnhancedHero({
     setLocation(getPublicHeroJourney(journey).destination);
   };
   const categories = getHomepageHeroJourneys();
+  const submitSearch = () => {
+    if (!canSubmitSearch || priceRangeError) return;
+    const selection: HomeAreaSelection = {
+      locations: selectedLocations,
+      searchArea: selectedSearchArea,
+    };
+    if (
+      homeSearch &&
+      (journey === 'buy' || journey === 'rent') &&
+      needsHomeAreaClarification(selection) &&
+      confirmedBroadId !== selectedLocations[0]?.id
+    ) {
+      setAreaPickerOpen(true);
+      return;
+    }
+    runSearch();
+  };
+
   return (
     <section className="relative isolate overflow-visible border-b border-slate-100 bg-[radial-gradient(circle_at_90%_25%,rgba(186,230,253,0.58),transparent_28rem),radial-gradient(circle_at_5%_75%,rgba(219,234,254,0.72),transparent_28rem),linear-gradient(180deg,#f8fbff_0%,#fff_82%)] text-slate-900">
       {backgroundImage ? (
@@ -762,26 +780,38 @@ export function EnhancedHero({
         </header>
         <div
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
-          className="mx-auto mt-8 w-full overflow-x-auto px-1 pb-2 [scrollbar-width:none] sm:mt-10"
+          className="mx-auto mt-8 w-full sm:mt-10"
         >
-          <div className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto">
-            {categories.map(category => {
-              const Icon = JOURNEY_ICONS[category.key];
-              const selected = journey === category.key;
-              return (
-                <button
-                  key={category.key}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => selectJourney(category.key)}
-                  onFocus={() => setPriceRangeOpen(false)}
-                  className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {category.label}
-                </button>
-              );
-            })}
+          <p
+            id="homepage-journey-label"
+            className="mb-3 text-center text-sm font-semibold text-slate-700"
+          >
+            What are you looking for?
+          </p>
+          <div className="overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
+            <div
+              role="group"
+              aria-labelledby="homepage-journey-label"
+              className="flex min-w-max w-fit items-center gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)] backdrop-blur-sm sm:mx-auto"
+            >
+              {categories.map(category => {
+                const Icon = JOURNEY_ICONS[category.key];
+                const selected = journey === category.key;
+                return (
+                  <button
+                    key={category.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectJourney(category.key)}
+                    onFocus={() => setPriceRangeOpen(false)}
+                    className={`flex min-h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 active:translate-y-px lg:px-4 ${selected ? 'bg-blue-700 text-white shadow-md shadow-blue-700/25' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {category.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
         <div
@@ -832,6 +862,7 @@ export function EnhancedHero({
                   inputAriaDescribedBy="homepage-journey-selection-prompt"
                   selectedLocations={selectedLocations}
                   onRemove={index => {
+                    setConfirmedBroadId(null);
                     setSelectedSearchArea(null);
                     setSelectedLocations(items =>
                       items.filter((_, itemIndex) => itemIndex !== index),
@@ -844,6 +875,7 @@ export function EnhancedHero({
                   discoverySuggestions={discoverySuggestions as SearchDiscoveryResult[]}
                   onDiscoverySelect={(suggestion: SearchDiscoveryResult) => {
                     if (suggestion.kind === 'search_area') {
+                      setConfirmedBroadId(null);
                       if (suggestion.availability !== 'available' || !suggestion.publicEligible)
                         return;
                       setSearchQuery('');
@@ -867,6 +899,7 @@ export function EnhancedHero({
                     selectCanonicalLocation({
                       id: suggestion.canonicalLocationId,
                       canonicalLocationId: suggestion.canonicalLocationId,
+                      factualType: suggestion.factualType,
                       name: suggestion.label,
                       slug: suggestion.suburbSlug || suggestion.citySlug || suggestion.provinceSlug,
                       type:
@@ -968,12 +1001,21 @@ export function EnhancedHero({
             <div className="border-t border-slate-200/80 bg-slate-50/80 p-3 sm:p-4">
               <div
                 className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-nowrap lg:items-end lg:gap-0"
-                onPointerDown={() => setPriceRangeOpen(false)}
+                onPointerDown={event => {
+                  if (
+                    !(
+                      event.target instanceof Element &&
+                      event.target.closest('[data-price-range-root], [data-price-range-menu]')
+                    )
+                  ) {
+                    setPriceRangeOpen(false);
+                  }
+                }}
                 onFocusCapture={event => {
                   if (
                     !(
                       event.target instanceof Element &&
-                      event.target.closest('[data-price-range-root]')
+                      event.target.closest('[data-price-range-root], [data-price-range-menu]')
                     )
                   ) {
                     setPriceRangeOpen(false);
@@ -1037,12 +1079,23 @@ export function EnhancedHero({
             </div>
           )}
         </div>
-        <section
+        <details
           style={{ maxWidth: 'var(--plds-home-hero-search-max-width, 1180px)' }}
-          className="mx-auto mt-5 w-full"
-          aria-label="Platform tools"
+          className="group/tools mx-auto mt-5 w-full"
         >
-          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0">
+          <summary className="mx-auto flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 [&::-webkit-details-marker]:hidden">
+            Upcoming property tools
+            <ChevronDown
+              className="h-4 w-4 transition-transform group-open/tools:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div
+            tabIndex={0}
+            role="group"
+            aria-label="Upcoming property tools"
+            className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pr-4 [scrollbar-width:none] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0 sm:pr-0"
+          >
             {PLATFORM_TOOL_ITEMS.map(item => {
               const Icon = item.icon;
               return (
@@ -1064,8 +1117,29 @@ export function EnhancedHero({
               );
             })}
           </div>
-        </section>
+        </details>
       </div>
+      {areaPickerOpen && (journey === 'buy' || journey === 'rent') && (
+        <HomeAreaPicker
+          open
+          onOpenChange={setAreaPickerOpen}
+          journey={journey}
+          initialSelection={{ locations: selectedLocations, searchArea: selectedSearchArea }}
+          onConfirm={selection => {
+            setSelectedLocations(selection.locations);
+            setSelectedSearchArea(selection.searchArea);
+            setConfirmedBroadId(
+              needsHomeAreaClarification(selection) ? (selection.locations[0]?.id ?? null) : null,
+            );
+            setAreaPickerOpen(false);
+            runSearch(selection.locations, selection.searchArea);
+          }}
+          onExplore={href => {
+            setAreaPickerOpen(false);
+            setLocation(href);
+          }}
+        />
+      )}
     </section>
   );
 }

@@ -838,6 +838,7 @@ export async function getPublicDevelopment(id: number) {
 
 export async function listPublicDevelopments(options: {
   limit?: number;
+  offset?: number;
   province?: string;
   city?: string;
   suburb?: string;
@@ -851,6 +852,7 @@ export async function listPublicDevelopments(options: {
 
   const {
     limit = 20,
+    offset = 0,
     province,
     city,
     suburb,
@@ -906,8 +908,9 @@ export async function listPublicDevelopments(options: {
     )
     .leftJoin(distributionPrograms, eq(developments.id, distributionPrograms.developmentId))
     .where(and(...conditions))
-    .orderBy(desc(developments.createdAt))
-    .limit(limit);
+    .orderBy(desc(developments.createdAt), desc(developments.id))
+    .limit(limit)
+    .offset(offset);
 
   const developmentIds = results.map((d: any) => Number(d.id)).filter(Boolean);
   const unitRows =

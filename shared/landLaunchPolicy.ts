@@ -1,12 +1,13 @@
 /**
- * First-cohort disposition for the specialist Land vertical.
+ * First-cohort publication disposition for the specialist Land vertical.
  *
  * Land has a separate authority, review and public-projection lifecycle. It
  * is deliberately deferred from the first paid cohort until that lifecycle
  * has its own commercial policy and acceptance slice. This is an explicit
  * product decision, not a signal inferred from provider or billing state.
  *
- * Keep this policy immutable and environment-independent. Releasing Land
+ * Public search entry is a separate decision below. Keep publication policy
+ * environment-independent. Releasing Land publication
  * requires a reviewed product change and the protected acceptance evidence
  * recorded in the launch register.
  */
@@ -18,6 +19,14 @@ export const LAND_VERTICAL_LAUNCH_STATE = {
 } as const;
 
 export type LandVerticalLaunchMode = typeof LAND_VERTICAL_LAUNCH_STATE.mode;
+
+/** Edward authorised public Land search entry on 14 October 2026.
+ * This opens the specialist consumer UI; it does not release Land authoring,
+ * review, lead custody or public inventory through the commercial boundary.
+ */
+export function isLandPublicDiscoveryAvailable(): boolean {
+  return true;
+}
 
 export function isLandVerticalAvailable(): boolean {
   return LAND_VERTICAL_LAUNCH_STATE.enabled;

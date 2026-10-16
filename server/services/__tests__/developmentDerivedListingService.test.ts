@@ -108,6 +108,75 @@ describe('DevelopmentDerivedListingService', () => {
     ]);
   });
 
+  it('requires unit photos before homepage pagination, without substituting development images', async () => {
+    const [row] = await mockOrderBy();
+    mockOrderBy.mockResolvedValueOnce([
+      { ...row, unitTypeId: 'no-photo', unitBaseMedia: '{}' },
+      {
+        ...row,
+        unitTypeId: 'render-only',
+        unitBaseMedia: { gallery: [{ url: '/media/render.jpg', category: 'rendering' }] },
+      },
+      {
+        ...row,
+        unitTypeId: 'photo',
+        unitBaseMedia: { gallery: [{ url: '/media/real-unit.jpg', category: 'photo' }] },
+      },
+    ]);
+    const result = await developmentDerivedListingService.searchListings(
+      { requireUnitPhoto: true },
+      'date_desc',
+      1,
+      1,
+    );
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({ unitTypeId: 'photo', image: '/media/real-unit.jpg' });
+  });
+
+  it('requires available stock and excludes sold-out projects from the homepage', async () => {
+    const [row] = await mockOrderBy();
+    mockOrderBy.mockResolvedValueOnce([
+      { ...row, unitTypeId: 'zero', availableUnits: 0 },
+      { ...row, unitTypeId: 'unknown', availableUnits: undefined },
+      { ...row, unitTypeId: 'sold', developmentStatus: 'sold-out' },
+      { ...row, unitTypeId: 'available', availableUnits: 2 },
+    ]);
+    const result = await developmentDerivedListingService.searchListings({
+      requireAvailableStock: true,
+    });
+    expect(result.items.map(item => item.unitTypeId)).toEqual(['available']);
+  });
+
+  it('keeps townhouse identity and parking facts for a standard property card', async () => {
+    const [row] = await mockOrderBy();
+    mockOrderBy.mockResolvedValueOnce([
+      {
+        ...row,
+        structuralType: 'townhouse',
+        unitParkingBays: 2,
+        unitParkingType: 'covered',
+        yardSize: null,
+      },
+    ]);
+    const result = await developmentDerivedListingService.searchListings({
+      requireUnitPhoto: true,
+      requireAvailableStock: true,
+    });
+    expect(result.items[0]).toMatchObject({
+      propertyType: 'townhouse',
+      parkingCount: 2,
+      parkingType: 'covered',
+    });
+    expect(result.items[0].erfSize).toBeUndefined();
+  });
+
+  it('does not hide database unavailability behind an empty property feed', async () => {
+    mockGetDb.mockResolvedValueOnce(null);
+    await expect(developmentDerivedListingService.searchListings({})).rejects.toThrow(
+      'Database unavailable',
+    );
+  });
+
   it('maps public unit types into development-derived listings', async () => {
     const result = await developmentDerivedListingService.searchListings(
       {

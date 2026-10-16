@@ -480,6 +480,7 @@ describe('development search-detail-lead public journey contract', () => {
         {
           id: '501',
           title: 'Family home with garden',
+          image: '/media/family-home.jpg',
           city: 'Johannesburg',
           suburb: 'Sandton',
           price: 3_850_000,
@@ -493,6 +494,7 @@ describe('development search-detail-lead public journey contract', () => {
         {
           id: '502',
           title: 'City apartment',
+          image: '/media/city-apartment.jpg',
           city: 'Johannesburg',
           suburb: 'Rosebank',
           price: 1_850_000,
@@ -562,7 +564,7 @@ describe('development search-detail-lead public journey contract', () => {
       1,
       20,
       undefined,
-      { publicOnly: true },
+      { publicOnly: true, requirePhoto: true },
     );
   });
 
@@ -610,7 +612,7 @@ describe('development search-detail-lead public journey contract', () => {
       1,
       20,
       undefined,
-      { publicOnly: true },
+      { publicOnly: true, requirePhoto: true },
     );
   });
 });

@@ -134,7 +134,7 @@ export function DevelopmentCard({
                 onClick={() => setLocation(developmentRoute)}
               >
                 {title}
-                {rating && (
+                {typeof rating === 'number' && rating > 0 && (
                   <span className="flex items-center gap-1 text-sm font-normal">
                     <Star className="h-4 w-4 fill-green-600 text-green-600" />
                     <span className="text-slate-700">{rating.toFixed(1)}</span>
@@ -209,11 +209,14 @@ export function DevelopmentCard({
                   </div>
                   {price !== null && price > 0 ? (
                     <div className="text-lg font-bold text-[#1e1b4b]">
-                      From {formatPrice(price)}{transactionType === 'for_rent' ? ' / month' : ''}
+                      From {formatPrice(price)}
+                      {transactionType === 'for_rent' ? ' / month' : ''}
                     </div>
                   ) : (
                     <div className="text-sm font-semibold text-slate-500">
-                      {transactionType === 'for_rent' ? 'Monthly rent on request' : 'Price on request'}
+                      {transactionType === 'for_rent'
+                        ? 'Monthly rent on request'
+                        : 'Price on request'}
                     </div>
                   )}
                 </div>

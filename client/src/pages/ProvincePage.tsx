@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import {
   ArrowRight,
   Bell,
@@ -6,7 +7,6 @@ import {
   Home,
   Info,
   KeyRound,
-  MapPin,
   MessageCircle,
 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
@@ -16,6 +16,10 @@ import { LocationSchema } from '@/components/location/LocationSchema';
 import { RecommendedAgents } from '@/components/location/RecommendedAgents';
 import { ProvincialBillboard } from '@/components/provincial/ProvincialBillboard';
 import { ProvincialComposer } from '@/components/provincial/ProvincialComposer';
+import { ProvinceGuideHero } from '@/components/provincial/ProvinceGuideHero';
+import { ProvinceCityGuides } from '@/components/provincial/ProvinceCityGuides';
+import { getProvinceGuideCover } from '@/lib/provinceGuideImages';
+import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { trpc } from '@/lib/trpc';
 import { buildTransactionalGeographyHref } from '@/lib/geographySearchHandoff';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
@@ -53,14 +57,6 @@ function inventoryStateLabel(state: string) {
   if (state === 'sparse') return 'Small live sample';
   if (state === 'empty') return 'No live inventory yet';
   return 'Inventory unavailable';
-}
-
-function formatDiscoveryLabel(value: string) {
-  return value
-    .split('-')
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 }
 
 function ProvinceLoadingState() {
@@ -122,6 +118,32 @@ export default function ProvincePage({ params }: ProvincePageProps) {
     { locationSlug: provinceSlug, fallbacks: campaignHierarchy.slice(1) },
     { enabled: Boolean(config) },
   );
+  const [citySearch, setCitySearch] = useState('');
+  const [debouncedCitySearch, setDebouncedCitySearch] = useState('');
+  useEffect(() => {
+    setCitySearch('');
+    setDebouncedCitySearch('');
+  }, [provinceSlug]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedCitySearch(citySearch.trim()), 180);
+    return () => window.clearTimeout(timer);
+  }, [citySearch]);
+  const citySearchQuery = trpc.locationPages.getCityGuides.useQuery(
+    {
+      provinceSlug,
+      limit: 12,
+      query: debouncedCitySearch.length >= 2 ? debouncedCitySearch : undefined,
+    },
+    {
+      enabled: Boolean(config) && debouncedCitySearch.length >= 2,
+      retry: false,
+      staleTime: 10 * 60 * 1000,
+    },
+  );
+  const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
+    { provinceSlug, limit: 12 },
+    { enabled: Boolean(config), retry: false, staleTime: 10 * 60 * 1000 },
+  );
 
   if (!config) {
     return <ProvinceErrorState provinceName={provinceSlug.replace(/-/g, ' ')} />;
@@ -130,8 +152,26 @@ export default function ProvincePage({ params }: ProvincePageProps) {
   if (isLoading) return <ProvinceLoadingState />;
   if (error || !data) return <ProvinceErrorState provinceName={config.name} />;
 
-  const heroImage = config.heroFallbackImage;
-  const marketLocations = data.markets
+  const heroImage = getProvinceGuideCover(provinceSlug)?.desktop;
+  const guideCities = new Map<
+    string,
+    {
+      id: number;
+      canonicalLocationId: string;
+      name: string;
+      slug: string;
+    }
+  >(
+    (cityGuidesQuery.data || [])
+      .filter(city => city.provinceSlug === data.province.slug)
+      .map(city => [city.slug, city]),
+  );
+  // Area-guide availability is independent of the inventory preview's city projection.
+  const markets = data.markets.map(market => ({
+    ...market,
+    city: market.city || guideCities.get(market.slug),
+  }));
+  const marketLocations = markets
     .filter(market => Boolean(market.city?.canonicalLocationId))
     .map(market => ({
       name: market.city!.name,
@@ -156,7 +196,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
         journey: 'rent',
         scope: provinceScope,
         context: { province: data.province.slug },
-    })
+      })
     : undefined;
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const visibleInventoryItems = data.inventoryPreview.items.filter(
@@ -176,9 +216,9 @@ export default function ProvincePage({ params }: ProvincePageProps) {
           { name: 'Explore', url: '/' },
           { name: data.province.name, url: `/${data.province.slug}` },
         ]}
-        stats={{ totalListings: data.inventoryPreview.total, avgPrice: 0 }}
+        stats={{ totalListings: data.inventoryPreview.total }}
         neutralMode
-        image={heroImage}
+        image={heroImage ? toAbsoluteUrl(heroImage) : undefined}
         geo={
           data.province.latitude && data.province.longitude
             ? {
@@ -201,58 +241,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
         </nav>
       </div>
 
-      <section className="provincial-hero" aria-labelledby="province-page-title">
-        <div
-          className="provincial-hero__art"
-          style={{ backgroundImage: `url(${heroImage})` }}
-          aria-hidden="true"
-        />
-        <div className="provincial-hero__wash" aria-hidden="true" />
-        <div className="provincial-hero__glow" aria-hidden="true" />
-        <div className="provincial-hero__grid" aria-hidden="true" />
-        <div className="provincial-rail provincial-hero__inner">
-          <div className="provincial-hero__copy">
-            <p className="provincial-eyebrow">{config.heroKicker}</p>
-            <h1 id="province-page-title">Explore {data.province.name}</h1>
-            <p className="provincial-hero__proposition">{config.shortProposition}</p>
-            <div
-              className="provincial-hero__signal"
-              aria-label={`${data.province.name} discovery signals`}
-            >
-              <span>
-                <strong>
-                  {data.inventoryPreview.total > 0
-                    ? formatCount(data.inventoryPreview.total)
-                    : 'Live'}
-                </strong>
-                {data.inventoryPreview.total > 0 ? 'public listings' : 'inventory lookup'}
-              </span>
-              <span>
-                <strong>{data.markets.filter(market => market.city).length}</strong>
-                supported markets
-              </span>
-              <span>
-                <strong>1</strong>
-                clear next move
-              </span>
-            </div>
-          </div>
-
-          <div
-            className="provincial-hero__billboard"
-            aria-label={`${data.province.name} discovery guidance`}
-          >
-            <span className="provincial-hero__billboard-label">
-              <MapPin size={13} aria-hidden="true" /> Built for direct discovery
-            </span>
-            <h2>One place. Several ways forward.</h2>
-            <p>Choose a property journey, then type the location you already have in mind.</p>
-            <span className="provincial-hero__billboard-link">
-              Canonical geography, resolved for you <ArrowRight size={15} aria-hidden="true" />
-            </span>
-          </div>
-        </div>
-      </section>
+      <ProvinceGuideHero provinceName={data.province.name} provinceSlug={provinceSlug} />
 
       <ProvincialComposer
         config={config}
@@ -263,103 +252,61 @@ export default function ProvincePage({ params }: ProvincePageProps) {
       {data.province.canonicalLocationId ? (
         <RecommendedAgents
           locationType="province"
-          locationId={Number(data.province.canonicalLocationId)}
+          locationId={data.province.id}
           areaLabel={data.province.name}
         />
       ) : null}
 
       <main id="main-content" tabIndex={-1} className="provincial-main">
-        <section className="provincial-rail provincial-section" aria-labelledby="markets-heading">
-          <div className="provincial-section__heading">
-            <div>
-              <p className="provincial-eyebrow">Start with a market</p>
-              <h2 id="markets-heading">Major markets, without a routing gate.</h2>
-              <p>
-                Use a market as a discovery aid, or go straight back to the composer when you
-                already know your intent.
-              </p>
+        <section
+          className="provincial-section provincial-city-guides bg-white"
+          aria-labelledby="markets-heading"
+        >
+          <div className="provincial-rail">
+            <div className="provincial-section__heading">
+              <div>
+                <h2 id="markets-heading">Explore cities in {data.province.name}</h2>
+                <p>
+                  Get to know the neighbourhoods, local insights and property opportunities in our
+                  city guides.
+                </p>
+              </div>
             </div>
-            <Link href={`/${data.province.slug}`} className="provincial-section__link">
-              Keep it province-wide <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          </div>
-          <div className="provincial-markets">
-            {data.markets.map(market => {
-              const inventory = market.inventory;
-              const hasCanonicalMarket = Boolean(market.city?.canonicalLocationId);
-              const cityHref =
-                hasCanonicalMarket && market.city
-                  ? `/${data.province.slug}/${market.city.slug}`
-                  : undefined;
-              return (
-                <article key={market.slug} className="provincial-market-card">
-                  <div className="provincial-market-card__body">
-                    <div className="provincial-market-card__top">
-                      <div>
-                        <p className="provincial-market-card__eyebrow">{market.eyebrow}</p>
-                        <h3>{market.name}</h3>
-                      </div>
-                      <span className="provincial-market-card__pill">
-                        {hasCanonicalMarket ? 'Canonical market' : 'Not configured'}
-                      </span>
-                    </div>
-                    <p className="provincial-market-card__description">{market.description}</p>
-                    <div className="provincial-market-card__stats">
-                      <div className="provincial-market-card__stat">
-                        <strong>
-                          {inventory
-                            ? inventory.total > 0
-                              ? formatCount(inventory.total)
-                              : '—'
-                            : '—'}
-                        </strong>
-                        <span>{inventory ? 'public listings' : 'availability'}</span>
-                      </div>
-                      <div className="provincial-market-card__stat">
-                        <strong>{inventoryStateLabel(market.state)}</strong>
-                        <span>data state</span>
-                      </div>
-                    </div>
-                    <div
-                      className="provincial-market-card__areas"
-                      aria-label={`Discovery cues for ${market.name}`}
-                    >
-                      {market.areaSlugs.length > 0 ? (
-                        market.areaSlugs.map(area => (
-                          <span key={area} className="provincial-market-card__area">
-                            {formatDiscoveryLabel(area)}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="provincial-market-card__area">
-                          Explore areas from the search field
-                        </span>
-                      )}
-                    </div>
-                    {market.areaSlugs.length > 0 ? (
-                      <p className="provincial-market-card__areas-note">
-                        Use these as orientation cues, then choose a canonical location in the
-                        composer when you are ready to search.
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="provincial-market-card__footer">
-                    <span>
-                      {inventory?.sourceCounts
-                        ? `${formatCount(inventory.sourceCounts.manual)} direct · ${formatCount(inventory.sourceCounts.development)} development`
-                        : 'No public sample yet'}
-                    </span>
-                    {cityHref ? (
-                      <Link href={cityHref}>
-                        Explore {market.name} <ArrowRight size={14} aria-hidden="true" />
-                      </Link>
-                    ) : (
-                      <span>Coming when identity is available</span>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+            {cityGuidesQuery.isError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800"
+              >
+                Some area guides could not be checked.
+                <button
+                  type="button"
+                  disabled={cityGuidesQuery.isFetching}
+                  className="ml-3 min-h-[44px] font-semibold text-[#005ca8] underline"
+                  onClick={() => void cityGuidesQuery.refetch()}
+                >
+                  {cityGuidesQuery.isFetching ? 'Trying again…' : 'Try again'}
+                </button>
+              </div>
+            )}
+            <ProvinceCityGuides
+              markets={markets}
+              provinceSlug={data.province.slug}
+              provinceName={data.province.name}
+              cities={[...guideCities.values()]}
+              guidesLoading={cityGuidesQuery.isLoading}
+              search={{
+                query: citySearch,
+                onChange: setCitySearch,
+                results: (citySearchQuery.data || []).filter(
+                  city => city.provinceSlug === provinceSlug,
+                ),
+                isLoading:
+                  citySearch.trim().length >= 2 &&
+                  (citySearch.trim() !== debouncedCitySearch || citySearchQuery.isFetching),
+                isError: citySearch.trim() === debouncedCitySearch && citySearchQuery.isError,
+                onRetry: () => void citySearchQuery.refetch(),
+              }}
+            />
           </div>
         </section>
 
@@ -422,10 +369,10 @@ export default function ProvincePage({ params }: ProvincePageProps) {
             <div className="provincial-section__heading">
               <div>
                 <p className="provincial-eyebrow">What is live now</p>
-                <h2 id="snapshot-heading">A useful snapshot, without invented certainty.</h2>
+                <h2 id="snapshot-heading">Property available in {data.province.name}</h2>
                 <p>
-                  These are public inventory signals, not concluded sales or valuations. Pricing
-                  stays unavailable until the method is defensible.
+                  Current advertised property across the province. Asking prices can differ from
+                  final sale prices.
                 </p>
               </div>
             </div>
@@ -436,7 +383,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   {journeyCountLabel(data.journeyCounts.buy)}
                 </p>
                 <p className="provincial-snapshot__meta">
-                  Public Buy inventory · same search authority used by results.
+                  Currently advertised properties for sale.
                 </p>
               </article>
               {rentJourneyEnabled ? (
@@ -456,7 +403,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   {journeyCountLabel(data.journeyCounts.developments)}
                 </p>
                 <p className="provincial-snapshot__meta">
-                  Approved public development-derived inventory.
+                  Available property in published developments.
                 </p>
               </article>
               <article
@@ -466,8 +413,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                 <p className="provincial-snapshot__label">Asking-price series</p>
                 <p className="provincial-snapshot__value">Not published yet</p>
                 <p className="provincial-snapshot__meta">
-                  No audited sample is exposed by this slice. That is different from a zero or an
-                  average.
+                  Reliable province-wide price trends are not available yet.
                 </p>
               </article>
             </div>
@@ -487,8 +433,8 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                 <p className="provincial-eyebrow">A small live sample</p>
                 <h2 id="inventory-heading">See what is available in {data.province.name}.</h2>
                 <p>
-                  Preview cards are deliberately bounded. Continue into the relevant journey for the
-                  complete public result set.
+                  A selection of available property. Choose Buy or Rent to refine the area and see
+                  more.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm font-bold">
@@ -519,11 +465,7 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                           style={item.image ? { backgroundImage: `url(${item.image})` } : undefined}
                         >
                           <span className="provincial-property-card__badge">
-                            {item.listingType === 'rent'
-                              ? 'For rent'
-                              : item.listingSource === 'development'
-                                ? 'Development'
-                                : 'For sale'}
+                            {item.listingType === 'rent' ? 'For rent' : 'For sale'}
                           </span>
                         </div>
                         <div className="provincial-property-card__body">
@@ -553,8 +495,8 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                       </strong>
                       <p>
                         {data.inventoryPreview.state === 'empty'
-                          ? 'The province is still useful as a journey hub. Try a location or continue to the public search.'
-                          : 'We will show listings here once the public search authority returns a safe sample.'}
+                          ? 'You can still explore its areas or choose another location for your property search.'
+                          : 'Please try again later, or continue with a property search.'}
                       </p>
                     </div>
                   </div>
@@ -565,8 +507,8 @@ export default function ProvincePage({ params }: ProvincePageProps) {
                   <p className="provincial-eyebrow">Public inventory</p>
                   <h3>{inventoryStateLabel(data.inventoryPreview.state)}</h3>
                   <p>
-                    Bounded to {formatCount(data.inventoryPreview.pageSize)} cards. Counts and links
-                    come from the same public result authority as the search page.
+                    Explore the properties shown here, or open a search to choose your area,
+                    property type and budget.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-4">

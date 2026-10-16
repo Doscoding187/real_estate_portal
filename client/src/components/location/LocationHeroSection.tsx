@@ -22,6 +22,8 @@ import {
   buildPropertySearchUrl,
 } from '@/lib/heroJourneySearch';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
+import { buildConsumerJourneyUrl } from '@/lib/consumerJourneyRouter';
+import { isLandVerticalAvailable } from '@shared/landLaunchPolicy';
 import { RENT_PUBLIC_PROPERTY_TYPES } from '@shared/property-taxonomy';
 
 interface HeroCampaign {
@@ -36,6 +38,8 @@ interface LocationHeroSectionProps {
   locationType: 'province' | 'city' | 'suburb';
   locationId: number;
   backgroundImage: string;
+  imageLabel?: string;
+  imagePosition?: string;
   listingCount: number;
   campaign?: HeroCampaign | null;
   quickLinks?: { label: string; path?: string; slug?: string }[];
@@ -95,6 +99,8 @@ export function LocationHeroSection({
   locationType,
   locationId,
   backgroundImage,
+  imageLabel,
+  imagePosition,
   listingCount,
   campaign,
   quickLinks = [],
@@ -146,7 +152,17 @@ export function LocationHeroSection({
   const handleCategoryClick = (categoryId: string) => {
     if (categoryId === 'rental' && !rentJourneyEnabled) return;
     if (categoryId === 'developments' && !developmentsJourneyEnabled) return;
-    if (categoryId === 'plot_land' && !landJourneyEnabled) return;
+    if (categoryId === 'plot_land') {
+      if (!landJourneyEnabled) return;
+      setLocation(
+        buildConsumerJourneyUrl({
+          intent: 'buy',
+          journey: 'land',
+          selectedLocations: [currentLocation],
+        }),
+      );
+      return;
+    }
     if (
       neutralMode &&
       categoryId !== 'buy' &&
@@ -236,10 +252,18 @@ export function LocationHeroSection({
       <div className="relative w-full h-[30vh] lg:h-[35vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${campaign?.imageUrl || backgroundImage})` }}
+          style={{
+            backgroundImage: `url(${campaign?.imageUrl || backgroundImage})`,
+            backgroundPosition: campaign?.imageUrl ? undefined : imagePosition,
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/50" />
 
+        {imageLabel && !campaign?.imageUrl && (
+          <span className="absolute right-4 top-4 rounded-md bg-slate-950/80 px-2.5 py-1.5 text-[10px] font-semibold text-white">
+            {imageLabel}
+          </span>
+        )}
         {campaign && (
           <a
             href={campaign.landingPageUrl || '#'}
@@ -271,7 +295,10 @@ export function LocationHeroSection({
               const Icon = category.icon;
               const isActive = activeTab === category.id;
                 const isUnavailableInNeutralMode =
-                  neutralMode && category.id !== 'buy' && category.id !== 'rental';
+                  neutralMode &&
+                  category.id !== 'buy' &&
+                  category.id !== 'rental' &&
+                  category.id !== 'plot_land';
               return (
                 <button
                   key={category.id}
@@ -329,7 +356,7 @@ export function LocationHeroSection({
                         <SelectContent>
                           <SelectItem value="all">Any Category</SelectItem>
                           {filterConfig.buy.intents
-                            .filter(intent => intent !== 'Land & Plots' || landJourneyEnabled)
+                            .filter(intent => intent !== 'Land & Plots' || isLandVerticalAvailable())
                             .map(intent => (
                             <SelectItem key={intent} value={intent}>
                               {intent}
@@ -359,7 +386,7 @@ export function LocationHeroSection({
                                 filters.propertyIntent as keyof typeof filterConfig.buy.propertyTypes
                               ]
                             : Object.entries(filterConfig.buy.propertyTypes)
-                                .filter(([intent]) => intent !== 'Land & Plots' || landJourneyEnabled)
+                                .filter(([intent]) => intent !== 'Land & Plots' || isLandVerticalAvailable())
                                 .flatMap(([, types]) => types)
                           ).map((type: string) => (
                             <SelectItem key={type} value={type}>
