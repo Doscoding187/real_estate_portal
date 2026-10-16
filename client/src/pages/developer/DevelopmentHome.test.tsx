@@ -112,7 +112,7 @@ function homeData(overrides: Record<string, unknown> = {}) {
       totalUnits: 10,
       availableUnits: 4,
       reservedUnits: 2,
-      derivedSoldUnits: 4,
+      unclassifiedRemainderUnits: 4,
       unitTypes: [
         {
           id: 'unit-type-1',
@@ -120,7 +120,7 @@ function homeData(overrides: Record<string, unknown> = {}) {
           totalUnits: 10,
           availableUnits: 4,
           reservedUnits: 2,
-          derivedSoldUnits: 4,
+          unclassifiedRemainderUnits: 4,
         },
       ],
       auctionTermsConfiguredCount: 0,
@@ -181,7 +181,10 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     render(<DevelopmentHome />);
     expect(screen.getByText('Active unit types')).toBeInTheDocument();
     expect(screen.getByText('Aggregate available')).toBeInTheDocument();
-    expect(screen.getByText('Derived aggregate sold')).toBeInTheDocument();
+    expect(screen.getByText('Unclassified remainder')).toBeInTheDocument();
+    expect(
+      screen.getByText(/it may include sold, withdrawn, or otherwise unavailable units/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Sale pricing:/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit catalogue' })).toBeInTheDocument();
     expect(
@@ -197,7 +200,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
           totalUnits: null,
           availableUnits: null,
           reservedUnits: null,
-          derivedSoldUnits: null,
+          unclassifiedRemainderUnits: null,
           auctionTermsConfiguredCount: 0,
           pricing: { kind: 'unavailable', from: null, to: null },
           warnings: [
@@ -240,7 +243,8 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     render(<DevelopmentHome />);
 
     expect(screen.getByText('Live availability by unit type')).toBeInTheDocument();
-    expect(screen.getByText('4 available of 10 · 2 reserved · 4 sold')).toBeInTheDocument();
+    expect(screen.getByText('4 available of 10 · 2 reserved · 4 unclassified')).toBeInTheDocument();
+    expect(screen.queryByText(/\d+ sold/)).not.toBeInTheDocument();
     expect(screen.getByText('No availability changes have been recorded yet.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Update availability' }));

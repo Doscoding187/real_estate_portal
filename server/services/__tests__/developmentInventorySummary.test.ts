@@ -23,7 +23,7 @@ const validUnit = {
 };
 
 describe('buildDevelopmentHomeInventory', () => {
-  it('uses only active unit types for exact aggregate quantities, sold and sale pricing', () => {
+  it('uses only active unit types for aggregate quantities, unclassified remainder and pricing', () => {
     const result = buildDevelopmentHomeInventory(
       development,
       [
@@ -45,13 +45,13 @@ describe('buildDevelopmentHomeInventory', () => {
       totalUnits: 16,
       availableUnits: 5,
       reservedUnits: 2,
-      derivedSoldUnits: 9,
+      unclassifiedRemainderUnits: 9,
       pricing: { kind: 'sale', from: 1200000, to: 2000000 },
     });
     expect(result.warnings.map(warning => warning.code)).toEqual(['inactive_unit_types']);
   });
 
-  it('does not fabricate aggregate quantities or derived sold for invalid active persisted inventory', () => {
+  it('does not fabricate aggregate quantities or an unclassified remainder for invalid active inventory', () => {
     const result = buildDevelopmentHomeInventory(
       development,
       [{ ...validUnit, availableUnits: 9, reservedUnits: 2 }],
@@ -59,7 +59,7 @@ describe('buildDevelopmentHomeInventory', () => {
     );
     expect(result.totalUnits).toBeNull();
     expect(result.availableUnits).toBeNull();
-    expect(result.derivedSoldUnits).toBeNull();
+    expect(result.unclassifiedRemainderUnits).toBeNull();
     expect(result.warnings.map(warning => warning.code)).toContain('invalid_aggregate_inventory');
   });
 
