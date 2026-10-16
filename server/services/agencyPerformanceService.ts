@@ -30,7 +30,7 @@ export type AgencyValueScorecard = {
 /**
  * Value-visibility scorecard for an agency: is Property Listify delivering
  * attention, enquiries and progression? Every metric is flat-cost SQL over
- * canonical tables (properties mirror counters, leads first-response truth,
+ * canonical tables (properties mirror counters, leads first-outreach truth,
  * showings progression) — no per-listing N+1.
  */
 export async function getAgencyValueScorecard(
@@ -40,7 +40,9 @@ export async function getAgencyValueScorecard(
   const [responseRow] = await db
     .select({
       respondedLeads: sql<number>`COUNT(*)`,
-      avgMinutes: sql<number | null>`AVG(TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, ${leads.firstRespondedAt}))`,
+      avgMinutes: sql<
+        number | null
+      >`AVG(TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, ${leads.firstRespondedAt}))`,
       withinFifteen: sql<number>`SUM(CASE WHEN TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, ${leads.firstRespondedAt}) <= 15 THEN 1 ELSE 0 END)`,
     })
     .from(leads)
@@ -48,7 +50,9 @@ export async function getAgencyValueScorecard(
 
   const [platformRow] = await db
     .select({
-      avgMinutes: sql<number | null>`AVG(TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, ${leads.firstRespondedAt}))`,
+      avgMinutes: sql<
+        number | null
+      >`AVG(TIMESTAMPDIFF(MINUTE, ${leads.createdAt}, ${leads.firstRespondedAt}))`,
     })
     .from(leads)
     .where(isNotNull(leads.firstRespondedAt));

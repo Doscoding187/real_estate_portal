@@ -19,6 +19,7 @@ import { formatSARandShort } from '@/lib/bond-calculator';
 import { trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 type LeadDialogMode = 'brochure' | 'contact' | 'qualification' | 'info' | 'viewing';
 
@@ -344,7 +345,8 @@ export function DevelopmentLeadDialog({
     if (!form.email.trim()) nextErrors.email = 'Email is required.';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       nextErrors.email = 'Enter a valid email address.';
-    if (!form.phone.trim()) nextErrors.phone = 'Phone number is required.';
+    const phoneError = agentProfilePhoneError(form.phone);
+    if (phoneError) nextErrors.phone = phoneError;
     if (!consentAccepted) nextErrors.consent = 'Consent is required before submitting.';
 
     setErrors(nextErrors);
@@ -550,15 +552,21 @@ export function DevelopmentLeadDialog({
                 </div>
 
                 <div>
+                  <Label htmlFor="development-lead-phone" className="mb-1 block text-xs">
+                    Phone number <span className="text-destructive">*</span>
+                  </Label>
                   <Input
+                    id="development-lead-phone"
                     type="tel"
                     placeholder="Phone number"
+                    aria-label="Phone number (required)"
                     value={form.phone}
                     onChange={e => {
                       setForm(prev => ({ ...prev, phone: e.target.value }));
                       if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
                     }}
                     className={errors.phone ? 'border-red-500' : ''}
+                    required
                   />
                   {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
                 </div>

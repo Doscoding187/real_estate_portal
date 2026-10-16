@@ -17,13 +17,7 @@ import {
   Sparkles,
   Users,
 } from 'lucide-react';
-import type {
-  AgencyStats,
-  CommissionStats,
-  ConversionStats,
-  Tone,
-  WorkspaceId,
-} from './types';
+import type { AgencyStats, CommissionStats, ConversionStats, Tone, WorkspaceId } from './types';
 
 export const EMPTY_STATS: AgencyStats = {
   totalListings: 0,
@@ -123,8 +117,7 @@ export const NAV_GROUPS: Array<{
 
 export const PIPELINE_STAGES = [
   { key: 'new', label: 'New', tone: 'sky' as Tone },
-  { key: 'contacted', label: 'Contacted', tone: 'teal' as Tone },
-  { key: 'qualified', label: 'Qualified', tone: 'emerald' as Tone },
+  { key: 'contacted', label: 'Connected', tone: 'teal' as Tone },
   { key: 'viewing_scheduled', label: 'Viewing', tone: 'amber' as Tone },
   { key: 'offer_sent', label: 'Offer', tone: 'amber' as Tone },
   { key: 'converted', label: 'Won', tone: 'emerald' as Tone },
@@ -143,7 +136,10 @@ export const DETAIL_WORKSPACES = new Set<WorkspaceId>([
 ]);
 
 export function workspaceFromPath(path: string): WorkspaceId {
-  const segment = path.split('?')[0].replace(/^\/agency\/?/, '').split('/')[0];
+  const segment = path
+    .split('?')[0]
+    .replace(/^\/agency\/?/, '')
+    .split('/')[0];
   if (!segment || segment === 'dashboard') return 'overview';
   if (segment === 'agents' || segment === 'invite') return 'team';
   if (segment === 'subscription') return 'billing';

@@ -141,8 +141,8 @@ describe('PXF-S1 property prospect contract', () => {
     // each surface must delegate to the same canonical handlers.
     expect(page.match(/onClick={handleOpenStandardEnquiry}/g)?.length).toBeGreaterThanOrEqual(3);
     expect(page).toContain('const handleOpenStandardEnquiry = () =>');
-    expect(page).toContain("isRentalListing ?");
-    expect(page).toContain("Send rental enquiry");
+    expect(page).toContain('isRentalListing ?');
+    expect(page).toContain('Send rental enquiry');
     expect(page).toContain('const handleRequestViewing = () =>');
     expect(page).toContain('const [isStickyNavVisible, setIsStickyNavVisible]');
     expect(page).toContain('overviewSectionRef');
@@ -156,7 +156,10 @@ describe('PXF-S1 property prospect contract', () => {
     expect(page).toContain('href={prop.href}');
     expect(page).toContain('aria-label={`Open ${prop.title}`}');
     expect(page).toContain('<Link href={similarListingsHref}>View all matching listings</Link>');
-    expect(page).toContain('HouseMeasureIcon');
+    expect(page).toContain(
+      "import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';",
+    );
+    expect(page).toContain('PROPERTY_FACT_ICONS.residentialSize');
     expect(page.indexOf('aria-labelledby="listed-by-heading"')).toBeLessThan(
       page.indexOf('aria-labelledby="contact-heading"'),
     );

@@ -221,8 +221,15 @@ describe('agency lead visibility and follow-up contract', () => {
     expect(schema).toContain("firstRespondedAt: timestamp('firstRespondedAt'");
     expect(schema).toContain("'contact_attempt'");
     expect(router).toContain('recordLeadContactAttempt');
-    expect(router).toContain('Record the next action for every active buyer lead.');
-    expect(router).toContain('firstResponseOverdueLeads');
+    expect(router).toContain('nextAction: z.string().trim().min(1).max(255)');
+    const contactAttemptStart = router.indexOf('recordLeadContactAttempt: agentProcedure');
+    const followUpStart = router.indexOf('setLeadFollowUp: agentProcedure', contactAttemptStart);
+    const contactAttemptRoute = router.slice(contactAttemptStart, followUpStart);
+    expect(contactAttemptRoute).not.toContain('status: nextStatus');
+    expect(contactAttemptRoute).not.toContain("nextStatus = 'lost'");
+    expect(contactAttemptRoute).toContain('isTwoWayContactOutcome(input.outcome)');
+    expect(router).toContain('nextFollowUp: null');
+    expect(router).toContain('firstOutreachOverdueLeads');
     // The SLA constant is single-sourced in the shared transition authority;
     // the router consumes it rather than redeclaring it.
     expect(router).toContain('FIRST_RESPONSE_SLA_MINUTES');

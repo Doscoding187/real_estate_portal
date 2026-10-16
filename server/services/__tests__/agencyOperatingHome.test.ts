@@ -11,11 +11,12 @@ const base: AgencyOperatingHomeInputs = {
   leads: {
     newToday: 0,
     unassigned: 0,
-    firstResponseOverdueCount: 0,
+    firstOutreachOverdueCount: 0,
     oldestOverdueWaitingMinutes: null,
     followUpsOverdueCount: 0,
     oldestOverdueFollowUpName: null,
   },
+  team: { workloadByAgent: [] },
   listings: {
     pendingReviewCount: 0,
     oldestPendingReviewAgeDays: null,
@@ -46,10 +47,27 @@ describe('agency operating home', () => {
     expect(home.actions).toHaveLength(0);
     expect(home).toMatchObject({
       brief: {
-        leads: { firstResponseOverdueCount: 0 },
+        leads: { firstOutreachOverdueCount: 0 },
         publication: { capacityMax: 500 },
       },
     });
+  });
+
+  it('preserves objective overdue follow-up counts by team owner for management review', () => {
+    const home = buildAgencyOperatingHome({
+      ...base,
+      team: {
+        workloadByAgent: [
+          { agentId: 17, agentName: 'Lerato Mokoena', activeLeadCount: 6, overdueFollowUpCount: 3 },
+          { agentId: null, agentName: 'Unassigned', activeLeadCount: 1, overdueFollowUpCount: 1 },
+        ],
+      },
+    });
+
+    expect(home.brief.team.workloadByAgent).toEqual([
+      { agentId: 17, agentName: 'Lerato Mokoena', activeLeadCount: 6, overdueFollowUpCount: 3 },
+      { agentId: null, agentName: 'Unassigned', activeLeadCount: 1, overdueFollowUpCount: 1 },
+    ]);
   });
 
   it('ranks subscription and verification blockers as critical before work signals', () => {
@@ -70,7 +88,7 @@ describe('agency operating home', () => {
       leads: {
         newToday: 3,
         unassigned: 2,
-        firstResponseOverdueCount: 4,
+        firstOutreachOverdueCount: 4,
         oldestOverdueWaitingMinutes: 42,
         followUpsOverdueCount: 1,
         oldestOverdueFollowUpName: 'Thabo M.',
@@ -79,10 +97,12 @@ describe('agency operating home', () => {
     });
 
     const codes = home.actions.map(action => action.code);
-    expect(codes.indexOf('resolve_publication_blocker')).toBeLessThan(codes.indexOf('respond_sla_breach'));
+    expect(codes.indexOf('resolve_publication_blocker')).toBeLessThan(
+      codes.indexOf('first_outreach_overdue'),
+    );
     expect(home.actions[0].severity).toBe('critical');
     expect(home.actions.filter(a => a.severity === 'critical').map(a => a.code)).toEqual(
-      expect.arrayContaining(['respond_sla_breach', 'fix_rejected_listings']),
+      expect.arrayContaining(['first_outreach_overdue', 'fix_rejected_listings']),
     );
   });
 
@@ -92,7 +112,7 @@ describe('agency operating home', () => {
       leads: {
         newToday: 5,
         unassigned: 3,
-        firstResponseOverdueCount: 2,
+        firstOutreachOverdueCount: 2,
         oldestOverdueWaitingMinutes: 90,
         followUpsOverdueCount: 2,
         oldestOverdueFollowUpName: 'A. Nkosi',
@@ -102,15 +122,15 @@ describe('agency operating home', () => {
     console.log('HOME', JSON.stringify(home));
     const codes = home.actions.map(action => action.code);
     expect(codes).toEqual([
-      'respond_sla_breach',
+      'first_outreach_overdue',
       'chase_overdue_follow_up',
       'assign_new_leads',
     ]);
     expect(home.actions[0].title).toContain('2 enquiries');
-    expect(home.actions[0].title).toContain('15-minute');
+    expect(home.actions[0].title).toContain('15 minutes');
     expect(home.actions[0].valueLabel).toContain('90 min');
     expect(home).toMatchObject({
-      brief: { leads: { newToday: 5, firstResponseOverdueCount: 2 } },
+      brief: { leads: { newToday: 5, firstOutreachOverdueCount: 2 } },
     });
   });
 

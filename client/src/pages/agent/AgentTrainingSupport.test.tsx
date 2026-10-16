@@ -72,7 +72,7 @@ describe('AgentTrainingSupport access handoff', () => {
     render(<AgentTrainingSupport />);
 
     expect(screen.getByRole('heading', { name: 'Training & Support' })).toBeInTheDocument();
-    expect(screen.getByText('Your payment proof is under review')).toBeInTheDocument();
+    expect(screen.getByText('Your payment notice is under review')).toBeInTheDocument();
     const supportTab = screen.getByRole('tab', { name: 'Support' });
     fireEvent.mouseDown(supportTab, { button: 0, ctrlKey: false });
     expect(supportTab).toHaveAttribute('aria-selected', 'true');

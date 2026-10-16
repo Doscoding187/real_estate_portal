@@ -83,9 +83,9 @@ export default function SubscriptionManagementPage({
     data: subscriptionsData,
     isLoading: isLoadingSubs,
     refetch: refetchSubs,
-  } = trpc.subscription.getAllSubscriptions.useQuery(
+  } = trpc.billing.admin.subscriptions.useQuery(
     {
-      page,
+      offset: (page - 1) * 10,
       limit: 10,
       status: statusFilter === 'all' ? undefined : (statusFilter as any),
     },
@@ -94,8 +94,8 @@ export default function SubscriptionManagementPage({
     },
   );
 
-  const { data: plansData, isLoading: isLoadingPlans } = trpc.billing.plans.useQuery(
-    { segment: 'agency' },
+  const { data: plansData, isLoading: isLoadingPlans } = trpc.billing.admin.plans.useQuery(
+    undefined,
     {
       enabled: activeTab === 'plans',
     },
@@ -233,7 +233,9 @@ export default function SubscriptionManagementPage({
   const subscriptions = Array.isArray(subscriptionsData)
     ? subscriptionsData
     : subscriptionsData?.subscriptions || [];
-  const plans = Array.isArray(plansData) ? plansData : plansData?.plans || [];
+  const plans = (Array.isArray(plansData) ? plansData : plansData?.plans || []).map(plan => ({
+    ...plan, features: JSON.parse(plan.features || '[]'),
+  }));
   const financeRows = proofsData?.payments || [];
 
   return (
@@ -412,9 +414,11 @@ export default function SubscriptionManagementPage({
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="trialing">Trialing</SelectItem>
+                    <SelectItem value="pending_payment">Awaiting payment</SelectItem>
+                    <SelectItem value="payment_under_review">Payment under review</SelectItem>
+                    <SelectItem value="expired">Expired</SelectItem>
                     <SelectItem value="past_due">Past Due</SelectItem>
-                    <SelectItem value="canceled">Canceled</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" className="bg-white/50 border-slate-200">
@@ -428,11 +432,11 @@ export default function SubscriptionManagementPage({
               <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow>
-                    <TableHead>Agency</TableHead>
+                    <TableHead>Account</TableHead>
                     <TableHead>Plan</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Billing Cycle</TableHead>
-                    <TableHead>Next Billing</TableHead>
+                    <TableHead>Term</TableHead>
+                    <TableHead>Access ends</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -455,8 +459,8 @@ export default function SubscriptionManagementPage({
                       <TableRow key={sub.id} className="hover:bg-slate-50/50 transition-colors">
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
-                            <span>{sub.agency?.name || 'Unknown Agency'}</span>
-                            <span className="text-xs text-slate-500">{sub.agency?.email}</span>
+                            <span>{sub.owner?.name || 'Unknown account'}</span>
+                            <span className="text-xs text-slate-500">{sub.owner?.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -466,7 +470,7 @@ export default function SubscriptionManagementPage({
                         </TableCell>
                         <TableCell>{getStatusBadge(sub.status)}</TableCell>
                         <TableCell className="capitalize">
-                          {sub.plan?.interval || 'Monthly'}
+                          {sub.plan?.metadata?.commercial_term_kind === 'paid_launch_access' ? '90 days · once-off' : sub.plan?.interval}
                         </TableCell>
                         <TableCell>
                           {sub.currentPeriodEnd
@@ -512,9 +516,9 @@ export default function SubscriptionManagementPage({
                   </div>
                   <div className="mb-6">
                     <span className="text-3xl font-bold text-slate-900">
-                      {formatCurrency(plan.price)}
+                      {formatCurrency(Number(plan.price) / 100)}
                     </span>
-                    <span className="text-slate-500">/{plan.interval}</span>
+                    <span className="text-slate-500">{plan.metadata?.commercial_term_kind === 'paid_launch_access' ? ' once-off · 90 days' : `/${plan.interval}`}</span>
                   </div>
                   <div className="space-y-3 mb-8">
                     {plan.features.slice(0, 5).map((feature: string, i: number) => (

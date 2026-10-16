@@ -84,7 +84,13 @@ type ViewingRecord = {
   instructions?: string | null;
   nextAction?: string | null;
   feedbackStructured?: Record<string, any> | null;
-  agent?: { id: number; userId?: number | null; name: string; email?: string | null; phone?: string | null } | null;
+  agent?: {
+    id: number;
+    userId?: number | null;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
   lead?: {
     id: number;
     name?: string | null;
@@ -142,6 +148,13 @@ function statusLabel(value?: string | null) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
 }
 
+function promptLeadFollowUpOutcome(name?: string | null) {
+  const result = window.prompt(
+    `What happened with ${name || 'this buyer'} and what should happen next?`,
+  );
+  return result?.trim() || null;
+}
+
 function viewingTone(value?: string | null): Tone {
   return STATUS_TONES[String(value || 'requested')] || 'slate';
 }
@@ -190,7 +203,11 @@ function normalizePhone(value?: string | null) {
 function whatsappHref(value?: string | null) {
   const phone = normalizePhone(value);
   if (!phone) return null;
-  const digits = phone.startsWith('+') ? phone.slice(1) : phone.startsWith('0') ? `27${phone.slice(1)}` : phone;
+  const digits = phone.startsWith('+')
+    ? phone.slice(1)
+    : phone.startsWith('0')
+      ? `27${phone.slice(1)}`
+      : phone;
   return `https://wa.me/${digits}`;
 }
 
@@ -252,7 +269,7 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
   const recordLeadContact = trpc.agency.recordLeadContactAttempt.useMutation({
     onSuccess: async () => {
       await refresh();
-      toast.success('Buyer response recorded');
+      toast.success('Contact activity recorded; update the lead stage separately');
     },
     onError: error => toast.error(error.message || 'Buyer response could not be recorded'),
   });
@@ -281,12 +298,7 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
   const data = myDayQuery.data as any;
   const leadOptions = useMemo(
     () =>
-      mergeLeads(
-        props.leads,
-        data?.overdueFollowUps,
-        data?.dueTodayFollowUps,
-        data?.urgentLeads,
-      ),
+      mergeLeads(props.leads, data?.overdueFollowUps, data?.dueTodayFollowUps, data?.urgentLeads),
     [data?.dueTodayFollowUps, data?.overdueFollowUps, data?.urgentLeads, props.leads],
   );
 
@@ -325,43 +337,96 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
       {data ? (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-            <QueueMetric label="Overdue follow-ups" value={data.counts?.overdueFollowUps} tone="rose" />
-            <QueueMetric label="Today follow-ups" value={data.counts?.dueTodayFollowUps} tone="amber" />
-            <QueueMetric label="First response overdue" value={data.counts?.firstResponseOverdueLeads} tone="rose" />
+            <QueueMetric
+              label="Overdue follow-ups"
+              value={data.counts?.overdueFollowUps}
+              tone="rose"
+            />
+            <QueueMetric
+              label="Today follow-ups"
+              value={data.counts?.dueTodayFollowUps}
+              tone="amber"
+            />
+            <QueueMetric
+              label="First outreach overdue"
+              value={data.counts?.firstOutreachOverdueLeads}
+              tone="rose"
+            />
             <QueueMetric
               label="Seller follow-ups"
-              value={(data.counts?.overdueSellerFollowUps || 0) + (data.counts?.dueTodaySellerFollowUps || 0)}
+              value={
+                (data.counts?.overdueSellerFollowUps || 0) +
+                (data.counts?.dueTodaySellerFollowUps || 0)
+              }
               tone="rose"
             />
             <QueueMetric label="Mandate actions" value={data.counts?.mandateWork} tone="amber" />
-            <QueueMetric label="Listing performance" value={data.counts?.performanceReviewWork} tone="amber" />
+            <QueueMetric
+              label="Listing performance"
+              value={data.counts?.performanceReviewWork}
+              tone="amber"
+            />
             <QueueMetric label="Today viewings" value={data.counts?.todayViewings} tone="sky" />
-            <QueueMetric label="Deal deadlines" value={data.counts?.transactionDeadlines} tone="teal" />
+            <QueueMetric
+              label="Deal deadlines"
+              value={data.counts?.transactionDeadlines}
+              tone="teal"
+            />
           </div>
 
           <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
             <div className="min-w-0 space-y-5">
               <LeadQueue
-                title="Buyer First Responses Overdue"
-                eyebrow={`${numberLabel(data.firstResponseOverdueLeads?.length || 0)} need a recorded response`}
-                leads={data.firstResponseOverdueLeads || []}
-                empty="No buyer first responses are overdue"
-                completeLabel="Respond"
+                title="Buyer First Outreach Overdue"
+                eyebrow={`${numberLabel(data.firstOutreachOverdueLeads?.length || 0)} need a recorded outreach attempt`}
+                leads={data.firstOutreachOverdueLeads || []}
+                empty="No buyer outreach is overdue"
+                completeLabel="Log attempt"
                 onOpenLead={() => props.onNavigate('leads')}
                 onCall={lead => window.open(`tel:${normalizePhone(lead.phone)}`, '_self')}
                 onWhatsApp={lead => {
                   const href = whatsappHref(lead.phone);
                   if (href) window.open(href, '_blank', 'noopener,noreferrer');
                 }}
-                onComplete={lead =>
+                onComplete={lead => {
+                  const allowedChannels = ['call', 'whatsapp', 'email', 'sms', 'other'];
+                  const allowedOutcomes = [
+                    'reached',
+                    'replied',
+                    'no_answer',
+                    'voicemail',
+                    'not_interested',
+                    'invalid_contact',
+                    'other',
+                  ];
+                  const channel = window
+                    .prompt(
+                      'Which channel did you use? (call, whatsapp, email, sms, other)',
+                      'call',
+                    )
+                    ?.trim()
+                    .toLowerCase();
+                  if (!channel || !allowedChannels.includes(channel)) return;
+                  const outcome = window
+                    .prompt(
+                      'What happened? (reached, replied, no_answer, voicemail, not_interested, invalid_contact, other)',
+                      'no_answer',
+                    )
+                    ?.trim()
+                    .toLowerCase();
+                  if (!outcome || !allowedOutcomes.includes(outcome)) return;
+                  const summary = window.prompt('Record what happened:')?.trim();
+                  if (!summary) return;
+                  const nextAction = window.prompt('What should happen next?')?.trim();
+                  if (!nextAction) return;
                   recordLeadContact.mutate({
                     leadId: lead.id,
-                    channel: 'call',
-                    outcome: 'reached',
-                    summary: 'First buyer response recorded from My Day.',
-                    nextAction: 'Schedule buyer follow-up',
-                  })
-                }
+                    channel: channel as any,
+                    outcome: outcome as any,
+                    summary,
+                    nextAction,
+                  });
+                }}
                 onBook={lead => setBookingLeadId(lead.id)}
                 onNextFollowUp={lead =>
                   setFollowUp.mutate({
@@ -418,8 +483,45 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
               />
 
               <Card className="border-slate-200 bg-white shadow-sm">
-                <CardHeader className="pb-2"><SectionTitle icon={ListChecks} title="Listing Performance Work" eyebrow={`${numberLabel(data.performanceReviewWork?.length || 0)} actionable seller items`} /></CardHeader>
-                <CardContent className="space-y-3">{data.performanceReviewWork?.length ? data.performanceReviewWork.map((item: any) => <div key={item.id} className="rounded-lg border border-amber-200 bg-amber-50 p-3"><p className="font-medium text-slate-900">{item.property}</p><p className="mt-1 text-sm text-slate-700">{item.reason}</p><p className="mt-1 text-xs text-slate-600">Owner: {item.responsibleAgent} · Due {item.dueAt ? new Date(item.dueAt).toLocaleDateString('en-ZA') : 'now'}</p><p className="mt-1 text-xs text-slate-500">Clears when: {item.resolution}</p><Button className="mt-3" size="sm" variant="outline" onClick={() => props.onNavigate('performance')}>Open listing performance</Button></div>) : <p className="text-sm text-slate-500">No seller-review or revision actions are due.</p>}</CardContent>
+                <CardHeader className="pb-2">
+                  <SectionTitle
+                    icon={ListChecks}
+                    title="Listing Performance Work"
+                    eyebrow={`${numberLabel(data.performanceReviewWork?.length || 0)} actionable seller items`}
+                  />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {data.performanceReviewWork?.length ? (
+                    data.performanceReviewWork.map((item: any) => (
+                      <div
+                        key={item.id}
+                        className="rounded-lg border border-amber-200 bg-amber-50 p-3"
+                      >
+                        <p className="font-medium text-slate-900">{item.property}</p>
+                        <p className="mt-1 text-sm text-slate-700">{item.reason}</p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          Owner: {item.responsibleAgent} · Due{' '}
+                          {item.dueAt ? new Date(item.dueAt).toLocaleDateString('en-ZA') : 'now'}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Clears when: {item.resolution}
+                        </p>
+                        <Button
+                          className="mt-3"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => props.onNavigate('performance')}
+                        >
+                          Open listing performance
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">
+                      No seller-review or revision actions are due.
+                    </p>
+                  )}
+                </CardContent>
               </Card>
 
               <LeadQueue
@@ -433,12 +535,10 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
                   const href = whatsappHref(lead.phone);
                   if (href) window.open(href, '_blank', 'noopener,noreferrer');
                 }}
-                onComplete={lead =>
-                  completeFollowUp.mutate({
-                    leadId: lead.id,
-                    note: 'Follow-up completed from My Day.',
-                  })
-                }
+                onComplete={lead => {
+                  const note = promptLeadFollowUpOutcome(lead.name);
+                  if (note) completeFollowUp.mutate({ leadId: lead.id, note });
+                }}
                 onBook={lead => setBookingLeadId(lead.id)}
                 onNextFollowUp={lead =>
                   setFollowUp.mutate({
@@ -460,12 +560,10 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
                   const href = whatsappHref(lead.phone);
                   if (href) window.open(href, '_blank', 'noopener,noreferrer');
                 }}
-                onComplete={lead =>
-                  completeFollowUp.mutate({
-                    leadId: lead.id,
-                    note: 'Follow-up completed from My Day.',
-                  })
-                }
+                onComplete={lead => {
+                  const note = promptLeadFollowUpOutcome(lead.name);
+                  if (note) completeFollowUp.mutate({ leadId: lead.id, note });
+                }}
                 onBook={lead => setBookingLeadId(lead.id)}
                 onNextFollowUp={lead =>
                   setFollowUp.mutate({
@@ -571,7 +669,11 @@ export function AgencyMyDayWorkspace(props: WorkspaceContentProps) {
                     />
                   ))}
                   {!data.upcomingWork?.length ? (
-                    <EmptyPanel icon={CalendarClock} title="No upcoming work" text="Future appointments appear here." />
+                    <EmptyPanel
+                      icon={CalendarClock}
+                      title="No upcoming work"
+                      text="Future appointments appear here."
+                    />
                   ) : null}
                 </CardContent>
               </Card>
@@ -740,7 +842,11 @@ export function AgencyViewingsWorkspace(props: WorkspaceContentProps) {
               onChange={event => setPropertyId(event.target.value.replace(/\D/g, ''))}
               placeholder="Property ID"
             />
-            <Input type="date" value={dateFrom} onChange={event => setDateFrom(event.target.value)} />
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={event => setDateFrom(event.target.value)}
+            />
             <Input type="date" value={dateTo} onChange={event => setDateTo(event.target.value)} />
           </div>
 
@@ -760,7 +866,9 @@ export function AgencyViewingsWorkspace(props: WorkspaceContentProps) {
 
         <CardContent className="space-y-4">
           {viewingsQuery.error ? <ErrorPanel title="Viewings could not be loaded" /> : null}
-          {viewingsQuery.isLoading ? <div className="h-56 animate-pulse rounded-lg bg-slate-100" /> : null}
+          {viewingsQuery.isLoading ? (
+            <div className="h-56 animate-pulse rounded-lg bg-slate-100" />
+          ) : null}
 
           {!viewingsQuery.isLoading && viewings.length ? (
             viewMode === 'list' ? (
@@ -798,7 +906,10 @@ export function AgencyViewingsWorkspace(props: WorkspaceContentProps) {
             ) : (
               <div className="grid gap-3 xl:grid-cols-3">
                 {grouped.map(group => (
-                  <div key={group.date} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div
+                    key={group.date}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                  >
                     <p className="mb-3 text-sm font-semibold text-slate-700">{group.label}</p>
                     <div className="space-y-2">
                       {group.items.map(viewing => (
@@ -891,8 +1002,9 @@ function SellerFollowUpQueue({
                   {prospect.ownerName || 'Unnamed seller opportunity'}
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  {[prospect.propertyAddress, prospect.suburb, prospect.city].filter(Boolean).join(', ') ||
-                    'Location not recorded'}
+                  {[prospect.propertyAddress, prospect.suburb, prospect.city]
+                    .filter(Boolean)
+                    .join(', ') || 'Location not recorded'}
                 </p>
                 <p className="mt-2 text-sm font-medium text-slate-700">
                   Next: {prospect.nextAction || 'Record the next seller action'}
@@ -925,7 +1037,9 @@ function SellerFollowUpQueue({
             </div>
           </div>
         ))}
-        {!prospects.length ? <EmptyPanel icon={Clock3} title={empty} text="This queue is clear." /> : null}
+        {!prospects.length ? (
+          <EmptyPanel icon={Clock3} title={empty} text="This queue is clear." />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -946,8 +1060,12 @@ function MandateWorkQueue({ work, onOpen }: { work: any[]; onOpen: (item: any) =
           <div key={item.id} className="rounded-lg border border-amber-100 bg-white p-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="font-semibold text-slate-950">{item.ownerName || 'Seller opportunity'}</p>
-                <p className="mt-1 text-sm text-slate-500">{item.propertyAddress || 'Location to be completed'}</p>
+                <p className="font-semibold text-slate-950">
+                  {item.ownerName || 'Seller opportunity'}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {item.propertyAddress || 'Location to be completed'}
+                </p>
                 <p className="mt-2 text-sm font-medium text-slate-700">Next: {item.nextAction}</p>
               </div>
               <Badge variant="outline">{statusLabel(item.type || item.status)}</Badge>
@@ -958,7 +1076,13 @@ function MandateWorkQueue({ work, onOpen }: { work: any[]; onOpen: (item: any) =
             </Button>
           </div>
         ))}
-        {!work.length ? <EmptyPanel icon={Handshake} title="No mandate actions" text="Current mandate requirements are complete." /> : null}
+        {!work.length ? (
+          <EmptyPanel
+            icon={Handshake}
+            title="No mandate actions"
+            text="Current mandate requirements are complete."
+          />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1003,11 +1127,21 @@ function LeadQueue({
                 <ArrowRight className="h-4 w-4" />
                 Open
               </Button>
-              <Button variant="outline" size="sm" disabled={!lead.phone} onClick={() => onCall(lead)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!lead.phone}
+                onClick={() => onCall(lead)}
+              >
                 <Phone className="h-4 w-4" />
                 Call
               </Button>
-              <Button variant="outline" size="sm" disabled={!lead.phone} onClick={() => onWhatsApp(lead)}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!lead.phone}
+                onClick={() => onWhatsApp(lead)}
+              >
                 WhatsApp
               </Button>
               <Button variant="outline" size="sm" onClick={() => onComplete(lead)}>
@@ -1025,7 +1159,9 @@ function LeadQueue({
             </div>
           </div>
         ))}
-        {!leads.length ? <EmptyPanel icon={MessageSquare} title={empty} text="This queue is clear." /> : null}
+        {!leads.length ? (
+          <EmptyPanel icon={MessageSquare} title={empty} text="This queue is clear." />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1075,7 +1211,9 @@ function ViewingQueue({
             />
           ),
         )}
-        {!viewings.length ? <EmptyPanel icon={CalendarDays} title={empty} text="This queue is clear." /> : null}
+        {!viewings.length ? (
+          <EmptyPanel icon={CalendarDays} title={empty} text="This queue is clear." />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1098,7 +1236,9 @@ function ViewingRow({
 }) {
   const status = viewing.queueStatus || viewing.status || 'requested';
   const classes = toneClasses(viewingTone(status));
-  const canConfirm = ['requested', 'awaiting_confirmation', 'rescheduled'].includes(String(viewing.status));
+  const canConfirm = ['requested', 'awaiting_confirmation', 'rescheduled'].includes(
+    String(viewing.status),
+  );
   const canFinish = String(viewing.status) === 'confirmed';
 
   return (
@@ -1106,17 +1246,23 @@ function ViewingRow({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className={cn('h-2 w-2 rounded-full', classes.dot)} />
-          <p className="font-semibold text-slate-950">{viewing.attendee || viewing.lead?.name || 'Viewing'}</p>
+          <p className="font-semibold text-slate-950">
+            {viewing.attendee || viewing.lead?.name || 'Viewing'}
+          </p>
           <Badge variant="outline" className="capitalize">
             {statusLabel(status)}
           </Badge>
         </div>
         <p className="mt-1 text-sm text-slate-500">{compactWhen(viewing.scheduledAt)}</p>
         <p className="mt-1 truncate text-sm text-slate-600">
-          {viewing.listing?.title || viewing.property?.title || viewing.location || 'No listing context'}
+          {viewing.listing?.title ||
+            viewing.property?.title ||
+            viewing.location ||
+            'No listing context'}
         </p>
         <p className="mt-1 truncate text-xs text-slate-500">
-          {viewing.agent?.name || 'Unassigned'} - {viewing.notes || viewing.nextAction || 'Review next action'}
+          {viewing.agent?.name || 'Unassigned'} -{' '}
+          {viewing.notes || viewing.nextAction || 'Review next action'}
         </p>
       </div>
       <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -1124,7 +1270,12 @@ function ViewingRow({
           <Eye className="h-4 w-4" />
           Open
         </Button>
-        <Button variant="outline" size="sm" disabled={!viewing.listingId && !viewing.propertyId} onClick={onOpenListing}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={!viewing.listingId && !viewing.propertyId}
+          onClick={onOpenListing}
+        >
           Listing
         </Button>
         {canConfirm ? (
@@ -1167,7 +1318,10 @@ function ViewingCompactRow({ viewing, onOpen }: { viewing: ViewingRecord; onOpen
         <span className={cn('mt-1 h-2 w-2 shrink-0 rounded-full', classes.dot)} />
       </div>
       <p className="mt-2 truncate text-xs text-slate-500">
-        {viewing.listing?.title || viewing.property?.title || viewing.agent?.name || statusLabel(status)}
+        {viewing.listing?.title ||
+          viewing.property?.title ||
+          viewing.agent?.name ||
+          statusLabel(status)}
       </p>
     </button>
   );
@@ -1177,7 +1331,11 @@ function ListingTaskQueue({ tasks, onOpen }: { tasks: any[]; onOpen: (listing: a
   return (
     <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
       <CardHeader className="pb-2">
-        <SectionTitle icon={ListChecks} title="Listing Tasks" eyebrow={`${numberLabel(tasks.length)} requiring attention`} />
+        <SectionTitle
+          icon={ListChecks}
+          title="Listing Tasks"
+          eyebrow={`${numberLabel(tasks.length)} requiring attention`}
+        />
       </CardHeader>
       <CardContent className="space-y-2">
         {tasks.slice(0, 6).map(listing => (
@@ -1187,11 +1345,21 @@ function ListingTaskQueue({ tasks, onOpen }: { tasks: any[]; onOpen: (listing: a
             onClick={() => onOpen(listing)}
             className="w-full rounded-lg border border-slate-200 p-3 text-left transition hover:border-teal-300"
           >
-            <p className="truncate text-sm font-semibold text-slate-950">{listing.title || `Listing #${listing.id}`}</p>
-            <p className="mt-1 truncate text-xs text-slate-500">{listing.nextAction || 'Review listing'}</p>
+            <p className="truncate text-sm font-semibold text-slate-950">
+              {listing.title || `Listing #${listing.id}`}
+            </p>
+            <p className="mt-1 truncate text-xs text-slate-500">
+              {listing.nextAction || 'Review listing'}
+            </p>
           </button>
         ))}
-        {!tasks.length ? <EmptyPanel icon={ListChecks} title="No listing tasks" text="Listing task queue is clear." /> : null}
+        {!tasks.length ? (
+          <EmptyPanel
+            icon={ListChecks}
+            title="No listing tasks"
+            text="Listing task queue is clear."
+          />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -1215,7 +1383,11 @@ function TransactionDeadlineQueue({
       </CardHeader>
       <CardContent className="space-y-2">
         {deadlines.slice(0, 6).map(deadline => {
-          const tone = deadline.overdue ? 'rose' : deadline.type === 'offer_expiry' ? 'amber' : 'sky';
+          const tone = deadline.overdue
+            ? 'rose'
+            : deadline.type === 'offer_expiry'
+              ? 'amber'
+              : 'sky';
           const classes = toneClasses(tone);
           return (
             <button
@@ -1244,7 +1416,11 @@ function TransactionDeadlineQueue({
           );
         })}
         {!deadlines.length ? (
-          <EmptyPanel icon={BriefcaseBusiness} title="No deal deadlines" text="Offer expiries and transaction conditions appear here." />
+          <EmptyPanel
+            icon={BriefcaseBusiness}
+            title="No deal deadlines"
+            text="Offer expiries and transaction conditions appear here."
+          />
         ) : null}
       </CardContent>
     </Card>
@@ -1270,7 +1446,9 @@ function CreateViewingDialog({
   const [agentId, setAgentId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(45);
-  const [status, setStatus] = useState<'awaiting_confirmation' | 'confirmed'>('awaiting_confirmation');
+  const [status, setStatus] = useState<'awaiting_confirmation' | 'confirmed'>(
+    'awaiting_confirmation',
+  );
   const [listingId, setListingId] = useState('');
   const [propertyId, setPropertyId] = useState('');
   const [location, setLocation] = useState('');
@@ -1282,13 +1460,23 @@ function CreateViewingDialog({
     if (!open) return;
     const initialLead = defaultLeadId ? leads.find(lead => lead.id === defaultLeadId) : leads[0];
     setLeadId(initialLead ? String(initialLead.id) : '');
-    setAgentId(initialLead?.agentId ? String(initialLead.agentId) : agents[0]?.id ? String(agents[0].id) : '');
+    setAgentId(
+      initialLead?.agentId
+        ? String(initialLead.agentId)
+        : agents[0]?.id
+          ? String(agents[0].id)
+          : '',
+    );
     setScheduledAt('');
     setDurationMinutes(45);
     setStatus('awaiting_confirmation');
     setPropertyId(initialLead?.propertyId ? String(initialLead.propertyId) : '');
     setListingId('');
-    setLocation(initialLead?.property ? [initialLead.property.city, initialLead.property.province].filter(Boolean).join(', ') : '');
+    setLocation(
+      initialLead?.property
+        ? [initialLead.property.city, initialLead.property.province].filter(Boolean).join(', ')
+        : '',
+    );
     setInstructions('');
     setNotes('');
   }, [agents, defaultLeadId, leads, open]);
@@ -1306,7 +1494,9 @@ function CreateViewingDialog({
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Book Viewing</DialogTitle>
-          <DialogDescription>Schedule against a same-agency lead, listing, and active agent.</DialogDescription>
+          <DialogDescription>
+            Schedule against a same-agency lead, listing, and active agent.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4">
@@ -1359,7 +1549,11 @@ function CreateViewingDialog({
 
           <div className="grid gap-3 md:grid-cols-3">
             <Field label="Date and time (Africa/Johannesburg)">
-              <Input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} />
+              <Input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={event => setScheduledAt(event.target.value)}
+              />
             </Field>
             <Field label="Duration">
               <Input
@@ -1372,7 +1566,10 @@ function CreateViewingDialog({
               />
             </Field>
             <Field label="Property ID">
-              <Input value={propertyId} onChange={event => setPropertyId(event.target.value.replace(/\D/g, ''))} />
+              <Input
+                value={propertyId}
+                onChange={event => setPropertyId(event.target.value.replace(/\D/g, ''))}
+              />
             </Field>
           </div>
 
@@ -1380,7 +1577,9 @@ function CreateViewingDialog({
             <Input
               value={listingId}
               onChange={event => setListingId(event.target.value.replace(/\D/g, ''))}
-              placeholder={selectedLead?.property?.title || 'Optional when lead has property context'}
+              placeholder={
+                selectedLead?.property?.title || 'Optional when lead has property context'
+              }
             />
           </Field>
 
@@ -1388,7 +1587,10 @@ function CreateViewingDialog({
             <Input value={location} onChange={event => setLocation(event.target.value)} />
           </Field>
           <Field label="Instructions">
-            <Textarea value={instructions} onChange={event => setInstructions(event.target.value)} />
+            <Textarea
+              value={instructions}
+              onChange={event => setInstructions(event.target.value)}
+            />
           </Field>
           <Field label="Notes">
             <Textarea value={notes} onChange={event => setNotes(event.target.value)} />
@@ -1443,7 +1645,9 @@ function ViewingDetailDialog({
     { viewingId: viewingId || 0 },
     { enabled: Boolean(viewingId) },
   );
-  const viewing = detailQuery.data as (ViewingRecord & { activities?: any[]; lifecycle?: { allowedNextStatuses: ViewingStatus[] } }) | undefined;
+  const viewing = detailQuery.data as
+    | (ViewingRecord & { activities?: any[]; lifecycle?: { allowedNextStatuses: ViewingStatus[] } })
+    | undefined;
   const [rescheduleAt, setRescheduleAt] = useState('');
   const [reassignAgentId, setReassignAgentId] = useState('');
   const [feedback, setFeedback] = useState({
@@ -1521,11 +1725,15 @@ function ViewingDetailDialog({
         <DialogHeader>
           <DialogTitle>{viewing?.attendee || viewing?.lead?.name || 'Viewing detail'}</DialogTitle>
           <DialogDescription>
-            {viewing ? `${compactWhen(viewing.scheduledAt)} - ${statusLabel(viewing.queueStatus || viewing.status)}` : 'Loading'}
+            {viewing
+              ? `${compactWhen(viewing.scheduledAt)} - ${statusLabel(viewing.queueStatus || viewing.status)}`
+              : 'Loading'}
           </DialogDescription>
         </DialogHeader>
 
-        {detailQuery.isLoading ? <div className="h-56 animate-pulse rounded-lg bg-slate-100" /> : null}
+        {detailQuery.isLoading ? (
+          <div className="h-56 animate-pulse rounded-lg bg-slate-100" />
+        ) : null}
         {detailQuery.error ? <ErrorPanel title="Viewing detail could not be loaded" /> : null}
         {viewing ? (
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -1536,7 +1744,9 @@ function ViewingDetailDialog({
                     <Badge variant="outline" className="capitalize">
                       {statusLabel(viewing.queueStatus || viewing.status)}
                     </Badge>
-                    <p className="mt-3 text-lg font-semibold text-slate-950">{compactWhen(viewing.scheduledAt)}</p>
+                    <p className="mt-3 text-lg font-semibold text-slate-950">
+                      {compactWhen(viewing.scheduledAt)}
+                    </p>
                     <p className="mt-1 text-sm text-slate-500">
                       {viewing.durationMinutes || 45} minutes - {viewing.agent?.name || 'No agent'}
                     </p>
@@ -1555,9 +1765,23 @@ function ViewingDetailDialog({
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <DetailBlock label="Contact" value={viewing.lead?.email || viewing.lead?.phone || 'No contact'} />
-                  <DetailBlock label="Listing" value={viewing.listing?.title || viewing.property?.title || 'No listing'} />
-                  <DetailBlock label="Location" value={viewing.location || viewing.listing?.address || viewing.property?.address || 'No location'} />
+                  <DetailBlock
+                    label="Contact"
+                    value={viewing.lead?.email || viewing.lead?.phone || 'No contact'}
+                  />
+                  <DetailBlock
+                    label="Listing"
+                    value={viewing.listing?.title || viewing.property?.title || 'No listing'}
+                  />
+                  <DetailBlock
+                    label="Location"
+                    value={
+                      viewing.location ||
+                      viewing.listing?.address ||
+                      viewing.property?.address ||
+                      'No location'
+                    }
+                  />
                 </div>
                 {viewing.instructions || viewing.notes ? (
                   <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
@@ -1576,13 +1800,21 @@ function ViewingDetailDialog({
                         <Badge variant="outline" className="capitalize">
                           {String(activity.type || 'note').replace(/_/g, ' ')}
                         </Badge>
-                        <span className="text-xs text-slate-500">{formatAge(activity.createdAt)}</span>
+                        <span className="text-xs text-slate-500">
+                          {formatAge(activity.createdAt)}
+                        </span>
                       </div>
-                      <p className="mt-2 text-sm leading-6 text-slate-700">{activity.description || 'Activity recorded.'}</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        {activity.description || 'Activity recorded.'}
+                      </p>
                     </div>
                   ))}
                   {!viewing.activities?.length ? (
-                    <EmptyPanel icon={Clock3} title="No activity yet" text="Viewing activity appears here." />
+                    <EmptyPanel
+                      icon={Clock3}
+                      title="No activity yet"
+                      text="Viewing activity appears here."
+                    />
                   ) : null}
                 </div>
               </div>
@@ -1594,7 +1826,9 @@ function ViewingDetailDialog({
                     <Field label="Attendance">
                       <select
                         value={feedback.attended}
-                        onChange={event => setFeedback(prev => ({ ...prev, attended: event.target.value }))}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, attended: event.target.value }))
+                        }
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
                         <option value="true">Attended</option>
@@ -1604,7 +1838,9 @@ function ViewingDetailDialog({
                     <Field label="Interest level">
                       <select
                         value={feedback.interestLevel}
-                        onChange={event => setFeedback(prev => ({ ...prev, interestLevel: event.target.value }))}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, interestLevel: event.target.value }))
+                        }
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
                         <option value="high">High</option>
@@ -1614,15 +1850,30 @@ function ViewingDetailDialog({
                       </select>
                     </Field>
                     <Field label="Price reaction">
-                      <Input value={feedback.priceReaction} onChange={event => setFeedback(prev => ({ ...prev, priceReaction: event.target.value }))} />
+                      <Input
+                        value={feedback.priceReaction}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, priceReaction: event.target.value }))
+                        }
+                      />
                     </Field>
                     <Field label="Property fit">
-                      <Input value={feedback.propertyFit} onChange={event => setFeedback(prev => ({ ...prev, propertyFit: event.target.value }))} />
+                      <Input
+                        value={feedback.propertyFit}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, propertyFit: event.target.value }))
+                        }
+                      />
                     </Field>
                     <Field label="Recommended next action">
                       <select
                         value={feedback.recommendedNextAction}
-                        onChange={event => setFeedback(prev => ({ ...prev, recommendedNextAction: event.target.value }))}
+                        onChange={event =>
+                          setFeedback(prev => ({
+                            ...prev,
+                            recommendedNextAction: event.target.value,
+                          }))
+                        }
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
                         <option value="offer">Offer</option>
@@ -1637,22 +1888,44 @@ function ViewingDetailDialog({
                       <Input
                         type="datetime-local"
                         value={feedback.followUpDate}
-                        onChange={event => setFeedback(prev => ({ ...prev, followUpDate: event.target.value }))}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, followUpDate: event.target.value }))
+                        }
                       />
                     </Field>
                   </div>
                   <div className="mt-3 grid gap-3">
                     <Field label="Objections">
-                      <Textarea value={feedback.objections} onChange={event => setFeedback(prev => ({ ...prev, objections: event.target.value }))} />
+                      <Textarea
+                        value={feedback.objections}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, objections: event.target.value }))
+                        }
+                      />
                     </Field>
                     <Field label="Financing/readiness notes">
-                      <Textarea value={feedback.financingNotes} onChange={event => setFeedback(prev => ({ ...prev, financingNotes: event.target.value }))} />
+                      <Textarea
+                        value={feedback.financingNotes}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, financingNotes: event.target.value }))
+                        }
+                      />
                     </Field>
                     <Field label="Seller or landlord feedback">
-                      <Textarea value={feedback.sellerFeedback} onChange={event => setFeedback(prev => ({ ...prev, sellerFeedback: event.target.value }))} />
+                      <Textarea
+                        value={feedback.sellerFeedback}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, sellerFeedback: event.target.value }))
+                        }
+                      />
                     </Field>
                     <Field label="Notes">
-                      <Textarea value={feedback.notes} onChange={event => setFeedback(prev => ({ ...prev, notes: event.target.value }))} />
+                      <Textarea
+                        value={feedback.notes}
+                        onChange={event =>
+                          setFeedback(prev => ({ ...prev, notes: event.target.value }))
+                        }
+                      />
                     </Field>
                   </div>
                   <Button
@@ -1692,7 +1965,13 @@ function ViewingDetailDialog({
                       variant="outline"
                       size="sm"
                       disabled={busy}
-                      onClick={() => updateViewingStatus.mutate({ viewingId: viewing.id, status: 'confirmed', note: 'Confirmed from detail.' })}
+                      onClick={() =>
+                        updateViewingStatus.mutate({
+                          viewingId: viewing.id,
+                          status: 'confirmed',
+                          note: 'Confirmed from detail.',
+                        })
+                      }
                     >
                       <CheckCircle2 className="h-4 w-4" />
                       Confirm
@@ -1703,7 +1982,13 @@ function ViewingDetailDialog({
                       variant="outline"
                       size="sm"
                       disabled={busy}
-                      onClick={() => updateViewingStatus.mutate({ viewingId: viewing.id, status: 'completed', note: 'Attendance marked from detail.' })}
+                      onClick={() =>
+                        updateViewingStatus.mutate({
+                          viewingId: viewing.id,
+                          status: 'completed',
+                          note: 'Attendance marked from detail.',
+                        })
+                      }
                     >
                       Attended
                     </Button>
@@ -1713,7 +1998,13 @@ function ViewingDetailDialog({
                       variant="outline"
                       size="sm"
                       disabled={busy}
-                      onClick={() => updateViewingStatus.mutate({ viewingId: viewing.id, status: 'no_show', note: 'Marked no-show from detail.' })}
+                      onClick={() =>
+                        updateViewingStatus.mutate({
+                          viewingId: viewing.id,
+                          status: 'no_show',
+                          note: 'Marked no-show from detail.',
+                        })
+                      }
                     >
                       No-show
                     </Button>
@@ -1723,7 +2014,13 @@ function ViewingDetailDialog({
                       variant="outline"
                       size="sm"
                       disabled={busy}
-                      onClick={() => updateViewingStatus.mutate({ viewingId: viewing.id, status: 'cancelled', note: 'Cancelled from detail.' })}
+                      onClick={() =>
+                        updateViewingStatus.mutate({
+                          viewingId: viewing.id,
+                          status: 'cancelled',
+                          note: 'Cancelled from detail.',
+                        })
+                      }
                     >
                       <XCircle className="h-4 w-4" />
                       Cancel
@@ -1736,7 +2033,11 @@ function ViewingDetailDialog({
                 <p className="font-semibold text-slate-950">Reschedule</p>
                 <div className="mt-3 space-y-3">
                   <p className="text-xs text-slate-500">Times use Africa/Johannesburg.</p>
-                  <Input type="datetime-local" value={rescheduleAt} onChange={event => setRescheduleAt(event.target.value)} />
+                  <Input
+                    type="datetime-local"
+                    value={rescheduleAt}
+                    onChange={event => setRescheduleAt(event.target.value)}
+                  />
                   <Button
                     variant="outline"
                     disabled={busy || !rescheduleAt}
@@ -1772,7 +2073,9 @@ function ViewingDetailDialog({
                   </select>
                   <Button
                     variant="outline"
-                    disabled={busy || !reassignAgentId || Number(reassignAgentId) === viewing.agentId}
+                    disabled={
+                      busy || !reassignAgentId || Number(reassignAgentId) === viewing.agentId
+                    }
                     onClick={() =>
                       reassignViewing.mutate({
                         viewingId: viewing.id,
@@ -1807,7 +2110,9 @@ function DetailBlock({ label, value }: { label: string; value?: string | number 
   return (
     <div className="rounded-lg border border-slate-200 p-3">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</p>
-      <p className="mt-2 truncate text-sm font-semibold text-slate-950">{value || 'Not recorded'}</p>
+      <p className="mt-2 truncate text-sm font-semibold text-slate-950">
+        {value || 'Not recorded'}
+      </p>
     </div>
   );
 }

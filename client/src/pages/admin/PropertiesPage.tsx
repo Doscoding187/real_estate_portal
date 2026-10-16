@@ -32,6 +32,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+type InventoryStatus =
+  | 'all'
+  | 'draft'
+  | 'pending_review'
+  | 'approved'
+  | 'published'
+  | 'rejected'
+  | 'archived'
+  | 'sold'
+  | 'rented';
+
 interface Property {
   id: number;
   title: string | null;
@@ -48,7 +59,7 @@ export default function PropertiesPage() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<InventoryStatus>('all');
   const [page, setPage] = useState(1);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [propertyToDelete, setPropertyToDelete] = useState<Property | null>(null);
@@ -58,7 +69,7 @@ export default function PropertiesPage() {
     page,
     limit: 20,
     search: searchTerm || undefined,
-    status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
   });
 
   const deleteMutation = trpc.listing.delete.useMutation({
@@ -128,8 +139,10 @@ export default function PropertiesPage() {
           <div className="flex items-center gap-3">
             <Eye className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">Property Management</h1>
-              <p className="text-slate-500">Complete system-level view of all listings</p>
+              <h1 className="text-3xl font-bold text-slate-800">Listings</h1>
+              <p className="text-slate-500">
+                Manage listing inventory. Open Approvals to review pending submissions.
+              </p>
             </div>
           </div>
         </div>
@@ -147,14 +160,23 @@ export default function PropertiesPage() {
                   className="pl-10 bg-white/50 border-slate-200 focus:bg-white transition-all"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-white/50 border-slate-200 focus:bg-white transition-all">
+              <Select
+                value={statusFilter}
+                onValueChange={value => {
+                  setStatusFilter(value as InventoryStatus);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  aria-label="Filter listing inventory by status"
+                  className="bg-white/50 border-slate-200 focus:bg-white transition-all"
+                >
                   <SelectValue placeholder="Filter by status..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="pending_review">Pending review</SelectItem>
                   <SelectItem value="sold">Sold</SelectItem>
                   <SelectItem value="rented">Rented</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
@@ -174,7 +196,7 @@ export default function PropertiesPage() {
         {/* Properties Table */}
         <Card className="border-slate-200 shadow-sm bg-white overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-slate-800">All Properties</CardTitle>
+            <CardTitle className="text-slate-800">Listing inventory</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (

@@ -9,6 +9,7 @@ import { developmentService } from './services/developmentService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
+import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
 import { getDeveloperByUserId, requireDeveloperProfileByUserId } from './services/developerService'; // [NEW] Import service methods
 import { getPublisherById } from './services/cataloguePublisherService';
@@ -1302,7 +1303,11 @@ export const developerRouter = router({
         leadType: z.enum(['inquiry', 'viewing_request']).default('inquiry'),
         name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
         email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
-        phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+        phone: z
+          .string()
+          .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
+          .trim()
+          .min(1, 'Please enter your phone number.'),
         message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
         website: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.honeypot).optional(),
         affordabilityData: z
@@ -1331,6 +1336,15 @@ export const developerRouter = router({
           version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
           source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
         }),
+      }).superRefine((input, refinementContext) => {
+        const phoneError = agentProfilePhoneError(input.phone);
+        if (phoneError) {
+          refinementContext.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['phone'],
+            message: phoneError,
+          });
+        }
       }),
     )
     .mutation(async ({ ctx, input }) => {

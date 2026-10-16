@@ -20,8 +20,8 @@ import {
 const hasDb = Boolean(process.env.DATABASE_URL);
 const describeWithDb: typeof describe = hasDb
   ? describe
-  : ((name: string, fn: Parameters<typeof describe>[1]) =>
-      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe;
+  : (((name: string, fn: Parameters<typeof describe>[1]) =>
+      describe.skip(`${name} (requires DATABASE_URL test DB)`, fn)) as typeof describe);
 
 const createdState = {
   agencyIds: [] as number[],
@@ -193,7 +193,12 @@ async function seedAgencyFixture(label: string) {
   const outsideAgentUser = await createUser('agent', outsideAgencyId, 'Outside Agent');
 
   const agentId = await createAgent(agentUser.userId, agencyId, 'Viewing Agent', agentUser.email);
-  const secondAgentId = await createAgent(secondAgentUser.userId, agencyId, 'Second Agent', secondAgentUser.email);
+  const secondAgentId = await createAgent(
+    secondAgentUser.userId,
+    agencyId,
+    'Second Agent',
+    secondAgentUser.email,
+  );
   const outsideAgentId = await createAgent(
     outsideAgentUser.userId,
     outsideAgencyId,
@@ -336,12 +341,14 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     const agencyIds = uniqueNumbers(createdState.agencyIds);
 
     if (showingIds.length) await db.delete(showings).where(inArray(showings.id, showingIds));
-    if (leadIds.length) await db.delete(leadActivities).where(inArray(leadActivities.leadId, leadIds));
+    if (leadIds.length)
+      await db.delete(leadActivities).where(inArray(leadActivities.leadId, leadIds));
     if (leadIds.length) await db.delete(leads).where(inArray(leads.id, leadIds));
     if (propertyIds.length) await db.delete(properties).where(inArray(properties.id, propertyIds));
     if (listingIds.length) await db.delete(listings).where(inArray(listings.id, listingIds));
     if (agentIds.length) await db.delete(agents).where(inArray(agents.id, agentIds));
-    if (userIds.length) await db.delete(notifications).where(inArray(notifications.userId, userIds));
+    if (userIds.length)
+      await db.delete(notifications).where(inArray(notifications.userId, userIds));
     if (userIds.length) await db.delete(users).where(inArray(users.id, userIds));
     if (agencyIds.length) await db.delete(agencies).where(inArray(agencies.id, agencyIds));
 
@@ -411,7 +418,9 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(myDayIds).toContain(created.viewingId);
     expect(new Set(myDayIds).size).toBe(myDayIds.length);
 
-    await expect(outsideCaller.getViewingDetail({ viewingId: created.viewingId })).rejects.toMatchObject({
+    await expect(
+      outsideCaller.getViewingDetail({ viewingId: created.viewingId }),
+    ).rejects.toMatchObject({
       code: 'NOT_FOUND',
     });
     await expect(
@@ -447,7 +456,9 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     });
     createdState.showingIds.push(created.viewingId);
 
-    await expect(memberCaller.getViewingDetail({ viewingId: created.viewingId })).resolves.toMatchObject({
+    await expect(
+      memberCaller.getViewingDetail({ viewingId: created.viewingId }),
+    ).resolves.toMatchObject({
       id: created.viewingId,
       location: 'Member authority test viewing',
     });
@@ -467,7 +478,9 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     await expect(memberCaller.getDealWorkspace()).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
-    await expect(memberCaller.getViewingDetail({ viewingId: created.viewingId })).rejects.toMatchObject({
+    await expect(
+      memberCaller.getViewingDetail({ viewingId: created.viewingId }),
+    ).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
     await expect(
@@ -594,9 +607,7 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
 
     const targetDate = new Date(Date.now() + 48 * 60 * 60 * 1000);
     const targetDay = agencyDateKey(targetDate);
-    const followingDay = agencyDateKey(
-      new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
-    );
+    const followingDay = agencyDateKey(new Date(targetDate.getTime() + 24 * 60 * 60 * 1000));
     const first = await caller.createViewing({
       leadId: seed.leadId,
       listingId: seed.listingId,
@@ -665,7 +676,7 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(myDay.todayViewings.map(viewing => viewing.id)).toContain(created.viewingId);
   }, 30_000);
 
-  it('escalates an ignored buyer lead then records a structured first response', async () => {
+  it('escalates an ignored buyer lead then records a structured first outreach attempt', async () => {
     const seed = await seedAgencyFixture('buyer-response');
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -710,7 +721,13 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
         and(
           eq(leads.agencyId, seed.agencyId),
           eq(agents.userId, seed.agentUserId),
-          inArray(leads.status, ['new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent']),
+          inArray(leads.status, [
+            'new',
+            'contacted',
+            'qualified',
+            'viewing_scheduled',
+            'offer_sent',
+          ]),
           sql`${leads.firstRespondedAt} IS NULL`,
           sql`${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)`,
         ),
@@ -718,17 +735,41 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
     expect(Number(matchingEscalation.count)).toBe(1);
 
     const beforeResponse = await agentCaller.getMyDay({ limit: 20 });
-    expect(beforeResponse.counts.firstResponseOverdueLeads).toBeGreaterThanOrEqual(1);
-    expect(beforeResponse.firstResponseOverdueLeads.map(lead => lead.id)).toContain(seed.leadId);
-    expect(beforeResponse.firstResponseOverdueLeads.find(lead => lead.id === seed.leadId)).toMatchObject({
-      firstResponseOverdue: true,
+    expect(beforeResponse.counts.firstOutreachOverdueLeads).toBeGreaterThanOrEqual(1);
+    expect(beforeResponse.firstOutreachOverdueLeads.map(lead => lead.id)).toContain(seed.leadId);
+    expect(
+      beforeResponse.firstOutreachOverdueLeads.find(lead => lead.id === seed.leadId),
+    ).toMatchObject({
+      firstOutreachOverdue: true,
       nextAction: 'Make first buyer contact',
     });
 
     await agentCaller.recordLeadContactAttempt({
       leadId: seed.leadId,
       channel: 'whatsapp',
-      outcome: 'follow_up_required',
+      outcome: 'no_answer',
+      summary: 'WhatsApp message sent; buyer has not replied yet.',
+      nextAction: 'Wait for a reply, then call if needed.',
+      nextFollowUp: futureIso(1),
+    });
+
+    const afterNoAnswer = await agentCaller.getLeadDetail({ leadId: seed.leadId });
+    expect(afterNoAnswer).toMatchObject({
+      status: 'new',
+      firstRespondedAt: null,
+      lastContactedAt: null,
+      firstResponseOverdue: true,
+      firstOutreachOverdue: false,
+    });
+    const outreachRecorded = await agentCaller.getMyDay({ limit: 20 });
+    expect(outreachRecorded.firstOutreachOverdueLeads.map(lead => lead.id)).not.toContain(
+      seed.leadId,
+    );
+
+    await agentCaller.recordLeadContactAttempt({
+      leadId: seed.leadId,
+      channel: 'whatsapp',
+      outcome: 'replied',
       summary: 'Buyer replied and requested a call after work.',
       nextAction: 'Call buyer at 17:30',
       nextFollowUp: futureIso(2),
@@ -736,11 +777,13 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
 
     const detail = await agentCaller.getLeadDetail({ leadId: seed.leadId });
     expect(detail).toMatchObject({
-      status: 'contacted',
+      status: 'new',
       nextAction: 'Call buyer at 17:30',
       firstResponseOverdue: false,
+      firstOutreachOverdue: false,
     });
     expect(detail.firstRespondedAt).toBeTruthy();
+    expect(detail.lastContactedAt).toBeTruthy();
     const [recordedResponseTiming] = await db
       .select({
         elapsedSeconds: sql<number>`TIMESTAMPDIFF(SECOND, ${leads.createdAt}, ${leads.firstRespondedAt})`,
@@ -753,13 +796,15 @@ describeWithDb('agency viewings and My Day persisted workflow', () => {
         expect.objectContaining({
           type: 'contact_attempt',
           description: 'Buyer replied and requested a call after work.',
-          metadata: expect.objectContaining({ channel: 'whatsapp', outcome: 'follow_up_required' }),
+          metadata: expect.objectContaining({ channel: 'whatsapp', outcome: 'replied' }),
         }),
       ]),
     );
 
     const afterResponse = await agentCaller.getMyDay({ limit: 20 });
-    expect(afterResponse.firstResponseOverdueLeads.map(lead => lead.id)).not.toContain(seed.leadId);
+    expect(afterResponse.firstOutreachOverdueLeads.map(lead => lead.id)).not.toContain(
+      seed.leadId,
+    );
 
     await expect(
       outsideCaller.recordLeadContactAttempt({

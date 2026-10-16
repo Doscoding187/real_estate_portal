@@ -1,14 +1,10 @@
 import {
   BatteryCharging,
-  Bath,
-  BedDouble,
   Building2,
-  CarFront,
   CheckCircle2,
   Droplets,
   Dumbbell,
   Home,
-  House,
   LandPlot,
   MapPin,
   Shield,
@@ -41,18 +37,7 @@ import {
   type MoneyFactStatus,
 } from '@/../../shared/pricing-contract';
 
-/**
- * Keep public property-card facts visually consistent wherever the shared
- * normalizer is used. These are the Lucide symbols that match the fact, not
- * generic measurement or vehicle glyphs.
- */
-const PROPERTY_FACT_ICONS = Object.freeze({
-  residentialSize: House,
-  landSize: LandPlot,
-  bedrooms: BedDouble,
-  bathrooms: Bath,
-  parking: CarFront,
-});
+import { PROPERTY_FACT_ICONS } from '@/components/icons/propertyFactIcons';
 
 export type PropertyFact = {
   key: string;

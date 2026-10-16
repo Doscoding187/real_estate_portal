@@ -90,13 +90,13 @@ export function getAgentJourneyAction(
         label: 'Complete payment',
         title: 'Complete your Launch Access payment',
         description:
-          'Your Launch Access invoice is ready. Pay by EFT and submit proof here to begin verification.',
+          'Your Launch Access invoice is ready. Pay by EFT and select “I’ve paid” to notify finance. No document is required.',
       };
     case 'await_payment_review':
       return {
         href: '/agent/dashboard',
         label: 'Return to dashboard',
-        title: 'Your payment proof is under review',
+        title: 'Your payment notice is under review',
         description:
           'We will notify you when Launch Access is active. Your professional profile remains available while verification is in progress.',
         waiting: true,
@@ -153,6 +153,33 @@ export function getAgentJourneyAction(
           'Your professional profile is ready. Choose Agent Launch Access to start publishing inventory and working enquiries.',
       };
   }
+}
+
+export type AgentDashboardJourneyPresentation = Omit<AgentJourneyAction, 'href' | 'label'> & {
+  href: string | null;
+  label: string | null;
+};
+
+/**
+ * Dashboard surfaces describe the current state without offering a button back
+ * to the dashboard itself. The dashboard-ready handoff belongs before entry;
+ * on the dashboard, the page content is the workspace.
+ */
+export function getAgentDashboardJourneyPresentation(
+  action: AgentJourneyAction,
+): AgentDashboardJourneyPresentation {
+  const isDashboardHandoff = action.href === '/agent/dashboard';
+  const isReadyHandoff = action.title === 'Your Agent workspace is ready';
+
+  return {
+    ...action,
+    href: action.waiting || isDashboardHandoff ? null : action.href,
+    label: action.waiting || isDashboardHandoff ? null : action.label,
+    title: isReadyHandoff ? 'Your business overview' : action.title,
+    description: isReadyHandoff
+      ? 'Review your listings, enquiries and appointments from this overview.'
+      : action.description,
+  };
 }
 
 export function isAgentProfileJourneyStep(

@@ -787,6 +787,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
       commercialAvailabilityId: commercial.commercialAvailabilityId,
       name: 'Commercial prospect',
       email: `commercial-prospect-${randomUUID()}@example.test`,
+      phone: '+27 82 123 4567',
       message: 'Please contact me about this office suite.',
       source: 'commercial',
       sourceSurface: 'commercial_detail',
@@ -833,6 +834,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
       commercialAvailabilityId: commercial.commercialAvailabilityId,
       name: 'Suspended Commercial prospect',
       email: `commercial-suspended-${randomUUID()}@example.test`,
+      phone: '+27 82 123 4567',
       message: 'Please contact me about this office suite.',
       source: 'commercial',
       sourceSurface: 'commercial_detail',
@@ -878,6 +880,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
     const captured = await publicCaller().leads.create({
       agentId,
       name: 'Direct profile prospect',
+      phone: '+27 82 123 4567',
       email: `direct-profile-${randomUUID()}@example.test`,
       message: 'Please contact me about your services.',
       source: 'agent_profile',
@@ -924,6 +927,7 @@ describeWithDb('canonical membership maintenance (atomic unique-pair authority)'
       publicCaller().leads.create({
         agentId,
         name: 'Suspended membership prospect',
+        phone: '+27 82 123 4567',
         email: `suspended-profile-${randomUUID()}@example.test`,
         message: 'Please contact me about your services.',
         source: 'agent_profile',

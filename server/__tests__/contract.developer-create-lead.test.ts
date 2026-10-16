@@ -28,6 +28,7 @@ const validLeadInput = () => ({
   developmentId: 77,
   name: 'Jane Doe',
   email: 'jane@example.com',
+  phone: '0820000000',
   captureRequestId: 'lead-request-developer-contract',
   consent: {
     accepted: true as const,
@@ -161,6 +162,8 @@ describe('developer.createLead contract', () => {
     ['name', { name: 'n'.repeat(201) }],
     ['email', { email: 'e'.repeat(321) }],
     ['phone', { phone: '1'.repeat(51) }],
+    ['missing phone', { phone: undefined }],
+    ['unusable phone', { phone: 'abc123' }],
     ['message', { message: 'm'.repeat(5001) }],
     ['honeypot', { website: 'w'.repeat(201) }],
     ['unit ID', { unitId: 'u'.repeat(37) }],

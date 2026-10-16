@@ -33,6 +33,7 @@ import {
   normalizeFeaturesContext,
 } from '@shared/features-context';
 import { readCorePropertyInformation } from '@shared/core-property-information';
+import { normalizeWizardPhotoOrder } from '@/lib/listingPhotoOrder';
 
 const PreviewStep: React.FC = () => {
   const state = useListingWizardStore();
@@ -57,7 +58,7 @@ const PreviewStep: React.FC = () => {
   };
 
   // Get primary media
-  const primaryMedia = state.media.find((m: any) => m.isPrimary) || state.media[0];
+  const primaryMedia = normalizeWizardPhotoOrder(state.media).media.find(m => m.isPrimary);
 
   // Get media counts
   const imageCount = state.media.filter((m: any) => m.type === 'image').length;

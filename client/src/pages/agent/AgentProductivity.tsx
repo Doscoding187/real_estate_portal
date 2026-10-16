@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'wouter';
+import { useCallback, useMemo } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { agentPageStyles } from '@/components/agent/agentPageStyles';
 import { AgentFeatureLockedState } from '@/components/agent/AgentFeatureLockedState';
@@ -17,6 +17,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ArrowRight, Bell, CalendarDays, CheckCircle, Clock, MapPin } from 'lucide-react';
+import { calendarDateFromSearch } from '@/lib/agentCalendar';
 import { ShowingsCalendar } from '@/components/agent/ShowingsCalendar';
 import { toast } from 'sonner';
 
@@ -131,17 +132,11 @@ function getFollowUpTone(value: string | Date | null | undefined) {
   return 'bg-blue-100 text-blue-700';
 }
 
-function productivityTabFromLocation(location: string) {
-  const search =
-    typeof window !== 'undefined'
-      ? window.location.search
-      : location.includes('?')
-        ? location.slice(location.indexOf('?'))
-        : '';
+function productivityTabFromSearch(search: string) {
   const requestedTab = new URLSearchParams(search).get('tab');
   return ['tasks', 'calendar', 'showings', 'reminders'].includes(String(requestedTab))
     ? String(requestedTab)
-    : 'tasks';
+    : 'calendar';
 }
 
 function leadWorkspaceHref(leadId: number) {
@@ -149,8 +144,15 @@ function leadWorkspaceHref(leadId: number) {
 }
 
 export default function AgentProductivity() {
-  const [location, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState(() => productivityTabFromLocation(location));
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const activeTab = productivityTabFromSearch(search);
+  const setActiveTab = useCallback(
+    (tab: string) => {
+      setLocation(`/agent/productivity?tab=${tab}`, { replace: true });
+    },
+    [setLocation],
+  );
   const {
     status,
     isLoading: statusLoading,
@@ -164,10 +166,6 @@ export default function AgentProductivity() {
   const operationalDataEnabled = !statusLoading && !productivityLocked;
   const journeyAction = getAgentJourneyAction(status, { agentLaunchAccessAvailable });
   const needsProfileCompletion = isAgentProfileJourneyStep(status);
-
-  useEffect(() => {
-    setActiveTab(productivityTabFromLocation(location));
-  }, [location]);
 
   const calendarRange = useMemo(() => {
     const now = new Date();
@@ -232,18 +230,26 @@ export default function AgentProductivity() {
     },
   });
 
+  const markNotificationReadMutation = trpc.agent.markNotificationAsRead.useMutation({
+    onSuccess: () => {
+      void utils.agent.getNotifications.invalidate();
+      void utils.agent.getUnreadNotificationCount.invalidate();
+    },
+    onError: error => toast.error(error.message || 'Unable to mark notification as read'),
+  });
+
   const upcomingShowings = useMemo(
     () =>
       [...showingsData]
         .filter(showing => {
           const scheduledAt = showing.scheduledAt;
-          if (!scheduledAt) return false;
-          const scheduledDate = new Date(scheduledAt);
+          if (showing.status !== 'scheduled' || !scheduledAt) return false;
+          const scheduledDate = parseDatabaseTimestamp(scheduledAt);
           return !Number.isNaN(scheduledDate.getTime()) && scheduledDate.getTime() >= Date.now();
         })
         .sort((left, right) => {
-          const leftTime = new Date(left.scheduledAt || 0).getTime();
-          const rightTime = new Date(right.scheduledAt || 0).getTime();
+          const leftTime = parseDatabaseTimestamp(left.scheduledAt || '').getTime();
+          const rightTime = parseDatabaseTimestamp(right.scheduledAt || '').getTime();
           return leftTime - rightTime;
         }),
     [showingsData],
@@ -255,7 +261,7 @@ export default function AgentProductivity() {
     return upcomingShowings.filter(showing => {
       const scheduledAt = showing.scheduledAt;
       if (!scheduledAt) return false;
-      const scheduledDate = new Date(scheduledAt);
+      const scheduledDate = parseDatabaseTimestamp(scheduledAt);
       return !Number.isNaN(scheduledDate.getTime()) && sameDay(scheduledDate, today);
     });
   }, [upcomingShowings]);
@@ -275,7 +281,7 @@ export default function AgentProductivity() {
       new Set(
         upcomingShowings.map(showing => {
           const scheduledAt = showing.scheduledAt;
-          const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
+          const scheduledDate = scheduledAt ? parseDatabaseTimestamp(scheduledAt) : null;
           return scheduledDate && !Number.isNaN(scheduledDate.getTime())
             ? scheduledDate.toISOString().split('T')[0]
             : null;
@@ -330,7 +336,7 @@ export default function AgentProductivity() {
       }));
 
     return [...followUpActions, ...showingActions, ...notificationActions].slice(0, 6);
-  }, [followUps, notificationsData, setLocation, upcomingShowings]);
+  }, [followUps, notificationsData, setLocation, setActiveTab, upcomingShowings]);
 
   const nextShowing = upcomingShowings[0] || null;
   const unreadAlerts =
@@ -370,16 +376,16 @@ export default function AgentProductivity() {
           <>
             <div className={agentPageStyles.header}>
               <div className={agentPageStyles.headingBlock}>
-                <h1 className={agentPageStyles.title}>Productivity</h1>
+                <h1 className={agentPageStyles.title}>Calendar</h1>
                 <p className={agentPageStyles.subtitle}>
-                  Live operational view across showings, reminders, and the month calendar.
+                  Plan viewings, review your schedule and follow up with customers.
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-              <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+            <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Scheduled This Month</p>
@@ -390,15 +396,15 @@ export default function AgentProductivity() {
                         {daysWithAppointments} active calendar days
                       </p>
                     </div>
-                    <div className="rounded-xl bg-blue-50 p-3">
+                    <div className="rounded-xl bg-blue-50 p-2">
                       <CalendarDays className="h-6 w-6 text-blue-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Showings Today</p>
@@ -411,15 +417,15 @@ export default function AgentProductivity() {
                           : 'No more showings today'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-violet-50 p-3">
+                    <div className="rounded-xl bg-violet-50 p-2">
                       <MapPin className="h-6 w-6 text-violet-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Unread Alerts</p>
@@ -427,18 +433,18 @@ export default function AgentProductivity() {
                         {notificationsLoading ? '...' : unreadAlerts}
                       </p>
                       <p className={cn(agentPageStyles.statSub, 'text-amber-600')}>
-                        Real reminders from your notification feed
+                        Unread messages and reminders
                       </p>
                     </div>
-                    <div className="rounded-xl bg-amber-50 p-3">
+                    <div className="rounded-xl bg-amber-50 p-2">
                       <Bell className="h-6 w-6 text-amber-600" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className={agentPageStyles.statCard}>
-                <CardContent className="p-6">
+              <Card className={cn(agentPageStyles.statCard, 'p-0')}>
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className={agentPageStyles.statLabel}>Follow-ups Due</p>
@@ -451,7 +457,7 @@ export default function AgentProductivity() {
                           : 'No lead follow-ups scheduled'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-emerald-50 p-3">
+                    <div className="rounded-xl bg-emerald-50 p-2">
                       <Clock className="h-6 w-6 text-emerald-600" />
                     </div>
                   </div>
@@ -463,11 +469,11 @@ export default function AgentProductivity() {
               <TabsList
                 className={cn(agentPageStyles.tabsList, 'grid w-full max-w-2xl grid-cols-4')}
               >
-                <TabsTrigger value="tasks" className={agentPageStyles.tabTrigger}>
-                  Action Queue
-                </TabsTrigger>
                 <TabsTrigger value="calendar" className={agentPageStyles.tabTrigger}>
                   Calendar
+                </TabsTrigger>
+                <TabsTrigger value="tasks" className={agentPageStyles.tabTrigger}>
+                  Action Queue
                 </TabsTrigger>
                 <TabsTrigger value="showings" className={agentPageStyles.tabTrigger}>
                   Showings
@@ -540,7 +546,11 @@ export default function AgentProductivity() {
               </TabsContent>
 
               <TabsContent value="calendar">
-                <ShowingsCalendar />
+                <ShowingsCalendar
+                  key={search}
+                  initialDate={calendarDateFromSearch(search)}
+                  initialBookingOpen={new URLSearchParams(search).get('book') === '1'}
+                />
               </TabsContent>
 
               <TabsContent value="showings" className="space-y-4">
@@ -655,9 +665,19 @@ export default function AgentProductivity() {
                               </Button>
                               <Button
                                 disabled={completeFollowUpMutation.isPending}
-                                onClick={() =>
-                                  completeFollowUpMutation.mutate({ leadId: followUp.id })
-                                }
+                                onClick={() => {
+                                  const note = window
+                                    .prompt(
+                                      'What happened with this buyer and what should happen next?',
+                                    )
+                                    ?.trim();
+                                  if (note) {
+                                    completeFollowUpMutation.mutate({
+                                      leadId: followUp.id,
+                                      note,
+                                    });
+                                  }
+                                }}
                               >
                                 {completeFollowUpMutation.isPending ? 'Completing...' : 'Complete'}
                               </Button>
@@ -667,7 +687,9 @@ export default function AgentProductivity() {
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center">
-                        <h3 className="text-lg font-semibold text-slate-900">No follow-ups due</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          No pending follow-ups
+                        </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Schedule follow-ups from a lead record to build your daily action queue.
                         </p>
@@ -687,17 +709,21 @@ export default function AgentProductivity() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Bell className="h-5 w-5 text-amber-600" />
-                      Agent reminders
+                      Notification history
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    <p className="text-sm text-slate-500">
+                      Read status tracks whether you have acknowledged an alert. Viewing and
+                      follow-up outcomes are recorded separately.
+                    </p>
                     {notificationsData.length > 0 ? (
                       notificationsData.map(notification => (
                         <div
                           key={notification.id}
                           className="rounded-xl border border-slate-200 bg-white p-4 transition-colors hover:bg-slate-50"
                         >
-                          <div className="flex items-start justify-between gap-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="font-semibold text-slate-900">{notification.title}</p>
@@ -707,7 +733,7 @@ export default function AgentProductivity() {
                                     notification.isRead === 1,
                                   )}
                                 >
-                                  {notification.isRead === 1 ? 'Read' : 'Unread'}
+                                  {notification.isRead === 1 ? 'Read' : 'Unread notification'}
                                 </Badge>
                               </div>
                               <p className="mt-1 text-sm text-slate-600">{notification.content}</p>
@@ -715,12 +741,28 @@ export default function AgentProductivity() {
                                 {formatRelativeTime(notification.createdAt)}
                               </p>
                             </div>
+                            {notification.isRead !== 1 && (
+                              <Button
+                                variant="outline"
+                                className="shrink-0"
+                                disabled={markNotificationReadMutation.isPending}
+                                onClick={() =>
+                                  markNotificationReadMutation.mutate({
+                                    notificationId: notification.id,
+                                  })
+                                }
+                              >
+                                Mark as read
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center">
-                        <h3 className="text-lg font-semibold text-slate-900">No reminders yet</h3>
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          No notifications yet
+                        </h3>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Follow-up prompts, offer alerts, and showing updates will appear here as
                           soon as the live notification feed has items for this account.

@@ -17,6 +17,7 @@ import {
 } from './services/publicLeadRateLimitService';
 import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
+import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 
 // ============================================================================
 // Input Schemas
@@ -90,7 +91,11 @@ const capturePublisherLeadSchema = z.object({
     .max(PUBLIC_LEAD_INPUT_LIMITS.email)
     .trim()
     .email('Valid email is required'),
-  phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+  phone: z
+    .string()
+    .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
+    .trim()
+    .min(1, 'Please enter your phone number.'),
   message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
   sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
   leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
@@ -119,6 +124,15 @@ const capturePublisherLeadSchema = z.object({
     version: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentVersion).trim().min(1),
     source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.consentSource).trim().optional(),
   }),
+}).superRefine((input, refinementContext) => {
+  const phoneError = agentProfilePhoneError(input.phone);
+  if (phoneError) {
+    refinementContext.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['phone'],
+      message: phoneError,
+    });
+  }
 });
 
 // ============================================================================

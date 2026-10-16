@@ -47,11 +47,18 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+function getSourceListingId(property: { listingId?: unknown } | null): number | null {
+  const id = property?.listingId;
+  return typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
 export default function ListingOversight() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'pending' | 'reviewing' | 'approved' | 'rejected'
+  >('pending');
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [actionReason, setActionReason] = useState('');
   const [rejectionReasons, setRejectionReasons] = useState<string[]>([]);
@@ -79,7 +86,7 @@ export default function ListingOversight() {
     isLoading,
     refetch,
   } = trpc.listing.getApprovalQueue.useQuery({
-    status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
   });
 
   // Client-side pagination
@@ -187,20 +194,24 @@ export default function ListingOversight() {
 
   const confirmDelete = () => {
     if (!propertyToDelete) return;
-    deleteMutation.mutate({ id: propertyToDelete.id });
+    const id = getSourceListingId(propertyToDelete);
+    if (id == null) return;
+    deleteMutation.mutate({ id });
   };
 
   const getActionButton = (property: any) => {
+    const sourceListingId = getSourceListingId(property);
     switch (property.status) {
       case 'pending':
         return (
           <div className="flex gap-2">
             <Button
               size="sm"
+              disabled={sourceListingId == null}
               className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
               onClick={e => {
                 e.stopPropagation();
-                setLocation(`/admin/review/${property.id}`);
+                if (sourceListingId != null) setLocation(`/admin/review/${sourceListingId}`);
               }}
             >
               <Eye className="h-3 w-3 mr-2" />
@@ -208,7 +219,9 @@ export default function ListingOversight() {
             </Button>
             <Button
               size="sm"
+              disabled={sourceListingId == null}
               variant="destructive"
+              aria-label={`Delete listing ${property.listingTitle}`}
               onClick={e => {
                 e.stopPropagation();
                 handleDelete(property);
@@ -222,7 +235,9 @@ export default function ListingOversight() {
         return (
           <Button
             size="sm"
+            disabled={sourceListingId == null}
             variant="destructive"
+            aria-label={`Delete listing ${property.listingTitle}`}
             onClick={e => {
               e.stopPropagation();
               handleDelete(property);
@@ -265,8 +280,17 @@ export default function ListingOversight() {
                   className="pl-10 bg-white/50 border-slate-200 focus:bg-white transition-all"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-white/50 border-slate-200 focus:bg-white transition-all">
+              <Select
+                value={statusFilter}
+                onValueChange={value => {
+                  setStatusFilter(value as typeof statusFilter);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger
+                  aria-label="Filter listing approvals by status"
+                  className="bg-white/50 border-slate-200 focus:bg-white transition-all"
+                >
                   <SelectValue placeholder="Filter by status..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -454,9 +478,11 @@ export default function ListingOversight() {
                       </label>
                     ))}
                   </div>
-                  <label className="mt-3 block text-sm font-medium">Review note (visible to the agency)</label>
+                  <label className="mt-3 block text-sm font-medium">
+                    Review note (visible to the agency)
+                  </label>
                   <Textarea
-                    placeholder='Add a note the agency will see explaining what needs to change...'
+                    placeholder="Add a note the agency will see explaining what needs to change..."
                     value={rejectionNote}
                     onChange={e => setRejectionNote(e.target.value)}
                     rows={3}

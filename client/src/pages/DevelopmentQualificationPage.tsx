@@ -29,6 +29,7 @@ import { calculateMonthlyRepayment, formatSARandShort, SA_PRIME_RATE } from '@/l
 import { formatPriceCompact } from '@/lib/formatPrice';
 import { trackCTAClick, trackFunnelStep } from '@/lib/analytics/advertiseTracking';
 import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 const DEFAULT_BOND_TERM_YEARS = 20;
 
@@ -77,7 +78,9 @@ export default function DevelopmentQualificationPage() {
       ? parseNumberInput(new URLSearchParams(window.location.search).get('deposit') || '')
       : 0;
   const initialUnitKey =
-    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('unit') || '' : '';
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('unit') || ''
+      : '';
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submitted, setSubmitted] = useState(false);
   const [financials, setFinancials] = useState({
@@ -173,7 +176,7 @@ export default function DevelopmentQualificationPage() {
   const maxAffordable = Math.max(affordableLoan + availableDeposit, 0);
   const comfortFloor = Math.max(Math.round(maxAffordable * 0.82), 0);
   const targetPriceValue = selectedUnit
-    ? selectedUnit.publicFacts?.priceFrom ?? null
+    ? (selectedUnit.publicFacts?.priceFrom ?? null)
     : developmentPricing.minPrice;
   const targetPrice =
     typeof targetPriceValue === 'number' && targetPriceValue > 0 ? targetPriceValue : 0;
@@ -207,7 +210,7 @@ export default function DevelopmentQualificationPage() {
   const canSubmit =
     contact.name.trim().length >= 2 &&
     contact.email.trim().length > 3 &&
-    contact.phone.trim().length >= 7 &&
+    !agentProfilePhoneError(contact.phone) &&
     totalIncome > 0 &&
     consentAccepted;
 
@@ -331,7 +334,10 @@ export default function DevelopmentQualificationPage() {
                 This development is offered to rent. Request rental information or a viewing from
                 the development page instead.
               </p>
-              <Button className="mt-6" onClick={() => setLocation(`/development/${dev.slug || slug}`)}>
+              <Button
+                className="mt-6"
+                onClick={() => setLocation(`/development/${dev.slug || slug}`)}
+              >
                 Back to development
               </Button>
             </CardContent>
@@ -350,10 +356,13 @@ export default function DevelopmentQualificationPage() {
             <CardContent className="p-10 text-center">
               <h1 className="text-2xl font-bold text-slate-900">Price not available</h1>
               <p className="mt-2 text-slate-600">
-                The publisher has not supplied a current price for this development or unit. Ask
-                the sales team for the latest pricing before starting an affordability check.
+                The publisher has not supplied a current price for this development or unit. Ask the
+                sales team for the latest pricing before starting an affordability check.
               </p>
-              <Button className="mt-6" onClick={() => setLocation(`/development/${dev.slug || slug}`)}>
+              <Button
+                className="mt-6"
+                onClick={() => setLocation(`/development/${dev.slug || slug}`)}
+              >
                 Back to development
               </Button>
             </CardContent>
@@ -363,11 +372,12 @@ export default function DevelopmentQualificationPage() {
     );
   }
 
-  const priceLabel = developmentPricing.maxPrice && developmentPricing.minPrice !== null
-    ? `${formatPriceCompact(developmentPricing.minPrice)} - ${formatPriceCompact(developmentPricing.maxPrice)}`
-    : developmentPricing.minPrice !== null
-      ? formatPriceCompact(developmentPricing.minPrice)
-      : 'Price on request';
+  const priceLabel =
+    developmentPricing.maxPrice && developmentPricing.minPrice !== null
+      ? `${formatPriceCompact(developmentPricing.minPrice)} - ${formatPriceCompact(developmentPricing.maxPrice)}`
+      : developmentPricing.minPrice !== null
+        ? formatPriceCompact(developmentPricing.minPrice)
+        : 'Price on request';
   const progressValue = step === 1 ? 33 : step === 2 ? 66 : 100;
 
   return (
@@ -751,10 +761,16 @@ export default function DevelopmentQualificationPage() {
                             />
                           </div>
                           <div className="space-y-2 md:col-span-2">
-                            <Label htmlFor="contactPhone">Phone number</Label>
+                            <Label htmlFor="contactPhone">
+                              Phone number <span className="text-destructive">*</span>
+                            </Label>
                             <Input
                               id="contactPhone"
                               type="tel"
+                              required
+                              aria-invalid={Boolean(
+                                contact.phone && agentProfilePhoneError(contact.phone),
+                              )}
                               value={contact.phone}
                               onChange={e =>
                                 setContact(prev => ({ ...prev, phone: e.target.value }))

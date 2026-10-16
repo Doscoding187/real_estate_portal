@@ -71,7 +71,10 @@ import {
 
 import { ENV } from './_core/env';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
-import { firstResponseOverdueSql } from './services/leadTransitionService';
+import {
+  firstOutreachOverdueSql,
+  firstResponseOverdueSql,
+} from './services/leadTransitionService';
 import { type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
 import { normalizeLocationFields, validateLocationForPublish } from './utils/locationUtils';
 import { locationResolver } from './services/locationResolverService';
@@ -185,10 +188,7 @@ export async function assertNotDedicatedLandWorkflowListing(
     .select({ id: landListingLinks.id })
     .from(landListingLinks)
     .where(
-      and(
-        eq(landListingLinks.listingId, listingId),
-        eq(landListingLinks.linkStatus, 'active'),
-      ),
+      and(eq(landListingLinks.listingId, listingId), eq(landListingLinks.linkStatus, 'active')),
     )
     .limit(1);
   if (activeLandLink) {
@@ -647,8 +647,13 @@ export async function deleteUserById(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const [target] = await db.select({ founderAuthority: users.founderAuthority }).from(users).where(eq(users.id, userId)).limit(1);
-  if (target?.founderAuthority === 'platform_founder') throw new Error('The founder account cannot be removed by registration cleanup.');
+  const [target] = await db
+    .select({ founderAuthority: users.founderAuthority })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (target?.founderAuthority === 'platform_founder')
+    throw new Error('The founder account cannot be removed by registration cleanup.');
   await db.delete(users).where(and(eq(users.id, userId), isNull(users.founderAuthority)));
 }
 
@@ -722,9 +727,7 @@ export async function revokeUserSessions(
   await db
     .update(users)
     .set({ sessionVersion: sql`${users.sessionVersion} + 1` })
-    .where(
-      and(eq(users.id, userId), eq(users.sessionVersion, expectedSessionVersion)),
-    );
+    .where(and(eq(users.id, userId), eq(users.sessionVersion, expectedSessionVersion)));
 }
 
 /**
@@ -1573,12 +1576,13 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
 
   // leads already imported at top
 
-  // Decorate with the shared first-response currency so client signals stay
+  // Decorate with the shared first-outreach currency so client signals stay
   // truthful even on the recent-leads fallback path.
   const rows = await db
     .select({
       lead: leads,
       firstResponseOverdue: firstResponseOverdueSql(),
+      firstOutreachOverdue: firstOutreachOverdueSql(),
     })
     .from(leads)
     .where(eq(leads.agencyId, agencyId))
@@ -1589,9 +1593,10 @@ export async function getAgencyRecentLeads(agencyId: number, limit: number = 5) 
     commercialLeadContextCandidateIds(rows.map(({ lead }) => lead)),
   );
 
-  return rows.map(({ lead, firstResponseOverdue }) => ({
+  return rows.map(({ lead, firstResponseOverdue, firstOutreachOverdue }) => ({
     ...lead,
     firstResponseOverdue: Number(firstResponseOverdue) === 1,
+    firstOutreachOverdue: Number(firstOutreachOverdue) === 1,
     commercial: commercialContexts.get(lead.id) || null,
   }));
 }
@@ -2478,10 +2483,7 @@ export async function getUserListings(
   // Keep every optional filter in one predicate. Reapplying `.where()` to a
   // builder can replace the first predicate in some adapter modes, which
   // would make a status-filtered request lose the Land containment boundary.
-  const conditions: SQL[] = [
-    eq(listings.ownerId, userId),
-    excludeLandFromGenericListingWorkflow(),
-  ];
+  const conditions: SQL[] = [eq(listings.ownerId, userId), excludeLandFromGenericListingWorkflow()];
   if (!agencyScope.allAgencies) {
     conditions.push(
       agencyScope.agencyId
@@ -2491,7 +2493,10 @@ export async function getUserListings(
   }
   if (status) conditions.push(eq(listings.status, status as any));
 
-  const query = db.select().from(listings).where(and(...conditions));
+  const query = db
+    .select()
+    .from(listings)
+    .where(and(...conditions));
 
   const listingsData = await query.orderBy(desc(listings.createdAt)).limit(limit).offset(offset);
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
+import { calendarTimestamp, calendarDayHref, calendarDateRange } from '@/lib/agentCalendar';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
+  getAgentDashboardJourneyPresentation,
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
@@ -72,6 +74,7 @@ type ListingItem = {
 
 type AuthoredListingItem = {
   id: number;
+  city?: string | null;
   title: string;
   status: string;
   createdAt?: string | Date;
@@ -82,6 +85,7 @@ type ShowingItem = {
   id: number;
   listingId?: number | null;
   visitorName?: string | null;
+  leadId?: number | null;
   status: string;
   scheduledAt?: string | Date;
 };
@@ -180,7 +184,7 @@ function formatPropertyType(value: string | null | undefined): string {
 }
 
 function getScheduleTime(showing: ShowingItem): Date | null {
-  return toDate(showing.scheduledAt);
+  return calendarTimestamp(showing.scheduledAt);
 }
 
 function getLeadStage(status: string): PipelineStage {
@@ -382,14 +386,8 @@ export function AgentDashboardOverview({
     );
 
   const calendarRange = useMemo(() => {
-    return {
-      startDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1)
-        .toISOString()
-        .split('T')[0],
-      endDate: new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0)
-        .toISOString()
-        .split('T')[0],
-    };
+    const range = calendarDateRange(calendarMonth, 'month');
+    return { startDate: range.start, endDate: range.end };
   }, [calendarMonth]);
 
   const { data: showingsData = [] } = trpc.agent.getMyShowings.useQuery(
@@ -485,11 +483,6 @@ export function AgentDashboardOverview({
     [draftListings],
   );
 
-  const listingsById = useMemo(
-    () => new Map(activeListings.map(listing => [listing.id, listing])),
-    [activeListings],
-  );
-
   const listingsTableRows = useMemo(() => {
     return [...activeListings]
       .sort((a, b) => b.enquiries - a.enquiries || b.views - a.views)
@@ -538,7 +531,11 @@ export function AgentDashboardOverview({
     return showings
       .filter(showing => {
         const scheduled = getScheduleTime(showing);
-        return !!scheduled && scheduled.getTime() > new Date().getTime();
+        return (
+          showing.status === 'scheduled' &&
+          !!scheduled &&
+          scheduled.getTime() > new Date().getTime()
+        );
       })
       .sort((left, right) => {
         const leftTime = getScheduleTime(left)?.getTime() || 0;
@@ -568,6 +565,7 @@ export function AgentDashboardOverview({
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
+  const dashboardJourney = getAgentDashboardJourneyPresentation(journeyAction);
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
@@ -689,23 +687,19 @@ export function AgentDashboardOverview({
   const hasDraftInventory = draftCount > 0;
   const workspaceAction = !canPublishListings
     ? {
-        eyebrow: journeyAction.waiting ? 'Verification in progress' : 'Workspace activation',
+        eyebrow: journeyAction.waiting
+          ? 'Verification in progress'
+          : onboardingStatus?.recommendedNextStep === 'dashboard'
+            ? 'Business overview'
+            : 'Workspace setup',
         title: needsProfileCompletion
           ? 'Finish setting up your professional presence.'
-          : journeyAction.title,
+          : dashboardJourney.title,
         description: needsProfileCompletion
           ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-          : journeyAction.description,
-        actionLabel: journeyAction.waiting
-          ? null
-          : needsProfileCompletion
-            ? 'Continue setup'
-            : journeyAction.label,
-        actionHref: journeyAction.waiting
-          ? null
-          : needsProfileCompletion
-            ? '/agent/setup'
-            : journeyAction.href,
+          : dashboardJourney.description,
+        actionLabel: needsProfileCompletion ? 'Continue setup' : dashboardJourney.label,
+        actionHref: needsProfileCompletion ? '/agent/setup' : dashboardJourney.href,
       }
     : !hasPublishedInventory && hasPendingReviewInventory
       ? {
@@ -735,7 +729,7 @@ export function AgentDashboardOverview({
               eyebrow: 'Launch your business',
               title: 'Get your first property live.',
               description:
-                'Your Agent workspace is ready. Publishing a listing is the first step towards discovery, enquiries and a working pipeline.',
+                'Add your first listing to start building marketplace visibility, enquiries and a working pipeline.',
               actionLabel: 'Add your first listing',
               actionHref: '/listings/create',
             }
@@ -991,17 +985,17 @@ export function AgentDashboardOverview({
                 <div className="mt-4 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold">{journeyAction.title}.</p>
-                      <p className="mt-1 text-sm text-amber-800">{journeyAction.description}</p>
+                      <p className="font-semibold">{dashboardJourney.title}.</p>
+                      <p className="mt-1 text-sm text-amber-800">{dashboardJourney.description}</p>
                     </div>
-                    {!journeyAction.waiting ? (
+                    {dashboardJourney.href && dashboardJourney.label ? (
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setLocation(journeyAction.href)}
+                        onClick={() => setLocation(dashboardJourney.href!)}
                         className="rounded-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
                       >
-                        {journeyAction.label}
+                        {dashboardJourney.label}
                       </Button>
                     ) : null}
                   </div>
@@ -1019,9 +1013,17 @@ export function AgentDashboardOverview({
                   const Icon = metric.icon;
 
                   return (
-                    <div
+                    <Link
+                      href={
+                        metric.label === 'Appointments Today'
+                          ? calendarDayHref(today)
+                          : metric.label === 'Unread Alerts'
+                            ? '/agent/productivity?tab=reminders'
+                            : '/agent/listings'
+                      }
+                      aria-label={`Open ${metric.label.toLowerCase()}`}
                       key={metric.label}
-                      className="grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 py-[11px]"
+                      className="grid grid-cols-[minmax(0,1fr)_60px_80px] items-center gap-2 rounded-md py-[11px] transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -1059,7 +1061,7 @@ export function AgentDashboardOverview({
                           {metric.status}
                         </Badge>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -1092,7 +1094,9 @@ export function AgentDashboardOverview({
 
               <div className="mt-4 grid gap-[6px] md:grid-cols-5">
                 {PIPELINE_CONFIG.map(stage => (
-                  <div
+                  <Link
+                    href="/agent/leads"
+                    aria-label={`Open CRM for ${stage.label.toLowerCase()} leads`}
                     key={stage.key}
                     className={cn(
                       'rounded-[9px] border px-3 py-[9px] transition duration-200 hover:-translate-y-0.5 hover:shadow-soft',
@@ -1110,7 +1114,7 @@ export function AgentDashboardOverview({
                         {pipeline[stage.key].length}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
@@ -1127,7 +1131,12 @@ export function AgentDashboardOverview({
                         .toUpperCase();
 
                       return (
-                        <div key={lead.id} className="flex items-center gap-3 py-[9px]">
+                        <Link
+                          href={`/agent/leads?leadId=${lead.id}`}
+                          aria-label={`Open lead for ${lead.name}`}
+                          key={lead.id}
+                          className="flex items-center gap-3 rounded-lg py-[9px] transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
                           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-[#5a9bd6] to-[var(--primary)] text-[10px] font-semibold text-white shadow-[0_8px_24px_rgba(0,92,168,0.2)]">
                             {initials}
                           </span>
@@ -1154,7 +1163,7 @@ export function AgentDashboardOverview({
                             {PIPELINE_CONFIG.find(item => item.key === stage)?.label ||
                               formatStatus(lead.status)}
                           </Badge>
-                        </div>
+                        </Link>
                       );
                     })}
 
@@ -1250,9 +1259,12 @@ export function AgentDashboardOverview({
                                   )}
                                 </span>
                                 <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-slate-900">
+                                  <Link
+                                    href={`/property/${listing.id}`}
+                                    className="block truncate text-sm font-semibold text-slate-900 hover:text-primary hover:underline"
+                                  >
                                     {listing.title}
-                                  </p>
+                                  </Link>
                                   <p className="truncate text-xs text-slate-500">{listing.city}</p>
                                 </div>
                               </div>
@@ -1372,25 +1384,24 @@ export function AgentDashboardOverview({
                   title={
                     needsProfileCompletion
                       ? 'Listing publishing is still locked'
-                      : journeyAction.title
+                      : onboardingStatus?.recommendedNextStep === 'dashboard'
+                        ? 'Listing publishing is unavailable'
+                        : dashboardJourney.title
                   }
                   description={
                     needsProfileCompletion
-                    ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
-                      : journeyAction.description
+                      ? getAgentProfileCompletionDescription({ agentLaunchAccessAvailable })
+                      : onboardingStatus?.recommendedNextStep === 'dashboard'
+                        ? 'Your business overview is available. Listing publishing will appear here when this account has publishing access.'
+                        : dashboardJourney.description
                   }
-                  actionLabel={
-                    journeyAction.waiting
-                      ? null
-                      : needsProfileCompletion
-                        ? 'Finish setup'
-                        : journeyAction.label
-                  }
+                  actionLabel={needsProfileCompletion ? 'Finish setup' : dashboardJourney.label}
                   onAction={
-                    journeyAction.waiting
-                      ? undefined
-                      : () =>
-                          setLocation(needsProfileCompletion ? '/agent/setup' : journeyAction.href)
+                    needsProfileCompletion
+                      ? () => setLocation('/agent/setup')
+                      : dashboardJourney.href
+                        ? () => setLocation(dashboardJourney.href!)
+                        : undefined
                   }
                 />
               ) : null}
@@ -1509,11 +1520,17 @@ export function AgentDashboardOverview({
                     selectedDayShowings.map(showing => {
                       const scheduled = getScheduleTime(showing);
                       const listing = showing.listingId
-                        ? listingsById.get(showing.listingId)
+                        ? authoredListings.find(listing => listing.id === showing.listingId)
                         : undefined;
 
                       return (
-                        <div
+                        <Link
+                          href={
+                            scheduled
+                              ? calendarDayHref(scheduled)
+                              : '/agent/productivity?tab=calendar'
+                          }
+                          aria-label={`Open viewing for ${listing?.title || `viewing ${showing.id}`}`}
                           key={showing.id}
                           className={cn(
                             'flex items-start gap-3 rounded-[9px] border px-3 py-[10px]',
@@ -1544,7 +1561,9 @@ export function AgentDashboardOverview({
                               {listing?.title || `Viewing #${showing.id}`}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-slate-500">
-                              {showing.visitorName || 'Prospective client'}
+                              {allLeads.find(lead => lead.id === showing.leadId)?.name ||
+                                showing.visitorName ||
+                                'Prospective client'}
                             </p>
                             {listing?.city && (
                               <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
@@ -1562,7 +1581,7 @@ export function AgentDashboardOverview({
                           >
                             {formatStatus(showing.status)}
                           </Badge>
-                        </div>
+                        </Link>
                       );
                     })
                   ) : (
@@ -1582,11 +1601,17 @@ export function AgentDashboardOverview({
                     upcomingShowings.map(showing => {
                       const scheduled = getScheduleTime(showing);
                       const listing = showing.listingId
-                        ? listingsById.get(showing.listingId)
+                        ? authoredListings.find(listing => listing.id === showing.listingId)
                         : undefined;
 
                       return (
-                        <div
+                        <Link
+                          href={
+                            scheduled
+                              ? calendarDayHref(scheduled)
+                              : '/agent/productivity?tab=calendar'
+                          }
+                          aria-label={`Open upcoming viewing for ${listing?.title || `viewing ${showing.id}`}`}
                           key={`upcoming-${showing.id}`}
                           className="flex items-center gap-3 rounded-[9px] border border-slate-200 bg-slate-50/80 px-3 py-[9px]"
                         >
@@ -1615,7 +1640,7 @@ export function AgentDashboardOverview({
                                 : 'Time to be confirmed'}
                             </p>
                           </div>
-                        </div>
+                        </Link>
                       );
                     })
                   ) : (
@@ -1629,7 +1654,7 @@ export function AgentDashboardOverview({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setLocation('/agent/productivity')}
+                onClick={() => setLocation('/agent/productivity?tab=calendar&book=1')}
                 className="mt-3 h-10 w-full rounded-[9px] border-dashed border-[color:color-mix(in_oklab,var(--primary)_24%,white)] bg-transparent text-[12px] font-medium text-[var(--primary)] hover:bg-[color:color-mix(in_oklab,var(--primary)_6%,white)] hover:text-[var(--primary)]"
               >
                 <CalendarPlus className="mr-2 h-4 w-4" />

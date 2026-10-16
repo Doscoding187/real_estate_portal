@@ -1,4 +1,6 @@
-import { and, desc, eq, inArray, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, ne, or, sql } from 'drizzle-orm';
+import type { MySql2Database } from 'drizzle-orm/mysql2';
+import type * as canonicalSchema from '../../drizzle/schema';
 
 import {
   agencyAgentMemberships,
@@ -13,6 +15,10 @@ import {
   suburbs,
   subscriptions,
 } from '../../drizzle/schema';
+import {
+  loadCanonicalPlaceSearchProjection,
+  canonicalPlaceSearchMembers,
+} from './canonicalPlaceSearchService';
 import { slugify } from '../_core/utils/slug';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
@@ -325,15 +331,18 @@ export async function resolveCanonicalAgentAreas(
   db: any,
   areasServed?: string | null | readonly AgentCoverageArea[],
 ): Promise<CanonicalAgentArea[]> {
-  const entries = Array.isArray(areasServed)
-    ? areasServed
-    : parseAgentCoverageAreas(areasServed);
+  const entries = Array.isArray(areasServed) ? areasServed : parseAgentCoverageAreas(areasServed);
   if (entries.length === 0) return [];
 
   const selections = entries
-    .map(area => ({ area, parsed: parseCanonicalAgentCoverageLocationId(area.canonicalLocationId) }))
+    .map(area => ({
+      area,
+      parsed: parseCanonicalAgentCoverageLocationId(area.canonicalLocationId),
+    }))
     .filter(
-      (selection): selection is {
+      (
+        selection,
+      ): selection is {
         area: AgentCoverageArea;
         parsed: NonNullable<ReturnType<typeof parseCanonicalAgentCoverageLocationId>>;
       } => Boolean(selection.parsed),
@@ -385,7 +394,11 @@ export async function resolveCanonicalAgentAreas(
         .from(cities)
         .innerJoin(provinces, eq(cities.provinceId, provinces.id))
         .where(
-          and(inArray(cities.id, cityIds), ne(cities.status, 'retired'), ne(provinces.status, 'retired')),
+          and(
+            inArray(cities.id, cityIds),
+            ne(cities.status, 'retired'),
+            ne(provinces.status, 'retired'),
+          ),
         )
     : [];
   const provinceRows: ProvinceResolution[] = provinceIds.length
@@ -479,22 +492,22 @@ async function loadPersonallyEntitledAgentUserIds(
     return new Set();
   }
   const rows = await db
-      .select({ subscription: subscriptions, plan: plans })
-      .from(subscriptions)
-      .innerJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(
-        and(
-          eq(subscriptions.ownerType, 'agent'),
-          inArray(subscriptions.ownerId, userIds),
-          sql`EXISTS (
+    .select({ subscription: subscriptions, plan: plans })
+    .from(subscriptions)
+    .innerJoin(plans, eq(subscriptions.planId, plans.id))
+    .where(
+      and(
+        eq(subscriptions.ownerType, 'agent'),
+        inArray(subscriptions.ownerId, userIds),
+        sql`EXISTS (
             SELECT 1
             FROM ${billableAccounts} account
             WHERE account.id = ${subscriptions.billableAccountId}
               AND account.account_kind = 'agent'
               AND account.user_id = ${subscriptions.ownerId}
           )`,
-        ),
-      );
+      ),
+    );
   const now = new Date();
   const entitled = new Set<number>();
   for (const row of rows) {
@@ -648,9 +661,7 @@ export async function findAgentsServingLocation(
       // A current membership makes the Agency the commercial owner; an
       // individual term cannot silently keep the member discoverable after
       // that Agency term expires.
-      const commerciallyEligible = membership
-        ? hasVerifiedCurrentAgency
-        : hasPersonalEntitlement;
+      const commerciallyEligible = membership ? hasVerifiedCurrentAgency : hasPersonalEntitlement;
       if (!commerciallyEligible) return null;
 
       return {
@@ -715,4 +726,114 @@ export async function listPublicInventoryForAgent(
     cards.push(toPublicPropertyDetailDto(resolution).property);
   }
   return cards;
+}
+
+export interface AgentPublicInventoryPageOptions {
+  limit: number;
+  cursor?: number;
+  listingType?: 'sale' | 'rent';
+  canonicalPlaceId?: string;
+  sort: 'newest' | 'oldest';
+}
+
+/** Keyset pages over one attributed inventory; public eligibility remains the final authority. */
+export async function pagePublicInventoryForAgent(
+  db: MySql2Database<typeof canonicalSchema>,
+  agentId: number,
+  options: AgentPublicInventoryPageOptions,
+) {
+  const limit = Math.max(1, Math.min(24, options.limit));
+  let memberIds: string[] | undefined;
+  if (options.canonicalPlaceId) {
+    const projection = await loadCanonicalPlaceSearchProjection(db, {
+      placeIds: [options.canonicalPlaceId],
+      includeProvinceMembers: true,
+    });
+    const execution = projection.executions.get(options.canonicalPlaceId);
+    if (!execution || !projection.labels.has(options.canonicalPlaceId))
+      return { items: [], nextCursor: null };
+    memberIds = canonicalPlaceSearchMembers(execution, projection);
+    if (!memberIds.length) return { items: [], nextCursor: null };
+  }
+  const cards: ReturnType<typeof toPublicPropertyDetailDto>['property'][] = [];
+  let cursor = options.cursor;
+  let lastScanned = cursor;
+  // Bound eligibility work per request. A continuation can legitimately have no public rows.
+  for (let batch = 0; batch < 10; batch += 1) {
+    const candidates: Array<{ id: number }> = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .leftJoin(listings, eq(properties.sourceListingId, listings.id))
+      .where(
+        and(
+          or(eq(properties.agentId, agentId), eq(listings.agentId, agentId)),
+          cursor
+            ? options.sort === 'oldest'
+              ? gt(properties.id, cursor)
+              : lt(properties.id, cursor)
+            : undefined,
+          options.listingType ? eq(properties.listingType, options.listingType) : undefined,
+          memberIds ? inArray(properties.canonicalPlaceId, memberIds) : undefined,
+        ),
+      )
+      .orderBy(options.sort === 'oldest' ? asc(properties.id) : desc(properties.id))
+      .limit(60);
+    if (!candidates.length) return { items: cards, nextCursor: null };
+    const ids = candidates.map(row => Number(row.id));
+    const resolutions = await resolvePublicPropertyEligibilities(ids);
+    for (const id of ids) {
+      const resolution = resolutions.get(id);
+      if (resolution) {
+        // Look ahead by one eligible property without skipping it on the next page.
+        if (cards.length === limit) return { items: cards, nextCursor: lastScanned ?? null };
+        cards.push(toPublicPropertyDetailDto(resolution).property);
+      }
+      lastScanned = id;
+    }
+    if (ids.length < 60) return { items: cards, nextCursor: null };
+    cursor = lastScanned;
+  }
+  return { items: cards, nextCursor: lastScanned ?? null };
+}
+
+/** Locations are derived from eligible public inventory, never inferred from profile labels. */
+export async function listPublicInventoryLocationsForAgent(
+  db: MySql2Database<typeof canonicalSchema>,
+  agentId: number,
+) {
+  const placeIds = new Set<string>();
+  let cursor: number | undefined;
+  for (;;) {
+    const candidates: Array<{ id: number }> = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .leftJoin(listings, eq(properties.sourceListingId, listings.id))
+      .where(
+        and(
+          or(eq(properties.agentId, agentId), eq(listings.agentId, agentId)),
+          cursor ? lt(properties.id, cursor) : undefined,
+        ),
+      )
+      .orderBy(desc(properties.id))
+      .limit(60);
+    if (!candidates.length) break;
+    const resolutions = await resolvePublicPropertyEligibilities(
+      candidates.map(row => Number(row.id)),
+    );
+    for (const resolution of resolutions.values()) {
+      if (resolution.property.canonicalPlaceId) placeIds.add(resolution.property.canonicalPlaceId);
+    }
+    if (candidates.length < 60) break;
+    cursor = Number(candidates[candidates.length - 1].id);
+  }
+  if (!placeIds.size) return [];
+  const projection = await loadCanonicalPlaceSearchProjection(db, { placeIds: [...placeIds] });
+  return [...placeIds]
+    .flatMap(placeId => {
+      const label = projection.labels.get(placeId);
+      return label && projection.executions.has(placeId)
+        ? [{ canonicalPlaceId: placeId, label: label.label }]
+        : [];
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
