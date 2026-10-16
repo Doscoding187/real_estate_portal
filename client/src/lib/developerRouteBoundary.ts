@@ -21,6 +21,7 @@ const PRIVATE_DEVELOPER_ROUTE_SEGMENTS = new Set([
   // even when its destination page has not been built yet.
   'activities',
   'units',
+  'documents',
 ]);
 
 /** True only for a one-segment public developer brand URL. */

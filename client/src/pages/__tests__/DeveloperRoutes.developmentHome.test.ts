@@ -59,6 +59,7 @@ vi.mock('@/pages/developer/DevelopmentHome', () => ({
     return 'Development Home';
   },
 }));
+vi.mock('@/pages/developer/ProjectLibrary', () => ({ default: () => 'Project library' }));
 
 import DeveloperRoutes from '../DeveloperRoutes';
 
@@ -81,6 +82,16 @@ describe('Development Home route registration', () => {
 
     expect(screen.queryByText('Development Home')).not.toBeInTheDocument();
     expect(homeQuerySpy).not.toHaveBeenCalled();
+  });
+
+  it('routes the reserved documents path to the Project Library', async () => {
+    window.history.pushState({}, '', '/developer/documents');
+
+    render(createElement(DeveloperRoutes));
+
+    await waitFor(() => {
+      expect(screen.getByText('Project library')).toBeInTheDocument();
+    });
   });
 
   it('registers the static creation route before Development Home and the portfolio list', () => {
