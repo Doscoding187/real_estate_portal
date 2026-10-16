@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getAgentJourneyAction, getAgentProfileCompletionDescription } from './agentJourney';
+import {
+  getAgentDashboardJourneyAction,
+  getAgentJourneyAction,
+  getAgentProfileCompletionDescription,
+} from './agentJourney';
 import type { AgentRecommendedNextStep } from '@shared/agentJourney';
 
 describe('Agent journey support handoff', () => {
@@ -43,6 +47,26 @@ describe('Agent journey support handoff', () => {
     ).toMatchObject({
       href: '/agent/select-package',
       label: 'Activate Launch Access',
+    });
+  });
+
+  it('routes a dashboard-ready action to a useful workspace instead of back to itself', () => {
+    const action = getAgentJourneyAction({ recommendedNextStep: 'dashboard' });
+
+    expect(getAgentDashboardJourneyAction(action)).toMatchObject({
+      href: '/agent/listings',
+      label: 'Open listings',
+      title: 'Your Agent workspace is ready',
+    });
+  });
+
+  it('preserves a waiting dashboard handoff', () => {
+    const action = getAgentJourneyAction({ recommendedNextStep: 'await_payment_review' });
+
+    expect(getAgentDashboardJourneyAction(action)).toMatchObject({
+      href: '/agent/dashboard',
+      label: 'Return to dashboard',
+      waiting: true,
     });
   });
 });

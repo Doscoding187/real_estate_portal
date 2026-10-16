@@ -155,6 +155,15 @@ export function getAgentJourneyAction(
   }
 }
 
+/**
+ * Dashboard cards must not offer an action that navigates back to the page
+ * the agent is already viewing. A ready workspace can continue in Listings.
+ */
+export function getAgentDashboardJourneyAction(action: AgentJourneyAction): AgentJourneyAction {
+  if (action.waiting || action.href !== '/agent/dashboard') return action;
+  return { ...action, href: '/agent/listings', label: 'Open listings' };
+}
+
 export function isAgentProfileJourneyStep(
   status: { recommendedNextStep?: AgentRecommendedNextStep } | null | undefined,
 ) {

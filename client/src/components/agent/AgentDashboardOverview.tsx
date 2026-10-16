@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import {
+  getAgentDashboardJourneyAction,
   getAgentJourneyAction,
   getAgentProfileCompletionDescription,
   isAgentProfileJourneyStep,
@@ -564,6 +565,7 @@ export function AgentDashboardOverview({
   const fullFeaturesUnlocked = onboardingStatus?.fullFeaturesUnlocked ?? false;
   const needsProfileCompletion = isAgentProfileJourneyStep(onboardingStatus);
   const journeyAction = getAgentJourneyAction(onboardingStatus, { agentLaunchAccessAvailable });
+  const dashboardJourneyAction = getAgentDashboardJourneyAction(journeyAction);
   const canPublishListings = entitlements?.canPublishListings ?? false;
   const setupPriorityFlags = profileSetupFlags.slice(0, 3).map(formatSetupFlag);
   const guidanceMode: DashboardGuidanceMode | null = needsProfileCompletion ? 'setup' : null;
@@ -696,12 +698,12 @@ export function AgentDashboardOverview({
           ? null
           : needsProfileCompletion
             ? 'Continue setup'
-            : journeyAction.label,
+            : dashboardJourneyAction.label,
         actionHref: journeyAction.waiting
           ? null
           : needsProfileCompletion
             ? '/agent/setup'
-            : journeyAction.href,
+            : dashboardJourneyAction.href,
       }
     : !hasPublishedInventory && hasPendingReviewInventory
       ? {
