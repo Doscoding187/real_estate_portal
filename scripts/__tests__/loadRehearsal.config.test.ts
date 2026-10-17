@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONNECTION_LEASE_THRESHOLDS,
   LOAD_REHEARSAL_CONFIRM_ENV,
   READ_REHEARSAL_THRESHOLDS,
   RehearsalRefusal,
+  WRITE_REHEARSAL_THRESHOLDS,
   assertRehearsalAuthority,
+  evaluateLease,
   evaluateScenario,
   parseRehearsalConfig,
   percentile,
@@ -144,6 +147,44 @@ describe('percentile and summaries', () => {
 
     expect(evaluateScenario(summarizeScenario('empty', [])).failures).toContainEqual(
       'no requests observed',
+    );
+  });
+});
+
+describe('write thresholds and connection leases', () => {
+  it('applies write thresholds only to write scenarios', () => {
+    const summary = summarizeScenario('write', [{ latencyMs: 800, ok: true }]);
+    expect(evaluateScenario(summary, 'write').pass).toBe(true);
+    expect(evaluateScenario(summary, 'read').pass).toBe(false);
+    expect(evaluateScenario(summary, 'read').failures).toContainEqual(
+      `p95 800ms exceeds ${READ_REHEARSAL_THRESHOLDS.p95MsMax}ms`,
+    );
+
+    const over = summarizeScenario('write-over', [
+      { latencyMs: WRITE_REHEARSAL_THRESHOLDS.p95MsMax + 1, ok: true },
+    ]);
+    expect(evaluateScenario(over, 'write').pass).toBe(false);
+  });
+
+  it('evaluates connection-lease percentiles against the acquisition threshold', () => {
+    const healthy = summarizeScenario('connection-lease', [
+      { latencyMs: 5, ok: true },
+      { latencyMs: 40, ok: true },
+    ]);
+    expect(evaluateLease(healthy).pass).toBe(true);
+
+    const slow = summarizeScenario('connection-lease', [
+      { latencyMs: CONNECTION_LEASE_THRESHOLDS.p95MsMax + 10, ok: true },
+    ]);
+    expect(evaluateLease(slow).failures).toEqual([
+      `p95 260ms exceeds ${CONNECTION_LEASE_THRESHOLDS.p95MsMax}ms`,
+    ]);
+
+    const errored = summarizeScenario('connection-lease', [{ latencyMs: 5, ok: false }]);
+    expect(evaluateLease(errored).pass).toBe(false);
+
+    expect(evaluateLease(summarizeScenario('connection-lease', [])).failures).toContainEqual(
+      'no lease samples observed',
     );
   });
 });

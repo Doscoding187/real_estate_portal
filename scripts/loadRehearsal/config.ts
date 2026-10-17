@@ -30,6 +30,18 @@ export const READ_REHEARSAL_THRESHOLDS = {
   p99MsMax: 2_000,
 } as const;
 
+export const WRITE_REHEARSAL_THRESHOLDS = {
+  errorRateMax: 0.001,
+  p95MsMax: 1_000,
+  p99MsMax: 2_000,
+} as const;
+
+export const CONNECTION_LEASE_THRESHOLDS = {
+  p95MsMax: 250,
+} as const;
+
+export type ScenarioKind = 'read' | 'write';
+
 export interface LoadRehearsalConfig {
   durationSeconds: number;
   rps: number;
@@ -198,21 +210,37 @@ export function summarizeScenario(
   };
 }
 
-export function evaluateScenario(summary: ScenarioSummary): ScenarioEvaluation {
+export function evaluateScenario(
+  summary: ScenarioSummary,
+  kind: ScenarioKind = 'read',
+): ScenarioEvaluation {
+  const thresholds = kind === 'write' ? WRITE_REHEARSAL_THRESHOLDS : READ_REHEARSAL_THRESHOLDS;
   const failures: string[] = [];
   if (summary.requests === 0) {
     failures.push('no requests observed');
   }
-  if (summary.errorRate > READ_REHEARSAL_THRESHOLDS.errorRateMax) {
-    failures.push(
-      `error rate ${summary.errorRate} exceeds ${READ_REHEARSAL_THRESHOLDS.errorRateMax}`,
-    );
+  if (summary.errorRate > thresholds.errorRateMax) {
+    failures.push(`error rate ${summary.errorRate} exceeds ${thresholds.errorRateMax}`);
   }
-  if (summary.p95Ms !== null && summary.p95Ms > READ_REHEARSAL_THRESHOLDS.p95MsMax) {
-    failures.push(`p95 ${summary.p95Ms}ms exceeds ${READ_REHEARSAL_THRESHOLDS.p95MsMax}ms`);
+  if (summary.p95Ms !== null && summary.p95Ms > thresholds.p95MsMax) {
+    failures.push(`p95 ${summary.p95Ms}ms exceeds ${thresholds.p95MsMax}ms`);
   }
-  if (summary.p99Ms !== null && summary.p99Ms > READ_REHEARSAL_THRESHOLDS.p99MsMax) {
-    failures.push(`p99 ${summary.p99Ms}ms exceeds ${READ_REHEARSAL_THRESHOLDS.p99MsMax}ms`);
+  if (summary.p99Ms !== null && summary.p99Ms > thresholds.p99MsMax) {
+    failures.push(`p99 ${summary.p99Ms}ms exceeds ${thresholds.p99MsMax}ms`);
+  }
+  return { name: summary.name, pass: failures.length === 0, failures };
+}
+
+export function evaluateLease(summary: ScenarioSummary): ScenarioEvaluation {
+  const failures: string[] = [];
+  if (summary.requests === 0) {
+    failures.push('no lease samples observed');
+  }
+  if (summary.errorRate > 0) {
+    failures.push(`connection-lease acquisition errors: ${summary.errors}`);
+  }
+  if (summary.p95Ms !== null && summary.p95Ms > CONNECTION_LEASE_THRESHOLDS.p95MsMax) {
+    failures.push(`p95 ${summary.p95Ms}ms exceeds ${CONNECTION_LEASE_THRESHOLDS.p95MsMax}ms`);
   }
   return { name: summary.name, pass: failures.length === 0, failures };
 }

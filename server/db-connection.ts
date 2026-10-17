@@ -10,6 +10,10 @@ import {
   type AuthorityRuntimePool,
 } from './_core/databaseAuthority/connectionAuthority';
 import { resolveDatabaseAuthority } from './_core/databaseAuthority/context';
+import {
+  observePoolLeases,
+  type PoolLeaseSample,
+} from './_core/databaseAuthority/poolLeaseObservation';
 
 // Connection state
 export let _db: any = null;
@@ -455,4 +459,22 @@ export async function getDb() {
 /** Worker entrypoints receive their own connection-authority operation. */
 export async function getWorkerDb() {
   return getDbForOperation('worker-connect');
+}
+
+/**
+ * Observe connection-lease latency on the active authorized pool. Observation
+ * only: it wraps `getConnection` and restores it when the returned function is
+ * called. Requires an initialized connection and changes no SQL or pool
+ * configuration.
+ */
+export function observeAuthorityPoolLease(listener: (sample: PoolLeaseSample) => void): () => void {
+  if (!runtimePool) {
+    throw new Error(
+      'Authority pool lease observation requires an initialized database connection.',
+    );
+  }
+  return observePoolLeases(
+    runtimePool.pool as unknown as { getConnection: (...args: unknown[]) => unknown },
+    listener,
+  );
 }
