@@ -1,0 +1,53 @@
+{
+  "checkedAt": "2026-10-17T22:33:32.558Z",
+  "status": "control_plane_verified",
+  "observations": [
+    {
+      "bucket": "listify-finance-914683204061-af-south-1",
+      "region": "af-south-1",
+      "versioning": "Enabled",
+      "encryption": [
+        "AES256"
+      ],
+      "publicAccessBlock": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+      },
+      "tlsOnly": true,
+      "restrictedPrincipals": [
+        "arn:aws:iam::914683204061:user/listify-finance-operator",
+        "arn:aws:iam::914683204061:root",
+        "arn:aws:iam::914683204061:user/listify-finance-af-south-1-ProofRuntimeUser-AZx3gkrzcgMx",
+        "arn:aws:iam::914683204061:role/listify-finance-af-south-1-ReplicationRole-jRMcboiYzXcD"
+      ],
+      "automaticExpiry": false
+    },
+    {
+      "bucket": "listify-finance-af-south-1-financebackup-kce1wayc2h2e",
+      "region": "af-south-1",
+      "versioning": "Enabled",
+      "encryption": [
+        "AES256"
+      ],
+      "publicAccessBlock": {
+        "BlockPublicAcls": true,
+        "IgnorePublicAcls": true,
+        "BlockPublicPolicy": true,
+        "RestrictPublicBuckets": true
+      },
+      "tlsOnly": true,
+      "restrictedPrincipals": [
+        "arn:aws:iam::914683204061:user/listify-finance-operator",
+        "arn:aws:iam::914683204061:root",
+        "arn:aws:iam::914683204061:role/listify-finance-af-south-1-ReplicationRole-jRMcboiYzXcD"
+      ],
+      "automaticExpiry": false
+    }
+  ],
+  "backupReplicationConfigured": true,
+  "runtimePermissionsExercised": false,
+  "recoveryExercised": false,
+  "migrationCompleted": false
+}
