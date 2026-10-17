@@ -157,7 +157,20 @@ function resolveStorageConfig(): BillingProofStorageConfig {
   };
 }
 
+/**
+ * Local rehearsal only: a non-production endpoint override lets the real S3
+ * code path run against a local S3-compatible listener. Deployed runtimes
+ * refuse the selector outright (TEST_ONLY_ENVIRONMENT_KEYS in
+ * securityRuntimeConfiguration); this guard is the second lock.
+ */
+function s3EndpointOverride(): string | undefined {
+  if (isProductionRuntime()) return undefined;
+  const endpoint = String(process.env.BILLING_PROOF_S3_ENDPOINT || '').trim();
+  return endpoint || undefined;
+}
+
 function createS3Client(config: Extract<BillingProofStorageConfig, { adapter: 's3' }>) {
+  const endpoint = s3EndpointOverride();
   return new S3Client({
     region: config.region,
     credentials:
@@ -167,6 +180,7 @@ function createS3Client(config: Extract<BillingProofStorageConfig, { adapter: 's
             secretAccessKey: config.secretAccessKey,
           }
         : undefined,
+    ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
   });
 }
 

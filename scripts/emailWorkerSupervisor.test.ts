@@ -1,5 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
-import { runEmailSupervisor } from './emailWorkerSupervisor';
+import { runEmailSupervisor, summarizeEmailWorkerBacklog } from './emailWorkerSupervisor';
+
+describe('email worker backlog attention contract', () => {
+  it('flags human-reconciliation states and stale claims for platform alerting', () => {
+    expect(
+      summarizeEmailWorkerBacklog([
+        { state: 'pending', stale: false },
+        { state: 'retryable_failed', stale: false },
+        { state: 'claimed', stale: false },
+      ]),
+    ).toEqual({ pending: 1, retryable_failed: 1, claimed: 1, stale: 0, attention: false });
+    expect(
+      summarizeEmailWorkerBacklog([{ state: 'permanent_failed', stale: false }]),
+    ).toMatchObject({ permanent_failed: 1, attention: true });
+    expect(summarizeEmailWorkerBacklog([{ state: 'unknown', stale: false }])).toMatchObject({
+      unknown: 1,
+      attention: true,
+    });
+    expect(summarizeEmailWorkerBacklog([{ state: 'claimed', stale: true }])).toMatchObject({
+      claimed: 1,
+      stale: 1,
+      attention: true,
+    });
+  });
+});
 
 describe('email supervisor loop', () => {
   it('repeats batches and drains the current batch on shutdown', async () => {
@@ -19,6 +43,24 @@ describe('email supervisor loop', () => {
     });
     expect(batches).toBe(2);
     expect(log).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it('stops during the idle wait without starting another batch', async () => {
+    const controller = new AbortController();
+    const close = vi.fn(async () => {});
+    let batches = 0;
+    await runEmailSupervisor(controller.signal, {
+      async batch() {
+        batches += 1;
+        setTimeout(() => controller.abort(), 10);
+        return { delivered: batches };
+      },
+      close,
+      log: vi.fn(),
+      pollMs: 1_000,
+    });
+    expect(batches).toBe(1);
     expect(close).toHaveBeenCalledOnce();
   });
 

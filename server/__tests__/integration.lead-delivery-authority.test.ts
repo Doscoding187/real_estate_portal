@@ -508,6 +508,112 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     expect(toMySqlDateTime(new Date('2026-09-09T12:34:56.789Z'))).toBe('2026-09-09 12:34:56.789000');
   });
 
+  it('drains bounded due work across repeated runs and honors retry backoff before re-invocation', async () => {
+    const dueLeadIds = [
+      await createLead('drain-first'),
+      await createLead('drain-second'),
+      await createLead('drain-third'),
+    ];
+    const futureLeadId = await createLead('drain-future');
+    const deliveries = [];
+    for (const leadId of dueLeadIds) {
+      deliveries.push(
+        await recordInitialLeadDelivery({ ...primaryDeliveryInput(leadId), database: databaseA }),
+      );
+    }
+    const futureDelivery = await recordInitialLeadDelivery({
+      ...primaryDeliveryInput(futureLeadId),
+      dueAt: new Date(Date.now() + 60 * 60_000),
+      database: databaseA,
+    });
+
+    const dispatched: number[] = [];
+    let failOnceDeliveryId: number | null = deliveries[1]!.delivery.id;
+    const dispatcher = async (claim: { deliveryId: number }) => {
+      dispatched.push(claim.deliveryId);
+      if (failOnceDeliveryId === claim.deliveryId) {
+        failOnceDeliveryId = null;
+        return { status: 'failed' as const, error: 'transient provider rejection' };
+      }
+      return { status: 'delivered' as const, providerReference: `drain-${claim.deliveryId}` };
+    };
+
+    const runs = [];
+    // Every run is scoped to one of this test's leads so a concurrently
+    // running suite can never have its due deliveries claimed or completed
+    // here. Each bounded run claims at most one delivery; the sequence drains
+    // all due work and never touches the future-due delivery.
+    for (const leadId of dueLeadIds) {
+      runs.push(await runLeadDeliveryWorker({ database: databaseA, dispatcher, leadId, limit: 1 }));
+    }
+    expect(runs).toEqual([
+      expect.objectContaining({ claimed: 1, completed: 1 }),
+      expect.objectContaining({ claimed: 1, failed: 1 }),
+      expect.objectContaining({ claimed: 1, completed: 1 }),
+    ]);
+    expect(dispatched).toHaveLength(3);
+
+    // The retry is scheduled five minutes out, so an immediately following
+    // scheduled run for the same lead must not re-invoke the provider inside
+    // the backoff window.
+    const backoffRun = await runLeadDeliveryWorker({
+      database: databaseB,
+      dispatcher,
+      leadId: dueLeadIds[1],
+      limit: 1,
+    });
+    expect(backoffRun).toMatchObject({ claimed: 0 });
+    expect(dispatched.filter(id => id === deliveries[1]!.delivery.id)).toHaveLength(1);
+
+    // Simulate the scheduler arriving after the backoff deadline without
+    // sleeping: move the persisted due timestamp into the past.
+    await fixtureConnection.execute('UPDATE lead_deliveries SET due_at = ? WHERE id = ?', [
+      toMySqlDateTime(new Date(Date.now() - 1_000)),
+      deliveries[1]!.delivery.id,
+    ]);
+    const retryRun = await runLeadDeliveryWorker({
+      database: databaseB,
+      dispatcher,
+      leadId: dueLeadIds[1],
+      limit: 1,
+    });
+    expect(retryRun).toMatchObject({ claimed: 1, completed: 1 });
+    expect(dispatched.filter(id => id === deliveries[1]!.delivery.id)).toHaveLength(2);
+
+    // Every due lead was delivered exactly once, the future-due route stayed
+    // queued, and repeated runs introduced no quarantine states.
+    for (const leadId of dueLeadIds) {
+      const snapshot = await getLeadDeliverySnapshot({ leadId, database: databaseA });
+      expect(snapshot.current).toMatchObject({ state: 'completed' });
+    }
+    const futureSnapshot = await getLeadDeliverySnapshot({
+      leadId: futureLeadId,
+      database: databaseA,
+    });
+    expect(futureSnapshot.current).toMatchObject({
+      id: futureDelivery.delivery.id,
+      state: 'queued',
+    });
+    const retrySnapshot = await getLeadDeliverySnapshot({
+      leadId: dueLeadIds[1],
+      database: databaseA,
+    });
+    expect(retrySnapshot.attempts.map(attempt => attempt.state)).toEqual([
+      'retryable_failed',
+      'completed',
+    ]);
+
+    const scopedStates = Object.fromEntries(
+      (
+        await query(
+          'SELECT state, COUNT(*) AS count_value FROM lead_deliveries WHERE lead_id IN (?, ?, ?, ?) GROUP BY state',
+          [dueLeadIds[0], dueLeadIds[1], dueLeadIds[2], futureLeadId],
+        )
+      ).map(row => [row.state, Number(row.count_value)]),
+    );
+    expect(scopedStates).toEqual({ completed: 3, queued: 1 });
+  }, 30_000);
+
   it('preserves route history while exposing only the superseding current custody', async () => {
     const leadId = await createLead('route-supersession');
     const firstUserId = await createUser('route-first');
