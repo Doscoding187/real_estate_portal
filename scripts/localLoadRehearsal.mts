@@ -6,23 +6,28 @@ import {
   resolveDatabaseAuthority,
 } from '../server/_core/databaseAuthority/context';
 import {
+  CONNECTION_LEASE_THRESHOLDS,
   LOAD_REHEARSAL_BOUNDS,
   LOAD_REHEARSAL_CONFIRM_ENV,
   READ_REHEARSAL_THRESHOLDS,
   RehearsalRefusal,
+  WRITE_REHEARSAL_THRESHOLDS,
   assertRehearsalAuthority,
+  evaluateLease,
   evaluateScenario,
   parseRehearsalConfig,
   round,
   summarizeScenario,
   type RehearsalSample,
+  type ScenarioKind,
 } from './loadRehearsal/config';
 
 /**
- * Bounded, opt-in local read-load rehearsal for the B17 recovery/capacity
- * workstream. It exercises real public read procedures against the owned
- * disposable worktree target and reports latency/error statistics against the
- * master-plan read thresholds. It is not the hosted 24-hour workload gate.
+ * Bounded, opt-in local read/write load rehearsal for the B17 recovery/capacity
+ * workstream. It exercises real public router procedures and one governed write
+ * path against the owned disposable worktree target, and reports latency, error
+ * and connection-lease statistics against the master-plan thresholds. It is not
+ * the hosted 24-hour workload gate.
  */
 async function main(): Promise<void> {
   if (process.env.NODE_ENV !== 'test' || process.env.APP_ENV !== 'test') {
@@ -37,11 +42,13 @@ async function main(): Promise<void> {
   authorizeDatabaseOperation(authority);
   Object.assign(process.env, databaseAuthorityChildEnvironment(authority, process.env));
 
-  const { getDb, shutdownDb } = await import('../server/db-connection');
+  const { getDb, shutdownDb, observeAuthorityPoolLease } = await import(
+    '../server/db-connection'
+  );
   await getDb();
   const { db } = await import('../server/db');
   const { appRouter } = await import('../server/routers');
-  const { desc } = await import('drizzle-orm');
+  const { desc, eq, inArray } = await import('drizzle-orm');
   const { properties } = await import('../drizzle/schema');
 
   const caller = appRouter.createCaller({
@@ -128,9 +135,11 @@ async function main(): Promise<void> {
 
   let detailCursor = 0;
   let relatedCursor = 0;
-  const scenarios: Array<{ name: string; execute: () => Promise<unknown> }> = [
+  let viewCursor = 0;
+  const scenarios: Array<{ name: string; kind: ScenarioKind; execute: () => Promise<unknown> }> = [
     {
       name: 'property-detail',
+      kind: 'read',
       execute: async () => {
         const id = publicIds[detailCursor++ % publicIds.length];
         const details = await withTimeout(caller.properties.getPublicByIds({ ids: [id] }));
@@ -142,21 +151,36 @@ async function main(): Promise<void> {
     },
     {
       name: 'property-related-feed',
+      kind: 'read',
       execute: () => {
         const id = publicIds[relatedCursor++ % publicIds.length];
         return withTimeout(caller.properties.getRelatedPublicInventory({ propertyId: id }));
+      },
+    },
+    {
+      name: 'property-detail-view',
+      kind: 'write',
+      execute: async () => {
+        const id = publicIds[viewCursor++ % publicIds.length];
+        const detail = await withTimeout(caller.properties.getById({ id }));
+        if (!detail || !(detail as { property?: unknown }).property) {
+          throw new Error(`public detail view projection missing for property ${id}`);
+        }
+        return detail;
       },
     },
   ];
   if (cityAvailable) {
     scenarios.push({
       name: 'search-typed-city',
+      kind: 'read',
       execute: () => withTimeout(caller.properties.searchPublicInventory({ city, listingType: 'sale', pageSize: 24 })),
     });
   }
   if (provinceAvailable) {
     scenarios.push({
       name: 'search-typed-province',
+      kind: 'read',
       execute: () =>
         withTimeout(caller.properties.searchPublicInventory({ province, listingType: 'sale', pageSize: 24 })),
     });
@@ -179,6 +203,14 @@ async function main(): Promise<void> {
 
   const samples = new Map<string, RehearsalSample[]>();
   enabled.forEach(scenario => samples.set(scenario.name, []));
+  const viewSnapshot = await db
+    .select({ id: properties.id, views: properties.views })
+    .from(properties)
+    .where(inArray(properties.id, publicIds));
+  const leaseSamples: RehearsalSample[] = [];
+  const stopLeaseObservation = observeAuthorityPoolLease(sample =>
+    leaseSamples.push({ latencyMs: sample.durationMs, ok: !sample.error }),
+  );
   const totalRequests = Math.max(
     enabled.length,
     Math.floor(config.durationSeconds * config.rps),
@@ -208,13 +240,39 @@ async function main(): Promise<void> {
     }
   });
   await Promise.all(workers);
+  stopLeaseObservation();
   const elapsedSeconds = (performance.now() - startedAtMs) / 1000;
 
   const summaries = enabled.map(scenario =>
     summarizeScenario(scenario.name, samples.get(scenario.name) ?? []),
   );
-  const evaluations = summaries.map(evaluateScenario);
-  const pass = evaluations.every(evaluation => evaluation.pass);
+  const evaluations = summaries.map((summary, index) =>
+    evaluateScenario(summary, enabled[index].kind),
+  );
+  const leaseSummary = summarizeScenario('connection-lease', leaseSamples);
+  const leaseEvaluation = evaluateLease(leaseSummary);
+
+  const cleanup = {
+    snapshotRows: viewSnapshot.length,
+    restoredViews: true,
+    error: null as string | null,
+  };
+  try {
+    for (const row of viewSnapshot) {
+      await db
+        .update(properties)
+        .set({ views: row.views })
+        .where(eq(properties.id, row.id));
+    }
+  } catch (error) {
+    cleanup.restoredViews = false;
+    cleanup.error = error instanceof Error ? error.message : String(error);
+  }
+
+  const pass =
+    evaluations.every(evaluation => evaluation.pass) &&
+    leaseEvaluation.pass &&
+    cleanup.restoredViews;
   const evidence = {
     evidenceClass: 'local-load-rehearsal-not-the-hosted-24h-gate',
     generatedAt: new Date().toISOString(),
@@ -223,17 +281,40 @@ async function main(): Promise<void> {
       targetFingerprintHash: authority.context.targetFingerprintHash,
     },
     config,
-    thresholds: READ_REHEARSAL_THRESHOLDS,
+    thresholds: {
+      read: READ_REHEARSAL_THRESHOLDS,
+      write: WRITE_REHEARSAL_THRESHOLDS,
+      connectionLease: CONNECTION_LEASE_THRESHOLDS,
+    },
     achievedRps: round(totalRequests / Math.max(elapsedSeconds, 0.001), 2),
     elapsedSeconds: round(elapsedSeconds),
-    scenarios: summaries.map((summary, index) => ({ ...summary, ...evaluations[index] })),
+    scenarios: summaries.map((summary, index) => ({
+      ...summary,
+      kind: enabled[index].kind,
+      ...evaluations[index],
+    })),
+    connectionLease: { ...leaseSummary, ...leaseEvaluation },
+    cleanup,
     unavailableScenarios: unavailable,
     notes: [
-      'Bounded local smoke rehearsal of public read procedures only.',
-      'Not the B17 24-hour representative workload, write-latency, connection-acquisition, restart/backlog, backup/restore or provider recovery evidence.',
+      'Bounded local smoke rehearsal of public read procedures and one public detail-view write path.',
+      'Not the B17 24-hour representative workload, resource-headroom, restart/backlog, backup/restore or provider recovery evidence.',
+      'View counters touched by the write scenario are restored from a pre-run snapshot.',
+      'Connection-lease latency observes the authorized runtime pool only; no SQL or pool configuration is changed.',
       `Workload started ${startedAt.toISOString()}.`,
     ],
-    verdict: { pass, failures: evaluations.flatMap(evaluation => evaluation.failures.map(failure => `${evaluation.name}: ${failure}`)) },
+    verdict: {
+      pass,
+      failures: [
+        ...evaluations.flatMap(evaluation =>
+          evaluation.failures.map(failure => `${evaluation.name}: ${failure}`),
+        ),
+        ...leaseEvaluation.failures.map(failure => `${leaseEvaluation.name}: ${failure}`),
+        ...(cleanup.restoredViews
+          ? []
+          : [`cleanup: view counter restore failed${cleanup.error ? ` (${cleanup.error})` : ''}`]),
+      ],
+    },
   };
 
   const serialized = `${JSON.stringify(evidence, null, 2)}\n`;
@@ -249,9 +330,12 @@ async function main(): Promise<void> {
   );
   for (const scenario of evidence.scenarios) {
     console.log(
-      `[load-rehearsal] ${scenario.name}: n=${scenario.requests} errors=${scenario.errors} p50=${scenario.p50Ms}ms p95=${scenario.p95Ms}ms p99=${scenario.p99Ms}ms ${scenario.pass ? 'PASS' : 'FAIL'}`,
+      `[load-rehearsal] ${scenario.name} (${scenario.kind}): n=${scenario.requests} errors=${scenario.errors} p50=${scenario.p50Ms}ms p95=${scenario.p95Ms}ms p99=${scenario.p99Ms}ms ${scenario.pass ? 'PASS' : 'FAIL'}`,
     );
   }
+  console.log(
+    `[load-rehearsal] connection-lease: n=${leaseSummary.requests} errors=${leaseSummary.errors} p50=${leaseSummary.p50Ms}ms p95=${leaseSummary.p95Ms}ms p99=${leaseSummary.p99Ms}ms max=${leaseSummary.maxMs}ms ${leaseEvaluation.pass ? 'PASS' : 'FAIL'}`,
+  );
   if (!pass) {
     console.error(`[load-rehearsal] threshold failures: ${evidence.verdict.failures.join('; ')}`);
   }
