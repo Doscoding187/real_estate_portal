@@ -335,6 +335,7 @@
     "test:db-authority:static": "vitest run --no-cache --config vitest.database-authority-static.config.ts --workspace vitest.database-authority-static.workspace.ts --project database-authority-static --reporter=basic",
     "test:integration": "vitest run tests/integration",
     "test:load:local": "cross-env NODE_ENV=test APP_ENV=test tsx scripts/localLoadRehearsal.mts",
+    "test:load:hosted": "tsx scripts/hostedLoadDriver/run.mts",
     "test:listing-performance": "tsx scripts/retiredDatabaseMutation.ts test:listing-performance",
     "test:prospect-journey": "tsx scripts/retiredDatabaseMutation.ts test:prospect-journey",
     "test:prospect-journey:auth": "tsx scripts/retiredDatabaseMutation.ts test:prospect-journey:auth",
