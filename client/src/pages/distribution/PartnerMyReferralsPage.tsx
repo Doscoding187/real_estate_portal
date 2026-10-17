@@ -24,8 +24,8 @@ const JOURNEY_STAGE_LABELS: Record<(typeof JOURNEY_STAGES)[number], string> = {
   application_submitted: 'Application',
   contract_signed: 'Offer / sale',
   bond_approved: 'Bond',
-  commission_pending: 'Reward pending',
-  commission_paid: 'Paid',
+  commission_pending: 'Referral payout pending',
+  commission_paid: 'Referral payout paid',
 };
 
 function normalizeStage(stage: string | null | undefined) {
@@ -52,9 +52,9 @@ function getNextActionLabel(
   docProgress?: { requiredCount: number; verifiedRequiredCount: number },
 ) {
   const normalized = normalizeStage(stage);
-  if (normalized === 'commission_paid') return 'View paid reward';
-  if (normalized === 'commission_pending') return 'Track reward';
-  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Protect payout';
+  if (normalized === 'commission_paid') return 'View recorded payout';
+  if (normalized === 'commission_pending') return 'Review payout status';
+  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Review deal progress';
   if (normalized === 'application_submitted') {
     if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
       return 'Upload missing docs';
@@ -73,10 +73,10 @@ function formatOwnerRole(ownerRole: string | null | undefined) {
 
 function getPrimaryAction(actionCode: string) {
   if (actionCode === 'track_payout') {
-    return { label: 'Track Reward', route: '/distribution/partner/commissions', variant: 'default' as const };
+    return { label: 'Open Referral Payouts', route: '/distribution/partner/commissions', variant: 'default' as const };
   }
   if (actionCode === 'submit_next_referral') {
-    return { label: 'Submit Buyer', route: '/distribution/partner/submit', variant: 'default' as const };
+    return { label: 'View Referral Intake', route: '/distribution/partner/submit', variant: 'default' as const };
   }
   if (actionCode === 'follow_up_docs') {
     return { label: 'Upload Missing Docs', route: null, variant: 'default' as const };
@@ -149,15 +149,15 @@ export default function PartnerMyReferralsPage() {
             <p className="text-[10px] font-semibold uppercase text-blue-100">Referral tracker</p>
             <h1 className="mt-1 text-[28px] font-semibold">My Buyers</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Track every buyer from submitted lead to qualified sale and paid reward.
+              Follow each submitted buyer referral through its current stage and recorded outcome.
             </p>
           </div>
           <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
             <Button variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit Buyer
+              Referral Intake Status
             </Button>
             <Button variant="conversion" onClick={() => setLocation('/distribution/partner/accelerator')}>
-              Match Buyer
+              View Intake Steps
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
@@ -171,8 +171,8 @@ export default function PartnerMyReferralsPage() {
                 <option value="application_submitted">Application Submitted</option>
                 <option value="contract_signed">Contract Signed</option>
                 <option value="bond_approved">Bond Approved</option>
-                <option value="commission_pending">Commission Pending</option>
-                <option value="commission_paid">Commission Paid</option>
+                <option value="commission_pending">Referral Payout Pending</option>
+                <option value="commission_paid">Referral Payout Paid</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
@@ -189,27 +189,28 @@ export default function PartnerMyReferralsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <WalletCards className="h-4 w-4 text-primary" />
-              Journey to Referral Reward
+              Referral and Payout Progress
             </CardTitle>
             <CardDescription>
-              Each buyer has one current stage, one next action, and one reward state.
+              Each referral has one current stage and next action. A payout status appears when a
+              program payout has been recorded.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Pending</p>
+              <p className="text-xs text-slate-500">Pending payouts</p>
               <p className="text-lg font-semibold text-amber-700">
                 R {Math.round(commissionSummary.pending).toLocaleString('en-ZA')}
               </p>
             </div>
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Approved</p>
+              <p className="text-xs text-slate-500">Approved payouts</p>
               <p className="text-lg font-semibold text-blue-700">
                 R {Math.round(commissionSummary.approved).toLocaleString('en-ZA')}
               </p>
             </div>
             <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Paid</p>
+              <p className="text-xs text-slate-500">Paid payouts</p>
               <p className="text-lg font-semibold text-green-700">
                 R {Math.round(commissionSummary.paid).toLocaleString('en-ZA')}
               </p>
@@ -296,7 +297,7 @@ export default function PartnerMyReferralsPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-xs text-slate-500">
-                    Reward state follows the sale and payout milestones for this buyer.
+                    Any referral payout follows the selected program's recorded terms and milestones.
                   </p>
                   <Button
                     size="sm"

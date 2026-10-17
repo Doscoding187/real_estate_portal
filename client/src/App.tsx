@@ -19,6 +19,7 @@ import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
 import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
 import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
 import { LandPublicLayout } from './components/land/LandPublicLayout';
+import { DistributionPartnerIdentityGate } from '@/components/referral/DistributionPartnerIdentityGate';
 
 // Eager Imports (Critical Path)
 import Home from './pages/Home';
@@ -154,6 +155,9 @@ const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
+);
+const SelectedTeamLeadQueuePage = lazy(
+  () => import('./pages/distribution/SelectedTeamLeadQueuePage'),
 );
 const ManagerDevelopmentOpsPage = lazy(
   () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
@@ -618,6 +622,7 @@ function Router() {
             <Redirect to="/distribution/manager/developments" />
           </Route>
           <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager/lead-queue" component={SelectedTeamLeadQueuePage} />
           <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
           <Route
             path="/distribution/manager/developments/:developmentId"
@@ -629,19 +634,41 @@ function Router() {
             <Redirect to="/distribution/partner/overview" />
           </Route>
           <Route path="/distribution/partner/overview" component={PartnerDashboardPage} />
-          <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
-          <Route
-            path="/distribution/partner/accelerator"
-            component={PartnerReferralAcceleratorPage}
-          />
-          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
-          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
-          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
-          <Route path="/distribution/partner/commissions" component={PartnerCommissionsPage} />
-          <Route
-            path="/distribution/partner/referrals/:dealId"
-            component={PartnerReferralDetailPage}
-          />
+          <Route path="/distribution/partner/developments">
+            <DistributionPartnerIdentityGate>
+              <PartnerDevelopmentsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/accelerator">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralAcceleratorPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/partner/referrals/accelerator">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralAcceleratorPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/submit">
+            <DistributionPartnerIdentityGate>
+              <PartnerSubmitReferralPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/referrals">
+            <DistributionPartnerIdentityGate>
+              <PartnerMyReferralsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/commissions">
+            <DistributionPartnerIdentityGate>
+              <PartnerCommissionsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/referrals/:dealId">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralDetailPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network/login">
             <Redirect to="/login?next=/distribution/partner/developments" />

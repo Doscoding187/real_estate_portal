@@ -8,7 +8,6 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  Upload,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -25,8 +24,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { ReferralIntakePolicyEditor } from './ReferralIntakePolicyEditor';
 
 type DevelopmentRow = {
   developmentId: number;
@@ -43,21 +49,14 @@ type ManagerOption = {
 
 type RequiredDocumentDraft = {
   id?: number;
-  category: 'developer_document' | 'client_required_document';
   documentCode:
     | 'id_document'
     | 'proof_of_address'
     | 'proof_of_income'
     | 'bank_statement'
     | 'pre_approval'
-    | 'signed_offer_to_purchase'
-    | 'sale_agreement'
-    | 'attorney_instruction_letter'
-    | 'transfer_documents'
     | 'custom';
   documentLabel: string;
-  templateFileUrl?: string | null;
-  templateFileName?: string | null;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -79,6 +78,8 @@ type ProgramReadiness = {
     hasActivePrimaryManager: boolean;
     requiredDocsCount: number;
     requiredRequiredDocsCount: number;
+    activeIntakePolicyVersion: number | null;
+    hasActiveIntakePolicy: boolean;
   };
 };
 
@@ -105,11 +106,6 @@ type BrochureConfigDraft = {
   headline: string;
   description: string;
   highlightBulletsText: string;
-  amenityLabelsText: string;
-  heroImageUrl: string;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
 };
 
 type ReadinessCounts = {
@@ -136,7 +132,10 @@ const payoutMilestones = [
   'custom',
 ] as const;
 
-const clientDocumentCodeOptions: Array<{ value: RequiredDocumentDraft['documentCode']; label: string }> = [
+const clientDocumentCodeOptions: Array<{
+  value: RequiredDocumentDraft['documentCode'];
+  label: string;
+}> = [
   { value: 'id_document', label: 'ID Document' },
   { value: 'proof_of_address', label: 'Proof of Address' },
   { value: 'proof_of_income', label: 'Payslips / Proof of Income' },
@@ -145,27 +144,12 @@ const clientDocumentCodeOptions: Array<{ value: RequiredDocumentDraft['documentC
   { value: 'custom', label: 'Custom Client Document' },
 ];
 
-const developerDocumentCodeOptions: Array<{
-  value: RequiredDocumentDraft['documentCode'];
-  label: string;
-}> = [
-  { value: 'signed_offer_to_purchase', label: 'Offer to Purchase' },
-  { value: 'sale_agreement', label: 'Sale Agreement' },
-  { value: 'attorney_instruction_letter', label: 'Attorney Instruction Letter' },
-  { value: 'transfer_documents', label: 'Transfer Documents' },
-  { value: 'custom', label: 'Custom Developer Document' },
-];
-
 const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string> = {
   id_document: 'ID Document',
   proof_of_address: 'Proof of Address',
   proof_of_income: 'Payslips / Proof of Income',
   bank_statement: 'Bank Statement',
   pre_approval: 'Pre-Approval',
-  signed_offer_to_purchase: 'Offer to Purchase',
-  sale_agreement: 'Sale Agreement',
-  attorney_instruction_letter: 'Attorney Instruction Letter',
-  transfer_documents: 'Transfer Documents',
   custom: 'Custom Document',
 };
 
@@ -173,18 +157,24 @@ const documentStarterPacks: Array<{
   id: string;
   label: string;
   description: string;
-  category: RequiredDocumentDraft['category'];
   documents: Array<Pick<RequiredDocumentDraft, 'documentCode' | 'documentLabel' | 'isRequired'>>;
 }> = [
   {
     id: 'bond-buyer',
     label: 'Bond buyer pack',
     description: 'ID, income, bank statement, and pre-approval for financed buyers.',
-    category: 'client_required_document',
     documents: [
       { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
-      { documentCode: 'proof_of_income', documentLabel: 'Latest payslip or proof of income', isRequired: true },
-      { documentCode: 'bank_statement', documentLabel: '3 months bank statements', isRequired: true },
+      {
+        documentCode: 'proof_of_income',
+        documentLabel: 'Latest payslip or proof of income',
+        isRequired: true,
+      },
+      {
+        documentCode: 'bank_statement',
+        documentLabel: '3 months bank statements',
+        isRequired: true,
+      },
       { documentCode: 'pre_approval', documentLabel: 'Bond pre-approval', isRequired: true },
     ],
   },
@@ -192,35 +182,14 @@ const documentStarterPacks: Array<{
     id: 'cash-buyer',
     label: 'Cash buyer pack',
     description: 'Lean checklist for buyers who do not need bond finance.',
-    category: 'client_required_document',
     documents: [
       { documentCode: 'id_document', documentLabel: 'ID Document', isRequired: true },
       { documentCode: 'proof_of_address', documentLabel: 'Proof of address', isRequired: true },
-      { documentCode: 'bank_statement', documentLabel: 'Proof of funds or bank confirmation', isRequired: true },
-    ],
-  },
-  {
-    id: 'developer-application',
-    label: 'Developer application pack',
-    description: 'Developer-specific forms the referrer downloads, gets signed, and re-uploads.',
-    category: 'developer_document',
-    documents: [
-      { documentCode: 'sale_agreement', documentLabel: 'Sale agreement', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'Building contract', isRequired: true },
-      { documentCode: 'custom', documentLabel: 'Price tracker / price schedule', isRequired: true },
-      { documentCode: 'signed_offer_to_purchase', documentLabel: 'Offer to purchase', isRequired: true },
-    ],
-  },
-  {
-    id: 'supporting',
-    label: 'Supporting document pack',
-    description: 'Reference files the referrer can share, but that do not block the application.',
-    category: 'developer_document',
-    documents: [
-      { documentCode: 'custom', documentLabel: 'Unit / house plans', isRequired: false },
-      { documentCode: 'custom', documentLabel: 'Site map', isRequired: false },
-      { documentCode: 'custom', documentLabel: 'Specifications', isRequired: false },
-      { documentCode: 'transfer_documents', documentLabel: 'Transfer and costs guide', isRequired: false },
+      {
+        documentCode: 'bank_statement',
+        documentLabel: 'Proof of funds or bank confirmation',
+        isRequired: true,
+      },
     ],
   },
 ];
@@ -234,6 +203,7 @@ const blockerSectionMap: Record<string, string> = {
   CURRENCY_MISSING: 'section-currency',
   MANAGER_MISSING: 'section-manager',
   REQUIRED_DOCS_MISSING: 'section-client-docs',
+  REFERRAL_INTAKE_POLICY_NOT_PUBLISHED: 'section-intake-policy',
 };
 
 function statusBadge(value: boolean, trueLabel: string, falseLabel: string) {
@@ -273,10 +243,15 @@ function getPrimaryReadinessMessage(readiness?: ProgramReadiness | null) {
   if (status === 'ready_to_enable') {
     return 'Ready to enable referrals.';
   }
-  return readiness?.blockers[0]?.message || 'Complete onboarding configuration before enabling referrals.';
+  return (
+    readiness?.blockers[0]?.message ||
+    'Complete onboarding configuration before enabling referrals.'
+  );
 }
 
-function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>) {
+function getReadinessCounts(
+  readinessByDevelopmentId: Record<number, ProgramReadiness | null | undefined>,
+) {
   return Object.values(readinessByDevelopmentId).reduce<ReadinessCounts>(
     (counts, readiness) => {
       if (!readiness) {
@@ -303,15 +278,6 @@ function getReadinessCounts(readinessByDevelopmentId: Record<number, ProgramRead
   );
 }
 
-function toFileBaseName(filename: string | null | undefined) {
-  if (!filename) return '';
-  const trimmed = String(filename).trim();
-  if (!trimmed) return '';
-  const withoutPath = trimmed.split(/[\\/]/).pop() || trimmed;
-  const withoutExt = withoutPath.replace(/\.[^.]+$/, '');
-  return withoutExt.trim();
-}
-
 function splitLines(value: string) {
   return value
     .split(/\r?\n/)
@@ -333,11 +299,6 @@ function getEmptyBrochureConfig(): BrochureConfigDraft {
     headline: '',
     description: '',
     highlightBulletsText: '',
-    amenityLabelsText: '',
-    heroImageUrl: '',
-    contactName: '',
-    contactPhone: '',
-    contactEmail: '',
   };
 }
 
@@ -353,7 +314,7 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
   }
 
   const { state } = readiness;
-  const hasCommission =
+  const hasPayoutValue =
     state.commissionModel === 'flat_percentage'
       ? Boolean(state.defaultCommissionPercent && state.defaultCommissionPercent > 0)
       : state.commissionModel === 'flat_amount'
@@ -365,11 +326,19 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
       {statusBadge(state.programExists, 'Setup: Created', 'Setup: Missing')}
       {statusBadge(state.isActive, 'Setup: Active', 'Setup: Paused')}
       {statusBadge(state.isReferralEnabled, 'Accepting referrals: On', 'Accepting referrals: Off')}
-      {statusBadge(hasCommission, 'Referral reward: Set', 'Referral reward: Missing')}
-      {statusBadge(Boolean(state.payoutMilestone), 'Payout trigger: Set', 'Payout trigger: Missing')}
+      {statusBadge(hasPayoutValue, 'Referral payout value: Set', 'Referral payout value: Missing')}
+      {statusBadge(
+        Boolean(state.payoutMilestone),
+        'Payout trigger: Set',
+        'Payout trigger: Missing',
+      )}
       {statusBadge(Boolean(state.currencyCode), 'Payout currency: Set', 'Payout currency: Missing')}
       {statusBadge(state.hasActivePrimaryManager, 'Manager: Assigned', 'Manager: Missing')}
-      {statusBadge(state.requiredRequiredDocsCount > 0, 'Application docs: Ready', 'Application docs: Missing')}
+      {statusBadge(
+        state.requiredRequiredDocsCount > 0,
+        'Application docs: Ready',
+        'Application docs: Missing',
+      )}
     </div>
   );
 }
@@ -386,7 +355,7 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
   }
 
   const { state } = readiness;
-  const hasReward =
+  const hasPayoutValue =
     state.commissionModel === 'flat_percentage'
       ? Boolean(state.defaultCommissionPercent && state.defaultCommissionPercent > 0)
       : state.commissionModel === 'flat_amount'
@@ -404,19 +373,19 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
       help: 'Paused programs cannot accept buyer submissions.',
     },
     {
-      label: 'Set referral reward',
-      done: hasReward,
-      help: 'Referrers need to know the reward before submitting buyers.',
+      label: 'Set referral payout value',
+      done: hasPayoutValue,
+      help: 'Document eligibility, calculation basis for percentages, and payout timing in program terms; this field stores only the value.',
     },
     {
       label: 'Choose payout trigger',
       done: Boolean(state.payoutMilestone),
-      help: 'This tells referrers when reward progress moves forward.',
+      help: 'This tells referrers which configured event is associated with payout progress.',
     },
     {
       label: 'Set payout currency',
       done: Boolean(state.currencyCode),
-      help: 'Rewards must show a clear currency.',
+      help: 'Referral payouts must show a clear currency.',
     },
     {
       label: 'Assign primary manager',
@@ -446,7 +415,13 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
             )}
             <div>
-              <p className={item.done ? 'text-sm font-medium text-emerald-900' : 'text-sm font-medium text-amber-950'}>
+              <p
+                className={
+                  item.done
+                    ? 'text-sm font-medium text-emerald-900'
+                    : 'text-sm font-medium text-amber-950'
+                }
+              >
                 {item.label}
               </p>
               <p className="text-xs text-slate-600">{item.help}</p>
@@ -497,11 +472,11 @@ function DevelopmentProgramConfigPanel({
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
   const setBrochureConfigMutation =
     trpc.distribution.admin.setDevelopmentBrochureConfig.useMutation();
-  const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
+  const setReferralEnabledMutation =
+    trpc.distribution.admin.setProgramReferralEnabled.useMutation();
   const onboardDevelopmentMutation =
     trpc.distribution.admin.onboardDevelopmentToPartnerNetwork.useMutation();
   const setBrandPresetMutation = trpc.distribution.admin.setBrandOnboardingPreset.useMutation();
-  const presignUploadMutation = trpc.upload.presign.useMutation();
 
   const [commissionModel, setCommissionModel] = useState<'flat_percentage' | 'flat_amount'>(
     development.program?.commissionModel === 'fixed_amount' ? 'flat_amount' : 'flat_percentage',
@@ -518,11 +493,9 @@ function DevelopmentProgramConfigPanel({
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
-  const [brochureConfig, setBrochureConfig] = useState<BrochureConfigDraft>(
-    getEmptyBrochureConfig,
-  );
+  const [brochureConfig, setBrochureConfig] = useState<BrochureConfigDraft>(getEmptyBrochureConfig);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
-  const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
+  const [isPolicyEditorOpen, setIsPolicyEditorOpen] = useState(false);
 
   const applyPresetToForm = useCallback((preset: BrandOnboardingPreset) => {
     setCommissionModel(preset.commissionModel);
@@ -537,9 +510,7 @@ function DevelopmentProgramConfigPanel({
     setPayoutMilestoneNotes(preset.payoutMilestoneNotes || '');
     setCurrencyCode(String(preset.currencyCode || 'ZAR'));
     setIsActive(Boolean(preset.isActive));
-    setPrimaryManagerUserId(
-      preset.primaryManagerUserId ? String(preset.primaryManagerUserId) : '',
-    );
+    setPrimaryManagerUserId(preset.primaryManagerUserId ? String(preset.primaryManagerUserId) : '');
     setDocuments(
       (preset.documents || []).map(document => ({
         ...document,
@@ -590,15 +561,8 @@ function DevelopmentProgramConfigPanel({
       .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
       .map((document: any) => ({
         id: Number(document.id),
-        category: (
-          document.category === 'developer_document'
-            ? 'developer_document'
-            : 'client_required_document'
-        ) as RequiredDocumentDraft['category'],
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
-        templateFileUrl: String(document.templateFileUrl || '') || null,
-        templateFileName: String(document.templateFileName || '') || null,
         isRequired: Boolean(document.isRequired),
         isActive: Boolean(document.isActive),
         sortOrder: Number(document.sortOrder || 0),
@@ -612,11 +576,6 @@ function DevelopmentProgramConfigPanel({
       headline: String(config.headline || ''),
       description: String(config.description || ''),
       highlightBulletsText: joinLines(config.highlightBullets),
-      amenityLabelsText: joinLines(config.amenityLabels),
-      heroImageUrl: String(config.heroImageUrl || ''),
-      contactName: String(config.contactName || ''),
-      contactPhone: String(config.contactPhone || ''),
-      contactEmail: String(config.contactEmail || ''),
     });
   }, [accessQuery.data, development.developmentId]);
 
@@ -637,14 +596,13 @@ function DevelopmentProgramConfigPanel({
     isApplyingTemplate;
   const readinessStatus = getAdminReadinessStatus(readinessQuery.data as ProgramReadiness | null);
 
-  function getDocumentCodeOptions(category: RequiredDocumentDraft['category']) {
-    return category === 'developer_document'
-      ? developerDocumentCodeOptions
-      : clientDocumentCodeOptions;
-  }
-
-  function updateDocumentAtIndex(index: number, updater: (document: RequiredDocumentDraft) => RequiredDocumentDraft) {
-    setDocuments(current => current.map((item, itemIndex) => (itemIndex === index ? updater(item) : item)));
+  function updateDocumentAtIndex(
+    index: number,
+    updater: (document: RequiredDocumentDraft) => RequiredDocumentDraft,
+  ) {
+    setDocuments(current =>
+      current.map((item, itemIndex) => (itemIndex === index ? updater(item) : item)),
+    );
   }
 
   function swapDocumentOrder(fromIndex: number, toIndex: number) {
@@ -666,31 +624,12 @@ function DevelopmentProgramConfigPanel({
     );
   }
 
-  function addDocument(category: RequiredDocumentDraft['category'], isRequired = true) {
+  function addDocument(isRequired = true) {
     setDocuments(current => [
       ...current,
       {
-        category,
         documentCode: 'custom',
         documentLabel: '',
-        templateFileUrl: null,
-        templateFileName: null,
-        isRequired,
-        isActive: true,
-        sortOrder: current.length,
-      },
-    ]);
-  }
-
-  function addDeveloperDocument(label: string, isRequired: boolean) {
-    setDocuments(current => [
-      ...current,
-      {
-        category: 'developer_document',
-        documentCode: 'custom',
-        documentLabel: label,
-        templateFileUrl: null,
-        templateFileName: null,
         isRequired,
         isActive: true,
         sortOrder: current.length,
@@ -702,93 +641,28 @@ function DevelopmentProgramConfigPanel({
     const pack = documentStarterPacks.find(item => item.id === packId);
     if (!pack) return;
 
-    setDocuments(current => {
-      const retained = current.filter(document => document.category !== pack.category);
-      const nextPackDocuments = pack.documents.map((document, index) => ({
-        id: undefined,
-        category: pack.category,
-        documentCode: document.documentCode,
-        documentLabel: document.documentLabel,
-        templateFileUrl: null,
-        templateFileName: null,
-        isRequired: document.isRequired,
-        isActive: true,
-        sortOrder: retained.length + index,
-      }));
-
-      return [...retained, ...nextPackDocuments].map((document, index) => ({
+    setDocuments(
+      pack.documents.map((document, index) => ({
         ...document,
+        isActive: true,
         sortOrder: index,
-      }));
-    });
+      })),
+    );
     toast.success(`${pack.label} applied`);
   }
 
   function resolveDocumentLabel(document: RequiredDocumentDraft) {
     const typedLabel = document.documentLabel.trim();
-    if (typedLabel) return typedLabel;
-
-    if (document.category === 'developer_document') {
-      const fileLabel = toFileBaseName(document.templateFileName);
-      if (fileLabel) return fileLabel;
-    }
-
-    return documentCodeLabelMap[document.documentCode] || 'Custom Document';
-  }
-
-  async function handleSourceDocumentUpload(index: number, file: File | null) {
-    if (!file) return;
-    setUploadingDocumentIndex(index);
-    try {
-      const { url, publicUrl } = await presignUploadMutation.mutateAsync({
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-        propertyId: `distribution-development-${development.developmentId}`,
-      });
-
-      const uploadResponse = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Document upload failed (${uploadResponse.status}).`);
-      }
-
-      updateDocumentAtIndex(index, item => ({
-        ...item,
-        templateFileUrl: publicUrl,
-        templateFileName: file.name,
-        documentLabel: item.documentLabel.trim() || toFileBaseName(file.name),
-      }));
-      toast.success('Source document uploaded.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to upload source document.');
-    } finally {
-      setUploadingDocumentIndex(null);
-    }
+    return typedLabel || documentCodeLabelMap[document.documentCode] || 'Custom Document';
   }
 
   function renderDocumentSection(input: {
     title: string;
     description: string;
-    category: RequiredDocumentDraft['category'];
     rows: Array<{ document: RequiredDocumentDraft; index: number }>;
     addLabel: string;
     sectionId: string;
-    role: 'developer_application' | 'supporting' | 'buyer_application';
   }) {
-    const packs = documentStarterPacks.filter(pack => {
-      if (input.role === 'developer_application') return pack.id === 'developer-application';
-      if (input.role === 'supporting') return pack.id === 'supporting';
-      return pack.category === input.category;
-    });
-    const isSupportingSection = input.role === 'supporting';
-    const isDeveloperApplicationSection = input.role === 'developer_application';
-
     return (
       <Card id={input.sectionId}>
         <CardHeader>
@@ -796,76 +670,23 @@ function DevelopmentProgramConfigPanel({
           <CardDescription>{input.description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {packs.length ? (
-            <div className="grid gap-2 md:grid-cols-2">
-              {packs.map(pack => (
-                <div key={pack.id} className="rounded border border-blue-100 bg-blue-50/60 p-3">
-                  <p className="text-sm font-medium text-slate-900">{pack.label}</p>
-                  <p className="mt-1 text-xs text-slate-600">{pack.description}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => applyDocumentStarterPack(pack.id)}
-                  >
-                    Use pack
-                  </Button>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {isDeveloperApplicationSection ? (
-            <div className="rounded border border-dashed border-slate-300 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Common developer application forms
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Add custom forms with the developer's own terminology. These are required and will
-                appear on the deal checklist for signing and re-upload.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {['Sale agreement', 'Building contract', 'Price tracker', 'House plan acknowledgement'].map(label => (
-                  <Button
-                    key={label}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addDeveloperDocument(label, true)}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    {label}
-                  </Button>
-                ))}
+          <div className="grid gap-2 md:grid-cols-2">
+            {documentStarterPacks.map(pack => (
+              <div key={pack.id} className="rounded border border-blue-100 bg-blue-50/60 p-3">
+                <p className="text-sm font-medium text-slate-900">{pack.label}</p>
+                <p className="mt-1 text-xs text-slate-600">{pack.description}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => applyDocumentStarterPack(pack.id)}
+                >
+                  Use pack
+                </Button>
               </div>
-            </div>
-          ) : null}
-
-          {isSupportingSection ? (
-            <div className="rounded border border-dashed border-slate-300 bg-slate-50 p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Common supporting files
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                Add the files each development normally needs, then upload the actual plan, map,
-                or specification PDF per row.
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {['Unit / house plans', 'Site map', 'Specifications', 'Price list'].map(label => (
-                  <Button
-                    key={label}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addDeveloperDocument(label, false)}
-                  >
-                    <Plus className="mr-1 h-3.5 w-3.5" />
-                    {label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+            ))}
+          </div>
 
           {input.rows.map(({ document, index }, rowIndex) => (
             <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
@@ -883,7 +704,7 @@ function DevelopmentProgramConfigPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {getDocumentCodeOptions(input.category).map(option => (
+                    {clientDocumentCodeOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -900,24 +721,15 @@ function DevelopmentProgramConfigPanel({
                       documentLabel: event.target.value,
                     }))
                   }
-                  placeholder={
-                    input.category === 'developer_document' && document.documentCode === 'custom'
-                      ? 'Custom document name'
-                      : 'Document title'
-                  }
+                  placeholder="Referral-process document"
                 />
 
                 <div className="flex items-center gap-2 rounded border px-2 text-xs">
-                  <span>{isSupportingSection ? 'Shareable' : 'Required'}</span>
+                  <span>Required</span>
                   <Switch
-                    checked={isSupportingSection ? document.isActive : document.isRequired}
-                    disabled={isDeveloperApplicationSection}
+                    checked={document.isRequired}
                     onCheckedChange={checked =>
-                      updateDocumentAtIndex(index, item =>
-                        isSupportingSection
-                          ? { ...item, isActive: checked }
-                          : { ...item, isRequired: checked },
-                      )
+                      updateDocumentAtIndex(index, item => ({ ...item, isRequired: checked }))
                     }
                   />
                 </div>
@@ -926,7 +738,9 @@ function DevelopmentProgramConfigPanel({
                   <Button
                     size="icon"
                     variant="outline"
-                    onClick={() => swapDocumentOrder(index, input.rows[rowIndex - 1]?.index ?? index)}
+                    onClick={() =>
+                      swapDocumentOrder(index, input.rows[rowIndex - 1]?.index ?? index)
+                    }
                     disabled={rowIndex === 0}
                   >
                     <ArrowUp className="h-3.5 w-3.5" />
@@ -934,7 +748,9 @@ function DevelopmentProgramConfigPanel({
                   <Button
                     size="icon"
                     variant="outline"
-                    onClick={() => swapDocumentOrder(index, input.rows[rowIndex + 1]?.index ?? index)}
+                    onClick={() =>
+                      swapDocumentOrder(index, input.rows[rowIndex + 1]?.index ?? index)
+                    }
                     disabled={rowIndex === input.rows.length - 1}
                   >
                     <ArrowDown className="h-3.5 w-3.5" />
@@ -945,86 +761,16 @@ function DevelopmentProgramConfigPanel({
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              {input.category === 'developer_document' ? (
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-medium text-slate-700">
-                      {isSupportingSection ? 'Upload supporting file' : 'Upload application template'}
-                    </label>
-                    <div className="rounded border border-slate-200 bg-slate-50 p-2">
-                      <p className="mb-2 text-xs text-slate-600">
-                        {isSupportingSection
-                          ? 'Use this for development-specific files like plans, site maps, specifications, price lists, or terms.'
-                          : 'Use this for developer-specific forms the referrer must download, get signed, and re-upload.'}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                      <Input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                        disabled={isSaving || uploadingDocumentIndex === index}
-                        onChange={event => {
-                          const file = event.target.files?.[0] || null;
-                          void handleSourceDocumentUpload(index, file);
-                          event.currentTarget.value = '';
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={isSaving || uploadingDocumentIndex === index}
-                        onClick={() =>
-                          updateDocumentAtIndex(index, item => ({
-                            ...item,
-                            templateFileUrl: null,
-                            templateFileName: null,
-                          }))
-                        }
-                      >
-                        Clear
-                      </Button>
-                      {uploadingDocumentIndex === index ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-slate-600">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Uploading...
-                        </span>
-                      ) : null}
-                      </div>
-                    </div>
-                    {document.templateFileUrl ? (
-                      <a
-                        href={document.templateFileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                      >
-                        <Upload className="h-3 w-3" />
-                        {isSupportingSection ? 'Supporting file ready' : 'Application template ready'}
-                        {document.templateFileName ? ` (${document.templateFileName})` : ''}
-                      </a>
-                    ) : (
-                      <p className="text-xs text-slate-500">
-                        {isSupportingSection
-                          ? 'No supporting file uploaded yet. The label can still be saved as a placeholder.'
-                          : 'No application template uploaded yet. Upload the developer-specific form before expecting referrers to download it.'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : null}
             </div>
           ))}
 
           {!input.rows.length ? (
             <div className="rounded border border-dashed p-3 text-sm text-slate-500">
-              No {input.category === 'developer_document' ? 'developer' : 'client'} documents configured yet.
+              No referral-process documents configured yet.
             </div>
           ) : null}
 
-          <Button
-            variant="outline"
-            onClick={() => addDocument(input.category, !isSupportingSection)}
-          >
+          <Button variant="outline" onClick={() => addDocument()}>
             <Plus className="mr-2 h-4 w-4" />
             {input.addLabel}
           </Button>
@@ -1060,17 +806,8 @@ function DevelopmentProgramConfigPanel({
       developmentId: targetDevelopmentId,
       documents: documents.map((document, index) => ({
         id: preserveIds ? document.id : undefined,
-        category: document.category,
         documentCode: document.documentCode,
         documentLabel: resolveDocumentLabel(document),
-        templateFileUrl:
-          document.category === 'developer_document'
-            ? document.templateFileUrl?.trim() || null
-            : null,
-        templateFileName:
-          document.category === 'developer_document'
-            ? document.templateFileName?.trim() || null
-            : null,
         isRequired: document.isRequired,
         sortOrder: index,
         isActive: document.isActive,
@@ -1097,17 +834,8 @@ function DevelopmentProgramConfigPanel({
       isActive,
       primaryManagerUserId: primaryManagerUserId ? Number(primaryManagerUserId) : null,
       documents: documents.map((document, index) => ({
-        category: document.category,
         documentCode: document.documentCode,
         documentLabel: resolveDocumentLabel(document),
-        templateFileUrl:
-          document.category === 'developer_document'
-            ? document.templateFileUrl?.trim() || null
-            : null,
-        templateFileName:
-          document.category === 'developer_document'
-            ? document.templateFileName?.trim() || null
-            : null,
         isRequired: document.isRequired,
         isActive: document.isActive,
         sortOrder: index,
@@ -1120,11 +848,6 @@ function DevelopmentProgramConfigPanel({
       headline: brochureConfig.headline.trim() || null,
       description: brochureConfig.description.trim() || null,
       highlightBullets: splitLines(brochureConfig.highlightBulletsText).slice(0, 8),
-      amenityLabels: splitLines(brochureConfig.amenityLabelsText).slice(0, 8),
-      heroImageUrl: brochureConfig.heroImageUrl.trim() || null,
-      contactName: brochureConfig.contactName.trim() || null,
-      contactPhone: brochureConfig.contactPhone.trim() || null,
-      contactEmail: brochureConfig.contactEmail.trim() || null,
     };
   }
 
@@ -1160,7 +883,9 @@ function DevelopmentProgramConfigPanel({
     }
 
     try {
-      await setDocsMutation.mutateAsync(buildDocumentsInput(targetDevelopmentId, preserveDocumentIds));
+      await setDocsMutation.mutateAsync(
+        buildDocumentsInput(targetDevelopmentId, preserveDocumentIds),
+      );
     } catch (error: any) {
       if (isRequiredDocumentSchemaNotReadyError(error)) {
         return { documentsSaved: false };
@@ -1198,7 +923,9 @@ function DevelopmentProgramConfigPanel({
       Promise.resolve(onMutationSuccess([development.developmentId])),
     ]);
     if (saveResult.documentsSaved) {
-      toast.success(keepReferralsLive ? 'Live referral setup saved' : 'Referral setup saved as draft');
+      toast.success(
+        keepReferralsLive ? 'Live referral setup saved' : 'Referral setup saved as draft',
+      );
     } else {
       toast.error(
         'Core setup saved, but document checklist was not saved. Run latest distribution DB migrations and retry Save setup.',
@@ -1208,7 +935,11 @@ function DevelopmentProgramConfigPanel({
 
   async function handleEnableReferrals() {
     try {
-      const saveResult = await saveConfigurationForDevelopment(development.developmentId, false, true);
+      const saveResult = await saveConfigurationForDevelopment(
+        development.developmentId,
+        false,
+        true,
+      );
       await setReferralEnabledMutation.mutateAsync({
         developmentId: development.developmentId,
         enabled: true,
@@ -1228,7 +959,9 @@ function DevelopmentProgramConfigPanel({
         );
       }
     } catch (error: any) {
-      toast.error(error?.message || 'Save setup first, then enable referrals when all blockers are clear');
+      toast.error(
+        error?.message || 'Save setup first, then enable referrals when all blockers are clear',
+      );
     }
   }
 
@@ -1333,7 +1066,9 @@ function DevelopmentProgramConfigPanel({
               Load Brand Preset
             </Button>
             <Button variant="outline" onClick={handleSaveBrandPreset} disabled={isSaving}>
-              {setBrandPresetMutation.isPending ? 'Saving Preset...' : 'Save Current as Brand Preset'}
+              {setBrandPresetMutation.isPending
+                ? 'Saving Preset...'
+                : 'Save Current as Brand Preset'}
             </Button>
           </div>
         </CardContent>
@@ -1395,30 +1130,73 @@ function DevelopmentProgramConfigPanel({
         </CardContent>
       </Card>
 
+      <Card id="section-intake-policy">
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle className="text-base">Referral Intake Policy</CardTitle>
+            <CardDescription>
+              Configure versioned sharing documents, named recipients, evidence rules, retention,
+              and the partner’s guided process for this development.
+            </CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setIsPolicyEditorOpen(current => !current)}
+            disabled={!readinessQuery.data?.state.programExists}
+          >
+            {isPolicyEditorOpen ? 'Close policy setup' : 'Configure policy'}
+          </Button>
+        </CardHeader>
+        {isPolicyEditorOpen ? (
+          <CardContent>
+            {readinessQuery.data?.state.programExists ? (
+              <ReferralIntakePolicyEditor
+                developmentId={development.developmentId}
+                onChanged={() => onMutationSuccess([development.developmentId])}
+              />
+            ) : (
+              <p className="text-sm text-slate-600">
+                Save the partner program setup before creating its intake policy.
+              </p>
+            )}
+          </CardContent>
+        ) : (
+          <CardContent className="pt-0">
+            <p className="text-xs text-slate-600">
+              {readinessQuery.data?.state.hasActiveIntakePolicy
+                ? `Published policy version ${readinessQuery.data.state.activeIntakePolicyVersion}. Partner intake opens when the private evidence storage and the rest of this program setup are ready.`
+                : 'No policy version is published yet. Referral intake remains paused.'}
+            </p>
+          </CardContent>
+        )}
+      </Card>
+
       <Card id="section-program">
         <CardHeader>
-          <CardTitle className="text-base">Referral Reward & Payout</CardTitle>
+          <CardTitle className="text-base">Referral Payout Terms</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div id="section-commission" className="grid gap-2 md:grid-cols-2">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Referral reward type</p>
+              <p className="text-xs font-medium text-slate-700">Referral payout type</p>
               <Select
                 value={commissionModel}
-                onValueChange={value => setCommissionModel(value as 'flat_percentage' | 'flat_amount')}
+                onValueChange={value =>
+                  setCommissionModel(value as 'flat_percentage' | 'flat_amount')
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="flat_percentage">Percentage of sale</SelectItem>
+                  <SelectItem value="flat_percentage">Percentage-based</SelectItem>
                   <SelectItem value="flat_amount">Fixed amount</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-medium text-slate-700">
-                {commissionModel === 'flat_percentage' ? 'Reward percentage' : 'Reward amount'}
+                {commissionModel === 'flat_percentage' ? 'Payout percentage' : 'Payout amount'}
               </p>
               <Input
                 type="number"
@@ -1434,13 +1212,22 @@ function DevelopmentProgramConfigPanel({
                     : setDefaultCommissionAmount(event.target.value)
                 }
               />
+              {commissionModel === 'flat_percentage' ? (
+                <p className="text-[11px] text-amber-700">
+                  The calculation basis is not captured here. Document the agreed basis in the
+                  program terms before enabling this payout model.
+                </p>
+              ) : null}
             </div>
           </div>
 
           <div className="grid gap-2 md:grid-cols-2">
             <div className="space-y-1">
               <p className="text-xs font-medium text-slate-700">Who can submit buyers?</p>
-              <Select value={tierAccessPolicy} onValueChange={value => setTierAccessPolicy(value as any)}>
+              <Select
+                value={tierAccessPolicy}
+                onValueChange={value => setTierAccessPolicy(value as any)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1453,7 +1240,10 @@ function DevelopmentProgramConfigPanel({
             </div>
             <div className="space-y-1" id="section-payout">
               <p className="text-xs font-medium text-slate-700">When does payout progress?</p>
-              <Select value={payoutMilestone} onValueChange={value => setPayoutMilestone(value as any)}>
+              <Select
+                value={payoutMilestone}
+                onValueChange={value => setPayoutMilestone(value as any)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -1498,39 +1288,27 @@ function DevelopmentProgramConfigPanel({
 
       <Card id="section-brochure">
         <CardHeader>
-          <CardTitle className="text-base">Buyer Brochure</CardTitle>
+          <CardTitle className="text-base">Program Promotion</CardTitle>
           <CardDescription>
-            Control the buyer-facing brochure copy for this development. Empty fields fall back to the
-            published development content.
+            Add Distribution-specific promotional copy. Development facts, images, contacts, and
+            partner-shared resources are managed by the Developer Engine.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Brochure headline</p>
-              <Input
-                value={brochureConfig.headline}
-                onChange={event =>
-                  setBrochureConfig(current => ({ ...current, headline: event.target.value }))
-                }
-                maxLength={120}
-                placeholder={development.developmentName}
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Hero image URL</p>
-              <Input
-                value={brochureConfig.heroImageUrl}
-                onChange={event =>
-                  setBrochureConfig(current => ({ ...current, heroImageUrl: event.target.value }))
-                }
-                placeholder="Use development hero image"
-              />
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-700">Promotion headline</p>
+            <Input
+              value={brochureConfig.headline}
+              onChange={event =>
+                setBrochureConfig(current => ({ ...current, headline: event.target.value }))
+              }
+              maxLength={120}
+              placeholder="Optional partner-program headline"
+            />
           </div>
 
           <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-700">Brochure description</p>
+            <p className="text-xs font-medium text-slate-700">Promotional copy</p>
             <Textarea
               value={brochureConfig.description}
               onChange={event =>
@@ -1538,77 +1316,24 @@ function DevelopmentProgramConfigPanel({
               }
               maxLength={900}
               rows={4}
-              placeholder="Short buyer-focused introduction for this development"
+              placeholder="Optional copy about this Distribution program"
             />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Buyer highlights</p>
-              <Textarea
-                value={brochureConfig.highlightBulletsText}
-                onChange={event =>
-                  setBrochureConfig(current => ({
-                    ...current,
-                    highlightBulletsText: event.target.value,
-                  }))
-                }
-                rows={6}
-                placeholder={'One highlight per line\nClose to schools\nModern finishes\nSecure estate access'}
-              />
-              <p className="text-[11px] text-slate-500">Up to 8 lines appear in the brochure.</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Amenity labels</p>
-              <Textarea
-                value={brochureConfig.amenityLabelsText}
-                onChange={event =>
-                  setBrochureConfig(current => ({
-                    ...current,
-                    amenityLabelsText: event.target.value,
-                  }))
-                }
-                rows={6}
-                placeholder={'One amenity per line\nKids play parks\nSolar backup\nEasy highway access'}
-              />
-              <p className="text-[11px] text-slate-500">Used in the icon row near the brochure footer.</p>
-            </div>
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Contact name</p>
-              <Input
-                value={brochureConfig.contactName}
-                onChange={event =>
-                  setBrochureConfig(current => ({ ...current, contactName: event.target.value }))
-                }
-                maxLength={120}
-                placeholder="Sales"
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Contact phone</p>
-              <Input
-                value={brochureConfig.contactPhone}
-                onChange={event =>
-                  setBrochureConfig(current => ({ ...current, contactPhone: event.target.value }))
-                }
-                maxLength={50}
-                placeholder="On request"
-              />
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-slate-700">Contact email</p>
-              <Input
-                value={brochureConfig.contactEmail}
-                onChange={event =>
-                  setBrochureConfig(current => ({ ...current, contactEmail: event.target.value }))
-                }
-                maxLength={320}
-                placeholder="Use brand public email"
-              />
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-slate-700">Program highlights</p>
+            <Textarea
+              value={brochureConfig.highlightBulletsText}
+              onChange={event =>
+                setBrochureConfig(current => ({
+                  ...current,
+                  highlightBulletsText: event.target.value,
+                }))
+              }
+              rows={6}
+              placeholder={'One program message per line\nPartner support\nClear referral steps'}
+            />
+            <p className="text-[11px] text-slate-500">Up to 8 promotional points.</p>
           </div>
         </CardContent>
       </Card>
@@ -1640,42 +1365,12 @@ function DevelopmentProgramConfigPanel({
       </Card>
 
       {renderDocumentSection({
-        title: 'Development Application Documents',
+        title: 'Referral Process Documents',
         description:
-          'Required developer-specific forms that affect the deal application, such as sale agreements, building contracts, price trackers, or house plan acknowledgements.',
-        category: 'developer_document',
-        rows: documents
-          .map((document, index) => ({ document, index }))
-          .filter(item => item.document.category === 'developer_document' && item.document.isRequired),
-        addLabel: 'Add Application Document',
-        sectionId: 'section-developer-docs',
-        role: 'developer_application',
-      })}
-
-      {renderDocumentSection({
-        title: 'Supporting Documents',
-        description:
-          'Optional reference files referrers can download or share with buyers. These do not block application progress.',
-        category: 'developer_document',
-        rows: documents
-          .map((document, index) => ({ document, index }))
-          .filter(item => item.document.category === 'developer_document' && !item.document.isRequired),
-        addLabel: 'Add Supporting File',
-        sectionId: 'section-supporting-docs',
-        role: 'supporting',
-      })}
-
-      {renderDocumentSection({
-        title: 'Buyer Application Documents',
-        description:
-          'Buyers must provide these documents before the referral can move cleanly through qualification.',
-        category: 'client_required_document',
-        rows: documents
-          .map((document, index) => ({ document, index }))
-          .filter(item => item.document.category === 'client_required_document'),
-        addLabel: 'Add Client Document',
+          'Set Distribution-owned documents needed for referral qualification. Development facts and sales collateral remain in the Developer Engine.',
+        rows: documents.map((document, index) => ({ document, index })),
+        addLabel: 'Add Process Document',
         sectionId: 'section-client-docs',
-        role: 'buyer_application',
       })}
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
@@ -1689,7 +1384,11 @@ function DevelopmentProgramConfigPanel({
           </p>
         ) : null}
         {otherDevelopments.length ? (
-          <Button variant="outline" onClick={handleApplyTemplateToOtherDevelopments} disabled={isSaving}>
+          <Button
+            variant="outline"
+            onClick={handleApplyTemplateToOtherDevelopments}
+            disabled={isSaving}
+          >
             {isApplyingTemplate
               ? 'Applying Defaults...'
               : `Apply Current Setup to Other ${otherDevelopments.length} Development${
@@ -1736,8 +1435,11 @@ function DevelopmentOnboardingRow({
   const readinessQuery = trpc.distribution.admin.getProgramReadiness.useQuery({
     developmentId: development.developmentId,
   });
-  const setReferralEnabledMutation = trpc.distribution.admin.setProgramReferralEnabled.useMutation();
-  const [inlineBlockers, setInlineBlockers] = useState<Array<{ code: string; message: string }>>([]);
+  const setReferralEnabledMutation =
+    trpc.distribution.admin.setProgramReferralEnabled.useMutation();
+  const [inlineBlockers, setInlineBlockers] = useState<Array<{ code: string; message: string }>>(
+    [],
+  );
   const isReadinessLoading = readinessQuery.isLoading && !readinessQuery.data;
 
   const isReferralEnabled = Boolean(readinessQuery.data?.state.isReferralEnabled);
@@ -1811,7 +1513,9 @@ function DevelopmentOnboardingRow({
   }
 
   return (
-    <div className={`rounded border p-3 ${isSelected ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200'}`}>
+    <div
+      className={`rounded border p-3 ${isSelected ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200'}`}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="font-medium">{development.developmentName}</p>
@@ -1839,9 +1543,7 @@ function DevelopmentOnboardingRow({
 
       {isSelected ? (
         <>
-          <div
-            className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}
-          >
+          <div className={`mt-2 rounded border p-2 text-xs ${statusClassName}`}>
             <p className="font-medium">{statusLabel}</p>
             <p className="mt-1">{primaryMessage}</p>
             {!isReadinessLoading && readinessStatus !== 'live' && blockers.length ? (
@@ -1884,7 +1586,12 @@ function DevelopmentOnboardingRow({
                 : primaryMessage}
           </span>
           {!isReadinessLoading && blockerCount > 0 ? (
-            <Button size="sm" variant="ghost" className="h-6 px-2 text-[11px]" onClick={onConfigure}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 px-2 text-[11px]"
+              onClick={onConfigure}
+            >
               Open setup
             </Button>
           ) : null}
@@ -2044,7 +1751,8 @@ export function PartnerDevelopmentOnboardingDrawer({
                 <CardHeader>
                   <CardTitle className="text-base">Development Referral Setup</CardTitle>
                   <CardDescription>
-                    Work through each development, resolve setup blockers, then turn on buyer referrals.
+                    Work through each development, resolve setup blockers, then turn on buyer
+                    referrals.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -2064,9 +1772,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                       <p className="mt-1 text-2xl font-semibold text-emerald-900">
                         {readinessCounts.live}
                       </p>
-                      <p className="text-[11px] text-emerald-700">
-                        Accepting buyer referrals now
-                      </p>
+                      <p className="text-[11px] text-emerald-700">Accepting buyer referrals now</p>
                     </div>
                     <div className="rounded border bg-amber-50 p-3">
                       <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
@@ -2091,7 +1797,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                       key={row.developmentId}
                       development={row}
                       isSelected={selectedDevelopmentId === row.developmentId}
-                  onConfigure={() => {
+                      onConfigure={() => {
                         setSelectedDevelopmentId(row.developmentId);
                         setFocusSection(null);
                       }}
@@ -2116,8 +1822,7 @@ export function PartnerDevelopmentOnboardingDrawer({
                         </CardTitle>
                         <CardDescription>
                           {selectedDevelopment.city || 'Unknown city'},{' '}
-                          {selectedDevelopment.province || 'Unknown province'}.
-                          {` `}
+                          {selectedDevelopment.province || 'Unknown province'}.{` `}
                           Save this development directly, or apply its onboarding defaults to the
                           other developments in this brand.
                         </CardDescription>

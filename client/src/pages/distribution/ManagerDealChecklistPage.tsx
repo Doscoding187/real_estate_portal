@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
-import { Loader2 } from 'lucide-react';
+import { Download, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ListingNavbar } from '@/components/ListingNavbar';
@@ -54,8 +54,13 @@ export default function ManagerDealChecklistPage() {
       retry: false,
     },
   );
+  const intakeEvidenceQuery = trpc.distribution.manager.listDealReferralIntakeEvidence.useQuery(
+    { dealId },
+    { enabled: isAuthenticated && match && dealId > 0, retry: false },
+  );
 
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
+  const downloadIntakeEvidenceMutation = trpc.distribution.manager.downloadDealReferralIntakeEvidence.useMutation();
 
   useEffect(() => {
     if (loading) return;
@@ -167,6 +172,22 @@ export default function ManagerDealChecklistPage() {
     }
   }
 
+  async function downloadIntakeEvidence(evidenceUuid: string) {
+    try {
+      const result = await downloadIntakeEvidenceMutation.mutateAsync({ dealId, evidenceUuid });
+      const binary = atob(result.base64Content);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      const blobUrl = URL.createObjectURL(new Blob([bytes], { type: result.mimeType }));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `referral-evidence-${evidenceUuid}`;
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not retrieve private referral evidence.');
+    }
+  }
+
   if (loading || checklistQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,6 +241,40 @@ export default function ManagerDealChecklistPage() {
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />
+
+        {intakeEvidenceQuery.data?.length ? (
+          <Card className="mt-5 border-sky-200">
+            <CardContent className="space-y-3 py-5">
+              <div className="flex items-start gap-3">
+                <ShieldCheck className="mt-0.5 h-5 w-5 text-sky-700" aria-hidden="true" />
+                <div>
+                  <h2 className="font-semibold text-slate-900">Private referral permission and identity evidence</h2>
+                  <p className="mt-1 text-xs text-slate-600">Visible only to the assigned Distribution manager. These files are kept separate from Developer sales resources.</p>
+                </div>
+              </div>
+              <div className="divide-y rounded border bg-white">
+                {intakeEvidenceQuery.data.map(item => (
+                  <div key={item.evidenceUuid} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2">
+                    <div>
+                      <p className="text-sm font-medium">{item.evidenceType.replace(/_/g, ' ')}</p>
+                      <p className="text-xs text-slate-500">{item.reviewStatus} · {Math.ceil(item.byteSize / 1024)} KB</p>
+                    </div>
+                    {item.storageStatus === 'stored' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={downloadIntakeEvidenceMutation.isPending}
+                        onClick={() => void downloadIntakeEvidence(item.evidenceUuid)}
+                      >
+                        <Download className="mr-2 h-4 w-4" /> Open privately
+                      </Button>
+                    ) : <span className="text-xs text-slate-500">No longer available</span>}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

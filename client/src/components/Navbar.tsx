@@ -36,19 +36,22 @@ export function Navbar() {
     retry: false,
     refetchOnWindowFocus: false,
   });
-  const hasReferrerAccess = Boolean(referrerStatusQuery.data?.hasAccess);
+  const hasDistributionIdentity = Boolean(referrerStatusQuery.data?.hasIdentity);
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
     logout();
   };
 
-  const getDashboardRoute = (role?: string, isReferrer?: boolean) => {
+  const getDashboardRoute = (role?: string, hasDistributionIdentity?: boolean) => {
     if (
-      isReferrer &&
+      hasDistributionIdentity &&
       role !== 'super_admin' &&
       role !== 'property_developer' &&
-      role !== 'agency_admin'
+      role !== 'agency_admin' &&
+      role !== 'admin' &&
+      role !== 'agent' &&
+      role !== 'service_provider'
     ) {
       return '/distribution/partner/overview';
     }
@@ -69,21 +72,24 @@ export function Navbar() {
     }
   };
 
-  const dashboardRoute = getDashboardRoute(user?.role, hasReferrerAccess);
+  const dashboardRoute = getDashboardRoute(user?.role, hasDistributionIdentity);
   // The generic listing wizard is an authorised Agent/Agency workflow. Keep
   // it out of account menus for buyers, developers and service providers so a
   // role never lands in a dead-end authoring screen.
   const canCreateListings = user?.role === 'agent' || user?.role === 'agency_admin';
   const showDashboardLink =
-    user?.role &&
-    [
-      'admin',
-      'super_admin',
-      'property_developer',
-      'agency_admin',
-      'agent',
-      'service_provider',
-    ].includes(user.role);
+    Boolean(hasDistributionIdentity) ||
+    Boolean(
+      user?.role &&
+        [
+          'admin',
+          'super_admin',
+          'property_developer',
+          'agency_admin',
+          'agent',
+          'service_provider',
+        ].includes(user.role),
+    );
 
   const navLinks: Array<{
     href: string;
@@ -173,9 +179,16 @@ export function Navbar() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="flex items-center gap-2 w-full">
-                      <Home className="h-4 w-4" />
-                      My Properties
+                    <Link
+                      href={user?.role === 'agent' ? '/agent/dashboard' : '/dashboard'}
+                      className="flex items-center gap-2 w-full"
+                    >
+                      {user?.role === 'agent' ? (
+                        <LayoutDashboard className="h-4 w-4" />
+                      ) : (
+                        <Home className="h-4 w-4" />
+                      )}
+                      {user?.role === 'agent' ? 'Agent Dashboard' : 'My Properties'}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -184,14 +197,14 @@ export function Navbar() {
                       My Favorites
                     </Link>
                   </DropdownMenuItem>
-                  {hasReferrerAccess && (
+                  {hasDistributionIdentity && (
                     <DropdownMenuItem asChild>
                       <Link
                         href="/distribution/partner/overview"
                         className="flex items-center gap-2 w-full"
                       >
                         <Briefcase className="h-4 w-4" />
-                        Referrer Dashboard
+                        Distribution Network
                       </Link>
                     </DropdownMenuItem>
                   )}

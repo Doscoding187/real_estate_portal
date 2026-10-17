@@ -2,9 +2,11 @@ import { and, eq } from 'drizzle-orm';
 import {
   distributionManagerAssignments,
   distributionPrograms,
+  distributionReferralIntakePolicyReleases,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getDevelopmentRequiredDocumentSummary } from './distributionRequiredDocumentsService';
+import { getDistributionReferralEvidenceStorageStatus } from './distributionReferralEvidenceStorage';
 
 export type ProgramReadinessBlockerCode =
   | 'PROGRAM_MISSING'
@@ -14,6 +16,8 @@ export type ProgramReadinessBlockerCode =
   | 'CURRENCY_MISSING'
   | 'MANAGER_MISSING'
   | 'REQUIRED_DOCS_MISSING'
+  | 'REFERRAL_INTAKE_POLICY_NOT_PUBLISHED'
+  | 'PRIVATE_EVIDENCE_STORAGE_UNAVAILABLE'
   | 'PROGRAM_VALIDATION_ERROR';
 
 export type ProgramReadiness = {
@@ -37,6 +41,10 @@ export type ProgramReadiness = {
     hasActivePrimaryManager: boolean;
     requiredDocsCount: number;
     requiredRequiredDocsCount: number;
+    activeIntakePolicyVersion: number | null;
+    hasActiveIntakePolicy: boolean;
+    privateEvidenceStorageConfigured: boolean;
+    privateEvidenceStorageAdapter: 'local' | 's3';
   };
 };
 
@@ -84,7 +92,21 @@ export async function getProgramReadinessByDevelopmentId(
     )
     .limit(1);
 
+  const [activeIntakePolicy] = program
+    ? await db
+        .select({ policyVersion: distributionReferralIntakePolicyReleases.policyVersion })
+        .from(distributionReferralIntakePolicyReleases)
+        .where(
+          and(
+            eq(distributionReferralIntakePolicyReleases.programId, program.id),
+            eq(distributionReferralIntakePolicyReleases.status, 'active'),
+          ),
+        )
+        .limit(1)
+    : [];
+
   const docsSummary = await getDevelopmentRequiredDocumentSummary(db, developmentId);
+  const evidenceStorage = getDistributionReferralEvidenceStorageStatus();
 
   const state: ProgramReadiness['state'] = {
     programExists: Boolean(program),
@@ -103,6 +125,10 @@ export async function getProgramReadinessByDevelopmentId(
     hasActivePrimaryManager: Boolean(managerRow?.id),
     requiredDocsCount: docsSummary.requiredDocsCount,
     requiredRequiredDocsCount: docsSummary.requiredRequiredDocsCount,
+    activeIntakePolicyVersion: activeIntakePolicy ? Number(activeIntakePolicy.policyVersion) : null,
+    hasActiveIntakePolicy: Boolean(activeIntakePolicy),
+    privateEvidenceStorageConfigured: evidenceStorage.configured,
+    privateEvidenceStorageAdapter: evidenceStorage.adapter,
   };
 
   const blockers: ProgramReadiness['blockers'] = [];
@@ -123,27 +149,27 @@ export async function getProgramReadinessByDevelopmentId(
     if (!state.commissionModel) {
       blockers.push({
         code: 'COMMISSION_MISSING',
-        message: 'Select a commission model and default payout value.',
+        message: 'Select a referral payout model and default value.',
       });
     } else if (state.commissionModel === 'flat_percentage') {
       if (!state.defaultCommissionPercent || state.defaultCommissionPercent <= 0) {
         blockers.push({
           code: 'COMMISSION_MISSING',
-          message: 'Set a default commission percentage greater than 0.',
+          message: 'Set a referral payout percentage greater than 0.',
         });
       }
     } else if (state.commissionModel === 'flat_amount') {
       if (!state.defaultCommissionAmount || state.defaultCommissionAmount <= 0) {
         blockers.push({
           code: 'COMMISSION_MISSING',
-          message: 'Set a default commission amount greater than 0.',
+          message: 'Set a referral payout amount greater than 0.',
         });
       }
     } else {
       blockers.push({
         code: 'PROGRAM_VALIDATION_ERROR',
         message:
-          'Commission model is not supported for referral enablement yet. Use flat_percentage or flat_amount.',
+          'This referral payout model is not supported for referral enablement yet. Use a percentage or fixed amount.',
       });
     }
 
@@ -173,6 +199,21 @@ export async function getProgramReadinessByDevelopmentId(
     blockers.push({
       code: 'REQUIRED_DOCS_MISSING',
       message: 'Add at least one active required document template for this development.',
+    });
+  }
+
+  if (state.programExists && !state.hasActiveIntakePolicy) {
+    blockers.push({
+      code: 'REFERRAL_INTAKE_POLICY_NOT_PUBLISHED',
+      message: 'Complete and publish this development’s referral intake policy.',
+    });
+  }
+
+  if (state.programExists && !state.privateEvidenceStorageConfigured) {
+    blockers.push({
+      code: 'PRIVATE_EVIDENCE_STORAGE_UNAVAILABLE',
+      message:
+        evidenceStorage.message || 'Configure private evidence storage before accepting referrals.',
     });
   }
 

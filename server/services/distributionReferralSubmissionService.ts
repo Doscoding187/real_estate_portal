@@ -4,7 +4,6 @@ import {
   affordabilityAssessments,
   developmentManagerAssignments,
   developmentRequiredDocuments,
-  developments,
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
@@ -13,8 +12,18 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getAffordabilityMatches } from './affordabilityAssessmentService';
-import { assertDevelopmentSubmissionEligible } from './distributionAccessPolicy';
-import { getPartnerProgramTermsByDevelopmentId } from './distributionPartnerTermsService';
+import { getDevelopmentSalesProjection } from './developmentSalesProjectionService';
+import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
+import {
+  assertPartnerDevelopmentProgramAccess,
+  assertPartnerDevelopmentReferralOpen,
+} from './distributionPartnerProgramAccessService';
+import { buildDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
+import {
+  buildReferralIntakeEvidenceSnapshot,
+  getCompletePartnerReferralIntakeSession,
+  markReferralIntakeSubmitted,
+} from './distributionReferralIntakeWorkflowService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -301,6 +310,8 @@ async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentI
     .where(
       and(
         eq(developmentRequiredDocuments.developmentId, developmentId),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),
@@ -311,6 +322,8 @@ async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentI
 export async function createReferralDeal(
   input: SubmissionActor & {
     developmentId: number;
+    marketMode: 'sale' | 'rent';
+    intakeSessionUuid: string;
     buyerName?: string | null;
     buyerPhone?: string | null;
     buyerEmail?: string | null;
@@ -320,15 +333,58 @@ export async function createReferralDeal(
   },
 ) {
   const db = await resolveDb();
-  const eligibility = await assertDevelopmentSubmissionEligible({
+  await assertPartnerDevelopmentProgramAccess({
     db,
-    developmentId: input.developmentId,
     actor: {
-      role: input.actorRole === 'super_admin' ? 'admin' : 'referrer',
       userId: input.actorUserId,
+      role: input.actorRole,
     },
-    channel: 'submission',
+    developmentId: input.developmentId,
   });
+  await assertPartnerDevelopmentReferralOpen({ db, developmentId: input.developmentId });
+  const [distributionProgram] = await db
+    .select({ programId: distributionPrograms.id })
+    .from(distributionPrograms)
+    .where(eq(distributionPrograms.developmentId, input.developmentId))
+    .limit(1);
+  const programId = Number(distributionProgram?.programId || 0);
+  if (!programId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'This Distribution opportunity is no longer active.',
+    });
+  }
+  const eligibility = { programId };
+
+  const intakeSession = await getCompletePartnerReferralIntakeSession({
+    sessionUuid: input.intakeSessionUuid,
+    partnerUserId: input.actorUserId,
+    developmentId: input.developmentId,
+    db,
+  });
+  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
+
+  const developerProjection = await getDevelopmentSalesProjection(input.developmentId);
+  const projectionMode = input.marketMode === 'sale' ? 'for_sale' : 'for_rent';
+  const requestedMode = developerProjection?.inventory.modes[projectionMode];
+  if (
+    !developerProjection ||
+    developerProjection.campaign.visible !== true ||
+    developerProjection.inventory.phaseScope === 'unscoped-hidden' ||
+    !requestedMode ||
+    !Number.isFinite(Number(requestedMode.availableCount)) ||
+    Number(requestedMode.availableCount) <= 0 ||
+    !Number.isFinite(Number(requestedMode.priceFrom)) ||
+    Number(requestedMode.priceFrom) <= 0 ||
+    !Number.isFinite(Number(requestedMode.priceTo)) ||
+    Number(requestedMode.priceTo) < Number(requestedMode.priceFrom) ||
+    requestedMode.priceBasis !== (input.marketMode === 'sale' ? 'purchase_price' : 'monthly_rent')
+  ) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `The Developer Engine has no current marketable ${input.marketMode} inventory for this opportunity.`,
+    });
+  }
 
   const normalizedClientReference = String(input.clientReference || '').trim() || null;
   if (normalizedClientReference) {
@@ -365,11 +421,31 @@ export async function createReferralDeal(
     buildDuplicateReferralError(Number(duplicateByBuyer.dealId));
   }
 
+  const referralTermsSnapshot = await buildDistributionReferralTermsSnapshot({
+    db,
+    developmentId: input.developmentId,
+    developerProjection,
+    marketMode: input.marketMode,
+    intakeEvidenceSnapshot,
+  });
+  if (!referralTermsSnapshot) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Current Distribution referral terms could not be captured.',
+    });
+  }
+
   const managerUserId = await pickManagerForDevelopment(input.developmentId, { db });
   const buyerName = String(input.buyerName || '').trim() || 'Buyer Pending';
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
   const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
+  if (input.marketMode === 'rent' && normalizedAssessmentId) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'A purchase affordability assessment cannot be attached to a rental referral.',
+    });
+  }
   let assessmentAttachment:
     | {
         assessmentId: string;
@@ -450,6 +526,11 @@ export async function createReferralDeal(
       buyerName,
       buyerPhone,
       buyerEmail,
+      marketMode: input.marketMode,
+      developerProjectionRevision: developerProjection.revision,
+      developerProjectionObservedAt: toSqlDateTime(new Date(developerProjection.observedAt)),
+      referralTermsSnapshotJson: referralTermsSnapshot as any,
+      referralTermsSnapshotDigest: referralTermsSnapshot.digest,
       currentStage: 'viewing_scheduled',
       commissionStatus: 'not_ready',
       attributionLockedAt: sql`CURRENT_TIMESTAMP`,
@@ -477,8 +558,22 @@ export async function createReferralDeal(
         managerAssigned: managerUserId,
         assessmentId: assessmentAttachment?.assessmentId || null,
         matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
+        marketMode: input.marketMode,
+        developerProjectionRevision: developerProjection.revision,
+        referralTermsSnapshotDigest: referralTermsSnapshot.digest,
       } as any,
       notes: input.notes ?? null,
+    });
+
+    await markReferralIntakeSubmitted({
+      tx,
+      sessionId: intakeSession.id,
+      sessionUuid: input.intakeSessionUuid,
+      developmentId: input.developmentId,
+      partnerUserId: input.actorUserId,
+      dealId,
+      developerProjectionRevision: developerProjection.revision,
+      referralTermsSnapshotDigest: referralTermsSnapshot.digest,
     });
 
     if (assessmentAttachment) {
@@ -525,6 +620,8 @@ export async function createReferralDeal(
         developmentId: distributionDeals.developmentId,
         programId: distributionDeals.programId,
         managerUserId: distributionDeals.managerUserId,
+        marketMode: distributionDeals.marketMode,
+        developerProjectionRevision: distributionDeals.developerProjectionRevision,
         createdAt: distributionDeals.createdAt,
       })
       .from(distributionDeals)
@@ -536,6 +633,8 @@ export async function createReferralDeal(
       developmentId: Number(createdDeal?.developmentId || input.developmentId),
       programId: Number(createdDeal?.programId || eligibility.programId),
       managerUserId: toNumberOrNull(createdDeal?.managerUserId),
+      marketMode: createdDeal?.marketMode || input.marketMode,
+      developerProjectionRevision: createdDeal?.developerProjectionRevision || developerProjection.revision,
       assessmentId: assessmentAttachment?.assessmentId || null,
       matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
       status: 'submitted',
@@ -576,6 +675,8 @@ async function computeDealDocumentProgressMap(
     .where(
       and(
         inArray(developmentRequiredDocuments.developmentId, developmentIds),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),
@@ -647,9 +748,6 @@ async function listDealApplicationDocuments(
       templateId: developmentRequiredDocuments.id,
       documentCode: developmentRequiredDocuments.documentCode,
       documentLabel: developmentRequiredDocuments.documentLabel,
-      category: developmentRequiredDocuments.category,
-      templateFileUrl: developmentRequiredDocuments.templateFileUrl,
-      templateFileName: developmentRequiredDocuments.templateFileName,
       isRequired: developmentRequiredDocuments.isRequired,
       sortOrder: developmentRequiredDocuments.sortOrder,
     })
@@ -657,6 +755,8 @@ async function listDealApplicationDocuments(
     .where(
       and(
         eq(developmentRequiredDocuments.developmentId, input.developmentId),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),
@@ -699,9 +799,7 @@ async function listDealApplicationDocuments(
       templateId,
       documentCode: String(template.documentCode),
       documentLabel: String(template.documentLabel || ''),
-      category: template.category as 'developer_document' | 'client_required_document',
-      templateFileUrl: template.templateFileUrl || null,
-      templateFileName: template.templateFileName || null,
+      category: 'client_required_document' as const,
       isRequired: Boolean(template.isRequired),
       sortOrder: Number(template.sortOrder || 0),
       status: (persisted?.status || 'pending') as PartnerDealDocumentStatus,
@@ -742,17 +840,20 @@ export async function listMyReferralDeals(
     .select({
       dealId: distributionDeals.id,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
       programId: distributionDeals.programId,
       assessmentId: distributionDeals.affordabilityAssessmentId,
       matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
       affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      marketMode: distributionDeals.marketMode,
+      developerProjectionRevision: distributionDeals.developerProjectionRevision,
+      developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       status: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
       updatedAt: distributionDeals.updatedAt,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
     .where(withConditions(conditions))
     .orderBy(desc(distributionDeals.id))
     .limit(normalizedLimit + 1);
@@ -768,32 +869,39 @@ export async function listMyReferralDeals(
   });
 
   return {
-    items: pageRows.map(row => ({
-      journey: buildJourneyGuidance({
-        stage: row.status,
-        docProgress: progressMap.get(Number(row.dealId)) || {
-          requiredCount: 0,
-          verifiedRequiredCount: 0,
-        },
-        updatedAt: row.updatedAt,
-        createdAt: row.createdAt,
-      }),
-      dealId: Number(row.dealId),
-      development: {
-        developmentId: Number(row.developmentId),
-        name: String(row.developmentName || `Development #${row.developmentId}`),
-      },
-      status: String(row.status || 'viewing_scheduled'),
-      assessmentId: row.assessmentId ? String(row.assessmentId) : null,
-      matchSnapshotId: row.matchSnapshotId ? String(row.matchSnapshotId) : null,
-      affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      docProgress: progressMap.get(Number(row.dealId)) || {
+    items: pageRows.map(row => {
+      const snapshot = parseJsonObject(row.referralTermsSnapshotJson);
+      const salesSnapshot = parseJsonObject(snapshot?.developerSalesSnapshot);
+      const campaign = parseJsonObject(salesSnapshot?.campaign);
+      const docProgress = progressMap.get(Number(row.dealId)) || {
         requiredCount: 0,
         verifiedRequiredCount: 0,
-      },
-    })),
+      };
+      return {
+        journey: buildJourneyGuidance({
+          stage: row.status,
+          docProgress,
+          updatedAt: row.updatedAt,
+          createdAt: row.createdAt,
+        }),
+        dealId: Number(row.dealId),
+        development: {
+          developmentId: Number(row.developmentId),
+          name: String(campaign?.name || `Development #${row.developmentId}`),
+        },
+        status: String(row.status || 'viewing_scheduled'),
+        assessmentId: row.assessmentId ? String(row.assessmentId) : null,
+        matchSnapshotId: row.matchSnapshotId ? String(row.matchSnapshotId) : null,
+        affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
+        marketMode: row.marketMode || null,
+        developerProjectionRevision: row.developerProjectionRevision || null,
+        developerProjectionObservedAt: row.developerProjectionObservedAt || null,
+        referralTermsSnapshotDigest: row.referralTermsSnapshotDigest || null,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        docProgress,
+      };
+    }),
     nextCursor: hasMore ? String(pageRows[pageRows.length - 1]?.dealId || '') : undefined,
   };
 }
@@ -810,9 +918,6 @@ export async function getMyReferralDeal(
       agentId: distributionDeals.agentId,
       programId: distributionDeals.programId,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
-      city: developments.city,
-      province: developments.province,
       buyerName: distributionDeals.buyerName,
       buyerEmail: distributionDeals.buyerEmail,
       buyerPhone: distributionDeals.buyerPhone,
@@ -821,6 +926,11 @@ export async function getMyReferralDeal(
       matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
       affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
       affordabilityAssumptionsJson: distributionDeals.affordabilityAssumptionsJson,
+      marketMode: distributionDeals.marketMode,
+      developerProjectionRevision: distributionDeals.developerProjectionRevision,
+      developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       managerUserId: distributionDeals.managerUserId,
       managerName: users.name,
       managerFirstName: users.firstName,
@@ -830,7 +940,6 @@ export async function getMyReferralDeal(
       updatedAt: distributionDeals.updatedAt,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
     .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
     .where(eq(distributionDeals.id, input.dealId))
     .limit(1);
@@ -877,8 +986,9 @@ export async function getMyReferralDeal(
     .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id))
     .limit(200);
 
-  // TODO(snapshotting): store immutable terms at submission time when program-term versioning is introduced.
-  const programTerms = await getPartnerProgramTermsByDevelopmentId(Number(deal.developmentId));
+  const programTermsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
+  const salesSnapshot = parseJsonObject(programTermsSnapshot?.developerSalesSnapshot);
+  const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
   const applicationDocuments = await listDealApplicationDocuments(db, {
     dealId: Number(deal.dealId),
     developmentId: Number(deal.developmentId),
@@ -894,11 +1004,15 @@ export async function getMyReferralDeal(
     dealId: Number(deal.dealId),
     development: {
       developmentId: Number(deal.developmentId),
-      name: String(deal.developmentName || `Development #${deal.developmentId}`),
-      city: deal.city || null,
-      province: deal.province || null,
+      name: String(snapshotCampaign?.name || `Development #${deal.developmentId}`),
+      city: snapshotCampaign?.city ? String(snapshotCampaign.city) : null,
+      province: snapshotCampaign?.province ? String(snapshotCampaign.province) : null,
     },
     status: String(deal.status || 'viewing_scheduled'),
+    marketMode: deal.marketMode || null,
+    developerProjectionRevision: deal.developerProjectionRevision || null,
+    developerProjectionObservedAt: deal.developerProjectionObservedAt || null,
+    referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
     assessmentId: deal.assessmentId ? String(deal.assessmentId) : null,
     matchSnapshotId: deal.matchSnapshotId ? String(deal.matchSnapshotId) : null,
     createdAt: deal.createdAt,
@@ -928,7 +1042,7 @@ export async function getMyReferralDeal(
         : null,
     docProgress,
     applicationDocuments,
-    programTerms,
+    programTermsSnapshot,
     timeline: events.map(event => {
       const metadata = parseJsonObject(event.metadata);
       const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
@@ -986,6 +1100,8 @@ export async function submitReferralDealDocument(
       and(
         eq(developmentRequiredDocuments.id, input.templateId),
         eq(developmentRequiredDocuments.developmentId, Number(deal.developmentId)),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),

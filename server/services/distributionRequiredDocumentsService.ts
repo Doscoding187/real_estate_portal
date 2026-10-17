@@ -1,8 +1,17 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { developmentRequiredDocuments } from '../../drizzle/schema';
 
 type DbHandle = any;
-export type DevelopmentDocumentCategory = 'developer_document' | 'client_required_document';
+export type DevelopmentDocumentCategory = 'client_required_document';
+
+export const DISTRIBUTION_PROCESS_DOCUMENT_CODES = [
+  'id_document',
+  'proof_of_address',
+  'proof_of_income',
+  'bank_statement',
+  'pre_approval',
+  'custom',
+] as const;
 
 export type DevelopmentRequiredDocumentSummary = {
   requiredDocsCount: number;
@@ -15,13 +24,10 @@ export type DevelopmentRequiredDocumentRow = {
   documentCode: string;
   documentLabel: string;
   category: DevelopmentDocumentCategory;
-  templateFileUrl: string | null;
-  templateFileName: string | null;
-  templateUploadedAt: string | null;
-  templateUploadedBy: number | null;
   isRequired: boolean;
   sortOrder: number;
   isActive: boolean;
+  createdAt: string | null;
 };
 
 export function isMissingRequiredDocumentsSchemaError(error: unknown): boolean {
@@ -38,19 +44,25 @@ export async function getDevelopmentRequiredDocumentSummary(
   db: DbHandle,
   developmentId: number,
 ): Promise<DevelopmentRequiredDocumentSummary> {
-  const [docsRow] = await db
+  const rows = await db
     .select({
-      requiredDocsCount:
-        sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
-      requiredRequiredDocsCount:
-        sql<number>`COALESCE(SUM(CASE WHEN ${developmentRequiredDocuments.isActive} = 1 AND ${developmentRequiredDocuments.isRequired} = 1 THEN 1 ELSE 0 END), 0)`,
+      isActive: developmentRequiredDocuments.isActive,
+      isRequired: developmentRequiredDocuments.isRequired,
     })
     .from(developmentRequiredDocuments)
-    .where(eq(developmentRequiredDocuments.developmentId, developmentId));
+    .where(
+      and(
+        eq(developmentRequiredDocuments.developmentId, developmentId),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
+      ),
+    );
+
+  const activeRows = rows.filter(row => Number(row.isActive) === 1);
 
   return {
-    requiredDocsCount: Number(docsRow?.requiredDocsCount || 0),
-    requiredRequiredDocsCount: Number(docsRow?.requiredRequiredDocsCount || 0),
+    requiredDocsCount: activeRows.length,
+    requiredRequiredDocsCount: activeRows.filter(row => Number(row.isRequired) === 1).length,
   };
 }
 
@@ -64,17 +76,19 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
         developmentId: developmentRequiredDocuments.developmentId,
         documentCode: developmentRequiredDocuments.documentCode,
         documentLabel: developmentRequiredDocuments.documentLabel,
-        category: developmentRequiredDocuments.category,
-        templateFileUrl: developmentRequiredDocuments.templateFileUrl,
-        templateFileName: developmentRequiredDocuments.templateFileName,
-        templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
-        templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
         isRequired: developmentRequiredDocuments.isRequired,
         sortOrder: developmentRequiredDocuments.sortOrder,
         isActive: developmentRequiredDocuments.isActive,
+        createdAt: developmentRequiredDocuments.createdAt,
       })
       .from(developmentRequiredDocuments)
-      .where(eq(developmentRequiredDocuments.developmentId, developmentId))
+      .where(
+        and(
+          eq(developmentRequiredDocuments.developmentId, developmentId),
+          eq(developmentRequiredDocuments.category, 'client_required_document'),
+          inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
+        ),
+      )
       .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
 
   return rows.map(row => ({
@@ -82,23 +96,10 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
       developmentId: Number(row.developmentId),
       documentCode: String(row.documentCode),
       documentLabel: String(row.documentLabel || ''),
-      category:
-        String(row.category || 'client_required_document') === 'developer_document'
-          ? 'developer_document'
-          : 'client_required_document',
-      templateFileUrl:
-        typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
-          ? row.templateFileUrl.trim()
-          : null,
-      templateFileName:
-        typeof row.templateFileName === 'string' && row.templateFileName.trim()
-          ? row.templateFileName.trim()
-          : null,
-      templateUploadedAt: row.templateUploadedAt || null,
-      templateUploadedBy:
-        typeof row.templateUploadedBy === 'number' ? Number(row.templateUploadedBy) : null,
+      category: 'client_required_document',
       isRequired: Number(row.isRequired || 0) === 1,
       sortOrder: Number(row.sortOrder || 0),
       isActive: Number(row.isActive || 0) === 1,
+      createdAt: row.createdAt || null,
   }));
 }

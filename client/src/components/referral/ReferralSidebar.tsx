@@ -31,7 +31,7 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
   { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
   { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
-  { label: 'Commissions', href: '/distribution/partner/commissions', icon: DollarSign },
+  { label: 'Referral Payouts', href: '/distribution/partner/commissions', icon: DollarSign },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard', '/distribution/partner']);
@@ -45,23 +45,26 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
+  const statusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
+    enabled: Boolean(user),
+    retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
+  const statusData = statusQuery.data;
+
   const { data: pipelineData } = trpc.distribution.referrer.myPipeline.useQuery(
     { limit: 200 },
     {
-      enabled: Boolean(user),
+      enabled: Boolean(user && statusData?.hasIdentity && !statusQuery.isFetching),
       retry: false,
     },
   );
 
-  const { data: statusData } = trpc.distribution.referrer.status.useQuery(undefined, {
-    enabled: Boolean(user),
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
   const { data: commissionRows } = trpc.distribution.referrer.myCommissionEntries.useQuery(
     { limit: 200 },
     {
-      enabled: Boolean(user),
+      enabled: Boolean(user && statusData?.hasIdentity && !statusQuery.isFetching),
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -124,6 +127,11 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
         <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-muted-foreground">
           PARTNER WORKSPACE
         </p>
+        {statusData?.distributionIdentityId ? (
+          <p className="mt-2 text-[10px] font-medium text-muted-foreground">
+            Distribution ID: {statusData.distributionIdentityId}
+          </p>
+        ) : null}
       </div>
 
       <p className="px-[18px] pb-[5px] pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">

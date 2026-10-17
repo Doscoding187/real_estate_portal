@@ -38,10 +38,6 @@ function boolFromTinyInt(value: unknown) {
   return Number(value || 0) === 1;
 }
 
-function isRolePartnerEligible(role: string) {
-  return role === 'agent' || role === 'agency_admin' || role === 'super_admin';
-}
-
 async function resolveDb(db?: DbExecutor) {
   if (db) return db;
   const connection = await getDb();
@@ -142,7 +138,6 @@ export async function validatePartnerSubmissionEligibility(
   input: {
     developmentId: number;
     actorUserId: number;
-    actorRole: string;
     db?: DbExecutor;
   },
 ) {
@@ -179,11 +174,8 @@ export async function validatePartnerSubmissionEligibility(
     });
   }
 
-  const roleEligible = isRolePartnerEligible(input.actorRole);
   const hasReferrerIdentity = await hasActiveReferrerIdentity(db, input.actorUserId);
-  const hasPartnerAccess = roleEligible || hasReferrerIdentity;
-
-  if (!hasPartnerAccess) {
+  if (!hasReferrerIdentity) {
     buildForbiddenReferralAccessError();
   }
 

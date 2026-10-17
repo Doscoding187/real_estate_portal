@@ -2,681 +2,407 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { CheckCircle2, Download, FileCheck2, Loader2, UserRound } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
+import { ReferralIntakePausedCard } from '@/components/distribution/partner/ReferralIntakePausedCard';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 import { toast } from 'sonner';
-import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
+import { CheckCircle2, FileCheck2, Loader2, ShieldCheck } from 'lucide-react';
 
-type EligibilityReason = {
-  code?: string;
-  message: string;
-};
+type MarketMode = 'sale' | 'rent';
+type IntakeEvidenceType =
+  | 'sharing_permission'
+  | 'privacy_notice'
+  | 'identity_document'
+  | 'credit_authorization';
+
+const REQUIRED_EVIDENCE: Array<{ type: IntakeEvidenceType; title: string; instructions: string }> = [
+  {
+    type: 'sharing_permission',
+    title: 'Signed permission to share details',
+    instructions: 'Have the prospect read and sign the approved sharing permission document.',
+  },
+  {
+    type: 'privacy_notice',
+    title: 'Signed privacy notice',
+    instructions: 'Give the prospect the privacy notice and upload the signed acknowledgement.',
+  },
+  {
+    type: 'identity_document',
+    title: 'Prospect identity document',
+    instructions: 'Upload the prospect’s ID or another identity document allowed by this program.',
+  },
+];
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the selected file.'));
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      if (comma < 0) reject(new Error('Could not read the selected file.'));
+      else resolve(result.slice(comma + 1));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatPrice(mode: any, marketMode: MarketMode) {
+  if (!mode || mode.availableCount <= 0 || mode.priceFrom <= 0 || mode.priceTo < mode.priceFrom) {
+    return 'Unavailable';
+  }
+  const from = `R${Math.round(mode.priceFrom).toLocaleString('en-ZA')}`;
+  const to = mode.priceTo === mode.priceFrom ? null : `R${Math.round(mode.priceTo).toLocaleString('en-ZA')}`;
+  const range = to ? `${from} – ${to}` : from;
+  return marketMode === 'rent' ? `${range} / month` : range;
+}
 
 export default function PartnerSubmitReferralPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
-
-  const [selectedDevelopmentId, setSelectedDevelopmentId] = useState<number | null>(null);
+  const [developmentId, setDevelopmentId] = useState<number | null>(null);
+  const [marketMode, setMarketMode] = useState<MarketMode | null>(null);
+  const [sessionUuid, setSessionUuid] = useState<string | null>(null);
+  const [confirmedPermission, setConfirmedPermission] = useState(false);
+  const [confirmedPrivacyNotice, setConfirmedPrivacyNotice] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
-  const [buyerIntent, setBuyerIntent] = useState('');
-  const [preferredArea, setPreferredArea] = useState('');
-  const [budgetRange, setBudgetRange] = useState('');
-  const [affordabilitySnapshot, setAffordabilitySnapshot] = useState('');
-  const [notes, setNotes] = useState('');
+  const [buyerNotes, setBuyerNotes] = useState('');
   const [clientReference, setClientReference] = useState('');
-  const [buyerRoute, setBuyerRoute] = useState<'bond' | 'cash' | 'investor'>('bond');
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [eligibilityBlockers, setEligibilityBlockers] = useState<string[]>([]);
-  const [duplicateDealId, setDuplicateDealId] = useState<number | null>(null);
+  const [eligibilityError, setEligibilityError] = useState('');
 
   useEffect(() => {
-    if (loading) return;
-    if (!isAuthenticated) {
-      setLocation('/login');
-    }
+    if (!loading && !isAuthenticated) setLocation('/login');
   }, [isAuthenticated, loading, setLocation]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const preselectedDevelopmentId = Number(params.get('developmentId') || 0);
-    const preselectedAssessmentId = String(params.get('assessmentId') || '').trim();
-    if (preselectedDevelopmentId > 0) {
-      setSelectedDevelopmentId(preselectedDevelopmentId);
-    }
-    setAssessmentId(preselectedAssessmentId || null);
+    const requestedDevelopmentId = Number(params.get('developmentId') || 0);
+    const requestedMode = params.get('marketMode');
+    if (requestedDevelopmentId > 0) setDevelopmentId(requestedDevelopmentId);
+    if (requestedMode === 'sale' || requestedMode === 'rent') setMarketMode(requestedMode);
   }, []);
 
+  const programsQuery = trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false },
+  );
+  const developments = programsQuery.data?.items || [];
+  const eligibleDevelopments = useMemo(
+    () => developments.filter(item => item.campaign?.visible === true),
+    [developments],
+  );
+
   useEffect(() => {
-    const rawDraft = window.localStorage.getItem('distribution-submit-buyer-draft');
-    if (!rawDraft) return;
-    try {
-      const draft = JSON.parse(rawDraft) as Record<string, string>;
-      setBuyerName(draft.buyerName || '');
-      setBuyerPhone(draft.buyerPhone || '');
-      setBuyerEmail(draft.buyerEmail || '');
-      setBuyerIntent(draft.buyerIntent || '');
-      setPreferredArea(draft.preferredArea || '');
-      setBudgetRange(draft.budgetRange || '');
-      setAffordabilitySnapshot(draft.affordabilitySnapshot || '');
-      setNotes(draft.notes || '');
-      setClientReference(draft.clientReference || '');
-    } catch {
-      window.localStorage.removeItem('distribution-submit-buyer-draft');
+    if (!eligibleDevelopments.length) {
+      setDevelopmentId(null);
+      setSessionUuid(null);
+      return;
     }
-  }, []);
+    if (!developmentId || !eligibleDevelopments.some(item => Number(item.developmentId) === developmentId)) {
+      setDevelopmentId(Number(eligibleDevelopments[0].developmentId));
+      setSessionUuid(null);
+    }
+  }, [developmentId, eligibleDevelopments]);
+
+  const selectedDevelopment = eligibleDevelopments.find(
+    item => Number(item.developmentId) === Number(developmentId || 0),
+  ) || null;
+  const selectedModeProjection = marketMode
+    ? selectedDevelopment?.inventory?.modes?.[marketMode === 'sale' ? 'for_sale' : 'for_rent']
+    : null;
 
   useEffect(() => {
-    window.localStorage.setItem(
-      'distribution-submit-buyer-draft',
-      JSON.stringify({
-        buyerName,
-        buyerPhone,
-        buyerEmail,
-        buyerIntent,
-        preferredArea,
-        budgetRange,
-        affordabilitySnapshot,
-        notes,
-        clientReference,
-      }),
-    );
-  }, [
-    affordabilitySnapshot,
-    budgetRange,
-    buyerEmail,
-    buyerIntent,
-    buyerName,
-    buyerPhone,
-    clientReference,
-    notes,
-    preferredArea,
-  ]);
+    if (marketMode && selectedDevelopment && !selectedDevelopment.inventory?.modes?.[
+      marketMode === 'sale' ? 'for_sale' : 'for_rent'
+    ]) {
+      setMarketMode(null);
+    }
+  }, [marketMode, selectedDevelopment]);
 
-  const eligibleDevelopmentsQuery =
-    trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(undefined, {
-      enabled: isAuthenticated,
-      retry: false,
-    });
+  const requirementsQuery = trpc.distribution.partner.getReferralIntakeRequirements.useQuery(
+    { developmentId: Number(developmentId || 0) },
+    { enabled: isAuthenticated && Boolean(developmentId) && selectedDevelopment?.opportunity?.openForReferral === true, retry: false },
+  );
+  const sessionQuery = trpc.distribution.partner.getReferralIntakeSession.useQuery(
+    { sessionUuid: sessionUuid || '00000000-0000-0000-0000-000000000000' },
+    { enabled: isAuthenticated && Boolean(sessionUuid), retry: false, refetchOnWindowFocus: false },
+  );
+  const utils = trpc.useUtils();
+
+  const startSessionMutation = trpc.distribution.partner.createReferralIntakeSession.useMutation({
+    onSuccess: result => {
+      setSessionUuid(result.sessionUuid);
+      toast.success('Secure referral checklist started.');
+    },
+    onError: error => toast.error(error.message || 'Could not start referral intake.'),
+  });
+
+  const uploadEvidenceMutation = trpc.distribution.partner.uploadReferralIntakeEvidence.useMutation({
+    onSuccess: async (_result, variables) => {
+      await utils.distribution.partner.getReferralIntakeSession.invalidate({ sessionUuid: variables.sessionUuid });
+      toast.success('Private evidence uploaded securely.');
+    },
+    onError: error => toast.error(error.message || 'Could not upload this document.'),
+  });
 
   const submitReferralMutation = trpc.distribution.partner.submitReferral.useMutation({
     onSuccess: result => {
-      window.localStorage.removeItem('distribution-submit-buyer-draft');
-      toast.success('Buyer submitted successfully.');
+      toast.success('Referral submitted. Your team will guide the next steps.');
       setLocation(`/distribution/partner/referrals/${Number(result.dealId)}`);
     },
     onError: error => {
-      const errorData = (error as any)?.data || {};
-      const errorCode = String(errorData.errorCode || '');
-      if (errorCode === 'PROGRAM_NOT_ELIGIBLE') {
-        const reasons = Array.isArray(errorData.reasons) ? (errorData.reasons as EligibilityReason[]) : [];
-        setEligibilityBlockers(reasons.map(reason => friendlyBlockerMessage(reason)).filter(Boolean));
-        setDuplicateDealId(null);
-        return;
-      }
-      if (errorCode === 'DUPLICATE_REFERRAL') {
-        const existingDealId = Number(errorData.existingDealId || 0);
-        setDuplicateDealId(existingDealId > 0 ? existingDealId : null);
-        setEligibilityBlockers([]);
-        return;
-      }
-      setEligibilityBlockers([error.message || 'Unable to submit referral.']);
-      setDuplicateDealId(null);
+      setEligibilityError(error.message || 'The referral could not be submitted.');
     },
   });
 
-  const availableItems = eligibleDevelopmentsQuery.data?.items || [];
-  const referralReadyItems = useMemo(
-    () =>
-      availableItems.filter(
-        item => item.opportunity?.status === 'ready' || (Boolean(item.program?.isActive) && Boolean(item.program?.isReferralEnabled)),
-      ),
-    [availableItems],
-  );
+  const session = sessionQuery.data;
+  const uploadedTypes = new Set((session?.evidence || []).map(item => item.evidenceType));
+  const intakeComplete = session?.requiredEvidenceComplete === true;
 
-  useEffect(() => {
-    if (!availableItems.length) {
-      setSelectedDevelopmentId(null);
+  async function uploadEvidence(evidenceType: IntakeEvidenceType, file?: File) {
+    if (!sessionUuid || !file) return;
+    const maxBytes = Number(requirementsQuery.data?.maxUploadBytes || 0);
+    if (maxBytes > 0 && file.size > maxBytes) {
+      toast.error(`Choose a file smaller than ${Math.floor(maxBytes / 1024 / 1024)} MB.`);
       return;
     }
-    if (!selectedDevelopmentId) {
-      const defaultItem = referralReadyItems[0] || availableItems[0];
-      setSelectedDevelopmentId(Number(defaultItem.developmentId));
-      return;
+    try {
+      const base64Content = await fileToBase64(file);
+      uploadEvidenceMutation.mutate({
+        sessionUuid,
+        evidenceType,
+        mimeType: file.type as 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp',
+        base64Content,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not read this file.');
     }
-    const stillAvailable = availableItems.some(
-      item => Number(item.developmentId) === Number(selectedDevelopmentId),
-    );
-    if (!stillAvailable) {
-      const defaultItem = referralReadyItems[0] || availableItems[0];
-      setSelectedDevelopmentId(Number(defaultItem.developmentId));
-    }
-  }, [availableItems, referralReadyItems, selectedDevelopmentId]);
-
-  const selectedDevelopment = useMemo(
-    () =>
-      availableItems.find(
-        item => Number(item.developmentId) === Number(selectedDevelopmentId || 0),
-      ) || null,
-    [availableItems, selectedDevelopmentId],
-  );
-  const selectedRequiredDocuments = selectedDevelopment?.requiredDocuments || [];
-  const selectedBuyerDocuments = selectedRequiredDocuments.filter(
-    (document: any) => document.category !== 'developer_document',
-  );
-  const selectedDeveloperApplicationDocuments = selectedRequiredDocuments.filter(
-    (document: any) => document.category === 'developer_document',
-  );
-  const selectedSupportingDocuments = selectedDevelopment?.sourceDocuments || [];
-  const selectedIsReady =
-    selectedDevelopment?.opportunity?.status === 'ready' ||
-    (Boolean(selectedDevelopment?.program?.isActive) &&
-      Boolean(selectedDevelopment?.program?.isReferralEnabled));
-  const buyerNotes = [
-    buyerIntent ? `Intent: ${buyerIntent}` : '',
-    preferredArea ? `Preferred area: ${preferredArea}` : '',
-    budgetRange ? `Budget: ${budgetRange}` : '',
-    affordabilitySnapshot ? `Affordability: ${affordabilitySnapshot}` : '',
-    notes.trim(),
-  ]
-    .filter(Boolean)
-    .join('\n');
-  const steps = ['Buyer basics', 'Buyer fit', 'Documents', 'Review'];
-
-  function buyerRouteCopy() {
-    if (buyerRoute === 'cash') {
-      return 'Cash buyers usually need ID, proof of address, and proof of funds or bank confirmation. Developer forms still need to be signed and returned.';
-    }
-    if (buyerRoute === 'investor') {
-      return 'Investor buyers usually need affordability or proof-of-funds evidence plus the signed developer application pack.';
-    }
-    return 'Bond buyers usually need income proof, bank statements, and pre-approval or an affordability note before the manager can qualify them.';
   }
 
-  function friendlyBlockerMessage(reason: EligibilityReason) {
-    const code = String(reason.code || '').toUpperCase();
-    if (code === 'REQUIRED_DOCS_MISSING') {
-      return 'Application documents are still being prepared for this opportunity.';
-    }
-    if (code === 'NO_MANAGER_ASSIGNED') {
-      return 'This opportunity is not accepting referrals yet.';
-    }
-    if (code === 'REFERRALS_DISABLED') {
-      return 'Referrals are currently closed for this opportunity.';
-    }
-    if (code === 'PROGRAM_INACTIVE') {
-      return 'This opportunity is not accepting referrals yet.';
-    }
-    if (code === 'SUBMISSIONS_CLOSED') {
-      return 'Referral submissions are currently closed for this opportunity.';
-    }
-    return reason.message || 'This opportunity is not accepting referrals right now.';
-  }
-
-  if (loading || eligibleDevelopmentsQuery.isLoading) {
+  if (loading || !isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+        Loading secure referral access…
       </div>
     );
   }
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-6 md:px-7">
-        <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
-          <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
-            <p className="text-[10px] font-semibold uppercase text-blue-100">Guided buyer capture</p>
-            <h1 className="mt-1 text-[28px] font-semibold">Submit Buyer</h1>
-            <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Choose a ready opportunity, capture the buyer fit, attach the right context, and start
-              reward tracking.
-            </p>
-          </div>
-          <CardHeader>
-            <CardDescription>
-              Drafts save locally in this browser while you prepare the buyer profile.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-8 sm:px-6">
+        <header className="space-y-2">
+          <p className="text-sm font-semibold text-primary">Distribution Network</p>
+          <h1 className="text-2xl font-bold text-foreground">Refer a prospect</h1>
+          <p className="text-sm leading-6 text-muted-foreground">
+            First get the prospect’s permission, share the privacy notice, and securely upload the
+            signed documents and ID. Buyer details appear only after those files are recorded.
+          </p>
+        </header>
 
-        {eligibleDevelopmentsQuery.error ? (
-          <Card className="mb-4">
-            <CardContent className="py-6 text-sm text-red-600">
-              {eligibleDevelopmentsQuery.error.message}
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {!eligibleDevelopmentsQuery.error && !availableItems.length ? (
-          <Card className="mb-4">
-            <CardContent className="space-y-3 py-6">
-              <p className="text-sm text-slate-700">
-                We could not find developments linked to your referral network yet.
-              </p>
-              <p className="text-xs text-slate-500">
-                You can still prepare your buyer and return in seconds once stock sync completes.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => setLocation('/distribution/partner/developments')}
-                >
-                  Browse Developments
-                </Button>
-                <Button
-                  size="sm"
-                  variant="conversion"
-                  onClick={() => setLocation('/distribution/partner/accelerator')}
-                >
-                  Run Pre-Qualification
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
-
-        {availableItems.length ? (
-          <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-            <Card className="h-fit border-primary/15 bg-white shadow-sm">
+        {programsQuery.isLoading ? (
+          <Card><CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading partner-enabled opportunities…</CardContent></Card>
+        ) : eligibleDevelopments.length === 0 ? (
+          <ReferralIntakePausedCard />
+        ) : (
+          <>
+            <Card>
               <CardHeader>
-                <CardTitle className="text-base">Available Developments</CardTitle>
-                <CardDescription>
-                  {referralReadyItems.length} ready for buyer submission. Pick the inventory you want
-                  this buyer matched against.
-                </CardDescription>
+                <CardTitle>1. Choose an opportunity and market</CardTitle>
+                <CardDescription>Sale and rental availability are checked separately against the current Developer projection.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {availableItems.map(item => {
-                  const isSelected =
-                    Number(item.developmentId) === Number(selectedDevelopmentId || 0);
-                  const isReady =
-                    Boolean(item.program?.isActive) && Boolean(item.program?.isReferralEnabled);
-                  return (
-                    <button
-                      key={item.developmentId}
-                      className={`w-full rounded-md border px-3 py-3 text-left text-sm transition ${
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-primary/15 bg-primary/5 hover:border-primary/20'
-                      }`}
-                      onClick={() => {
-                        setSelectedDevelopmentId(Number(item.developmentId));
-                        setEligibilityBlockers([]);
-                        setDuplicateDealId(null);
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold">{item.developmentName}</p>
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                            isSelected
-                              ? 'bg-white/20 text-white'
-                              : isReady
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-amber-100 text-amber-700'
-                          }`}
+              <CardContent className="space-y-3">
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={developmentId || ''}
+                  onChange={event => {
+                    setDevelopmentId(Number(event.target.value));
+                    setSessionUuid(null);
+                    setMarketMode(null);
+                  }}
+                >
+                  {eligibleDevelopments.map(item => (
+                    <option key={item.developmentId} value={item.developmentId}>{item.developmentName}</option>
+                  ))}
+                </select>
+                {selectedDevelopment ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(['sale', 'rent'] as const).map(mode => {
+                      const projection = selectedDevelopment.inventory?.modes?.[mode === 'sale' ? 'for_sale' : 'for_rent'];
+                      const available = Boolean(projection && projection.availableCount > 0);
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          disabled={!available}
+                          onClick={() => setMarketMode(mode)}
+                          className={`rounded-lg border p-3 text-left ${marketMode === mode ? 'border-primary bg-primary/5' : 'border-border'} ${!available ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
-                          {isReady ? "Ready" : "Opening soon"}
-                        </span>
-                      </div>
-                      <p className={`text-xs ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>
-                        {[item.city, item.province].filter(Boolean).join(', ') || 'Location unavailable'}
-                      </p>
-                      {item.computed?.commissionDisplay ? (
-                        <p className={`mt-1 text-xs font-semibold ${isSelected ? 'text-white' : 'text-green-700'}`}>
-                          Reward: {String(item.computed.commissionDisplay).replace(/commission/gi, 'reward')}
-                        </p>
-                      ) : null}
-                    </button>
-                  );
-                })}
+                          <span className="block text-sm font-semibold">{mode === 'sale' ? 'Buy' : 'Rent'}</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {available ? `${projection.availableCount} available · ${formatPrice(projection, mode)}` : 'Not currently available'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 
-            <div className="space-y-4">
-              <PayoutRulesDisclosure developmentId={selectedDevelopmentId} />
-
-              <Card className="border-primary/15 bg-white shadow-sm">
+            {!selectedDevelopment?.opportunity?.openForReferral ? (
+              <ReferralIntakePausedCard />
+            ) : requirementsQuery.isLoading ? (
+              <Card><CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading the current approved intake documents…</CardContent></Card>
+            ) : requirementsQuery.isError || !requirementsQuery.data ? (
+              <ReferralIntakePausedCard />
+            ) : !sessionUuid ? (
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <UserRound className="h-4 w-4 text-primary" />
-                    Buyer Submission Wizard
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedDevelopment
-                      ? `Preparing buyer for ${selectedDevelopment.developmentName}`
-                      : 'Select a ready opportunity first'}
-                  </CardDescription>
+                  <CardTitle>2. Confirm the prospect has seen the documents</CardTitle>
+                  <CardDescription>Use the current policy version for this program. Do not enter buyer details at this stage.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid gap-2 sm:grid-cols-4">
-                    {steps.map((step, index) => (
-                      <button
-                        key={step}
-                        type="button"
-                        className={`rounded-md border px-2 py-2 text-xs font-medium ${
-                          index === currentStep
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-primary/15 bg-primary/5 text-muted-foreground'
-                        }`}
-                        onClick={() => setCurrentStep(index)}
-                      >
-                        {index + 1}. {step}
-                      </button>
-                    ))}
+                <CardContent className="space-y-4">
+                  {[requirementsQuery.data.sharingPermissionDocument, requirementsQuery.data.privacyNoticeDocument].map(document => (
+                    <section key={`${document.title}-${document.version}`} className="rounded-md border p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold">{document.title} · version {document.version}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => window.print()}>Print</Button>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">{document.content}</p>
+                    </section>
+                  ))}
+                  <div className="rounded-md bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
+                    <p><strong>Purpose:</strong> {requirementsQuery.data.sharingPurpose}</p>
+                    <p className="mt-1"><strong>Recipients:</strong> {requirementsQuery.data.namedRecipients.map(recipient => `${recipient.name} · ${recipient.organization} (${recipient.role})`).join('; ')}</p>
+                    <p className="mt-1"><strong>Signature method:</strong> {requirementsQuery.data.signatureMethod}</p>
                   </div>
-                  <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-xs text-primary">
-                    <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
-                    Journey after submission: manager review, buyer qualification, site visit, offer,
-                    sale milestone, then reward progress.
-                  </div>
-                  {selectedDevelopment &&
-                  !selectedIsReady ? (
-                    <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
-                      {selectedDevelopment.opportunity?.friendlyMessage ||
-                        'This opportunity is not accepting referrals yet.'}
-                    </div>
-                  ) : null}
-                  {assessmentId ? (
-                    <div className="rounded border border-primary/20 bg-primary/5 p-2 text-xs text-blue-700">
-                      This referral will attach affordability assessment <code>{assessmentId}</code>.
-                    </div>
-                  ) : null}
-                  {currentStep === 0 ? (
-                    <div className="space-y-3">
-                      <Input
-                        placeholder="Buyer full name"
-                        value={buyerName}
-                        onChange={event => setBuyerName(event.target.value)}
-                      />
-                      <Input
-                        placeholder="Buyer phone"
-                        value={buyerPhone}
-                        onChange={event => setBuyerPhone(event.target.value)}
-                      />
-                      <Input
-                        placeholder="Buyer email"
-                        value={buyerEmail}
-                        onChange={event => setBuyerEmail(event.target.value)}
-                      />
-                    </div>
-                  ) : null}
-
-                  {currentStep === 1 ? (
-                    <div className="space-y-3">
-                      <Input
-                        placeholder="Buyer intent (first-time buyer, investor, family, cash buyer)"
-                        value={buyerIntent}
-                        onChange={event => setBuyerIntent(event.target.value)}
-                      />
-                      <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                        <p className="text-xs font-semibold uppercase text-muted-foreground">Buyer route</p>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                          {[
-                            { value: 'bond', label: 'Bond finance' },
-                            { value: 'cash', label: 'Cash buyer' },
-                            { value: 'investor', label: 'Investor' },
-                          ].map(option => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className={`rounded-md border px-3 py-2 text-xs font-semibold ${
-                                buyerRoute === option.value
-                                  ? 'border-primary bg-primary text-primary-foreground'
-                                  : 'border-primary/15 bg-white text-foreground'
-                              }`}
-                              onClick={() => setBuyerRoute(option.value as typeof buyerRoute)}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="mt-2 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
-                      </div>
-                      <Input
-                        placeholder="Preferred area or suburb"
-                        value={preferredArea}
-                        onChange={event => setPreferredArea(event.target.value)}
-                      />
-                      <Input
-                        placeholder="Budget or price range"
-                        value={budgetRange}
-                        onChange={event => setBudgetRange(event.target.value)}
-                      />
-                      <Input
-                        placeholder="Affordability snapshot (income, deposit, pre-approval status)"
-                        value={affordabilitySnapshot}
-                        onChange={event => setAffordabilitySnapshot(event.target.value)}
-                      />
-                    </div>
-                  ) : null}
-
-                  {currentStep === 2 ? (
-                    <div className="space-y-3">
-                      <div className="rounded-md border border-primary/15 bg-primary/5 p-3 text-sm">
-                        <p className="flex items-center gap-2 font-medium text-foreground">
-                          <FileCheck2 className="h-4 w-4 text-primary" />
-                          Buyer application documents
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">{buyerRouteCopy()}</p>
-                        {selectedBuyerDocuments.length ? (
-                          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-muted-foreground">
-                            {selectedBuyerDocuments.map((document: any) => (
-                              <li key={document.templateId}>{document.documentLabel}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-2 text-xs text-slate-600">
-                            No buyer document checklist is published yet.
-                          </p>
-                        )}
-                      </div>
-                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-                        <p className="flex items-center gap-2 font-medium text-amber-950">
-                          <FileCheck2 className="h-4 w-4 text-amber-700" />
-                          Developer application documents
-                        </p>
-                        <p className="mt-1 text-xs text-amber-800">
-                          Download these templates, get the buyer to sign where needed, then upload the completed files on the referral detail page after submission.
-                        </p>
-                        {selectedDeveloperApplicationDocuments.length ? (
-                          <div className="mt-2 space-y-2">
-                            {selectedDeveloperApplicationDocuments.map((document: any) => (
-                              <div
-                                key={document.templateId}
-                                className="flex flex-wrap items-center justify-between gap-2 rounded border border-amber-200 bg-white px-2 py-2 text-xs"
-                              >
-                                <span className="font-medium text-foreground">{document.documentLabel}</span>
-                                {document.templateFileUrl ? (
-                                  <a
-                                    href={document.templateFileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-                                  >
-                                    <Download className="h-3.5 w-3.5" />
-                                    Download template
-                                  </a>
-                                ) : (
-                                  <span className="text-muted-foreground">Template pending</span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="mt-2 text-xs text-amber-800">
-                            No developer application templates have been published yet.
-                          </p>
-                        )}
-                      </div>
-                      <div className="rounded-md border border-primary/15 bg-white p-3 text-sm">
-                        <p className="flex items-center gap-2 font-medium text-foreground">
-                          <Download className="h-4 w-4 text-primary" />
-                          Supporting documents
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          These files are for buyer education and sharing. They do not block the application.
-                        </p>
-                        {selectedSupportingDocuments.length ? (
-                          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                            {selectedSupportingDocuments.map((document: any) => (
-                              <a
-                                key={document.templateId}
-                                href={document.fileUrl || '#'}
-                                target={document.fileUrl ? '_blank' : undefined}
-                                rel="noreferrer"
-                                className={`rounded border border-primary/15 px-2 py-2 text-xs ${
-                                  document.fileUrl
-                                    ? 'text-primary hover:bg-primary/5'
-                                    : 'pointer-events-none text-muted-foreground'
-                                }`}
-                              >
-                                {document.documentLabel}
-                                <span className="block text-[10px] text-muted-foreground">
-                                  {document.fileName || 'File pending upload'}
-                                </span>
-                              </a>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            No supporting files have been uploaded yet.
-                          </p>
-                        )}
-                      </div>
-                      <Input
-                        placeholder="Client reference (optional duplicate-safe key)"
-                        value={clientReference}
-                        onChange={event => setClientReference(event.target.value)}
-                      />
-                      <Textarea
-                        placeholder="Anything the manager should know?"
-                        rows={4}
-                        value={notes}
-                        onChange={event => setNotes(event.target.value)}
-                      />
-                    </div>
-                  ) : null}
-
-                  {currentStep === 3 ? (
-                    <div className="space-y-3 rounded-md border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">
-                      <p className="font-medium text-foreground">Review buyer submission</p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <div className="rounded border border-primary/10 bg-white p-2">
-                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Buyer</p>
-                          <p className="mt-1 text-foreground">{buyerName || buyerPhone || buyerEmail || 'Not captured yet'}</p>
-                        </div>
-                        <div className="rounded border border-primary/10 bg-white p-2">
-                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Opportunity</p>
-                          <p className="mt-1 text-foreground">{selectedDevelopment?.developmentName || 'Not selected yet'}</p>
-                        </div>
-                        <div className="rounded border border-primary/10 bg-white p-2">
-                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Buyer fit</p>
-                          <p className="mt-1 text-foreground">
-                            {[buyerRoute, buyerIntent, preferredArea, budgetRange].filter(Boolean).join(' | ') || 'Not captured yet'}
-                          </p>
-                        </div>
-                        <div className="rounded border border-primary/10 bg-white p-2">
-                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">Readiness</p>
-                          <p className="mt-1 text-foreground">
-                            {selectedBuyerDocuments.length || 0} buyer docs, {selectedDeveloperApplicationDocuments.length || 0} developer docs, {selectedSupportingDocuments.length || 0} sales files
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-xs">
-                        The buyer will appear in your tracker with document progress and reward status
-                        as soon as the referral is accepted.
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {eligibilityBlockers.length ? (
-                    <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                      <p className="font-semibold">This buyer cannot be submitted yet</p>
-                      <p className="mt-1 text-xs text-red-600">
-                        You can still continue preparing the buyer profile while this is resolved.
-                      </p>
-                      <ul className="mt-1 list-disc space-y-1 pl-5">
-                        {eligibilityBlockers.map(reason => (
-                          <li key={reason}>{reason}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-
-                  {duplicateDealId ? (
-                    <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                      A matching referral already exists for this development.
-                      <div className="mt-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setLocation(`/distribution/partner/referrals/${duplicateDealId}`)}
-                        >
-                          View existing referral
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      disabled={currentStep === 0}
-                      onClick={() => setCurrentStep(step => Math.max(0, step - 1))}
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={currentStep === steps.length - 1}
-                      onClick={() => setCurrentStep(step => Math.min(steps.length - 1, step + 1))}
-                    >
-                      Next
-                    </Button>
-                  </div>
-
+                  <label className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" checked={confirmedPermission} onChange={event => setConfirmedPermission(event.target.checked)} className="mt-1" />
+                    <span>The prospect agreed to share their details for this referral and signed the permission document.</span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm">
+                    <input type="checkbox" checked={confirmedPrivacyNotice} onChange={event => setConfirmedPrivacyNotice(event.target.checked)} className="mt-1" />
+                    <span>I gave the prospect the privacy notice and explained the named recipients.</span>
+                  </label>
                   <Button
-                    variant="conversion"
-                    className="w-full"
-                    disabled={submitReferralMutation.isPending || !selectedDevelopmentId || !selectedIsReady}
-                    onClick={() => {
-                      if (!selectedDevelopmentId) {
-                        toast.error('Select a ready opportunity to continue.');
-                        return;
-                      }
-                      if (!buyerName.trim() && !buyerPhone.trim() && !buyerEmail.trim()) {
-                        toast.error('Provide at least buyer name, phone, or email.');
-                        return;
-                      }
-
-                      setEligibilityBlockers([]);
-                      setDuplicateDealId(null);
-                      submitReferralMutation.mutate({
-                        developmentId: Number(selectedDevelopmentId),
-                        buyerName: buyerName.trim() || undefined,
-                        buyerPhone: buyerPhone.trim() || undefined,
-                        buyerEmail: buyerEmail.trim() || undefined,
-                        notes: buyerNotes || undefined,
-                        clientReference: clientReference.trim() || undefined,
-                        assessmentId: assessmentId || undefined,
-                      });
-                    }}
+                    disabled={!marketMode || !selectedModeProjection || !confirmedPermission || !confirmedPrivacyNotice || startSessionMutation.isPending}
+                    onClick={() => startSessionMutation.mutate({
+                      developmentId: Number(developmentId),
+                      confirmedPermission: true,
+                      confirmedPrivacyNotice: true,
+                    })}
                   >
-                    {submitReferralMutation.isPending ? 'Submitting...' : 'Submit Buyer'}
+                    {startSessionMutation.isPending ? 'Starting secure checklist…' : 'Continue to secure document upload'}
                   </Button>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        ) : null}
+            ) : (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" />3. Upload the signed documents privately</CardTitle>
+                    <CardDescription>Files are kept in Distribution’s private evidence storage. They are not Developer sales resources and no file URLs are shared with partners.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {REQUIRED_EVIDENCE.map(item => {
+                      const uploaded = uploadedTypes.has(item.type);
+                      return (
+                        <div key={item.type} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="flex items-center gap-2 text-sm font-semibold">
+                              {uploaded ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <FileCheck2 className="h-4 w-4 text-muted-foreground" />}
+                              {item.title}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">{item.instructions}</p>
+                          </div>
+                          <Input
+                            type="file"
+                            accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(',')}
+                            disabled={uploadEvidenceMutation.isPending}
+                            onChange={event => {
+                              const file = event.currentTarget.files?.[0];
+                              void uploadEvidence(item.type, file);
+                              event.currentTarget.value = '';
+                            }}
+                            className="max-w-sm"
+                          />
+                        </div>
+                      );
+                    })}
+                    {requirementsQuery.data.creditReport.enabled ? (
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
+                        <p className="font-semibold text-amber-950">Credit-report authorization is separate</p>
+                        <p className="mt-1 text-xs text-amber-900">This referral does not request a credit report. If a later step needs one, the prospect must separately sign the authorization for {requirementsQuery.data.creditReport.providerName}.</p>
+                        <p className="mt-2 whitespace-pre-wrap text-xs text-amber-950">{requirementsQuery.data.creditReport.authorizationDocument?.content}</p>
+                        <label className="mt-3 block text-xs font-medium text-amber-950">Upload the separate signed authorization (optional at referral intake)
+                          <Input type="file" accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(',')} className="mt-2 bg-white" disabled={uploadEvidenceMutation.isPending} onChange={event => { const file = event.currentTarget.files?.[0]; void uploadEvidence('credit_authorization', file); event.currentTarget.value = ''; }} />
+                        </label>
+                      </div>
+                    ) : null}
+                    {intakeComplete ? (
+                      <p className="rounded-md bg-green-50 p-3 text-sm text-green-800">All required evidence is recorded. Buyer details are now available below.</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Upload all three required items to continue. The policy remains pinned to this session.</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {intakeComplete ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>4. Enter buyer details</CardTitle>
+                      <CardDescription>These details are submitted to the assigned Distribution team and the developer process stated in this program’s terms.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                        <p className="font-semibold">{selectedDevelopment?.developmentName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{marketMode ? `${marketMode === 'sale' ? 'Sale' : 'Rental'} · ${formatPrice(selectedModeProjection, marketMode)}` : 'Choose sale or rental above'}</p>
+                      </div>
+                      <Input placeholder="Prospect’s full name" autoComplete="off" value={buyerName} onChange={event => setBuyerName(event.target.value)} />
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Input placeholder="Phone number" autoComplete="off" value={buyerPhone} onChange={event => setBuyerPhone(event.target.value)} />
+                        <Input placeholder="Email address" type="email" autoComplete="off" value={buyerEmail} onChange={event => setBuyerEmail(event.target.value)} />
+                      </div>
+                      <Input placeholder="Your referral reference (optional)" autoComplete="off" value={clientReference} onChange={event => setClientReference(event.target.value)} />
+                      <Textarea placeholder="Anything the manager should know? Do not include financial account or ID numbers here." rows={4} value={buyerNotes} onChange={event => setBuyerNotes(event.target.value)} />
+                      {eligibilityError ? <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">{eligibilityError}</p> : null}
+                      <Button
+                        className="w-full"
+                        disabled={
+                          submitReferralMutation.isPending ||
+                          !developmentId ||
+                          !marketMode ||
+                          !selectedModeProjection ||
+                          (!buyerName.trim() && !buyerPhone.trim() && !buyerEmail.trim())
+                        }
+                        onClick={() => {
+                          setEligibilityError('');
+                          submitReferralMutation.mutate({
+                            developmentId: Number(developmentId),
+                            marketMode: marketMode!,
+                            intakeSessionUuid: sessionUuid!,
+                            buyerName: buyerName.trim() || undefined,
+                            buyerPhone: buyerPhone.trim() || undefined,
+                            buyerEmail: buyerEmail.trim() || undefined,
+                            notes: buyerNotes.trim() || undefined,
+                            clientReference: clientReference.trim() || undefined,
+                          });
+                        }}
+                      >
+                        {submitReferralMutation.isPending ? 'Submitting referral…' : 'Submit referral'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : null}
+              </>
+            )}
+          </>
+        )}
       </main>
     </ReferralAppShell>
   );

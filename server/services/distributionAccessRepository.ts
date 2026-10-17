@@ -1,11 +1,14 @@
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
 
 import {
-  developments,
   distributionBrandPartnerships,
   distributionDevelopmentAccess,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  listDevelopmentSalesWorkspaceReferences,
+  type DevelopmentSalesWorkspaceReference,
+} from './developmentSalesWorkspaceService';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -332,23 +335,9 @@ export async function listDevelopmentAccess(
   if (filters.accessStatus?.length) {
     conditions.push(inArray(distributionDevelopmentAccess.status, filters.accessStatus));
   }
-  if (filters.search?.trim()) {
-    const term = `%${filters.search.trim()}%`;
-    conditions.push(
-      sql`(
-        LOWER(COALESCE(${developments.name}, '')) LIKE LOWER(${term})
-        OR LOWER(COALESCE(${developments.city}, '')) LIKE LOWER(${term})
-        OR LOWER(COALESCE(${developments.province}, '')) LIKE LOWER(${term})
-      )`,
-    );
-  }
-
-  return await db
+  const rows = await db
     .select({
-      developmentId: developments.id,
-      developmentName: developments.name,
-      city: developments.city,
-      province: developments.province,
+      developmentId: distributionDevelopmentAccess.developmentId,
       cataloguePublisherId: distributionDevelopmentAccess.cataloguePublisherId,
       partnershipId: distributionBrandPartnerships.id,
       partnershipStatus: distributionBrandPartnerships.status,
@@ -365,14 +354,50 @@ export async function listDevelopmentAccess(
       distributionBrandPartnerships,
       eq(distributionDevelopmentAccess.brandPartnershipId, distributionBrandPartnerships.id),
     )
-    .innerJoin(developments, eq(distributionDevelopmentAccess.developmentId, developments.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(distributionDevelopmentAccess.updatedAt))
-    .limit(filters.limit ?? 200)
-    .then(rows =>
-      rows.map(row => ({
-        ...row,
-        accessStatus: row.accessStatus,
+    .limit(filters.limit ?? 200);
+
+  const developmentIds: number[] = [...new Set<number>(rows.map(row => Number(row.developmentId)))];
+  const references: DevelopmentSalesWorkspaceReference[] = [];
+  for (let index = 0; index < developmentIds.length; index += 200) {
+    references.push(
+      ...(await listDevelopmentSalesWorkspaceReferences({
+        developmentIds: developmentIds.slice(index, index + 200),
+        limit: 200,
       })),
     );
+  }
+  const referenceById = new Map(references.map(reference => [reference.developmentId, reference]));
+  const search = filters.search?.trim().toLocaleLowerCase() || '';
+
+  return rows.flatMap(row => {
+    const developmentId = Number(row.developmentId);
+    const reference = referenceById.get(developmentId);
+    if (!reference || reference.publisherId !== (row.cataloguePublisherId ? Number(row.cataloguePublisherId) : null)) {
+      return [];
+    }
+    if (
+      search &&
+      ![reference.name, reference.displayName, reference.city, reference.province, reference.suburb]
+        .filter(Boolean)
+        .some(value => String(value).toLocaleLowerCase().includes(search))
+    ) {
+      return [];
+    }
+    return [{
+      ...row,
+      developmentId,
+      developmentName: reference.displayName,
+      city: reference.city,
+      province: reference.province,
+      publisherName: reference.publisherName,
+      publisherAuthorityKind: reference.publisherAuthorityKind,
+      cataloguePublisherId: reference.publisherId,
+      isPublished: reference.isPublished,
+      approvalStatus: reference.approvalStatus,
+      lifecycle: reference.lifecycle,
+      accessStatus: row.accessStatus,
+    }];
+  });
 }
