@@ -51,6 +51,7 @@ describe('deployed security configuration', () => {
     ['B04 email capture', 'PROPERTY_LISTIFY_GOVERNED_B04_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b04-capture.jsonl'],
     ['B05 email capture', 'PROPERTY_LISTIFY_GOVERNED_B05_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b05-capture.jsonl'],
     ['B06 email capture', 'PROPERTY_LISTIFY_GOVERNED_B06_EMAIL_CAPTURE_PATH', '/tmp/property-listify-b06-capture.jsonl'],
+    ['billing proof S3 endpoint override', 'BILLING_PROOF_S3_ENDPOINT', 'http://127.0.0.1:9000'],
   ])('rejects the %s selector in production', (_label, key, value) => {
     const env = deployedEnv({ [key]: value });
     expect(deployedSecurityConfigurationIssues(env, 'production').join(' ')).toContain(key);
