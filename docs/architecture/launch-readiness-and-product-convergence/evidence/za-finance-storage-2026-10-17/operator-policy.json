@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::listify-finance-914683204061-af-south-1",
+        "arn:aws:s3:::listify-finance-914683204061-af-south-1/*",
+        "arn:aws:s3:::listify-finance-af-south-1-financebackup-kce1wayc2h2e",
+        "arn:aws:s3:::listify-finance-af-south-1-financebackup-kce1wayc2h2e/*"
+      ]
+    }
+  ]
+}
