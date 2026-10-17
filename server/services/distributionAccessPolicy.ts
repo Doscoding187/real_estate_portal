@@ -12,12 +12,10 @@ import { getDb } from '../db';
 import { getProgramActivationReadiness } from './distributionProgramService';
 import {
   getDevelopmentSalesProjection,
-  type DevelopmentSalesProjection,
-} from './developmentSalesProjectionService';
-import {
   getDevelopmentSalesWorkspaceReference,
+  type DevelopmentSalesProjection,
   type DevelopmentSalesWorkspaceReference,
-} from './developmentSalesWorkspaceService';
+} from './distributionDeveloperReadPort';
 import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
 import {
   getBrandPartnershipByPublisherId,
@@ -272,6 +270,10 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     readiness_commissionModel: {
       code: 'COMMISSION_MISSING',
       message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_commissionModelUnsupported: {
+      code: 'PAYOUT_MODEL_UNSUPPORTED',
+      message: 'This referral payout type is not available yet.',
     },
     readiness_defaultCommissionPercent: {
       code: 'COMMISSION_MISSING',

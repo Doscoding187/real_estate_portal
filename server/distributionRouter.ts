@@ -41,12 +41,10 @@ import { developerIdentityService } from './services/developerIdentityService';
 import {
   getDevelopmentSalesWorkspaceReference,
   listDevelopmentSalesWorkspaceReferences,
-  type DevelopmentSalesWorkspaceReference,
-} from './services/developmentSalesWorkspaceService';
-import {
   getDevelopmentSalesProjection,
+  type DevelopmentSalesWorkspaceReference,
   type DevelopmentSalesProjection,
-} from './services/developmentSalesProjectionService';
+} from './services/distributionDeveloperReadPort';
 import { authService } from './_core/auth';
 import { EmailService } from './_core/emailService';
 import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
@@ -1297,13 +1295,7 @@ const upsertProgramInput = z.object({
   developmentId: z.number().int().positive(),
   isReferralEnabled: z.boolean(),
   isActive: z.boolean().default(true),
-  commissionModel: z.enum([
-    'flat_percentage',
-    'flat_amount',
-    'tiered_percentage',
-    'fixed_amount',
-    'hybrid',
-  ]),
+  commissionModel: z.enum(['flat_percentage', 'flat_amount']),
   defaultCommissionPercent: z.number().min(0).max(100).nullable().optional(),
   defaultCommissionAmount: z.number().int().min(0).nullable().optional(),
   tierAccessPolicy: z.enum(['open', 'restricted', 'invite_only']),
@@ -1526,6 +1518,8 @@ async function getDealById(db: any, dealId: number) {
       dealAmount: distributionDeals.dealAmount,
       commissionBaseAmount: distributionDeals.commissionBaseAmount,
       affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       currentStage: distributionDeals.currentStage,
       commissionTriggerStage: distributionDeals.commissionTriggerStage,
       commissionStatus: distributionDeals.commissionStatus,
@@ -4410,7 +4404,7 @@ const adminDistributionRouter = router({
         throw new TRPCError({
           code: 'BAD_REQUEST',
           message:
-            'Mark the commission entry paid with its payment reference; that action advances the deal to commission_paid.',
+            'Mark the referral payout record paid with its payment reference; that action advances the deal to payout recorded.',
         });
       }
 
@@ -4461,6 +4455,8 @@ const adminDistributionRouter = router({
             dealAmount: Number(deal.dealAmount ?? 0),
             commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
             affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
+            referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
+            referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest,
             commissionTriggerStage: deal.commissionTriggerStage as
               | 'contract_signed'
               | 'bond_approved',
@@ -4482,19 +4478,6 @@ const adminDistributionRouter = router({
                 .limit(1);
               return row ? { id: Number(row.id) } : null;
             },
-            getProgramDefaults: async programId => {
-              const [program] = await tx
-                .select({
-                  commissionModel: distributionPrograms.commissionModel,
-                  defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-                  defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-                  currencyCode: distributionPrograms.currencyCode,
-                })
-                .from(distributionPrograms)
-                .where(eq(distributionPrograms.id, programId))
-                .limit(1);
-              return program || null;
-            },
             insertEntry: async payload => {
               await tx.insert(distributionCommissionEntries).values(payload);
             },
@@ -4512,7 +4495,7 @@ const adminDistributionRouter = router({
                 eventType: 'system',
                 actorUserId,
                 metadata: metadata as any,
-                notes: 'Commission entry created from stage transition.',
+                notes: 'Referral payout record created from stage transition.',
               });
             },
           },
@@ -4681,14 +4664,14 @@ const adminDistributionRouter = router({
         .limit(1);
 
       if (!entry) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Commission entry not found.' });
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Referral payout record not found.' });
       }
 
       const deal = await getDealById(db, entry.dealId);
       if (!deal) {
         throw new TRPCError({
           code: 'NOT_FOUND',
-          message: 'Linked distribution deal not found for this commission entry.',
+          message: 'Linked distribution deal not found for this referral payout record.',
         });
       }
 
@@ -4719,7 +4702,7 @@ const adminDistributionRouter = router({
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message:
-              'A real payment or receipt reference is required before marking a commission paid.',
+              'A real payment or receipt reference is required before marking a referral payout paid.',
           });
         }
         if (entry.entryStatus !== 'paid') {
@@ -4727,7 +4710,7 @@ const adminDistributionRouter = router({
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message:
-                'A commission can be marked paid only after its deal reaches commission pending.',
+                'A referral payout can be marked paid only after its deal reaches the payout pending stage.',
             });
           }
 
@@ -4740,7 +4723,7 @@ const adminDistributionRouter = router({
             const blockers = checklist.computed.blockers.join(', ') || 'unknown blockers';
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
-              message: `Commission payout is blocked: ${blockers}.`,
+              message: `Referral payout is blocked: ${blockers}.`,
             });
           }
           // Unsupported program milestones may be settled only through this
@@ -6422,6 +6405,8 @@ const managerDistributionRouter = router({
             dealAmount: Number(deal.dealAmount ?? 0),
             commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
             affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
+            referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
+            referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest,
             commissionTriggerStage: deal.commissionTriggerStage as
               | 'contract_signed'
               | 'bond_approved',
@@ -6443,19 +6428,6 @@ const managerDistributionRouter = router({
                 .limit(1);
               return row ? { id: Number(row.id) } : null;
             },
-            getProgramDefaults: async programId => {
-              const [program] = await tx
-                .select({
-                  commissionModel: distributionPrograms.commissionModel,
-                  defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-                  defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-                  currencyCode: distributionPrograms.currencyCode,
-                })
-                .from(distributionPrograms)
-                .where(eq(distributionPrograms.id, programId))
-                .limit(1);
-              return program || null;
-            },
             insertEntry: async payload => {
               await tx.insert(distributionCommissionEntries).values(payload);
             },
@@ -6473,7 +6445,7 @@ const managerDistributionRouter = router({
                 eventType: 'system',
                 actorUserId,
                 metadata: metadata as any,
-                notes: 'Commission entry created from stage transition.',
+                notes: 'Referral payout record created from stage transition.',
               });
             },
           },

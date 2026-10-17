@@ -17,6 +17,8 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function formatStageLabel(stage: string | null | undefined) {
+  if (stage === 'commission_pending') return 'Referral payout pending';
+  if (stage === 'commission_paid') return 'Referral payout paid';
   return String(stage || 'unknown')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, char => char.toUpperCase());

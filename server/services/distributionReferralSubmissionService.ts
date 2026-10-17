@@ -12,7 +12,7 @@ import {
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getAffordabilityMatches } from './affordabilityAssessmentService';
-import { getDevelopmentSalesProjection } from './developmentSalesProjectionService';
+import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
 import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
 import {
   assertPartnerDevelopmentProgramAccess,
@@ -129,7 +129,7 @@ function buildJourneyGuidance(input: {
     | 'review_outcome' = 'follow_up_viewing';
 
   if (stage === 'commission_paid') {
-    nextAction = 'Commission paid. Archive this deal and submit the next referral.';
+    nextAction = 'Referral payout recorded. Archive this deal and submit the next referral.';
     ownerRole = 'system';
     actionCode = 'submit_next_referral';
   } else if (stage === 'commission_pending') {
@@ -356,19 +356,21 @@ export async function createReferralDeal(
   }
   const eligibility = { programId };
 
-  const intakeSession = await getCompletePartnerReferralIntakeSession({
-    sessionUuid: input.intakeSessionUuid,
-    partnerUserId: input.actorUserId,
-    developmentId: input.developmentId,
-    db,
-  });
-  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
-
+  // Confirm current Developer marketability before reading referral evidence.
+  // The Distribution-owned adapter returns null until its Developer contract
+  // is integrated, so this path stays unavailable and fails closed.
   const developerProjection = await getDevelopmentSalesProjection(input.developmentId);
+  if (!developerProjection) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Current availability for this opportunity could not be confirmed, so referral submission is temporarily unavailable.',
+    });
+  }
+
   const projectionMode = input.marketMode === 'sale' ? 'for_sale' : 'for_rent';
-  const requestedMode = developerProjection?.inventory.modes[projectionMode];
+  const requestedMode = developerProjection.inventory.modes[projectionMode];
   if (
-    !developerProjection ||
     developerProjection.campaign.visible !== true ||
     developerProjection.inventory.phaseScope === 'unscoped-hidden' ||
     !requestedMode ||
@@ -385,6 +387,14 @@ export async function createReferralDeal(
       message: `The Developer Engine has no current marketable ${input.marketMode} inventory for this opportunity.`,
     });
   }
+
+  const intakeSession = await getCompletePartnerReferralIntakeSession({
+    sessionUuid: input.intakeSessionUuid,
+    partnerUserId: input.actorUserId,
+    developmentId: input.developmentId,
+    db,
+  });
+  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
 
   const normalizedClientReference = String(input.clientReference || '').trim() || null;
   if (normalizedClientReference) {

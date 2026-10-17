@@ -4,7 +4,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { distributionDevelopmentAccess } from '../../drizzle/schema';
 import { logAudit } from '../_core/auditLog';
 import { getDb } from '../db';
-import { getDevelopmentSalesWorkspaceReference } from './developmentSalesWorkspaceService';
+import { getDevelopmentSalesWorkspaceReference } from './distributionDeveloperReadPort';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,

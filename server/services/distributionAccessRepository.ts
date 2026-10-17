@@ -8,7 +8,7 @@ import { getDb } from '../db';
 import {
   listDevelopmentSalesWorkspaceReferences,
   type DevelopmentSalesWorkspaceReference,
-} from './developmentSalesWorkspaceService';
+} from './distributionDeveloperReadPort';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 

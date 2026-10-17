@@ -1,3 +1,5 @@
+import { isValidDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
+
 type CommissionTriggerStage = 'contract_signed' | 'bond_approved';
 type DealStage =
   | 'viewing_scheduled'
@@ -19,6 +21,8 @@ type EnsureCommissionInput = {
     commissionBaseAmount?: number | null;
     affordabilityPurchasePrice?: number | null;
     dealAmount?: number | null;
+    referralTermsSnapshotJson?: unknown;
+    referralTermsSnapshotDigest?: string | null;
   };
   transitionToStage: DealStage;
   actorUserId: number;
@@ -28,12 +32,6 @@ type EnsureCommissionInput = {
       dealId: number,
       triggerStage: CommissionTriggerStage,
     ) => Promise<{ id: number } | null>;
-    getProgramDefaults: (programId: number) => Promise<{
-      commissionModel?: 'flat_percentage' | 'tiered_percentage' | 'fixed_amount' | 'hybrid' | null;
-      defaultCommissionPercent?: number | null;
-      defaultCommissionAmount?: number | null;
-      currencyCode?: string | null;
-    } | null>;
     insertEntry: (payload: {
       dealId: number;
       programId: number;
@@ -92,6 +90,52 @@ function resolveCalculationBaseAmount(input: EnsureCommissionInput['deal']) {
   return 0;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readFrozenPayoutTerms(
+  snapshotValue: unknown,
+  expectedDigest: string | null | undefined,
+) {
+  if (!isValidDistributionReferralTermsSnapshot(snapshotValue, expectedDigest)) return null;
+  const snapshot = asRecord(snapshotValue);
+  const program = snapshot ? asRecord(snapshot.program) : null;
+  if (!program) return null;
+
+  const rawModel = String(program.commissionModel || '').trim();
+  const commissionModel = rawModel === 'flat_amount' ? 'fixed_amount' : rawModel;
+  if (commissionModel !== 'flat_percentage' && commissionModel !== 'fixed_amount') return null;
+
+  const toFiniteNumber = (value: unknown) => {
+    if (value === null || typeof value === 'undefined' || value === '') return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const currencyCode = String(program.currencyCode || '').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currencyCode)) return null;
+
+  return {
+    commissionModel,
+    defaultCommissionPercent: toFiniteNumber(program.defaultCommissionPercent),
+    defaultCommissionAmount: toFiniteNumber(program.defaultCommissionAmount),
+    currencyCode,
+  };
+}
+
 export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput) {
   const shouldCreate = shouldCreateCommissionEntry(
     input.deal.commissionTriggerStage,
@@ -112,7 +156,7 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
     // Never advance the deal while silently omitting its financial fact.
     if (error instanceof Error) {
       const wrapped = new Error(
-        'Commission entry could not be persisted; deal transition rolled back.',
+        'Referral payout record could not be persisted; deal transition rolled back.',
       );
       (wrapped as Error & { cause?: unknown }).cause = error;
       throw wrapped;
@@ -123,10 +167,18 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
     return { created: false as const, reason: 'already_exists' as const, entryId: existing.id };
   }
 
-  const defaults = await input.deps.getProgramDefaults(input.deal.programId);
-  const model = defaults?.commissionModel ?? 'flat_percentage';
-  const defaultPercent = Number(defaults?.defaultCommissionPercent ?? 0);
-  const defaultAmount = Number(defaults?.defaultCommissionAmount ?? 0);
+  const frozenTerms = readFrozenPayoutTerms(
+    input.deal.referralTermsSnapshotJson,
+    input.deal.referralTermsSnapshotDigest,
+  );
+  if (!frozenTerms) {
+    throw new Error(
+      'Referral payout terms were not captured for this deal; the stage transition was not applied.',
+    );
+  }
+  const model = frozenTerms.commissionModel;
+  const defaultPercent = Number(frozenTerms.defaultCommissionPercent ?? 0);
+  const defaultAmount = Number(frozenTerms.defaultCommissionAmount ?? 0);
   const calculationBaseAmount = resolveCalculationBaseAmount(input.deal);
   const commissionPercent =
     model === 'fixed_amount' ? null : Number.isFinite(defaultPercent) ? defaultPercent : null;
@@ -144,7 +196,7 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
       calculationBaseAmount,
       commissionPercent,
       commissionAmount,
-      currency: defaults?.currencyCode?.trim() || 'ZAR',
+      currency: frozenTerms.currencyCode,
       triggerStage: input.deal.commissionTriggerStage,
       entryStatus: 'pending',
       notes: `Auto-generated by ${input.source}.`,
@@ -171,7 +223,7 @@ export async function ensureCommissionEntryForDeal(input: EnsureCommissionInput)
     // returning a successful stage change would create a false financial state.
     if (error instanceof Error) {
       const wrapped = new Error(
-        'Commission entry could not be persisted; deal transition rolled back.',
+        'Referral payout record could not be persisted; deal transition rolled back.',
       );
       (wrapped as Error & { cause?: unknown }).cause = error;
       throw wrapped;

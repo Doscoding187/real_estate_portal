@@ -9,12 +9,10 @@ import {
   getDevelopmentSalesProjection,
   type DevelopmentSalesModeProjection,
   type DevelopmentSalesProjection,
-} from './developmentSalesProjectionService';
-import {
   getDevelopmentSalesWorkspaceReference,
   listDevelopmentSalesWorkspaceReferences,
   type DevelopmentSalesWorkspaceReference,
-} from './developmentSalesWorkspaceService';
+} from './distributionDeveloperReadPort';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import {
   listPartnerAccessibleDevelopmentIds,
@@ -82,12 +80,31 @@ function formatPayout(program: typeof distributionPrograms.$inferSelect) {
   const currency = program.currencyCode || 'ZAR';
   const amount = Number(program.referrerCommissionValue ?? program.defaultCommissionAmount ?? 0);
   const percent = Number(program.referrerCommissionValue ?? program.defaultCommissionPercent ?? 0);
-  const commissionType = program.referrerCommissionType || program.commissionModel;
-  if (commissionType === 'flat_amount' && Number.isFinite(amount) && amount > 0) {
+  const payoutType = program.referrerCommissionType;
+  if (payoutType === 'flat' && Number.isFinite(amount) && amount > 0) {
     return `${currency === 'ZAR' ? 'R' : `${currency} `}${Math.round(amount).toLocaleString('en-ZA')} referral payout`;
   }
-  if (commissionType === 'flat_percentage' && Number.isFinite(percent) && percent > 0) {
-    return `${percent}% referral payout`;
+  if (payoutType === 'percentage' && Number.isFinite(percent) && percent > 0) {
+    const basis = program.referrerCommissionBasis?.replace(/_/g, ' ');
+    return `${percent}% referral payout${basis ? ` of ${basis}` : ''}`;
+  }
+
+  // The pre-existing program form still writes the generic payout model.
+  // Keep its display accurate while that form is being reconciled with the
+  // explicit referrer payout fields above.
+  if (
+    (program.commissionModel === 'fixed_amount' || program.commissionModel === 'flat_amount') &&
+    Number.isFinite(Number(program.defaultCommissionAmount)) &&
+    Number(program.defaultCommissionAmount) > 0
+  ) {
+    return `${currency === 'ZAR' ? 'R' : `${currency} `}${Math.round(Number(program.defaultCommissionAmount)).toLocaleString('en-ZA')} referral payout`;
+  }
+  if (
+    program.commissionModel === 'flat_percentage' &&
+    Number.isFinite(Number(program.defaultCommissionPercent)) &&
+    Number(program.defaultCommissionPercent) > 0
+  ) {
+    return `${Number(program.defaultCommissionPercent)}% referral payout`;
   }
   return 'Referral payout terms configured';
 }

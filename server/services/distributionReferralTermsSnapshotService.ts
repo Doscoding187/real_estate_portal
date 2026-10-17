@@ -63,6 +63,30 @@ function digest(value: unknown) {
   return createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 }
 
+export function isValidDistributionReferralTermsSnapshot(
+  value: unknown,
+  expectedDigest: string | null | undefined,
+) {
+  if (!expectedDigest) return false;
+  let parsedValue = value;
+  if (typeof parsedValue === 'string') {
+    try {
+      parsedValue = JSON.parse(parsedValue);
+    } catch {
+      return false;
+    }
+  }
+  const snapshot =
+    parsedValue && typeof parsedValue === 'object' && !Array.isArray(parsedValue)
+      ? (parsedValue as Record<string, unknown>)
+      : null;
+  if (!snapshot || typeof snapshot.digest !== 'string' || snapshot.digest !== expectedDigest) {
+    return false;
+  }
+  const { digest: _storedDigest, ...terms } = snapshot;
+  return digest(terms) === expectedDigest;
+}
+
 /**
  * Capture the Distribution-owned rules that applied when a referral was submitted.
  * Developer projection facts are deliberately supplied by the caller and are never queried here.
@@ -81,6 +105,21 @@ export async function buildDistributionReferralTermsSnapshot(input: {
     .limit(1);
 
   if (!program) return null;
+  const commissionModel = String(program.commissionModel || '');
+  const payoutPercent = Number(program.defaultCommissionPercent || 0);
+  const payoutAmount = Number(program.defaultCommissionAmount || 0);
+  const currencyCode = String(program.currencyCode || '').trim().toUpperCase();
+  const payoutTermsConfigured =
+    (commissionModel === 'flat_percentage' && Number.isFinite(payoutPercent) && payoutPercent > 0) ||
+    (commissionModel === 'fixed_amount' && Number.isFinite(payoutAmount) && payoutAmount > 0);
+  if (
+    Number(program.isActive) !== 1 ||
+    Number(program.isReferralEnabled) !== 1 ||
+    !payoutTermsConfigured ||
+    !/^[A-Z]{3}$/.test(currencyCode)
+  ) {
+    return null;
+  }
 
   const [workflow, activePolicy] = await Promise.all([
     input.db
@@ -204,6 +243,9 @@ export async function buildDistributionReferralTermsSnapshot(input: {
       referrerCommissionType: program.referrerCommissionType,
       referrerCommissionValue: program.referrerCommissionValue,
       referrerCommissionBasis: program.referrerCommissionBasis,
+      platformCommissionType: program.platformCommissionType,
+      platformCommissionValue: program.platformCommissionValue,
+      platformCommissionBasis: program.platformCommissionBasis,
       currencyCode: program.currencyCode,
       payoutMilestone: program.payoutMilestone,
       payoutMilestoneNotes: program.payoutMilestoneNotes,

@@ -282,7 +282,7 @@ export default function ReferrerDashboard() {
                               ? [selectedDevelopment.suburb, selectedDevelopment.city, selectedDevelopment.province]
                                   .filter(Boolean)
                                   .join(', ')
-                              : 'Location details will appear when Developer data is connected'}
+                              : 'Location details will appear when this opportunity is ready.'}
                           </CardDescription>
                         </div>
                         <Badge
@@ -297,15 +297,15 @@ export default function ReferrerDashboard() {
                     <CardContent className="space-y-4">
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         <div className="rounded-md border p-2.5">
-                          <p className="text-[11px] text-slate-500">Developer availability</p>
+                          <p className="text-[11px] text-slate-500">Current availability</p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
                             {selectedDevelopment.developmentFactsAvailable
                               ? `${formatMoney(selectedDevelopment.priceFrom)} - ${formatMoney(selectedDevelopment.priceTo)}`
-                              : 'Not connected'}
+                              : 'Not available yet'}
                           </p>
                         </div>
                         <div className="rounded-md border p-2.5">
-                          <p className="text-[11px] text-slate-500">Commission Model</p>
+                          <p className="text-[11px] text-slate-500">Referral payout type</p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
                             {String(selectedDevelopment.commissionModel || 'N/A').replace('_', ' ')}
                           </p>
@@ -531,7 +531,7 @@ export default function ReferrerDashboard() {
                                     : 'text-slate-500'
                                 }`}
                               >
-                                Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
+                                Stage: {deal.currentStage} | Referral payout: {deal.commissionStatus}
                               </p>
                             </button>
                           ))}

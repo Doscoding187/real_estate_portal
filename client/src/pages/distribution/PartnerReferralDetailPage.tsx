@@ -28,9 +28,10 @@ function normalizeStage(stage: string | null | undefined) {
 }
 
 function getStageLabel(stage: string | null | undefined) {
-  return normalizeStage(stage)
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, char => char.toUpperCase());
+  const normalized = normalizeStage(stage);
+  if (normalized === 'commission_pending') return 'Referral payout pending';
+  if (normalized === 'commission_paid') return 'Referral payout paid';
+  return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
 function getStageProgress(stage: string | null | undefined) {

@@ -4,7 +4,7 @@ import {
   getDevelopmentSalesWorkspaceReference,
   listDevelopmentSalesWorkspaceReferences,
   type DevelopmentSalesWorkspaceReference,
-} from './developmentSalesWorkspaceService';
+} from './distributionDeveloperReadPort';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,
