@@ -45,7 +45,7 @@ their existing dispositions.
 | B11 | Local private-proof durability: owner-only mode `0600`, root containment, identical bytes returned by a freshly started process | 2 tests, pass |
 | B11 | Real S3 HTTP path against a local S3-compatible listener: signed path-style PUT with `AES256` SSE, original-file name and proof-id metadata, prefix application, GET read-back | 1 test, pass |
 | B13 | One-shot worker exit-code contract: `0` clean, `2` for run-unknown, backlog-unknown and exhausted | 4 new cases, pass |
-| B13 | Bounded multi-run drain: due work drains one claim per run, future-due work untouched, retry backoff blocks re-invocation inside 5 minutes, retried delivery completes after the persisted due time passes, no double-sends, scoped states `{completed: 3, queued: 1}` | 1 integration test, pass |
+| B13 | Bounded multi-run drain: due work drains one claim per run (runs scoped to this test's leads so concurrent suites stay isolated), future-due work untouched, retry backoff blocks re-invocation inside 5 minutes, retried delivery completes after the persisted due time passes, no double-sends, scoped states `{completed: 3, queued: 1}` | 1 integration test, pass |
 | B17 | Local service recovery contracts (stale PID/socket/lock normalization, refusal of live/opened/wrong-owner artifacts, symlink and contradictory metadata) inside the static authority suite | 65 files / 774 tests, pass |
 
 ## Changes

@@ -539,22 +539,29 @@ describeDatabase('relational lead delivery authority (P2)', () => {
     };
 
     const runs = [];
-    for (let run = 0; run < 4; run += 1) {
-      runs.push(await runLeadDeliveryWorker({ database: databaseA, dispatcher, limit: 1 }));
+    // Every run is scoped to one of this test's leads so a concurrently
+    // running suite can never have its due deliveries claimed or completed
+    // here. Each bounded run claims at most one delivery; the sequence drains
+    // all due work and never touches the future-due delivery.
+    for (const leadId of dueLeadIds) {
+      runs.push(await runLeadDeliveryWorker({ database: databaseA, dispatcher, leadId, limit: 1 }));
     }
-    // The bounded limit forces one claim per run; four runs still drain all due
-    // work and never touch the future-due delivery.
     expect(runs).toEqual([
       expect.objectContaining({ claimed: 1, completed: 1 }),
       expect.objectContaining({ claimed: 1, failed: 1 }),
       expect.objectContaining({ claimed: 1, completed: 1 }),
-      expect.objectContaining({ claimed: 0 }),
     ]);
     expect(dispatched).toHaveLength(3);
 
     // The retry is scheduled five minutes out, so an immediately following
-    // scheduled run must not re-invoke the provider inside the backoff window.
-    const backoffRun = await runLeadDeliveryWorker({ database: databaseB, dispatcher, limit: 1 });
+    // scheduled run for the same lead must not re-invoke the provider inside
+    // the backoff window.
+    const backoffRun = await runLeadDeliveryWorker({
+      database: databaseB,
+      dispatcher,
+      leadId: dueLeadIds[1],
+      limit: 1,
+    });
     expect(backoffRun).toMatchObject({ claimed: 0 });
     expect(dispatched.filter(id => id === deliveries[1]!.delivery.id)).toHaveLength(1);
 
@@ -564,7 +571,12 @@ describeDatabase('relational lead delivery authority (P2)', () => {
       toMySqlDateTime(new Date(Date.now() - 1_000)),
       deliveries[1]!.delivery.id,
     ]);
-    const retryRun = await runLeadDeliveryWorker({ database: databaseB, dispatcher, limit: 1 });
+    const retryRun = await runLeadDeliveryWorker({
+      database: databaseB,
+      dispatcher,
+      leadId: dueLeadIds[1],
+      limit: 1,
+    });
     expect(retryRun).toMatchObject({ claimed: 1, completed: 1 });
     expect(dispatched.filter(id => id === deliveries[1]!.delivery.id)).toHaveLength(2);
 
