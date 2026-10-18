@@ -141,13 +141,16 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <WalletCards className="h-4 w-4 text-primary" />
-              Latest update
+              Current progress
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
               {nextActionHint}
             </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Last recorded update: {formatPartnerDateTime(referral.updatedAt)}
+            </p>
             {referral.manager?.displayName ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 Responsible contact: {referral.manager.displayName}

@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ReferralApplyForm } from '@/components/distribution/ReferralApplyForm';
-import { PropertyOpportunityShortlist } from '@/components/distribution/PropertyOpportunityShortlist';
+import {
+  PropertyOpportunityShortlist,
+  type ShortlistOption,
+} from '@/components/distribution/PropertyOpportunityShortlist';
 import {
   ArrowRight,
   Building2,
@@ -204,6 +207,34 @@ export default function DistributionNetworkPublicPage() {
       }, criteria);
     });
   }, [marketMode, matchPriceRange, matchArea, selectedBeds, projectedDevelopments]);
+  const shortlistOptions = useMemo<ShortlistOption[]>(
+    () => projectedDevelopments.map(dev => {
+      const mode = dev.inventory.modes[marketMode];
+      return {
+        id: dev.id,
+        marketable: Boolean(mode),
+        name: dev.name,
+        location: [dev.suburb, dev.city, dev.province].filter(Boolean).join(', '),
+        imageUrl: dev.images[0] || null,
+        url: dev.canonicalRoute,
+        priceLabel: formatModePrice(mode, marketMode),
+        availabilityLabel: mode
+          ? `${mode.availableCount} currently available · checked ${formatObservedAt(dev.observedAt)}`
+          : 'No current availability for this option',
+        propertyDetails: dev.inventory.unitTypes
+          .filter(unit => Boolean(unit.modes[marketMode]))
+          .slice(0, 4)
+          .map(unit => `${unit.name}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unit.modes[marketMode], marketMode)}`),
+        description: dev.description,
+      };
+    }),
+    [marketMode, projectedDevelopments],
+  );
+  const shortlistOptionsById = new Map(shortlistOptions.map(option => [String(option.id), option]));
+  const filteredShortlistOptions = filteredDevelopments.flatMap(dev => {
+    const option = shortlistOptionsById.get(String(dev.id));
+    return option ? [option] : [];
+  });
   const shortlistSummary = [
     marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
     matchPriceRange !== 'any'
@@ -537,25 +568,12 @@ export default function DistributionNetworkPublicPage() {
                   {!publicInventoryLoading && !publicInventoryError ? (
                     <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
                       <PropertyOpportunityShortlist
-                        key={marketMode}
+                        key={`${marketMode}:public`}
                         marketMode={marketMode}
+                        storageScope="public"
                         searchSummary={shortlistSummary}
-                        opportunities={filteredDevelopments.map(dev => ({
-                          id: dev.id,
-                          name: dev.name,
-                          location: [dev.suburb, dev.city, dev.province].filter(Boolean).join(', '),
-                          imageUrl: dev.images[0] || null,
-                          url: dev.canonicalRoute,
-                          priceLabel: formatModePrice(dev.inventory.modes[marketMode], marketMode),
-                          availabilityLabel: dev.inventory.modes[marketMode]
-                            ? `${dev.inventory.modes[marketMode]!.availableCount} currently available · checked ${formatObservedAt(dev.observedAt)}`
-                            : 'No current availability for this option',
-                          propertyDetails: dev.inventory.unitTypes
-                            .filter(unit => Boolean(unit.modes[marketMode]))
-                            .slice(0, 4)
-                            .map(unit => `${unit.name}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unit.modes[marketMode], marketMode)}`),
-                          description: dev.description,
-                        }))}
+                        opportunities={filteredShortlistOptions}
+                        currentOpportunities={shortlistOptions}
                       />
                     </div>
                   ) : null}

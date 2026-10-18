@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -6,6 +6,7 @@ const MAX_SHORTLIST_OPTIONS = 5;
 
 export type ShortlistOption = {
   id: number | string;
+  marketable?: boolean;
   name: string;
   location: string;
   publisher?: string | null;
@@ -24,32 +25,92 @@ function currentTimestamp() {
   }).format(new Date());
 }
 
+type ShortlistSelection = {
+  searchSummary: string;
+};
+
+function readSavedSelections(storageKey: string): Record<string, ShortlistSelection> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = window.sessionStorage.getItem(storageKey);
+    if (!raw || raw.length > 100_000) return {};
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    if (entries.length > MAX_SHORTLIST_OPTIONS) return {};
+    return Object.fromEntries(entries.flatMap(([id, value]) => {
+      if (!/^\d{1,20}$/.test(id)) return [];
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+      const selection = value as Record<string, unknown>;
+      if (typeof selection.searchSummary !== 'string') return [];
+      return [[id, { searchSummary: selection.searchSummary.slice(0, 1000) } satisfies ShortlistSelection]];
+    }));
+  } catch {
+    return {};
+  }
+}
+
 export function PropertyOpportunityShortlist({
   marketMode,
   searchSummary,
   opportunities,
+  currentOpportunities,
+  storageScope,
 }: {
   marketMode: 'sale' | 'rent';
   searchSummary: string;
   opportunities: ShortlistOption[];
+  currentOpportunities: ShortlistOption[];
+  storageScope: string;
 }) {
-  const [selectedById, setSelectedById] = useState<Record<string, {
-    option: ShortlistOption;
-    searchSummary: string;
-  }>>({});
-  const currentOptionsById = useMemo(
-    () => new Map(opportunities.map(option => [String(option.id), option])),
-    [opportunities],
+  const storageKey = `property-listify:distribution-shortlist:v1:${storageScope}:${marketMode}`;
+  const publicStorageKey = `property-listify:distribution-shortlist:v1:public:${marketMode}`;
+  const [selectedById, setSelectedById] = useState<Record<string, ShortlistSelection>>(
+    () => readSavedSelections(storageKey),
   );
-  const selectedOptions = Object.entries(selectedById).map(([id, selection]) => ({
-    id,
-    option: currentOptionsById.get(id) || selection.option,
-    searchSummary: selection.searchSummary,
-  }));
+  const [publicSelectionCount, setPublicSelectionCount] = useState(() =>
+    storageScope.startsWith('partner:')
+      ? Object.keys(readSavedSelections(publicStorageKey)).length
+      : 0,
+  );
+  const [importMessage, setImportMessage] = useState('');
+  useEffect(() => {
+    try {
+      if (Object.keys(selectedById).length) {
+        window.sessionStorage.setItem(storageKey, JSON.stringify(selectedById));
+      } else {
+        window.sessionStorage.removeItem(storageKey);
+      }
+    } catch {
+      // Keep the shortlist usable when browser storage is unavailable.
+    }
+  }, [selectedById, storageKey]);
+  const currentOptionsById = useMemo(
+    () => new Map(currentOpportunities.map(option => [String(option.id), option])),
+    [currentOpportunities],
+  );
+  const selectedOptions = Object.entries(selectedById).flatMap(([id, selection]) => {
+    const currentOption = currentOptionsById.get(id);
+    if (!currentOption || currentOption.marketable === false) return [];
+    return [{ id, option: currentOption, searchSummary: selection.searchSummary }];
+  });
   const selectedIds = new Set(selectedOptions.map(selection => selection.id));
   const selectedSearchSummaries = [...new Set(
     selectedOptions.map(selection => selection.searchSummary).filter(Boolean),
   )];
+
+  useEffect(() => {
+    setSelectedById(current => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([id]) => {
+          const option = currentOptionsById.get(id);
+          return Boolean(option && option.marketable !== false);
+        }),
+      );
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }, [currentOptionsById]);
 
   const toggleOption = (option: ShortlistOption) => {
     const id = String(option.id);
@@ -60,7 +121,7 @@ export function PropertyOpportunityShortlist({
         return next;
       }
       if (Object.keys(current).length >= MAX_SHORTLIST_OPTIONS) return current;
-      return { ...current, [id]: { option, searchSummary } };
+      return { ...current, [id]: { searchSummary } };
     });
   };
 
@@ -70,6 +131,33 @@ export function PropertyOpportunityShortlist({
       delete next[id];
       return next;
     });
+  };
+
+  const importPublicShortlist = () => {
+    const publicSelections = readSavedSelections(publicStorageKey);
+    const next = Object.fromEntries(
+      Object.entries(selectedById).filter(([id]) => {
+        const option = currentOptionsById.get(id);
+        return Boolean(option && option.marketable !== false);
+      }),
+    ) as Record<string, ShortlistSelection>;
+    let importedCount = 0;
+
+    for (const [id, selection] of Object.entries(publicSelections)) {
+      if (next[id] || Object.keys(next).length >= MAX_SHORTLIST_OPTIONS) continue;
+      const option = currentOptionsById.get(id);
+      if (!option || option.marketable === false) continue;
+      next[id] = selection;
+      importedCount += 1;
+    }
+
+    setSelectedById(next);
+    setPublicSelectionCount(Object.keys(publicSelections).length);
+    setImportMessage(
+      importedCount
+        ? `Added ${importedCount} currently available option${importedCount === 1 ? '' : 's'} to your partner shortlist.`
+        : 'No additional public options could be added. They may already be selected, unavailable to your account, or the five-option limit may be reached.',
+    );
   };
 
   const generatedAt = currentTimestamp();
@@ -110,6 +198,20 @@ export function PropertyOpportunityShortlist({
             Select the options you want to discuss. Changing filters keeps your selections; switching
             between buying and renting starts a separate shortlist.
           </p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            Your selections and search preferences stay in this browser session. No name, ID, income, or contact details are saved here.
+          </p>
+          {publicSelectionCount > 0 && storageScope.startsWith('partner:') ? (
+            <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-3">
+              <p className="text-xs text-slate-700">
+                You have {publicSelectionCount} option{publicSelectionCount === 1 ? '' : 's'} in your public shortlist for this search.
+              </p>
+              <Button type="button" variant="outline" className="mt-2" onClick={importPublicShortlist}>
+                Continue with public shortlist
+              </Button>
+              {importMessage ? <p role="status" className="mt-2 text-xs text-muted-foreground">{importMessage}</p> : null}
+            </div>
+          ) : null}
           {opportunities.length ? (
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {opportunities.map(option => {

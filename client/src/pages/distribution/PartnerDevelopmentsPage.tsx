@@ -4,11 +4,15 @@ import { Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
-import { PropertyOpportunityShortlist } from '@/components/distribution/PropertyOpportunityShortlist';
+import {
+  PropertyOpportunityShortlist,
+  type ShortlistOption,
+} from '@/components/distribution/PropertyOpportunityShortlist';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatPartnerDateTime } from '@/lib/distributionPartnerJourney';
 import {
   DISTRIBUTION_BEDROOM_FILTERS,
   DISTRIBUTION_PRICE_BANDS,
@@ -56,7 +60,7 @@ function promotionBullets(value: unknown): string[] {
 }
 
 export default function PartnerDevelopmentsPage() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
@@ -118,6 +122,40 @@ export default function PartnerDevelopmentsPage() {
       return matchesFilters;
     });
   }, [allItems, marketMode, priceBand, search, selectedBeds]);
+  const currentShortlistOptions = useMemo<ShortlistOption[]>(
+    () => allItems.map(item => {
+      const mode = item.inventory?.modes?.[marketMode];
+      const currencyCode = item.program.currencyCode || 'ZAR';
+      return {
+        id: item.developmentId,
+        marketable: Boolean(
+          mode && mode.availableCount > 0 && mode.priceFrom > 0 && mode.priceTo >= mode.priceFrom,
+        ),
+        name: item.developmentName,
+        location: [item.city, item.province].filter(Boolean).join(', '),
+        imageUrl: item.imageUrl,
+        priceLabel: formatModePrice(mode, currencyCode, marketMode === 'rent'),
+        availabilityLabel: mode
+          ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed · checked ${formatPartnerDateTime(item.developerProjectionObservedAt)}`
+          : 'No current availability for this option',
+        propertyDetails: (item.unitTypes || [])
+          .filter((unitType: any) => Boolean(unitType.modes?.[marketMode]))
+          .map((unitType: any) => {
+            const unitMode = unitType.modes[marketMode] as PartnerModeProjection;
+            return `${unitType.name}${unitType.bedrooms === null ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
+          }),
+        description: item.campaign.description || item.campaign.tagline,
+      };
+    }),
+    [allItems, marketMode],
+  );
+  const shortlistOptionsById = new Map(
+    currentShortlistOptions.map(option => [String(option.id), option]),
+  );
+  const filteredShortlistOptions = filteredItems.flatMap(item => {
+    const option = shortlistOptionsById.get(String(item.developmentId));
+    return option ? [option] : [];
+  });
 
   const toggleBedroom = (bedroom: DistributionBedroomFilter) => {
     setSelectedBeds(current => {
@@ -219,8 +257,9 @@ export default function PartnerDevelopmentsPage() {
               Showing {filteredItems.length} current {marketMode === 'sale' ? 'purchase' : 'rental'} option{filteredItems.length === 1 ? '' : 's'} available to your account.
             </p>
             <PropertyOpportunityShortlist
-              key={marketMode}
+              key={`${marketMode}:partner:${user?.id ?? 'unknown'}`}
               marketMode={marketMode}
+              storageScope={`partner:${user?.id ?? 'unknown'}`}
               searchSummary={[
                 marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
                 priceBand !== 'any'
@@ -231,27 +270,8 @@ export default function PartnerDevelopmentsPage() {
                   ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
                   : 'Any bedroom count',
               ].filter(Boolean).join(' · ')}
-              opportunities={filteredItems.map(item => {
-                const mode = item.inventory?.modes?.[marketMode];
-                const currencyCode = item.program.currencyCode || 'ZAR';
-                return {
-                  id: item.developmentId,
-                  name: item.developmentName,
-                  location: [item.city, item.province].filter(Boolean).join(', '),
-                  imageUrl: item.imageUrl,
-                  priceLabel: formatModePrice(mode, currencyCode, marketMode === 'rent'),
-                  availabilityLabel: mode
-                    ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed`
-                    : 'No current availability for this option',
-                  propertyDetails: (item.unitTypes || [])
-                    .filter((unitType: any) => Boolean(unitType.modes?.[marketMode]))
-                    .map((unitType: any) => {
-                      const unitMode = unitType.modes[marketMode] as PartnerModeProjection;
-                      return `${unitType.name}${unitType.bedrooms === null ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
-                    }),
-                  description: item.campaign.description || item.campaign.tagline,
-                };
-              })}
+              opportunities={filteredShortlistOptions}
+              currentOpportunities={currentShortlistOptions}
             />
           </div>
 
