@@ -54,6 +54,17 @@ function getNextActionHint(status: string, scheduledViewing?: any) {
   return 'The responsible team will add the next update here when it is confirmed.';
 }
 
+function processStepTypeLabel(stepType: unknown) {
+  const labels: Record<string, string> = {
+    internal: 'Team step',
+    document: 'Documents',
+    bank: 'Home finance',
+    decision: 'Decision',
+    closure: 'Completion',
+  };
+  return labels[String(stepType || '').toLowerCase()] || 'Process step';
+}
+
 export default function PartnerReferralDetailPage() {
   const [match, params] = useRoute('/distribution/partner/referrals/:dealId');
   const { isAuthenticated, loading } = useAuth();
@@ -135,6 +146,11 @@ export default function PartnerReferralDetailPage() {
   const normalizedStage = normalizeStage(referral.status);
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
+    : [];
+  const processSteps = Array.isArray((referral as any).programTermsSnapshot?.workflow?.steps)
+    ? [...(referral as any).programTermsSnapshot.workflow.steps].sort(
+        (left: any, right: any) => Number(left.stepOrder || 0) - Number(right.stepOrder || 0),
+      )
     : [];
   const documentRequirementsSnapshotAvailable = Array.isArray(
     (referral as any).programTermsSnapshot?.requiredDocuments,
@@ -251,6 +267,46 @@ export default function PartnerReferralDetailPage() {
             historical
           />
         </div>
+
+        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
+          <CardHeader>
+            <CardTitle>Steps for this opportunity</CardTitle>
+            <CardDescription>
+              These are the steps configured for this opportunity. Recorded updates for this deal appear in its timeline.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {processSteps.length ? (
+              <ol className="space-y-3">
+                {processSteps.map((step: any, index: number) => (
+                  <li
+                    key={`${String(step.stepKey || index)}-${index}`}
+                    className="flex items-start gap-3 rounded-md border border-primary/10 bg-white p-3"
+                  >
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground">
+                        {String(step.stepLabel || 'Next step to be confirmed')}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {processStepTypeLabel(step.stepType)}
+                        {step.isBlocking === true || Number(step.isBlocking) === 1
+                          ? ' · Required'
+                          : ' · As needed'}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+                The steps for this opportunity have not been added yet. Follow the recorded updates here for now.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         <Card className="mt-5 border-primary/15 bg-white shadow-sm">
           <CardHeader>
