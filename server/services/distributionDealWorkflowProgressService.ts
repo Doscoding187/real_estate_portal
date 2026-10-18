@@ -63,7 +63,6 @@ function normalizeWorkflowSteps(
   input: unknown,
   source: 'intake_policy' | 'program_workflow',
 ): DistributionReferralWorkflowStep[] | null {
-  if (typeof input === 'undefined' || input === null) return [];
   if (!Array.isArray(input) || input.length > 30) return null;
 
   const steps: DistributionReferralWorkflowStep[] = [];
@@ -137,17 +136,18 @@ export function readConfiguredReferralWorkflowSteps(
   const intakeConfiguration = rawIntakeConfiguration == null
     ? null
     : asRecord(rawIntakeConfiguration);
-  if (rawIntakeConfiguration != null && !intakeConfiguration) return null;
-  const intakeSteps = normalizeWorkflowSteps(
-    intakeConfiguration?.workflowSteps,
-    'intake_policy',
-  );
-  if (!intakeSteps) return null;
+  if (intakePolicy && !intakeConfiguration) return null;
+  const intakeSteps = intakeConfiguration
+    ? normalizeWorkflowSteps(intakeConfiguration.workflowSteps, 'intake_policy')
+    : [];
+  if (!intakeSteps || (intakePolicy && intakeSteps.length === 0)) return null;
 
   const rawWorkflow = snapshot.workflow;
   const workflow = rawWorkflow == null ? null : asRecord(rawWorkflow);
   if (rawWorkflow != null && !workflow) return null;
-  const programSteps = normalizeWorkflowSteps(workflow?.steps, 'program_workflow');
+  const programSteps = workflow
+    ? normalizeWorkflowSteps(workflow.steps, 'program_workflow')
+    : [];
   if (!programSteps) return null;
 
   const steps = intakeSteps.length ? intakeSteps : programSteps;
