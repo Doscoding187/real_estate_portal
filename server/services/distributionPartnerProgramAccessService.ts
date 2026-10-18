@@ -18,7 +18,6 @@ type DbExecutor = any;
 type CandidateProgram = {
   programId: number;
   developmentId: number;
-  tierAccessPolicy: string | null;
 };
 type ActorProgramGrant = {
   programId: number;
@@ -84,7 +83,6 @@ async function listCandidatePrograms(
     .select({
       programId: distributionPrograms.id,
       developmentId: distributionPrograms.developmentId,
-      tierAccessPolicy: distributionPrograms.tierAccessPolicy,
     })
     .from(distributionPrograms)
     .innerJoin(
@@ -100,7 +98,6 @@ async function listCandidatePrograms(
   return rows.map((row: any) => ({
     programId: Number(row.programId),
     developmentId: Number(row.developmentId),
-    tierAccessPolicy: row.tierAccessPolicy ? String(row.tierAccessPolicy) : null,
   }));
 }
 
@@ -151,24 +148,19 @@ function grantMeetsTier(grant: ActorProgramGrant, currentTier: string | null) {
   return requiredRank !== undefined && currentRank !== undefined && currentRank >= requiredRank;
 }
 
-function canAccessProgram(input: {
-  candidate: CandidateProgram;
+export function partnerHasSpecificProgramEntitlement(input: {
+  developmentId: number;
   grant: ActorProgramGrant | undefined;
   currentTier: string | null;
 }) {
-  const { candidate, grant, currentTier } = input;
+  const { developmentId, grant, currentTier } = input;
 
-  // An explicit pause or revocation wins over an otherwise open program.
-  if (grant && grant.accessStatus !== 'active') return false;
-
-  if (candidate.tierAccessPolicy === 'open') {
-    return true;
+  // Program visibility policy never creates an actor entitlement. Every
+  // partner, including one applying to an open program, needs an explicit
+  // active grant for this development and a sufficient Distribution tier.
+  if (!grant || grant.accessStatus !== 'active' || grant.developmentId !== developmentId) {
+    return false;
   }
-
-  // Restricted and invite-only programs require an explicit grant and the
-  // Distribution tier assigned to this partner account, independent of the
-  // user's agent, agency, or visitor role.
-  if (!grant || grant.developmentId !== candidate.developmentId) return false;
   return grantMeetsTier(grant, currentTier);
 }
 
@@ -192,8 +184,8 @@ export async function listPartnerAccessibleDevelopmentIds(input: {
 
   return candidates
     .filter(candidate =>
-      canAccessProgram({
-        candidate,
+      partnerHasSpecificProgramEntitlement({
+        developmentId: candidate.developmentId,
         grant: grants.get(candidate.programId),
         currentTier,
       }),

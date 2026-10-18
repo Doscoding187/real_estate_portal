@@ -92,6 +92,10 @@ import {
   verifyListingPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
 import {
+  prepareDistributionReferrerPreviewFixture,
+  verifyDistributionReferrerPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/distributionReferrerPreviewFixture';
+import {
   prepareLocalJourneyPreview,
   verifyLocalJourneyPreview,
 } from '../server/_core/databaseAuthority/dataAdapters/localJourneyPreview';
@@ -194,6 +198,8 @@ type Command =
   | 'scenario:verify'
   | 'listing-preview:prepare'
   | 'listing-preview:verify'
+  | 'distribution-referrer-preview:prepare'
+  | 'distribution-referrer-preview:verify'
   | 'local-journey:prepare'
   | 'local-journey:verify'
   | 'homepage-preview:prepare'
@@ -924,6 +930,8 @@ async function run(command: Command): Promise<void> {
     command === 'scenario:verify' ||
     command === 'listing-preview:prepare' ||
     command === 'listing-preview:verify' ||
+    command === 'distribution-referrer-preview:prepare' ||
+    command === 'distribution-referrer-preview:verify' ||
     command === 'homepage-preview:prepare' ||
     command === 'homepage-preview:verify' ||
     command === 'local-journey:prepare' ||
@@ -961,6 +969,23 @@ async function run(command: Command): Promise<void> {
         const evidence = isPrepare
           ? await prepareListingPreviewFixture({ authority, decision, connection })
           : await verifyListingPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
+    if (command.startsWith('distribution-referrer-preview:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareDistributionReferrerPreviewFixture({ authority, decision, connection })
+          : await verifyDistributionReferrerPreviewFixture({ authority, decision, connection });
         print(evidence);
       } finally {
         await connection.end();
@@ -1186,6 +1211,8 @@ const commands = new Set<Command>([
   'scenario:verify',
   'listing-preview:prepare',
   'listing-preview:verify',
+  'distribution-referrer-preview:prepare',
+  'distribution-referrer-preview:verify',
   'local-journey:prepare',
   'local-journey:verify',
   'homepage-preview:prepare',

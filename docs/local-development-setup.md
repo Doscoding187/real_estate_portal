@@ -239,14 +239,14 @@ The legacy fixed-database demo seed/reset commands are retired. They may not
 be used to create, adopt, or mutate `listify_local`. Product-specific demo
 workflows require their own approved Database Authority target and adapter.
 
-## Product-specific demo details (separate workflow)
+## Distribution individual-referrer preview
 
-The accounts and records below describe an older agency-workspace smoke
-scenario. They are not created by the Database Authority service or the
-Search-to-Lead adapter above, and they are not a prerequisite for ordinary
-feature-worktree startup. Do not restore the retired fixed-database seed
-commands to create them; use a separately approved target and adapter when
-that product workflow is explicitly required.
+Distribution membership is attached to a normal Property Listify account. The
+individual-referrer preview uses a `visitor` account with one active Distribution
+identity; it does not create an Agent OS profile, agency membership, buyer, or
+sample referral. Prepare it only after the worktree database is current and
+schema-congruent. The adapter refuses any other target and never changes an
+existing agent account into a referrer-only account.
 
 Local demo credentials are supplied through development-only environment configuration:
 
@@ -254,41 +254,24 @@ Local demo credentials are supplied through development-only environment configu
 LOCAL_DEMO_AGENCY_PASSWORD=...
 ```
 
-Accounts:
+Prepare and verify the referrer-only login:
 
-```text
-admin@listify.local      Super Admin
-agency@listify.local     Agency Principal / workspace smoke account
-developer@listify.local  Developer / Development Manager
-agent@listify.local      Agency / Agent referrer
-referrer@listify.local   Open Referrer / Workclass-style referrer
-buyer@listify.local      Buyer user
+```bash
+pnpm db:distribution-referrer-preview:prepare
+pnpm db:distribution-referrer-preview:verify
 ```
 
-Seeded demo scenarios:
+The login is `individual-referrer@listify.local` with the configured local demo
+password. Open `/distribution/partner/overview`. Its account role remains
+`visitor`; its Distribution ID comes from the separate active Distribution
+identity. Agents continue using their Agent dashboard and its Distribution
+Network link.
 
-```text
-[LOCAL DEMO] Hillside Gardens        Submit-ready opportunity
-[LOCAL DEMO] River Quarter           Pending setup / explore-only opportunity
-[LOCAL DEMO] Mandate Locked Estate   Blocked opportunity
-```
-
-Seeded referrer records:
-
-```text
-LOCAL-DEMO-SUBMITTED         Buyer submitted, awaiting review
-LOCAL-DEMO-NEEDS-ACTION      Buyer has missing/pending required documents
-LOCAL-DEMO-PAYOUT-PROGRESS   Reward approved and payout in progress
-LOCAL-DEMO-AGENT-SUBMITTED   Agency-agent submitted referral
-```
-
-Seeded agency workspace checks:
-
-```text
-[LOCAL DEMO] New Buyer                    Assignment, status, follow-up, reload persistence
-[LOCAL DEMO] Missing Agent Detail Buyer   Detail view with an out-of-agency agent reference
-[LOCAL DEMO] Cross Agency Buyer           Isolation fixture that must not be visible to the main agency
-```
+This account-only fixture does not invent a development catalogue or referral
+history. Catalogue entries require a Developer sales projection, a visible
+campaign, an active Distribution opportunity, and an explicit program grant
+for this partner. Referral submissions remain unavailable until their current
+Developer projection can be rechecked.
 
 ## Visual Testing Walkthrough
 
@@ -308,11 +291,13 @@ pnpm db:reference:verify
 pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
+pnpm db:distribution-referrer-preview:prepare
+pnpm db:distribution-referrer-preview:verify
 pnpm dev
 ```
 
 Use only records provided by the approved adapter for the feature under test;
-this workflow does not create the retired agency demo seed or fixed
+this workflow does not create retired agency demo records or the fixed
 `listify_local` database.
 
 The supported data lanes are intentionally separate. `db:reference:*` owns
@@ -357,26 +342,15 @@ Manual acceptance path:
 The fixture is restricted to the exact disposable worktree database; it does
 not access `listify_local`, staging, or production.
 
-2. Open `http://localhost:3009/login`.
+2. Open `http://localhost:3009/login` and log in as
+   `individual-referrer@listify.local` with the configured local demo password.
 
-3. Log in as `referrer@listify.local` with your configured local demo password.
+3. Visit `http://localhost:3009/distribution/partner/overview`. Confirm the
+   Distribution workspace opens for this visitor account and shows its empty
+   state until a specific program grant and Developer projection are available.
 
-4. Visit `http://localhost:3009/distribution/partner/overview`.
-
-5. Check:
-
-- dashboard modules show available opportunities, buyers needing action, recent next steps, and reward progress
-- submit mode shows `[LOCAL DEMO] Hillside Gardens`
-- explore mode shows `[LOCAL DEMO] River Quarter` and `[LOCAL DEMO] Mandate Locked Estate` with non-submit labels/messages
-- buyer referral wizard shows required documents and saves local draft state while typing
-- referral detail page shows buyer status, assigned manager, document progress, and payout/reward progress
-- blocked opportunity messages are friendly and do not expose internal policy wording
-
-6. Log in as `agent@listify.local` to test the agency/agent referral path.
-
-7. Log in as `developer@listify.local` to inspect assigned referrals and manager/developer flows.
-
-8. Log in as `admin@listify.local` to inspect development readiness, documents, commissions, and access setup.
+4. Log in as `agent@listify.local` to confirm an Agent account retains its
+   Agent dashboard and reaches Distribution from the Agent sidebar.
 
 ## Running The App Locally
 

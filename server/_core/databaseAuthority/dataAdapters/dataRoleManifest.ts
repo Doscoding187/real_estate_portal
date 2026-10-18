@@ -22,6 +22,10 @@ import {
   HOMEPAGE_JOURNEY_PREVIEW_VERSION,
 } from './homepageJourneyPreviewFixture';
 import {
+  DISTRIBUTION_REFERRER_PREVIEW_DIGEST,
+  DISTRIBUTION_REFERRER_PREVIEW_VERSION,
+} from './distributionReferrerPreviewFixture';
+import {
   PLE_PUBLICATION_ENTITLEMENT_DIGEST,
   PLE_PUBLICATION_ENTITLEMENT_VERSION,
 } from './plePublicationEntitlement';
@@ -142,6 +146,23 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['listing-preview'],
+    },
+    {
+      key: 'demo.distribution-individual-referrer-preview',
+      role: 'demo',
+      adapter: 'distribution-individual-referrer-preview',
+      adapterPath:
+        'server/_core/databaseAuthority/dataAdapters/distributionReferrerPreviewFixture.ts',
+      version: DISTRIBUTION_REFERRER_PREVIEW_VERSION,
+      digest: DISTRIBUTION_REFERRER_PREVIEW_DIGEST,
+      prepareCommand: 'db:distribution-referrer-preview:prepare',
+      verifyCommand: 'db:distribution-referrer-preview:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-partner-preview'],
     },
     {
       key: 'demo.homepage-journey-preview',

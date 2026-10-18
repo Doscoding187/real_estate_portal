@@ -1271,10 +1271,14 @@ function DevelopmentProgramConfigPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="restricted">Approved partners only</SelectItem>
-                  <SelectItem value="open">Open referrers and partners</SelectItem>
+                  <SelectItem value="open">Open to Distribution partners</SelectItem>
                   <SelectItem value="invite_only">Invite-only partners</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-[11px] text-slate-500">
+                Each partner still needs active access to this opportunity and the required
+                Distribution tier.
+              </p>
             </div>
             <div className="space-y-1" id="section-payout">
               <p className="text-xs font-medium text-slate-700">When does payout progress?</p>

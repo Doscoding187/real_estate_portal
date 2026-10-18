@@ -53,6 +53,8 @@
     "db:authority:service:status",
     "db:authority:service:stop",
     "db:authority:service:recover",
+    "db:distribution-referrer-preview:prepare",
+    "db:distribution-referrer-preview:verify",
     "db:reference:prepare",
     "db:reference:verify",
     "db:foundation:prepare",
@@ -75,7 +77,7 @@
     "all mutation of the quarantined current listify_local database"
   ],
   "localSeedEntrypoint": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
-  "localDataAuthorityStatus": "operation-specific-reference-foundation-demo-scenario-and-test-adapters",
+  "localDataAuthorityStatus": "operation-specific-reference-foundation-distribution-demo-scenario-and-test-adapters",
   "verificationEntrypoints": [
     "scripts/db-contract-verify.ts",
     "scripts/db-verify-distribution-schema.ts",
