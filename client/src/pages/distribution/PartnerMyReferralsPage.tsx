@@ -11,6 +11,8 @@ import {
   findScheduledPartnerViewing,
   formatPartnerDealStatus,
   formatPartnerDateTime,
+  formatPartnerPayoutRecordState,
+  getPartnerPayoutRecordState,
   summarizePartnerReferralWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
@@ -19,6 +21,14 @@ type DealFilter = 'all' | 'in_progress' | 'closed';
 
 function isClosed(statusValue: unknown) {
   return ['commission_paid', 'cancelled'].includes(String(statusValue || '').toLowerCase());
+}
+
+function formatPayoutAmount(value: unknown, currencyValue: unknown) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 'Amount not recorded';
+  const currency = String(currencyValue || 'ZAR').trim().toUpperCase();
+  const formatted = Math.round(amount).toLocaleString(currency === 'ZAR' ? 'en-ZA' : 'en-US');
+  return currency === 'ZAR' ? `R ${formatted}` : `${currency} ${formatted}`;
 }
 
 export default function PartnerMyReferralsPage() {
@@ -39,16 +49,30 @@ export default function PartnerMyReferralsPage() {
     { includePast: true, limit: 500 },
     { enabled: isAuthenticated, retry: false },
   );
+  const payoutsQuery = trpc.distribution.referrer.myCommissionEntries.useQuery(
+    { limit: 500 },
+    { enabled: isAuthenticated, retry: false },
+  );
 
   const items = referralsQuery.data?.items || [];
   const recordedViewings = (viewingsQuery.data || []) as PartnerViewingRecord[];
+  const payoutsByDealId = useMemo(() => {
+    const byDealId = new Map<number, any>();
+    for (const payout of payoutsQuery.data || []) {
+      const dealId = Number(payout.dealId);
+      if (Number.isSafeInteger(dealId) && dealId > 0 && !byDealId.has(dealId)) {
+        byDealId.set(dealId, payout);
+      }
+    }
+    return byDealId;
+  }, [payoutsQuery.data]);
   const filteredItems = useMemo(() => items.filter((item: any) => {
     if (filter === 'in_progress') return !isClosed(item.status);
     if (filter === 'closed') return isClosed(item.status);
     return true;
   }), [filter, items]);
 
-  if (loading || referralsQuery.isLoading || viewingsQuery.isLoading) {
+  if (loading || referralsQuery.isLoading || viewingsQuery.isLoading || payoutsQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
@@ -100,10 +124,12 @@ export default function PartnerMyReferralsPage() {
           </CardContent>
         </Card>
 
-        {referralsQuery.error || viewingsQuery.error ? (
+        {referralsQuery.error || viewingsQuery.error || payoutsQuery.error ? (
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="py-5 text-sm text-amber-900">
-              We could not load the latest deal updates. Refresh and try again.
+              {payoutsQuery.error && !referralsQuery.error && !viewingsQuery.error
+                ? 'We could not load referral payout statuses. Refresh and try again.'
+                : 'We could not load the latest deal updates. Refresh and try again.'}
             </CardContent>
           </Card>
         ) : null}
@@ -114,6 +140,17 @@ export default function PartnerMyReferralsPage() {
               const dealId = Number(item.dealId);
               const scheduledViewing = findScheduledPartnerViewing(dealId, recordedViewings);
               const processSummary = summarizePartnerReferralWorkflow(item.workflowProgress);
+              const payout = payoutsByDealId.get(dealId);
+              const payoutState = payout
+                ? getPartnerPayoutRecordState(payout.entryStatus, payout.dealStage)
+                : null;
+              const payoutStatus = payoutsQuery.error
+                ? 'Payout status could not be loaded.'
+                : payout
+                  ? `${formatPartnerPayoutRecordState(payoutState!)} · ${formatPayoutAmount(payout.commissionAmount, payout.currency)}`
+                  : (payoutsQuery.data || []).length >= 500
+                    ? 'Not present in the latest payout records.'
+                    : 'No referral payout record has been created yet.';
               return (
                 <article key={dealId} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
@@ -125,6 +162,9 @@ export default function PartnerMyReferralsPage() {
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       Updated {formatPartnerDateTime(item.updatedAt)}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Referral payout: {payoutStatus}
                     </p>
                     {processSummary ? (
                       <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
