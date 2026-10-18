@@ -74,8 +74,34 @@ function toPartnerVisibleReferralTermsSnapshot(
   snapshot: Record<string, unknown> | null,
 ): Record<string, unknown> | null {
   if (!snapshot) return null;
-  const { intakeEvidence: _privateReferralEvidence, ...partnerTerms } = snapshot;
-  return partnerTerms;
+  const program = parseJsonObject(snapshot.program);
+  const developerSalesSnapshot = parseJsonObject(snapshot.developerSalesSnapshot);
+
+  // Keep this as an allow-list: private intake evidence and policy internals
+  // remain inside Distribution's referral workflow.
+  return {
+    version: snapshot.version,
+    capturedAt: snapshot.capturedAt,
+    developmentId: snapshot.developmentId,
+    marketMode: snapshot.marketMode,
+    developerProjectionRevision: snapshot.developerProjectionRevision,
+    ...(developerSalesSnapshot ? { developerSalesSnapshot } : {}),
+    ...(program
+      ? {
+          program: {
+            referrerCommissionType: program.referrerCommissionType,
+            referrerCommissionValue: program.referrerCommissionValue,
+            referrerCommissionBasis: program.referrerCommissionBasis,
+            currencyCode: program.currencyCode,
+            payoutMilestone: program.payoutMilestone,
+            payoutMilestoneNotes: program.payoutMilestoneNotes,
+          },
+        }
+      : {}),
+    requiredDocuments: Array.isArray(snapshot.requiredDocuments)
+      ? snapshot.requiredDocuments
+      : [],
+  };
 }
 
 function normalizePhone(value: string | null | undefined) {
