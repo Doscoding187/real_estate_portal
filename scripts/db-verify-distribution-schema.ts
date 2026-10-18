@@ -1,5 +1,5 @@
-import { safeErrorSummary } from '../server/_core/safeError';
 #!/usr/bin/env tsx
+import { safeErrorSummary } from '../server/_core/safeError';
 import {
   authorizeDatabaseOperation,
   protectedDatabaseApprovalFromEnvironment,

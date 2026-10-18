@@ -31,6 +31,15 @@ contain a surrogate-pair emoji (💥) before the error identifier; ESLint
 columns are UTF-16 while the splice tool counts code points, so those two
 were skipped by the guard clause (no corruption) and fixed by hand.
 
+### Shebang defect and fix
+
+The import-insertion pass placed the new import above the shebang in
+`scripts/db-verify-distribution-schema.ts`, which CI's DB Contract
+Verification job caught when `pnpm db:verify:distribution` failed to parse
+(esbuild: `Syntax error "!"` at line 2). The shebang is restored as line 1
+and the import moved beneath it; esbuild parse and ESLint pass. No other
+file in the change carried a shebang.
+
 ## Guard baseline and lint scope
 
 - `pnpm exec eslint server scripts shared` → **0** new-selector violations.
