@@ -70,6 +70,14 @@ function parseJsonObject(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function toPartnerVisibleReferralTermsSnapshot(
+  snapshot: Record<string, unknown> | null,
+): Record<string, unknown> | null {
+  if (!snapshot) return null;
+  const { intakeEvidence: _privateReferralEvidence, ...partnerTerms } = snapshot;
+  return partnerTerms;
+}
+
 function normalizePhone(value: string | null | undefined) {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
@@ -912,6 +920,7 @@ export async function getMyReferralDeal(
     .limit(200);
 
   const programTermsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
+  const partnerVisibleTermsSnapshot = toPartnerVisibleReferralTermsSnapshot(programTermsSnapshot);
   const salesSnapshot = parseJsonObject(programTermsSnapshot?.developerSalesSnapshot);
   const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
   const savedWorkflowProgress = await getReferralWorkflowProgress(db, Number(deal.dealId));
@@ -955,7 +964,7 @@ export async function getMyReferralDeal(
         : null,
     docProgress,
     applicationDocuments,
-    programTermsSnapshot,
+    programTermsSnapshot: partnerVisibleTermsSnapshot,
     workflowProgress,
     timeline: events.flatMap(event => {
       const metadata = parseJsonObject(event.metadata);
