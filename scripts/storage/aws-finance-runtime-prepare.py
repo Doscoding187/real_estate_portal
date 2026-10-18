@@ -139,7 +139,7 @@ def verify_replication(configuration):
     rule = rules[0] if len(rules) == 1 else {}
     if (configuration.get("Role") != REPLICATION_ROLE_ARN
             or len(rules) != 1
-            or rule.get("Id") != "DomesticBackup"
+            or rule.get("ID") != "DomesticBackup"
             or rule.get("Status") != "Enabled"
             or rule.get("Priority") != 1
             or rule.get("Filter") != {"Prefix": ""}

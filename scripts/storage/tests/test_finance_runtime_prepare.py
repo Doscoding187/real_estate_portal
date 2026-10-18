@@ -63,7 +63,7 @@ def make_aws(overrides=None):
             return {"Policy": json.dumps(prepare.expected_bucket_policy(bucket, principals))}
         if op == "get-bucket-replication":
             return {"ReplicationConfiguration": {"Role": prepare.REPLICATION_ROLE_ARN, "Rules": [{
-                "Id": "DomesticBackup", "Status": "Enabled", "Priority": 1,
+                "ID": "DomesticBackup", "Status": "Enabled", "Priority": 1,
                 "Filter": {"Prefix": ""}, "DeleteMarkerReplication": {"Status": "Disabled"},
                 "Destination": {"Bucket": prepare.BACKUP_ARN}}]}}
         if op == "get-user-policy":
@@ -165,6 +165,18 @@ class ConfigurationContracts(unittest.TestCase):
                 patch.object(prepare, "_run_aws", side_effect=make_raw()):
             with self.assertRaisesRegex(RuntimeError, "versioning"):
                 prepare.preflight(require_no_access_keys=True)
+        assert_no_maintenance(self, calls)
+
+    def test_preflight_replication_drift_stops_before_any_maintenance(self):
+        calls, fake = make_aws(overrides={"get-bucket-replication": {
+            "ReplicationConfiguration": {"Role": prepare.REPLICATION_ROLE_ARN, "Rules": [{
+                "ID": "OtherRule", "Status": "Enabled", "Priority": 1, "Filter": {"Prefix": ""},
+                "DeleteMarkerReplication": {"Status": "Disabled"},
+                "Destination": {"Bucket": prepare.BACKUP_ARN}}]}}})
+        with patch.object(prepare, "aws", side_effect=fake), \
+                patch.object(prepare, "_run_aws", side_effect=make_raw()):
+            with self.assertRaisesRegex(RuntimeError, "replication"):
+                prepare.preflight(require_no_access_keys=False)
         assert_no_maintenance(self, calls)
 
     def test_preflight_refuses_runtime_credentials_as_operator(self):
