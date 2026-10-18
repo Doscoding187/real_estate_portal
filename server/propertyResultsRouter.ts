@@ -187,7 +187,7 @@ export const propertyResultsRouter = router({
             } catch (error) {
               console.error(
                 `[PropertyResults] Error getting counts for search ${search.id}:`,
-                error,
+                safeErrorSummary(error),
               );
               const savedSearch = normalizeSavedSearch(search);
               return {

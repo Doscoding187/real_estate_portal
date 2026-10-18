@@ -52,7 +52,7 @@ async function run() {
 
     console.log('✅ getProfile valid role passed');
   } catch (error) {
-    console.error('❌ Test 1 Failed:', error);
+    console.error('❌ Test 1 Failed:', safeErrorSummary(error));
     failed = true;
   }
 

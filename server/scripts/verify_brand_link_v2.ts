@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Force load .env.local
 const envPath = path.resolve(process.cwd(), '.env.local');
@@ -53,7 +54,7 @@ async function main() {
       console.log('SUCCESS: Found developments linked to brand profiles.');
     }
   } catch (error) {
-    console.error('An error occurred:', error);
+    console.error('An error occurred:', safeErrorSummary(error));
     process.exit(1);
   }
 }
@@ -64,6 +65,6 @@ main()
     process.exit(0);
   })
   .catch(err => {
-    console.error('Fatal error:', err);
+    console.error('Fatal error:', safeErrorSummary(err));
     process.exit(1);
   });

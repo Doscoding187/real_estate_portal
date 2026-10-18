@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { ENV } from './env';
+import { safeErrorSummary } from './safeError';
 
 export type NotificationPayload = {
   title: string;
@@ -101,7 +102,7 @@ export async function notifyOwner(payload: NotificationPayload): Promise<boolean
 
     return true;
   } catch (error) {
-    console.warn('[Notification] Error calling notification service:', error);
+    console.warn('[Notification] Error calling notification service:', safeErrorSummary(error));
     return false;
   }
 }

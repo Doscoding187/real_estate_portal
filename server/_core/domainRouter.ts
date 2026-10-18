@@ -2,6 +2,7 @@ import express from 'express';
 import { getDb } from '../db';
 import { agencyBranding } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { safeErrorSummary } from './safeError';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ export const domainRoutingMiddleware = async (
         (req as any).isWhiteLabel = true;
       }
     } catch (error) {
-      console.error('Domain routing error:', error);
+      console.error('Domain routing error:', safeErrorSummary(error));
     }
   }
 
@@ -95,7 +96,7 @@ export const customDomainMiddleware = async (
         (req as any).isCustomDomain = true;
       }
     } catch (error) {
-      console.error('Custom domain routing error:', error);
+      console.error('Custom domain routing error:', safeErrorSummary(error));
     }
   }
 
@@ -161,7 +162,7 @@ export const checkDomainAvailability = async (
 
     return !existing;
   } catch (error) {
-    console.error('Domain availability check error:', error);
+    console.error('Domain availability check error:', safeErrorSummary(error));
     return false;
   }
 };

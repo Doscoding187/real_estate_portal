@@ -14,6 +14,7 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from './types/manusTypes';
+import { safeErrorSummary } from './safeError';
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
@@ -258,7 +259,7 @@ class SDKServer {
         });
         user = await db.getUser(userInfo.openId);
       } catch (error) {
-        console.error('[Auth] Failed to sync user from OAuth:', error);
+        console.error('[Auth] Failed to sync user from OAuth:', safeErrorSummary(error));
         throw ForbiddenError('Failed to sync user info');
       }
     }

@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Load env vars from .env.local
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -78,6 +79,6 @@ async function verifyIdFix() {
 }
 
 verifyIdFix().catch(err => {
-  console.error('❌ Script validation failed:', err);
+  console.error('❌ Script validation failed:', safeErrorSummary(err));
   process.exit(1);
 });

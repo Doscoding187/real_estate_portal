@@ -55,6 +55,7 @@ import {
   buildPublicPropertyParkingFact,
   buildPublicRentalEssentials,
 } from '../../shared/public-property-detail-presentation';
+import { safeErrorSummary } from '../_core/safeError';
 
 // v11 carries canonical Place identity and preferred-name locality labels.
 const CACHE_PREFIX = 'property:search:v11:';
@@ -568,7 +569,7 @@ export class PropertySearchService {
       } catch (error) {
         console.error(
           '[PropertySearchService] Location resolver failed, using text fallback:',
-          error,
+          safeErrorSummary(error),
         );
       }
     }
@@ -1470,7 +1471,7 @@ export class PropertySearchService {
     } catch (error) {
       console.error(
         '[PropertySearchService] Location resolver failed in getFilterCounts, using text fallback:',
-        error,
+        safeErrorSummary(error),
       );
     }
 

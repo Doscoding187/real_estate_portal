@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../_core/safeError';
 dotenv.config();
 
 import { developmentService } from '../services/developmentService';
@@ -78,7 +79,7 @@ async function verifyFix() {
     if (error.message.includes('Brand Profile with ID') && error.message.includes('not found')) {
       console.log('✅ SUCCESS: Correct Validation Error Thrown');
     } else {
-      console.log('⚠️ Unexpected Error format:', error);
+      console.log('⚠️ Unexpected Error format:', safeErrorSummary(error));
     }
   }
 

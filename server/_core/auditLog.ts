@@ -1,6 +1,7 @@
 import type { Request } from 'express';
 import { getDb } from '../db';
 import { auditLogs, type InsertAuditLog } from '../../drizzle/schema';
+import { safeErrorSummary } from './safeError';
 
 /**
  * Log super_admin and sensitive actions for audit trail
@@ -33,7 +34,7 @@ export async function logAudit(params: {
     await db.insert(auditLogs).values(logEntry);
     console.log(`[AuditLog] ${params.action} by user ${params.userId}`);
   } catch (error) {
-    console.error('[AuditLog] Failed to log action:', error);
+    console.error('[AuditLog] Failed to log action:', safeErrorSummary(error));
   }
 }
 
