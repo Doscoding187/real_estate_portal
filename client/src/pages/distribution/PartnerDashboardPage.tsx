@@ -111,17 +111,7 @@ function formatPercent(value: number) {
 
 function getCommissionDisplay(item: any) {
   const computed = String(item?.computed?.commissionDisplay || '').trim();
-  if (computed) return computed;
-
-  const program = item?.program || item;
-  const model = String(program?.commissionModel || '');
-  if (model === 'flat_amount' && Number(program?.defaultCommissionAmount || 0) > 0) {
-    return `Configured referral payout: ${formatCurrency(Number(program.defaultCommissionAmount))}`;
-  }
-  if (model === 'flat_percentage' && Number(program?.defaultCommissionPercent || 0) > 0) {
-    return `${Number(program.defaultCommissionPercent)}% referral payout; calculation basis is not configured`;
-  }
-  return 'Referral payout terms not configured';
+  return computed || 'Referral payout terms not configured';
 }
 
 function getPayoutDisplay(item: any) {
