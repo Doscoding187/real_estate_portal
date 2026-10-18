@@ -18,7 +18,7 @@ describe('price insights authority boundary', () => {
       path.resolve(process.cwd(), 'server/services/priceInsightsService.ts'),
       'utf8',
     );
-    expect(service).toContain('Error fetching micromarkets for city ${cityId}:`, error);');
+    expect(service).toContain('Error fetching micromarkets for city ${cityId}:`, safeErrorSummary(error));');
     expect(service).toContain('      throw error;');
   });
 });

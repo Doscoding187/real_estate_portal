@@ -52,6 +52,10 @@ by a paren-balance check across all 18 files.
 - Related suites (12 files: development, explore, places, location pages,
   lead capture, saved-search delivery, search discovery, badges, commercial
   terms): 128 passed, 2 pre-existing skips (plus one skipped suite).
+- Two source-text authority contracts asserted the exact raw form and were
+  updated to the summarized form (`contract.feed-ranking-authority.test.ts`,
+  `contract.price-insights-authority.test.ts`); intent unchanged — errors must
+  still be logged with context, never swallowed. Both pass.
 
 ## Remaining phases
 
