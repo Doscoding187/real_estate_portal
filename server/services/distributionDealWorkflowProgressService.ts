@@ -53,39 +53,73 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function asBoolean(value: unknown) {
-  return value === true || Number(value) === 1;
+function asBoolean(value: unknown): boolean | null {
+  if (value === true || value === 1 || value === '1') return true;
+  if (value === false || value === 0 || value === '0') return false;
+  return null;
 }
 
 function normalizeWorkflowSteps(
   input: unknown,
   source: 'intake_policy' | 'program_workflow',
-): DistributionReferralWorkflowStep[] {
-  if (!Array.isArray(input)) return [];
-  return input.flatMap((value, index) => {
+): DistributionReferralWorkflowStep[] | null {
+  if (typeof input === 'undefined' || input === null) return [];
+  if (!Array.isArray(input) || input.length > 30) return null;
+
+  const steps: DistributionReferralWorkflowStep[] = [];
+  for (const [index, value] of input.entries()) {
     const row = asRecord(value);
-    if (!row) return [];
-    const stepKey = String(source === 'intake_policy' ? row.key : row.stepKey || '').trim();
-    const stepLabel = String(source === 'intake_policy' ? row.title : row.stepLabel || '').trim();
-    if (!stepKey || !stepLabel) return [];
-    return [{
+    if (!row) return null;
+
+    const rawStepKey = source === 'intake_policy' ? row.key : row.stepKey;
+    const rawStepLabel = source === 'intake_policy' ? row.title : row.stepLabel;
+    if (typeof rawStepKey !== 'string' || typeof rawStepLabel !== 'string') return null;
+    const stepKey = rawStepKey.trim();
+    const stepLabel = rawStepLabel.trim();
+    if (stepKey.length < 2 || stepKey.length > 80 || stepLabel.length < 2 || stepLabel.length > 180) {
+      return null;
+    }
+
+    const rawIsBlocking = asBoolean(row.isBlocking);
+    if (rawIsBlocking === null) return null;
+
+    let stepOrder = index + 1;
+    let stepType: string | null = null;
+    let partnerInstructions: string | null = null;
+    let ownerRole: string | null = null;
+    if (source === 'program_workflow') {
+      const order = Number(row.stepOrder);
+      if (!Number.isSafeInteger(order) || order < 1) return null;
+      if (typeof row.stepType !== 'string' || !row.stepType.trim()) return null;
+      stepOrder = order;
+      stepType = row.stepType.trim();
+    } else {
+      if (typeof row.partnerInstructions !== 'string' || typeof row.ownerRole !== 'string') {
+        return null;
+      }
+      partnerInstructions = row.partnerInstructions.trim();
+      ownerRole = row.ownerRole.trim();
+      if (
+        partnerInstructions.length < 3 ||
+        partnerInstructions.length > 4_000 ||
+        ownerRole.length < 2 ||
+        ownerRole.length > 120
+      ) {
+        return null;
+      }
+    }
+
+    steps.push({
       stepKey,
       stepLabel,
-      stepType: source === 'program_workflow' && row.stepType
-        ? String(row.stepType)
-        : null,
-      stepOrder: source === 'program_workflow'
-        ? Number(row.stepOrder || index + 1)
-        : index + 1,
-      isBlocking: asBoolean(row.isBlocking),
-      partnerInstructions: source === 'intake_policy' && row.partnerInstructions
-        ? String(row.partnerInstructions)
-        : null,
-      ownerRole: source === 'intake_policy' && row.ownerRole
-        ? String(row.ownerRole)
-        : null,
-    }];
-  });
+      stepType,
+      stepOrder,
+      isBlocking: rawIsBlocking,
+      partnerInstructions,
+      ownerRole,
+    });
+  }
+  return steps;
 }
 
 export function readConfiguredReferralWorkflowSteps(
@@ -96,18 +130,34 @@ export function readConfiguredReferralWorkflowSteps(
   const snapshot = asRecord(snapshotValue);
   if (!snapshot) return null;
 
-  const intakePolicy = asRecord(snapshot.intakePolicy);
-  const intakeConfiguration = intakePolicy ? asRecord(intakePolicy.configuration) : null;
-  const intakeSteps = normalizeWorkflowSteps(intakeConfiguration?.workflowSteps, 'intake_policy');
-  const workflow = asRecord(snapshot.workflow);
+  const rawIntakePolicy = snapshot.intakePolicy;
+  const intakePolicy = rawIntakePolicy == null ? null : asRecord(rawIntakePolicy);
+  if (rawIntakePolicy != null && !intakePolicy) return null;
+  const rawIntakeConfiguration = intakePolicy?.configuration;
+  const intakeConfiguration = rawIntakeConfiguration == null
+    ? null
+    : asRecord(rawIntakeConfiguration);
+  if (rawIntakeConfiguration != null && !intakeConfiguration) return null;
+  const intakeSteps = normalizeWorkflowSteps(
+    intakeConfiguration?.workflowSteps,
+    'intake_policy',
+  );
+  if (!intakeSteps) return null;
+
+  const rawWorkflow = snapshot.workflow;
+  const workflow = rawWorkflow == null ? null : asRecord(rawWorkflow);
+  if (rawWorkflow != null && !workflow) return null;
   const programSteps = normalizeWorkflowSteps(workflow?.steps, 'program_workflow');
+  if (!programSteps) return null;
+
   const steps = intakeSteps.length ? intakeSteps : programSteps;
-  if (steps.length > 30) return null;
 
   const keys = new Set<string>();
+  const orders = new Set<number>();
   for (const step of steps) {
-    if (keys.has(step.stepKey)) return null;
+    if (keys.has(step.stepKey) || orders.has(step.stepOrder)) return null;
     keys.add(step.stepKey);
+    orders.add(step.stepOrder);
   }
   return steps.sort((left, right) => left.stepOrder - right.stepOrder);
 }
