@@ -12,6 +12,7 @@
  */
 
 import { redisCache, CacheTTL } from './redis';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Cache Key Generators for Location System
@@ -149,7 +150,7 @@ export async function withCache<T>(
 
   // Cache the result (don't await to avoid blocking)
   redisCache.set(cacheKey, result, ttlSeconds).catch(err => {
-    console.error(`Failed to cache result for ${cacheKey}:`, err);
+    console.error(`Failed to cache result for ${cacheKey}:`, safeErrorSummary(err));
   });
 
   return result;

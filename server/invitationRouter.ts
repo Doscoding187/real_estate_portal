@@ -18,6 +18,7 @@ import {
   ensureApprovedAgencyAgentProfile,
   isCurrentActiveAgencyMembership,
 } from './services/agencyMembershipService';
+import { safeErrorSummary } from './_core/safeError';
 
 /**
  * Invitation Router
@@ -267,7 +268,7 @@ export const invitationRouter = router({
       });
     } catch (error) {
       delivery = { deferred: false, attempted: 1, sent: 0, failed: 1 };
-      console.error('[invitation.create] Invitation saved but email delivery failed', error);
+      console.error('[invitation.create] Invitation saved but email delivery failed', safeErrorSummary(error));
     }
 
     return { ...toInvitationClient(invitation), delivery };
@@ -661,7 +662,7 @@ export const invitationRouter = router({
         });
       } catch (error) {
         delivery = { deferred: false, attempted: 1, sent: 0, failed: 1 };
-        console.error('[invitation.resend] Invitation updated but email delivery failed', error);
+        console.error('[invitation.resend] Invitation updated but email delivery failed', safeErrorSummary(error));
       }
 
       return { ...toInvitationClient(updated), delivery };

@@ -17,6 +17,7 @@
 
 import { Router, Request, Response } from 'express';
 import { marketplaceBundleService } from './services/marketplaceBundleService';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.get('/bundles', async (req: Request, res: Response) => {
     const bundles = await marketplaceBundleService.getActiveBundles();
     res.json(bundles);
   } catch (error) {
-    console.error('Error fetching bundles:', error);
+    console.error('Error fetching bundles:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch bundles',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -57,7 +58,7 @@ router.get('/bundles/:slug', async (req: Request, res: Response) => {
 
     res.json(bundle);
   } catch (error) {
-    console.error('Error fetching bundle:', error);
+    console.error('Error fetching bundle:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch bundle',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -80,7 +81,7 @@ router.get('/bundles/:bundleId/partners', async (req: Request, res: Response) =>
 
     res.json(bundle.partners);
   } catch (error) {
-    console.error('Error fetching bundle partners:', error);
+    console.error('Error fetching bundle partners:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch bundle partners',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -99,7 +100,7 @@ router.get('/bundles/:bundleId/category/:category', async (req: Request, res: Re
 
     res.json(partners);
   } catch (error) {
-    console.error('Error fetching partners by category:', error);
+    console.error('Error fetching partners by category:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch partners by category',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -144,7 +145,7 @@ router.post('/bundles', async (req: Request, res: Response) => {
 
     res.status(201).json(bundle);
   } catch (error) {
-    console.error('Error creating bundle:', error);
+    console.error('Error creating bundle:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to create bundle',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -180,7 +181,7 @@ router.post('/bundles/:bundleId/partners', async (req: Request, res: Response) =
 
     res.status(201).json({ message: 'Partner added to bundle successfully' });
   } catch (error) {
-    console.error('Error adding partner to bundle:', error);
+    console.error('Error adding partner to bundle:', safeErrorSummary(error));
 
     if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
@@ -206,7 +207,7 @@ router.delete('/bundles/:bundleId/partners/:partnerId', async (req: Request, res
 
     res.json({ message: 'Partner removed from bundle successfully' });
   } catch (error) {
-    console.error('Error removing partner from bundle:', error);
+    console.error('Error removing partner from bundle:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to remove partner from bundle',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -247,7 +248,7 @@ router.put(
 
       res.json({ message: 'Partner performance updated successfully' });
     } catch (error) {
-      console.error('Error updating partner performance:', error);
+      console.error('Error updating partner performance:', safeErrorSummary(error));
       res.status(500).json({
         error: 'Failed to update partner performance',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -270,7 +271,7 @@ router.get('/bundles/:bundleId/underperforming', async (req: Request, res: Respo
 
     res.json(partners);
   } catch (error) {
-    console.error('Error fetching underperforming partners:', error);
+    console.error('Error fetching underperforming partners:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch underperforming partners',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -298,7 +299,7 @@ router.put('/bundles/:bundleId/status', async (req: Request, res: Response) => {
 
     res.json({ message: 'Bundle status updated successfully' });
   } catch (error) {
-    console.error('Error updating bundle status:', error);
+    console.error('Error updating bundle status:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to update bundle status',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -319,7 +320,7 @@ router.delete('/bundles/:bundleId', async (req: Request, res: Response) => {
 
     res.json({ message: 'Bundle deleted successfully' });
   } catch (error) {
-    console.error('Error deleting bundle:', error);
+    console.error('Error deleting bundle:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to delete bundle',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -350,7 +351,7 @@ router.post('/bundles/:bundleId/validate', async (req: Request, res: Response) =
 
     res.json(validation);
   } catch (error) {
-    console.error('Error validating bundle:', error);
+    console.error('Error validating bundle:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to validate bundle',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -387,7 +388,7 @@ router.post('/bundles/:bundleId/track/view', async (req: Request, res: Response)
 
     res.status(201).json({ message: 'Bundle view tracked successfully' });
   } catch (error) {
-    console.error('Error tracking bundle view:', error);
+    console.error('Error tracking bundle view:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to track bundle view',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -428,7 +429,7 @@ router.post('/bundles/:bundleId/track/partner-engagement', async (req: Request, 
 
     res.status(201).json({ message: 'Partner engagement tracked successfully' });
   } catch (error) {
-    console.error('Error tracking partner engagement:', error);
+    console.error('Error tracking partner engagement:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to track partner engagement',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -469,7 +470,7 @@ router.post('/bundles/:bundleId/track/lead', async (req: Request, res: Response)
 
     res.status(201).json({ message: 'Lead attribution tracked successfully' });
   } catch (error) {
-    console.error('Error tracking lead attribution:', error);
+    console.error('Error tracking lead attribution:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to track lead attribution',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -492,7 +493,7 @@ router.get('/bundles/:bundleId/metrics', async (req: Request, res: Response) => 
 
     res.json(metrics);
   } catch (error) {
-    console.error('Error fetching bundle metrics:', error);
+    console.error('Error fetching bundle metrics:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch bundle metrics',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -511,7 +512,7 @@ router.get('/partners/:partnerId/bundle-metrics', async (req: Request, res: Resp
 
     res.json(metrics);
   } catch (error) {
-    console.error('Error fetching partner bundle metrics:', error);
+    console.error('Error fetching partner bundle metrics:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch partner bundle metrics',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -530,7 +531,7 @@ router.get('/users/:userId/bundle-history', async (req: Request, res: Response) 
 
     res.json(history);
   } catch (error) {
-    console.error('Error fetching user bundle history:', error);
+    console.error('Error fetching user bundle history:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch user bundle history',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -549,7 +550,7 @@ router.get('/bundles-analytics/top-performing', async (req: Request, res: Respon
 
     res.json(bundles);
   } catch (error) {
-    console.error('Error fetching top performing bundles:', error);
+    console.error('Error fetching top performing bundles:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to fetch top performing bundles',
       message: error instanceof Error ? error.message : 'Unknown error',

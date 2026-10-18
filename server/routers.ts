@@ -43,6 +43,7 @@ import {
   resolvePublicPropertyEligibility,
 } from './services/publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
+import { safeErrorSummary } from './_core/safeError';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -727,7 +728,7 @@ const appRouterConfig = {
             })),
           };
         } catch (error) {
-          console.error('Error getting filter counts:', error);
+          console.error('Error getting filter counts:', safeErrorSummary(error));
           return {
             total: 0,
             byType: {},

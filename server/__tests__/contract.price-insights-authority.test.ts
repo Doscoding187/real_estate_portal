@@ -12,7 +12,7 @@ describe('price insights authority boundary', () => {
     expect(source).not.toContain('WHERE provinceId =');
     expect(source).not.toContain('WHERE cityId =');
     expect(source).not.toContain('Return empty structure on error');
-    expect(source).not.toContain("console.error('Error fetching heatmap data:', error);\n        return []");
+    expect(source).not.toContain("console.error('Error fetching heatmap data:', safeErrorSummary(error));\n        return []");
 
     const service = readFileSync(
       path.resolve(process.cwd(), 'server/services/priceInsightsService.ts'),

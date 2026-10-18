@@ -26,6 +26,7 @@ import {
   getTranscodingStatus as getVideoTranscodingStatus,
   validateVideoFile as validateUploadedVideoFile,
 } from './services/videoProcessingService';
+import { safeErrorSummary } from './_core/safeError';
 
 async function requireExplorePublisher(ctx: Parameters<typeof requireUser>[0]) {
   const db = await getDb();
@@ -135,7 +136,7 @@ export const exploreVideoUploadRouter = router({
       // Trigger video processing pipeline (transcoding, thumbnails, etc.)
       // This runs asynchronously and doesn't block the response
       processUploadedVideo(result.contentId, input.videoUrl, input.duration).catch(error => {
-        console.error('[ExploreVideoUpload] Video processing failed:', error);
+        console.error('[ExploreVideoUpload] Video processing failed:', safeErrorSummary(error));
         // In production, this would trigger an alert or retry mechanism
       });
 

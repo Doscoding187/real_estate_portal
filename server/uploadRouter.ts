@@ -10,6 +10,7 @@ import {
 } from './_core/mediaStorage';
 import { createListingMediaUploadToken } from './services/listingMediaAuthority';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from './_core/safeError';
 
 type LocalUploadMediaType = 'image' | 'video' | 'pdf';
 
@@ -101,7 +102,7 @@ export const uploadRouter = router({
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        console.error('[UploadRouter] Failed to generate presigned URL:', error);
+        console.error('[UploadRouter] Failed to generate presigned URL:', safeErrorSummary(error));
         // Log the stack trace if available
         if (error instanceof Error) {
           console.error(error.stack);
