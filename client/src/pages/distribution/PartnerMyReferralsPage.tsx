@@ -73,7 +73,7 @@ function formatOwnerRole(ownerRole: string | null | undefined) {
 
 function getPrimaryAction(actionCode: string) {
   if (actionCode === 'track_payout') {
-    return { label: 'Open Referral Payouts', route: '/distribution/partner/commissions', variant: 'default' as const };
+    return { label: 'Open Referral Payouts', route: '/distribution/partner/payouts', variant: 'default' as const };
   }
   if (actionCode === 'submit_next_referral') {
     return { label: 'View Referral Intake', route: '/distribution/partner/submit', variant: 'default' as const };

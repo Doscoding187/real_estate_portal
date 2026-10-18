@@ -899,7 +899,7 @@ export default function PartnerDashboardPage() {
             <Button
               variant="outline"
               className="mt-4 w-full"
-              onClick={() => setLocation('/distribution/partner/commissions')}
+              onClick={() => setLocation('/distribution/partner/payouts')}
             >
               Open Referral Payouts
             </Button>

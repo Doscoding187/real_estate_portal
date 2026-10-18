@@ -303,7 +303,7 @@ export default function PartnerReferralDetailPage() {
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               {actionCode === 'track_payout' ? (
-                <Button size="sm" onClick={() => setLocation('/distribution/partner/commissions')}>
+                <Button size="sm" onClick={() => setLocation('/distribution/partner/payouts')}>
                   Open Referral Payouts
                 </Button>
               ) : null}

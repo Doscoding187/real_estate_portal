@@ -659,10 +659,13 @@ function Router() {
               <PartnerMyReferralsPage />
             </DistributionPartnerIdentityGate>
           </Route>
-          <Route path="/distribution/partner/commissions">
+          <Route path="/distribution/partner/payouts">
             <DistributionPartnerIdentityGate>
               <PartnerCommissionsPage />
             </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/commissions">
+            <Redirect to="/distribution/partner/payouts" />
           </Route>
           <Route path="/distribution/partner/referrals/:dealId">
             <DistributionPartnerIdentityGate>
