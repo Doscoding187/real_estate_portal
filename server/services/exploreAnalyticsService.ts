@@ -13,6 +13,7 @@ import {
 } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from '../_core/safeError';
 
 interface VideoAnalytics {
   videoId: string;
@@ -394,7 +395,7 @@ export class ExploreAnalyticsService {
           .set({ engagementScore: sql`${score.toFixed(2)}` })
           .where(eq(exploreContent.id, content.id));
       } catch (err) {
-        console.error(`[Analytics] Failed to update score for content ${content.id}:`, err);
+        console.error(`[Analytics] Failed to update score for content ${content.id}:`, safeErrorSummary(err));
       }
     }
 
@@ -433,7 +434,7 @@ export class ExploreAnalyticsService {
           `[Analytics] Completion rate for video ${video.id}: ${rate.toFixed(2)}% (${totalViews} views)`,
         );
       } catch (err) {
-        console.error(`[Analytics] Failed to update completion rate for video ${video.id}:`, err);
+        console.error(`[Analytics] Failed to update completion rate for video ${video.id}:`, safeErrorSummary(err));
       }
     }
 

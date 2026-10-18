@@ -15,6 +15,7 @@ import { getDb } from '../db-connection';
 import { eq, and, ne, sql } from 'drizzle-orm';
 import { provinces, cities, suburbs } from '../../drizzle/schema';
 import { parseCanonicalLocationId } from '../../shared/locationAuthority';
+import { safeErrorSummary } from '../_core/safeError';
 
 export interface ResolvedProvince {
   id: number;
@@ -705,7 +706,7 @@ export class LocationResolverService {
       console.log(`[LocationResolver] Created suburb: ${suburbName} (${slug})`);
       return Number(result[0].insertId);
     } catch (error) {
-      console.error(`[LocationResolver] Failed to create suburb:`, error);
+      console.error(`[LocationResolver] Failed to create suburb:`, safeErrorSummary(error));
       throw error;
     }
   }

@@ -1,6 +1,7 @@
 import { getDb } from '../db-connection';
 import { agentMemory, agentTasks, agentKnowledge } from '../../drizzle/schema';
 import { eq, desc, and, like, or, sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ==================== MEMORY OPERATIONS ====================
 
@@ -24,7 +25,7 @@ export async function storeConversation(data: {
     const result = await db.insert(agentMemory).values(data);
     return Number(result[0].insertId);
   } catch (error) {
-    console.error('[agentService] Failed to store conversation:', error);
+    console.error('[agentService] Failed to store conversation:', safeErrorSummary(error));
     throw new Error('Failed to store conversation in database');
   }
 }
@@ -73,7 +74,7 @@ export async function createTask(data: {
     });
     return Number(result[0].insertId);
   } catch (error) {
-    console.error('[agentService] Failed to create task:', error);
+    console.error('[agentService] Failed to create task:', safeErrorSummary(error));
     throw new Error('Failed to create task in database');
   }
 }
@@ -108,7 +109,7 @@ export async function updateTaskStatus(
 
     await db.update(agentTasks).set(updates).where(eq(agentTasks.taskId, taskId));
   } catch (error) {
-    console.error('[agentService] Failed to update task status:', error);
+    console.error('[agentService] Failed to update task status:', safeErrorSummary(error));
     throw new Error('Failed to update task status in database');
   }
 }
@@ -167,7 +168,7 @@ export async function addKnowledge(data: {
     const result = await db.insert(agentKnowledge).values(data);
     return Number(result[0].insertId);
   } catch (error) {
-    console.error('[agentService] Failed to add knowledge:', error);
+    console.error('[agentService] Failed to add knowledge:', safeErrorSummary(error));
     throw new Error('Failed to add knowledge to database');
   }
 }

@@ -57,6 +57,7 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../../shared/commercial-domain';
+import { safeErrorSummary } from '../_core/safeError';
 
 type LeadType = 'inquiry' | 'viewing_request' | 'offer' | 'callback';
 type LeadInsert = typeof leads.$inferInsert;
@@ -1859,7 +1860,7 @@ export async function capturePublicLead(
     void cataloguePublisherService
       .incrementLeadCountAsync(resolved.cataloguePublisherId)
       .catch(error =>
-        console.error('[capturePublicLead] Failed to update brand lead metrics:', error),
+        console.error('[capturePublicLead] Failed to update brand lead metrics:', safeErrorSummary(error)),
       );
   }
 

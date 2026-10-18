@@ -50,6 +50,7 @@ import {
   type SearchAreaResolution,
 } from './searchAreaAuthority';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
+import { safeErrorSummary } from '../_core/safeError';
 
 export type SearchDiscoveryMode = 'public' | 'controlled_acceptance';
 
@@ -755,17 +756,17 @@ export class SearchDiscoveryService {
     const safeLimit = Math.max(1, Math.min(20, Math.floor(limit)));
     const [catalogRows, factualResults, areaResults] = await Promise.all([
       this.canonicalLocationSearch(normalized, safeLimit, options.level).catch(error => {
-        console.error('[searchDiscovery] Canonical catalog query failed:', error);
+        console.error('[searchDiscovery] Canonical catalog query failed:', safeErrorSummary(error));
         return [] as readonly CanonicalLocationCatalogRow[];
       }),
       this.searchFactualProjection(normalized, safeLimit, options.level).catch(error => {
-        console.error('[searchDiscovery] Factual projection query failed:', error);
+        console.error('[searchDiscovery] Factual projection query failed:', safeErrorSummary(error));
         return [] as readonly CanonicalLocationDiscoveryResult[];
       }),
       options.includeSearchAreas === false
         ? Promise.resolve([] as readonly SearchAreaDiscoveryResult[])
         : this.searchAreas(normalized, journey).catch(error => {
-            console.error('[searchDiscovery] Search Area discovery query failed:', error);
+            console.error('[searchDiscovery] Search Area discovery query failed:', safeErrorSummary(error));
             return [] as readonly SearchAreaDiscoveryResult[];
           }),
     ]);
@@ -785,7 +786,7 @@ export class SearchDiscoveryService {
       factualPaths,
       options.level,
     ).catch(error => {
-      console.error('[searchDiscovery] Alias match query failed:', error);
+      console.error('[searchDiscovery] Alias match query failed:', safeErrorSummary(error));
       return [] as readonly CanonicalLocationDiscoveryResult[];
     });
 
