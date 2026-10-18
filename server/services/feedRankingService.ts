@@ -19,6 +19,7 @@ import {
   contentQualityScores,
 } from '../../drizzle/schema';
 import { eq, and, inArray, sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Types and Interfaces
@@ -322,7 +323,7 @@ export class FeedRankingService {
 
       return scoreMap;
     } catch (error) {
-      console.error('Error fetching quality scores:', error);
+      console.error('Error fetching quality scores:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -348,7 +349,7 @@ export class FeedRankingService {
 
       return trustMap;
     } catch (error) {
-      console.error('Error fetching partner trust scores:', error);
+      console.error('Error fetching partner trust scores:', safeErrorSummary(error));
       throw error;
     }
   }

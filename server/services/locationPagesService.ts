@@ -16,6 +16,7 @@ import {
   type PublicPropertyEligibilityResolution,
 } from './publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto } from './publicPropertyDto';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -234,7 +235,7 @@ export const locationPagesService = {
         )
         .slice(0, 12);
     } catch (error) {
-      console.warn('[LocationPages] City list query failed for province', error);
+      console.warn('[LocationPages] City list query failed for province', safeErrorSummary(error));
       throw error;
     }
 
@@ -480,7 +481,7 @@ export const locationPagesService = {
           .slice(0, 10),
       };
     } catch (error) {
-      console.error('[LocationPages] Error in getCityData:', error);
+      console.error('[LocationPages] Error in getCityData:', safeErrorSummary(error));
       throw error;
     }
   },
@@ -561,7 +562,7 @@ export const locationPagesService = {
       try {
         localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
       } catch (error) {
-        console.warn('[LocationPages] Properties preview projection failed for suburb', error);
+        console.warn('[LocationPages] Properties preview projection failed for suburb', safeErrorSummary(error));
         throw error;
       }
     }
@@ -575,7 +576,7 @@ export const locationPagesService = {
         .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
         .limit(1);
     } catch (error) {
-      console.warn('[LocationPages] suburbPriceAnalytics query failed', error);
+      console.warn('[LocationPages] suburbPriceAnalytics query failed', safeErrorSummary(error));
       throw error;
     }
 

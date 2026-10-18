@@ -1,6 +1,7 @@
 import { foundingPartnerService } from './foundingPartnerService';
 import { launchService } from './launchService';
 import { contentQuotaService } from './contentQuotaService';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * Founding Partner Content Tracker
@@ -94,7 +95,7 @@ class FoundingPartnerContentTracker {
       await contentQuotaService.trackContentCreation(contentType, partnerId);
       quotaUpdated = true;
     } catch (error) {
-      console.error(`Failed to update quota for content type ${contentType}:`, error);
+      console.error(`Failed to update quota for content type ${contentType}:`, safeErrorSummary(error));
     }
 
     return {
@@ -325,7 +326,7 @@ class FoundingPartnerContentTracker {
           sent++;
         }
       } catch (error) {
-        console.error(`Failed to send reminder to ${partner.partnerId}:`, error);
+        console.error(`Failed to send reminder to ${partner.partnerId}:`, safeErrorSummary(error));
         failed++;
       }
     }
