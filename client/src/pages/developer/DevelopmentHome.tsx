@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { formatReviewEventStatus } from '@/lib/developerStatusVocabulary';
+import DevelopmentPhasePlanner from './DevelopmentPhasePlanner';
 import { toast } from 'sonner';
 
 const lifecycleLabels = {
@@ -297,6 +298,8 @@ export default function DevelopmentHome() {
           ) : null}
         </CardContent>
       </Card>
+
+      <DevelopmentPhasePlanner developmentId={development.id} />
 
       <Card className="order-1 sm:order-2">
         <CardHeader>

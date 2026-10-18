@@ -72,6 +72,8 @@ export const AuditActions = {
 
   // Developer operations
   DEVELOPER_UNIT_AVAILABILITY_UPDATED: 'developer_unit_availability_updated',
+  DEVELOPER_PHASE_PREPARED: 'developer_phase_prepared',
+  DEVELOPER_PHASE_PLAN_UPDATED: 'developer_phase_plan_updated',
 
   // Agency admin actions
   INVITE_AGENT: 'invite_agent',

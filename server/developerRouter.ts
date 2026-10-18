@@ -7,6 +7,11 @@ import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
+import {
+  listDeveloperPhasePlans,
+  prepareDeveloperPhase,
+  updateDeveloperPhasePlan,
+} from './services/developmentPhasePlanningService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
@@ -112,6 +117,38 @@ export const DevelopmentHomeInputSchema = z
     developmentId: z.number().int().positive(),
     range: z.enum(['7d', '30d', '90d']),
   })
+  .strict();
+
+const phasePlanDetailsShape = {
+  name: z.string().trim().min(1).max(255),
+  phaseNumber: z.number().int().min(1).max(10000),
+  description: z.string().trim().max(5000).nullable().optional(),
+  specType: z.enum(['affordable', 'gap', 'luxury', 'custom']).nullable().optional(),
+  customSpecType: z.string().trim().max(100).nullable().optional(),
+  phaseHighlights: z.array(z.string().trim().min(1).max(250)).max(12).optional(),
+};
+
+const DevelopmentPhasePlansInputSchema = z
+  .object({ developmentId: z.number().int().positive() })
+  .strict();
+
+const PrepareDevelopmentPhaseInputSchema =
+  DevelopmentPhasePlansInputSchema.extend(phasePlanDetailsShape).strict();
+
+const PhasePlanSnapshotSchema = z
+  .object({
+    name: z.string().trim().min(1).max(255),
+    phaseNumber: z.number().int().min(1).max(10000),
+    description: z.string().trim().max(5000).nullable(),
+    specType: z.enum(['affordable', 'gap', 'luxury', 'custom']).nullable(),
+    customSpecType: z.string().trim().max(100).nullable(),
+    phaseHighlights: z.array(z.string().trim().min(1).max(250)).max(12),
+  })
+  .strict();
+
+const UpdateDevelopmentPhasePlanInputSchema = z
+  .object({ phaseId: z.number().int().positive(), expectedPlan: PhasePlanSnapshotSchema })
+  .extend(phasePlanDetailsShape)
   .strict();
 
 export const UpdateUnitAvailabilityInputSchema = z.object({
@@ -1948,6 +1985,31 @@ export const developerRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
       }
       return dev;
+    }),
+
+  getPhasePlans: protectedProcedure
+    .input(DevelopmentPhasePlansInputSchema)
+    .query(async ({ ctx, input }) => {
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      return listDeveloperPhasePlans(input.developmentId, requireUser(ctx).id);
+    }),
+
+  preparePhase: protectedProcedure
+    .input(PrepareDevelopmentPhaseInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      return prepareDeveloperPhase(input.developmentId, requireUser(ctx).id, input);
+    }),
+
+  updatePlannedPhase: protectedProcedure
+    .input(UpdateDevelopmentPhasePlanInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      const { phaseId, expectedPlan, ...details } = input;
+      return updateDeveloperPhasePlan(phaseId, requireUser(ctx).id, {
+        ...details,
+        expectedPlan,
+      });
     }),
 
   getOperatingHome: protectedProcedure
