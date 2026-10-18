@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
-  affordabilityAssessments,
   developmentRequiredDocuments,
   distributionDealDocuments,
   distributionDealEvents,
@@ -11,10 +10,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import {
-  getAffordabilityMatches,
-  requireApprovedAffordabilityModel,
-} from './affordabilityAssessmentService';
+import { requireApprovedAffordabilityModel } from './affordabilityAssessmentService';
 import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
 import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
 import {
@@ -264,8 +260,7 @@ export async function createReferralDeal(
     assessmentId?: string | null;
   },
 ) {
-  const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
-  if (normalizedAssessmentId) requireApprovedAffordabilityModel();
+  if (String(input.assessmentId || '').trim()) requireApprovedAffordabilityModel();
 
   const db = await resolveDb();
   await assertPartnerDevelopmentProgramAccess({
@@ -381,87 +376,12 @@ export async function createReferralDeal(
   const buyerName = String(input.buyerName || '').trim() || 'Buyer Pending';
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
-  if (input.marketMode === 'rent' && normalizedAssessmentId) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'A purchase affordability assessment cannot be attached to a rental referral.',
-    });
-  }
-  let assessmentAttachment:
-    | {
-        assessmentId: string;
-        matchSnapshotId: string;
-        purchasePrice: number;
-        assumptionsSummary: {
-          interestRateAnnual: number | null;
-          termMonths: number | null;
-          maxRepaymentRatio: number | null;
-          calcVersion: string | null;
-        };
-      }
-    | null = null;
-
-  if (normalizedAssessmentId) {
-    const assessmentConditions: SQL[] = [eq(affordabilityAssessments.id, normalizedAssessmentId)];
-    if (input.actorRole !== 'super_admin') {
-      assessmentConditions.push(eq(affordabilityAssessments.actorUserId, input.actorUserId));
-    }
-
-    const [assessment] = await db
-      .select({
-        id: affordabilityAssessments.id,
-        assumptionsJson: affordabilityAssessments.assumptionsJson,
-        lockedAt: affordabilityAssessments.lockedAt,
-        lockedByDealId: affordabilityAssessments.lockedByDealId,
-      })
-      .from(affordabilityAssessments)
-      .where(withConditions(assessmentConditions))
-      .limit(1);
-
-    if (!assessment?.id) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'assessmentId is invalid or not accessible for this actor.',
-      });
-    }
-
-    if (assessment.lockedAt && Number(assessment.lockedByDealId || 0) > 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'This affordability assessment is already attached to another referral.',
-      });
-    }
-
-    const snapshot = await getAffordabilityMatches({
-      assessmentId: normalizedAssessmentId,
-      actorUserId: input.actorUserId,
-      actorRole: input.actorRole,
-      db,
-    });
-    const assumptionsJson = parseJsonObject(assessment.assumptionsJson) || {};
-    assessmentAttachment = {
-      assessmentId: normalizedAssessmentId,
-      matchSnapshotId: String(snapshot.matchSnapshotId),
-      purchasePrice: Math.max(0, Math.round(Number(snapshot.purchasePrice || 0))),
-      assumptionsSummary: {
-        interestRateAnnual: toNumberOrNull(assumptionsJson.interestRateAnnual),
-        termMonths: toNumberOrNull(assumptionsJson.termMonths),
-        maxRepaymentRatio: toNumberOrNull(assumptionsJson.maxRepaymentRatio),
-        calcVersion: assumptionsJson.calcVersion ? String(assumptionsJson.calcVersion) : null,
-      },
-    };
-  }
-
   const result = await db.transaction(async tx => {
     const [insertDealResult] = await tx.insert(distributionDeals).values({
       programId: eligibility.programId,
       developmentId: input.developmentId,
       agentId: input.actorUserId,
       managerUserId,
-      affordabilityAssessmentId: assessmentAttachment?.assessmentId || null,
-      affordabilityMatchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
-      affordabilityPurchasePrice: assessmentAttachment?.purchasePrice ?? null,
-      affordabilityAssumptionsJson: assessmentAttachment?.assumptionsSummary as any,
       externalRef: normalizedClientReference,
       buyerName,
       buyerPhone,
@@ -496,8 +416,6 @@ export async function createReferralDeal(
         programId: eligibility.programId,
         developmentId: input.developmentId,
         managerAssigned: managerUserId,
-        assessmentId: assessmentAttachment?.assessmentId || null,
-        matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
         marketMode: input.marketMode,
         developerProjectionRevision: developerProjection.revision,
         referralTermsSnapshotDigest: referralTermsSnapshot.digest,
@@ -515,33 +433,6 @@ export async function createReferralDeal(
       developerProjectionRevision: developerProjection.revision,
       referralTermsSnapshotDigest: referralTermsSnapshot.digest,
     });
-
-    if (assessmentAttachment) {
-      await tx
-        .update(affordabilityAssessments)
-        .set({
-          lockedAt: toSqlDateTime(new Date()),
-          lockedByDealId: dealId,
-          lockedByUserId: input.actorUserId,
-        })
-        .where(eq(affordabilityAssessments.id, assessmentAttachment.assessmentId));
-
-      await tx.insert(distributionDealEvents).values({
-        dealId,
-        fromStage: null,
-        toStage: 'viewing_scheduled',
-        eventType: 'note',
-        actorUserId: input.actorUserId,
-        metadata: {
-          source: 'partner.attachAssessment',
-          assessmentId: assessmentAttachment.assessmentId,
-          matchSnapshotId: assessmentAttachment.matchSnapshotId,
-          purchasePrice: assessmentAttachment.purchasePrice,
-          assumptions: assessmentAttachment.assumptionsSummary,
-        } as any,
-        notes: 'Affordability Snapshot Attached',
-      });
-    }
 
     const templateIds = await getRequiredTemplateIdsForDevelopment(tx, input.developmentId);
     if (templateIds.length) {

@@ -3,8 +3,8 @@ import { TRPCError } from '@trpc/server';
 import { calculateAffordabilityOutputs } from '../affordabilityAssessmentService';
 
 describe('affordabilityAssessmentService.calculateAffordabilityOutputs', () => {
-  it('returns deterministic amortization outputs for fixed inputs', () => {
-    const result = calculateAffordabilityOutputs({
+  it('fails closed while the affordability policy is unapproved', () => {
+    const execute = () => calculateAffordabilityOutputs({
       grossIncomeMonthly: 50000,
       deductionsMonthly: 2500,
       depositAmount: 100000,
@@ -15,16 +15,11 @@ describe('affordabilityAssessmentService.calculateAffordabilityOutputs', () => {
       },
     });
 
-    expect(result.assumptions.calcVersion).toBe('v1');
-    expect(result.outputs.maxMonthlyRepayment).toBe(15000);
-    expect(result.outputs.indicativeLoanAmount).toBe(1384138);
-    expect(result.outputs.purchasePrice).toBe(1484138);
-    expect(result.outputs.indicativePurchaseMin).toBe(1484138);
-    expect(result.outputs.indicativePurchaseMax).toBe(1484138);
-    expect(result.outputs.confidenceLabel).toBe('Indicative — needs credit verification');
+    expect(execute).toThrow(TRPCError);
+    expect(execute).toThrow(/Income-based opportunity matching is not available yet/);
   });
 
-  it('throws validation error when assumptions are invalid', () => {
+  it('does not validate an unapproved model before it is enabled', () => {
     const execute = () =>
       calculateAffordabilityOutputs({
         grossIncomeMonthly: 50000,
@@ -36,6 +31,6 @@ describe('affordabilityAssessmentService.calculateAffordabilityOutputs', () => {
       });
 
     expect(execute).toThrow(TRPCError);
-    expect(execute).toThrow(/interestRateAnnual/);
+    expect(execute).toThrow(/agreed loan term and repayment allowance/);
   });
 });

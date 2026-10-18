@@ -1534,7 +1534,6 @@ async function getDealById(db: any, dealId: number) {
       managerUserId: distributionDeals.managerUserId,
       dealAmount: distributionDeals.dealAmount,
       commissionBaseAmount: distributionDeals.commissionBaseAmount,
-      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
       referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
       referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       currentStage: distributionDeals.currentStage,
