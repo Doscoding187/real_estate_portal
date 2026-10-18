@@ -70,6 +70,7 @@ import {
 } from '../drizzle/schema';
 
 import { ENV } from './_core/env';
+import { safeErrorSummary } from './_core/safeError';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import {
   firstOutreachOverdueSql,
@@ -568,7 +569,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error('[Database] Failed to upsert user:', error);
+    console.error('[Database] Failed to upsert user:', safeErrorSummary(error));
     throw error;
   }
 }
@@ -890,7 +891,7 @@ export async function updateProperty(
     }
   } catch (error) {
     // If location resolution fails, continue without IDs
-    console.warn('[updateProperty] Location ID resolution failed:', error);
+    console.warn('[updateProperty] Location ID resolution failed:', safeErrorSummary(error));
   }
 
   await db
@@ -2369,12 +2370,7 @@ export async function createListing(
 
     return listingId;
   } catch (error) {
-    console.error('[Database] Failed to create listing:', error);
-    if (error instanceof Error) {
-      console.error('[Database] Error details:', error.message);
-    } else {
-      console.error('[Database] Error details:', String(error));
-    }
+    console.error('[Database] Failed to create listing:', safeErrorSummary(error));
     throw error;
   }
 }
@@ -3714,7 +3710,10 @@ async function invalidateApprovedPropertySearchCacheAfterCommit(): Promise<void>
     const { propertySearchService } = await import('./services/propertySearchService');
     await propertySearchService.invalidateCache();
   } catch (error) {
-    console.error('[Listings] Approved property Search cache invalidation failed', error);
+    console.error(
+      '[Listings] Approved property Search cache invalidation failed',
+      safeErrorSummary(error),
+    );
   }
 }
 
