@@ -5990,8 +5990,9 @@ const managerDistributionRouter = router({
       await assertDistributionIdentity(db, ctx.user!, 'manager');
 
       const conditions: SQL[] = [
-        sql`${distributionDeals.currentStage} <> 'commission_paid'`,
-        sql`${distributionDeals.currentStage} <> 'cancelled'`,
+        eq(distributionDeals.currentStage, 'viewing_scheduled'),
+        eq(distributionViewings.status, 'scheduled'),
+        sql`${distributionViewings.scheduledStartAt} <= CURRENT_TIMESTAMP`,
       ];
 
       if (typeof input.programId === 'number') {
@@ -6034,6 +6035,7 @@ const managerDistributionRouter = router({
           updatedAt: distributionDeals.updatedAt,
         })
         .from(distributionDeals)
+        .innerJoin(distributionViewings, eq(distributionViewings.dealId, distributionDeals.id))
         .where(withConditions(conditions))
         .orderBy(desc(distributionDeals.updatedAt))
         .limit(input.limit);
@@ -6063,9 +6065,7 @@ const managerDistributionRouter = router({
             validationAt: validation?.validatedAt || null,
             validationNotes: validation?.notes || null,
             attributionLockApplied: Boolean(validation?.attributionLockApplied),
-            canValidate:
-              deal.currentStage === 'viewing_scheduled' ||
-              deal.currentStage === 'viewing_completed',
+            canValidate: true,
           };
         })
         .filter(row =>
@@ -6093,58 +6093,74 @@ const managerDistributionRouter = router({
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
+      return await db.transaction(async (tx: any) => {
+        await tx.execute(
+          sql`SELECT id FROM distribution_viewings WHERE deal_id = ${input.dealId} FOR UPDATE`,
+        );
+        await tx.execute(
+          sql`SELECT id FROM distribution_deals WHERE id = ${input.dealId} FOR UPDATE`,
+        );
+        const [deal] = await tx
+          .select({
+            id: distributionDeals.id,
+            programId: distributionDeals.programId,
+            developmentId: distributionDeals.developmentId,
+            agentId: distributionDeals.agentId,
+            managerUserId: distributionDeals.managerUserId,
+            currentStage: distributionDeals.currentStage,
+            attributionLockedAt: distributionDeals.attributionLockedAt,
+          })
+          .from(distributionDeals)
+          .where(eq(distributionDeals.id, input.dealId))
+          .limit(1);
 
-      const [deal] = await db
-        .select({
-          id: distributionDeals.id,
-          programId: distributionDeals.programId,
-          developmentId: distributionDeals.developmentId,
-          agentId: distributionDeals.agentId,
-          managerUserId: distributionDeals.managerUserId,
-          currentStage: distributionDeals.currentStage,
-          attributionLockedAt: distributionDeals.attributionLockedAt,
-        })
-        .from(distributionDeals)
-        .where(eq(distributionDeals.id, input.dealId))
-        .limit(1);
+        if (!deal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+        }
+        assertDealIsMutable(deal.currentStage, 'validate viewing');
+        if (ctx.user!.role !== 'super_admin') {
+          await assertManagerScope(tx, ctx.user!.id, {
+            programId: deal.programId,
+            developmentId: deal.developmentId,
+          });
+          assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
+        }
+        if (deal.currentStage !== 'viewing_scheduled') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'A viewing outcome can only be recorded for a referral awaiting its booked viewing.',
+          });
+        }
 
-      if (!deal) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
-      }
-      assertDealIsMutable(deal.currentStage, 'validate viewing');
+        const [dueViewing] = await tx
+          .select({ id: distributionViewings.id })
+          .from(distributionViewings)
+          .where(
+            and(
+              eq(distributionViewings.dealId, deal.id),
+              eq(distributionViewings.status, 'scheduled'),
+              sql`${distributionViewings.scheduledStartAt} <= CURRENT_TIMESTAMP`,
+            ),
+          )
+          .limit(1);
+        if (!dueViewing) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'A viewing must be booked and its scheduled time must pass before an outcome can be recorded.',
+          });
+        }
 
-      if (ctx.user!.role !== 'super_admin') {
-        await assertManagerScope(db, ctx.user!.id, {
-          programId: deal.programId,
-          developmentId: deal.developmentId,
-        });
-        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
-      }
+        const nextStage: (typeof DISTRIBUTION_DEAL_STAGE_VALUES)[number] =
+          input.outcome === 'completed_proceeding' ? 'viewing_completed' : 'cancelled';
+        const attributionLockAt = deal.attributionLockedAt ?? null;
+        const attributionLockApplied = Boolean(attributionLockAt);
+        const viewingStatus: (typeof DISTRIBUTION_VIEWING_STATUS_VALUES)[number] =
+          input.outcome === 'no_show'
+            ? 'no_show'
+            : input.outcome === 'cancelled'
+              ? 'cancelled'
+              : 'completed';
 
-      const nextStage: (typeof DISTRIBUTION_DEAL_STAGE_VALUES)[number] =
-        input.outcome === 'completed_proceeding' ? 'viewing_completed' : 'cancelled';
-      const attributionLockAt = deal.attributionLockedAt ?? null;
-      const attributionLockApplied = Boolean(attributionLockAt);
-
-      const viewingStatus: (typeof DISTRIBUTION_VIEWING_STATUS_VALUES)[number] =
-        input.outcome === 'no_show'
-          ? 'no_show'
-          : input.outcome === 'cancelled'
-            ? 'cancelled'
-            : 'completed';
-
-      const dealUpdate: Record<string, unknown> = {
-        currentStage: nextStage,
-        managerUserId: deal.managerUserId ?? ctx.user!.id,
-      };
-      // Attribution lock cleanup: no longer set here (set at booking)
-
-      const resolvedAttributionLockAt =
-        (dealUpdate.attributionLockedAt as string | null | undefined) ?? attributionLockAt;
-      const resolvedAttributionLockApplied = Boolean(resolvedAttributionLockAt);
-
-      await db.transaction(async tx => {
-        // Attribution lock is now set at booking (submitDeal). No lock logic here.
         await tx.insert(distributionViewingValidations).values({
           dealId: deal.id,
           developmentId: deal.developmentId,
@@ -6156,17 +6172,17 @@ const managerDistributionRouter = router({
           attributionLockAt,
           notes: input.notes ?? null,
         });
-
         await tx
           .update(distributionViewings)
-          .set({
-            status: viewingStatus,
-            managerUserId: ctx.user!.id,
-          })
+          .set({ status: viewingStatus, managerUserId: ctx.user!.id })
           .where(eq(distributionViewings.dealId, deal.id));
-
-        await tx.update(distributionDeals).set(dealUpdate).where(eq(distributionDeals.id, deal.id));
-
+        await tx
+          .update(distributionDeals)
+          .set({
+            currentStage: nextStage,
+            managerUserId: deal.managerUserId ?? ctx.user!.id,
+          })
+          .where(eq(distributionDeals.id, deal.id));
         await tx.insert(distributionDealEvents).values({
           dealId: deal.id,
           fromStage: deal.currentStage,
@@ -6176,8 +6192,8 @@ const managerDistributionRouter = router({
           metadata: {
             outcome: input.outcome,
             validationStatus: input.outcome,
-            attributionLockApplied: resolvedAttributionLockApplied,
-            attributionLockAt: resolvedAttributionLockAt,
+            attributionLockApplied,
+            attributionLockAt,
             nextStage,
           } as any,
           notes: input.notes ?? null,
@@ -6190,15 +6206,15 @@ const managerDistributionRouter = router({
             closure: 'closed',
           });
         }
-      });
 
-      return {
-        success: true,
-        dealId: deal.id,
-        outcome: input.outcome,
-        stage: nextStage,
-        attributionLocked: resolvedAttributionLockApplied,
-      };
+        return {
+          success: true,
+          dealId: deal.id,
+          outcome: input.outcome,
+          stage: nextStage,
+          attributionLocked: attributionLockApplied,
+        };
+      });
     }),
 
   listPipeline: protectedProcedure.input(listDealsInput).query(async ({ ctx, input }) => {
@@ -6248,8 +6264,10 @@ const managerDistributionRouter = router({
         commissionStatus: distributionDeals.commissionStatus,
         submittedAt: distributionDeals.submittedAt,
         updatedAt: distributionDeals.updatedAt,
+        viewingStatus: distributionViewings.status,
       })
       .from(distributionDeals)
+      .leftJoin(distributionViewings, eq(distributionViewings.dealId, distributionDeals.id))
       .where(withConditions(conditions))
       .orderBy(desc(distributionDeals.updatedAt))
       .limit(input.limit);
