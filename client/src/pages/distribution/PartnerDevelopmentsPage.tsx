@@ -411,6 +411,9 @@ export default function PartnerDevelopmentsPage() {
                           </p>
                         </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Property details and availability checked {formatPartnerDateTime(item.developerProjectionObservedAt)}. Confirm current stock before proceeding.
+                      </p>
 
                       {unitTypes.length ? (
                         <div className="space-y-2">
