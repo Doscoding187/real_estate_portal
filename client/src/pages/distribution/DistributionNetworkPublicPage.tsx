@@ -89,6 +89,13 @@ export default function DistributionNetworkPublicPage() {
     }, 150);
   };
 
+  const scrollToOpportunities = () => {
+    document.getElementById('available-developments')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+
   const toggleBed = (bed: DistributionBedroomFilter) => {
     setSelectedBeds(prev => {
       const next = new Set(prev);
@@ -216,17 +223,17 @@ export default function DistributionNetworkPublicPage() {
               </div>
 
               <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-5xl">
-                Help someone find their next home.
+                Know someone looking for a home?
                 <br />
                 <span className="bg-[linear-gradient(135deg,#67e8f9,var(--brand-blue))] bg-clip-text text-transparent">
-                  Join the Property Listify Distribution Network.
+                  Explore property opportunities together.
                 </span>
               </h1>
 
               <p className="mx-auto max-w-2xl text-lg text-slate-300 mb-4 font-light">
-                Agents and individuals can apply to take part in developer opportunities.
-                Approved partners get a guided workspace to explore developments, prepare property
-                referrals, and follow their progress.
+                Browse current buying and rental options first. When you are ready to introduce
+                someone, apply for partner access to see the referral steps and follow recorded
+                progress and payouts.
               </p>
 
               <div className="text-blue-200 text-sm md:text-base font-medium mb-10 flex flex-col md:flex-row justify-center items-center gap-2 md:gap-4">
@@ -236,7 +243,7 @@ export default function DistributionNetworkPublicPage() {
                 <span className="hidden md:inline">•</span>
                 <span>Browse by area, price, and size</span>
                 <span className="hidden md:inline">•</span>
-                <span>Steps and referral payouts shown up front</span>
+                <span>Referral steps and payouts vary by opportunity</span>
               </div>
 
               <div className="mx-auto mb-4 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
@@ -244,20 +251,18 @@ export default function DistributionNetworkPublicPage() {
                   size="lg"
                   variant="conversion"
                   className="h-14 px-10 text-base font-bold sm:w-auto transition-transform hover:-translate-y-0.5"
-                  onClick={() => revealAndScrollToForm()}
+                  onClick={scrollToOpportunities}
                 >
-                  Apply to Join
+                  Explore current options
                 </Button>
 
                 <Button
                   size="lg"
                   variant="outline"
                   className="h-14 border-slate-600 bg-transparent px-8 text-base text-slate-300 sm:w-auto hover:bg-slate-800 hover:text-white transition-colors"
-                  onClick={() => {
-                    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
+                  onClick={() => revealAndScrollToForm()}
                 >
-                  See How It Works
+                  Apply to join
                 </Button>
                 <Button
                   size="lg"
@@ -731,11 +736,11 @@ export default function DistributionNetworkPublicPage() {
                   A Guided Referral Journey
                 </div>
                 <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl mb-4">
-                  From exploring to a clear next step.
+                  Explore first. Introduce when they are ready.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  The workspace guides agents and individuals through the steps for each property
-                  opportunity.
+                  Agents and individuals can see public options before applying for access to make
+                  and follow a referral.
                 </p>
               </div>
 
@@ -748,10 +753,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-primary font-black text-xl">
                       1
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Apply to join</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Explore options</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Agents and individuals can apply. You do not need property-sales
-                      experience to ask for access.
+                      Browse current public buying and rental options by area, listed price, and
+                      home type before creating an account.
                     </p>
                   </div>
 
@@ -759,12 +764,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-slate-100 shadow-sm text-primary font-black text-xl">
                       2
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">
-                      Check fit and terms
-                    </h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Get partner access</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Compare current options for the person you are helping and see what each
-                      opportunity may require.
+                      Agents and individuals can apply when they are ready to make referrals. Access
+                      is checked for each opportunity.
                     </p>
                   </div>
 
@@ -772,10 +775,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary border-[6px] border-primary/10 shadow-md text-primary-foreground font-black text-xl">
                       3
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Make the introduction</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Introduce with permission</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       If they want to continue, we guide you through their permission and the
-                      documents needed before you share their details.
+                      information needed before you share their details.
                     </p>
                   </div>
 
@@ -783,10 +786,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-emerald-100 shadow-sm text-emerald-600 font-black text-xl">
                       4
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Follow your referral</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Follow progress and payout</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      See recorded updates, what needs to happen next, and the referral payout
-                      conditions.
+                      See recorded updates, the next confirmed action, and the referral payout
+                      conditions for that opportunity.
                     </p>
                   </div>
                 </div>
@@ -795,24 +798,22 @@ export default function DistributionNetworkPublicPage() {
                 <div className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col md:flex-row justify-between items-center gap-6 shadow-sm">
                   <div className="flex-1">
                     <p className="text-slate-600 text-sm md:text-base">
-                      Keep multiple referrals organized and see who owns each next step.
+                      The deal page shows recorded updates. The process and milestones can differ
+                      by opportunity, and a viewing appears only after it is booked.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 md:max-w-md justify-center md:justify-end">
                     <span className="px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold">
-                      Submitted
+                      Explore options
                     </span>
                     <span className="px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold">
-                      Viewing scheduled
+                      Choose an opportunity
                     </span>
                     <span className="px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold">
-                      Application in progress
+                      Introduce with permission
                     </span>
                     <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Documents needed
-                    </span>
-                    <span className="px-3 py-1.5 bg-white border border-slate-300 text-slate-600 rounded-full text-xs font-medium">
-                      Outcome recorded
+                      Track progress and payout
                     </span>
                   </div>
                 </div>
