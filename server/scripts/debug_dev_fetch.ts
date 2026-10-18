@@ -77,7 +77,7 @@ async function run() {
         );
       }
     } catch (err) {
-      console.error('❌ EXCEPTION calling service:', err);
+      console.error('❌ EXCEPTION calling service:', safeErrorSummary(err));
     }
   }
 

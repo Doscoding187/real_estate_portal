@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import mysql from 'mysql2/promise';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Load .env.local explicitly
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -23,7 +24,7 @@ async function debugDb() {
     console.log('Tables in listify_local_dev:', rows);
     await connection.end();
   } catch (err) {
-    console.error('PROBE FAILED:', err);
+    console.error('PROBE FAILED:', safeErrorSummary(err));
   }
 }
 

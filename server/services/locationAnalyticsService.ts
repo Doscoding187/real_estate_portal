@@ -911,7 +911,7 @@ export const locationAnalyticsService = {
         } catch (error) {
           console.error(
             `[LocationAnalytics] Error calculating similarity for location ${candidate.id}:`,
-            error,
+            safeErrorSummary(error),
           );
           // Continue with next candidate
         }

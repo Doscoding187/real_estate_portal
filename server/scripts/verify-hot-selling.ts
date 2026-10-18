@@ -4,6 +4,7 @@
  */
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Load env vars from .env.local first, then .env
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -45,7 +46,7 @@ async function verify() {
       }
     }
   } catch (error) {
-    console.error('Verification failed:', error);
+    console.error('Verification failed:', safeErrorSummary(error));
   } finally {
     process.exit(0);
   }

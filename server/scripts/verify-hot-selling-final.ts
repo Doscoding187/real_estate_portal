@@ -4,6 +4,7 @@
  */
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Load env vars
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -47,7 +48,7 @@ async function verifyFinal() {
       }
     }
   } catch (err) {
-    console.error('Error calling service:', err);
+    console.error('Error calling service:', safeErrorSummary(err));
   }
 }
 

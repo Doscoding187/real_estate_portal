@@ -21,6 +21,7 @@ import {
   getMediaStorageAdapter,
   inspectLocalMediaObject,
 } from './mediaStorage';
+import { safeErrorSummary } from './safeError';
 
 // The PLE listing route selects its storage adapter before reaching this
 // helper. Keep the legacy helper aligned with that selection so local
@@ -157,7 +158,7 @@ export async function uploadPropertyImage(
 
       return urls as ImageUrls;
     } catch (error) {
-      console.error('S3 image upload failed:', error);
+      console.error('S3 image upload failed:', safeErrorSummary(error));
       throw new Error('Failed to upload image to S3');
     }
   } else {
@@ -180,7 +181,7 @@ export async function uploadPropertyImage(
         large: result.url,
       };
     } catch (error) {
-      console.error('Storage proxy upload failed:', error);
+      console.error('Storage proxy upload failed:', safeErrorSummary(error));
       throw new Error('Failed to upload image');
     }
   }
@@ -212,7 +213,7 @@ export async function deletePropertyImages(imageUrls: string[]): Promise<void> {
   try {
     await Promise.all(deletePromises);
   } catch (error) {
-    console.error('Failed to delete images from S3:', error);
+    console.error('Failed to delete images from S3:', safeErrorSummary(error));
     throw new Error('Failed to delete images');
   }
 }
@@ -256,7 +257,7 @@ export async function generatePresignedUploadUrl(
 
     return { uploadUrl, key };
   } catch (error) {
-    console.error('[S3] Failed to generate presigned URL:', error);
+    console.error('[S3] Failed to generate presigned URL:', safeErrorSummary(error));
     if (error instanceof Error) {
       throw new Error(`Failed to generate upload URL: ${error.message}`);
     }

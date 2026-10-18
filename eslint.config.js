@@ -137,6 +137,12 @@ export default [
           message:
             'Do not pass console.error directly to .catch(). Use .catch(err => console.error(<context>, safeErrorSummary(err))).',
         },
+        {
+          selector:
+            "CallExpression[callee.object.name='console'][callee.property.name=/^(error|warn|log|info)$/][arguments.length>=2] > Identifier[name=/^(error|err)$/]:last-child",
+          message:
+            'Do not pass a raw Error object to console. Use safeErrorSummary(error|err) from server/_core/safeError.',
+        },
       ],
     },
   },

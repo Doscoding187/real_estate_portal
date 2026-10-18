@@ -203,7 +203,7 @@ export const locationPagesService = {
     } catch (error) {
       console.warn(
         '[LocationPages] Public property eligibility failed for province',
-        error,
+        safeErrorSummary(error),
       );
       throw error;
     }
@@ -261,7 +261,7 @@ export const locationPagesService = {
     } catch (error) {
       console.warn(
         '[LocationPages] Developments query failed for province',
-        error,
+        safeErrorSummary(error),
       );
       throw error;
     }
@@ -293,7 +293,7 @@ export const locationPagesService = {
     } catch (error) {
       console.warn(
         '[LocationPages] Trending suburbs query failed for province',
-        error,
+        safeErrorSummary(error),
       );
       throw error;
     }
@@ -545,7 +545,7 @@ export const locationPagesService = {
     } catch (error) {
       console.warn(
         '[LocationPages] Public property eligibility failed for suburb',
-        error,
+        safeErrorSummary(error),
       );
       throw error;
     }
@@ -590,7 +590,7 @@ export const locationPagesService = {
     } catch (error) {
       console.warn(
         '[LocationPages] locationInsightsService failed, returning null insights',
-        error,
+        safeErrorSummary(error),
       );
     }
 
