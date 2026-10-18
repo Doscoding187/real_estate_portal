@@ -36,18 +36,6 @@ import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
 const ACCOUNT_LOGIN_PATH = '/login?next=/distribution/partner/overview';
-// Bedroom chip options
-// Area options map to the published suburb and city labels.
-const AREA_OPTIONS = [
-  { label: 'Select area', value: '' },
-  { label: 'Roodepoort / West Rand', value: 'roodepoort,west rand,constantia,wilgeheuwel,northgate' },
-  { label: 'Johannesburg South', value: 'johannesburg south,alberton,soweto,lenasia,ennerdale,ormonde' },
-  { label: 'North Riding / Sandton', value: 'north riding,sandton,fourways,randburg,lonehill,dainfern' },
-  { label: 'Pretoria / Centurion', value: 'pretoria,centurion,midrand,menlyn,brooklyn,hatfield' },
-  { label: 'East Rand', value: 'east rand,boksburg,germiston,bedfordview,edenvale,benoni' },
-  { label: 'Any area', value: 'any' },
-];
-
 function formatCurrency(value: number) {
   return `R${Math.round(value).toLocaleString('en-ZA')}`;
 }
@@ -172,17 +160,14 @@ export default function DistributionNetworkPublicPage() {
     const priceRange = DISTRIBUTION_PRICE_BANDS[marketMode].find(
       option => option.key === matchPriceRange,
     );
-    const areaOption = AREA_OPTIONS.find(o => o.value === matchArea);
-    const areaKeywords = areaOption?.value && areaOption.value !== 'any'
-      ? areaOption.value.split(',').map(k => k.trim().toLowerCase())
-      : null;
+    const areaKeyword = matchArea.trim().toLowerCase();
 
     const selectedBandIsAny = !priceRange || priceRange.key === 'any';
     const criteria = {
       marketMode,
       minPrice: selectedBandIsAny ? null : priceRange?.minPrice ?? null,
       maxPrice: selectedBandIsAny ? null : priceRange?.maxPrice ?? null,
-      areaKeywords: areaKeywords || [],
+      areaKeywords: areaKeyword ? [areaKeyword] : [],
       bedrooms: [...selectedBeds],
     };
 
@@ -240,7 +225,7 @@ export default function DistributionNetworkPublicPage() {
     matchPriceRange !== 'any'
       ? DISTRIBUTION_PRICE_BANDS[marketMode].find(option => option.key === matchPriceRange)?.label
       : 'Any listed price',
-    AREA_OPTIONS.find(option => option.value === matchArea)?.label || 'Any area',
+    matchArea.trim() ? `Preferred area: ${matchArea.trim()}` : 'Any area',
     selectedBeds.size
       ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
       : 'Any bedroom count',
@@ -492,22 +477,19 @@ export default function DistributionNetworkPublicPage() {
 
                     {/* Area */}
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+                      <label htmlFor="distribution-public-area" className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
                         Preferred area
                       </label>
                       <div className="relative">
-                        <select
-                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          id="distribution-public-area"
+                          type="search"
+                          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
                           value={matchArea}
-                          onChange={e => setMatchArea(e.target.value)}
-                        >
-                          {AREA_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value} disabled={o.value === ''}>
-                              {o.label}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                          onChange={event => setMatchArea(event.target.value)}
+                          placeholder="City, suburb, or province"
+                        />
                       </div>
                     </div>
 
