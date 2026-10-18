@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
-  developmentRequiredDocuments,
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
@@ -12,12 +11,15 @@ import {
 import { getDb } from '../db';
 import { requireApprovedAffordabilityModel } from './affordabilityAssessmentService';
 import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
-import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
 import {
   assertPartnerDevelopmentProgramAccess,
   assertPartnerDevelopmentReferralOpen,
 } from './distributionPartnerProgramAccessService';
-import { buildDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
+import {
+  buildDistributionReferralTermsSnapshot,
+  isValidDistributionReferralTermsSnapshot,
+} from './distributionReferralTermsSnapshotService';
+import { resolveDealRequirementSnapshots } from './distributionDealRequirementsSnapshotService';
 import {
   getReferralWorkflowProgress,
   getReferralWorkflowProgressForDeals,
@@ -68,8 +70,9 @@ function parseJsonObject(value: unknown): Record<string, unknown> | null {
 
 function toPartnerVisibleReferralTermsSnapshot(
   snapshot: Record<string, unknown> | null,
+  expectedDigest: string | null | undefined,
 ): Record<string, unknown> | null {
-  if (!snapshot) return null;
+  if (!snapshot || !isValidDistributionReferralTermsSnapshot(snapshot, expectedDigest)) return null;
   const program = parseJsonObject(snapshot.program);
   const developerSalesSnapshot = parseJsonObject(snapshot.developerSalesSnapshot);
 
@@ -95,7 +98,19 @@ function toPartnerVisibleReferralTermsSnapshot(
         }
       : {}),
     requiredDocuments: Array.isArray(snapshot.requiredDocuments)
-      ? snapshot.requiredDocuments
+      ? snapshot.requiredDocuments.flatMap(value => {
+          if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+          const document = value as Record<string, unknown>;
+          return [
+            {
+              documentCode: document.documentCode,
+              documentLabel: document.documentLabel,
+              category: document.category,
+              isRequired: document.isRequired,
+              sortOrder: document.sortOrder,
+            },
+          ];
+        })
       : [],
   };
 }
@@ -227,24 +242,6 @@ async function findDuplicateByBuyerIdentity(
     .limit(1);
 
   return existing || null;
-}
-
-async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentId: number) {
-  const rows = await db
-    .select({
-      id: developmentRequiredDocuments.id,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.developmentId, developmentId),
-        eq(developmentRequiredDocuments.category, 'client_required_document'),
-        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
-        eq(developmentRequiredDocuments.isActive, 1),
-        eq(developmentRequiredDocuments.isRequired, 1),
-      ),
-    );
-  return rows.map(row => Number(row.id));
 }
 
 export async function createReferralDeal(
@@ -434,7 +431,15 @@ export async function createReferralDeal(
       referralTermsSnapshotDigest: referralTermsSnapshot.digest,
     });
 
-    const templateIds = await getRequiredTemplateIdsForDevelopment(tx, input.developmentId);
+    const templateIds = Array.isArray(referralTermsSnapshot.requiredDocuments)
+      ? referralTermsSnapshot.requiredDocuments.map(document => Number(document.templateId))
+      : [];
+    if (templateIds.some(templateId => !Number.isInteger(templateId) || templateId <= 0)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The saved referral document requirements could not be confirmed.',
+      });
+    }
     if (templateIds.length) {
       await tx.insert(distributionDealDocuments).values(
         templateIds.map(templateId => ({
@@ -483,32 +488,6 @@ type ReferralProgress = {
 
 type PartnerDealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
 
-type RequiredDocumentSnapshot = {
-  documentCode: string;
-  documentLabel: string;
-  isRequired: true;
-  sortOrder: number;
-};
-
-function normalizeRequiredDocumentSnapshot(value: unknown): RequiredDocumentSnapshot[] | null {
-  if (!Array.isArray(value)) return null;
-  const allowedCodes = new Set<string>(DISTRIBUTION_PROCESS_DOCUMENT_CODES);
-  return value.flatMap(entry => {
-    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
-    const item = entry as Record<string, unknown>;
-    const documentCode = String(item.documentCode || '').trim();
-    if (!allowedCodes.has(documentCode) || item.isRequired !== true && Number(item.isRequired) !== 1) {
-      return [];
-    }
-    return [{
-      documentCode,
-      documentLabel: String(item.documentLabel || documentCode),
-      isRequired: true as const,
-      sortOrder: Number(item.sortOrder || 0),
-    }];
-  });
-}
-
 async function computeDealDocumentProgressMap(
   db: DbExecutor,
   input: {
@@ -523,49 +502,66 @@ async function computeDealDocumentProgressMap(
   const dealSnapshots = await db
     .select({
       dealId: distributionDeals.id,
+      developmentId: distributionDeals.developmentId,
       referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
     })
     .from(distributionDeals)
     .where(inArray(distributionDeals.id, dealIds));
 
-  const requiredCodesByDeal = new Map<number, string[]>();
-  for (const row of dealSnapshots) {
-    const snapshot = parseJsonObject(row.referralTermsSnapshotJson);
-    const requiredDocuments = normalizeRequiredDocumentSnapshot(snapshot?.requiredDocuments);
-    requiredCodesByDeal.set(
-      Number(row.dealId),
-      requiredDocuments?.map(document => document.documentCode) || [],
-    );
-  }
+  const resolvedRequirements = await resolveDealRequirementSnapshots(
+    db,
+    dealSnapshots.map(row => ({
+      dealId: Number(row.dealId),
+      developmentId: Number(row.developmentId),
+      snapshotJson: row.referralTermsSnapshotJson,
+      snapshotDigest: row.referralTermsSnapshotDigest,
+    })),
+  );
+  const templateIds = Array.from(
+    new Set(
+      Array.from(resolvedRequirements.values()).flatMap(snapshot =>
+        snapshot.requirements.flatMap(document =>
+          document.templateId === null ? [] : [document.templateId],
+        ),
+      ),
+    ),
+  );
+  const persistedRows = templateIds.length
+    ? await db
+        .select({
+          dealId: distributionDealDocuments.dealId,
+          templateId: distributionDealDocuments.developmentRequiredDocumentId,
+          status: distributionDealDocuments.status,
+        })
+        .from(distributionDealDocuments)
+        .where(
+          and(
+            inArray(distributionDealDocuments.dealId, dealIds),
+            inArray(distributionDealDocuments.developmentRequiredDocumentId, templateIds),
+          ),
+        )
+    : [];
 
-  const persistedRows = await db
-    .select({
-      dealId: distributionDealDocuments.dealId,
-      documentCode: developmentRequiredDocuments.documentCode,
-      status: distributionDealDocuments.status,
-    })
-    .from(distributionDealDocuments)
-    .innerJoin(
-      developmentRequiredDocuments,
-      eq(distributionDealDocuments.developmentRequiredDocumentId, developmentRequiredDocuments.id),
-    )
-    .where(inArray(distributionDealDocuments.dealId, dealIds));
-
-  const verifiedCodesByDeal = new Map<number, Set<string>>();
+  const verifiedTemplateIdsByDeal = new Map<number, Set<number>>();
   for (const row of persistedRows) {
     if (row.status !== 'verified') continue;
     const dealId = Number(row.dealId);
-    const current = verifiedCodesByDeal.get(dealId) || new Set<string>();
-    current.add(String(row.documentCode));
-    verifiedCodesByDeal.set(dealId, current);
+    const current = verifiedTemplateIdsByDeal.get(dealId) || new Set<number>();
+    current.add(Number(row.templateId));
+    verifiedTemplateIdsByDeal.set(dealId, current);
   }
 
   for (const row of input.dealRows) {
-    const requiredCodes = requiredCodesByDeal.get(Number(row.dealId)) || [];
-    const verifiedCodes = verifiedCodesByDeal.get(Number(row.dealId)) || new Set<string>();
+    const snapshot = resolvedRequirements.get(Number(row.dealId));
+    const requirements = snapshot?.snapshotValid ? snapshot.requirements : [];
+    const verifiedTemplateIds =
+      verifiedTemplateIdsByDeal.get(Number(row.dealId)) || new Set<number>();
     progressMap.set(Number(row.dealId), {
-      requiredCount: requiredCodes.length,
-      verifiedRequiredCount: requiredCodes.filter(code => verifiedCodes.has(code)).length,
+      requiredCount: requirements.length,
+      verifiedRequiredCount: requirements.filter(
+        document => document.templateId !== null && verifiedTemplateIds.has(document.templateId),
+      ).length,
     });
   }
 
@@ -576,54 +572,55 @@ async function listDealApplicationDocuments(
   db: DbExecutor,
   input: {
     dealId: number;
-    developmentId: number;
-    requiredDocuments: unknown;
+    requiredDocuments: Array<{
+      templateId: number | null;
+      documentCode: string;
+      documentLabel: string;
+      sortOrder: number;
+      isAvailable: boolean;
+    }>;
   },
 ) {
-  const requiredDocuments = normalizeRequiredDocumentSnapshot(input.requiredDocuments);
-  if (!requiredDocuments) return [];
+  const requiredDocuments = input.requiredDocuments;
   if (!requiredDocuments.length) return [];
 
-  const persistedRows = await db
-    .select({
-      templateId: distributionDealDocuments.developmentRequiredDocumentId,
-      documentCode: developmentRequiredDocuments.documentCode,
-      status: distributionDealDocuments.status,
-      submittedAt: distributionDealDocuments.submittedAt,
-      receivedAt: distributionDealDocuments.receivedAt,
-      verifiedAt: distributionDealDocuments.verifiedAt,
-      notes: distributionDealDocuments.notes,
-    })
-    .from(distributionDealDocuments)
-    .innerJoin(
-      developmentRequiredDocuments,
-      eq(
-        distributionDealDocuments.developmentRequiredDocumentId,
-        developmentRequiredDocuments.id,
+  const templateIds = Array.from(
+    new Set(
+      requiredDocuments.flatMap(document =>
+        document.templateId === null ? [] : [document.templateId],
       ),
-    )
-    .where(
-      and(
-        eq(distributionDealDocuments.dealId, input.dealId),
-        eq(developmentRequiredDocuments.developmentId, input.developmentId),
-        eq(developmentRequiredDocuments.category, 'client_required_document'),
-        inArray(
-          developmentRequiredDocuments.documentCode,
-          requiredDocuments.map(document => document.documentCode),
-        ),
-      ),
-    );
+    ),
+  );
+  const persistedRows = templateIds.length
+    ? await db
+        .select({
+          templateId: distributionDealDocuments.developmentRequiredDocumentId,
+          status: distributionDealDocuments.status,
+          submittedAt: distributionDealDocuments.submittedAt,
+          receivedAt: distributionDealDocuments.receivedAt,
+          verifiedAt: distributionDealDocuments.verifiedAt,
+          notes: distributionDealDocuments.notes,
+        })
+        .from(distributionDealDocuments)
+        .where(
+          and(
+            eq(distributionDealDocuments.dealId, input.dealId),
+            inArray(distributionDealDocuments.developmentRequiredDocumentId, templateIds),
+          ),
+        )
+    : [];
 
-  const persistedByCode = new Map<string, any>();
+  const persistedByTemplateId = new Map<number, any>();
   for (const row of persistedRows) {
-    persistedByCode.set(String(row.documentCode), row);
+    persistedByTemplateId.set(Number(row.templateId), row);
   }
 
   return requiredDocuments.map(document => {
-    const persisted = persistedByCode.get(document.documentCode);
-    if (!persisted) {
+    const persisted = document.templateId === null
+      ? null
+      : persistedByTemplateId.get(document.templateId);
+    if (!document.isAvailable || !persisted) {
       return {
-        templateId: null,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel,
         category: 'client_required_document' as const,
@@ -637,7 +634,6 @@ async function listDealApplicationDocuments(
       };
     }
     return {
-      templateId: Number(persisted.templateId),
       documentCode: document.documentCode,
       documentLabel: document.documentLabel,
       category: 'client_required_document' as const,
@@ -837,15 +833,29 @@ export async function getMyReferralDeal(
     .limit(200);
 
   const programTermsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
-  const partnerVisibleTermsSnapshot = toPartnerVisibleReferralTermsSnapshot(programTermsSnapshot);
-  const salesSnapshot = parseJsonObject(programTermsSnapshot?.developerSalesSnapshot);
+  const partnerVisibleTermsSnapshot = toPartnerVisibleReferralTermsSnapshot(
+    programTermsSnapshot,
+    deal.referralTermsSnapshotDigest,
+  );
+  const salesSnapshot = partnerVisibleTermsSnapshot
+    ? parseJsonObject(programTermsSnapshot?.developerSalesSnapshot)
+    : null;
   const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
   const savedWorkflowProgress = await getReferralWorkflowProgress(db, Number(deal.dealId));
   const workflowProgress = savedWorkflowProgress.verified ? savedWorkflowProgress : null;
+  const resolvedRequirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: Number(deal.dealId),
+      developmentId: Number(deal.developmentId),
+      snapshotJson: deal.referralTermsSnapshotJson,
+      snapshotDigest: deal.referralTermsSnapshotDigest,
+    },
+  ]);
+  const resolvedRequirementSnapshot = resolvedRequirementSnapshots.get(Number(deal.dealId));
   const applicationDocuments = await listDealApplicationDocuments(db, {
     dealId: Number(deal.dealId),
-    developmentId: Number(deal.developmentId),
-    requiredDocuments: programTermsSnapshot?.requiredDocuments,
+    requiredDocuments:
+      resolvedRequirementSnapshot?.snapshotValid ? resolvedRequirementSnapshot.requirements : [],
   });
 
   return {

@@ -110,7 +110,10 @@ export default function ManagerDevelopmentDealsPage() {
           <CardContent className="space-y-2">
             {(dealsQuery.data || []).map((deal: any) => {
               const pendingRequired = Number(deal.docs.requiredCount) - Number(deal.docs.verifiedRequiredCount);
-              const needsAttention = pendingRequired > 0 || Boolean(deal.docs.hasRejections);
+              const checklistNeedsReview =
+                deal.docs.snapshotAvailable === false || Boolean(deal.docs.hasUnresolvedRequirement);
+              const needsAttention =
+                checklistNeedsReview || pendingRequired > 0 || Boolean(deal.docs.hasRejections);
 
               return (
                 <button
@@ -127,7 +130,9 @@ export default function ManagerDevelopmentDealsPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary">
-                        {deal.docs.verifiedRequiredCount}/{deal.docs.requiredCount} verified
+                        {checklistNeedsReview
+                          ? 'Checklist needs review'
+                          : `${deal.docs.verifiedRequiredCount}/${deal.docs.requiredCount} verified`}
                       </Badge>
                       <Badge variant={needsAttention ? 'destructive' : 'default'}>
                         {needsAttention ? 'Needs attention' : 'On track'}

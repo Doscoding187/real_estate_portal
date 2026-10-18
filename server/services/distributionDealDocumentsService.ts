@@ -10,10 +10,11 @@ import {
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
-import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 import { readFrozenPayoutTerms } from './distributionCommissionService';
+import { resolveDealRequirementSnapshots } from './distributionDealRequirementsSnapshotService';
 
-export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
+type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
 
 type ChecklistOptions = {
   skipAssignmentCheck?: boolean;
@@ -40,7 +41,7 @@ export type DealChecklistPayload = {
     canRecordPayoutBasis: boolean;
   };
   requiredDocuments: Array<{
-    templateId: number;
+    templateId: number | null;
     documentCode: string;
     documentLabel: string;
     category: 'client_required_document';
@@ -69,15 +70,11 @@ export type DealChecklistPayload = {
 type UpsertDealDocumentStatusInput = {
   dealId: number;
   templateId: number;
-  status: DealDocumentStatus;
+  status: EditableDealDocumentStatus;
   notes?: string | null;
   submittedFileUrl?: string | null;
   submittedFileName?: string | null;
 };
-
-function boolFromTinyInt(value: unknown) {
-  return Number(value || 0) === 1;
-}
 
 function toNumberOrNull(value: unknown) {
   if (value === null || typeof value === 'undefined') return null;
@@ -213,11 +210,24 @@ export async function getDealChecklist(
     .where(eq(distributionCommissionEntries.dealId, dealScope.dealId))
     .limit(1);
 
-  const templates = (
-    await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
-  ).filter(template => template.isActive && template.isRequired);
-
-  const templateIds = templates.map(template => Number(template.id));
+  const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: dealScope.dealId,
+      developmentId: dealScope.developmentId,
+      snapshotJson: dealScope.referralTermsSnapshotJson,
+      snapshotDigest: dealScope.referralTermsSnapshotDigest,
+    },
+  ]);
+  const requirementSnapshot = requirementSnapshots.get(dealScope.dealId);
+  const savedRequirements =
+    requirementSnapshot?.snapshotValid ? requirementSnapshot.requirements : [];
+  const templateIds = Array.from(
+    new Set(
+      savedRequirements.flatMap(document =>
+        document.templateId === null ? [] : [document.templateId],
+      ),
+    ),
+  );
   const persistedDealDocs = templateIds.length
     ? await db
         .select({
@@ -266,46 +276,48 @@ export async function getDealChecklist(
     }
   }
 
-  const requiredDocuments: DealChecklistPayload['requiredDocuments'] = templates.map(template => {
-    const templateId = Number(template.id);
-    const persisted = persistedByTemplateId.get(templateId);
-    const receivedById = persisted?.receivedBy ? Number(persisted.receivedBy) : null;
-    const verifiedById = persisted?.verifiedBy ? Number(persisted.verifiedBy) : null;
-    const status = (persisted?.status || 'pending') as DealDocumentStatus;
+  const requiredDocuments: DealChecklistPayload['requiredDocuments'] = savedRequirements.map(
+    document => {
+      const templateId = document.templateId;
+      const persisted = templateId === null ? undefined : persistedByTemplateId.get(templateId);
+      const receivedById = persisted?.receivedBy ? Number(persisted.receivedBy) : null;
+      const verifiedById = persisted?.verifiedBy ? Number(persisted.verifiedBy) : null;
+      const status = (persisted?.status || 'unavailable') as DealDocumentStatus;
 
-    return {
-      templateId,
-      documentCode: String(template.documentCode),
-      documentLabel: String(template.documentLabel || ''),
-      category: template.category,
-      isRequired: Boolean(template.isRequired),
-      sortOrder: Number(template.sortOrder || 0),
-      isActive: Boolean(template.isActive),
-      status,
-      receivedAt: persisted?.receivedAt || null,
-      verifiedAt: persisted?.verifiedAt || null,
-      submittedAt: persisted?.submittedAt || null,
-      receivedBy: receivedById
-        ? {
-            userId: receivedById,
-            name: actorDirectory.get(receivedById)?.name,
-          }
-        : null,
-      verifiedBy: verifiedById
-        ? {
-            userId: verifiedById,
-            name: actorDirectory.get(verifiedById)?.name,
-          }
-        : null,
-      submittedBy: persisted?.submittedBy
-        ? {
-            userId: Number(persisted.submittedBy),
-            name: actorDirectory.get(Number(persisted.submittedBy))?.name,
-          }
-        : null,
-      notes: persisted?.notes || null,
-    };
-  });
+      return {
+        templateId,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel,
+        category: document.category,
+        isRequired: true,
+        sortOrder: document.sortOrder,
+        isActive: document.isAvailable && Boolean(persisted),
+        status,
+        receivedAt: persisted?.receivedAt || null,
+        verifiedAt: persisted?.verifiedAt || null,
+        submittedAt: persisted?.submittedAt || null,
+        receivedBy: receivedById
+          ? {
+              userId: receivedById,
+              name: actorDirectory.get(receivedById)?.name,
+            }
+          : null,
+        verifiedBy: verifiedById
+          ? {
+              userId: verifiedById,
+              name: actorDirectory.get(verifiedById)?.name,
+            }
+          : null,
+        submittedBy: persisted?.submittedBy
+          ? {
+              userId: Number(persisted.submittedBy),
+              name: actorDirectory.get(Number(persisted.submittedBy))?.name,
+            }
+          : null,
+        notes: persisted?.notes || null,
+      };
+    },
+  );
 
   const requiredOnly = requiredDocuments.filter(document => document.isRequired);
   const requiredCount = requiredOnly.length;
@@ -328,12 +340,19 @@ export async function getDealChecklist(
   const blockers: string[] = [];
 
   if (requiredCount === 0) {
-    blockers.push('No required document templates are configured for this development.');
+    blockers.push(
+      requirementSnapshot?.snapshotValid
+        ? 'No required document templates were saved for this referral.'
+        : 'The saved referral document requirements could not be validated.',
+    );
   } else if (!allRequiredVerified) {
     const remaining = requiredCount - verifiedRequiredCount;
     blockers.push(
       `${remaining} required document${remaining === 1 ? '' : 's'} still need verification.`,
     );
+  }
+  if (requiredDocuments.some(document => document.status === 'unavailable')) {
+    blockers.push('One or more saved document requirements cannot be resolved to a document record.');
   }
 
   blockers.push(...payoutMilestoneEvaluation.blockers);
@@ -438,16 +457,23 @@ export async function upsertDealDocumentStatus(
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
-  const template = (
-    await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
-  ).find(
-    candidate => candidate.id === input.templateId && candidate.isActive && candidate.isRequired,
+  const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: dealScope.dealId,
+      developmentId: dealScope.developmentId,
+      snapshotJson: dealScope.referralTermsSnapshotJson,
+      snapshotDigest: dealScope.referralTermsSnapshotDigest,
+    },
+  ]);
+  const requirementSnapshot = requirementSnapshots.get(dealScope.dealId);
+  const savedRequirement = requirementSnapshot?.requirements.find(
+    requirement => requirement.templateId === input.templateId && requirement.isAvailable,
   );
 
-  if (!template) {
+  if (!requirementSnapshot?.snapshotValid || !savedRequirement) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Document template is not available for this deal development.',
+      message: 'Document is not part of this referral’s saved requirements.',
     });
   }
 
@@ -474,6 +500,13 @@ export async function upsertDealDocumentStatus(
         ),
       )
       .limit(1);
+
+    if (!existing) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The saved document status record is unavailable for this referral.',
+      });
+    }
 
     const now = sqlDateNow();
     let receivedAt = existing?.receivedAt || null;

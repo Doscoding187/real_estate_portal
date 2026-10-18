@@ -80,6 +80,7 @@ import {
   getDealChecklist,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
+import { resolveDealRequirementSnapshots } from './services/distributionDealRequirementsSnapshotService';
 import { assertDealIsMutable } from './services/distributionDealMutationGuards';
 import {
   DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES,
@@ -5379,28 +5380,15 @@ const managerDistributionRouter = router({
         });
       }
 
-      const requiredTemplates = await db
-        .select({
-          id: developmentRequiredDocuments.id,
-        })
-        .from(developmentRequiredDocuments)
-        .where(
-          and(
-            eq(developmentRequiredDocuments.developmentId, input.developmentId),
-            eq(developmentRequiredDocuments.isActive, 1),
-            eq(developmentRequiredDocuments.isRequired, 1),
-          ),
-        );
-
-      const requiredTemplateIds = requiredTemplates.map(row => Number(row.id));
-      const requiredCount = requiredTemplateIds.length;
-
       const dealRows = await db
         .select({
           dealId: distributionDeals.id,
+          developmentId: distributionDeals.developmentId,
           externalRef: distributionDeals.externalRef,
           buyerName: distributionDeals.buyerName,
           createdAt: distributionDeals.createdAt,
+          referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+          referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
         })
         .from(distributionDeals)
         .where(eq(distributionDeals.developmentId, input.developmentId))
@@ -5412,29 +5400,47 @@ const managerDistributionRouter = router({
       }
 
       const dealIds = dealRows.map(row => Number(row.dealId));
-      const dealDocsRows =
-        dealIds.length && requiredTemplateIds.length
-          ? await db
-              .select({
-                dealId: distributionDealDocuments.dealId,
-                templateId: distributionDealDocuments.developmentRequiredDocumentId,
-                status: distributionDealDocuments.status,
-              })
-              .from(distributionDealDocuments)
-              .where(
-                and(
-                  inArray(distributionDealDocuments.dealId, dealIds),
-                  inArray(
-                    distributionDealDocuments.developmentRequiredDocumentId,
-                    requiredTemplateIds,
-                  ),
+      const requirementSnapshots = await resolveDealRequirementSnapshots(
+        db,
+        dealRows.map(row => ({
+          dealId: Number(row.dealId),
+          developmentId: Number(row.developmentId),
+          snapshotJson: row.referralTermsSnapshotJson,
+          snapshotDigest: row.referralTermsSnapshotDigest,
+        })),
+      );
+      const requirementTemplateIds = Array.from(
+        new Set(
+          Array.from(requirementSnapshots.values()).flatMap(snapshot =>
+            snapshot.requirements.flatMap(requirement =>
+              requirement.templateId === null ? [] : [requirement.templateId],
+            ),
+          ),
+        ),
+      );
+      const dealDocsRows = dealIds.length && requirementTemplateIds.length
+        ? await db
+            .select({
+              dealId: distributionDealDocuments.dealId,
+              templateId: distributionDealDocuments.developmentRequiredDocumentId,
+              status: distributionDealDocuments.status,
+            })
+            .from(distributionDealDocuments)
+            .where(
+              and(
+                inArray(distributionDealDocuments.dealId, dealIds),
+                inArray(
+                  distributionDealDocuments.developmentRequiredDocumentId,
+                  requirementTemplateIds,
                 ),
-              )
-          : [];
+              ),
+            )
+        : [];
 
       const docStateByDealId = new Map<
         number,
         {
+          recordedTemplateIds: Set<number>;
           verifiedTemplateIds: Set<number>;
           hasRejections: boolean;
         }
@@ -5443,10 +5449,21 @@ const managerDistributionRouter = router({
       for (const row of dealDocsRows) {
         const dealId = Number(row.dealId);
         const templateId = Number(row.templateId);
+        const dealRequirements = requirementSnapshots.get(dealId);
+        if (
+          !dealRequirements?.snapshotValid ||
+          !dealRequirements.requirements.some(
+            requirement => requirement.templateId === templateId,
+          )
+        ) {
+          continue;
+        }
         const existing = docStateByDealId.get(dealId) || {
+          recordedTemplateIds: new Set<number>(),
           verifiedTemplateIds: new Set<number>(),
           hasRejections: false,
         };
+        existing.recordedTemplateIds.add(templateId);
         if (row.status === 'verified') {
           existing.verifiedTemplateIds.add(templateId);
         }
@@ -5459,13 +5476,32 @@ const managerDistributionRouter = router({
       const rows = dealRows
         .map(row => {
           const dealId = Number(row.dealId);
+          const requirementsSnapshot = requirementSnapshots.get(dealId);
+          const requirements = requirementsSnapshot?.snapshotValid
+            ? requirementsSnapshot.requirements
+            : [];
           const docState = docStateByDealId.get(dealId) || {
+            recordedTemplateIds: new Set<number>(),
             verifiedTemplateIds: new Set<number>(),
             hasRejections: false,
           };
-          const verifiedRequiredCount = docState.verifiedTemplateIds.size;
+          const verifiedRequiredCount = requirements.filter(
+            requirement =>
+              requirement.templateId !== null &&
+              docState.verifiedTemplateIds.has(requirement.templateId),
+          ).length;
+          const requiredCount = requirements.length;
+          const hasUnresolvedRequirement = requirements.some(
+            requirement =>
+              requirement.templateId === null ||
+              !docState.recordedTemplateIds.has(requirement.templateId),
+          );
           const needsDocs =
-            requiredCount === 0 || verifiedRequiredCount < requiredCount || docState.hasRejections;
+            !requirementsSnapshot?.snapshotValid ||
+            requiredCount === 0 ||
+            hasUnresolvedRequirement ||
+            verifiedRequiredCount < requiredCount ||
+            docState.hasRejections;
 
           return {
             dealId,
@@ -5476,6 +5512,8 @@ const managerDistributionRouter = router({
               requiredCount,
               verifiedRequiredCount,
               hasRejections: docState.hasRejections,
+              snapshotAvailable: Boolean(requirementsSnapshot?.snapshotValid),
+              hasUnresolvedRequirement,
             },
             needsDocs,
           };

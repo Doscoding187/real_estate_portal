@@ -10,7 +10,7 @@ type PayoutMilestone =
   | 'occupation'
   | 'custom';
 
-type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
 
 type ChecklistDocument = {
   documentCode: string;

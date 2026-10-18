@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
-type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
+type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
 
 type DealChecklist = {
   dealId: number;
@@ -28,7 +29,7 @@ type DealChecklist = {
     canRecordPayoutBasis?: boolean;
   };
   requiredDocuments: Array<{
-    templateId: number;
+    templateId: number | null;
     documentCode: string;
     documentLabel: string;
     isRequired: boolean;
@@ -88,19 +89,19 @@ export function ManagerDealChecklistPanel({
   onRecordPayoutBasis?: (amount: number) => Promise<void>;
   onUpdateDocumentStatus: (input: {
     templateId: number;
-    status: DealDocumentStatus;
+    status: EditableDealDocumentStatus;
     notes?: string | null;
   }) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
-  const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
+  const [notesByTemplateId, setNotesByTemplateId] = useState<Record<string, string>>({});
   const [payoutBasisAmount, setPayoutBasisAmount] = useState('');
 
   useEffect(() => {
-    const next: Record<number, string> = {};
+    const next: Record<string, string> = {};
     for (const row of checklist.requiredDocuments) {
-      next[row.templateId] = row.notes || '';
+      next[String(row.templateId ?? `unavailable:${row.documentCode}:${row.sortOrder}`)] = row.notes || '';
     }
     setNotesByTemplateId(next);
   }, [checklist.requiredDocuments]);
@@ -273,7 +274,10 @@ export function ManagerDealChecklistPanel({
             ) : null}
           </div>
           {orderedDocuments.map(document => (
-            <div key={document.templateId} className="rounded border p-3">
+            <div
+              key={`${document.documentCode}-${document.sortOrder}-${document.templateId ?? 'unavailable'}`}
+              className="rounded border p-3"
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">{document.documentLabel}</p>
@@ -286,49 +290,76 @@ export function ManagerDealChecklistPanel({
 
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor={`status-${document.templateId}`}>Status</Label>
+                  <Label htmlFor={`status-${document.templateId ?? document.documentCode}`}>Status</Label>
                   <select
-                    id={`status-${document.templateId}`}
+                    id={`status-${document.templateId ?? document.documentCode}`}
                     className="h-9 w-full rounded border border-input bg-background px-2 text-sm"
                     value={document.status}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
+                    disabled={
+                      document.templateId === null ||
+                      !document.isActive ||
+                      document.status === 'unavailable' ||
+                      savingTemplateId === document.templateId ||
+                      Boolean(isBatchSaving)
+                    }
+                    onChange={event => {
+                      if (document.templateId === null) return;
                       void onUpdateDocumentStatus({
                         templateId: document.templateId,
-                        status: event.target.value as DealDocumentStatus,
-                        notes: notesByTemplateId[document.templateId] || null,
-                      })
-                    }
+                        status: event.target.value as EditableDealDocumentStatus,
+                        notes:
+                          notesByTemplateId[String(document.templateId)] || null,
+                      });
+                    }}
                   >
                     <option value="pending">pending</option>
                     <option value="received">Received by our team</option>
                     <option value="verified">Verified by our team</option>
                     <option value="rejected">Update needed</option>
+                    {document.status === 'unavailable' ? (
+                      <option value="unavailable">Saved requirement unavailable</option>
+                    ) : null}
                   </select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor={`notes-${document.templateId}`}>Notes</Label>
+                  <Label htmlFor={`notes-${document.templateId ?? document.documentCode}`}>Notes</Label>
                   <Input
-                    id={`notes-${document.templateId}`}
-                    value={notesByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setNotesByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
+                    id={`notes-${document.templateId ?? document.documentCode}`}
+                    value={
+                      notesByTemplateId[
+                        String(document.templateId ?? `unavailable:${document.documentCode}:${document.sortOrder}`)
+                      ] || ''
                     }
-                    onBlur={() =>
+                    disabled={
+                      document.templateId === null ||
+                      !document.isActive ||
+                      document.status === 'unavailable' ||
+                      savingTemplateId === document.templateId ||
+                      Boolean(isBatchSaving)
+                    }
+                    onChange={event => {
+                      const key = String(
+                        document.templateId ?? `unavailable:${document.documentCode}:${document.sortOrder}`,
+                      );
+                      setNotesByTemplateId(current => ({ ...current, [key]: event.target.value }));
+                    }}
+                    onBlur={() => {
+                      if (document.templateId === null || document.status === 'unavailable') return;
                       void onUpdateDocumentStatus({
                         templateId: document.templateId,
                         status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                      })
-                    }
+                        notes: notesByTemplateId[String(document.templateId)] || null,
+                      });
+                    }}
                   />
                 </div>
               </div>
+              {document.status === 'unavailable' ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  This saved requirement cannot be matched to its document record. It remains a blocker until an administrator reviews it.
+                </p>
+              ) : null}
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>
                   Received: {document.receivedAt || 'Pending'} | {formatActor(document.receivedBy)}

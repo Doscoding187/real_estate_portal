@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ManagerDealChecklistPanel } from '@/components/distribution/manager/ManagerDealChecklistPanel';
 
-type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
+type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
 type WorkflowStepStatus = 'in_progress' | 'waiting' | 'completed' | 'not_applicable';
 type WorkflowStepDraft = { status: WorkflowStepStatus | ''; partnerUpdate: string };
 
@@ -90,7 +91,7 @@ export default function ManagerDealChecklistPage() {
 
   async function handleUpdateDocumentStatus(input: {
     templateId: number;
-    status: DealDocumentStatus;
+    status: EditableDealDocumentStatus;
     notes?: string | null;
   }) {
     if (!localChecklist) return;
@@ -142,6 +143,10 @@ export default function ManagerDealChecklistPage() {
     );
     if (!requiredDocuments.length) {
       toast.error('No required documents configured for this deal.');
+      return;
+    }
+    if (requiredDocuments.some((document: any) => !document.templateId || document.status === 'unavailable')) {
+      toast.error('One or more saved document requirements cannot be updated. Ask an administrator to review the checklist.');
       return;
     }
 

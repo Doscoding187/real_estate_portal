@@ -183,6 +183,7 @@ export async function buildDistributionReferralTermsSnapshot(input: {
       : Promise.resolve([]),
     input.db
       .select({
+        templateId: developmentRequiredDocuments.id,
         documentCode: developmentRequiredDocuments.documentCode,
         documentLabel: developmentRequiredDocuments.documentLabel,
         isRequired: developmentRequiredDocuments.isRequired,
@@ -250,7 +251,7 @@ export async function buildDistributionReferralTermsSnapshot(input: {
     },
   };
   const terms = {
-    version: 1,
+    version: 2,
     capturedAt,
     developmentId: input.developmentId,
     marketMode: input.marketMode,
@@ -303,6 +304,7 @@ export async function buildDistributionReferralTermsSnapshot(input: {
       : null,
     intakeEvidence: input.intakeEvidenceSnapshot,
     requiredDocuments: requiredDocuments.map(document => ({
+      templateId: Number(document.templateId),
       documentCode: document.documentCode,
       documentLabel: document.documentLabel,
       category: 'client_required_document' as const,

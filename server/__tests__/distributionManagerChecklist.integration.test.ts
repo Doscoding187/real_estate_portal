@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
@@ -62,6 +63,18 @@ const createdState = {
 
 function uniqueIds(ids: number[]) {
   return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 async function insertUser(emailPrefix: string, role: 'visitor' | 'super_admin' = 'visitor') {
@@ -200,12 +213,36 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
     createdState.templateIds.push(templateId);
   }
 
+  const terms = {
+    version: 2,
+    marketMode: 'sale',
+    program: {
+      referrerCommissionType: 'flat',
+      referrerCommissionValue: 1000,
+      currencyCode: 'ZAR',
+      payoutMilestone,
+    },
+    requiredDocuments: templateIds.map((templateId, index) => ({
+      templateId,
+      documentCode: templateDocumentCodes[index] || 'custom',
+      documentLabel: `Required document ${index + 1}`,
+      category: 'client_required_document',
+      isRequired: true,
+      sortOrder: index,
+    })),
+  };
+  const termsDigest = createHash('sha256').update(canonicalJson(terms), 'utf8').digest('hex');
+  const referralTermsSnapshot = { ...terms, digest: termsDigest };
+
   const [dealInsert] = await db.insert(distributionDeals).values({
     programId,
     developmentId,
     agentId: agentUserId,
     managerUserId,
     buyerName: 'Buyer Seed',
+    marketMode: 'sale',
+    referralTermsSnapshotJson: referralTermsSnapshot,
+    referralTermsSnapshotDigest: termsDigest,
   });
   const dealId = Number((dealInsert as any).insertId || 0);
   createdState.dealIds.push(dealId);
