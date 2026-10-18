@@ -31,7 +31,10 @@ function formatDealStatus(statusValue: unknown, dealId: number, viewings: any[])
     const scheduledViewing = viewings.find(
       viewing => Number(viewing.dealId) === dealId && viewing.status === 'scheduled',
     );
-    return scheduledViewing ? 'Viewing scheduled' : 'Referral received';
+    if (!scheduledViewing) return 'Referral received';
+    return new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
+      ? 'Viewing outcome pending'
+      : 'Viewing scheduled';
   }
 
   const labels: Record<string, string> = {
@@ -96,7 +99,7 @@ export default function PartnerDashboardPage() {
     { enabled: isAuthenticated && hasDistributionIdentity, retry: false },
   );
   const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
-    { includePast: false, limit: 10 },
+    { includePast: true, limit: 500 },
     { enabled: isAuthenticated && hasDistributionIdentity, retry: false },
   );
   const payoutsQuery = trpc.distribution.referrer.myCommissionEntries.useQuery(
@@ -110,8 +113,11 @@ export default function PartnerDashboardPage() {
     [deals],
   );
   const recentDeals = referralsQuery.data?.items || [];
-  const upcomingViewings = (viewingsQuery.data || []).filter(
-    (viewing: any) => viewing.status === 'scheduled',
+  const recordedViewings = viewingsQuery.data || [];
+  const upcomingViewings = recordedViewings.filter(
+    (viewing: any) =>
+      viewing.status === 'scheduled' &&
+      new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
   );
   const payoutCounts = useMemo(() => {
     const counts = { pending: 0, approved: 0, paid: 0 };
@@ -330,7 +336,7 @@ export default function PartnerDashboardPage() {
                       </span>
                     </span>
                     <Badge variant="secondary">
-                      {formatDealStatus(deal.status, dealId, upcomingViewings)}
+                      {formatDealStatus(deal.status, dealId, recordedViewings)}
                     </Badge>
                   </button>
                 );

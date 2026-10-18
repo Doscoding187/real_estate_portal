@@ -11,7 +11,10 @@ import {
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { getAffordabilityMatches } from './affordabilityAssessmentService';
+import {
+  getAffordabilityMatches,
+  requireApprovedAffordabilityModel,
+} from './affordabilityAssessmentService';
 import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
 import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
 import {
@@ -73,113 +76,6 @@ function withConditions(conditions: SQL[]) {
   if (!conditions.length) return sql`1 = 1`;
   if (conditions.length === 1) return conditions[0];
   return and(...conditions) as SQL;
-}
-
-type JourneyOwnerRole = 'referrer' | 'manager' | 'system' | 'none';
-
-const STAGE_SLA_DAYS: Record<string, number> = {
-  viewing_scheduled: 2,
-  viewing_completed: 2,
-  application_submitted: 3,
-  contract_signed: 5,
-  bond_approved: 7,
-  commission_pending: 10,
-  commission_paid: 0,
-  cancelled: 0,
-};
-
-function parseSqlDate(value: unknown) {
-  if (!value) return null;
-  const parsed = new Date(String(value));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value.getTime());
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function normalizeStage(stage: unknown) {
-  const value = String(stage || '').trim().toLowerCase();
-  if (!value) return 'viewing_scheduled';
-  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
-  return value;
-}
-
-function buildJourneyGuidance(input: {
-  stage: unknown;
-  docProgress?: { requiredCount: number; verifiedRequiredCount: number };
-  updatedAt?: unknown;
-  createdAt?: unknown;
-}) {
-  const stage = normalizeStage(input.stage);
-  const requiredCount = Number(input.docProgress?.requiredCount || 0);
-  const verifiedRequiredCount = Number(input.docProgress?.verifiedRequiredCount || 0);
-  const hasMissingDocs = requiredCount > verifiedRequiredCount;
-
-  let nextAction = 'Continue moving this referral to the next milestone.';
-  let ownerRole: JourneyOwnerRole = 'referrer';
-  let actionCode:
-    | 'follow_up_viewing'
-    | 'follow_up_docs'
-    | 'follow_up_manager'
-    | 'track_payout'
-    | 'submit_next_referral'
-    | 'review_outcome' = 'follow_up_viewing';
-
-  if (stage === 'commission_paid') {
-    nextAction = 'Referral payout recorded. Archive this deal and submit the next referral.';
-    ownerRole = 'system';
-    actionCode = 'submit_next_referral';
-  } else if (stage === 'commission_pending') {
-    nextAction = 'Follow up on payout processing and payment confirmation.';
-    ownerRole = 'manager';
-    actionCode = 'track_payout';
-  } else if (stage === 'bond_approved' || stage === 'contract_signed') {
-    nextAction = 'Confirm final transfer milestones and payout readiness.';
-    ownerRole = 'manager';
-    actionCode = 'follow_up_manager';
-  } else if (stage === 'application_submitted') {
-    if (hasMissingDocs) {
-      nextAction = 'Upload and verify missing required documents to prevent delays.';
-      ownerRole = 'referrer';
-      actionCode = 'follow_up_docs';
-    } else {
-      nextAction = 'Application is in review. Stay available for manager requests.';
-      ownerRole = 'manager';
-      actionCode = 'follow_up_manager';
-    }
-  } else if (stage === 'viewing_completed') {
-    nextAction = 'Convert this buyer to application submission.';
-    ownerRole = 'referrer';
-    actionCode = 'follow_up_viewing';
-  } else if (stage === 'viewing_scheduled') {
-    nextAction = 'Confirm viewing attendance and prepare buyer application details.';
-    ownerRole = 'referrer';
-    actionCode = 'follow_up_viewing';
-  } else if (stage === 'cancelled') {
-    nextAction = 'Deal closed as cancelled. Review reason and focus on active deals.';
-    ownerRole = 'none';
-    actionCode = 'review_outcome';
-  }
-
-  const baseline = parseSqlDate(input.updatedAt) || parseSqlDate(input.createdAt) || new Date();
-  const slaDays = STAGE_SLA_DAYS[stage] ?? 3;
-  const slaDueAt = slaDays > 0 ? addDays(baseline, slaDays) : null;
-  const atRisk =
-    Boolean(slaDueAt) &&
-    stage !== 'commission_paid' &&
-    stage !== 'cancelled' &&
-    Date.now() > Number(slaDueAt);
-
-  return {
-    nextAction,
-    ownerRole,
-    actionCode,
-    slaDueAt: slaDueAt ? toSqlDateTime(slaDueAt) : null,
-    atRisk,
-  };
 }
 
 async function resolveDb(db?: DbExecutor) {
@@ -244,8 +140,6 @@ async function findExistingByClientReference(
       developmentId: distributionDeals.developmentId,
       programId: distributionDeals.programId,
       managerUserId: distributionDeals.managerUserId,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
       currentStage: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
     })
@@ -332,6 +226,9 @@ export async function createReferralDeal(
     assessmentId?: string | null;
   },
 ) {
+  const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
+  if (normalizedAssessmentId) requireApprovedAffordabilityModel();
+
   const db = await resolveDb();
   await assertPartnerDevelopmentProgramAccess({
     db,
@@ -409,8 +306,6 @@ export async function createReferralDeal(
         developmentId: Number(existing.developmentId),
         programId: Number(existing.programId),
         managerUserId: toNumberOrNull(existing.managerUserId),
-        assessmentId: existing.assessmentId ? String(existing.assessmentId) : null,
-        matchSnapshotId: existing.matchSnapshotId ? String(existing.matchSnapshotId) : null,
         status: 'submitted',
         createdAt: String(existing.createdAt || ''),
         checklistSeededCount: 0,
@@ -448,7 +343,6 @@ export async function createReferralDeal(
   const buyerName = String(input.buyerName || '').trim() || 'Buyer Pending';
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
-  const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
   if (input.marketMode === 'rent' && normalizedAssessmentId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -643,8 +537,6 @@ export async function createReferralDeal(
       managerUserId: toNumberOrNull(createdDeal?.managerUserId),
       marketMode: createdDeal?.marketMode || input.marketMode,
       developerProjectionRevision: createdDeal?.developerProjectionRevision || developerProjection.revision,
-      assessmentId: assessmentAttachment?.assessmentId || null,
-      matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
       status: 'submitted',
       createdAt: String(createdDeal?.createdAt || ''),
       checklistSeededCount: templateIds.length,
@@ -867,9 +759,6 @@ export async function listMyReferralDeals(
       dealId: distributionDeals.id,
       developmentId: distributionDeals.developmentId,
       programId: distributionDeals.programId,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
-      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
       marketMode: distributionDeals.marketMode,
       developerProjectionRevision: distributionDeals.developerProjectionRevision,
       developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
@@ -904,21 +793,12 @@ export async function listMyReferralDeals(
         verifiedRequiredCount: 0,
       };
       return {
-        journey: buildJourneyGuidance({
-          stage: row.status,
-          docProgress,
-          updatedAt: row.updatedAt,
-          createdAt: row.createdAt,
-        }),
         dealId: Number(row.dealId),
         development: {
           developmentId: Number(row.developmentId),
           name: String(campaign?.name || `Development #${row.developmentId}`),
         },
-        status: String(row.status || 'viewing_scheduled'),
-        assessmentId: row.assessmentId ? String(row.assessmentId) : null,
-        matchSnapshotId: row.matchSnapshotId ? String(row.matchSnapshotId) : null,
-        affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
+        status: String(row.status || 'submitted'),
         marketMode: row.marketMode || null,
         developerProjectionRevision: row.developerProjectionRevision || null,
         developerProjectionObservedAt: row.developerProjectionObservedAt || null,
@@ -948,10 +828,6 @@ export async function getMyReferralDeal(
       buyerEmail: distributionDeals.buyerEmail,
       buyerPhone: distributionDeals.buyerPhone,
       status: distributionDeals.currentStage,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
-      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
-      affordabilityAssumptionsJson: distributionDeals.affordabilityAssumptionsJson,
       marketMode: distributionDeals.marketMode,
       developerProjectionRevision: distributionDeals.developerProjectionRevision,
       developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
@@ -1022,12 +898,6 @@ export async function getMyReferralDeal(
   });
 
   return {
-    journey: buildJourneyGuidance({
-      stage: deal.status,
-      docProgress,
-      updatedAt: deal.updatedAt,
-      createdAt: deal.createdAt,
-    }),
     dealId: Number(deal.dealId),
     development: {
       developmentId: Number(deal.developmentId),
@@ -1035,13 +905,11 @@ export async function getMyReferralDeal(
       city: snapshotCampaign?.city ? String(snapshotCampaign.city) : null,
       province: snapshotCampaign?.province ? String(snapshotCampaign.province) : null,
     },
-    status: String(deal.status || 'viewing_scheduled'),
+    status: String(deal.status || 'submitted'),
     marketMode: deal.marketMode || null,
     developerProjectionRevision: deal.developerProjectionRevision || null,
     developerProjectionObservedAt: deal.developerProjectionObservedAt || null,
     referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
-    assessmentId: deal.assessmentId ? String(deal.assessmentId) : null,
-    matchSnapshotId: deal.matchSnapshotId ? String(deal.matchSnapshotId) : null,
     createdAt: deal.createdAt,
     updatedAt: deal.updatedAt,
     buyer: {
@@ -1060,13 +928,6 @@ export async function getMyReferralDeal(
             email: deal.managerEmail || null,
           }
         : null,
-    affordability:
-      deal.assessmentId && deal.matchSnapshotId
-        ? {
-            purchasePriceEstimate: toNumberOrNull(deal.affordabilityPurchasePrice),
-            assumptions: parseJsonObject(deal.affordabilityAssumptionsJson),
-          }
-        : null,
     docProgress,
     applicationDocuments,
     programTermsSnapshot,
@@ -1078,7 +939,6 @@ export async function getMyReferralDeal(
         event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
         byRole: event.actorRole ? String(event.actorRole) : 'system',
         note: event.note || null,
-        metadata,
       };
     }),
   };

@@ -40,7 +40,9 @@ function getNextActionHint(status: string, scheduledViewing?: any) {
     const formattedDate = Number.isNaN(date.getTime())
       ? 'the scheduled time'
       : new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-    return `A viewing has been booked for ${formattedDate}.`;
+    return date.getTime() < Date.now()
+      ? `A viewing was booked for ${formattedDate}. Its outcome has not been recorded yet.`
+      : `A viewing has been booked for ${formattedDate}.`;
   }
   if (normalized === 'viewing_scheduled') {
     return 'Your referral has been received. The next step will appear here after the responsible team confirms it.';
@@ -79,7 +81,7 @@ export default function PartnerReferralDetailPage() {
     },
   );
   const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
-    { includePast: false, limit: 200 },
+    { includePast: true, limit: 500 },
     { enabled: isAuthenticated && match && dealId > 0, retry: false },
   );
 
@@ -164,11 +166,15 @@ export default function PartnerReferralDetailPage() {
   const scheduledViewing = (viewingsQuery.data || []).find(
     (viewing: any) =>
       Number(viewing.dealId) === Number(referral.dealId) &&
-      viewing.status === 'scheduled' &&
-      new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
+      viewing.status === 'scheduled',
   );
+  const scheduledViewingIsPast = scheduledViewing
+    ? new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
+    : false;
   const statusLabel = normalizeStage(referral.status) === 'viewing_scheduled' && scheduledViewing
-    ? 'Viewing scheduled'
+    ? scheduledViewingIsPast
+      ? 'Viewing outcome pending'
+      : 'Viewing scheduled'
     : getStageLabel(referral.status);
   const nextActionHint = getNextActionHint(String(referral.status || ''), scheduledViewing);
   const normalizedStage = normalizeStage(referral.status);

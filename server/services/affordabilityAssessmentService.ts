@@ -8,13 +8,30 @@ import {
   qualificationPackExports,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { assertDistributionReferralIntakeReady } from './distributionReferralIntakePolicy';
 
+// Historical calculator constants. Public assessment and matching entrypoints
+// fail closed until the approved prime-based model replaces these assumptions.
 const CALC_VERSION = 'v1' as const;
 const DEFAULT_INTEREST_RATE_ANNUAL = 11.75;
 const DEFAULT_TERM_MONTHS = 240;
 const DEFAULT_MAX_REPAYMENT_RATIO = 0.3;
 const DEFAULT_LOW_CONFIDENCE_THRESHOLD = 12000;
+
+export function requireApprovedAffordabilityModel(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Income-based opportunity matching is not available yet. Purchase estimates still need an agreed loan term and repayment allowance, and rental affordability needs its own rules.',
+  });
+}
+
+export function requireCreditReportFlow(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Credit reports cannot be requested yet. An approved provider and a separate authorization process are not configured.',
+  });
+}
 
 export const QUALIFICATION_DISCLAIMER_LINES = [
   'This is an indicative affordability estimate, not a credit approval.',
@@ -553,6 +570,7 @@ export async function ensureAssessmentBelongsToActor(input: {
   actorRole: string;
   db?: DbExecutor;
 }) {
+  requireApprovedAffordabilityModel();
   const db = await resolveDbOrThrow(input.db);
   return await getAssessmentForActor(db, {
     assessmentId: input.assessmentId,
@@ -572,7 +590,7 @@ export async function createAffordabilityAssessment(input: {
   locationFilter?: AffordabilityLocationFilter | null;
   db?: DbExecutor;
 }) {
-  assertDistributionReferralIntakeReady();
+  requireApprovedAffordabilityModel();
   const db = await resolveDbOrThrow(input.db);
 
   const calculation = calculateAffordabilityOutputs({
@@ -606,6 +624,7 @@ export async function getAffordabilityAssessment(input: {
   actorRole: string;
   db?: DbExecutor;
 }) {
+  requireApprovedAffordabilityModel();
   const db = await resolveDbOrThrow(input.db);
   const assessment = await getAssessmentForActor(db, input);
   return {
@@ -647,6 +666,7 @@ export async function getAffordabilityMatches(input: {
   matches: MatchItem[];
   createdNewSnapshot: boolean;
 }> {
+  requireApprovedAffordabilityModel();
   void input;
   // The legacy Developer-table matcher and its stored snapshots are intentionally retired.
   // Re-enable matching only after the Distribution build can call the Developer projection.
@@ -660,38 +680,9 @@ export async function requestCreditCheckPlaceholder(input: {
   consentGiven: boolean;
   db?: DbExecutor;
 }) {
-  assertDistributionReferralIntakeReady();
-  if (!input.consentGiven) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'A credit check requires the client’s explicit consent.',
-    });
-  }
+  void input;
+  requireCreditReportFlow();
 
-  const db = await resolveDbOrThrow(input.db);
-  const assessment = await getAssessmentForActor(db, input);
-  if (assessment.lockedAt) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'This affordability assessment has already been attached and is immutable.',
-    });
-  }
-  const requestedAt = normalizeDateTimeForSql(new Date());
-
-  await db
-    .update(affordabilityAssessments)
-    .set({
-      creditCheckConsentGiven: 1,
-      creditCheckRequestedAt: requestedAt,
-    })
-    .where(eq(affordabilityAssessments.id, assessment.id));
-
-  return {
-    assessmentId: assessment.id,
-    consentGiven: true,
-    requestedAt,
-    status: 'placeholder_requested',
-  };
 }
 
 export async function exportQualificationPackPdf(input: {
@@ -700,6 +691,7 @@ export async function exportQualificationPackPdf(input: {
   actorRole: string;
   db?: DbExecutor;
 }) {
+  requireApprovedAffordabilityModel();
   const db = await resolveDbOrThrow(input.db);
   const assessment = await getAssessmentForActor(db, input);
   const snapshot = await getAffordabilityMatches({
@@ -745,6 +737,7 @@ export async function exportQualificationPackPdfForReferral(input: {
   actorRole: string;
   db?: DbExecutor;
 }) {
+  requireApprovedAffordabilityModel();
   requireDeveloperSalesProjection();
   const db = await resolveDbOrThrow(input.db);
   const [deal] = await db

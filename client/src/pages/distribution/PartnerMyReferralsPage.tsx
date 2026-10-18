@@ -23,7 +23,10 @@ function humanStatus(statusValue: unknown, dealId: number, viewings: any[]) {
     const viewing = viewings.find(
       item => Number(item.dealId) === dealId && item.status === 'scheduled',
     );
-    return viewing ? 'Viewing scheduled' : 'Referral received';
+    if (!viewing) return 'Referral received';
+    return new Date(String(viewing.scheduledStartAt)).getTime() < Date.now()
+      ? 'Viewing outcome pending'
+      : 'Viewing scheduled';
   }
   const labels: Record<string, string> = {
     viewing_completed: 'Viewing completed',
@@ -56,12 +59,12 @@ export default function PartnerMyReferralsPage() {
     { enabled: isAuthenticated, retry: false },
   );
   const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
-    { includePast: false, limit: 200 },
+    { includePast: true, limit: 500 },
     { enabled: isAuthenticated, retry: false },
   );
 
   const items = referralsQuery.data?.items || [];
-  const upcomingViewings = viewingsQuery.data || [];
+  const recordedViewings = viewingsQuery.data || [];
   const filteredItems = useMemo(() => items.filter((item: any) => {
     if (filter === 'in_progress') return !isClosed(item.status);
     if (filter === 'closed') return isClosed(item.status);
@@ -132,7 +135,7 @@ export default function PartnerMyReferralsPage() {
           <CardContent className="divide-y divide-border p-5">
             {filteredItems.map((item: any) => {
               const dealId = Number(item.dealId);
-              const scheduledViewing = upcomingViewings.find(
+              const scheduledViewing = recordedViewings.find(
                 (viewing: any) => Number(viewing.dealId) === dealId && viewing.status === 'scheduled',
               );
               return (
@@ -149,13 +152,15 @@ export default function PartnerMyReferralsPage() {
                     </p>
                     {scheduledViewing ? (
                       <p className="mt-2 text-xs font-medium text-primary">
-                        Viewing booked for {formatDate(scheduledViewing.scheduledStartAt)}
+                        {new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
+                          ? `Viewing recorded for ${formatDate(scheduledViewing.scheduledStartAt)} — outcome update pending`
+                          : `Viewing booked for ${formatDate(scheduledViewing.scheduledStartAt)}`}
                       </p>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      {humanStatus(item.status, dealId, upcomingViewings)}
+                      {humanStatus(item.status, dealId, recordedViewings)}
                     </Badge>
                     <Button
                       variant="outline"

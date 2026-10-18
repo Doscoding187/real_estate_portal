@@ -86,7 +86,6 @@ import {
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
 import {
-  assertDistributionReferralIntakeReady,
   getDistributionReferralIntakePolicy,
   publishDistributionReferralIntakePolicy,
   saveDistributionReferralIntakePolicyDraft,
@@ -111,12 +110,8 @@ import {
   submitReferralDealDocument,
 } from './services/distributionReferralSubmissionService';
 import {
-  createAffordabilityAssessment,
-  exportQualificationPackPdf,
-  exportQualificationPackPdfForReferral,
-  getAffordabilityAssessment,
-  getAffordabilityMatches,
-  requestCreditCheckPlaceholder,
+  requireApprovedAffordabilityModel,
+  requireCreditReportFlow,
 } from './services/affordabilityAssessmentService';
 import {
   getDistributionSchemaReadinessSnapshot,
@@ -238,9 +233,6 @@ const MANAGER_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, Distribut
 
 // Stages where fee accrual has begun - cancellation requires admin override
 const ACCRUAL_PROTECTED_STAGES: DistributionDealStage[] = ['commission_pending', 'commission_paid'];
-
-// Viewing expiry: booking must complete within this window or auto-cancel
-const VIEWING_EXPIRY_DAYS = 14;
 
 function isForwardStageTransition(
   fromStage: DistributionDealStage,
@@ -6422,7 +6414,6 @@ const managerDistributionRouter = router({
           commissionTriggerStage: distributionDeals.commissionTriggerStage,
           commissionStatus: distributionDeals.commissionStatus,
           managerUserId: distributionDeals.managerUserId,
-          submittedAt: distributionDeals.submittedAt,
         })
         .from(distributionDeals)
         .where(eq(distributionDeals.id, input.dealId))
@@ -6450,48 +6441,6 @@ const managerDistributionRouter = router({
           stage: fromStage,
           commissionStatus: deal.commissionStatus,
         };
-      }
-
-      // Viewing expiry check
-      // If deal is still at viewing_scheduled and TTL expired -> auto-cancel
-      if (fromStage === 'viewing_scheduled' && deal.submittedAt) {
-        const bookingDate = new Date(deal.submittedAt);
-        const expiryDate = new Date(
-          bookingDate.getTime() + VIEWING_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
-        );
-        if (new Date() > expiryDate) {
-          await db.transaction(async tx => {
-            await tx
-              .update(distributionDeals)
-              .set({
-                currentStage: 'cancelled',
-                closedAt: sql`CURRENT_TIMESTAMP`,
-              })
-              .where(eq(distributionDeals.id, deal.id));
-            await tx.insert(distributionDealEvents).values({
-              dealId: deal.id,
-              fromStage: 'viewing_scheduled',
-              toStage: 'cancelled',
-              eventType: 'system',
-              actorUserId: null,
-              metadata: {
-                reason: 'viewing_expired',
-                expiryDays: VIEWING_EXPIRY_DAYS,
-              } as any,
-              notes: `Auto-cancelled: viewing not completed within ${VIEWING_EXPIRY_DAYS} days.`,
-            });
-            await closeReferralIntakeForDeal({
-              tx,
-              dealId: Number(deal.id),
-              actorUserId: null,
-              closure: 'closed',
-            });
-          });
-          throw new TRPCError({
-            code: 'PRECONDITION_FAILED',
-            message: `Deal expired: viewing not completed within ${VIEWING_EXPIRY_DAYS} days. Deal auto-cancelled.`,
-          });
-        }
       }
 
       // Attribution null-check
@@ -6654,24 +6603,9 @@ const partnerDistributionRouter = router({
         locationFilter: AFFORDABILITY_LOCATION_FILTER_SCHEMA,
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      assertDistributionReferralIntakeReady();
+    .mutation(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await createAffordabilityAssessment({
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        subjectName: input.subjectName ?? null,
-        subjectPhone: input.subjectPhone ?? null,
-        grossIncomeMonthly: input.grossIncomeMonthly,
-        deductionsMonthly: input.deductionsMonthly,
-        depositAmount: input.depositAmount,
-        locationFilter: input.locationFilter,
-        db,
-      });
+      return requireApprovedAffordabilityModel();
     }),
 
   getAffordabilityAssessment: protectedProcedure
@@ -6680,18 +6614,9 @@ const partnerDistributionRouter = router({
         assessmentId: z.string().uuid(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .query(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await getAffordabilityAssessment({
-        assessmentId: input.assessmentId,
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        db,
-      });
+      return requireApprovedAffordabilityModel();
     }),
 
   getAffordabilityMatches: protectedProcedure
@@ -6700,18 +6625,9 @@ const partnerDistributionRouter = router({
         assessmentId: z.string().uuid(),
       }),
     )
-    .query(async ({ ctx, input }) => {
+    .query(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await getAffordabilityMatches({
-        assessmentId: input.assessmentId,
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        db,
-      });
+      return requireApprovedAffordabilityModel();
     }),
 
   exportQualificationPackPdf: protectedProcedure
@@ -6720,18 +6636,9 @@ const partnerDistributionRouter = router({
         assessmentId: z.string().uuid(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await exportQualificationPackPdf({
-        assessmentId: input.assessmentId,
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        db,
-      });
+      return requireApprovedAffordabilityModel();
     }),
 
   exportQualificationPackPdfForReferral: protectedProcedure
@@ -6740,18 +6647,9 @@ const partnerDistributionRouter = router({
         dealId: z.number().int().positive(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await exportQualificationPackPdfForReferral({
-        dealId: input.dealId,
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        db,
-      });
+      return requireApprovedAffordabilityModel();
     }),
 
   requestCreditCheckPlaceholder: protectedProcedure
@@ -6761,20 +6659,9 @@ const partnerDistributionRouter = router({
         consentGiven: z.boolean(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
-      assertDistributionReferralIntakeReady();
+    .mutation(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await requestCreditCheckPlaceholder({
-        assessmentId: input.assessmentId,
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        consentGiven: input.consentGiven,
-        db,
-      });
+      return requireCreditReportFlow();
     }),
 
   listEligibleDevelopmentsForSubmission: protectedProcedure
@@ -6962,7 +6849,6 @@ const partnerDistributionRouter = router({
         developmentId: z.number().int().positive(),
         marketMode: z.enum(['sale', 'rent']),
         intakeSessionUuid: z.string().uuid(),
-        assessmentId: z.string().uuid().optional(),
         buyerName: z.string().trim().max(200).optional(),
         buyerPhone: z.string().trim().max(50).optional(),
         buyerEmail: z.string().email().max(320).optional(),
@@ -6997,7 +6883,6 @@ const partnerDistributionRouter = router({
         buyerEmail: input.buyerEmail ?? null,
         notes: input.notes ?? null,
         clientReference: input.clientReference ?? null,
-        assessmentId: input.assessmentId ?? null,
       });
     }),
 
