@@ -109,7 +109,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
       <div className="border-b border-border px-[18px] pb-[18px] pt-5">
         <p className="text-[14px] font-semibold tracking-[-0.02em] text-foreground">Property Listify</p>
         <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-muted-foreground">
-          PARTNER WORKSPACE
+          REFERRAL DASHBOARD
         </p>
         {statusData?.distributionIdentityId ? (
           <p className="mt-2 text-[10px] font-medium text-muted-foreground">
@@ -163,7 +163,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
             <p className="truncate text-[12px] font-semibold text-foreground">
               {user?.name || 'Referral Partner'}
             </p>
-            <p className="truncate text-[10px] text-muted-foreground">Partner Workspace</p>
+            <p className="truncate text-[10px] text-muted-foreground">Distribution referrer</p>
           </div>
         </div>
         <div className="mt-2 flex gap-1.5">

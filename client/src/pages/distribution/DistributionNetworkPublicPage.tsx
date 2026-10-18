@@ -577,7 +577,7 @@ export default function DistributionNetworkPublicPage() {
             <div className="container">
               <div className="mx-auto mb-14 max-w-3xl text-center">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700">
-                  A Guided Partner Workspace
+                  A guided referral journey
                 </div>
                 <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
                   You can take part even if you are new to property.
