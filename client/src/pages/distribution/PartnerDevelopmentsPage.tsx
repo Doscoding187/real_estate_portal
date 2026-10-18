@@ -503,6 +503,11 @@ export default function PartnerDevelopmentsPage() {
                   ? 'Try changing the area, price range, or bedroom filters, or switch between buying and renting.'
                   : 'Options appear here when they are open for referrals and available to your account.'}
               </p>
+              {!termsQuery.data?.items?.length ? (
+                <Button className="mt-4" variant="outline" onClick={() => setLocation('/distribution-network')}>
+                  Explore public opportunities
+                </Button>
+              ) : null}
             </div>
           )}
         </section>
