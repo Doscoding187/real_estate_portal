@@ -12,6 +12,7 @@ import {
   formatPartnerDealStatus,
   formatPartnerPayoutRecordState,
   getPartnerPayoutRecordState,
+  type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
 type EntryStatusFilter = 'all' | 'pending' | 'approved' | 'paid' | 'cancelled';
@@ -52,6 +53,11 @@ export default function PartnerCommissionsPage() {
       retry: false,
     },
   );
+  const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
+    { includePast: true, limit: 500 },
+    { enabled: isAuthenticated, retry: false },
+  );
+  const recordedViewings = (viewingsQuery.data || []) as PartnerViewingRecord[];
 
   const summary = useMemo(() => {
     const rows = commissionsQuery.data || [];
@@ -83,7 +89,7 @@ export default function PartnerCommissionsPage() {
       : rows.filter((row: any) => String(row.entryStatus || '').toLowerCase() === statusFilter);
   }, [commissionsQuery.data, statusFilter]);
 
-  if (loading || commissionsQuery.isLoading) {
+  if (loading || commissionsQuery.isLoading || viewingsQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
@@ -157,6 +163,13 @@ export default function PartnerCommissionsPage() {
             <CardContent className="py-6 text-sm text-red-600">{commissionsQuery.error.message}</CardContent>
           </Card>
         ) : null}
+        {viewingsQuery.error ? (
+          <Card>
+            <CardContent className="py-4 text-sm text-amber-800">
+              We could not load viewing information, so some deal progress may be unavailable. Your referral payout records are still shown below.
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader>
@@ -165,6 +178,11 @@ export default function PartnerCommissionsPage() {
           <CardContent className="space-y-2">
             {filteredRows.map((row: any) => {
               const payoutState = getPartnerPayoutRecordState(row.entryStatus, row.dealStage);
+              const dealStage = String(row.dealStage || '').toLowerCase();
+              const dealProgressLabel =
+                dealStage === 'viewing_scheduled' && viewingsQuery.error
+                  ? 'Deal progress unavailable'
+                  : formatPartnerDealStatus(row.dealStage, Number(row.dealId), recordedViewings);
               return (
                 <button
                   key={row.id}
@@ -174,7 +192,7 @@ export default function PartnerCommissionsPage() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="font-medium">{row.developmentName || 'Development'}</p>
-                      <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatPartnerDealStatus(row.dealStage, Number(row.dealId))}</p>
+                      <p className="text-xs text-slate-500">Deal #{row.dealId} · {dealProgressLabel}</p>
                       {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
                     </div>
                     <div className="text-right">

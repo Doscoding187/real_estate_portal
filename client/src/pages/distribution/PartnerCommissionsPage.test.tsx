@@ -7,11 +7,13 @@ const {
   mockUseLocation,
   mockSetLocation,
   mockCommissionEntriesQuery,
+  mockMyViewingsQuery,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockUseLocation: vi.fn(),
   mockSetLocation: vi.fn(),
   mockCommissionEntriesQuery: vi.fn(),
+  mockMyViewingsQuery: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -34,6 +36,9 @@ vi.mock('@/lib/trpc', () => ({
   trpc: {
     distribution: {
       referrer: {
+        myViewings: {
+          useQuery: (...args: unknown[]) => mockMyViewingsQuery(...args),
+        },
         myCommissionEntries: {
           useQuery: (...args: unknown[]) => mockCommissionEntriesQuery(...args),
         },
@@ -65,15 +70,16 @@ describe('PartnerCommissionsPage', () => {
         },
       ],
     });
+    mockMyViewingsQuery.mockReturnValue({ isLoading: false, error: null, data: [] });
   });
 
-  it('uses reward language while showing payout states', () => {
+  it('uses referral payout language while showing recorded payout states', () => {
     render(<PartnerCommissionsPage />);
 
-    expect(screen.getByText('Rewards')).toBeInTheDocument();
-    expect(screen.getByText('Reward Snapshot')).toBeInTheDocument();
-    expect(screen.getByText('Reward Entries')).toBeInTheDocument();
+    expect(screen.getByText('My referral payouts')).toBeInTheDocument();
+    expect(screen.getByText('Recorded payout totals')).toBeInTheDocument();
+    expect(screen.getByText('Referral Payout Records')).toBeInTheDocument();
     expect(screen.getAllByText(/R 24\s000/)).not.toHaveLength(0);
-    expect(screen.getByText('Pays at: Bond Approved')).toBeInTheDocument();
+    expect(screen.getByText('Potential referral payout')).toBeInTheDocument();
   });
 });
