@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, count, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, isNull } from 'drizzle-orm';
 import {
   cataloguePublishers,
   developmentPhases,
@@ -253,6 +253,7 @@ export async function getDevelopmentSalesProjection(
               isNull(developmentPhases.archivedAt),
             ),
           )
+          .orderBy(asc(developmentPhases.phaseNumber), asc(developmentPhases.id))
       : [];
   const activePhaseIds = new Set(activePhases.map(phase => Number(phase.id)));
 
@@ -276,6 +277,8 @@ export async function getDevelopmentSalesProjection(
               eq(developmentTeamContacts.isActive, 1),
             ),
           )
+          // Contact order is part of the projection revision; use stable keys.
+          .orderBy(asc(developmentTeamContacts.phaseId), asc(developmentTeamContacts.id))
       : [];
   const contacts = partnerContactRows
     .filter(contact => contact.phaseId === null || activePhaseIds.has(Number(contact.phaseId)))
