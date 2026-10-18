@@ -47,6 +47,17 @@ function MetricCard({
   );
 }
 
+function formatPayoutTotals(amounts: Record<string, number>) {
+  const totals = Object.entries(amounts)
+    .filter(([, amount]) => Number.isFinite(amount) && amount > 0)
+    .map(([currency, amount]) =>
+      currency === 'ZAR'
+        ? `R ${Math.round(amount).toLocaleString('en-ZA')}`
+        : `${currency} ${Math.round(amount).toLocaleString('en-US')}`,
+    );
+  return totals.length ? totals.join(' · ') : 'Amount not recorded';
+}
+
 export default function PartnerDashboardPage() {
   const { isAuthenticated, loading, user } = useAuth();
   const [, setLocation] = useLocation();
@@ -92,17 +103,37 @@ export default function PartnerDashboardPage() {
       viewing.status === 'scheduled' &&
       new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
   );
-  const payoutCounts = useMemo(() => {
+  const payoutSummary = useMemo(() => {
     const counts = { potential: 0, pending: 0, approved: 0, paid: 0, needsReview: 0 };
+    const amounts: Record<'potential' | 'pending' | 'approved' | 'paid', Record<string, number>> = {
+      potential: {},
+      pending: {},
+      approved: {},
+      paid: {},
+    };
     for (const entry of payoutsQuery.data || []) {
       const state = getPartnerPayoutRecordState(entry.entryStatus, entry.dealStage);
+      const currency = String(entry.currency || 'ZAR').trim().toUpperCase();
+      const amount = Number(entry.commissionAmount);
       if (state === 'potential') counts.potential += 1;
       if (state === 'pending_approval') counts.pending += 1;
       if (state === 'approved') counts.approved += 1;
       if (state === 'paid') counts.paid += 1;
       if (state === 'needs_review') counts.needsReview += 1;
+      const bucket = state === 'potential'
+        ? 'potential'
+        : state === 'pending_approval'
+          ? 'pending'
+          : state === 'approved'
+            ? 'approved'
+            : state === 'paid'
+              ? 'paid'
+              : null;
+      if (bucket && currency && Number.isFinite(amount) && amount > 0) {
+        amounts[bucket][currency] = (amounts[bucket][currency] || 0) + amount;
+      }
     }
-    return counts;
+    return { counts, amounts };
   }, [payoutsQuery.data]);
 
   const queryError = statusQuery.isError ||
@@ -174,8 +205,40 @@ export default function PartnerDashboardPage() {
   }
 
   const firstName = String(user?.name || '').trim().split(/\s+/)[0];
-  const hasAnyActivity = deals.length > 0 || payoutCounts.potential > 0 || payoutCounts.pending > 0 ||
-    payoutCounts.approved > 0 || payoutCounts.paid > 0 || payoutCounts.needsReview > 0 || upcomingViewings.length > 0;
+  const hasAnyActivity = deals.length > 0 || payoutSummary.counts.potential > 0 || payoutSummary.counts.pending > 0 ||
+    payoutSummary.counts.approved > 0 || payoutSummary.counts.paid > 0 || payoutSummary.counts.needsReview > 0 || upcomingViewings.length > 0;
+  const activityMetrics = [
+    ...(activeDeals.length > 0 ? [{
+      label: 'Deals in progress',
+      value: String(activeDeals.length),
+      supportingText: 'Introductions still moving through their recorded steps',
+      icon: <Home className="h-4 w-4" />,
+    }] : []),
+    ...(payoutSummary.counts.potential > 0 ? [{
+      label: 'Potential referral payout',
+      value: formatPayoutTotals(payoutSummary.amounts.potential),
+      supportingText: `${payoutSummary.counts.potential} record${payoutSummary.counts.potential === 1 ? '' : 's'} · eligibility trigger not confirmed`,
+      icon: <CircleDollarSign className="h-4 w-4" />,
+    }] : []),
+    ...(payoutSummary.counts.pending > 0 ? [{
+      label: 'Awaiting team approval',
+      value: formatPayoutTotals(payoutSummary.amounts.pending),
+      supportingText: `${payoutSummary.counts.pending} referral payout${payoutSummary.counts.pending === 1 ? '' : 's'} waiting for approval`,
+      icon: <CircleDollarSign className="h-4 w-4" />,
+    }] : []),
+    ...(payoutSummary.counts.approved > 0 ? [{
+      label: 'Approved for payment',
+      value: formatPayoutTotals(payoutSummary.amounts.approved),
+      supportingText: `${payoutSummary.counts.approved} approved record${payoutSummary.counts.approved === 1 ? '' : 's'} · payment timing follows program terms`,
+      icon: <CircleDollarSign className="h-4 w-4" />,
+    }] : []),
+    ...(payoutSummary.counts.paid > 0 ? [{
+      label: 'Referral payouts paid',
+      value: formatPayoutTotals(payoutSummary.amounts.paid),
+      supportingText: `${payoutSummary.counts.paid} confirmed payment record${payoutSummary.counts.paid === 1 ? '' : 's'}`,
+      icon: <CircleDollarSign className="h-4 w-4" />,
+    }] : []),
+  ];
 
   return (
     <ReferralAppShell>
@@ -206,41 +269,20 @@ export default function PartnerDashboardPage() {
           <p className="mt-4 text-xs text-blue-100">Distribution ID: {statusQuery.data?.distributionIdentityId}</p>
         </section>
 
-        {hasAnyActivity ? (
+        {activityMetrics.length ? (
           <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="Deals in progress"
-              value={String(activeDeals.length)}
-              supportingText="Introductions not yet closed or paid"
-              icon={<Home className="h-4 w-4" />}
-            />
-            <MetricCard
-              label="Potential referral payouts"
-              value={String(payoutCounts.potential)}
-              supportingText="Eligibility trigger not yet confirmed"
-              icon={<CircleDollarSign className="h-4 w-4" />}
-            />
-            <MetricCard
-              label="Payouts pending or approved"
-              value={String(payoutCounts.pending + payoutCounts.approved)}
-              supportingText={`${payoutCounts.pending} awaiting approval · ${payoutCounts.approved} approved`}
-              icon={<CircleDollarSign className="h-4 w-4" />}
-            />
-            <MetricCard
-              label="Referral payouts paid"
-              value={String(payoutCounts.paid)}
-              supportingText="Confirmed in the payout records"
-              icon={<CircleDollarSign className="h-4 w-4" />}
-            />
+            {activityMetrics.map(metric => (
+              <MetricCard key={metric.label} {...metric} />
+            ))}
           </section>
         ) : null}
 
-        {payoutCounts.needsReview > 0 ? (
+        {payoutSummary.counts.needsReview > 0 ? (
           <Card className="border-amber-300 bg-amber-50">
             <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
                 <p className="font-medium text-amber-950">
-                  {payoutCounts.needsReview} payout {payoutCounts.needsReview === 1 ? 'record needs' : 'records need'} a team check
+                  {payoutSummary.counts.needsReview} payout {payoutSummary.counts.needsReview === 1 ? 'record needs' : 'records need'} a team check
                 </p>
                 <p className="mt-1 text-sm text-amber-900">
                   The recorded payout state does not match the deal progress. The team will confirm how these records fit together.
