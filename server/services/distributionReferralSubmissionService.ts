@@ -356,9 +356,8 @@ export async function createReferralDeal(
   }
   const eligibility = { programId };
 
-  // Confirm current Developer marketability before reading referral evidence.
-  // The Distribution-owned adapter returns null until its Developer contract
-  // is integrated, so this path stays unavailable and fails closed.
+  // Confirm current Developer marketability through the Developer-owned
+  // projection before reading referral evidence.
   const developerProjection = await getDevelopmentSalesProjection(input.developmentId);
   if (!developerProjection) {
     throw new TRPCError({
