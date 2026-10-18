@@ -345,9 +345,6 @@ export const developments = mysqlTable(
     transactionType: mysqlEnum('transaction_type', ['for_sale', 'for_rent', 'auction'])
       .default('for_sale')
       .notNull(),
-    inventoryMode: mysqlEnum('inventory_mode', ['aggregate', 'itemized'])
-      .default('aggregate')
-      .notNull(),
     monthlyRentFrom: decimal('monthly_rent_from', { precision: 15, scale: 2 }),
     monthlyRentTo: decimal('monthly_rent_to', { precision: 15, scale: 2 }),
     auctionStartDate: datetime('auction_start_date', { mode: 'string' }),
@@ -358,6 +355,9 @@ export const developments = mysqlTable(
       () => cataloguePublishers.id,
       { onDelete: 'restrict' },
     ),
+    inventoryMode: mysqlEnum('inventory_mode', ['aggregate', 'itemized'])
+      .default('aggregate')
+      .notNull(),
   },
   table => [
     index('idx_developments_slug').on(table.slug),
@@ -488,7 +488,6 @@ export const developmentPhases = mysqlTable(
     status: mysqlEnum(['planning', 'pre_launch', 'selling', 'sold_out', 'completed'])
       .default('planning')
       .notNull(),
-    archivedAt: timestamp('archived_at', { mode: 'string' }),
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),
     priceFrom: int('price_from'),
@@ -505,6 +504,7 @@ export const developmentPhases = mysqlTable(
     phaseHighlights: json('phase_highlights'),
     latitude: decimal({ precision: 10, scale: 7 }),
     longitude: decimal({ precision: 10, scale: 7 }),
+    archivedAt: timestamp('archived_at', { mode: 'string' }),
   },
   table => [
     index('idx_development_phases_development_id').on(table.developmentId),
@@ -763,17 +763,6 @@ export const unitTypes = mysqlTable(
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),
     reservedUnits: int('reserved_units').default(0),
-    availableForSaleUnits: int('available_for_sale_units').default(0).notNull(),
-    availableForRentUnits: int('available_for_rent_units').default(0).notNull(),
-    releasedForSaleUnits: int('released_for_sale_units').default(0).notNull(),
-    releasedForRentUnits: int('released_for_rent_units').default(0).notNull(),
-    reservedForSaleUnits: int('reserved_for_sale_units').default(0).notNull(),
-    reservedForRentUnits: int('reserved_for_rent_units').default(0).notNull(),
-    soldForSaleUnits: int('sold_for_sale_units').default(0).notNull(),
-    availableSalePriceFrom: decimal('available_sale_price_from', { precision: 15, scale: 2 }),
-    availableSalePriceTo: decimal('available_sale_price_to', { precision: 15, scale: 2 }),
-    availableRentPriceFrom: decimal('available_rent_price_from', { precision: 15, scale: 2 }),
-    availableRentPriceTo: decimal('available_rent_price_to', { precision: 15, scale: 2 }),
     transferCostsIncluded: tinyint('transfer_costs_included').default(0),
     monthlyLevy: int('monthly_levy'),
     monthlyLevyTo: int('monthly_levy_to'),
@@ -829,6 +818,17 @@ export const unitTypes = mysqlTable(
       'passed_in',
       'withdrawn',
     ]).default('scheduled'),
+    availableForSaleUnits: int('available_for_sale_units').default(0).notNull(),
+    availableForRentUnits: int('available_for_rent_units').default(0).notNull(),
+    releasedForSaleUnits: int('released_for_sale_units').default(0).notNull(),
+    releasedForRentUnits: int('released_for_rent_units').default(0).notNull(),
+    reservedForSaleUnits: int('reserved_for_sale_units').default(0).notNull(),
+    reservedForRentUnits: int('reserved_for_rent_units').default(0).notNull(),
+    soldForSaleUnits: int('sold_for_sale_units').default(0).notNull(),
+    availableSalePriceFrom: decimal('available_sale_price_from', { precision: 15, scale: 2 }),
+    availableSalePriceTo: decimal('available_sale_price_to', { precision: 15, scale: 2 }),
+    availableRentPriceFrom: decimal('available_rent_price_from', { precision: 15, scale: 2 }),
+    availableRentPriceTo: decimal('available_rent_price_to', { precision: 15, scale: 2 }),
   },
   table => [
     index('idx_unit_types_development_id').on(table.developmentId),
@@ -863,7 +863,6 @@ export const developmentInventoryItems = mysqlTable(
       .references(() => unitTypes.id, { onDelete: 'restrict' }),
     internalIdentifier: varchar('internal_identifier', { length: 100 }).notNull(),
     publicIdentifier: varchar('public_identifier', { length: 100 }),
-    allocationNotes: text('allocation_notes'),
     transactionType: mysqlEnum('transaction_type', ['for_sale', 'for_rent']).notNull(),
     status: mysqlEnum([
       'planned',
@@ -884,6 +883,7 @@ export const developmentInventoryItems = mysqlTable(
     versionId: int('version_id').default(1).notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    allocationNotes: text('allocation_notes'),
   },
   table => [
     unique('uq_development_inventory_internal_identifier').on(
