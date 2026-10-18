@@ -1,13 +1,14 @@
 # ZA finance runtime credential and recovery preparation
 
-18 October 2026. Prepares the complete, bounded runtime-phase workstream for
-the South African finance storage: the synthetic restore-from-backup recovery
-exercise and the encrypted issuance of the one dedicated runtime access key
-recorded in D6 (launch-readiness packet 50). Every mode is locally validated
-against a mocked AWS layer. This packet **does not** contact AWS, does not
-create an access key, does not run the recovery exercise and does not bind the
-application; execution is a short attended session with the operator's own
-credentials.
+18 October 2026. Prepared and then executed the bounded runtime-phase
+workstream for the South African finance storage: the synthetic
+restore-from-backup recovery exercise and the encrypted issuance of the one
+dedicated runtime access key recorded in D6 (launch-readiness packet 50),
+followed by local credential verification and bounded permission probes. The
+workstream is recorded in
+[evidence/za-finance-runtime-2026-10-18](evidence/za-finance-runtime-2026-10-18/run-record.md).
+This packet does **not** bind the application, migrate records or open any
+hosted window; those remain with the hosting resume.
 
 ## Authority and boundary
 
@@ -17,7 +18,7 @@ credentials.
 | Base | `main` at `ac1ee5eb1` (contains the packet-50 D6 record via PR #643) |
 | Worktree / branch | `property-listify-za-finance-runtime-20261018` / `prep/za-finance-runtime-credential-probes-20261018` |
 | Precedent | Packet 29 (`aws-proof-runtime-verify.cjs`, `aws-private-proof-provision.py`): recovery precedes key issuance, envelope-then-local-verify, no hosted binding. |
-| Boundary | Local files and mocked-AWS tests only. No AWS API call, credential, bucket, database, provider or protected action was accessed or changed. |
+| Boundary | Local files and mocked-AWS tests for preparation; the executed run used operator credentials in CloudShell against the recorded stack only, with no hosted binding, database or media change. |
 | Reviewer action | Review the two gates that run before any mutation (`preflight`, `run_issue` ordering), the denied-operation contract in `runtimeProbe`, and re-run both suites. |
 
 ## What was built
@@ -46,22 +47,29 @@ credentials.
    `runtimePermissionsExercised: true`, and `hostedOwnerIsolationVerified`
    stays false.
 
-## Attended-run sequence (not yet executed)
+## Attended run (executed 18 October 2026)
 
-1. Generate a fresh RSA-4096 transfer keypair locally; record the public key
-   SHA256. The private key never leaves the local machine.
-2. In Cost Explorer, capture the recovery/exercise quote as JSON.
-3. Read-only preflight: `python3 scripts/storage/aws-finance-runtime-prepare.py`.
-4. Recovery: `--recovery --quote-readback <file> --budget-usd <n>`.
-5. Issuance: `--issue --public-key <pem> --expected-public-key-sha256 <hash> --recovery-evidence <path>`
-   (only the public key is needed wherever this runs).
-6. Locally: `node scripts/storage/aws-finance-runtime-verify.cjs <encrypted> <result.json> <private key> <export sha256> <public key sha256> <new private dir>`
-   (needs `@aws-sdk/client-s3`; CloudShell precedent for scratch installs is the
-   packet-50 run record).
-7. Copy only non-secret evidence (`result.json`, `recovery.private.json`,
-   `transfer-verification.json`, `runtime-verification.json`) into
-   `evidence/za-finance-runtime-2026-10-18/`; the encrypted export and
-   `runtime-credentials.private.json` stay outside the repository.
+Executed in CloudShell as the account root operator on the branch at
+`1e10004ea`; full detail and file hashes in the
+[run record](evidence/za-finance-runtime-2026-10-18/run-record.md).
+
+1. Fresh RSA-4096 transfer keypair generated locally; public key SHA256
+   `8ee54526e70bb549d12a6878b75accfee73f7069817a1f9b236933d34dbf8555`; private
+   key never left the operator machine.
+2. Quote readback `{"amountUsd": 0.01}` with budget USD 1.
+3. Read-only preflight: **PASS** — operator root, zero existing keys, stack and
+   both buckets read back as prepared.
+4. Recovery: **PASS** — replication completed, replica hash verified, delete
+   marker confirmed, restored current object read back from the backup version,
+   anonymous read denied (403); evidence sha256 `5112582a...`.
+5. Issuance: **PASS** — one dedicated access key created (none before),
+   encrypted export sha256 `62ed3d97...`; plaintext removed.
+6. Local verification: **PASS** — checksum, transfer key and signed STS
+   identity pinned; positive PUT/GET pass with AES256; all 10 forbidden
+   operations returned 403 AccessDenied.
+7. Non-secret evidence copied into this packet's evidence directory; the
+   encrypted export and `runtime-credentials.private.json` stay outside the
+   repository.
 
 ## Local validation
 
@@ -72,18 +80,16 @@ credentials.
   `node --test scripts/storage/tests/finance-runtime-verify.test.cjs`.
 - `node --check` and `python3 -m py_compile` clean; ESLint on both new `.cjs`
   files: 0 errors, 0 warnings.
-- All runs use the mocked AWS layer; no network or AWS call was made.
+- All runs use the mocked AWS layer; no network or AWS call was made before the
+  attended run.
 
 ## Open items
 
-1. Attended execution of steps 1–7 above, including the transfer-key generation
-   and the operator quote readback.
-2. The storage runtime verifier flags (`runtimePermissionsExercised`,
-   `recoveryExercised`, `migrationCompleted`) remain false until the attended
-   run produces the runtime evidence; `migrationCompleted` additionally waits
-   for the hosted resume.
-3. Hosted application binding remains a separate reviewed decision; this
-   packet produces a verified credential envelope and runtime evidence only.
+1. Bounded migration, hosted application binding and hosted owner isolation
+   remain unexercised and wait for the hosting resume; this packet produces a
+   verified credential envelope and runtime evidence only.
+2. `migrationCompleted` stays false in every artifact; the control-plane
+   verifier is unchanged and continues to claim control-plane status only.
 
 ## Validation commands
 
@@ -95,6 +101,8 @@ credentials.
 
 ## Register effect
 
-None. The workstream is prepared and locally validated only; no AWS mutation,
-access key, recovery run, migration or binding has occurred, and every
-pre-existing disposition is unchanged.
+The SA finance/proof storage (B11/B15) register row moves from
+"CONTROL PLANE PROVISIONED AND VERIFIED — runtime probes, recovery, migration
+and bindings NOT EXERCISED" to "RUNTIME PROBES AND SYNTHETIC RECOVERY
+EXERCISED — migration and bindings NOT EXERCISED". No hosted window, migration,
+binding or paid opening is implied.
