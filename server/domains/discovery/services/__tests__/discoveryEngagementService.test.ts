@@ -106,7 +106,16 @@ describe('discoveryEngagementService', () => {
     );
   });
 
-  it('uses a stable guest session fallback when no explicit session header exists', async () => {
+  it('keys the guest session fallback by a stable hash instead of raw network/agent parts', async () => {
+    const context = {
+      req: {
+        headers: {
+          'user-agent': 'Mozilla/5.0 Test',
+        },
+        ip: '10.0.0.5',
+      },
+    };
+
     await discoveryEngagementService.handle(
       {
         itemId: '9',
@@ -117,19 +126,30 @@ describe('discoveryEngagementService', () => {
           query: { mode: 'home' },
         },
       },
-      {
-        req: {
-          headers: {
-            'user-agent': 'Mozilla/5.0 Test',
-          },
-          ip: '10.0.0.5',
-        },
-      },
+      context,
     );
 
-    expect(recordInteractionMock).toHaveBeenCalledWith(
+    await discoveryEngagementService.handle(
+      {
+        itemId: '9',
+        eventId: 'event-share-10',
+        action: 'share',
+        context: {
+          mode: 'home',
+          query: { mode: 'home' },
+        },
+      },
+      context,
+    );
+
+    const [first, second] = recordInteractionMock.mock.calls.map(call => call[0]);
+
+    expect(first.sessionId).toMatch(/^guest-[0-9a-f]{32}$/);
+    expect(first.sessionId).not.toContain('10-0-0-5');
+    expect(first.sessionId).not.toContain('Mozilla');
+    expect(second.sessionId).toBe(first.sessionId);
+    expect(first).toEqual(
       expect.objectContaining({
-        sessionId: 'guest-10-0-0-5-Mozilla-5-0-Test',
         interactionType: 'share',
         feedType: 'recommended',
       }),

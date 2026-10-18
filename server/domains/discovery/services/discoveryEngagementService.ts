@@ -1,6 +1,8 @@
 import { TRPCError } from '@trpc/server';
+import { createHmac } from 'node:crypto';
 import type { DiscoveryEngagementEvent } from '../../../../shared/discovery/contracts';
 import { exploreInteractionService } from '../../../services/exploreInteractionService';
+import { ENV } from '../../../_core/env';
 import type { FeedType, InteractionType } from '../../../../shared/types';
 
 interface DiscoveryEngagementContext {
@@ -84,7 +86,13 @@ function buildSessionId(context: DiscoveryEngagementContext, userId?: number): s
 
   const ipPart = toSafeSessionPart(context.req?.ip || forwardedFor) ?? 'unknown-ip';
   const uaPart = toSafeSessionPart(userAgent) ?? 'unknown-agent';
-  return `guest-${ipPart}-${uaPart}`;
+  // Key the anonymous dedup session by a keyed hash so the stable grouping
+  // survives without storing the raw network address or agent string.
+  const anonymousSession = createHmac('sha256', ENV.cookieSecret)
+    .update(`${ipPart}|${uaPart}`)
+    .digest('hex')
+    .slice(0, 32);
+  return `guest-${anonymousSession}`;
 }
 
 export class DiscoveryEngagementService {
@@ -94,8 +102,6 @@ export class DiscoveryEngagementService {
 
     const contentId = toContentId(input.itemId);
     const sessionId = buildSessionId(context, userId);
-    const userAgentHeader = context.req?.headers?.['user-agent'];
-    const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
     const interactionType = deriveInteractionType(input.action);
 
     await exploreInteractionService.recordInteraction({
@@ -112,8 +118,6 @@ export class DiscoveryEngagementService {
         discoveryQuery: input.context?.query,
         discoveryAction: input.action,
       },
-      userAgent,
-      ipAddress: context.req?.ip,
       metadata: {
         discoveryAction: input.action,
         discoveryMode: input.context?.mode,

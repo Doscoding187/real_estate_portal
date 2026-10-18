@@ -42,8 +42,6 @@ export interface RecordInteractionOptions {
   feedType: FeedType;
   feedContext?: Record<string, any>;
   deviceType: DeviceType;
-  userAgent?: string;
-  ipAddress?: string;
   metadata?: Record<string, any>;
 }
 
@@ -66,8 +64,6 @@ export class ExploreInteractionService {
       feedType,
       feedContext,
       deviceType,
-      userAgent,
-      ipAddress,
       metadata,
     } = options;
 
@@ -91,8 +87,6 @@ export class ExploreInteractionService {
           feedType,
           feedContext,
           deviceType,
-          userAgent,
-          ipAddress,
           ...metadata,
         },
       });
@@ -136,8 +130,6 @@ export class ExploreInteractionService {
               feedType: interaction.feedType,
               feedContext: interaction.feedContext,
               deviceType: interaction.deviceType,
-              userAgent: interaction.userAgent,
-              ipAddress: interaction.ipAddress,
               ...interaction.metadata,
             },
           });
