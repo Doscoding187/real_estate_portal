@@ -120,8 +120,6 @@ describe('explore engagement log minimization', () => {
       interactionType: 'view',
       feedType: 'recommended',
       deviceType: 'mobile',
-      userAgent: 'SecretAgent/9.9',
-      ipAddress: SENSITIVE_IP,
     });
 
     expect(log).toHaveBeenCalledWith('[ENG_INSERT_ATTEMPT]', {
@@ -135,8 +133,14 @@ describe('explore engagement log minimization', () => {
       interactionType: 'view',
     });
     expect(JSON.stringify(log.mock.calls)).not.toMatch(
-      /4242|private-session-token|SecretAgent|198\.51\.100\.20|userId|sessionId/,
+      /4242|private-session-token|userId|sessionId/,
     );
+
+    const insertedValues = mockInsertValues.mock.calls[0][0] as {
+      metadata: Record<string, unknown>;
+    };
+    expect('userAgent' in insertedValues.metadata).toBe(false);
+    expect('ipAddress' in insertedValues.metadata).toBe(false);
   });
 });
 
