@@ -28,6 +28,26 @@ function processStepTypeLabel(stepType: unknown) {
   return labels[String(stepType || '').toLowerCase()] || 'Process step';
 }
 
+function processOwnerLabel(ownerRole: unknown) {
+  const owner = String(ownerRole || '').trim();
+  if (!owner) return null;
+
+  const normalized = owner.toLowerCase().replace(/[\s_-]+/g, ' ');
+  const knownLabels: Record<string, string> = {
+    partner: 'You',
+    referrer: 'You',
+    'referral partner': 'You',
+    'distribution team': 'Property Listify team',
+    'distribution manager': 'Property Listify team',
+    manager: 'Property Listify team',
+    admin: 'Property Listify team',
+    developer: 'Developer team',
+    'developer team': 'Developer team',
+  };
+
+  return knownLabels[normalized] || owner.replace(/[_-]+/g, ' ');
+}
+
 export default function PartnerReferralDetailPage() {
   const [match, params] = useRoute('/distribution/partner/referrals/:dealId');
   const { isAuthenticated, loading } = useAuth();
@@ -106,11 +126,37 @@ export default function PartnerReferralDetailPage() {
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
-  const processSteps = Array.isArray((referral as any).programTermsSnapshot?.workflow?.steps)
-    ? [...(referral as any).programTermsSnapshot.workflow.steps].sort(
-        (left: any, right: any) => Number(left.stepOrder || 0) - Number(right.stepOrder || 0),
-      )
+  const policyWorkflowSteps = Array.isArray(
+    (referral as any).programTermsSnapshot?.intakePolicy?.configuration?.workflowSteps,
+  )
+    ? (referral as any).programTermsSnapshot.intakePolicy.configuration.workflowSteps
+        .flatMap((step: any, index: number) => {
+          if (!step || typeof step !== 'object') return [];
+          const stepLabel = String(step.title || '').trim();
+          if (!stepLabel) return [];
+          return [{
+            stepKey: String(step.key || `guided-step-${index + 1}`),
+            stepLabel,
+            stepType: null,
+            stepOrder: index + 1,
+            isBlocking: step.isBlocking === true || Number(step.isBlocking) === 1,
+            partnerInstructions: String(step.partnerInstructions || '').trim() || null,
+            ownerRole: String(step.ownerRole || '').trim() || null,
+          }];
+        })
     : [];
+  const structuredWorkflowSteps = Array.isArray(
+    (referral as any).programTermsSnapshot?.workflow?.steps,
+  )
+    ? [...(referral as any).programTermsSnapshot.workflow.steps]
+        .sort((left: any, right: any) => Number(left.stepOrder || 0) - Number(right.stepOrder || 0))
+        .map((step: any) => ({
+          ...step,
+          partnerInstructions: null,
+          ownerRole: null,
+        }))
+    : [];
+  const processSteps = policyWorkflowSteps.length ? policyWorkflowSteps : structuredWorkflowSteps;
   const documentRequirementsSnapshotAvailable = Array.isArray(
     (referral as any).programTermsSnapshot?.requiredDocuments,
   );
@@ -234,7 +280,7 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle>Steps for this opportunity</CardTitle>
             <CardDescription>
-              These are the steps configured for this opportunity. Recorded updates for this deal appear in its timeline.
+              These steps and instructions were saved when this referral started. Recorded progress appears in the timeline.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,12 +298,20 @@ export default function PartnerReferralDetailPage() {
                       <p className="font-medium text-foreground">
                         {String(step.stepLabel || 'Next step to be confirmed')}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {processStepTypeLabel(step.stepType)}
-                        {step.isBlocking === true || Number(step.isBlocking) === 1
-                          ? ' · Required'
-                          : ' · As needed'}
-                      </p>
+                      <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+                        {step.stepType ? <p>{processStepTypeLabel(step.stepType)}</p> : null}
+                        <p>
+                          {step.isBlocking === true || Number(step.isBlocking) === 1
+                            ? 'Required to continue'
+                            : 'As needed'}
+                        </p>
+                        {step.ownerRole ? <p>Handled by: {processOwnerLabel(step.ownerRole)}</p> : null}
+                        {step.partnerInstructions ? (
+                          <p className="whitespace-pre-line text-sm leading-5 text-foreground/80">
+                            {step.partnerInstructions}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   </li>
                 ))}
