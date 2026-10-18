@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { distributionDealEvents, distributionDeals, users } from '../../drizzle/schema';
 import { isValidDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
 
@@ -412,6 +412,11 @@ export async function recordReferralWorkflowStepProgress(
   ) {
     return currentProgress;
   }
+
+  await db
+    .update(distributionDeals)
+    .set({ updatedAt: sql`CURRENT_TIMESTAMP` })
+    .where(eq(distributionDeals.id, input.dealId));
 
   await db.insert(distributionDealEvents).values({
     dealId: input.dealId,
