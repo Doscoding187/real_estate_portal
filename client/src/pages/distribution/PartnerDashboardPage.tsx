@@ -11,7 +11,7 @@ import {
   formatPartnerDealGuidance,
   formatPartnerDateTime,
   getPartnerPayoutRecordState,
-  summarizePartnerReferralWorkflow,
+  summarizeActivePartnerDealWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 import {
@@ -357,7 +357,7 @@ export default function PartnerDashboardPage() {
             <div className="divide-y divide-border">
               {recentDeals.slice(0, 5).map((deal: any) => {
                 const dealId = Number(deal.dealId);
-                const processSummary = summarizePartnerReferralWorkflow(deal.workflowProgress);
+                const processSummary = summarizeActivePartnerDealWorkflow(deal.workflowProgress, deal.status);
                 return (
                   <button
                     key={dealId}

@@ -15,7 +15,7 @@ import {
   formatPartnerDateTime,
   formatPartnerEventSource,
   formatPartnerProcessOwner,
-  summarizePartnerReferralWorkflow,
+  summarizeActivePartnerDealWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -101,7 +101,7 @@ export default function PartnerReferralDetailPage() {
     recordedViewings,
   );
   const workflowProgress = (referral as any).workflowProgress;
-  const processSummary = summarizePartnerReferralWorkflow(workflowProgress);
+  const processSummary = summarizeActivePartnerDealWorkflow(workflowProgress, referral.status);
   const nextActionHint = processSummary || formatPartnerDealGuidance(
     referral.status,
     Number(referral.dealId),

@@ -130,6 +130,12 @@ export function summarizePartnerReferralWorkflow(value: unknown) {
   return `${label} · ${statusLabels[status] || 'Progress update pending'}${update ? `: ${update}` : ''}`;
 }
 
+export function summarizeActivePartnerDealWorkflow(value: unknown, statusValue: unknown) {
+  const status = String(statusValue || '').trim().toLowerCase();
+  if (['commission_pending', 'commission_paid', 'cancelled'].includes(status)) return null;
+  return summarizePartnerReferralWorkflow(value);
+}
+
 const PARTNER_EVENT_LABELS: Record<string, string> = {
   system: 'Referral update recorded',
   stage_transition: 'Deal progress updated',

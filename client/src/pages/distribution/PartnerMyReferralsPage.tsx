@@ -13,7 +13,7 @@ import {
   formatPartnerDateTime,
   formatPartnerPayoutRecordState,
   getPartnerPayoutRecordState,
-  summarizePartnerReferralWorkflow,
+  summarizeActivePartnerDealWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -139,7 +139,7 @@ export default function PartnerMyReferralsPage() {
             {filteredItems.map((item: any) => {
               const dealId = Number(item.dealId);
               const scheduledViewing = findScheduledPartnerViewing(dealId, recordedViewings);
-              const processSummary = summarizePartnerReferralWorkflow(item.workflowProgress);
+              const processSummary = summarizeActivePartnerDealWorkflow(item.workflowProgress, item.status);
               const payout = payoutsByDealId.get(dealId);
               const payoutState = payout
                 ? getPartnerPayoutRecordState(payout.entryStatus, payout.dealStage)
