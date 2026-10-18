@@ -73,6 +73,22 @@ the provider-document evidence. Effective changes:
 No acceptance scope changes, no hosted or paid execution, and the paid-opening
 NO-GO remains. Each affected gate still needs its own execution and evidence.
 
+## B17 window admission prepared — 2026-10-18
+
+[Packet 53](53-b17-window-and-driver-admission-2026-10-18.md) records the
+remaining packet-48 admission decisions and admits the hosted load driver under
+the [packet-45](45-b17-hosted-window-runbook-2026-10-17.md) review requirement:
+
+| Item | Recorded | Effect |
+| --- | --- | --- |
+| W1 write mix | Read-only plus the smoke write, enabled explicitly at the window | No hosted write-volume claim; writes remain local calibration |
+| W2 rate plan | Provisional plan accepted as the accepted plan (5/s sustained, 2×20/s peaks, 30-min 40/s double peak) | Driver's encoded plan stands; replacements require a reviewed amendment before the test |
+| W3 operational card | Incident log, abort channel (abort-file + signal), escalation and coverage defaults accepted | Packet-45 entry criterion 6 prepared; log opened at T-2 |
+| Driver admission | Packet-48 candidate admitted at base `7706e93bc`, module hashes pinned (30/30 tests) | Entry criterion 5 tooling complete; window admission record drafted but ineffective until hosting resume and B08/B09/B11–B14/B16 |
+
+B17 stays **OPEN — RECOVERY / CAPACITY**; no window opens, no spend is
+authorized and the paid-opening NO-GO is unchanged.
+
 ## Paid MVP working disposition — 2026-09-30
 
 B01–B07 acceptance is carried forward from the later recorded scoped decisions;
