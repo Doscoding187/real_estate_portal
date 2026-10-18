@@ -469,13 +469,10 @@ export default function DistributionNetworkPublicPage() {
                     )}
                   </div>
 
-                  {filteredDevelopments.length > 0 ? (
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">Share these options with the person you’re helping</p>
-                        <p className="mt-1 text-xs text-slate-600">Create a print-friendly shortlist or save it as a PDF.</p>
-                      </div>
+                  {!isLoadingDevs && !developmentSearchError ? (
+                    <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
                       <PropertyOpportunityShortlist
+                        key={marketMode}
                         marketMode={marketMode}
                         searchSummary={shortlistSummary}
                         opportunities={filteredDevelopments.map(dev => ({

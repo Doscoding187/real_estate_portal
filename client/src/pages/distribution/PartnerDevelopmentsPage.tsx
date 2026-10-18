@@ -218,48 +218,41 @@ export default function PartnerDevelopmentsPage() {
             <p className="text-xs text-muted-foreground">
               Showing {filteredItems.length} current {marketMode === 'sale' ? 'purchase' : 'rental'} option{filteredItems.length === 1 ? '' : 's'} available to your account.
             </p>
-            {filteredItems.length ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/15 bg-white p-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Share the options you found</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Print a shortlist or save it as a PDF to discuss with the person you’re helping.</p>
-                </div>
-                <PropertyOpportunityShortlist
-                  marketMode={marketMode}
-                  searchSummary={[
-                    marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
-                    priceBand !== 'any'
-                      ? DISTRIBUTION_PRICE_BANDS[marketMode].find(band => band.key === priceBand)?.label
-                      : 'Any listed price',
-                    search.trim() ? `Area or development: ${search.trim()}` : 'Any area',
-                    selectedBeds.size
-                      ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
-                      : 'Any bedroom count',
-                  ].filter(Boolean).join(' · ')}
-                  opportunities={filteredItems.map(item => {
-                    const mode = item.inventory?.modes?.[marketMode];
-                    const currencyCode = item.program.currencyCode || 'ZAR';
-                    return {
-                      id: item.developmentId,
-                      name: item.developmentName,
-                      location: [item.city, item.province].filter(Boolean).join(', '),
-                      imageUrl: item.imageUrl,
-                      priceLabel: formatModePrice(mode, currencyCode, marketMode === 'rent'),
-                      availabilityLabel: mode
-                        ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed`
-                        : 'No current availability for this option',
-                      propertyDetails: (item.unitTypes || [])
-                        .filter((unitType: any) => Boolean(unitType.modes?.[marketMode]))
-                        .map((unitType: any) => {
-                          const unitMode = unitType.modes[marketMode] as PartnerModeProjection;
-                          return `${unitType.name}${unitType.bedrooms === null ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
-                        }),
-                      description: item.campaign.description || item.campaign.tagline,
-                    };
-                  })}
-                />
-              </div>
-            ) : null}
+            <PropertyOpportunityShortlist
+              key={marketMode}
+              marketMode={marketMode}
+              searchSummary={[
+                marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
+                priceBand !== 'any'
+                  ? DISTRIBUTION_PRICE_BANDS[marketMode].find(band => band.key === priceBand)?.label
+                  : 'Any listed price',
+                search.trim() ? `Area or development: ${search.trim()}` : 'Any area',
+                selectedBeds.size
+                  ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
+                  : 'Any bedroom count',
+              ].filter(Boolean).join(' · ')}
+              opportunities={filteredItems.map(item => {
+                const mode = item.inventory?.modes?.[marketMode];
+                const currencyCode = item.program.currencyCode || 'ZAR';
+                return {
+                  id: item.developmentId,
+                  name: item.developmentName,
+                  location: [item.city, item.province].filter(Boolean).join(', '),
+                  imageUrl: item.imageUrl,
+                  priceLabel: formatModePrice(mode, currencyCode, marketMode === 'rent'),
+                  availabilityLabel: mode
+                    ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed`
+                    : 'No current availability for this option',
+                  propertyDetails: (item.unitTypes || [])
+                    .filter((unitType: any) => Boolean(unitType.modes?.[marketMode]))
+                    .map((unitType: any) => {
+                      const unitMode = unitType.modes[marketMode] as PartnerModeProjection;
+                      return `${unitType.name}${unitType.bedrooms === null ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
+                    }),
+                  description: item.campaign.description || item.campaign.tagline,
+                };
+              })}
+            />
           </div>
 
           {termsQuery.error ? (
