@@ -91,13 +91,14 @@ export default function PartnerDashboardPage() {
       new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
   );
   const payoutCounts = useMemo(() => {
-    const counts = { potential: 0, pending: 0, approved: 0, paid: 0 };
+    const counts = { potential: 0, pending: 0, approved: 0, paid: 0, needsReview: 0 };
     for (const entry of payoutsQuery.data || []) {
       const state = getPartnerPayoutRecordState(entry.entryStatus, entry.dealStage);
       if (state === 'potential') counts.potential += 1;
       if (state === 'pending_approval') counts.pending += 1;
       if (state === 'approved') counts.approved += 1;
       if (state === 'paid') counts.paid += 1;
+      if (state === 'needs_review') counts.needsReview += 1;
     }
     return counts;
   }, [payoutsQuery.data]);
@@ -172,7 +173,7 @@ export default function PartnerDashboardPage() {
 
   const firstName = String(user?.name || '').trim().split(/\s+/)[0];
   const hasAnyActivity = deals.length > 0 || payoutCounts.potential > 0 || payoutCounts.pending > 0 ||
-    payoutCounts.approved > 0 || payoutCounts.paid > 0 || upcomingViewings.length > 0;
+    payoutCounts.approved > 0 || payoutCounts.paid > 0 || payoutCounts.needsReview > 0 || upcomingViewings.length > 0;
 
   return (
     <ReferralAppShell>
@@ -230,6 +231,24 @@ export default function PartnerDashboardPage() {
               icon={<CircleDollarSign className="h-4 w-4" />}
             />
           </section>
+        ) : null}
+
+        {payoutCounts.needsReview > 0 ? (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <p className="font-medium text-amber-950">
+                  {payoutCounts.needsReview} payout {payoutCounts.needsReview === 1 ? 'record needs' : 'records need'} a team check
+                </p>
+                <p className="mt-1 text-sm text-amber-900">
+                  The recorded payout state does not match the deal progress. The team will confirm how these records fit together.
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => setLocation('/distribution/partner/payouts')}>
+                View referral payouts <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
         ) : null}
 
         {!hasAnyActivity ? (

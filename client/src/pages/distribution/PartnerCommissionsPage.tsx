@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+  describePartnerPayoutRecordState,
   formatPartnerDealStatus,
   formatPartnerPayoutRecordState,
   getPartnerPayoutRecordState,
@@ -162,41 +163,41 @@ export default function PartnerCommissionsPage() {
             <CardTitle>Referral Payout Records</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {filteredRows.map((row: any) => (
-              <button
-                key={row.id}
-                className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
-                onClick={() => setLocation(`/distribution/partner/referrals/${Number(row.dealId)}`)}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{row.developmentName || 'Development'}</p>
-                    <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatPartnerDealStatus(row.dealStage, Number(row.dealId))}</p>
-                    {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-500">
-                      {getPartnerPayoutRecordState(row.entryStatus, row.dealStage) === 'potential'
-                        ? 'Potential referral payout'
-                        : 'Referral payout amount'}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
-                    <div className="mt-1 flex flex-wrap justify-end gap-1">
-                      <Badge variant="secondary">
-                        {formatPartnerPayoutRecordState(
-                          getPartnerPayoutRecordState(row.entryStatus, row.dealStage),
-                        )}
-                      </Badge>
+            {filteredRows.map((row: any) => {
+              const payoutState = getPartnerPayoutRecordState(row.entryStatus, row.dealStage);
+              return (
+                <button
+                  key={row.id}
+                  className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
+                  onClick={() => setLocation(`/distribution/partner/referrals/${Number(row.dealId)}`)}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{row.developmentName || 'Development'}</p>
+                      <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatPartnerDealStatus(row.dealStage, Number(row.dealId))}</p>
+                      {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] text-slate-500">
+                        {payoutState === 'potential' ? 'Potential referral payout' : 'Referral payout amount'}
+                      </p>
+                      <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
+                      <div className="mt-1 flex flex-wrap justify-end gap-1">
+                        <Badge variant="secondary">{formatPartnerPayoutRecordState(payoutState)}</Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                  {row.approvedAt ? <span>Approved: {String(row.approvedAt)}</span> : null}
-                  {row.paidAt ? <span>Paid: {String(row.paidAt)}</span> : null}
-                  {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
-                </div>
-              </button>
-            ))}
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                    {describePartnerPayoutRecordState(payoutState)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
+                    {row.approvedAt ? <span>Approved: {String(row.approvedAt)}</span> : null}
+                    {row.paidAt ? <span>Paid: {String(row.paidAt)}</span> : null}
+                    {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
+                  </div>
+                </button>
+              );
+            })}
 
             {!commissionsQuery.error && !filteredRows.length ? (
               <p className="py-6 text-center text-sm text-slate-500">No referral payout records found for this filter yet.</p>

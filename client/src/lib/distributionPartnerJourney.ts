@@ -150,19 +150,20 @@ export type PartnerPayoutRecordState =
   | 'needs_review'
   | 'unknown';
 
+const PARTNER_PAYOUT_PRE_ELIGIBILITY_STAGES = new Set([
+  'viewing_scheduled',
+  'viewing_completed',
+  'application_submitted',
+  'contract_signed',
+  'bond_approved',
+]);
+
 export function getPartnerPayoutRecordState(
   entryStatusValue: unknown,
   dealStageValue: unknown,
 ): PartnerPayoutRecordState {
   const entryStatus = String(entryStatusValue || '').trim().toLowerCase();
   const dealStage = String(dealStageValue || '').trim().toLowerCase();
-  const preEligibilityStages = new Set([
-    'viewing_scheduled',
-    'viewing_completed',
-    'application_submitted',
-    'contract_signed',
-    'bond_approved',
-  ]);
 
   if (entryStatus === 'paid') {
     return dealStage === 'commission_paid' ? 'paid' : 'needs_review';
@@ -175,7 +176,7 @@ export function getPartnerPayoutRecordState(
   if (dealStage === 'commission_pending') return 'pending_approval';
   if (dealStage === 'commission_paid') return 'needs_review';
   if (dealStage === 'cancelled') return 'deal_closed';
-  return preEligibilityStages.has(dealStage) ? 'potential' : 'unknown';
+  return PARTNER_PAYOUT_PRE_ELIGIBILITY_STAGES.has(dealStage) ? 'potential' : 'unknown';
 }
 
 export function formatPartnerPayoutRecordState(state: PartnerPayoutRecordState) {
@@ -190,6 +191,20 @@ export function formatPartnerPayoutRecordState(state: PartnerPayoutRecordState) 
     unknown: 'Update pending',
   };
   return labels[state];
+}
+
+export function describePartnerPayoutRecordState(state: PartnerPayoutRecordState) {
+  const descriptions: Record<PartnerPayoutRecordState, string> = {
+    potential: 'This amount follows the saved terms. The eligibility trigger has not been recorded.',
+    pending_approval: 'The eligibility trigger is recorded. The payout is waiting for approval.',
+    approved: 'This payout is approved. Payment timing is not specified in the saved terms.',
+    paid: 'Payment has been recorded.',
+    cancelled: 'This payout record was cancelled.',
+    deal_closed: 'The deal closed before the payout eligibility trigger was recorded.',
+    needs_review: 'The payout record and deal progress do not match. The Property Listify team needs to check it.',
+    unknown: 'The payout status is not available yet.',
+  };
+  return descriptions[state];
 }
 
 export function formatPartnerDateTime(value: unknown) {
