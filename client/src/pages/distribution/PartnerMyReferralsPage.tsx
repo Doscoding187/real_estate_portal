@@ -168,7 +168,7 @@ export default function PartnerMyReferralsPage() {
                     </p>
                     {processSummary ? (
                       <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
-                        Saved process: {processSummary}
+                        Current step: {processSummary}
                       </p>
                     ) : null}
                     {scheduledViewing ? (

@@ -374,7 +374,7 @@ export default function PartnerDashboardPage() {
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {processSummary
-                          ? `Saved process: ${processSummary}`
+                          ? `Current step: ${processSummary}`
                           : `What happens next: ${formatPartnerDealGuidance(deal.status, dealId, recordedViewings)}`}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
