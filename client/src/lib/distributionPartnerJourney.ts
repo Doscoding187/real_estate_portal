@@ -171,7 +171,9 @@ export function getPartnerPayoutRecordState(
   if (entryStatus === 'approved') {
     return dealStage === 'commission_pending' ? 'approved' : 'needs_review';
   }
-  if (entryStatus === 'cancelled') return 'cancelled';
+  if (entryStatus === 'cancelled') {
+    return dealStage === 'cancelled' ? 'cancelled' : 'needs_review';
+  }
   if (entryStatus !== 'pending' || !dealStage) return 'unknown';
   if (dealStage === 'commission_pending') return 'pending_approval';
   if (dealStage === 'commission_paid') return 'needs_review';
