@@ -757,10 +757,16 @@ export async function listMyReferralDeals(
       referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
       referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       status: distributionDeals.currentStage,
+      managerUserId: distributionDeals.managerUserId,
+      managerName: users.name,
+      managerFirstName: users.firstName,
+      managerLastName: users.lastName,
+      managerEmail: users.email,
       createdAt: distributionDeals.createdAt,
       updatedAt: distributionDeals.updatedAt,
     })
     .from(distributionDeals)
+    .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
     .where(withConditions(conditions))
     .orderBy(desc(distributionDeals.id))
     .limit(normalizedLimit + 1);
@@ -795,6 +801,16 @@ export async function listMyReferralDeals(
         developerProjectionRevision: row.developerProjectionRevision || null,
         developerProjectionObservedAt: row.developerProjectionObservedAt || null,
         referralTermsSnapshotDigest: row.referralTermsSnapshotDigest || null,
+        manager: row.managerUserId
+          ? {
+              userId: Number(row.managerUserId),
+              displayName:
+                String(row.managerName || '').trim() ||
+                [row.managerFirstName, row.managerLastName].filter(Boolean).join(' ').trim() ||
+                null,
+              email: row.managerEmail || null,
+            }
+          : null,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         docProgress,

@@ -131,6 +131,11 @@ export default function PartnerMyReferralsPage() {
                           : `Viewing booked for ${formatPartnerDateTime(scheduledViewing.scheduledStartAt)}`}
                       </p>
                     ) : null}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {item.manager?.displayName
+                        ? `Responsible contact: ${item.manager.displayName}`
+                        : 'Responsible contact: Pending assignment'}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">

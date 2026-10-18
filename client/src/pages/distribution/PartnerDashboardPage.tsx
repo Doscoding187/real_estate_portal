@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   formatPartnerDealStatus,
+  formatPartnerDealGuidance,
   formatPartnerDateTime,
   getPartnerPayoutRecordState,
   type PartnerViewingRecord,
@@ -326,6 +327,14 @@ export default function PartnerDashboardPage() {
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {deal.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId} · Updated {formatPartnerDateTime(deal.updatedAt)}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        What happens next: {formatPartnerDealGuidance(deal.status, dealId, recordedViewings)}
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {deal.manager?.displayName
+                          ? `Responsible contact: ${deal.manager.displayName}`
+                          : 'Responsible contact: Pending assignment'}
                       </span>
                     </span>
                     <Badge variant="secondary">
