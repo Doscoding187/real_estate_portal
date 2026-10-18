@@ -10,16 +10,6 @@ import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutR
 import { toast } from 'sonner';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
-const JOURNEY_STAGES = [
-  'viewing_scheduled',
-  'viewing_completed',
-  'application_submitted',
-  'contract_signed',
-  'bond_approved',
-  'commission_pending',
-  'commission_paid',
-] as const;
-
 function normalizeStage(stage: string | null | undefined) {
   const value = String(stage || '').toLowerCase();
   if (!value) return 'viewing_scheduled';
@@ -29,58 +19,38 @@ function normalizeStage(stage: string | null | undefined) {
 
 function getStageLabel(stage: string | null | undefined) {
   const normalized = normalizeStage(stage);
+  if (normalized === 'viewing_scheduled') return 'Referral received';
   if (normalized === 'commission_pending') return 'Referral payout pending';
   if (normalized === 'commission_paid') return 'Referral payout paid';
+  if (normalized === 'bond_approved') return 'Home finance approved';
+  if (normalized === 'cancelled') return 'Closed';
   return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
 
-function getStageProgress(stage: string | null | undefined) {
-  const normalized = normalizeStage(stage);
-  const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
-  if (index < 0) return { index: 0, percent: 0 };
-  return { index, percent: Math.round(((index + 1) / JOURNEY_STAGES.length) * 100) };
-}
-
-function getNextActionHint(input: {
-  status: string;
-  docProgress: { requiredCount: number; verifiedRequiredCount: number };
-}) {
-  const normalized = normalizeStage(input.status);
+function getNextActionHint(status: string, scheduledViewing?: any) {
+  const normalized = normalizeStage(status);
   if (normalized === 'commission_paid') {
-    return 'Referral payout recorded. Download supporting documents or prepare another referral.';
+    return 'A referral payout has been recorded. See the payout page for its payment details.';
   }
   if (normalized === 'commission_pending') {
-    return 'A referral payout stage has been reached. Track its approval and payment record against the program terms.';
+    return 'A referral payout is in progress. Follow the recorded updates and terms on the payout page.';
   }
-  if (normalized === 'bond_approved' || normalized === 'contract_signed') {
-    return 'Keep required documents complete while the program milestone is reviewed.';
+  if (normalized === 'viewing_scheduled' && scheduledViewing) {
+    const date = new Date(String(scheduledViewing.scheduledStartAt));
+    const formattedDate = Number.isNaN(date.getTime())
+      ? 'the scheduled time'
+      : new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+    return `A viewing has been booked for ${formattedDate}.`;
   }
-  if (normalized === 'application_submitted') {
-    if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
-      return 'Upload and verify the remaining required documents for this program step.';
-    }
-    return 'Application submitted. Track manager feedback and bond progression.';
+  if (normalized === 'viewing_scheduled') {
+    return 'Your referral has been received. The next step will appear here after the responsible team confirms it.';
   }
-  return 'Coordinate buyer viewing and progress this buyer to application stage.';
-}
-
-function formatOwnerRole(ownerRole: string | null | undefined) {
-  const value = String(ownerRole || '').toLowerCase();
-  if (!value) return 'Team';
-  return value.replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function normalizePhoneForWhatsApp(value: string | null | undefined) {
-  const digits = String(value || '').replace(/[^\d]/g, '');
-  if (!digits) return null;
-  if (digits.startsWith('0')) return `27${digits.slice(1)}`;
-  if (digits.startsWith('27')) return digits;
-  return digits;
-}
-
-function base64ToBlob(base64: string, mimeType: string) {
-  const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
-  return new Blob([bytes], { type: mimeType });
+  if (normalized === 'viewing_completed') return 'The viewing is recorded as complete. Follow this page for the next update.';
+  if (normalized === 'application_submitted') return 'The application has been submitted. Follow this page for the next recorded update.';
+  if (normalized === 'contract_signed') return 'The contract milestone has been recorded. Follow this page for the next update.';
+  if (normalized === 'bond_approved') return 'Home finance approval has been recorded. Follow the remaining transaction updates here.';
+  if (normalized === 'cancelled') return 'This deal has been closed. Open the timeline to review the recorded outcome.';
+  return 'The responsible team will add the next update here when it is confirmed.';
 }
 
 export default function PartnerReferralDetailPage() {
@@ -108,25 +78,10 @@ export default function PartnerReferralDetailPage() {
       retry: false,
     },
   );
-
-  const exportQualificationPackMutation =
-    trpc.distribution.partner.exportQualificationPackPdfForReferral.useMutation({
-      onSuccess: payload => {
-        const blob = base64ToBlob(payload.base64, payload.mimeType);
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = payload.fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(downloadUrl);
-        toast.success('Qualification Pack downloaded.');
-      },
-      onError: error => {
-        toast.error(error.message || 'Unable to export qualification pack.');
-      },
-    });
+  const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
+    { includePast: false, limit: 200 },
+    { enabled: isAuthenticated && match && dealId > 0, retry: false },
+  );
 
   const presignUploadMutation = trpc.upload.presign.useMutation();
   const submitDocumentMutation = trpc.distribution.partner.submitReferralDocument.useMutation({
@@ -171,7 +126,7 @@ export default function PartnerReferralDetailPage() {
     }
   }
 
-  if (loading || referralQuery.isLoading) {
+  if (loading || referralQuery.isLoading || viewingsQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
@@ -179,12 +134,14 @@ export default function PartnerReferralDetailPage() {
     );
   }
 
-  if (referralQuery.error) {
+  if (referralQuery.error || viewingsQuery.error) {
     return (
       <ReferralAppShell>
         <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
           <Card>
-            <CardContent className="py-6 text-sm text-red-600">{referralQuery.error.message}</CardContent>
+            <CardContent className="py-6 text-sm text-red-600">
+              {referralQuery.error?.message || 'We could not confirm the latest viewing information. Refresh and try again.'}
+            </CardContent>
           </Card>
         </main>
       </ReferralAppShell>
@@ -204,25 +161,23 @@ export default function PartnerReferralDetailPage() {
     );
   }
 
-  const affordabilityAssumptions = (referral.affordability?.assumptions || null) as
-    | {
-        interestRateAnnual?: number | null;
-        termMonths?: number | null;
-        maxRepaymentRatio?: number | null;
-        calcVersion?: string | null;
-      }
-    | null;
-  const journeyProgress = getStageProgress(referral.status);
-  const nextActionHint =
-    referral.journey?.nextAction ||
-    getNextActionHint({
-      status: String(referral.status || ''),
-      docProgress: referral.docProgress,
-    });
-  const actionCode = String(referral.journey?.actionCode || '');
+  const scheduledViewing = (viewingsQuery.data || []).find(
+    (viewing: any) =>
+      Number(viewing.dealId) === Number(referral.dealId) &&
+      viewing.status === 'scheduled' &&
+      new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
+  );
+  const statusLabel = normalizeStage(referral.status) === 'viewing_scheduled' && scheduledViewing
+    ? 'Viewing scheduled'
+    : getStageLabel(referral.status);
+  const nextActionHint = getNextActionHint(String(referral.status || ''), scheduledViewing);
+  const normalizedStage = normalizeStage(referral.status);
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
+  const documentRequirementsSnapshotAvailable = Array.isArray(
+    (referral as any).programTermsSnapshot?.requiredDocuments,
+  );
 
   return (
     <ReferralAppShell>
@@ -230,34 +185,19 @@ export default function PartnerReferralDetailPage() {
         <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
             <div>
-              <p className="text-[10px] font-semibold uppercase text-blue-100">Buyer referral</p>
+              <p className="text-[10px] font-semibold uppercase text-blue-100">My deal</p>
               <h1 className="mt-1 text-[28px] font-semibold">{referral.development.name}</h1>
               <p className="mt-2 text-[13px] text-[#ece6da]">Deal #{referral.dealId}</p>
             </div>
-            <Badge className="bg-white text-primary hover:bg-white">{getStageLabel(referral.status)}</Badge>
+            <Badge className="bg-white text-primary hover:bg-white">{statusLabel}</Badge>
           </div>
           <CardContent className="flex flex-wrap gap-2 bg-primary/5 py-4">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
-              Back to My Buyers
+              Back to my deals
             </Button>
-            <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Referral Intake Status
+            <Button variant="outline" onClick={() => setLocation('/distribution/partner/developments')}>
+              Find opportunities
             </Button>
-            {referral.matchSnapshotId ? (
-              <Button
-                variant="outline"
-                disabled={exportQualificationPackMutation.isPending}
-                onClick={() =>
-                  exportQualificationPackMutation.mutate({
-                    dealId: Number(referral.dealId),
-                  })
-                }
-              >
-                {exportQualificationPackMutation.isPending
-                  ? 'Preparing Qualification Pack...'
-                  : 'Download Qualification Pack'}
-              </Button>
-            ) : null}
           </CardContent>
         </Card>
 
@@ -265,50 +205,25 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <WalletCards className="h-4 w-4 text-primary" />
-              Referral Status and Next Steps
+              Latest update
             </CardTitle>
-            <CardDescription>
-              Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
-              % complete)
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 h-2 overflow-hidden rounded bg-[#e7dfd3]">
-              <div className="h-full rounded bg-primary" style={{ width: `${journeyProgress.percent}%` }} />
-            </div>
-            <div className="mb-3 flex flex-wrap gap-1">
-              {JOURNEY_STAGES.map(stage => {
-                const currentIndex = journeyProgress.index;
-                const stageIndex = JOURNEY_STAGES.indexOf(stage);
-                const reached = stageIndex <= currentIndex;
-                return (
-                  <span
-                    key={stage}
-                    className={`rounded px-2 py-1 text-[11px] ${
-                      reached ? 'bg-primary/10 text-primary' : 'bg-[#f5f0e8] text-muted-foreground'
-                    }`}
-                  >
-                    {getStageLabel(stage)}
-                  </span>
-                );
-              })}
-            </div>
             <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
               {nextActionHint}
             </div>
-            {referral.journey?.slaDueAt ? (
-              <p className={`mt-2 text-xs ${referral.journey?.atRisk ? 'text-red-600' : 'text-slate-600'}`}>
-                Owner: {formatOwnerRole(referral.journey.ownerRole)} • SLA due {String(referral.journey.slaDueAt)}
+            {referral.manager?.displayName ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Responsible contact: {referral.manager.displayName}
               </p>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
-              {actionCode === 'track_payout' ? (
+              {normalizedStage === 'commission_pending' || normalizedStage === 'commission_paid' ? (
                 <Button size="sm" onClick={() => setLocation('/distribution/partner/payouts')}>
-                  Open Referral Payouts
+                  View referral payout
                 </Button>
               ) : null}
-              {(actionCode === 'follow_up_manager' || referral.journey?.ownerRole === 'manager') &&
-              referral.manager?.email ? (
+              {referral.manager?.email ? (
                 <Button
                   size="sm"
                   variant="conversion"
@@ -322,30 +237,7 @@ export default function PartnerReferralDetailPage() {
                     window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
                   }}
                 >
-                  Contact Manager
-                </Button>
-              ) : null}
-              {(() => {
-                const whatsappPhone = normalizePhoneForWhatsApp(referral.buyer?.phone || null);
-                if (!whatsappPhone) return null;
-                const msg = encodeURIComponent(
-                  `Hi ${referral.buyer?.name || ''}, quick update on your ${referral.development.name} referral. ${nextActionHint}`,
-                );
-                return (
-                  <Button
-                    size="sm"
-                    variant="conversion"
-                    onClick={() =>
-                      window.open(`https://wa.me/${whatsappPhone}?text=${msg}`, '_blank', 'noopener,noreferrer')
-                    }
-                  >
-                    WhatsApp Buyer
-                  </Button>
-                );
-              })()}
-              {actionCode === 'submit_next_referral' ? (
-                <Button size="sm" variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
-                  View Referral Intake
+                  Contact the responsible team
                 </Button>
               ) : null}
             </div>
@@ -362,22 +254,16 @@ export default function PartnerReferralDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>
-                <span className="text-slate-500">Created:</span> {referral.createdAt}
+                <span className="text-slate-500">Introduced:</span> {new Date(String(referral.createdAt)).toLocaleDateString('en-ZA')}
               </p>
               {referral.marketMode ? (
                 <p>
-                  <span className="text-slate-500">Purchase mode:</span>{' '}
-                  {referral.marketMode === 'sale' ? 'For sale' : 'For rent'}
-                </p>
-              ) : null}
-              {referral.developerProjectionRevision ? (
-                <p>
-                  <span className="text-slate-500">Developer terms revision:</span>{' '}
-                  {referral.developerProjectionRevision}
+                  <span className="text-slate-500">Looking to:</span>{' '}
+                  {referral.marketMode === 'sale' ? 'Buy' : 'Rent'}
                 </p>
               ) : null}
               <p>
-                <span className="text-slate-500">Buyer:</span> {referral.buyer.name || 'Not provided'}
+                <span className="text-slate-500">Person introduced:</span> {referral.buyer.name || 'Not provided'}
               </p>
               <p>
                 <span className="text-slate-500">Phone:</span> {referral.buyer.phone || 'Not provided'}
@@ -385,42 +271,6 @@ export default function PartnerReferralDetailPage() {
               <p>
                 <span className="text-slate-500">Email:</span> {referral.buyer.email || 'Not provided'}
               </p>
-              <p>
-                <span className="text-slate-500">Document progress:</span>{' '}
-                {referral.docProgress.verifiedRequiredCount}/{referral.docProgress.requiredCount}
-              </p>
-              {referral.affordability?.purchasePriceEstimate ? (
-                <p>
-                  <span className="text-slate-500">Purchase price estimate:</span> R
-                  {Number(referral.affordability.purchasePriceEstimate).toLocaleString('en-ZA')}
-                </p>
-              ) : null}
-              {affordabilityAssumptions ? (
-                <>
-                  <p>
-                    <span className="text-slate-500">Assumptions:</span>{' '}
-                    {[
-                      affordabilityAssumptions.interestRateAnnual
-                        ? `${affordabilityAssumptions.interestRateAnnual}% interest`
-                        : null,
-                      affordabilityAssumptions.termMonths
-                        ? `${affordabilityAssumptions.termMonths} months`
-                        : null,
-                      affordabilityAssumptions.maxRepaymentRatio
-                        ? `${Math.round(affordabilityAssumptions.maxRepaymentRatio * 100)}% ratio`
-                        : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' | ') || 'Not available'}
-                  </p>
-                  {affordabilityAssumptions.calcVersion ? (
-                    <p>
-                      <span className="text-slate-500">Calculation version:</span>{' '}
-                      {affordabilityAssumptions.calcVersion}
-                    </p>
-                  ) : null}
-                </>
-              ) : null}
               {referral.manager ? (
                 <p>
                   <span className="text-slate-500">Assigned manager:</span>{' '}
@@ -445,20 +295,19 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4 text-primary" />
-              Referral Process Documents
+              Documents for this referral
             </CardTitle>
             <CardDescription>
-              Upload completed application documents here. Supporting files are buyer-facing reference files.
+              This checklist is saved from the referral’s original program requirements. Later program edits do not change it.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                These are Distribution referral-process documents. Upload the requested buyer file
-                here for the manager to review.
+                Upload a requested file here for the responsible team to review.
               </p>
               {applicationDocuments.map((document: any) => (
-                <div key={document.templateId} className="rounded-md border border-primary/15 bg-white p-3 text-sm">
+                <div key={document.documentCode} className="rounded-md border border-primary/15 bg-white p-3 text-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <p className="font-semibold text-foreground">{document.documentLabel}</p>
@@ -472,44 +321,58 @@ export default function PartnerReferralDetailPage() {
                         ? 'Verified'
                         : document.status === 'received'
                           ? 'Uploaded'
+                          : document.status === 'unavailable'
+                            ? 'Needs team update'
                           : 'Needed'}
                     </Badge>
                   </div>
+                  {document.status === 'unavailable' ? (
+                    <p className="mt-2 text-xs text-amber-800">
+                      This saved requirement is no longer available in the document library. Contact the responsible team.
+                    </p>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     {document.submittedFileUrl ? (
                       <Button asChild size="sm" variant="outline">
                         <a href={document.submittedFileUrl} target="_blank" rel="noreferrer">View uploaded file</a>
                       </Button>
                     ) : null}
-                    <label className="inline-flex cursor-pointer items-center rounded-md border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">
-                      <UploadCloud className="mr-1 h-3.5 w-3.5" />
-                      {uploadingTemplateId === Number(document.templateId) ? 'Uploading...' : 'Upload requested file'}
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                        className="sr-only"
-                        disabled={uploadingTemplateId === Number(document.templateId)}
-                        onChange={event => {
-                          const file = event.currentTarget.files?.[0] || null;
-                          void handleApplicationDocumentUpload(document, file);
-                          event.currentTarget.value = '';
-                        }}
-                      />
-                    </label>
+                    {document.canUpload ? (
+                      <label className="inline-flex cursor-pointer items-center rounded-md border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">
+                        <UploadCloud className="mr-1 h-3.5 w-3.5" />
+                        {uploadingTemplateId === Number(document.templateId) ? 'Uploading...' : 'Upload requested file'}
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                          className="sr-only"
+                          disabled={uploadingTemplateId === Number(document.templateId)}
+                          onChange={event => {
+                            const file = event.currentTarget.files?.[0] || null;
+                            void handleApplicationDocumentUpload(document, file);
+                            event.currentTarget.value = '';
+                          }}
+                        />
+                      </label>
+                    ) : null}
                   </div>
                 </div>
               ))}
-              {!applicationDocuments.length ? (
+              {!applicationDocuments.length && documentRequirementsSnapshotAvailable ? (
                 <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
-                  No referral-process documents are configured for this referral.
+                  No referral documents were required when this referral was submitted.
+                </p>
+              ) : null}
+              {!applicationDocuments.length && !documentRequirementsSnapshotAvailable ? (
+                <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  This older referral does not contain a saved document checklist. Contact the responsible team before uploading files.
                 </p>
               ) : null}
             </div>
 
             <div className="rounded-md border border-primary/15 bg-white p-3">
-              <p className="text-sm font-semibold text-foreground">Developer shared resources</p>
+              <p className="text-sm font-semibold text-foreground">Developer documents</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Shared sales files will appear here after an authorized delivery path is available.
+                No additional developer documents are available for this opportunity yet.
               </p>
             </div>
           </CardContent>

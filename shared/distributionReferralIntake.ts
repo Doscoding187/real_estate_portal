@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-export const DISTRIBUTION_REFERRAL_INTAKE_PAUSED_TITLE = 'Partner referral intake is paused';
+export const DISTRIBUTION_REFERRAL_INTAKE_PAUSED_TITLE = 'This opportunity is not ready for a referral';
 
 export const DISTRIBUTION_REFERRAL_INTAKE_PAUSED_MESSAGE =
-  'Referral intake is not ready for this opportunity. A current approved program policy and private evidence storage must be available before prospect details are collected. Sharing permission, privacy notice, identity evidence, and any credit-report authorization are separate records.';
+  'We can’t start an introduction for this opportunity right now. Check its status later or choose another option. You can still explore current sale and rental properties without sharing anyone’s personal details.';
 
 export const DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES = [
   'application/pdf',

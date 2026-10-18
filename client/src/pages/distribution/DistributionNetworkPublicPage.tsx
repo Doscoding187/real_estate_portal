@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ReferralApplyForm } from '@/components/distribution/ReferralApplyForm';
+import { PropertyOpportunityShortlist } from '@/components/distribution/PropertyOpportunityShortlist';
 import {
   ArrowRight,
   Building2,
@@ -21,13 +22,18 @@ import { MobileStickyCTA, useMobileStickyCTA } from '@/components/advertise/Mobi
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
 import { trpc } from '@/lib/trpc';
+import {
+  DISTRIBUTION_BEDROOM_FILTERS,
+  DISTRIBUTION_PRICE_BANDS,
+  matchesDistributionOpportunity,
+  type DistributionBedroomFilter,
+  type DistributionMarketMode,
+} from '@shared/distributionOpportunityMatching';
 import '@/styles/advertise-responsive.css';
 import '@/styles/advertise-focus-indicators.css';
 
 const ACCOUNT_LOGIN_PATH = '/login?next=/distribution/partner/overview';
 // Bedroom chip options
-const BED_CHIPS = ['Studio', '1 Bed', '2 Bed', '3 Bed', '4+ Bed'];
-
 // Area options map to the published suburb and city labels.
 const AREA_OPTIONS = [
   { label: 'Select area', value: '' },
@@ -39,15 +45,6 @@ const AREA_OPTIONS = [
   { label: 'Any area', value: 'any' },
 ];
 
-const PRICE_RANGE_OPTIONS = [
-  { label: 'Select price range', value: '' },
-  { label: 'Any price', value: 'any' },
-  { label: 'Up to R900k', value: 'up_to_900k', minPrice: 0, maxPrice: 900_000 },
-  { label: 'Over R900k up to R1.5m', value: '900k_to_1_5m', minPrice: 900_001, maxPrice: 1_500_000 },
-  { label: 'Over R1.5m up to R2.2m', value: '1_5m_to_2_2m', minPrice: 1_500_001, maxPrice: 2_200_000 },
-  { label: 'Over R2.2m', value: 'over_2_2m', minPrice: 2_200_001, maxPrice: Infinity },
-];
-
 export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
@@ -57,10 +54,11 @@ export default function DistributionNetworkPublicPage() {
   const [interestedDevId, setInterestedDevId] = useState<number | null>(null);
 
   // Matcher state starts empty.
-  const [matchPriceRange, setMatchPriceRange] = useState('');
+  const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
+  const [matchPriceRange, setMatchPriceRange] = useState('any');
   const [matchArea, setMatchArea] = useState('');
   // Bedrooms = multi-select chip set
-  const [selectedBeds, setSelectedBeds] = useState<Set<string>>(new Set());
+  const [selectedBeds, setSelectedBeds] = useState<Set<DistributionBedroomFilter>>(new Set());
 
   const {
     data: developmentSearch,
@@ -69,12 +67,14 @@ export default function DistributionNetworkPublicPage() {
   } = trpc.properties.searchDevelopments.useQuery(
     {
       developmentType: 'residential',
-      transactionType: 'for_sale',
+      transactionType: marketMode === 'sale' ? 'for_sale' : 'for_rent',
+      developmentStatus: 'selling',
+      availability: 'available',
       page: 0,
       pageSize: 50,
       sortOption: 'date_desc',
     },
-    { staleTime: 1000 * 60 * 5 },
+    { staleTime: 1000 * 60 * 5, refetchOnWindowFocus: true },
   );
   const developments = developmentSearch?.items ?? [];
 
@@ -89,7 +89,7 @@ export default function DistributionNetworkPublicPage() {
     }, 150);
   };
 
-  const toggleBed = (bed: string) => {
+  const toggleBed = (bed: DistributionBedroomFilter) => {
     setSelectedBeds(prev => {
       const next = new Set(prev);
       if (next.has(bed)) next.delete(bed);
@@ -98,63 +98,50 @@ export default function DistributionNetworkPublicPage() {
     });
   };
 
-  // Filter the canonical public development search results.
-  const matcherResult = useMemo(() => {
-    const hasFilter = matchPriceRange || matchArea || selectedBeds.size > 0;
-    if (!hasFilter || !developments || developments.length === 0) {
-      return null; // no filters selected yet
-    }
-
-    const priceRange = PRICE_RANGE_OPTIONS.find(o => o.value === matchPriceRange);
+  // Apply the same browse-only matching rules used in the entitled partner catalogue.
+  const filteredDevelopments = useMemo(() => {
+    const priceRange = DISTRIBUTION_PRICE_BANDS[marketMode].find(
+      option => option.key === matchPriceRange,
+    );
     const areaOption = AREA_OPTIONS.find(o => o.value === matchArea);
     const areaKeywords = areaOption?.value && areaOption.value !== 'any'
       ? areaOption.value.split(',').map(k => k.trim().toLowerCase())
       : null;
 
-    const matched = developments.filter(dev => {
-      // A public price filter helps people browse; it is not an affordability assessment.
-      if (priceRange && priceRange.minPrice !== undefined) {
-        const price = dev.priceFrom;
-        if (price === null || !Number.isFinite(price)) return false;
-        if (price < priceRange.minPrice || price > priceRange.maxPrice) return false;
-      }
+    const selectedBandIsAny = !priceRange || priceRange.key === 'any';
+    const criteria = {
+      marketMode,
+      minPrice: selectedBandIsAny ? null : priceRange?.minPrice ?? null,
+      maxPrice: selectedBandIsAny ? null : priceRange?.maxPrice ?? null,
+      areaKeywords: areaKeywords || [],
+      bedrooms: [...selectedBeds],
+    };
 
-      // Area filter (keyword match on suburb/city)
-      if (areaKeywords) {
-        const devArea = `${dev.suburb || ''} ${dev.city || ''}`.toLowerCase();
-        const areaMatch = areaKeywords.some(kw => devArea.includes(kw));
-        if (!areaMatch) return false;
-      }
-
-      const configurations = Array.isArray(dev.unitTypes) ? dev.unitTypes : [];
-
-      // Bedrooms filter (match config labels)
-      if (selectedBeds.size > 0) {
-        if (configurations.length === 0) return false;
-        const bedMatch = [...selectedBeds].some(bed => {
-          return configurations.some((configuration: any) => {
-            const label = String(configuration.label || '').toLowerCase();
-            const bedrooms = configuration.bedrooms;
-            const n = bed.toLowerCase();
-            if (n === 'studio') return bedrooms === 0 || label.includes('studio') || label.includes('bach');
-            if (n === '4+ bed') return (bedrooms !== null && bedrooms >= 4) || /[4-9](\s*bed|br)/.test(label);
-            const num = Number(n.match(/\d+/)?.[0]);
-            return num > 0 && (bedrooms === num || label.includes(`${num} bed`) || label.includes(`${num}bed`));
-          });
-        });
-        if (!bedMatch) return false;
-      }
-
-      return true;
-    });
-
-    const count = matched.length;
-
-    if (count === 0) {
-      return { count: 0, noMatch: true };
-    }
-    return { count, noMatch: false };
-  }, [matchPriceRange, matchArea, selectedBeds, developments]);
+    return developments.filter(dev => matchesDistributionOpportunity({
+      marketMode,
+      available: dev.availabilityState === 'available',
+      priceFrom: dev.priceFrom,
+      priceTo: dev.priceTo,
+      locationText: [dev.suburb, dev.city, dev.province].filter(Boolean).join(' '),
+      unitTypes: (dev.unitTypes || []).map(unit => ({
+        bedrooms: unit.bedrooms,
+        label: unit.label,
+        available: unit.availabilityState === 'available',
+        priceFrom: unit.priceFrom,
+        priceTo: unit.priceTo,
+      })),
+    }, criteria));
+  }, [marketMode, matchPriceRange, matchArea, selectedBeds, developments]);
+  const shortlistSummary = [
+    marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
+    matchPriceRange !== 'any'
+      ? DISTRIBUTION_PRICE_BANDS[marketMode].find(option => option.key === matchPriceRange)?.label
+      : 'Any listed price',
+    AREA_OPTIONS.find(option => option.value === matchArea)?.label || 'Any area',
+    selectedBeds.size
+      ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
+      : 'Any bedroom count',
+  ].filter(Boolean).join(' · ');
 
   return (
     <>
@@ -229,7 +216,7 @@ export default function DistributionNetworkPublicPage() {
               </div>
 
               <h1 className="mx-auto mb-6 max-w-5xl text-4xl font-extrabold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-5xl">
-                Help buyers find their next home.
+                Help someone find their next home.
                 <br />
                 <span className="bg-[linear-gradient(135deg,#67e8f9,var(--brand-blue))] bg-clip-text text-transparent">
                   Join the Property Listify Distribution Network.
@@ -237,8 +224,8 @@ export default function DistributionNetworkPublicPage() {
               </h1>
 
               <p className="mx-auto max-w-2xl text-lg text-slate-300 mb-4 font-light">
-                Agents, agencies, and individuals can apply to take part in developer opportunities.
-                Approved partners get a guided workspace to explore developments, prepare buyer
+                Agents and individuals can apply to take part in developer opportunities.
+                Approved partners get a guided workspace to explore developments, prepare property
                 referrals, and follow their progress.
               </p>
 
@@ -247,7 +234,7 @@ export default function DistributionNetworkPublicPage() {
                   Explore developer inventory
                 </span>
                 <span className="hidden md:inline">•</span>
-                <span>Guided buyer-fit tools</span>
+                <span>Browse by area, price, and size</span>
                 <span className="hidden md:inline">•</span>
                 <span>Terms set for each program</span>
               </div>
@@ -290,7 +277,7 @@ export default function DistributionNetworkPublicPage() {
               <div className="border-t border-slate-800 pt-8 flex flex-wrap justify-center gap-x-12 gap-y-6">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Zap className="h-5 w-5 text-amber-400" />
-                  <span className="text-sm font-medium">Start with the buyer's needs</span>
+                  <span className="text-sm font-medium">Start with the person's needs</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Target className="h-5 w-5 text-emerald-400" />
@@ -340,16 +327,15 @@ export default function DistributionNetworkPublicPage() {
                     Browse Development Inventory
                   </div>
                   <h2 className="text-3xl font-bold text-slate-900 sm:text-4xl leading-tight mb-5">
-                    Find developments to explore with your buyer.
+                    Find options for the person you’re helping.
                   </h2>
                   <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                    Filter public development listings by price range, area, and bedrooms. This
-                    helps you browse; it is not an affordability assessment or a promise that a
-                    buyer qualifies.
+                    Choose whether they want to buy or rent, then narrow current opportunities by
+                    price, area, and bedrooms. This is a property search, not a credit decision.
                   </p>
                   <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
-                    Approved partners can use the guided affordability and matching tools in the
-                    workspace. Estimates are indicative and do not replace a lender's decision.
+                    Prices and availability can change. Referral access and program terms are shown
+                    after a partner signs in.
                   </div>
                 </div>
 
@@ -357,19 +343,44 @@ export default function DistributionNetworkPublicPage() {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-[100px] -z-0"></div>
 
                   <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+                    <div className="md:col-span-2">
+                      <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                        What are they looking for?
+                      </span>
+                      <div className="flex flex-wrap gap-2" role="group" aria-label="Property type">
+                        {(['sale', 'rent'] as const).map(mode => (
+                          <button
+                            key={mode}
+                            type="button"
+                            aria-pressed={marketMode === mode}
+                            onClick={() => {
+                              setMarketMode(mode);
+                              setMatchPriceRange('any');
+                            }}
+                            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${
+                              marketMode === mode
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-primary/40'
+                            }`}
+                          >
+                            {mode === 'sale' ? 'Buy' : 'Rent'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {/* Price range */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-                        Buyer's rough price range
+                        {marketMode === 'sale' ? 'Price range' : 'Monthly rent'}
                       </label>
                       <div className="relative">
                         <select
-                            className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                           value={matchPriceRange}
                           onChange={e => setMatchPriceRange(e.target.value)}
                         >
-                          {PRICE_RANGE_OPTIONS.map(o => (
-                            <option key={o.value} value={o.value} disabled={o.value === ''}>
+                          {DISTRIBUTION_PRICE_BANDS[marketMode].map(o => (
+                            <option key={o.key} value={o.key}>
                               {o.label}
                             </option>
                           ))}
@@ -385,7 +396,7 @@ export default function DistributionNetworkPublicPage() {
                       </label>
                       <div className="relative">
                         <select
-                            className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                          className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                           value={matchArea}
                           onChange={e => setMatchArea(e.target.value)}
                         >
@@ -405,13 +416,14 @@ export default function DistributionNetworkPublicPage() {
                         Bedrooms <span className="text-slate-400 font-normal normal-case">(select all that apply)</span>
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {BED_CHIPS.map(bed => {
-                          const active = selectedBeds.has(bed);
+                        {DISTRIBUTION_BEDROOM_FILTERS.map(bed => {
+                          const active = selectedBeds.has(bed.key);
                           return (
                             <button
-                              key={bed}
+                              key={bed.label}
                               type="button"
-                              onClick={() => toggleBed(bed)}
+                              aria-pressed={active}
+                              onClick={() => toggleBed(bed.key)}
                               className={`px-3.5 py-2 rounded-lg text-xs font-bold border transition-all select-none ${
                                 active
                             ? 'bg-primary text-primary-foreground border-primary shadow-sm'
@@ -419,7 +431,7 @@ export default function DistributionNetworkPublicPage() {
                               }`}
                             >
                               {active && <span className="mr-1">✓</span>}
-                              {bed}
+                              {bed.label}
                             </button>
                           );
                         })}
@@ -429,40 +441,64 @@ export default function DistributionNetworkPublicPage() {
 
                   {/* Dynamic Results Card */}
                   <div className={`rounded-xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${
-                    matcherResult === null
-                      ? 'bg-slate-50 border border-slate-200'
-                      : matcherResult.noMatch
-                        ? 'bg-amber-50 border border-amber-200'
-                        : 'bg-blue-50 border border-blue-100'
+                    filteredDevelopments.length === 0
+                      ? 'bg-amber-50 border border-amber-200'
+                      : 'bg-blue-50 border border-blue-100'
                   }`}>
-                    {matcherResult === null ? (
-                      <p className="text-sm text-slate-500 font-medium text-center w-full">
-                        Choose filters to browse public developments. Program eligibility and terms vary.
-                      </p>
-                    ) : matcherResult.noMatch ? (
+                    {filteredDevelopments.length === 0 ? (
                       <div className="w-full text-center">
-                        <p className="text-sm font-bold text-amber-800">No developments match these filters.</p>
-                        <p className="text-xs text-amber-700 mt-1">Try changing the price, area, or bedroom filters.</p>
+                        <p className="text-sm font-bold text-amber-800">No current opportunities match these choices.</p>
+                        <p className="text-xs text-amber-700 mt-1">Try a different area, price range, or bedroom count.</p>
                       </div>
                     ) : (
                       <>
                         <div>
                           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                            Developments in this list
+                            Current {marketMode === 'sale' ? 'buying' : 'rental'} options matching these choices
                           </p>
                           <p className="text-xl font-bold text-slate-900">
-                            {matcherResult.count} Development{matcherResult.count !== 1 ? 's' : ''}
+                            {filteredDevelopments.length} opportunit{filteredDevelopments.length !== 1 ? 'ies' : 'y'}
                           </p>
                         </div>
                       </>
                     )}
                   </div>
 
+                  {filteredDevelopments.length > 0 ? (
+                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Share these options with the person you’re helping</p>
+                        <p className="mt-1 text-xs text-slate-600">Create a print-friendly shortlist or save it as a PDF.</p>
+                      </div>
+                      <PropertyOpportunityShortlist
+                        marketMode={marketMode}
+                        searchSummary={shortlistSummary}
+                        opportunities={filteredDevelopments.map(dev => ({
+                          id: dev.id,
+                          name: dev.name,
+                          location: [dev.suburb, dev.city, dev.province].filter(Boolean).join(', '),
+                          publisher: dev.publisher.name,
+                          imageUrl: dev.images[0] || null,
+                          url: dev.canonicalRoute,
+                          priceLabel: `${dev.priceFrom !== null ? `From R${Math.round(dev.priceFrom).toLocaleString('en-ZA')}` : 'Price not listed'}${marketMode === 'rent' ? ' / month' : ''}`,
+                          availabilityLabel: dev.availableUnits !== null
+                            ? `${dev.availableUnits} units reported available`
+                            : 'Availability details are listed on the development page',
+                          propertyDetails: (dev.unitTypes || [])
+                            .filter(unit => unit.availabilityState === 'available')
+                            .slice(0, 4)
+                            .map(unit => `${unit.label}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`}${unit.priceFrom ? ` · From R${Math.round(unit.priceFrom).toLocaleString('en-ZA')}` : ''}`),
+                          description: dev.description,
+                        }))}
+                      />
+                    </div>
+                  ) : null}
+
                   <Button
                     className="w-full h-14 bg-[linear-gradient(135deg,#0f172a,#1e293b)] text-white text-base font-bold shadow-lg hover:bg-slate-800 group"
                     onClick={() => revealAndScrollToForm()}
                   >
-                    Apply for Partner Access
+                    Join to refer someone
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
@@ -481,8 +517,8 @@ export default function DistributionNetworkPublicPage() {
                   You can take part even if you are new to property.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  The network brings developer opportunities, buyer-fit guidance, program rules,
-                  and deal progress into one place.
+                  The network brings developer opportunities, clear program steps, deal progress,
+                  and referral payouts into one place.
                 </p>
               </div>
 
@@ -507,11 +543,11 @@ export default function DistributionNetworkPublicPage() {
                       <Search className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
-                      Check buyer fit
+                      Explore available options
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Use the guided assessment to compare a buyer's information with available
-                      developments. The estimate is indicative, not a lender decision.
+                      Browse current opportunities by buying or renting, area, listed price, and
+                      bedrooms. This does not decide whether a lender will approve a buyer.
                     </p>
                   </CardContent>
                 </Card>
@@ -561,8 +597,9 @@ export default function DistributionNetworkPublicPage() {
                   Explore developments from our publishing partners.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  Browse public residential developments for sale. Partner access, referral
-                  eligibility, and commercial terms depend on each active program.
+                  Browse currently available residential opportunities for{' '}
+                  {marketMode === 'sale' ? 'purchase' : 'rent'}. Partner access, referral eligibility,
+                  and commercial terms depend on each active program.
                 </p>
                 {developmentSearch?.hasMore && (
                   <p className="mt-2 text-sm text-slate-500">
@@ -585,13 +622,14 @@ export default function DistributionNetworkPublicPage() {
                 <p role="status" className="mx-auto max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-900">
                   Development inventory is temporarily unavailable. Please try again later.
                 </p>
-              ) : developments.length === 0 ? (
+              ) : filteredDevelopments.length === 0 ? (
                 <p className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-700">
-                  No public residential sale developments are available to browse right now.
+                  No public residential {marketMode === 'sale' ? 'purchase' : 'rental'} opportunities
+                  match these choices right now.
                 </p>
               ) : (
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {developments.map((dev, i) => {
+                  {filteredDevelopments.map((dev, i) => {
                     const priceFrom = dev.priceFrom;
                     const availabilityLabel =
                       dev.availableUnits !== null
@@ -638,11 +676,11 @@ export default function DistributionNetworkPublicPage() {
                           <div className="opp-price-row">
                             <div className="opp-price">
                               {priceFrom !== null
-                                ? `From R${priceFrom >= 1000000 ? `${(priceFrom / 1000000).toFixed(1)}m` : `${(priceFrom / 1000).toFixed(0)}k`}`
+                                ? `From R${priceFrom >= 1000000 ? `${(priceFrom / 1000000).toFixed(1)}m` : `${(priceFrom / 1000).toFixed(0)}k`}${marketMode === 'rent' ? ' / month' : ''}`
                                 : 'Price not listed'}
                               <span>
-                                Published development price. Confirm current unit availability and
-                                costs with the responsible team.
+                                Published {marketMode === 'rent' ? 'monthly rent' : 'development price'}.
+                                Confirm current unit availability and costs with the responsible team.
                               </span>
                             </div>
                             <div className="opp-payout">
@@ -712,7 +750,7 @@ export default function DistributionNetworkPublicPage() {
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">Apply to join</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Agents, agencies, and individuals can apply. You do not need property-sales
+                      Agents and individuals can apply. You do not need property-sales
                       experience to ask for access.
                     </p>
                   </div>
@@ -869,7 +907,7 @@ export default function DistributionNetworkPublicPage() {
                   </div>
                 </div>
                 <div className="w-full max-w-xs rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-                  <div className="text-xl font-black text-slate-900 mb-2">Buyer referrals</div>
+                  <div className="text-xl font-black text-slate-900 mb-2">Property introductions</div>
                   <div className="text-sm text-slate-600 font-medium tracking-wide">
                     Submitted by approved partners
                   </div>
@@ -889,7 +927,7 @@ export default function DistributionNetworkPublicPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,92,168,0.22),transparent_60%)]" />
             <div className="container relative z-10 max-w-3xl mx-auto text-center">
               <h2 className="mb-4 text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl">
-                Help buyers find
+                Help people find
                 <br />
                 the right opportunity.
               </h2>

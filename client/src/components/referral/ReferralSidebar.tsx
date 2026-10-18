@@ -3,16 +3,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
-import {
-  Building2,
-  CircleHelp,
-  Compass,
-  DollarSign,
-  FilePlus2,
-  Home,
-  LogOut,
-  Send,
-} from 'lucide-react';
+import { CircleHelp, DollarSign, Home, LogOut, Send, Search } from 'lucide-react';
 
 type ReferralSidebarProps = {
   mode?: 'desktop' | 'sheet';
@@ -27,11 +18,9 @@ type NavItem = {
 
 const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Overview', href: '/distribution/partner/overview', icon: Home },
-  { label: 'Developments', href: '/distribution/partner/developments', icon: Building2 },
-  { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
-  { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
-  { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
-  { label: 'Referral Payouts', href: '/distribution/partner/payouts', icon: DollarSign },
+  { label: 'Find opportunities', href: '/distribution/partner/developments', icon: Search },
+  { label: 'My deals', href: '/distribution/partner/referrals', icon: Send },
+  { label: 'Referral payouts', href: '/distribution/partner/payouts', icon: DollarSign },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard', '/distribution/partner']);
@@ -79,7 +68,6 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   }, [pipelineData?.stageCounts]);
 
   const currentPath = normalizeCurrentPath(location.split('?')[0]);
-  const networkCount = Number(statusData?.accessCount || 0);
   const pendingCommissionCount = (commissionRows || []).filter((row: any) => {
     const status = String(row?.entryStatus || '').toLowerCase();
     return status === 'pending' || status === 'approved';
@@ -88,9 +76,6 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const workspaceLinks: NavItem[] = WORKSPACE_LINKS.map(item => {
     if (item.href === '/distribution/partner/referrals') {
       return { ...item, badge: liveReferralCount || undefined };
-    }
-    if (item.href === '/distribution/partner/developments') {
-      return { ...item, badge: networkCount || undefined };
     }
     if (item.href === '/distribution/partner/payouts') {
       return { ...item, badge: pendingCommissionCount || undefined };

@@ -1,141 +1,76 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { Loader2, UsersRound, WalletCards } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Search } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
-const JOURNEY_STAGES = [
-  'viewing_scheduled',
-  'viewing_completed',
-  'application_submitted',
-  'contract_signed',
-  'bond_approved',
-  'commission_pending',
-  'commission_paid',
-] as const;
+type DealFilter = 'all' | 'in_progress' | 'closed';
 
-const JOURNEY_STAGE_LABELS: Record<(typeof JOURNEY_STAGES)[number], string> = {
-  viewing_scheduled: 'Submitted',
-  viewing_completed: 'Qualified / viewed',
-  application_submitted: 'Application',
-  contract_signed: 'Offer / sale',
-  bond_approved: 'Bond',
-  commission_pending: 'Referral payout pending',
-  commission_paid: 'Referral payout paid',
-};
-
-function normalizeStage(stage: string | null | undefined) {
-  const value = String(stage || '').toLowerCase();
-  if (!value) return 'viewing_scheduled';
-  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
-  return value;
+function formatDate(value: unknown) {
+  if (!value) return 'Date not available';
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return 'Date not available';
+  return new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(parsed);
 }
 
-function getStageLabel(stage: string | null | undefined) {
-  const normalized = normalizeStage(stage);
-  return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function getStageProgress(stage: string | null | undefined) {
-  const normalized = normalizeStage(stage);
-  const index = JOURNEY_STAGES.indexOf(normalized as (typeof JOURNEY_STAGES)[number]);
-  if (index < 0) return 0;
-  return Math.round(((index + 1) / JOURNEY_STAGES.length) * 100);
-}
-
-function getNextActionLabel(
-  stage: string | null | undefined,
-  docProgress?: { requiredCount: number; verifiedRequiredCount: number },
-) {
-  const normalized = normalizeStage(stage);
-  if (normalized === 'commission_paid') return 'View recorded payout';
-  if (normalized === 'commission_pending') return 'Review payout status';
-  if (normalized === 'bond_approved' || normalized === 'contract_signed') return 'Review deal progress';
-  if (normalized === 'application_submitted') {
-    if ((docProgress?.verifiedRequiredCount || 0) < (docProgress?.requiredCount || 0)) {
-      return 'Upload missing docs';
-    }
-    return 'Await approval';
+function humanStatus(statusValue: unknown, dealId: number, viewings: any[]) {
+  const status = String(statusValue || '').toLowerCase();
+  if (status === 'viewing_scheduled') {
+    const viewing = viewings.find(
+      item => Number(item.dealId) === dealId && item.status === 'scheduled',
+    );
+    return viewing ? 'Viewing scheduled' : 'Referral received';
   }
-  if (normalized === 'cancelled') return 'Review outcome';
-  return 'Move to next stage';
+  const labels: Record<string, string> = {
+    viewing_completed: 'Viewing completed',
+    application_submitted: 'Application submitted',
+    contract_signed: 'Contract signed',
+    bond_approved: 'Home finance approved',
+    commission_pending: 'Referral payout pending',
+    commission_paid: 'Referral payout paid',
+    cancelled: 'Closed',
+  };
+  return labels[status] || 'Referral received';
 }
 
-function formatOwnerRole(ownerRole: string | null | undefined) {
-  const value = String(ownerRole || '').toLowerCase();
-  if (!value) return 'Team';
-  return value.replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function getPrimaryAction(actionCode: string) {
-  if (actionCode === 'track_payout') {
-    return { label: 'Open Referral Payouts', route: '/distribution/partner/payouts', variant: 'default' as const };
-  }
-  if (actionCode === 'submit_next_referral') {
-    return { label: 'View Referral Intake', route: '/distribution/partner/submit', variant: 'default' as const };
-  }
-  if (actionCode === 'follow_up_docs') {
-    return { label: 'Upload Missing Docs', route: null, variant: 'default' as const };
-  }
-  return { label: 'Open Buyer File', route: null, variant: 'outline' as const };
+function isClosed(statusValue: unknown) {
+  return ['commission_paid', 'cancelled'].includes(String(statusValue || '').toLowerCase());
 }
 
 export default function PartnerMyReferralsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [showAtRiskOnly, setShowAtRiskOnly] = useState(false);
+  const [filter, setFilter] = useState<DealFilter>('all');
 
   useEffect(() => {
     if (loading) return;
-    if (!isAuthenticated) {
-      setLocation('/login');
-    }
+    if (!isAuthenticated) setLocation('/login');
   }, [isAuthenticated, loading, setLocation]);
 
   const referralsQuery = trpc.distribution.partner.listMyReferrals.useQuery(
-    {
-      status: statusFilter === 'all' ? undefined : statusFilter,
-      limit: 100,
-    },
-    {
-      enabled: isAuthenticated,
-      retry: false,
-    },
+    { limit: 100 },
+    { enabled: isAuthenticated, retry: false },
   );
-  const commissionsQuery = trpc.distribution.referrer.myCommissionEntries.useQuery(
-    { limit: 200 },
-    {
-      enabled: isAuthenticated,
-      retry: false,
-    },
+  const viewingsQuery = trpc.distribution.referrer.myViewings.useQuery(
+    { includePast: false, limit: 200 },
+    { enabled: isAuthenticated, retry: false },
   );
 
-  const commissionSummary = (commissionsQuery.data || []).reduce(
-    (acc, row: any) => {
-      const status = String(row.entryStatus || '').toLowerCase();
-      const amount = Number(row.commissionAmount || 0);
-      if (status === 'pending') acc.pending += amount;
-      if (status === 'approved') acc.approved += amount;
-      if (status === 'paid') acc.paid += amount;
-      return acc;
-    },
-    { pending: 0, approved: 0, paid: 0 },
-  );
+  const items = referralsQuery.data?.items || [];
+  const upcomingViewings = viewingsQuery.data || [];
+  const filteredItems = useMemo(() => items.filter((item: any) => {
+    if (filter === 'in_progress') return !isClosed(item.status);
+    if (filter === 'closed') return isClosed(item.status);
+    return true;
+  }), [filter, items]);
 
-  const allItems = referralsQuery.data?.items || [];
-  const atRiskCount = allItems.filter((item: any) => Boolean(item.journey?.atRisk)).length;
-  const visibleItems = showAtRiskOnly
-    ? allItems.filter((item: any) => Boolean(item.journey?.atRisk))
-    : allItems;
-
-  if (loading || referralsQuery.isLoading) {
+  if (loading || referralsQuery.isLoading || viewingsQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
+      <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
       </div>
     );
@@ -143,178 +78,113 @@ export default function PartnerMyReferralsPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-[1280px] px-4 pb-10 pt-6 md:px-7">
-        <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
-          <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
-            <p className="text-[10px] font-semibold uppercase text-blue-100">Referral tracker</p>
-            <h1 className="mt-1 text-[28px] font-semibold">My Buyers</h1>
-            <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Follow each submitted buyer referral through its current stage and recorded outcome.
+      <main className="mx-auto w-full max-w-[1180px] space-y-5 px-4 pb-10 pt-6 md:px-7">
+        <Card className="overflow-hidden border-primary/15 bg-white shadow-sm">
+          <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-5 py-6 text-white md:px-7">
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-100">Your introductions</p>
+            <h1 className="mt-2 text-3xl font-semibold">My deals</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-50">
+              See the latest status that has been recorded for each person you introduced. A viewing
+              appears here only when a booking has been recorded.
             </p>
-          </div>
-          <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
-            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
-              Referral Intake Status
-            </Button>
-            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/accelerator')}>
-              View Intake Steps
-            </Button>
-            <label className="ml-auto flex items-center gap-2 text-sm">
-              Status
-              <select
-                className="h-9 rounded-md border border-primary/15 bg-white px-2"
-                value={statusFilter}
-                onChange={event => setStatusFilter(event.target.value)}
-              >
-                <option value="all">All</option>
-                <option value="viewing_scheduled">Submitted</option>
-                <option value="application_submitted">Application Submitted</option>
-                <option value="contract_signed">Contract Signed</option>
-                <option value="bond_approved">Bond Approved</option>
-                <option value="commission_pending">Referral Payout Pending</option>
-                <option value="commission_paid">Referral Payout Paid</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </label>
-            <Button
-              variant={showAtRiskOnly ? 'default' : 'outline'}
-              onClick={() => setShowAtRiskOnly(current => !current)}
-            >
-              {showAtRiskOnly ? 'Showing At-Risk' : `At-Risk (${atRiskCount})`}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4 border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <WalletCards className="h-4 w-4 text-primary" />
-              Referral and Payout Progress
-            </CardTitle>
-            <CardDescription>
-              Each referral has one current stage and next action. A payout status appears when a
-              program payout has been recorded.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Pending payouts</p>
-              <p className="text-lg font-semibold text-amber-700">
-                R {Math.round(commissionSummary.pending).toLocaleString('en-ZA')}
-              </p>
-            </div>
-            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Approved payouts</p>
-              <p className="text-lg font-semibold text-blue-700">
-                R {Math.round(commissionSummary.approved).toLocaleString('en-ZA')}
-              </p>
-            </div>
-            <div className="rounded-md border border-primary/15 bg-primary/5/60 p-3">
-              <p className="text-xs text-slate-500">Paid payouts</p>
-              <p className="text-lg font-semibold text-green-700">
-                R {Math.round(commissionSummary.paid).toLocaleString('en-ZA')}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {!!atRiskCount && !showAtRiskOnly ? (
-          <Card className="mb-4 border-red-200 bg-red-50">
-            <CardContent className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-red-700">
-              <p>
-                {atRiskCount} buyer{atRiskCount === 1 ? '' : 's'} need immediate
-                follow-up.
-              </p>
-              <Button size="sm" onClick={() => setShowAtRiskOnly(true)}>
-                Review At-Risk Deals
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button variant="conversion" onClick={() => setLocation('/distribution/partner/developments')}>
+                <Search className="mr-2 h-4 w-4" /> Find opportunities
               </Button>
+              <Button
+                variant="outline"
+                className="border-white/50 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                onClick={() => setLocation('/distribution/partner/payouts')}
+              >
+                View referral payouts
+              </Button>
+            </div>
+          </div>
+
+          <CardContent className="flex flex-wrap items-center gap-2 bg-primary/5 py-4">
+            {([
+              ['all', 'All deals'],
+              ['in_progress', 'In progress'],
+              ['closed', 'Closed'],
+            ] as const).map(([value, label]) => (
+              <Button
+                key={value}
+                type="button"
+                variant={filter === value ? 'default' : 'outline'}
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+              >
+                {label}
+              </Button>
+            ))}
+          </CardContent>
+        </Card>
+
+        {referralsQuery.error || viewingsQuery.error ? (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="py-5 text-sm text-amber-900">
+              We could not load the latest deal updates. Refresh and try again.
             </CardContent>
           </Card>
         ) : null}
 
-        {referralsQuery.error ? (
-          <Card>
-            <CardContent className="py-6 text-sm text-red-600">{referralsQuery.error.message}</CardContent>
-          </Card>
-        ) : null}
-
         <Card className="border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UsersRound className="h-4 w-4 text-primary" />
-              Buyer Tracker
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {visibleItems.map((item: any) => {
-              const primaryAction = getPrimaryAction(String(item.journey?.actionCode || ''));
-              const primaryRoute =
-                primaryAction.route || `/distribution/partner/referrals/${Number(item.dealId)}`;
+          <CardContent className="divide-y divide-border p-5">
+            {filteredItems.map((item: any) => {
+              const dealId = Number(item.dealId);
+              const scheduledViewing = upcomingViewings.find(
+                (viewing: any) => Number(viewing.dealId) === dealId && viewing.status === 'scheduled',
+              );
               return (
-              <div key={item.dealId} className="w-full rounded-md border border-primary/15 bg-white p-3 text-left">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{item.development.name}</p>
-                    <p className="text-xs text-slate-500">
-                      Deal #{item.dealId}
-                      {item.buyer?.name ? ` | Buyer: ${item.buyer.name}` : ''}
+                <article key={dealId} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate font-semibold text-foreground">
+                      {item.development?.name || `Referral ${dealId}`}
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {item.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId}
                     </p>
-                    <p className="mt-1 text-xs text-slate-600">
-                      Next action: {item.journey?.nextAction || getNextActionLabel(item.status, item.docProgress)}
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Updated {formatDate(item.updatedAt)}
                     </p>
-                    {item.journey?.slaDueAt ? (
-                      <p className={`mt-1 text-[11px] ${item.journey?.atRisk ? 'text-red-600' : 'text-slate-500'}`}>
-                        Owner: {formatOwnerRole(item.journey.ownerRole)} | SLA due {String(item.journey.slaDueAt)}
+                    {scheduledViewing ? (
+                      <p className="mt-2 text-xs font-medium text-primary">
+                        Viewing booked for {formatDate(scheduledViewing.scheduledStartAt)}
                       </p>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{getStageLabel(item.status)}</Badge>
-                    <Badge variant="outline">
-                      {item.docProgress.verifiedRequiredCount}/{item.docProgress.requiredCount} docs
+                    <Badge variant="secondary">
+                      {humanStatus(item.status, dealId, upcomingViewings)}
                     </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setLocation(`/distribution/partner/referrals/${dealId}`)}
+                    >
+                      View deal
+                    </Button>
                   </div>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#e7dfd3]">
-                  <div className="h-full rounded bg-primary" style={{ width: `${getStageProgress(item.status)}%` }} />
-                </div>
-                <div className="mt-2 grid grid-cols-7 gap-1">
-                  {JOURNEY_STAGES.map(stage => {
-                    const currentIndex = JOURNEY_STAGES.indexOf(normalizeStage(item.status) as any);
-                    const stageIndex = JOURNEY_STAGES.indexOf(stage);
-                    const isComplete = currentIndex >= stageIndex;
-                    return (
-                      <span
-                        key={stage}
-                        className={`rounded px-1.5 py-1 text-center text-[9px] font-medium ${
-                          isComplete ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500'
-                        }`}
-                      >
-                        {JOURNEY_STAGE_LABELS[stage]}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-slate-500">
-                    Any referral payout follows the selected program's recorded terms and milestones.
-                  </p>
-                  <Button
-                    size="sm"
-                    variant={primaryAction.variant}
-                    onClick={() => setLocation(primaryRoute)}
-                  >
-                    {primaryAction.label}
-                  </Button>
-                </div>
-              </div>
-            );
+                </article>
+              );
             })}
 
-            {!referralsQuery.error && !visibleItems.length ? (
-              <p className="py-6 text-center text-sm text-slate-500">
-                No referrals found for this filter{showAtRiskOnly ? ' and SLA state' : ''}.
-              </p>
+            {!referralsQuery.error && filteredItems.length === 0 ? (
+              <div className="py-8 text-center">
+                <h2 className="font-semibold text-foreground">
+                  {items.length ? 'No deals in this view' : 'Your introductions will appear here'}
+                </h2>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
+                  {items.length
+                    ? 'Choose another filter to see the rest of your deals.'
+                    : 'Explore current opportunities first. If someone wants to proceed, we will guide you through the permission and information steps.'}
+                </p>
+                {!items.length ? (
+                  <Button className="mt-4" onClick={() => setLocation('/distribution/partner/developments')}>
+                    Browse opportunities <Search className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
           </CardContent>
         </Card>

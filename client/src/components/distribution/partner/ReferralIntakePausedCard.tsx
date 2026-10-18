@@ -20,8 +20,7 @@ export function ReferralIntakePausedCard() {
         </div>
       </CardHeader>
       <CardContent className="pt-0 text-xs text-slate-600">
-        You can still browse available developments and program terms while this workflow is being
-        completed.
+        You can still explore current property options. No one’s personal details are needed to browse.
       </CardContent>
     </Card>
   );

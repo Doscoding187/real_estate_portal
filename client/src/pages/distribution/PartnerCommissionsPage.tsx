@@ -17,10 +17,30 @@ function formatCurrency(value: number | null | undefined, currency = 'ZAR') {
   return `${currency} ${amount.toLocaleString('en-US')}`;
 }
 
-function formatStageLabel(value: string | null | undefined) {
-  return String(value || 'unknown')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, char => char.toUpperCase());
+function formatDealStatus(value: string | null | undefined) {
+  const status = String(value || '').toLowerCase();
+  if (status === 'viewing_scheduled') return 'Referral received';
+  if (status === 'bond_approved') return 'Home finance approved';
+  if (status === 'commission_pending') return 'Referral payout pending';
+  if (status === 'commission_paid') return 'Referral payout paid';
+  if (status === 'cancelled') return 'Closed';
+  return status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()) || 'Update pending';
+}
+
+function formatStatus(value: string | null | undefined) {
+  const status = String(value || '').toLowerCase();
+  if (status === 'pending') return 'Pending approval';
+  if (status === 'approved') return 'Approved';
+  if (status === 'paid') return 'Paid';
+  if (status === 'cancelled') return 'Cancelled';
+  return 'Update pending';
+}
+
+function formatCurrencyTotals(amounts: Record<string, number>) {
+  const rows = Object.entries(amounts)
+    .filter(([, amount]) => amount > 0)
+    .map(([currency, amount]) => formatCurrency(amount, currency));
+  return rows.length ? rows.join(' · ') : '—';
 }
 
 export default function PartnerCommissionsPage() {
@@ -38,7 +58,7 @@ export default function PartnerCommissionsPage() {
   const commissionsQuery = trpc.distribution.referrer.myCommissionEntries.useQuery(
     {
       limit: 300,
-      entryStatus: statusFilter === 'all' ? undefined : statusFilter,
+      entryStatus: undefined,
     },
     {
       enabled: isAuthenticated,
@@ -49,17 +69,25 @@ export default function PartnerCommissionsPage() {
   const summary = useMemo(() => {
     const rows = commissionsQuery.data || [];
     return rows.reduce(
-      (acc, row: any) => {
+      (acc: Record<'pending' | 'approved' | 'paid', Record<string, number>>, row: any) => {
         const status = String(row.entryStatus || '').toLowerCase();
         const amount = Number(row.commissionAmount || 0);
-        if (status === 'pending') acc.pending += amount;
-        if (status === 'approved') acc.approved += amount;
-        if (status === 'paid') acc.paid += amount;
+        const currency = String(row.currency || 'ZAR').toUpperCase();
+        if (status === 'pending' || status === 'approved' || status === 'paid') {
+          acc[status][currency] = (acc[status][currency] || 0) + amount;
+        }
         return acc;
       },
-      { pending: 0, approved: 0, paid: 0 },
+      { pending: {}, approved: {}, paid: {} },
     );
   }, [commissionsQuery.data]);
+
+  const filteredRows = useMemo(() => {
+    const rows = commissionsQuery.data || [];
+    return statusFilter === 'all'
+      ? rows
+      : rows.filter((row: any) => String(row.entryStatus || '').toLowerCase() === statusFilter);
+  }, [commissionsQuery.data, statusFilter]);
 
   if (loading || commissionsQuery.isLoading) {
     return (
@@ -74,15 +102,17 @@ export default function PartnerCommissionsPage() {
       <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Referral Payouts</CardTitle>
-            <CardDescription>Track recorded referral payouts under the applicable program terms.</CardDescription>
+            <CardTitle>My referral payouts</CardTitle>
+            <CardDescription>
+              Follow payout amounts, approval, and confirmed payment. This page shows recorded states; it does not promise a payment date.
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
-              Open Buyer Tracker
+              My deals
             </Button>
-            <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Referral Intake Status
+            <Button variant="outline" onClick={() => setLocation('/distribution/partner/developments')}>
+              Find opportunities
             </Button>
             <label className="ml-auto flex items-center gap-2 text-sm">
               Status
@@ -103,21 +133,21 @@ export default function PartnerCommissionsPage() {
 
         <Card className="mb-4">
           <CardHeader>
-            <CardTitle>Recorded Payout Summary</CardTitle>
-            <CardDescription>Totals from referral payout records in the current view.</CardDescription>
+            <CardTitle>Recorded payout totals</CardTitle>
+            <CardDescription>Amounts are grouped by currency and reflect the records currently on file.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-3">
             <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Pending</p>
-              <p className="text-lg font-semibold text-amber-700">{formatCurrency(summary.pending)}</p>
+              <p className="text-lg font-semibold text-amber-700">{formatCurrencyTotals(summary.pending)}</p>
             </div>
             <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Approved</p>
-              <p className="text-lg font-semibold text-blue-700">{formatCurrency(summary.approved)}</p>
+              <p className="text-lg font-semibold text-blue-700">{formatCurrencyTotals(summary.approved)}</p>
             </div>
             <div className="rounded border bg-surface p-3">
               <p className="text-xs text-slate-500">Paid</p>
-              <p className="text-lg font-semibold text-green-700">{formatCurrency(summary.paid)}</p>
+              <p className="text-lg font-semibold text-green-700">{formatCurrencyTotals(summary.paid)}</p>
             </div>
           </CardContent>
         </Card>
@@ -133,7 +163,7 @@ export default function PartnerCommissionsPage() {
             <CardTitle>Referral Payout Records</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {(commissionsQuery.data || []).map((row: any) => (
+            {filteredRows.map((row: any) => (
               <button
                 key={row.id}
                 className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
@@ -142,14 +172,14 @@ export default function PartnerCommissionsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{row.developmentName || 'Development'}</p>
-                    <p className="text-xs text-slate-500">Deal #{row.dealId} | Buyer stage {formatStageLabel(row.dealStage)}</p>
-                    {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Buyer: {row.buyerName}</p> : null}
+                    <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatDealStatus(row.dealStage)}</p>
+                    {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
                     <div className="mt-1 flex flex-wrap justify-end gap-1">
-                      <Badge variant="secondary">{formatStageLabel(row.entryStatus)}</Badge>
-                      {row.triggerStage ? <Badge variant="outline">Recorded payout stage: {formatStageLabel(row.triggerStage)}</Badge> : null}
+                      <Badge variant="secondary">{formatStatus(row.entryStatus)}</Badge>
+                      {row.triggerStage ? <Badge variant="outline">Configured milestone: {formatDealStatus(row.triggerStage)}</Badge> : null}
                     </div>
                   </div>
                 </div>
@@ -161,7 +191,7 @@ export default function PartnerCommissionsPage() {
               </button>
             ))}
 
-            {!commissionsQuery.error && !(commissionsQuery.data || []).length ? (
+            {!commissionsQuery.error && !filteredRows.length ? (
               <p className="py-6 text-center text-sm text-slate-500">No referral payout records found for this filter yet.</p>
             ) : null}
           </CardContent>

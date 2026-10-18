@@ -4,13 +4,18 @@ import { Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
+import { PropertyOpportunityShortlist } from '@/components/distribution/PropertyOpportunityShortlist';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-const VIEW_MODE_SUBMIT = 'submit';
-const VIEW_MODE_EXPLORE = 'explore';
+import {
+  DISTRIBUTION_BEDROOM_FILTERS,
+  DISTRIBUTION_PRICE_BANDS,
+  matchesDistributionOpportunity,
+  type DistributionBedroomFilter,
+  type DistributionMarketMode,
+} from '@shared/distributionOpportunityMatching';
 
 type PartnerModeProjection = {
   availableCount: number;
@@ -54,9 +59,9 @@ export default function PartnerDevelopmentsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<typeof VIEW_MODE_SUBMIT | typeof VIEW_MODE_EXPLORE>(
-    VIEW_MODE_SUBMIT,
-  );
+  const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
+  const [priceBand, setPriceBand] = useState('any');
+  const [selectedBeds, setSelectedBeds] = useState<Set<DistributionBedroomFilter>>(new Set());
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
 
   useEffect(() => {
@@ -67,34 +72,61 @@ export default function PartnerDevelopmentsPage() {
   const termsQuery = trpc.distribution.partner.listProgramTerms.useQuery(undefined, {
     enabled: isAuthenticated,
     retry: false,
+    refetchOnWindowFocus: true,
   });
   const allItems = termsQuery.data?.items || [];
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const candidates =
-      viewMode === VIEW_MODE_SUBMIT
-        ? allItems.filter(
-            item =>
-              item.opportunity.openForReferral && item.opportunity.marketability === 'marketable',
-          )
-        : allItems;
-    if (!query) return candidates;
-    return candidates.filter(item => {
-      const promotion = item.programPromotion;
-      return [
-        item.developmentName,
-        item.campaign.tagline,
-        item.campaign.description,
-        promotion.headline,
-        promotion.description,
-        ...promotionBullets(promotion.highlightBullets),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(query);
+    const selectedBand = DISTRIBUTION_PRICE_BANDS[marketMode].find(
+      band => band.key === priceBand,
+    );
+    const hasPriceBand = selectedBand && selectedBand.key !== 'any';
+
+    return allItems.filter(item => {
+      const selectedMode = item.inventory?.modes?.[marketMode];
+      const matchingMode = (mode: PartnerModeProjection | undefined) => Boolean(
+        mode &&
+          mode.availableCount > 0 &&
+          mode.priceFrom > 0 &&
+          mode.priceTo >= mode.priceFrom,
+      );
+      const candidate = {
+        marketMode,
+        available: matchingMode(selectedMode),
+        priceFrom: selectedMode?.priceFrom ?? null,
+        priceTo: selectedMode?.priceTo ?? null,
+        locationText: [item.developmentName, item.city, item.province].filter(Boolean).join(' '),
+        unitTypes: (item.unitTypes || []).map((unitType: any) => {
+          const mode = unitType.modes?.[marketMode] as PartnerModeProjection | undefined;
+          return {
+            bedrooms: unitType.bedrooms,
+            label: unitType.name,
+            available: matchingMode(mode),
+            priceFrom: mode?.priceFrom ?? null,
+            priceTo: mode?.priceTo ?? null,
+          };
+        }),
+      };
+
+      const matchesFilters = matchesDistributionOpportunity(candidate, {
+        marketMode,
+        minPrice: hasPriceBand ? selectedBand?.minPrice ?? null : null,
+        maxPrice: hasPriceBand ? selectedBand?.maxPrice ?? null : null,
+        areaKeywords: query ? [query] : [],
+        bedrooms: [...selectedBeds],
+      });
+      return matchesFilters;
     });
-  }, [allItems, search, viewMode]);
+  }, [allItems, marketMode, priceBand, search, selectedBeds]);
+
+  const toggleBedroom = (bedroom: DistributionBedroomFilter) => {
+    setSelectedBeds(current => {
+      const next = new Set(current);
+      if (next.has(bedroom)) next.delete(bedroom);
+      else next.add(bedroom);
+      return next;
+    });
+  };
 
   if (loading || termsQuery.isLoading) {
     return (
@@ -110,41 +142,124 @@ export default function PartnerDevelopmentsPage() {
         <section className="overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-5 py-5 text-white md:px-6">
             <p className="text-[10px] font-semibold uppercase text-blue-100">Distribution Network</p>
-            <h1 className="mt-1 text-[28px] font-semibold">Partner opportunities</h1>
+            <h1 className="mt-1 text-[28px] font-semibold">Find property opportunities</h1>
             <p className="mt-2 max-w-3xl text-[13px] leading-5 text-[#ece6da]">
-              Browse opportunities you are entitled to access. Development facts, images, contacts,
-              and sale or rental availability come from the Developer Engine. Program promotion and
-              referral steps are managed here.
+              Search current sale or rental options for the person you are helping. Prices and
+              availability are a guide to explore, not a credit decision. Before referring, check
+              that referrals are open and review the program steps and referral payout.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 border-b border-primary/15 bg-primary/5 px-5 py-4 md:px-6">
-            <Button
-              type="button"
-              variant={viewMode === VIEW_MODE_SUBMIT ? 'default' : 'outline'}
-              onClick={() => setViewMode(VIEW_MODE_SUBMIT)}
-            >
-              Ready for referral
-            </Button>
-            <Button
-              type="button"
-              variant={viewMode === VIEW_MODE_EXPLORE ? 'default' : 'outline'}
-              onClick={() => setViewMode(VIEW_MODE_EXPLORE)}
-            >
-              Explore programs
-            </Button>
-          </div>
+          <div className="space-y-4 border-b border-primary/15 bg-primary/5 px-5 py-4 md:px-6">
+            <div>
+              <span className="mb-2 block text-xs font-semibold text-slate-700">Are they looking to buy or rent?</span>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Property type">
+                {(['sale', 'rent'] as const).map(mode => (
+                  <Button
+                    key={mode}
+                    type="button"
+                    variant={marketMode === mode ? 'default' : 'outline'}
+                    aria-pressed={marketMode === mode}
+                    onClick={() => {
+                      setMarketMode(mode);
+                      setPriceBand('any');
+                    }}
+                  >
+                    {mode === 'sale' ? 'Buy' : 'Rent'}
+                  </Button>
+                ))}
+              </div>
+            </div>
 
-          <div className="border-b border-primary/15 px-5 py-4 md:px-6">
-            <label className="relative block max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-                placeholder="Search development or program promotion"
-                className="h-9 w-full rounded-md border border-primary/15 bg-white pl-9 pr-3 text-[12px] text-foreground placeholder:text-muted-foreground"
-              />
-            </label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                {marketMode === 'sale' ? 'Listed price range' : 'Monthly rent range'}
+                <select
+                  value={priceBand}
+                  onChange={event => setPriceBand(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-md border border-primary/15 bg-white px-3 text-sm font-normal text-foreground"
+                >
+                  {DISTRIBUTION_PRICE_BANDS[marketMode].map(band => (
+                    <option key={band.key} value={band.key}>{band.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="relative block text-xs font-semibold text-slate-700">
+                Development or area
+                <Search className="pointer-events-none absolute left-3 top-[2.1rem] h-4 w-4 text-muted-foreground" />
+                <input
+                  value={search}
+                  onChange={event => setSearch(event.target.value)}
+                  placeholder="For example, Sandton or a development name"
+                  className="mt-1 h-10 w-full rounded-md border border-primary/15 bg-white pl-9 pr-3 text-sm font-normal text-foreground placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+
+            <fieldset>
+              <legend className="mb-2 text-xs font-semibold text-slate-700">Bedrooms</legend>
+              <div className="flex flex-wrap gap-2">
+                {DISTRIBUTION_BEDROOM_FILTERS.map(bedroom => {
+                  const active = selectedBeds.has(bedroom.key);
+                  return (
+                    <Button
+                      key={bedroom.label}
+                      type="button"
+                      variant={active ? 'default' : 'outline'}
+                      aria-pressed={active}
+                      onClick={() => toggleBedroom(bedroom.key)}
+                    >
+                      {bedroom.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <p className="text-xs text-muted-foreground">
+              Showing {filteredItems.length} current {marketMode === 'sale' ? 'purchase' : 'rental'} option{filteredItems.length === 1 ? '' : 's'} available to your account.
+            </p>
+            {filteredItems.length ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/15 bg-white p-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Share the options you found</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Print a shortlist or save it as a PDF to discuss with the person you’re helping.</p>
+                </div>
+                <PropertyOpportunityShortlist
+                  marketMode={marketMode}
+                  searchSummary={[
+                    marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
+                    priceBand !== 'any'
+                      ? DISTRIBUTION_PRICE_BANDS[marketMode].find(band => band.key === priceBand)?.label
+                      : 'Any listed price',
+                    search.trim() ? `Area or development: ${search.trim()}` : 'Any area',
+                    selectedBeds.size
+                      ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
+                      : 'Any bedroom count',
+                  ].filter(Boolean).join(' · ')}
+                  opportunities={filteredItems.map(item => {
+                    const mode = item.inventory?.modes?.[marketMode];
+                    const currencyCode = item.program.currencyCode || 'ZAR';
+                    return {
+                      id: item.developmentId,
+                      name: item.developmentName,
+                      location: [item.city, item.province].filter(Boolean).join(', '),
+                      imageUrl: item.imageUrl,
+                      priceLabel: formatModePrice(mode, currencyCode, marketMode === 'rent'),
+                      availabilityLabel: mode
+                        ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed`
+                        : 'No current availability for this option',
+                      propertyDetails: (item.unitTypes || [])
+                        .filter((unitType: any) => Boolean(unitType.modes?.[marketMode]))
+                        .map((unitType: any) => {
+                          const unitMode = unitType.modes[marketMode] as PartnerModeProjection;
+                          return `${unitType.name}${unitType.bedrooms === null ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
+                        }),
+                      description: item.campaign.description || item.campaign.tagline,
+                    };
+                  })}
+                />
+              </div>
+            ) : null}
           </div>
 
           {termsQuery.error ? (
@@ -181,9 +296,9 @@ export default function PartnerDevelopmentsPage() {
                   <Card key={item.developmentId} className="border-primary/15 shadow-sm">
                     <CardHeader className="space-y-3 pb-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Badge variant="secondary">Distribution program active</Badge>
+                        <Badge variant="secondary">Program active</Badge>
                         <Badge variant={item.opportunity.openForReferral ? 'default' : 'outline'}>
-                          {item.opportunity.openForReferral ? 'Open for referral' : 'Referrals paused'}
+                          {item.opportunity.openForReferral ? 'Accepting referrals' : 'Referrals temporarily paused'}
                         </Badge>
                       </div>
                       <div>
@@ -348,25 +463,12 @@ export default function PartnerDevelopmentsPage() {
                           Program process and requirements
                         </Button>
                         <Button
-                          disabled={!canSubmitSale}
-                          onClick={() =>
-                            setLocation(
-                              `/distribution/partner/submit?developmentId=${item.developmentId}&marketMode=sale`,
-                            )
-                          }
+                          disabled={marketMode === 'sale' ? !canSubmitSale : !canSubmitRent}
+                          onClick={() => setLocation(
+                            `/distribution/partner/submit?developmentId=${item.developmentId}&marketMode=${marketMode}`,
+                          )}
                         >
-                          Refer a buyer
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={!canSubmitRent}
-                          onClick={() =>
-                            setLocation(
-                              `/distribution/partner/submit?developmentId=${item.developmentId}&marketMode=rent`,
-                            )
-                          }
-                        >
-                          Refer a renter
+                          {marketMode === 'sale' ? 'Refer a buyer' : 'Refer a renter'}
                         </Button>
                       </div>
                     </CardContent>
@@ -377,14 +479,14 @@ export default function PartnerDevelopmentsPage() {
           ) : (
             <div className="p-8 text-center">
               <p className="font-medium text-slate-900">
-                {viewMode === VIEW_MODE_SUBMIT
-                  ? 'No opportunities are ready for referral.'
-                  : 'No active programs are available to this partner.'}
+                {termsQuery.data?.items?.length
+                  ? `No current ${marketMode === 'sale' ? 'purchase' : 'rental'} options match these choices.`
+                  : 'No property opportunities are available to your account yet.'}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {viewMode === VIEW_MODE_SUBMIT
-                  ? 'A referral can be submitted only for a currently marketable sale or rental mode.'
-                  : 'Programs appear here only when Distribution access and partner eligibility allow them.'}
+                {termsQuery.data?.items?.length
+                  ? 'Try changing the area, price range, or bedroom filters, or switch between buying and renting.'
+                  : 'Opportunities appear here when a program is active and your account has access.'}
               </p>
             </div>
           )}

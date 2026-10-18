@@ -206,7 +206,7 @@ export function PayoutRulesDisclosure({
                 ? `${(item.sourceDocuments || []).length} file${
                     (item.sourceDocuments || []).length === 1 ? '' : 's'
                   }`
-                : 'Developer shared resources are not connected'}
+                : 'No additional developer documents are available'}
             </span>
           </p>
           {historical && termsSnapshot?.developerSalesSnapshot ? (
