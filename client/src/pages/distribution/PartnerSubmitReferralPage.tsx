@@ -139,7 +139,7 @@ export default function PartnerSubmitReferralPage() {
       setSessionUuid(result.sessionUuid);
       toast.success('Referral steps started.');
     },
-    onError: error => toast.error(error.message || 'Could not start referral intake.'),
+    onError: error => toast.error(error.message || 'Could not start the referral steps.'),
   });
 
   const uploadEvidenceMutation = trpc.distribution.partner.uploadReferralIntakeEvidence.useMutation({

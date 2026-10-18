@@ -50,10 +50,10 @@ export function ProgramRequirementsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{item.developmentName} Requirements</DialogTitle>
+          <DialogTitle>{item.developmentName}: Before you refer</DialogTitle>
           <DialogDescription>
-            Program requirements describe what the buyer must provide. Developer resources appear
-            only when the Developer Engine enables them for partner sharing.
+            Review the information available for this property and the documents that may be needed
+            if the person chooses to continue.
           </DialogDescription>
         </DialogHeader>
 
@@ -61,9 +61,9 @@ export function ProgramRequirementsDialog({
           <section>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Supporting pack</p>
+                <p className="text-sm font-semibold text-slate-900">Property information</p>
                 <p className="text-xs text-slate-500">
-                  Plans, price lists, and other resources explicitly shared with partners by the developer.
+                  Shared plans, price lists, and other property information appear here.
                 </p>
               </div>
               <Badge variant="secondary">
@@ -89,7 +89,7 @@ export function ProgramRequirementsDialog({
               ))}
               {!sourceDocuments.length ? (
                 <p className="rounded border border-dashed p-3 text-sm text-slate-500">
-                  Developer shared resources are not connected yet.
+                  No additional property documents are available right now.
                 </p>
               ) : null}
             </div>
@@ -98,10 +98,10 @@ export function ProgramRequirementsDialog({
           <section>
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Application documents</p>
+                <p className="text-sm font-semibold text-slate-900">Documents for a referral</p>
                 <p className="text-xs text-slate-500">
-                  These are the buyer documents listed for this program's application and any
-                  configured payout checks.
+                  These documents are listed for this opportunity. The referral steps will show
+                  you what is needed and when.
                 </p>
               </div>
               <Badge variant="secondary">
@@ -116,9 +116,6 @@ export function ProgramRequirementsDialog({
             >
               <div>
                   <p className="font-medium">{document.documentLabel}</p>
-                  <p className="text-xs text-slate-500">
-                    {document.documentCode}
-                  </p>
               </div>
               <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                 {document.isRequired ? 'Required' : 'Optional'}
@@ -127,7 +124,7 @@ export function ProgramRequirementsDialog({
           ))}
           {!orderedDocuments.length ? (
             <p className="rounded border border-dashed p-3 text-sm text-slate-500">
-              Application documents are not configured yet.
+              No extra documents are listed for this opportunity.
             </p>
           ) : null}
             </div>

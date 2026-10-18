@@ -146,7 +146,7 @@ export default function PartnerDevelopmentsPage() {
             <p className="mt-2 max-w-3xl text-[13px] leading-5 text-[#ece6da]">
               Search current sale or rental options for the person you are helping. Prices and
               availability are a guide to explore, not a credit decision. Before referring, check
-              that referrals are open and review the program steps and referral payout.
+              that referrals are open and review the steps and referral payout.
             </p>
           </div>
 
@@ -296,7 +296,7 @@ export default function PartnerDevelopmentsPage() {
                   <Card key={item.developmentId} className="border-primary/15 shadow-sm">
                     <CardHeader className="space-y-3 pb-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <Badge variant="secondary">Program active</Badge>
+                        <Badge variant="secondary">Available to explore</Badge>
                         <Badge variant={item.opportunity.openForReferral ? 'default' : 'outline'}>
                           {item.opportunity.openForReferral ? 'Accepting referrals' : 'Referrals temporarily paused'}
                         </Badge>
@@ -305,9 +305,6 @@ export default function PartnerDevelopmentsPage() {
                         <CardTitle className="text-lg">{item.developmentName}</CardTitle>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {[item.city, item.province].filter(Boolean).join(', ')}
-                        </p>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
-                          Canonical development ID {item.developmentId}
                         </p>
                       </div>
                     </CardHeader>
@@ -330,7 +327,7 @@ export default function PartnerDevelopmentsPage() {
 
                       <div className="rounded-md border border-blue-100 bg-blue-50/70 p-3">
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-800">
-                          Program promotion
+                          About this referral opportunity
                         </p>
                         {item.programPromotion.headline ? (
                           <p className="mt-1 font-semibold text-slate-900">
@@ -353,18 +350,12 @@ export default function PartnerDevelopmentsPage() {
                         !item.programPromotion.description &&
                         !bullets.length ? (
                           <p className="mt-1 text-sm text-slate-500">
-                            No program promotion has been added.
+                            No extra referral information has been added.
                           </p>
                         ) : null}
                       </div>
 
-                      <div className="grid gap-2 sm:grid-cols-4">
-                        <div className="rounded-md border p-3">
-                          <p className="text-[10px] font-semibold uppercase text-muted-foreground">
-                            Developer campaign
-                          </p>
-                          <p className="mt-1 text-sm font-semibold">Visible</p>
-                        </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
                         <div className="rounded-md border p-3">
                           <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                             Sale availability
@@ -403,7 +394,7 @@ export default function PartnerDevelopmentsPage() {
                       {unitTypes.length ? (
                         <div className="space-y-2">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Unit type availability
+                            Home types and current prices
                           </p>
                           {unitTypes.map((unitType: any) => (
                             <div key={unitType.id} className="rounded-md border p-3 text-sm">
@@ -430,7 +421,7 @@ export default function PartnerDevelopmentsPage() {
                       {contacts.length ? (
                         <div className="rounded-md border p-3">
                           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Developer contacts shared with partners
+                            Opportunity contact
                           </p>
                           <div className="mt-2 space-y-2">
                             {contacts.map((contact: any) => (
@@ -460,7 +451,7 @@ export default function PartnerDevelopmentsPage() {
 
                       <div className="flex flex-wrap gap-2">
                         <Button variant="outline" onClick={() => setSelectedItem(item)}>
-                          Program process and requirements
+                          How referring works
                         </Button>
                         <Button
                           disabled={marketMode === 'sale' ? !canSubmitSale : !canSubmitRent}
@@ -468,7 +459,7 @@ export default function PartnerDevelopmentsPage() {
                             `/distribution/partner/submit?developmentId=${item.developmentId}&marketMode=${marketMode}`,
                           )}
                         >
-                          {marketMode === 'sale' ? 'Refer a buyer' : 'Refer a renter'}
+                          Start a referral
                         </Button>
                       </div>
                     </CardContent>
@@ -486,7 +477,7 @@ export default function PartnerDevelopmentsPage() {
               <p className="mt-2 text-sm text-muted-foreground">
                 {termsQuery.data?.items?.length
                   ? 'Try changing the area, price range, or bedroom filters, or switch between buying and renting.'
-                  : 'Opportunities appear here when a program is active and your account has access.'}
+                  : 'Options appear here when they are open for referrals and available to your account.'}
               </p>
             </div>
           )}

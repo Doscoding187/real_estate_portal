@@ -147,7 +147,7 @@ export default function DistributionNetworkPublicPage() {
     <>
       <SEOHead
         title="Distribution Network | Property Listify"
-        description="Explore developer opportunities, apply to join Property Listify's distribution network, and review program-specific requirements and terms."
+        description="Explore property opportunities, apply to join Property Listify's Distribution Network, and see the steps and referral payout for each opportunity."
         canonicalUrl="/distribution-network"
         ogType="website"
       />
@@ -236,7 +236,7 @@ export default function DistributionNetworkPublicPage() {
                 <span className="hidden md:inline">•</span>
                 <span>Browse by area, price, and size</span>
                 <span className="hidden md:inline">•</span>
-                <span>Terms set for each program</span>
+                <span>Steps and referral payouts shown up front</span>
               </div>
 
               <div className="mx-auto mb-4 flex w-full max-w-md flex-col items-center justify-center gap-4 sm:max-w-none sm:flex-row">
@@ -270,7 +270,7 @@ export default function DistributionNetworkPublicPage() {
                 </Button>
               </div>
               <p className="text-xs text-slate-500 mb-12">
-                You can apply without a buyer or property-sales experience.
+                You can apply even if no one is ready to proceed and you have no property-sales experience.
               </p>
 
               {/* NETWORK BENEFITS */}
@@ -285,7 +285,7 @@ export default function DistributionNetworkPublicPage() {
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <ShieldCheck className="h-5 w-5 text-blue-400" />
-                  <span className="text-sm font-medium">Review program terms before referring</span>
+                  <span className="text-sm font-medium">Review the conditions before introducing someone</span>
                 </div>
               </div>
             </div>
@@ -334,8 +334,8 @@ export default function DistributionNetworkPublicPage() {
                     price, area, and bedrooms. This is a property search, not a credit decision.
                   </p>
                   <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
-                    Prices and availability can change. Referral access and program terms are shown
-                    after a partner signs in.
+                    Prices and availability can change. After you join, you’ll see which options are
+                    open for referrals to you and the conditions for each one.
                   </div>
                 </div>
 
@@ -517,8 +517,8 @@ export default function DistributionNetworkPublicPage() {
                   You can take part even if you are new to property.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  The network brings developer opportunities, clear program steps, deal progress,
-                  and referral payouts into one place.
+                  Explore property options, see what is needed to make an introduction, follow its
+                  progress, and track the referral payout.
                 </p>
               </div>
 
@@ -532,8 +532,8 @@ export default function DistributionNetworkPublicPage() {
                       Start with a person you know
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Agents and individuals can apply. A buyer does not need to be ready before
-                      you join.
+                      Agents and individuals can join. The person you want to help does not need to
+                      be ready before you apply.
                     </p>
                   </CardContent>
                 </Card>
@@ -546,8 +546,8 @@ export default function DistributionNetworkPublicPage() {
                       Explore available options
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Browse current opportunities by buying or renting, area, listed price, and
-                      bedrooms. This does not decide whether a lender will approve a buyer.
+                      Browse current options by buying or renting, area, listed price, and bedrooms.
+                      This search does not predict a lender's decision.
                     </p>
                   </CardContent>
                 </Card>
@@ -557,11 +557,11 @@ export default function DistributionNetworkPublicPage() {
                       <ClipboardCheck className="h-5 w-5" />
                     </div>
                     <h3 className="mb-2 text-base font-bold text-slate-900">
-                      See each program's rules
+                      Know what happens next
                     </h3>
                     <p className="text-sm leading-relaxed text-slate-600">
-                      Access, required steps, referral payout terms, and payout milestones can differ by
-                      developer. Review the active program before submitting.
+                      Documents, next steps, and referral payouts can differ by opportunity. Review
+                      them before you introduce someone.
                     </p>
                   </CardContent>
                 </Card>
@@ -591,15 +591,15 @@ export default function DistributionNetworkPublicPage() {
             <div className="container">
               <div className="mx-auto mb-12 max-w-3xl text-center">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
-                  Public Development Inventory
+                  Current property options
                 </div>
                 <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
                   Explore developments from our publishing partners.
                 </h2>
                 <p className="text-lg text-slate-600">
                   Browse currently available residential opportunities for{' '}
-                  {marketMode === 'sale' ? 'purchase' : 'rent'}. Partner access, referral eligibility,
-                  and commercial terms depend on each active program.
+                  {marketMode === 'sale' ? 'purchase' : 'rent'}. You can explore these public options
+                  now; referring someone depends on the opportunity and your account access.
                 </p>
                 {developmentSearch?.hasMore && (
                   <p className="mt-2 text-sm text-slate-500">
@@ -691,10 +691,10 @@ export default function DistributionNetworkPublicPage() {
                         </div>
                         <div className="opp-footer">
                           <button className="btn-refer" onClick={() => setLocation(dev.canonicalRoute)}>
-                            View Development
+                            View property
                           </button>
                           <button className="btn-details" onClick={() => revealAndScrollToForm(dev.id)}>
-                            Ask about Partner Access
+                            Ask how to refer this property
                           </button>
                         </div>
                       </div>
@@ -706,9 +706,9 @@ export default function DistributionNetworkPublicPage() {
                     <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground mb-4 shadow-md">
                       <Unlock className="h-6 w-6" />
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 mb-2">Request Partner Access</h3>
+                    <h3 className="text-base font-bold text-slate-900 mb-2">Join the referral network</h3>
                     <p className="text-sm text-slate-600 max-w-[200px] mb-6">
-                      Access depends on the active program, your role, and the developer's rules.
+                      After you join, we’ll show which opportunities you can refer someone to.
                     </p>
                     <Button
                       variant="conversion"
@@ -734,8 +734,8 @@ export default function DistributionNetworkPublicPage() {
                   From exploring to a clear next step.
                 </h2>
                 <p className="text-lg text-slate-600">
-                  The workspace is meant to guide agents and individual introducers through the
-                  steps for each development program.
+                  The workspace guides agents and individuals through the steps for each property
+                  opportunity.
                 </p>
               </div>
 
@@ -763,8 +763,8 @@ export default function DistributionNetworkPublicPage() {
                       Check fit and terms
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Review the buyer's needs, available developments, required information, and
-                      the active program's terms.
+                      Compare current options for the person you are helping and see what each
+                      opportunity may require.
                     </p>
                   </div>
 
@@ -772,10 +772,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary border-[6px] border-primary/10 shadow-md text-primary-foreground font-black text-xl">
                       3
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Submit with permission</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Make the introduction</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Choose a program and share the buyer's details only after they agree to the
-                      referral.
+                      If they want to continue, we guide you through their permission and the
+                      documents needed before you share their details.
                     </p>
                   </div>
 
@@ -783,10 +783,10 @@ export default function DistributionNetworkPublicPage() {
                     <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-white border-[6px] border-emerald-100 shadow-sm text-emerald-600 font-black text-xl">
                       4
                     </div>
-                    <h3 className="mb-2 text-base font-bold text-slate-900">Follow the outcome</h3>
+                    <h3 className="mb-2 text-base font-bold text-slate-900">Follow your referral</h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      See progress, the responsible team, required tasks, and the payout terms set
-                      for that program.
+                      See recorded updates, what needs to happen next, and the referral payout
+                      conditions.
                     </p>
                   </div>
                 </div>
@@ -828,14 +828,14 @@ export default function DistributionNetworkPublicPage() {
             <div className="container">
               <div className="mx-auto mb-14 max-w-3xl text-center">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
-                  Program-Specific Terms
+                  Referral conditions
                 </div>
                 <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">
                   Each development has its own rules.
                 </h2>
                 <p className="text-lg text-slate-600">
                   Eligibility, required steps, referral payout terms, and payment milestones can vary by
-                  developer. Review the active program before submitting a referral.
+                  developer. Review the terms for an opportunity before making an introduction.
                 </p>
               </div>
 
@@ -846,12 +846,12 @@ export default function DistributionNetworkPublicPage() {
                       Referral payout terms
                     </p>
                     <h3 className="mb-3 text-lg font-bold text-slate-900">
-                      Set for each program
+                      Set for each opportunity
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
                       Whether a referral payout applies and how it is calculated are defined by the
-                      participating development program. A referral does not create an entitlement
-                      unless its program terms say so.
+                      participating opportunity. A referral payout is available only when its terms
+                      say it applies.
                     </p>
                   </CardContent>
                 </Card>
@@ -865,8 +865,8 @@ export default function DistributionNetworkPublicPage() {
                       Milestones and documents
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Programs can have different document requirements and payment milestones.
-                      The partner workspace shows the configured requirements for each program.
+                      Opportunities can have different document requirements and payout milestones.
+                      The workspace shows the steps and conditions for each one.
                     </p>
                   </CardContent>
                 </Card>
@@ -888,7 +888,7 @@ export default function DistributionNetworkPublicPage() {
               <div className="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center sm:p-12">
                 <h3 className="mb-3 text-2xl font-bold text-slate-900">No universal payout rate</h3>
                 <p className="mx-auto max-w-3xl text-base text-slate-600">
-                  The active developer program determines whether a referral is eligible for a
+                  Each opportunity's terms determine whether a referral is eligible for a
                   referral payout, how it is calculated, and which milestone applies.
                   Check those terms before you submit.
                 </p>
@@ -932,7 +932,7 @@ export default function DistributionNetworkPublicPage() {
                 the right opportunity.
               </h2>
               <p className="mb-10 text-lg text-slate-400 font-light">
-                Apply to join, then review the active opportunities and program rules available to
+                Apply to join, then review the active opportunities and terms available to
                 you.
               </p>
 
