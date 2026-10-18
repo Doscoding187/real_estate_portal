@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -29,7 +30,7 @@ async function checkColumns() {
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', safeErrorSummary(error));
   } finally {
     await connection.end();
     process.exit(0);

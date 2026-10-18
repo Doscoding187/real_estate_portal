@@ -5,6 +5,7 @@ import { eq, or, and } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,7 +51,7 @@ async function main() {
       }
 
   } catch (error) {
-      console.error('Error:', error);
+      console.error('Error:', safeErrorSummary(error));
   }
   process.exit(0);
 }

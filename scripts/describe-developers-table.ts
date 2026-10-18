@@ -5,6 +5,7 @@
 
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -37,7 +38,7 @@ async function describeDevelopersTable() {
     });
 
   } catch (error) {
-    console.error('❌ Failed to describe table:', error);
+    console.error('❌ Failed to describe table:', safeErrorSummary(error));
   } finally {
     if (connection) await connection.end();
   }

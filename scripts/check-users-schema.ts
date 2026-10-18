@@ -1,5 +1,6 @@
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ async function checkColumns() {
     console.log('Users table columns:', columns);
 
   } catch (error) {
-    console.error('❌ Failed to check columns:', error);
+    console.error('❌ Failed to check columns:', safeErrorSummary(error));
   } finally {
     if (connection) await connection.end();
   }

@@ -4,6 +4,7 @@
  */
 
 import * as agentService from '../server/services/agentService';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function testAgentIntegration() {
 	console.log('🚀 Starting TiDB Agent Integration Test...\n');
@@ -87,7 +88,7 @@ async function testAgentIntegration() {
 		console.log('  - Knowledge added and searched ✓');
 		console.log('\n🎉 TiDB Agent Integration is working correctly!');
 	} catch (error) {
-		console.error('\n❌ Test failed:', error);
+		console.error('\n❌ Test failed:', safeErrorSummary(error));
 		process.exit(1);
 	}
 }
@@ -96,6 +97,6 @@ async function testAgentIntegration() {
 testAgentIntegration()
 	.then(() => process.exit(0))
 	.catch((error) => {
-		console.error('Fatal error:', error);
+		console.error('Fatal error:', safeErrorSummary(error));
 		process.exit(1);
 	});

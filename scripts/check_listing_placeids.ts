@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 config();
 import { getDb } from '../server/db';
 import { sql } from 'drizzle-orm';
@@ -39,7 +40,7 @@ async function main() {
 
     process.exit(0);
   } catch (error) {
-    console.error('Error running script:', error);
+    console.error('Error running script:', safeErrorSummary(error));
     process.exit(1);
   }
 }

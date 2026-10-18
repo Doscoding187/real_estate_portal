@@ -20,6 +20,7 @@ import fc from 'fast-check';
 import { getDb } from '../../db';
 import { properties } from '../../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { safeErrorSummary } from '../../_core/safeError';
 
 describe('Property Results Optimization - Database Schema', () => {
   let testPropertyIds: number[] = [];
@@ -39,7 +40,7 @@ describe('Property Results Optimization - Database Schema', () => {
         try {
           await db.delete(properties).where(eq(properties.id, id));
         } catch (error) {
-          console.warn(`Failed to delete test property ${id}:`, error);
+          console.warn(`Failed to delete test property ${id}:`, safeErrorSummary(error));
         }
       }
     }

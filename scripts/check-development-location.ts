@@ -6,6 +6,7 @@
 
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function checkDevelopmentLocation() {
   console.log('🔍 Checking development location data...\n');
@@ -90,7 +91,7 @@ async function checkDevelopmentLocation() {
     console.log(`\nDevelopments matching Albert*:`, likeDevs.length, likeDevs);
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', safeErrorSummary(error));
     throw error;
   } finally {
     await connection.end();
@@ -103,6 +104,6 @@ checkDevelopmentLocation()
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\n💥 Failed:', error);
+    console.error('\n💥 Failed:', safeErrorSummary(error));
     process.exit(1);
   });

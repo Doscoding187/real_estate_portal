@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { getDb } from '../../db';
 import { resetDb } from '../../db-connection';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../../_core/safeError';
 
 /**
  * Database Schema Unit Tests for Explore Discovery Engine
@@ -52,13 +53,13 @@ describe('Explore Discovery Engine Database Schema', () => {
         try {
           await db.execute(sql.raw(`SELECT 1 FROM ${table} LIMIT 1`));
         } catch (error) {
-          console.error(`Table ${table} not found. Run migration first:`, error);
+          console.error(`Table ${table} not found. Run migration first:`, safeErrorSummary(error));
           throw error;
         }
       }
     } catch (error) {
       console.warn('⚠️  Failed to connect to database. Skipping schema tests.');
-      console.warn('   Error:', error);
+      console.warn('   Error:', safeErrorSummary(error));
       skipTests = true;
       db = null;
     }
@@ -71,7 +72,7 @@ describe('Explore Discovery Engine Database Schema', () => {
         await db.execute(sql`DELETE FROM explore_content WHERE title LIKE 'TEST:%'`);
         await db.execute(sql`DELETE FROM explore_neighbourhoods WHERE name LIKE 'TEST:%'`);
       } catch (error) {
-        console.warn('Cleanup failed:', error);
+        console.warn('Cleanup failed:', safeErrorSummary(error));
       }
     }
   });

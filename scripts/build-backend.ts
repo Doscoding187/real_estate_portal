@@ -1,4 +1,5 @@
 import { build } from 'esbuild';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function buildBackend() {
   try {
@@ -15,7 +16,7 @@ async function buildBackend() {
     });
     console.log('✅ Backend build complete');
   } catch (error) {
-    console.error('❌ Backend build failed:', error);
+    console.error('❌ Backend build failed:', safeErrorSummary(error));
     process.exit(1);
   }
 }

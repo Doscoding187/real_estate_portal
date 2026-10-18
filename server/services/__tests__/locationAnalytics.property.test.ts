@@ -23,6 +23,7 @@ import { getDb } from '../../db';
 import { locations, listings, developments } from '../../../drizzle/schema';
 import { locationAnalyticsService } from '../locationAnalyticsService';
 import { eq, sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../../_core/safeError';
 
 // ============================================================================
 // Test Setup and Teardown
@@ -53,7 +54,7 @@ beforeAll(async () => {
       return;
     }
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Failed to initialize database:', safeErrorSummary(error));
     skipTests = true;
   }
 });

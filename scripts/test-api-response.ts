@@ -1,5 +1,6 @@
 import { getDeveloperByUserId } from '../server/db';
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -26,7 +27,7 @@ async function testAPIResponse() {
     }
     
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', safeErrorSummary(error));
   } finally {
     process.exit(0);
   }
