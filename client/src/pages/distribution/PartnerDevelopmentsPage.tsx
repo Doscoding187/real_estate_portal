@@ -394,7 +394,7 @@ export default function PartnerDevelopmentsPage() {
                             Referral payout
                           </p>
                           <p className="mt-1 text-sm font-semibold">
-                            {item.computed.commissionDisplay || 'Payout terms configured'}
+                            {item.computed.commissionDisplay || 'Referral payout terms not configured'}
                           </p>
                           {item.computed.payoutTriggerDisplay ? (
                             <p className="mt-1 text-xs text-muted-foreground">
