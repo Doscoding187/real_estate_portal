@@ -5,6 +5,7 @@ dotenv.config();
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 import { getDb } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, developerBrandProfiles } from '../../drizzle/schema';
 import { eq, isNotNull } from 'drizzle-orm';
 
@@ -38,5 +39,7 @@ async function main() {
 }
 
 main()
-  .catch(console.error)
+  .catch(err => {
+    console.error('verify-brand-link failed:', safeErrorSummary(err));
+  })
   .finally(() => process.exit());

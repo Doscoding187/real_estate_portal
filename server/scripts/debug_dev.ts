@@ -1,4 +1,5 @@
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
@@ -40,4 +41,4 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch(err => console.error('debug-dev failed:', safeErrorSummary(err)));

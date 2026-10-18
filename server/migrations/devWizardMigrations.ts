@@ -13,6 +13,7 @@
 // ============================================================================
 
 import { db } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 import { unitTypes, developments } from '../../drizzle/schema';
 import { eq, isNull } from 'drizzle-orm';
 
@@ -582,7 +583,7 @@ if (require.main === module) {
   runAllMigrations()
     .then(() => process.exit(0))
     .catch(err => {
-      console.error(err);
+      console.error('dev-wizard migrations failed:', safeErrorSummary(err));
       process.exit(1);
     });
 }
