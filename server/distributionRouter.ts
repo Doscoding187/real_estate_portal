@@ -4714,6 +4714,35 @@ const adminDistributionRouter = router({
       updatePayload.notes = normalizedNotes;
 
       if (nextStatus === 'approved') {
+        if (entry.entryStatus !== 'approved') {
+          if (String(deal.currentStage) !== 'commission_pending') {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message:
+                'A referral payout cannot be approved before its deal reaches the payout pending stage.',
+            });
+          }
+
+          const checklist = await getDealChecklist(Number(deal.id), ctx.user.id, {
+            skipAssignmentCheck: true,
+          });
+          const milestoneNeedsManualConfirmation = !checklist.computed.payoutMilestoneSupported;
+          if (
+            !checklist.computed.allRequiredVerified ||
+            (checklist.computed.payoutMilestoneSupported && !checklist.computed.payoutReady)
+          ) {
+            const blockers = checklist.computed.blockers.join(', ') || 'unknown blockers';
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Referral payout approval is blocked: ${blockers}.`,
+            });
+          }
+
+          // This route is super-admin-only and requires justification notes.
+          // Preserve an explicit audit signal when the program uses a milestone
+          // that cannot be verified automatically.
+          manualPayoutMilestoneOverride = milestoneNeedsManualConfirmation;
+        }
         updatePayload.approvedAt = entry.approvedAt ?? sql`CURRENT_TIMESTAMP`;
         updatePayload.approvedBy = entry.approvedBy ?? ctx.user.id;
         updatePayload.paidAt = null;

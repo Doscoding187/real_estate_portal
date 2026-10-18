@@ -65,12 +65,14 @@ The initial state must mean “referral received.” A viewing status may appear
 - Use **referral payout** in partner-facing language.
 - Show potential, pending approval, approved, paid, cancelled, or needs-review states from recorded terms and events.
 - Potential is not payable; approval is not payment; only a recorded payment is paid.
+- Normal progression to payout-pending and super-admin approval recheck the frozen program milestone and required documents. Unsupported milestones require a documented super-admin confirmation and an audit event.
 - Do not show an expected payment date or window until the program has explicit processing terms and the required milestone is verified. Do not infer timing from proximity to a deal stage.
 
 ## Current implementation evidence
 
 - Public discovery consumes the Developer projection, and the shared matching helper is used by public and entitled partner catalogues.
 - The partner catalogue applies actor-specific program access, projection visibility, marketability, and referral-open checks. Referral submission re-fetches the projection and snapshots its revision, mode, displayed terms, and applicable Distribution terms.
+- The payout transition and approval paths check the deal's frozen milestone and required documents; unsupported milestones require a documented administrator override. Payment still requires a real payment reference.
 - The public shortlist is a browser print-to-PDF flow and keeps prospect details out. Selections can be imported into the partner catalogue in the same browser session; there is no durable server-side assessment/shortlist record yet.
 - Income-based assessment and matches fail closed. The retired calculator's fixed 11.75% rate, 240-month term, and 30% repayment ratio are no longer callable; browse-by-listed-price remains available and is not presented as qualification.
 - The existing `affordability_assessments` table requires an authenticated actor and gross monthly income, with assumptions and outputs stored as required JSON. It is not a safe store for public browse-only searches: doing so would require inventing income/model values. `affordability_match_snapshots` has a generic JSON payload that could carry projection revision and selected mode, but it depends on an assessment and has no guest owner or explicit versioned shortlist contract. Distribution runtime no longer reads or writes these tables; do not reuse them by filling fake values or storing prospect details before the guided referral evidence step. Their schema declarations remain pending the shared schema decision.
