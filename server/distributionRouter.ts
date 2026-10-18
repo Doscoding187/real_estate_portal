@@ -85,6 +85,7 @@ import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
+import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
 import {
   getDistributionReferralIntakePolicy,
   publishDistributionReferralIntakePolicy,
@@ -8361,6 +8362,17 @@ export const distributionRouter = router({
     assertDistributionEnabled();
     return await listDeals(input);
   }),
+
+  listPublicMarketableOpportunities: publicProcedure
+    .input(
+      z.object({
+        developmentIds: z.array(z.number().int().positive()).min(1).max(50),
+      }),
+    )
+    .query(({ input }) => {
+      assertDistributionEnabled();
+      return listPublicDistributionOpportunities(input.developmentIds);
+    }),
 
   submitReferrerApplication: publicProcedure
     .input(

@@ -45,6 +45,30 @@ const AREA_OPTIONS = [
   { label: 'Any area', value: 'any' },
 ];
 
+function formatCurrency(value: number) {
+  return `R${Math.round(value).toLocaleString('en-ZA')}`;
+}
+
+function formatModePrice(
+  mode: { priceFrom: number; priceTo: number } | undefined,
+  marketMode: DistributionMarketMode,
+) {
+  if (!mode) return 'Unavailable';
+  const range = mode.priceFrom === mode.priceTo
+    ? formatCurrency(mode.priceFrom)
+    : `${formatCurrency(mode.priceFrom)} – ${formatCurrency(mode.priceTo)}`;
+  return marketMode === 'rent' ? `${range} / month` : range;
+}
+
+function formatObservedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'time unavailable';
+  return new Intl.DateTimeFormat('en-ZA', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
 export default function DistributionNetworkPublicPage() {
   const [, setLocation] = useLocation();
   const stickyVisible = useMobileStickyCTA('distribution-network-hero');
@@ -67,9 +91,6 @@ export default function DistributionNetworkPublicPage() {
   } = trpc.properties.searchDevelopments.useQuery(
     {
       developmentType: 'residential',
-      transactionType: marketMode === 'sale' ? 'for_sale' : 'for_rent',
-      developmentStatus: 'selling',
-      availability: 'available',
       page: 0,
       pageSize: 50,
       sortOption: 'date_desc',
@@ -77,6 +98,44 @@ export default function DistributionNetworkPublicPage() {
     { staleTime: 1000 * 60 * 5, refetchOnWindowFocus: true },
   );
   const developments = developmentSearch?.items ?? [];
+  const candidateDevelopmentIds = useMemo(
+    () => [...new Set(developments.map(development => Number(development.id)))],
+    [developments],
+  );
+  const salesProjectionQuery = trpc.distribution.listPublicMarketableOpportunities.useQuery(
+    { developmentIds: candidateDevelopmentIds },
+    {
+      enabled: !isLoadingDevs && candidateDevelopmentIds.length > 0,
+      staleTime: 1000 * 30,
+      refetchOnWindowFocus: true,
+    },
+  );
+  const publicInventoryLoading = isLoadingDevs ||
+    (candidateDevelopmentIds.length > 0 && salesProjectionQuery.isLoading);
+  const publicInventoryError = developmentSearchError || salesProjectionQuery.error;
+  const searchMetadataById = useMemo(
+    () => new Map(developments.map(development => [Number(development.id), development])),
+    [developments],
+  );
+  const projectedDevelopments = useMemo(
+    () => (salesProjectionQuery.data?.items || []).flatMap(item => {
+      const searchMetadata = searchMetadataById.get(item.developmentId);
+      if (!searchMetadata) return [];
+      return [{
+        id: item.developmentId,
+        name: item.campaign.name,
+        suburb: searchMetadata.suburb || null,
+        city: item.campaign.city,
+        province: item.campaign.province,
+        canonicalRoute: searchMetadata.canonicalRoute,
+        images: item.campaign.images,
+        description: item.campaign.description || item.campaign.tagline,
+        inventory: item.inventory,
+        observedAt: item.observedAt,
+      }];
+    }),
+    [salesProjectionQuery.data?.items, searchMetadataById],
+  );
 
   const revealAndScrollToForm = (devId?: number) => {
     setInterestedDevId(devId ?? null);
@@ -124,21 +183,27 @@ export default function DistributionNetworkPublicPage() {
       bedrooms: [...selectedBeds],
     };
 
-    return developments.filter(dev => matchesDistributionOpportunity({
-      marketMode,
-      available: dev.availabilityState === 'available',
-      priceFrom: dev.priceFrom,
-      priceTo: dev.priceTo,
-      locationText: [dev.suburb, dev.city, dev.province].filter(Boolean).join(' '),
-      unitTypes: (dev.unitTypes || []).map(unit => ({
-        bedrooms: unit.bedrooms,
-        label: unit.label,
-        available: unit.availabilityState === 'available',
-        priceFrom: unit.priceFrom,
-        priceTo: unit.priceTo,
-      })),
-    }, criteria));
-  }, [marketMode, matchPriceRange, matchArea, selectedBeds, developments]);
+    return projectedDevelopments.filter(dev => {
+      const mode = dev.inventory.modes[marketMode];
+      return matchesDistributionOpportunity({
+        marketMode,
+        available: Boolean(mode),
+        priceFrom: mode?.priceFrom ?? null,
+        priceTo: mode?.priceTo ?? null,
+        locationText: [dev.suburb, dev.city, dev.province].filter(Boolean).join(' '),
+        unitTypes: dev.inventory.unitTypes.map(unit => {
+          const unitMode = unit.modes[marketMode];
+          return {
+            bedrooms: unit.bedrooms,
+            label: unit.name,
+            available: Boolean(unitMode),
+            priceFrom: unitMode?.priceFrom ?? null,
+            priceTo: unitMode?.priceTo ?? null,
+          };
+        }),
+      }, criteria);
+    });
+  }, [marketMode, matchPriceRange, matchArea, selectedBeds, projectedDevelopments]);
   const shortlistSummary = [
     marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
     matchPriceRange !== 'any'
@@ -469,7 +534,7 @@ export default function DistributionNetworkPublicPage() {
                     )}
                   </div>
 
-                  {!isLoadingDevs && !developmentSearchError ? (
+                  {!publicInventoryLoading && !publicInventoryError ? (
                     <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4">
                       <PropertyOpportunityShortlist
                         key={marketMode}
@@ -479,17 +544,16 @@ export default function DistributionNetworkPublicPage() {
                           id: dev.id,
                           name: dev.name,
                           location: [dev.suburb, dev.city, dev.province].filter(Boolean).join(', '),
-                          publisher: dev.publisher.name,
                           imageUrl: dev.images[0] || null,
                           url: dev.canonicalRoute,
-                          priceLabel: `${dev.priceFrom !== null ? `From R${Math.round(dev.priceFrom).toLocaleString('en-ZA')}` : 'Price not listed'}${marketMode === 'rent' ? ' / month' : ''}`,
-                          availabilityLabel: dev.availableUnits !== null
-                            ? `${dev.availableUnits} units reported available`
-                            : 'Availability details are listed on the development page',
-                          propertyDetails: (dev.unitTypes || [])
-                            .filter(unit => unit.availabilityState === 'available')
+                          priceLabel: formatModePrice(dev.inventory.modes[marketMode], marketMode),
+                          availabilityLabel: dev.inventory.modes[marketMode]
+                            ? `${dev.inventory.modes[marketMode]!.availableCount} currently available · checked ${formatObservedAt(dev.observedAt)}`
+                            : 'No current availability for this option',
+                          propertyDetails: dev.inventory.unitTypes
+                            .filter(unit => Boolean(unit.modes[marketMode]))
                             .slice(0, 4)
-                            .map(unit => `${unit.label}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`}${unit.priceFrom ? ` · From R${Math.round(unit.priceFrom).toLocaleString('en-ZA')}` : ''}`),
+                            .map(unit => `${unit.name}${unit.bedrooms === null ? '' : ` · ${unit.bedrooms} bed${unit.bedrooms === 1 ? '' : 's'}`} · ${formatModePrice(unit.modes[marketMode], marketMode)}`),
                           description: dev.description,
                         }))}
                       />
@@ -605,7 +669,7 @@ export default function DistributionNetworkPublicPage() {
                 </p>
                 {developmentSearch?.hasMore && (
                   <p className="mt-2 text-sm text-slate-500">
-                    Showing the newest 50 developments.{' '}
+                    Showing up to 50 public listings; only options with confirmed public details and current marketable stock appear here.{' '}
                     <Link href="/new-developments">
                       <span className="font-semibold text-primary underline">Browse the full catalogue</span>
                     </Link>
@@ -614,15 +678,15 @@ export default function DistributionNetworkPublicPage() {
                 )}
               </div>
 
-              {isLoadingDevs ? (
+              {publicInventoryLoading ? (
                 <div className="mx-auto grid max-w-6xl gap-6 md:grid-cols-3">
                   <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
                   <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
                   <Skeleton className="h-[420px] w-full rounded-2xl bg-slate-100" />
                 </div>
-              ) : developmentSearchError ? (
+              ) : publicInventoryError ? (
                 <p role="status" className="mx-auto max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-900">
-                  Development inventory is temporarily unavailable. Please try again later.
+                  Current property availability is temporarily unavailable. Please try again later.
                 </p>
               ) : filteredDevelopments.length === 0 ? (
                 <p className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-slate-50 p-4 text-center text-sm text-slate-700">
@@ -632,13 +696,10 @@ export default function DistributionNetworkPublicPage() {
               ) : (
                 <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {filteredDevelopments.map((dev, i) => {
-                    const priceFrom = dev.priceFrom;
-                    const availabilityLabel =
-                      dev.availableUnits !== null
-                        ? `${dev.availableUnits}${dev.totalUnits !== null ? ` of ${dev.totalUnits}` : ''} units reported available`
-                        : dev.availabilityState === 'sold_out'
-                          ? 'Reported sold out'
-                          : 'Availability not stated';
+                    const mode = dev.inventory.modes[marketMode];
+                    const availabilityLabel = mode
+                      ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently available`
+                      : 'Not currently available';
                     const bgGradients = [
                       'linear-gradient(140deg, #0f172a 0%, var(--brand-blue) 100%)',
                       'linear-gradient(140deg, #064e3b 0%, #047857 100%)',
@@ -673,21 +734,18 @@ export default function DistributionNetworkPublicPage() {
                         </div>
                         <div className="opp-body">
                           <p className="mb-3 text-xs font-medium text-slate-500">
-                            Published by {dev.publisher.name}
+                            Current {marketMode === 'sale' ? 'sale' : 'rental'} option · Checked {formatObservedAt(dev.observedAt)}
                           </p>
                           <div className="opp-price-row">
                             <div className="opp-price">
-                              {priceFrom !== null
-                                ? `From R${priceFrom >= 1000000 ? `${(priceFrom / 1000000).toFixed(1)}m` : `${(priceFrom / 1000).toFixed(0)}k`}${marketMode === 'rent' ? ' / month' : ''}`
-                                : 'Price not listed'}
+                              {formatModePrice(mode, marketMode)}
                               <span>
-                                Published {marketMode === 'rent' ? 'monthly rent' : 'development price'}.
-                                Confirm current unit availability and costs with the responsible team.
+                                Current advertised {marketMode === 'rent' ? 'monthly rent' : 'sale price'} range. Confirm final unit costs with the responsible team.
                               </span>
                             </div>
                             <div className="opp-payout">
                               {availabilityLabel}
-                              <span>Published stock count. Confirm current availability with the responsible team.</span>
+                              <span>Availability can change. Confirm the selected unit is still available before proceeding.</span>
                             </div>
                           </div>
                         </div>
