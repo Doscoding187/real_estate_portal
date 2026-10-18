@@ -174,7 +174,9 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(derivedListingService).not.toContain("neq(developments.transactionType, 'auction')");
     expect(locationPagesService).toContain('publicDevelopmentEligibilityConditions()');
     expect(publicLeadCaptureService).toContain('evaluatePublicDevelopmentEligibility');
-    expect(distributionPolicy).toContain('evaluatePublicDevelopmentEligibility');
+    expect(distributionPolicy).toContain('getDevelopmentSalesProjection');
+    expect(distributionPolicy).toContain('projection.campaign.visible === true');
+    expect(distributionPolicy).not.toContain('evaluatePublicDevelopmentEligibility');
     expect(sitemap).toContain('publicDevelopmentEligibilityConditions()');
     expect(guard).toContain(
       'Auction developments are not part of the supported public MVP contract',
