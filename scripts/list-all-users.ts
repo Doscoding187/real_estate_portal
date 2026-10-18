@@ -5,6 +5,7 @@
 
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -45,7 +46,7 @@ async function listAllUsers() {
     });
 
   } catch (error) {
-    console.error('❌ Failed to list users:', error);
+    console.error('❌ Failed to list users:', safeErrorSummary(error));
   } finally {
     if (connection) await connection.end();
   }

@@ -6,6 +6,7 @@
 
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function checkUnitMedia() {
   console.log('🔎 Checking Unit Types Media Structure...\n');
@@ -50,7 +51,7 @@ async function checkUnitMedia() {
     });
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', safeErrorSummary(error));
   } finally {
     await connection.end();
   }

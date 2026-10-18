@@ -6,6 +6,7 @@
  */
 
 import { qualityScoringService } from './qualityScoringService';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Example 1: Initial Content Creation
@@ -322,7 +323,7 @@ async function runExamples() {
     console.log('Example 10: Underperformance Detection');
     await example10_UnderperformanceDetection();
   } catch (error) {
-    console.error('Error running examples:', error);
+    console.error('Error running examples:', safeErrorSummary(error));
   }
 }
 

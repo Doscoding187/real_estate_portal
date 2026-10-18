@@ -1,4 +1,5 @@
 import { appRouter } from '../server/routers';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function run() {
   console.log('🔍 Verifying tRPC Router Integrity...');
@@ -33,7 +34,7 @@ async function run() {
       process.exit(1);
     }
   } catch (error) {
-    console.error('❌ FAIL: Error verifying router:', error);
+    console.error('❌ FAIL: Error verifying router:', safeErrorSummary(error));
     process.exit(1);
   }
 }

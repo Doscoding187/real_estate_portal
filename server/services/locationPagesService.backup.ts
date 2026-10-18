@@ -10,6 +10,7 @@ import {
   amenities,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, like, inArray } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * Service for handling location page data aggregation
@@ -186,7 +187,7 @@ export const locationPagesService = {
         },
       };
     } catch (error) {
-      console.error('[LocationService] Error in getCityData:', error);
+      console.error('[LocationService] Error in getCityData:', safeErrorSummary(error));
       throw error;
     }
   },

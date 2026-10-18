@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { getDb } from '../server/db';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function checkDevelopers() {
   console.log('🔍 Checking developers in database...\n');
@@ -35,7 +36,7 @@ async function checkDevelopers() {
     console.log('Result:', searchResult[0]);
 
   } catch (error) {
-    console.error('❌ Error querying developers:', error);
+    console.error('❌ Error querying developers:', safeErrorSummary(error));
   }
   
   process.exit(0);

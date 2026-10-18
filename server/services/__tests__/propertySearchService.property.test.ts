@@ -16,6 +16,7 @@ import { properties, users } from '../../../drizzle/schema';
 import { inArray } from 'drizzle-orm';
 import type { SortOption, PropertyFilters } from '../../../shared/types';
 import { redisCache } from '../../lib/redis';
+import { safeErrorSummary } from '../../_core/safeError';
 
 describe('PropertySearchService - Property-Based Tests', () => {
   let db: any;
@@ -206,7 +207,7 @@ describe('PropertySearchService - Property-Based Tests', () => {
       try {
         await db.delete(properties).where(inArray(properties.id, insertedPropertyIds));
       } catch (error) {
-        console.warn('Failed to clean up test data:', error);
+        console.warn('Failed to clean up test data:', safeErrorSummary(error));
       }
     }
     if (db && testOwnerId) {

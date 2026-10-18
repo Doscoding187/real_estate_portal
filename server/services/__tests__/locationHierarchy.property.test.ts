@@ -10,6 +10,7 @@ import fc from 'fast-check';
 import { getDb } from '../../db';
 import { locations } from '../../../drizzle/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
+import { safeErrorSummary } from '../../_core/safeError';
 
 describe('Location Hierarchy Property Tests', () => {
   let db: Awaited<ReturnType<typeof getDb>> | null = null;
@@ -39,7 +40,7 @@ describe('Location Hierarchy Property Tests', () => {
         return;
       }
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('Failed to initialize database:', safeErrorSummary(error));
       skipTests = true;
     }
   });
