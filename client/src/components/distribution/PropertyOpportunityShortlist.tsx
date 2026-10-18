@@ -31,9 +31,22 @@ type ShortlistSelection = {
 
 function readSavedSelections(storageKey: string): Record<string, ShortlistSelection> {
   if (typeof window === 'undefined') return {};
+  let raw: string | null = null;
   try {
-    const raw = window.sessionStorage.getItem(storageKey);
-    if (!raw || raw.length > 100_000) return {};
+    raw = window.localStorage.getItem(storageKey);
+  } catch {
+    // Continue with the tab-scoped fallback when persistent storage is unavailable.
+  }
+  if (!raw) {
+    try {
+      raw = window.sessionStorage.getItem(storageKey);
+      if (raw) window.localStorage.setItem(storageKey, raw);
+    } catch {
+      // The shortlist remains usable when browser storage is unavailable.
+    }
+  }
+  if (!raw || raw.length > 100_000) return {};
+  try {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
 
@@ -78,12 +91,22 @@ export function PropertyOpportunityShortlist({
   useEffect(() => {
     try {
       if (Object.keys(selectedById).length) {
-        window.sessionStorage.setItem(storageKey, JSON.stringify(selectedById));
+        window.localStorage.setItem(storageKey, JSON.stringify(selectedById));
+        window.sessionStorage.removeItem(storageKey);
       } else {
+        window.localStorage.removeItem(storageKey);
         window.sessionStorage.removeItem(storageKey);
       }
     } catch {
-      // Keep the shortlist usable when browser storage is unavailable.
+      try {
+        if (Object.keys(selectedById).length) {
+          window.sessionStorage.setItem(storageKey, JSON.stringify(selectedById));
+        } else {
+          window.sessionStorage.removeItem(storageKey);
+        }
+      } catch {
+        // Keep the shortlist usable when browser storage is unavailable.
+      }
     }
   }, [selectedById, storageKey]);
   const currentOptionsById = useMemo(
@@ -199,7 +222,7 @@ export function PropertyOpportunityShortlist({
             between buying and renting starts a separate shortlist.
           </p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Your selections and search preferences stay in this browser session. No name, ID, income, or contact details are saved here.
+            Your options and search preferences stay in this browser and can carry into your signed-in catalogue. Current details are refreshed before sharing. No name, ID, income, or contact details are saved here.
           </p>
           {publicSelectionCount > 0 && storageScope.startsWith('partner:') ? (
             <div className="mt-3 rounded-md border border-primary/15 bg-primary/5 p-3">
