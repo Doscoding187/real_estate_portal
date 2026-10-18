@@ -8,51 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
-
-function normalizeStage(stage: string | null | undefined) {
-  const value = String(stage || '').toLowerCase();
-  if (!value) return 'viewing_scheduled';
-  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
-  return value;
-}
-
-function getStageLabel(stage: string | null | undefined) {
-  const normalized = normalizeStage(stage);
-  if (normalized === 'viewing_scheduled') return 'Referral received';
-  if (normalized === 'commission_pending') return 'Referral payout pending';
-  if (normalized === 'commission_paid') return 'Referral payout paid';
-  if (normalized === 'bond_approved') return 'Home finance approved';
-  if (normalized === 'cancelled') return 'Closed';
-  return normalized.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function getNextActionHint(status: string, scheduledViewing?: any) {
-  const normalized = normalizeStage(status);
-  if (normalized === 'commission_paid') {
-    return 'A referral payout has been recorded. See the payout page for its payment details.';
-  }
-  if (normalized === 'commission_pending') {
-    return 'A referral payout is in progress. Follow the recorded updates and terms on the payout page.';
-  }
-  if (normalized === 'viewing_scheduled' && scheduledViewing) {
-    const date = new Date(String(scheduledViewing.scheduledStartAt));
-    const formattedDate = Number.isNaN(date.getTime())
-      ? 'the scheduled time'
-      : new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
-    return date.getTime() < Date.now()
-      ? `A viewing was booked for ${formattedDate}. Its outcome has not been recorded yet.`
-      : `A viewing has been booked for ${formattedDate}.`;
-  }
-  if (normalized === 'viewing_scheduled') {
-    return 'Your referral has been received. The next step will appear here after the responsible team confirms it.';
-  }
-  if (normalized === 'viewing_completed') return 'The viewing is recorded as complete. Follow this page for the next update.';
-  if (normalized === 'application_submitted') return 'The application has been submitted. Follow this page for the next recorded update.';
-  if (normalized === 'contract_signed') return 'The contract milestone has been recorded. Follow this page for the next update.';
-  if (normalized === 'bond_approved') return 'Home finance approval has been recorded. Follow the remaining transaction updates here.';
-  if (normalized === 'cancelled') return 'This deal has been closed. Open the timeline to review the recorded outcome.';
-  return 'The responsible team will add the next update here when it is confirmed.';
-}
+import {
+  formatPartnerDealEvent,
+  formatPartnerDealGuidance,
+  formatPartnerDealStatus,
+  formatPartnerDateTime,
+  formatPartnerEventSource,
+  type PartnerViewingRecord,
+} from '@/lib/distributionPartnerJourney';
 
 function processStepTypeLabel(stepType: unknown) {
   const labels: Record<string, string> = {
@@ -129,21 +92,17 @@ export default function PartnerReferralDetailPage() {
     );
   }
 
-  const scheduledViewing = (viewingsQuery.data || []).find(
-    (viewing: any) =>
-      Number(viewing.dealId) === Number(referral.dealId) &&
-      viewing.status === 'scheduled',
+  const recordedViewings = (viewingsQuery.data || []) as PartnerViewingRecord[];
+  const statusLabel = formatPartnerDealStatus(
+    referral.status,
+    Number(referral.dealId),
+    recordedViewings,
   );
-  const scheduledViewingIsPast = scheduledViewing
-    ? new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
-    : false;
-  const statusLabel = normalizeStage(referral.status) === 'viewing_scheduled' && scheduledViewing
-    ? scheduledViewingIsPast
-      ? 'Viewing outcome pending'
-      : 'Viewing scheduled'
-    : getStageLabel(referral.status);
-  const nextActionHint = getNextActionHint(String(referral.status || ''), scheduledViewing);
-  const normalizedStage = normalizeStage(referral.status);
+  const nextActionHint = formatPartnerDealGuidance(
+    referral.status,
+    Number(referral.dealId),
+    recordedViewings,
+  );
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
@@ -195,7 +154,7 @@ export default function PartnerReferralDetailPage() {
               </p>
             ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
-              {normalizedStage === 'commission_pending' || normalizedStage === 'commission_paid' ? (
+              {['commission_pending', 'commission_paid'].includes(String(referral.status || '').toLowerCase()) ? (
                 <Button size="sm" onClick={() => setLocation('/distribution/partner/payouts')}>
                   View referral payout
                 </Button>
@@ -231,7 +190,7 @@ export default function PartnerReferralDetailPage() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>
-                <span className="text-slate-500">Introduced:</span> {new Date(String(referral.createdAt)).toLocaleDateString('en-ZA')}
+                <span className="text-slate-500">Introduced:</span> {formatPartnerDateTime(referral.createdAt)}
               </p>
               {referral.marketMode ? (
                 <p>
@@ -387,10 +346,10 @@ export default function PartnerReferralDetailPage() {
             {(referral.timeline || []).map((event, index) => (
               <div key={`${event.at}-${index}`} className="rounded-md border border-primary/15 bg-primary/5/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{event.event}</p>
-                  <Badge variant="secondary">{event.byRole}</Badge>
+                  <p className="font-medium">{formatPartnerDealEvent(event.event)}</p>
+                  <Badge variant="secondary">{formatPartnerEventSource(event.byRole)}</Badge>
                 </div>
-                <p className="text-xs text-slate-500">{event.at}</p>
+                <p className="text-xs text-slate-500">{formatPartnerDateTime(event.at)}</p>
                 {event.note ? <p className="mt-1 text-sm">{event.note}</p> : null}
               </div>
             ))}

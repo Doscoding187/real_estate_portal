@@ -7,6 +7,7 @@ import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatPartnerDealStatus } from '@/lib/distributionPartnerJourney';
 
 type EntryStatusFilter = 'all' | 'pending' | 'approved' | 'paid' | 'cancelled';
 
@@ -15,16 +16,6 @@ function formatCurrency(value: number | null | undefined, currency = 'ZAR') {
   if (!Number.isFinite(amount)) return 'R 0';
   if (currency === 'ZAR') return `R ${amount.toLocaleString('en-ZA')}`;
   return `${currency} ${amount.toLocaleString('en-US')}`;
-}
-
-function formatDealStatus(value: string | null | undefined) {
-  const status = String(value || '').toLowerCase();
-  if (status === 'viewing_scheduled') return 'Referral received';
-  if (status === 'bond_approved') return 'Home finance approved';
-  if (status === 'commission_pending') return 'Referral payout pending';
-  if (status === 'commission_paid') return 'Referral payout paid';
-  if (status === 'cancelled') return 'Closed';
-  return status.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()) || 'Update pending';
 }
 
 function formatStatus(value: string | null | undefined) {
@@ -172,14 +163,14 @@ export default function PartnerCommissionsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-medium">{row.developmentName || 'Development'}</p>
-                    <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatDealStatus(row.dealStage)}</p>
+                    <p className="text-xs text-slate-500">Deal #{row.dealId} · {formatPartnerDealStatus(row.dealStage, Number(row.dealId))}</p>
                     {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
                     <div className="mt-1 flex flex-wrap justify-end gap-1">
                       <Badge variant="secondary">{formatStatus(row.entryStatus)}</Badge>
-                      {row.triggerStage ? <Badge variant="outline">Configured milestone: {formatDealStatus(row.triggerStage)}</Badge> : null}
+                      {row.triggerStage ? <Badge variant="outline">Payout milestone: {formatPartnerDealStatus(row.triggerStage, Number(row.dealId))}</Badge> : null}
                     </div>
                   </div>
                 </div>

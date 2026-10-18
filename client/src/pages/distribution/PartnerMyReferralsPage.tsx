@@ -7,38 +7,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
+import {
+  findScheduledPartnerViewing,
+  formatPartnerDealStatus,
+  formatPartnerDateTime,
+  type PartnerViewingRecord,
+} from '@/lib/distributionPartnerJourney';
 
 type DealFilter = 'all' | 'in_progress' | 'closed';
-
-function formatDate(value: unknown) {
-  if (!value) return 'Date not available';
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return 'Date not available';
-  return new Intl.DateTimeFormat('en-ZA', { dateStyle: 'medium', timeStyle: 'short' }).format(parsed);
-}
-
-function humanStatus(statusValue: unknown, dealId: number, viewings: any[]) {
-  const status = String(statusValue || '').toLowerCase();
-  if (status === 'viewing_scheduled') {
-    const viewing = viewings.find(
-      item => Number(item.dealId) === dealId && item.status === 'scheduled',
-    );
-    if (!viewing) return 'Referral received';
-    return new Date(String(viewing.scheduledStartAt)).getTime() < Date.now()
-      ? 'Viewing outcome pending'
-      : 'Viewing scheduled';
-  }
-  const labels: Record<string, string> = {
-    viewing_completed: 'Viewing completed',
-    application_submitted: 'Application submitted',
-    contract_signed: 'Contract signed',
-    bond_approved: 'Home finance approved',
-    commission_pending: 'Referral payout pending',
-    commission_paid: 'Referral payout paid',
-    cancelled: 'Closed',
-  };
-  return labels[status] || 'Referral received';
-}
 
 function isClosed(statusValue: unknown) {
   return ['commission_paid', 'cancelled'].includes(String(statusValue || '').toLowerCase());
@@ -64,7 +40,7 @@ export default function PartnerMyReferralsPage() {
   );
 
   const items = referralsQuery.data?.items || [];
-  const recordedViewings = viewingsQuery.data || [];
+  const recordedViewings = (viewingsQuery.data || []) as PartnerViewingRecord[];
   const filteredItems = useMemo(() => items.filter((item: any) => {
     if (filter === 'in_progress') return !isClosed(item.status);
     if (filter === 'closed') return isClosed(item.status);
@@ -135,9 +111,7 @@ export default function PartnerMyReferralsPage() {
           <CardContent className="divide-y divide-border p-5">
             {filteredItems.map((item: any) => {
               const dealId = Number(item.dealId);
-              const scheduledViewing = recordedViewings.find(
-                (viewing: any) => Number(viewing.dealId) === dealId && viewing.status === 'scheduled',
-              );
+              const scheduledViewing = findScheduledPartnerViewing(dealId, recordedViewings);
               return (
                 <article key={dealId} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
@@ -148,19 +122,19 @@ export default function PartnerMyReferralsPage() {
                       {item.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Updated {formatDate(item.updatedAt)}
+                      Updated {formatPartnerDateTime(item.updatedAt)}
                     </p>
                     {scheduledViewing ? (
                       <p className="mt-2 text-xs font-medium text-primary">
-                        {new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
-                          ? `Viewing recorded for ${formatDate(scheduledViewing.scheduledStartAt)} — outcome update pending`
-                          : `Viewing booked for ${formatDate(scheduledViewing.scheduledStartAt)}`}
+                        {new Date(String(scheduledViewing.scheduledStartAt || '')).getTime() < Date.now()
+                          ? `Viewing recorded for ${formatPartnerDateTime(scheduledViewing.scheduledStartAt)} — outcome update pending`
+                          : `Viewing booked for ${formatPartnerDateTime(scheduledViewing.scheduledStartAt)}`}
                       </p>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      {humanStatus(item.status, dealId, recordedViewings)}
+                      {formatPartnerDealStatus(item.status, dealId, recordedViewings)}
                     </Badge>
                     <Button
                       variant="outline"

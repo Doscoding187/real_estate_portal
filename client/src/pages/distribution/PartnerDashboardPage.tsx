@@ -7,6 +7,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  formatPartnerDealStatus,
+  formatPartnerDateTime,
+  type PartnerViewingRecord,
+} from '@/lib/distributionPartnerJourney';
+import {
   ArrowRight,
   CalendarDays,
   CircleDollarSign,
@@ -14,40 +19,6 @@ import {
   Loader2,
   Search,
 } from 'lucide-react';
-
-function formatDate(value: unknown) {
-  if (!value) return 'Date not available';
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return 'Date not available';
-  return new Intl.DateTimeFormat('en-ZA', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(parsed);
-}
-
-function formatDealStatus(statusValue: unknown, dealId: number, viewings: any[]) {
-  const status = String(statusValue || '').toLowerCase();
-  if (status === 'viewing_scheduled') {
-    const scheduledViewing = viewings.find(
-      viewing => Number(viewing.dealId) === dealId && viewing.status === 'scheduled',
-    );
-    if (!scheduledViewing) return 'Referral received';
-    return new Date(String(scheduledViewing.scheduledStartAt)).getTime() < Date.now()
-      ? 'Viewing outcome pending'
-      : 'Viewing scheduled';
-  }
-
-  const labels: Record<string, string> = {
-    viewing_completed: 'Viewing completed',
-    application_submitted: 'Application submitted',
-    contract_signed: 'Contract signed',
-    bond_approved: 'Home finance approved',
-    commission_pending: 'Referral payout pending',
-    commission_paid: 'Referral payout paid',
-    cancelled: 'Closed',
-  };
-  return labels[status] || 'Referral received';
-}
 
 function MetricCard({
   label,
@@ -113,7 +84,7 @@ export default function PartnerDashboardPage() {
     [deals],
   );
   const recentDeals = referralsQuery.data?.items || [];
-  const recordedViewings = viewingsQuery.data || [];
+  const recordedViewings = (viewingsQuery.data || []) as PartnerViewingRecord[];
   const upcomingViewings = recordedViewings.filter(
     (viewing: any) =>
       viewing.status === 'scheduled' &&
@@ -297,7 +268,7 @@ export default function PartnerDashboardPage() {
                   className="rounded-md border border-primary/15 p-3 text-left transition hover:border-primary/40 hover:bg-primary/5"
                 >
                   <p className="font-medium text-foreground">{viewing.developmentName || 'Property viewing'}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{formatDate(viewing.scheduledStartAt)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{formatPartnerDateTime(viewing.scheduledStartAt)}</p>
                 </button>
               ))}
             </div>
@@ -332,11 +303,11 @@ export default function PartnerDashboardPage() {
                         {deal.development?.name || `Referral ${dealId}`}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
-                        {deal.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId} · Updated {formatDate(deal.updatedAt)}
+                        {deal.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId} · Updated {formatPartnerDateTime(deal.updatedAt)}
                       </span>
                     </span>
                     <Badge variant="secondary">
-                      {formatDealStatus(deal.status, dealId, recordedViewings)}
+                      {formatPartnerDealStatus(deal.status, dealId, recordedViewings)}
                     </Badge>
                   </button>
                 );
