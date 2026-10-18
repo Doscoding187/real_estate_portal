@@ -4,6 +4,7 @@ import { eq, sql, and, count, desc } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import type { InteractionType, DeviceType, FeedType } from '../../shared/types';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from '../_core/safeError';
 
 function isMissingExploreSchema(error: unknown) {
   const err = error as { code?: string; message?: string; cause?: { code?: string; message?: string } };
@@ -75,8 +76,6 @@ export class ExploreInteractionService {
       console.log('[ENG_INSERT_ATTEMPT]', {
         contentId,
         interactionType,
-        userId: userId ?? null,
-        sessionId,
         feedType,
         deviceType,
       });
@@ -102,7 +101,7 @@ export class ExploreInteractionService {
 
       // 2) Update aggregated metrics (async, non-blocking)
       this.updateContentMetrics(contentId, interactionType as any, duration).catch(err => {
-        console.error('Error updating content metrics:', err);
+        console.error('Error updating content metrics:', safeErrorSummary(err));
       });
     } catch (error: any) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
@@ -155,9 +154,9 @@ export class ExploreInteractionService {
 
       for (const contentId of contentIds) {
         const last = insertedInteractions.filter(i => i.contentId === contentId).pop();
-        this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(
-          console.error,
-        );
+        this.updateContentMetrics(contentId, (last?.interactionType as any) ?? 'view').catch(err => {
+          console.error('Error updating content metrics:', safeErrorSummary(err));
+        });
       }
     } catch (error) {
       if (isMissingExploreSchema(error)) throwExploreUnavailable(error);
@@ -272,7 +271,7 @@ export class ExploreInteractionService {
         `);
       }
     } catch (error) {
-      console.error('Error updating content metrics:', error);
+      console.error('Error updating content metrics:', safeErrorSummary(error));
     }
   }
 
@@ -353,7 +352,7 @@ export class ExploreInteractionService {
         performanceScore: content[0]?.engagementScore ?? 0,
       };
     } catch (error) {
-      console.error('Error getting content stats:', error);
+      console.error('Error getting content stats:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -370,7 +369,7 @@ export class ExploreInteractionService {
         .orderBy(desc(exploreEngagements.createdAt))
         .limit(limit);
     } catch (error) {
-      console.error('Error getting user interaction history:', error);
+      console.error('Error getting user interaction history:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -387,7 +386,7 @@ export class ExploreInteractionService {
         .orderBy(desc(exploreEngagements.createdAt))
         .limit(limit);
     } catch (error) {
-      console.error('Error getting session interaction history:', error);
+      console.error('Error getting session interaction history:', safeErrorSummary(error));
       throw error;
     }
   }

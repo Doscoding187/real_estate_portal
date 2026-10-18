@@ -170,7 +170,6 @@ export const leadsRouter = router({
       if (input.website && input.website.trim().length > 0) {
         logLeadEvent('honeypot_trigger', {
           requestId,
-          ip,
           ownerType,
           ownerId,
           developmentId: input.developmentId ?? null,
@@ -189,7 +188,6 @@ export const leadsRouter = router({
       if (!(await checkPublicLeadRateLimit(ip, ctx.res))) {
         logLeadEvent('rate_limit_trigger', {
           requestId,
-          ip,
           ownerType,
           ownerId,
           developmentId: input.developmentId ?? null,
@@ -209,7 +207,6 @@ export const leadsRouter = router({
 
       logLeadEvent('lead_accepted', {
         requestId,
-        ip,
         ownerType,
         ownerId,
         developmentId: input.developmentId ?? null,
