@@ -5,11 +5,13 @@ import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { trpc } from '@/lib/trpc';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ManagerDealChecklistPanel } from '@/components/distribution/manager/ManagerDealChecklistPanel';
 
 type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type WorkflowStepStatus = 'in_progress' | 'waiting' | 'completed' | 'not_applicable';
+type WorkflowStepDraft = { status: WorkflowStepStatus | ''; partnerUpdate: string };
 
 function computeChecklistSummary(checklist: any) {
   const requiredDocuments = (checklist.requiredDocuments || []) as Array<any>;
@@ -45,6 +47,7 @@ export default function ManagerDealChecklistPage() {
   const [savingTemplateId, setSavingTemplateId] = useState<number | null>(null);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [localChecklist, setLocalChecklist] = useState<any | null>(null);
+  const [workflowDrafts, setWorkflowDrafts] = useState<Record<string, WorkflowStepDraft>>({});
 
   const dealId = Number(params?.dealId || 0);
   const checklistQuery = trpc.distribution.manager.getDealChecklist.useQuery(
@@ -58,10 +61,15 @@ export default function ManagerDealChecklistPage() {
     { dealId },
     { enabled: isAuthenticated && match && dealId > 0, retry: false },
   );
+  const workflowProgressQuery = trpc.distribution.manager.getReferralWorkflowProgress.useQuery(
+    { dealId },
+    { enabled: isAuthenticated && match && dealId > 0, retry: false },
+  );
 
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
   const downloadIntakeEvidenceMutation = trpc.distribution.manager.downloadDealReferralIntakeEvidence.useMutation();
   const recordPayoutBasisMutation = trpc.distribution.manager.recordDealPayoutBasis.useMutation();
+  const updateWorkflowStepMutation = trpc.distribution.manager.updateReferralWorkflowStep.useMutation();
 
   useEffect(() => {
     if (loading) return;
@@ -195,6 +203,31 @@ export default function ManagerDealChecklistPage() {
     }
   }
 
+  async function handleSaveWorkflowStep(stepKey: string) {
+    const draft = workflowDrafts[stepKey];
+    if (!draft?.status) {
+      toast.error('Choose a process status before saving.');
+      return;
+    }
+    try {
+      await updateWorkflowStepMutation.mutateAsync({
+        dealId,
+        stepKey,
+        status: draft.status,
+        partnerUpdate: draft.partnerUpdate.trim() || null,
+      });
+      setWorkflowDrafts(current => {
+        const next = { ...current };
+        delete next[stepKey];
+        return next;
+      });
+      await workflowProgressQuery.refetch();
+      toast.success('Referral progress updated.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not update this process step.');
+    }
+  }
+
   if (loading || checklistQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -250,6 +283,106 @@ export default function ManagerDealChecklistPage() {
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />
+
+        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
+          <CardHeader>
+            <CardTitle>Opportunity process updates</CardTitle>
+            <CardDescription>
+              Update the steps saved for this referral. Status and the short update are visible to the referrer; they do not change inventory, deal stages, or payout eligibility.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {workflowProgressQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading saved process…</p>
+            ) : workflowProgressQuery.error ? (
+              <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {workflowProgressQuery.error.message}
+              </p>
+            ) : workflowProgressQuery.data && !workflowProgressQuery.data.verified ? (
+              <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                The saved process terms could not be verified. Progress updates are disabled for this referral.
+              </p>
+            ) : workflowProgressQuery.data?.steps.length ? (
+              workflowProgressQuery.data.steps.map(step => {
+                const saved = workflowProgressQuery.data.progress.find(item => item.stepKey === step.stepKey);
+                const draft = workflowDrafts[step.stepKey];
+                const selectedStatus = draft?.status ?? (saved?.status === 'not_started' ? '' : saved?.status || '');
+                const partnerUpdate = draft?.partnerUpdate ?? saved?.partnerUpdate ?? '';
+                return (
+                  <div key={step.stepKey} className="rounded-lg border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold text-slate-900">{step.stepOrder}. {step.stepLabel}</h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {step.isBlocking ? 'Required process step' : 'Optional process step'}
+                          {step.ownerRole ? ` · Owner: ${step.ownerRole.replace(/_/g, ' ')}` : ''}
+                        </p>
+                        {step.partnerInstructions ? (
+                          <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{step.partnerInstructions}</p>
+                        ) : null}
+                      </div>
+                      {saved?.updatedAt ? (
+                        <span className="text-xs text-slate-500">Updated {new Date(saved.updatedAt).toLocaleString()}</span>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr]">
+                      <label className="space-y-1 text-sm font-medium text-slate-700">
+                        Status
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={selectedStatus}
+                          onChange={event => setWorkflowDrafts(current => ({
+                            ...current,
+                            [step.stepKey]: {
+                              status: event.target.value as WorkflowStepStatus | '',
+                              partnerUpdate: current[step.stepKey]?.partnerUpdate ?? saved?.partnerUpdate ?? '',
+                            },
+                          }))}
+                        >
+                          <option value="">Choose an update</option>
+                          <option value="in_progress">In progress</option>
+                          <option value="waiting">Waiting</option>
+                          <option value="completed">Completed</option>
+                          <option value="not_applicable" disabled={step.isBlocking}>Not needed</option>
+                        </select>
+                      </label>
+                      <label className="space-y-1 text-sm font-medium text-slate-700">
+                        Update for the referrer
+                        <textarea
+                          className="min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-normal"
+                          maxLength={500}
+                          rows={2}
+                          placeholder="Share a brief progress update. Don’t include private documents, ID numbers, or financial account details."
+                          value={partnerUpdate}
+                          onChange={event => setWorkflowDrafts(current => ({
+                            ...current,
+                            [step.stepKey]: {
+                              status: current[step.stepKey]?.status ?? (saved?.status === 'not_started' ? '' : saved?.status || ''),
+                              partnerUpdate: event.target.value,
+                            },
+                          }))}
+                        />
+                      </label>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={!selectedStatus || updateWorkflowStepMutation.isPending}
+                        onClick={() => void handleSaveWorkflowStep(step.stepKey)}
+                      >
+                        {updateWorkflowStepMutation.isPending ? 'Saving…' : 'Save progress update'}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+                No process steps were saved for this referral.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {intakeEvidenceQuery.data?.length ? (
           <Card className="mt-5 border-sky-200">

@@ -82,6 +82,11 @@ import {
 } from './services/distributionDealDocumentsService';
 import { assertDealIsMutable } from './services/distributionDealMutationGuards';
 import {
+  DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES,
+  getReferralWorkflowProgress,
+  recordReferralWorkflowStepProgress,
+} from './services/distributionDealWorkflowProgressService';
+import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
@@ -5467,6 +5472,71 @@ const managerDistributionRouter = router({
 
       return await getDealChecklist(input.dealId, ctx.user!.id, {
         skipAssignmentCheck: ctx.user!.role === 'super_admin',
+      });
+    }),
+
+  getReferralWorkflowProgress: protectedProcedure
+    .input(z.object({ dealId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      const deal = await getDealById(db, input.dealId);
+      if (!deal) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+      }
+      if (ctx.user!.role !== 'super_admin') {
+        await assertManagerScope(db, ctx.user!.id, {
+          programId: Number(deal.programId),
+          developmentId: Number(deal.developmentId),
+        });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
+      }
+
+      return await getReferralWorkflowProgress(db, input.dealId);
+    }),
+
+  updateReferralWorkflowStep: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        stepKey: z.string().trim().min(1).max(100),
+        status: z.enum(DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES),
+        partnerUpdate: z.string().trim().max(500).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await db.transaction(async (tx: any) => {
+        await tx.execute(
+          sql`SELECT id FROM distribution_deals WHERE id = ${input.dealId} FOR UPDATE`,
+        );
+        const deal = await getDealById(tx, input.dealId);
+        if (!deal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+        }
+        if (ctx.user!.role !== 'super_admin') {
+          await assertManagerScope(tx, ctx.user!.id, {
+            programId: Number(deal.programId),
+            developmentId: Number(deal.developmentId),
+          });
+          assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
+        }
+        assertDealIsMutable(deal.currentStage, 'update the saved referral process');
+
+        return await recordReferralWorkflowStepProgress(tx, {
+          dealId: input.dealId,
+          actorUserId: ctx.user!.id,
+          stepKey: input.stepKey,
+          status: input.status,
+          partnerUpdate: input.partnerUpdate,
+        });
       });
     }),
 

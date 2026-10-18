@@ -107,37 +107,14 @@ export default function PartnerReferralDetailPage() {
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
-  const policyWorkflowSteps = Array.isArray(
-    (referral as any).programTermsSnapshot?.intakePolicy?.configuration?.workflowSteps,
-  )
-    ? (referral as any).programTermsSnapshot.intakePolicy.configuration.workflowSteps
-        .flatMap((step: any, index: number) => {
-          if (!step || typeof step !== 'object') return [];
-          const stepLabel = String(step.title || '').trim();
-          if (!stepLabel) return [];
-          return [{
-            stepKey: String(step.key || `guided-step-${index + 1}`),
-            stepLabel,
-            stepType: null,
-            stepOrder: index + 1,
-            isBlocking: step.isBlocking === true || Number(step.isBlocking) === 1,
-            partnerInstructions: String(step.partnerInstructions || '').trim() || null,
-            ownerRole: String(step.ownerRole || '').trim() || null,
-          }];
-        })
-    : [];
-  const structuredWorkflowSteps = Array.isArray(
-    (referral as any).programTermsSnapshot?.workflow?.steps,
-  )
-    ? [...(referral as any).programTermsSnapshot.workflow.steps]
-        .sort((left: any, right: any) => Number(left.stepOrder || 0) - Number(right.stepOrder || 0))
-        .map((step: any) => ({
-          ...step,
-          partnerInstructions: null,
-          ownerRole: null,
-        }))
-    : [];
-  const processSteps = policyWorkflowSteps.length ? policyWorkflowSteps : structuredWorkflowSteps;
+  const workflowProgress = (referral as any).workflowProgress;
+  const processSteps = Array.isArray(workflowProgress?.steps) ? workflowProgress.steps : [];
+  const progressByStepKey = new Map<string, any>(
+    (Array.isArray(workflowProgress?.progress) ? workflowProgress.progress : []).map((item: any) => [
+      String(item.stepKey),
+      item,
+    ]),
+  );
   const documentRequirementsSnapshotAvailable = Array.isArray(
     (referral as any).programTermsSnapshot?.requiredDocuments,
   );
@@ -261,24 +238,32 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle>Steps for this opportunity</CardTitle>
             <CardDescription>
-              These steps and instructions were saved when this referral started. Recorded progress appears in the timeline.
+              These steps were saved when this referral started. The responsible team updates each step as the deal progresses.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {processSteps.length ? (
               <ol className="space-y-3">
                 {processSteps.map((step: any, index: number) => (
-                  <li
-                    key={`${String(step.stepKey || index)}-${index}`}
-                    className="flex items-start gap-3 rounded-md border border-primary/10 bg-white p-3"
-                  >
+                  <li key={`${String(step.stepKey || index)}-${index}`} className="flex items-start gap-3 rounded-md border border-primary/10 bg-white p-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                       {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground">
-                        {String(step.stepLabel || 'Next step to be confirmed')}
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-medium text-foreground">
+                          {String(step.stepLabel || 'Next step to be confirmed')}
+                        </p>
+                        <Badge variant={progressByStepKey.get(String(step.stepKey))?.status === 'completed' ? 'default' : 'secondary'}>
+                          {{
+                            not_started: 'Not started',
+                            in_progress: 'In progress',
+                            waiting: 'Waiting',
+                            completed: 'Completed',
+                            not_applicable: 'Not needed',
+                          }[String(progressByStepKey.get(String(step.stepKey))?.status || 'not_started')] || 'Not started'}
+                        </Badge>
+                      </div>
                       <div className="mt-1 space-y-1 text-xs text-muted-foreground">
                         {step.stepType ? <p>{processStepTypeLabel(step.stepType)}</p> : null}
                         <p>
@@ -293,10 +278,26 @@ export default function PartnerReferralDetailPage() {
                           </p>
                         ) : null}
                       </div>
+                      {progressByStepKey.get(String(step.stepKey))?.partnerUpdate ? (
+                        <div className="mt-3 rounded-md bg-primary/5 p-3">
+                          <p className="whitespace-pre-line text-sm text-foreground">
+                            {progressByStepKey.get(String(step.stepKey)).partnerUpdate}
+                          </p>
+                          {progressByStepKey.get(String(step.stepKey))?.updatedAt ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Updated {formatPartnerDateTime(progressByStepKey.get(String(step.stepKey)).updatedAt)}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </li>
                 ))}
               </ol>
+            ) : workflowProgress === null ? (
+              <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                The saved process details could not be verified. Contact the responsible team for your next step.
+              </p>
             ) : (
               <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
                 The steps for this opportunity have not been added yet. Follow the recorded updates here for now.

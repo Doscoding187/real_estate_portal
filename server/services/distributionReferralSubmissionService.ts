@@ -22,6 +22,7 @@ import {
   assertPartnerDevelopmentReferralOpen,
 } from './distributionPartnerProgramAccessService';
 import { buildDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
+import { getReferralWorkflowProgress } from './distributionDealWorkflowProgressService';
 import {
   buildReferralIntakeEvidenceSnapshot,
   getCompletePartnerReferralIntakeSession,
@@ -899,6 +900,8 @@ export async function getMyReferralDeal(
   const programTermsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
   const salesSnapshot = parseJsonObject(programTermsSnapshot?.developerSalesSnapshot);
   const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
+  const savedWorkflowProgress = await getReferralWorkflowProgress(db, Number(deal.dealId));
+  const workflowProgress = savedWorkflowProgress.verified ? savedWorkflowProgress : null;
   const applicationDocuments = await listDealApplicationDocuments(db, {
     dealId: Number(deal.dealId),
     developmentId: Number(deal.developmentId),
@@ -939,15 +942,17 @@ export async function getMyReferralDeal(
     docProgress,
     applicationDocuments,
     programTermsSnapshot,
-    timeline: events.map(event => {
+    workflowProgress,
+    timeline: events.flatMap(event => {
       const metadata = parseJsonObject(event.metadata);
+      if (metadata?.source === 'manager.updateReferralWorkflowStep') return [];
       const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
-      return {
+      return [{
         at: event.at,
         event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
         byRole: event.actorRole ? String(event.actorRole) : 'system',
         note: event.note || null,
-      };
+      }];
     }),
   };
 }

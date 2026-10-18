@@ -1,0 +1,292 @@
+import { TRPCError } from '@trpc/server';
+import { and, desc, eq } from 'drizzle-orm';
+import { distributionDealEvents, distributionDeals, users } from '../../drizzle/schema';
+import { isValidDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
+
+export const DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES = [
+  'in_progress',
+  'waiting',
+  'completed',
+  'not_applicable',
+] as const;
+
+export type DistributionReferralWorkflowStepStatus =
+  (typeof DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES)[number];
+
+export type DistributionReferralWorkflowStep = {
+  stepKey: string;
+  stepLabel: string;
+  stepType: string | null;
+  stepOrder: number;
+  isBlocking: boolean;
+  partnerInstructions: string | null;
+  ownerRole: string | null;
+};
+
+export type DistributionReferralWorkflowStepProgress = {
+  stepKey: string;
+  status: DistributionReferralWorkflowStepStatus | 'not_started';
+  partnerUpdate: string | null;
+  updatedAt: string | null;
+  updatedByRole: string | null;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function asBoolean(value: unknown) {
+  return value === true || Number(value) === 1;
+}
+
+function normalizeWorkflowSteps(
+  input: unknown,
+  source: 'intake_policy' | 'program_workflow',
+): DistributionReferralWorkflowStep[] {
+  if (!Array.isArray(input)) return [];
+  return input.flatMap((value, index) => {
+    const row = asRecord(value);
+    if (!row) return [];
+    const stepKey = String(source === 'intake_policy' ? row.key : row.stepKey || '').trim();
+    const stepLabel = String(source === 'intake_policy' ? row.title : row.stepLabel || '').trim();
+    if (!stepKey || !stepLabel) return [];
+    return [{
+      stepKey,
+      stepLabel,
+      stepType: source === 'program_workflow' && row.stepType
+        ? String(row.stepType)
+        : null,
+      stepOrder: source === 'program_workflow'
+        ? Number(row.stepOrder || index + 1)
+        : index + 1,
+      isBlocking: asBoolean(row.isBlocking),
+      partnerInstructions: source === 'intake_policy' && row.partnerInstructions
+        ? String(row.partnerInstructions)
+        : null,
+      ownerRole: source === 'intake_policy' && row.ownerRole
+        ? String(row.ownerRole)
+        : null,
+    }];
+  });
+}
+
+export function readConfiguredReferralWorkflowSteps(
+  snapshotValue: unknown,
+  expectedDigest: string | null | undefined,
+): DistributionReferralWorkflowStep[] | null {
+  if (!isValidDistributionReferralTermsSnapshot(snapshotValue, expectedDigest)) return null;
+  const snapshot = asRecord(snapshotValue);
+  if (!snapshot) return null;
+
+  const intakePolicy = asRecord(snapshot.intakePolicy);
+  const intakeConfiguration = intakePolicy ? asRecord(intakePolicy.configuration) : null;
+  const intakeSteps = normalizeWorkflowSteps(intakeConfiguration?.workflowSteps, 'intake_policy');
+  const workflow = asRecord(snapshot.workflow);
+  const programSteps = normalizeWorkflowSteps(workflow?.steps, 'program_workflow');
+  const steps = intakeSteps.length ? intakeSteps : programSteps;
+  if (steps.length > 30) return null;
+
+  const keys = new Set<string>();
+  for (const step of steps) {
+    if (keys.has(step.stepKey)) return null;
+    keys.add(step.stepKey);
+  }
+  return steps.sort((left, right) => left.stepOrder - right.stepOrder);
+}
+
+function isWorkflowStepStatus(value: unknown): value is DistributionReferralWorkflowStepStatus {
+  return DISTRIBUTION_REFERRAL_WORKFLOW_STEP_STATUSES.includes(
+    value as DistributionReferralWorkflowStepStatus,
+  );
+}
+
+export function deriveReferralWorkflowStepProgress(input: {
+  steps: DistributionReferralWorkflowStep[];
+  events: Array<Record<string, unknown>>;
+  termsSnapshotDigest: string | null | undefined;
+}): DistributionReferralWorkflowStepProgress[] {
+  const stepKeys = new Set(input.steps.map(step => step.stepKey));
+  const latestByStepKey = new Map<string, DistributionReferralWorkflowStepProgress>();
+
+  for (const event of input.events) {
+    const metadata = asRecord(event.metadata);
+    if (
+      !metadata ||
+      metadata.source !== 'manager.updateReferralWorkflowStep' ||
+      metadata.termsSnapshotDigest !== input.termsSnapshotDigest
+    ) {
+      continue;
+    }
+    const stepKey = String(metadata.stepKey || '').trim();
+    if (!stepKeys.has(stepKey) || latestByStepKey.has(stepKey) || !isWorkflowStepStatus(metadata.status)) {
+      continue;
+    }
+    const partnerUpdate = String(metadata.partnerUpdate || '').trim();
+    latestByStepKey.set(stepKey, {
+      stepKey,
+      status: metadata.status,
+      partnerUpdate: partnerUpdate || null,
+      updatedAt: event.eventAt || event.at ? String(event.eventAt || event.at) : null,
+      updatedByRole: event.actorRole || event.byRole ? String(event.actorRole || event.byRole) : null,
+    });
+  }
+
+  return input.steps.map(step => latestByStepKey.get(step.stepKey) || {
+    stepKey: step.stepKey,
+    status: 'not_started',
+    partnerUpdate: null,
+    updatedAt: null,
+    updatedByRole: null,
+  });
+}
+
+export async function getReferralWorkflowProgress(db: any, dealId: number) {
+  const [deal] = await db
+    .select({
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
+    })
+    .from(distributionDeals)
+    .where(eq(distributionDeals.id, dealId))
+    .limit(1);
+  if (!deal) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+  }
+
+  const steps = readConfiguredReferralWorkflowSteps(
+    deal.referralTermsSnapshotJson,
+    deal.referralTermsSnapshotDigest,
+  );
+  if (!steps) {
+    return { verified: false, steps: [], progress: [] };
+  }
+
+  const events = await db
+    .select({
+      id: distributionDealEvents.id,
+      eventAt: distributionDealEvents.eventAt,
+      metadata: distributionDealEvents.metadata,
+      actorRole: users.role,
+    })
+    .from(distributionDealEvents)
+    .leftJoin(users, eq(distributionDealEvents.actorUserId, users.id))
+    .where(
+      and(
+        eq(distributionDealEvents.dealId, dealId),
+        eq(distributionDealEvents.eventType, 'note'),
+      ),
+    )
+    .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id))
+    .limit(500);
+
+  return {
+    verified: true,
+    steps,
+    progress: deriveReferralWorkflowStepProgress({
+      steps,
+      events,
+      termsSnapshotDigest: deal.referralTermsSnapshotDigest,
+    }),
+  };
+}
+
+export async function recordReferralWorkflowStepProgress(
+  db: any,
+  input: {
+    dealId: number;
+    actorUserId: number;
+    stepKey: string;
+    status: DistributionReferralWorkflowStepStatus;
+    partnerUpdate?: string | null;
+  },
+) {
+  const [deal] = await db
+    .select({
+      currentStage: distributionDeals.currentStage,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
+    })
+    .from(distributionDeals)
+    .where(eq(distributionDeals.id, input.dealId))
+    .limit(1);
+  if (!deal) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+  }
+
+  const steps = readConfiguredReferralWorkflowSteps(
+    deal.referralTermsSnapshotJson,
+    deal.referralTermsSnapshotDigest,
+  );
+  if (!steps) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The saved opportunity process could not be verified for this referral.',
+    });
+  }
+  const step = steps.find(candidate => candidate.stepKey === input.stepKey);
+  if (!step) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'This process step is not part of the saved referral terms.',
+    });
+  }
+  if (input.status === 'not_applicable' && step.isBlocking) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'A required process step cannot be marked as not needed.',
+    });
+  }
+
+  const partnerUpdate = String(input.partnerUpdate || '').trim();
+  if (partnerUpdate.length > 500) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Keep the update to 500 characters or fewer.',
+    });
+  }
+  if (['waiting', 'not_applicable'].includes(input.status) && !partnerUpdate) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Add a short update for the referrer before saving this status.',
+    });
+  }
+
+  const currentProgress = await getReferralWorkflowProgress(db, input.dealId);
+  const currentStepProgress = currentProgress.progress.find(item => item.stepKey === input.stepKey);
+  if (
+    currentStepProgress?.status === input.status &&
+    currentStepProgress.partnerUpdate === (partnerUpdate || null)
+  ) {
+    return currentProgress;
+  }
+
+  await db.insert(distributionDealEvents).values({
+    dealId: input.dealId,
+    fromStage: deal.currentStage,
+    toStage: deal.currentStage,
+    eventType: 'note',
+    actorUserId: input.actorUserId,
+    metadata: {
+      source: 'manager.updateReferralWorkflowStep',
+      stepKey: step.stepKey,
+      status: input.status,
+      partnerUpdate: partnerUpdate || null,
+      termsSnapshotDigest: deal.referralTermsSnapshotDigest,
+    } as any,
+    notes: null,
+  });
+
+  return await getReferralWorkflowProgress(db, input.dealId);
+}
