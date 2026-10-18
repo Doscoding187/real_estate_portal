@@ -146,7 +146,7 @@ export default function PartnerDashboardPage() {
     undefined,
     {
       enabled:
-        isAuthenticated && statusQuery.data?.hasIdentity === true && !statusQuery.isFetching,
+        isAuthenticated && statusQuery.data?.hasIdentity === true,
       retry: false,
     },
   );
@@ -155,7 +155,7 @@ export default function PartnerDashboardPage() {
     { limit: 200 },
     {
       enabled:
-        isAuthenticated && statusQuery.data?.hasIdentity === true && !statusQuery.isFetching,
+        isAuthenticated && statusQuery.data?.hasIdentity === true,
       retry: false,
     },
   );
@@ -164,7 +164,7 @@ export default function PartnerDashboardPage() {
     { limit: 200 },
     {
       enabled:
-        isAuthenticated && statusQuery.data?.hasIdentity === true && !statusQuery.isFetching,
+        isAuthenticated && statusQuery.data?.hasIdentity === true,
       retry: false,
     },
   );
@@ -173,7 +173,7 @@ export default function PartnerDashboardPage() {
     { limit: 20 },
     {
       enabled:
-        isAuthenticated && statusQuery.data?.hasIdentity === true && !statusQuery.isFetching,
+        isAuthenticated && statusQuery.data?.hasIdentity === true,
       retry: false,
     },
   );
@@ -182,7 +182,7 @@ export default function PartnerDashboardPage() {
     { includePast: false, limit: 10 },
     {
       enabled:
-        isAuthenticated && statusQuery.data?.hasIdentity === true && !statusQuery.isFetching,
+        isAuthenticated && statusQuery.data?.hasIdentity === true,
       retry: false,
     },
   );
@@ -228,8 +228,7 @@ export default function PartnerDashboardPage() {
     [commissionsQuery.data],
   );
 
-  const hasDistributionIdentity =
-    statusQuery.data?.hasIdentity === true && !statusQuery.isFetching;
+  const hasDistributionIdentity = statusQuery.data?.hasIdentity === true;
 
   const applicationOrBeyondCount = useMemo(() => {
     const convertedStages = new Set([
@@ -399,7 +398,7 @@ export default function PartnerDashboardPage() {
   const showLoadingState =
     loading ||
     statusQuery.isLoading ||
-    statusQuery.isFetching ||
+    (statusQuery.isFetching && !statusQuery.data) ||
     (hasDistributionIdentity &&
       (programTermsQuery.isLoading ||
         pipelineQuery.isLoading ||

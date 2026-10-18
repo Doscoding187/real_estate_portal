@@ -48,7 +48,6 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const statusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
     enabled: Boolean(user),
     retry: false,
-    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
   const statusData = statusQuery.data;
@@ -56,7 +55,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const { data: pipelineData } = trpc.distribution.referrer.myPipeline.useQuery(
     { limit: 200 },
     {
-      enabled: Boolean(user && statusData?.hasIdentity && !statusQuery.isFetching),
+      enabled: Boolean(user && statusData?.hasIdentity),
       retry: false,
     },
   );
@@ -64,7 +63,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const { data: commissionRows } = trpc.distribution.referrer.myCommissionEntries.useQuery(
     { limit: 200 },
     {
-      enabled: Boolean(user && statusData?.hasIdentity && !statusQuery.isFetching),
+      enabled: Boolean(user && statusData?.hasIdentity),
       retry: false,
       refetchOnWindowFocus: false,
     },
