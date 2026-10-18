@@ -107,7 +107,6 @@ import {
   createReferralDeal,
   getMyReferralDeal,
   listMyReferralDeals,
-  submitReferralDealDocument,
 } from './services/distributionReferralSubmissionService';
 import {
   requireApprovedAffordabilityModel,
@@ -5534,6 +5533,13 @@ const managerDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
+      if (input.submittedFileUrl || input.submittedFileName) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Secure deal-document storage and authorized developer delivery are not available yet.',
+        });
+      }
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
@@ -6939,26 +6945,15 @@ const partnerDistributionRouter = router({
       z.object({
         dealId: z.number().int().positive(),
         templateId: z.number().int().positive(),
-        submittedFileUrl: z.string().trim().url().max(2048),
-        submittedFileName: z.string().trim().max(255).nullable().optional(),
         notes: z.string().trim().max(1000).nullable().optional(),
       }),
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(() => {
       assertDistributionEnabled();
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-
-      await assertPartnerTermsAccess(db, ctx.user!);
-
-      return await submitReferralDealDocument({
-        actorUserId: Number(ctx.user!.id),
-        actorRole: String(ctx.user!.role || ''),
-        dealId: input.dealId,
-        templateId: input.templateId,
-        submittedFileUrl: input.submittedFileUrl,
-        submittedFileName: input.submittedFileName ?? null,
-        notes: input.notes ?? null,
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Secure deal-document storage and authorized developer delivery are not available yet.',
       });
     }),
 

@@ -50,8 +50,6 @@ export type DealChecklistPayload = {
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
-    submittedFileUrl: string | null;
-    submittedFileName: string | null;
     submittedAt: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
@@ -228,8 +226,6 @@ export async function getDealChecklist(
           status: distributionDealDocuments.status,
           receivedAt: distributionDealDocuments.receivedAt,
           verifiedAt: distributionDealDocuments.verifiedAt,
-          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
-          submittedFileName: distributionDealDocuments.submittedFileName,
           submittedAt: distributionDealDocuments.submittedAt,
           receivedBy: distributionDealDocuments.receivedBy,
           verifiedBy: distributionDealDocuments.verifiedBy,
@@ -288,8 +284,6 @@ export async function getDealChecklist(
       status,
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
-      submittedFileUrl: persisted?.submittedFileUrl || null,
-      submittedFileName: persisted?.submittedFileName || null,
       submittedAt: persisted?.submittedAt || null,
       receivedBy: receivedById
         ? {
@@ -424,6 +418,14 @@ export async function upsertDealDocumentStatus(
   actorUserId: number,
   options?: ChecklistOptions,
 ) {
+  if (input.submittedFileUrl?.trim() || input.submittedFileName?.trim()) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Secure deal-document storage and authorized developer delivery are not available yet.',
+    });
+  }
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 

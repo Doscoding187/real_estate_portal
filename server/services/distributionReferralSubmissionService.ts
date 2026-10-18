@@ -660,8 +660,6 @@ async function listDealApplicationDocuments(
       templateId: distributionDealDocuments.developmentRequiredDocumentId,
       documentCode: developmentRequiredDocuments.documentCode,
       status: distributionDealDocuments.status,
-      submittedFileUrl: distributionDealDocuments.submittedFileUrl,
-      submittedFileName: distributionDealDocuments.submittedFileName,
       submittedAt: distributionDealDocuments.submittedAt,
       receivedAt: distributionDealDocuments.receivedAt,
       verifiedAt: distributionDealDocuments.verifiedAt,
@@ -703,13 +701,10 @@ async function listDealApplicationDocuments(
         isRequired: true,
         sortOrder: document.sortOrder,
         status: 'unavailable' as const,
-        submittedFileUrl: null,
-        submittedFileName: null,
         submittedAt: null,
         receivedAt: null,
         verifiedAt: null,
         notes: null,
-        canUpload: false,
       };
     }
     return {
@@ -720,13 +715,10 @@ async function listDealApplicationDocuments(
       isRequired: true,
       sortOrder: document.sortOrder,
       status: (persisted?.status || 'pending') as PartnerDealDocumentStatus,
-      submittedFileUrl: persisted?.submittedFileUrl || null,
-      submittedFileName: persisted?.submittedFileName || null,
       submittedAt: persisted?.submittedAt || null,
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
       notes: persisted?.notes || null,
-      canUpload: true,
     };
   });
 }
@@ -941,145 +933,5 @@ export async function getMyReferralDeal(
         note: event.note || null,
       };
     }),
-  };
-}
-
-export async function submitReferralDealDocument(
-  input: SubmissionActor & {
-    dealId: number;
-    templateId: number;
-    submittedFileUrl: string;
-    submittedFileName?: string | null;
-    notes?: string | null;
-  },
-) {
-  const db = await resolveDb();
-  const [deal] = await db
-    .select({
-      dealId: distributionDeals.id,
-      agentId: distributionDeals.agentId,
-      developmentId: distributionDeals.developmentId,
-      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
-    })
-    .from(distributionDeals)
-    .where(eq(distributionDeals.id, input.dealId))
-    .limit(1);
-
-  if (!deal) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'Referral deal not found.',
-    });
-  }
-
-  if (input.actorRole !== 'super_admin' && Number(deal.agentId) !== Number(input.actorUserId)) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'You can only upload documents for referrals you submitted.',
-    });
-  }
-
-  const termsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
-  const requiredDocuments = normalizeRequiredDocumentSnapshot(termsSnapshot?.requiredDocuments);
-  if (!requiredDocuments) {
-    throw new TRPCError({
-      code: 'CONFLICT',
-      message: 'This referral has no saved document checklist. Contact the team before uploading.',
-    });
-  }
-
-  const [template] = await db
-    .select({
-      id: developmentRequiredDocuments.id,
-      documentCode: developmentRequiredDocuments.documentCode,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.id, input.templateId),
-        eq(developmentRequiredDocuments.developmentId, Number(deal.developmentId)),
-        eq(developmentRequiredDocuments.category, 'client_required_document'),
-        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
-      ),
-    )
-    .limit(1);
-
-  const isSavedRequirement = requiredDocuments.some(
-    document => document.documentCode === String(template?.documentCode || ''),
-  );
-  if (!template || !isSavedRequirement) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'This document was not required for this referral when it was submitted.',
-    });
-  }
-
-  const [linkedDocument] = await db
-    .select({ dealId: distributionDealDocuments.dealId })
-    .from(distributionDealDocuments)
-    .where(
-      and(
-        eq(distributionDealDocuments.dealId, input.dealId),
-        eq(distributionDealDocuments.developmentRequiredDocumentId, input.templateId),
-      ),
-    )
-    .limit(1);
-  if (!linkedDocument) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'This document is not linked to the saved requirements for this referral.',
-    });
-  }
-
-  await db
-    .insert(distributionDealDocuments)
-    .values({
-      dealId: input.dealId,
-      developmentRequiredDocumentId: input.templateId,
-      status: 'received',
-      receivedAt: sql`CURRENT_TIMESTAMP`,
-      receivedBy: input.actorUserId,
-      submittedFileUrl: input.submittedFileUrl,
-      submittedFileName: input.submittedFileName || null,
-      submittedAt: sql`CURRENT_TIMESTAMP`,
-      submittedBy: input.actorUserId,
-      notes: input.notes || null,
-    })
-    .onDuplicateKeyUpdate({
-      set: {
-        status: 'received',
-        receivedAt: sql`CURRENT_TIMESTAMP`,
-        receivedBy: input.actorUserId,
-        verifiedAt: null,
-        verifiedBy: null,
-        submittedFileUrl: input.submittedFileUrl,
-        submittedFileName: input.submittedFileName || null,
-        submittedAt: sql`CURRENT_TIMESTAMP`,
-        submittedBy: input.actorUserId,
-        notes: input.notes || null,
-      },
-    });
-
-  return {
-    success: true,
-    applicationDocuments: await listDealApplicationDocuments(db, {
-      dealId: Number(deal.dealId),
-      developmentId: Number(deal.developmentId),
-      requiredDocuments: termsSnapshot?.requiredDocuments,
-    }),
-    docProgress:
-      (
-        await computeDealDocumentProgressMap(db, {
-          dealRows: [
-            {
-              dealId: Number(deal.dealId),
-              developmentId: Number(deal.developmentId),
-            },
-          ],
-        })
-      ).get(Number(deal.dealId)) || {
-        requiredCount: 0,
-        verifiedRequiredCount: 0,
-      },
   };
 }

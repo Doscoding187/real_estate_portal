@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { FileText, Loader2, UploadCloud, UserRound, WalletCards } from 'lucide-react';
+import { FileText, Loader2, UserRound, WalletCards } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
-import { toast } from 'sonner';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 
 function normalizeStage(stage: string | null | undefined) {
@@ -60,7 +59,6 @@ export default function PartnerReferralDetailPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const dealId = Number(params?.dealId || 0);
-  const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -84,49 +82,6 @@ export default function PartnerReferralDetailPage() {
     { includePast: true, limit: 500 },
     { enabled: isAuthenticated && match && dealId > 0, retry: false },
   );
-
-  const presignUploadMutation = trpc.upload.presign.useMutation();
-  const submitDocumentMutation = trpc.distribution.partner.submitReferralDocument.useMutation({
-    onSuccess: () => {
-      toast.success('Application document uploaded for manager review.');
-      void referralQuery.refetch();
-    },
-    onError: error => {
-      toast.error(error.message || 'Unable to upload application document.');
-    },
-  });
-
-  async function handleApplicationDocumentUpload(document: any, file: File | null) {
-    if (!file || !referralQuery.data) return;
-    setUploadingTemplateId(Number(document.templateId));
-    try {
-      const { url, publicUrl } = await presignUploadMutation.mutateAsync({
-        filename: file.name,
-        contentType: file.type || 'application/octet-stream',
-        propertyId: `distribution-referral-${dealId}`,
-      });
-      const uploadResponse = await fetch(url, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-        },
-      });
-      if (!uploadResponse.ok) {
-        throw new Error(`Document upload failed (${uploadResponse.status}).`);
-      }
-      await submitDocumentMutation.mutateAsync({
-        dealId,
-        templateId: Number(document.templateId),
-        submittedFileUrl: publicUrl,
-        submittedFileName: file.name,
-      });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Unable to upload application document.');
-    } finally {
-      setUploadingTemplateId(null);
-    }
-  }
 
   if (loading || referralQuery.isLoading || viewingsQuery.isLoading) {
     return (
@@ -310,7 +265,7 @@ export default function PartnerReferralDetailPage() {
           <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Upload a requested file here for the responsible team to review.
+                Secure file storage and delivery to the developer are not connected yet. The responsible team will coordinate the document handover for this referral.
               </p>
               {applicationDocuments.map((document: any) => (
                 <div key={document.documentCode} className="rounded-md border border-primary/15 bg-white p-3 text-sm">
@@ -318,18 +273,17 @@ export default function PartnerReferralDetailPage() {
                     <div>
                       <p className="font-semibold text-foreground">{document.documentLabel}</p>
                       <p className="text-xs text-muted-foreground">{document.documentCode}</p>
-                      {document.submittedFileName ? (
-                        <p className="text-xs text-muted-foreground">Uploaded: {document.submittedFileName}</p>
-                      ) : null}
                     </div>
                     <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
                       {document.status === 'verified'
-                        ? 'Verified'
+                        ? 'Verified by our team'
                         : document.status === 'received'
-                          ? 'Uploaded'
+                          ? 'Received by our team'
                           : document.status === 'unavailable'
                             ? 'Needs team update'
-                          : 'Needed'}
+                            : document.status === 'rejected'
+                              ? 'Update needed'
+                              : 'Needed'}
                     </Badge>
                   </div>
                   {document.status === 'unavailable' ? (
@@ -337,30 +291,11 @@ export default function PartnerReferralDetailPage() {
                       This saved requirement is no longer available in the document library. Contact the responsible team.
                     </p>
                   ) : null}
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {document.submittedFileUrl ? (
-                      <Button asChild size="sm" variant="outline">
-                        <a href={document.submittedFileUrl} target="_blank" rel="noreferrer">View uploaded file</a>
-                      </Button>
-                    ) : null}
-                    {document.canUpload ? (
-                      <label className="inline-flex cursor-pointer items-center rounded-md border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">
-                        <UploadCloud className="mr-1 h-3.5 w-3.5" />
-                        {uploadingTemplateId === Number(document.templateId) ? 'Uploading...' : 'Upload requested file'}
-                        <input
-                          type="file"
-                          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                          className="sr-only"
-                          disabled={uploadingTemplateId === Number(document.templateId)}
-                          onChange={event => {
-                            const file = event.currentTarget.files?.[0] || null;
-                            void handleApplicationDocumentUpload(document, file);
-                            event.currentTarget.value = '';
-                          }}
-                        />
-                      </label>
-                    ) : null}
-                  </div>
+                  {document.status === 'received' || document.status === 'verified' ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      This records a Distribution team update. Developer receipt will be shown here when it is confirmed.
+                    </p>
+                  ) : null}
                 </div>
               ))}
               {!applicationDocuments.length && documentRequirementsSnapshotAvailable ? (

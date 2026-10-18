@@ -37,8 +37,6 @@ type DealChecklist = {
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
-    submittedFileUrl?: string | null;
-    submittedFileName?: string | null;
     submittedAt?: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
@@ -92,15 +90,11 @@ export function ManagerDealChecklistPanel({
     templateId: number;
     status: DealDocumentStatus;
     notes?: string | null;
-    submittedFileUrl?: string | null;
-    submittedFileName?: string | null;
   }) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
-  const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
-  const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
   const [payoutBasisAmount, setPayoutBasisAmount] = useState('');
 
   useEffect(() => {
@@ -109,14 +103,6 @@ export function ManagerDealChecklistPanel({
       next[row.templateId] = row.notes || '';
     }
     setNotesByTemplateId(next);
-    const nextUrls: Record<number, string> = {};
-    const nextNames: Record<number, string> = {};
-    for (const row of checklist.requiredDocuments) {
-      nextUrls[row.templateId] = row.submittedFileUrl || '';
-      nextNames[row.templateId] = row.submittedFileName || '';
-    }
-    setFileUrlByTemplateId(nextUrls);
-    setFileNameByTemplateId(nextNames);
   }, [checklist.requiredDocuments]);
 
   useEffect(() => {
@@ -171,6 +157,10 @@ export function ManagerDealChecklistPanel({
           </div>
         </CardContent>
       </Card>
+
+      <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        This workspace records document status, but secure file storage and developer delivery are not connected yet.
+      </p>
 
       {checklist.commissionSummary.referrerCommissionType === 'percentage' ? (
         <Card className="border-sky-200">
@@ -235,7 +225,7 @@ export function ManagerDealChecklistPanel({
             {checklist.computed.payoutReady ? 'Payout Ready' : 'Payout Not Ready'}
           </CardTitle>
           <CardDescription>
-            Verified required documents: {checklist.computed.verifiedRequiredCount}/
+            Required documents verified by our team: {checklist.computed.verifiedRequiredCount}/
             {checklist.computed.requiredCount}
           </CardDescription>
         </CardHeader>
@@ -247,8 +237,8 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Payout readiness requires verified documents and a milestone the system can verify.
-            Unsupported milestones need a documented administrator confirmation.
+            Payout readiness uses the Distribution team’s document checks and a recorded transaction milestone.
+            It does not confirm that the developer received the files. Unsupported milestones need a documented administrator confirmation.
           </p>
         </CardContent>
       </Card>
@@ -268,7 +258,7 @@ export function ManagerDealChecklistPanel({
               disabled={Boolean(isBatchSaving)}
               onClick={() => void onMarkAllRequiredReceived?.()}
             >
-              Mark All Required as Received
+              Mark All Required as Received by Our Team
             </Button>
             <Button
               variant="outline"
@@ -276,7 +266,7 @@ export function ManagerDealChecklistPanel({
               disabled={Boolean(isBatchSaving)}
               onClick={() => void onMarkAllRequiredVerified?.()}
             >
-              Mark All Required as Verified
+              Mark All Required as Verified by Our Team
             </Button>
             {isBatchSaving ? (
               <p className="self-center text-xs text-blue-600">Applying batch update...</p>
@@ -311,9 +301,9 @@ export function ManagerDealChecklistPanel({
                     }
                   >
                     <option value="pending">pending</option>
-                    <option value="received">received</option>
-                    <option value="verified">verified</option>
-                    <option value="rejected">rejected</option>
+                    <option value="received">Received by our team</option>
+                    <option value="verified">Verified by our team</option>
+                    <option value="rejected">Update needed</option>
                   </select>
                 </div>
 
@@ -339,57 +329,6 @@ export function ManagerDealChecklistPanel({
                   />
                 </div>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor={`file-url-${document.templateId}`}>Submitted file URL</Label>
-                  <Input
-                    id={`file-url-${document.templateId}`}
-                    placeholder="https://..."
-                    value={fileUrlByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setFileUrlByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
-                    }
-                    onBlur={() =>
-                      void onUpdateDocumentStatus({
-                        templateId: document.templateId,
-                        status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
-                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`file-name-${document.templateId}`}>Submitted file name</Label>
-                  <Input
-                    id={`file-name-${document.templateId}`}
-                    placeholder="Document name"
-                    value={fileNameByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setFileNameByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
-                    }
-                    onBlur={() =>
-                      void onUpdateDocumentStatus({
-                        templateId: document.templateId,
-                        status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
-                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>
                   Received: {document.receivedAt || 'Pending'} | {formatActor(document.receivedBy)}
@@ -398,7 +337,7 @@ export function ManagerDealChecklistPanel({
                   Verified: {document.verifiedAt || 'Pending'} | {formatActor(document.verifiedBy)}
                 </p>
                 <p className="md:col-span-2">
-                  Submitted file: {document.submittedAt || 'Pending'} |{' '}
+                  Document submission: {document.submittedAt || 'No secure file recorded'} |{' '}
                   {formatActor(document.submittedBy || null)}
                 </p>
               </div>
