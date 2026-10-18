@@ -151,6 +151,10 @@ export default function PartnerMyReferralsPage() {
                   : (payoutsQuery.data || []).length >= 500
                     ? 'Not present in the latest payout records.'
                     : 'No referral payout record has been created yet.';
+              const dealStatusLabel =
+                String(item.status || '').toLowerCase() === 'viewing_scheduled' && viewingsQuery.error
+                  ? 'Deal progress unavailable'
+                  : formatPartnerDealStatus(item.status, dealId, recordedViewings);
               return (
                 <article key={dealId} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
@@ -186,7 +190,7 @@ export default function PartnerMyReferralsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
-                      {formatPartnerDealStatus(item.status, dealId, recordedViewings)}
+                      {dealStatusLabel}
                     </Badge>
                     <Button
                       variant="outline"
