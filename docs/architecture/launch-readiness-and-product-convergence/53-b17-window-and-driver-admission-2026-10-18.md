@@ -25,7 +25,7 @@ Recorded in session; D1–D7 are not re-asked (packet 49).
 
 | Decision | Recorded answer | Consequence |
 | --- | --- | --- |
-| W1 — write mix | **Read-only plus the smoke write.** The window runs public reads at the admitted rates; the existing view-counter smoke write is enabled explicitly for the window (`--enable-smoke-write`). This is the explicit alternative permitted by packet 48 open item 1. | No hosted write-volume claim is made; write-path latency remains covered by the local calibration of packets 43–44 only. The write is irreversible on the candidate target and must never be pointed at customer production. |
+| W1 — write mix | **Read-only 24-hour run plus a separate bounded smoke-write step.** The rate-plan invocation names the four read scenarios and never passes `--enable-smoke-write`; the write is a separate short invocation bounded by `--duration-seconds`, because the driver round-robins every enabled scenario and `--enable-smoke-write` on the 24-hour run would turn the write into a write-volume workload (~1/5 of 522,000 requests). This is the explicit alternative permitted by packet 48 open item 1. | No hosted write-volume claim is made; write-path latency remains covered by the local calibration of packets 43–44 only. `getById` increments real public view counters irreversibly on the candidate target and must never be pointed at customer production. |
 | W2 — rate plan | **Provisional plan accepted as the accepted plan**: 5 req/s sustained, two 15-minute 20 req/s peaks at T0+6h and T0+18h, one 30-minute 40 req/s double peak at T0+12h (522,000 scheduled requests over 24h). | The driver's `PROVISIONAL_RATE_PLAN` stands unchanged. Any replacement must be a reviewed amendment written before the test and loaded via `--rate-plan` (hard cap 40 rps). |
 | W3 — operational card | **Drafted defaults accepted** (incident log, abort channel, escalation, coverage) — see the operational card below. | Packet 45 entry criterion 6 is prepared; the log is opened at T-2 in the window execution. |
 
@@ -51,7 +51,7 @@ reviewed admission before it may run against a hosted target.
 | Packet-45 admission bullet | Admitted state |
 | --- | --- |
 | Open-model scheduling, no closed-loop self-throttling | Satisfied: wall-clock due times from the rate plan; the in-flight cap is a hard safety valve and its drops are recorded and fail the run. |
-| Profile parity incl. approved representative write mix | Satisfied for the four calibrated read shapes. Per W1 the write mix is the smoke write only; the no-write-volume claim is recorded, not waived silently. |
+| Profile parity incl. approved representative write mix | Satisfied for the four calibrated read shapes. Per W1 the write mix is the bounded smoke-write step only; the no-write-volume claim is recorded, not waived silently. |
 | Provisional rates unless an accepted forecast replaces them | Satisfied by W2; the encoded plan stands and cannot exceed 40 rps from any replacement file. |
 | Single abort switch and hard stop at T0+24h | Satisfied: `--abort-file` plus SIGINT/SIGTERM stops dispatch immediately (exit 3); duration is hard-capped at 86,400 seconds. |
 | No credential, payment or protected-action capability | Satisfied: public read procedures and the one admitted smoke write; cookies/credentials omitted. |
@@ -75,9 +75,17 @@ schedules the window. Until then it grants nothing.
 | 5. Tooling admitted | `pnpm launch:probe` exists; the hosted load driver is admitted by this packet. Satisfied. |
 | 6. Operational readiness | Operational card below accepted (W3). The incident log is opened at T-2. |
 
-At scheduling the execution record must fix the exact target, the B16 tuple,
-the command line (`--target`, confirmation host, `--enable-smoke-write`) and
-the alert binding readback.
+At scheduling the execution record must fix the exact target, the B16 tuple
+and the two invocation forms:
+
+- 24-hour rate-plan run, read-only — the four read scenarios named explicitly
+  (`--scenario property-detail --scenario property-related-feed --scenario
+  search-typed-city --scenario search-typed-province`), no `--enable-smoke-write`;
+- bounded smoke-write step — `--scenario property-detail-view
+  --enable-smoke-write --duration-seconds 5` (the floor bound; ≤25 view-counter
+  increments), run once, separately from the 24-hour run.
+
+Both invocations use the admitted driver hashes and the confirmation gate.
 
 ## Operational card (entry criterion 6, accepted as W3)
 

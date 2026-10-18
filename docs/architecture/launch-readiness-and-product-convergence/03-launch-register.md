@@ -81,7 +81,7 @@ the [packet-45](45-b17-hosted-window-runbook-2026-10-17.md) review requirement:
 
 | Item | Recorded | Effect |
 | --- | --- | --- |
-| W1 write mix | Read-only plus the smoke write, enabled explicitly at the window | No hosted write-volume claim; writes remain local calibration |
+| W1 write mix | Read-only 24-hour run plus a separate bounded smoke-write step (`--duration-seconds` floor; the rate-plan run never enables the write) | No hosted write-volume claim; writes remain local calibration |
 | W2 rate plan | Provisional plan accepted as the accepted plan (5/s sustained, 2×20/s peaks, 30-min 40/s double peak) | Driver's encoded plan stands; replacements require a reviewed amendment before the test |
 | W3 operational card | Incident log, abort channel (abort-file + signal), escalation and coverage defaults accepted | Packet-45 entry criterion 6 prepared; log opened at T-2 |
 | Driver admission | Packet-48 candidate admitted at base `7706e93bc`, module hashes pinned (30/30 tests) | Entry criterion 5 tooling complete; window admission record drafted but ineffective until hosting resume and B08/B09/B11–B14/B16 |
