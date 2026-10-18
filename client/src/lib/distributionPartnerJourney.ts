@@ -90,6 +90,46 @@ export function formatPartnerDealGuidance(
   return 'Your referral has been received. The responsible team will confirm the next step here.';
 }
 
+export function summarizePartnerReferralWorkflow(value: unknown) {
+  if (!value || typeof value !== 'object') return null;
+  const workflow = value as Record<string, unknown>;
+  if (workflow.verified !== true || !Array.isArray(workflow.steps) || !Array.isArray(workflow.progress)) {
+    return null;
+  }
+
+  const progressByStepKey = new Map(
+    workflow.progress.flatMap((item: any) =>
+      item && typeof item === 'object' && item.stepKey
+        ? [[String(item.stepKey), item] as const]
+        : [],
+    ),
+  );
+  const nextStep = workflow.steps.find((step: any) => {
+    if (!step || typeof step !== 'object') return false;
+    const progress: any = progressByStepKey.get(String(step.stepKey));
+    return !['completed', 'not_applicable'].includes(String(progress?.status || 'not_started'));
+  }) as any;
+
+  if (!nextStep) {
+    return workflow.steps.length
+      ? 'All saved process steps are complete. Follow the deal for the next confirmed milestone.'
+      : null;
+  }
+
+  const progress: any = progressByStepKey.get(String(nextStep.stepKey));
+  const statusLabels: Record<string, string> = {
+    not_started: 'Not started',
+    in_progress: 'In progress',
+    waiting: 'Waiting',
+    completed: 'Completed',
+    not_applicable: 'Not needed',
+  };
+  const status = String(progress?.status || 'not_started');
+  const label = String(nextStep.stepLabel || 'Next process step');
+  const update = String(progress?.partnerUpdate || '').trim();
+  return `${label} · ${statusLabels[status] || 'Progress update pending'}${update ? `: ${update}` : ''}`;
+}
+
 const PARTNER_EVENT_LABELS: Record<string, string> = {
   system: 'Referral update recorded',
   stage_transition: 'Deal progress updated',

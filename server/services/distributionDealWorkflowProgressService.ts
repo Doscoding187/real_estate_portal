@@ -1,5 +1,5 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { distributionDealEvents, distributionDeals, users } from '../../drizzle/schema';
 import { isValidDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
 
@@ -29,6 +29,12 @@ export type DistributionReferralWorkflowStepProgress = {
   partnerUpdate: string | null;
   updatedAt: string | null;
   updatedByRole: string | null;
+};
+
+export type DistributionReferralWorkflowProgressResult = {
+  verified: boolean;
+  steps: DistributionReferralWorkflowStep[];
+  progress: DistributionReferralWorkflowStepProgress[];
 };
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -191,6 +197,10 @@ export async function getReferralWorkflowProgress(db: any, dealId: number) {
     .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id))
     .limit(500);
 
+  if (events.length >= 500) {
+    return { verified: false, steps: [], progress: [] };
+  }
+
   return {
     verified: true,
     steps,
@@ -200,6 +210,81 @@ export async function getReferralWorkflowProgress(db: any, dealId: number) {
       termsSnapshotDigest: deal.referralTermsSnapshotDigest,
     }),
   };
+}
+
+export async function getReferralWorkflowProgressForDeals(
+  db: any,
+  deals: Array<{
+    dealId: number;
+    referralTermsSnapshotJson: unknown;
+    referralTermsSnapshotDigest: string | null | undefined;
+  }>,
+): Promise<Map<number, DistributionReferralWorkflowProgressResult>> {
+  const results = new Map<number, DistributionReferralWorkflowProgressResult>();
+  const dealIds = deals.map(deal => deal.dealId).filter(id => Number.isSafeInteger(id) && id > 0);
+  if (!dealIds.length) return results;
+
+  const stepsByDealId = new Map<number, DistributionReferralWorkflowStep[]>();
+  for (const deal of deals) {
+    const steps = readConfiguredReferralWorkflowSteps(
+      deal.referralTermsSnapshotJson,
+      deal.referralTermsSnapshotDigest,
+    );
+    if (steps) stepsByDealId.set(deal.dealId, steps);
+    else results.set(deal.dealId, { verified: false, steps: [], progress: [] });
+  }
+
+  const verifiableDealIds = [...stepsByDealId.keys()];
+  if (!verifiableDealIds.length) return results;
+
+  const eventLimit = 10000;
+  const events = await db
+    .select({
+      dealId: distributionDealEvents.dealId,
+      eventAt: distributionDealEvents.eventAt,
+      metadata: distributionDealEvents.metadata,
+      actorRole: users.role,
+    })
+    .from(distributionDealEvents)
+    .leftJoin(users, eq(distributionDealEvents.actorUserId, users.id))
+    .where(
+      and(
+        inArray(distributionDealEvents.dealId, verifiableDealIds),
+        eq(distributionDealEvents.eventType, 'note'),
+      ),
+    )
+    .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id))
+    .limit(eventLimit);
+
+  if (events.length >= eventLimit) {
+    for (const dealId of verifiableDealIds) {
+      results.set(dealId, { verified: false, steps: [], progress: [] });
+    }
+    return results;
+  }
+
+  const eventsByDealId = new Map<number, Array<Record<string, unknown>>>();
+  for (const event of events) {
+    const dealId = Number(event.dealId);
+    const dealEvents = eventsByDealId.get(dealId) || [];
+    dealEvents.push(event);
+    eventsByDealId.set(dealId, dealEvents);
+  }
+
+  for (const deal of deals) {
+    const steps = stepsByDealId.get(deal.dealId);
+    if (!steps) continue;
+    results.set(deal.dealId, {
+      verified: true,
+      steps,
+      progress: deriveReferralWorkflowStepProgress({
+        steps,
+        events: eventsByDealId.get(deal.dealId) || [],
+        termsSnapshotDigest: deal.referralTermsSnapshotDigest,
+      }),
+    });
+  }
+  return results;
 }
 
 export async function recordReferralWorkflowStepProgress(
@@ -264,6 +349,12 @@ export async function recordReferralWorkflowStepProgress(
   }
 
   const currentProgress = await getReferralWorkflowProgress(db, input.dealId);
+  if (!currentProgress.verified) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The referral process history is too large to verify safely. Contact an administrator.',
+    });
+  }
   const currentStepProgress = currentProgress.progress.find(item => item.stepKey === input.stepKey);
   if (
     currentStepProgress?.status === input.status &&

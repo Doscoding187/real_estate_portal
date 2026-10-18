@@ -11,6 +11,7 @@ import {
   findScheduledPartnerViewing,
   formatPartnerDealStatus,
   formatPartnerDateTime,
+  summarizePartnerReferralWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -112,6 +113,7 @@ export default function PartnerMyReferralsPage() {
             {filteredItems.map((item: any) => {
               const dealId = Number(item.dealId);
               const scheduledViewing = findScheduledPartnerViewing(dealId, recordedViewings);
+              const processSummary = summarizePartnerReferralWorkflow(item.workflowProgress);
               return (
                 <article key={dealId} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
                   <div className="min-w-0 flex-1">
@@ -124,6 +126,11 @@ export default function PartnerMyReferralsPage() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       Updated {formatPartnerDateTime(item.updatedAt)}
                     </p>
+                    {processSummary ? (
+                      <p className="mt-2 max-w-2xl text-xs text-muted-foreground">
+                        Saved process: {processSummary}
+                      </p>
+                    ) : null}
                     {scheduledViewing ? (
                       <p className="mt-2 text-xs font-medium text-primary">
                         {new Date(String(scheduledViewing.scheduledStartAt || '')).getTime() < Date.now()

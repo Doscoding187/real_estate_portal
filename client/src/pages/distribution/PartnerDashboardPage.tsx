@@ -11,6 +11,7 @@ import {
   formatPartnerDealGuidance,
   formatPartnerDateTime,
   getPartnerPayoutRecordState,
+  summarizePartnerReferralWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 import {
@@ -314,6 +315,7 @@ export default function PartnerDashboardPage() {
             <div className="divide-y divide-border">
               {recentDeals.slice(0, 5).map((deal: any) => {
                 const dealId = Number(deal.dealId);
+                const processSummary = summarizePartnerReferralWorkflow(deal.workflowProgress);
                 return (
                   <button
                     key={dealId}
@@ -329,7 +331,9 @@ export default function PartnerDashboardPage() {
                         {deal.marketMode === 'rent' ? 'Rental' : 'Purchase'} · Deal #{dealId} · Updated {formatPartnerDateTime(deal.updatedAt)}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
-                        What happens next: {formatPartnerDealGuidance(deal.status, dealId, recordedViewings)}
+                        {processSummary
+                          ? `Saved process: ${processSummary}`
+                          : `What happens next: ${formatPartnerDealGuidance(deal.status, dealId, recordedViewings)}`}
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {deal.manager?.displayName

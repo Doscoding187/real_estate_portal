@@ -22,7 +22,10 @@ import {
   assertPartnerDevelopmentReferralOpen,
 } from './distributionPartnerProgramAccessService';
 import { buildDistributionReferralTermsSnapshot } from './distributionReferralTermsSnapshotService';
-import { getReferralWorkflowProgress } from './distributionDealWorkflowProgressService';
+import {
+  getReferralWorkflowProgress,
+  getReferralWorkflowProgressForDeals,
+} from './distributionDealWorkflowProgressService';
 import {
   buildReferralIntakeEvidenceSnapshot,
   getCompletePartnerReferralIntakeSession,
@@ -775,12 +778,22 @@ export async function listMyReferralDeals(
   const hasMore = rows.length > normalizedLimit;
   const pageRows = hasMore ? rows.slice(0, normalizedLimit) : rows;
 
-  const progressMap = await computeDealDocumentProgressMap(db, {
-    dealRows: pageRows.map(row => ({
-      dealId: Number(row.dealId),
-      developmentId: Number(row.developmentId),
-    })),
-  });
+  const [progressMap, workflowProgressMap] = await Promise.all([
+    computeDealDocumentProgressMap(db, {
+      dealRows: pageRows.map(row => ({
+        dealId: Number(row.dealId),
+        developmentId: Number(row.developmentId),
+      })),
+    }),
+    getReferralWorkflowProgressForDeals(
+      db,
+      pageRows.map(row => ({
+        dealId: Number(row.dealId),
+        referralTermsSnapshotJson: row.referralTermsSnapshotJson,
+        referralTermsSnapshotDigest: row.referralTermsSnapshotDigest,
+      })),
+    ),
+  ]);
 
   return {
     items: pageRows.map(row => {
@@ -815,6 +828,7 @@ export async function listMyReferralDeals(
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         docProgress,
+        workflowProgress: workflowProgressMap.get(Number(row.dealId)) || null,
       };
     }),
     nextCursor: hasMore ? String(pageRows[pageRows.length - 1]?.dealId || '') : undefined,
