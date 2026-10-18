@@ -25,6 +25,7 @@ import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
 } from '../shared/commercial-domain';
+import { safeErrorSummary } from './_core/safeError';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -134,7 +135,7 @@ export const propertyResultsRouter = router({
             },
           };
         } catch (error) {
-          console.error('[PropertyResults] Create saved search error:', error);
+          console.error('[PropertyResults] Create saved search error:', safeErrorSummary(error));
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Failed to create saved search',
@@ -204,7 +205,7 @@ export const propertyResultsRouter = router({
           data: searchesWithCounts,
         };
       } catch (error) {
-        console.error('[PropertyResults] List saved searches error:', error);
+        console.error('[PropertyResults] List saved searches error:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to list saved searches',
@@ -256,7 +257,7 @@ export const propertyResultsRouter = router({
           };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
-          console.error('[PropertyResults] Load saved search error:', error);
+          console.error('[PropertyResults] Load saved search error:', safeErrorSummary(error));
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Failed to load saved search',
@@ -304,7 +305,7 @@ export const propertyResultsRouter = router({
           };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
-          console.error('[PropertyResults] Delete saved search error:', error);
+          console.error('[PropertyResults] Delete saved search error:', safeErrorSummary(error));
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Failed to delete saved search',

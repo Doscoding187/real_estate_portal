@@ -18,6 +18,7 @@ import type { EnhancedTRPCContext } from './_core/publisherContext';
 import { sanitizeDraftData } from './lib/sanitizeDraftData';
 import { getDeveloperOperatingHome } from './services/developerOperatingHome';
 import { assertLandDevelopmentDraftOperationAvailable } from './services/developerEngineContainment';
+import { safeErrorSummary } from './_core/safeError';
 
 async function requireActivePublisherContext(ctx: EnhancedTRPCContext, cataloguePublisherId: number) {
   const identity = await resolveOperatingIdentity(ctx, {
@@ -806,7 +807,7 @@ export const superAdminPublisherRouter = router({
         totalLeads: Number(leadCount?.count || 0),
       };
     } catch (error) {
-      console.error('[superAdminPublisher.getGlobalMetrics] Query failed:', error);
+      console.error('[superAdminPublisher.getGlobalMetrics] Query failed:', safeErrorSummary(error));
       throw error;
     }
   }),

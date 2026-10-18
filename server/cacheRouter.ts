@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { redisCache } from './lib/redis';
 import { getCacheStats } from './services/cacheIntegrationService';
+import { safeErrorSummary } from './_core/safeError';
 
 export const cacheRouter = router({
   /**
@@ -28,7 +29,7 @@ export const cacheRouter = router({
         },
       };
     } catch (error: any) {
-      console.error('Error fetching cache stats:', error);
+      console.error('Error fetching cache stats:', safeErrorSummary(error));
       throw new Error('Failed to fetch cache statistics');
     }
   }),
@@ -45,7 +46,7 @@ export const cacheRouter = router({
         message: 'Cache cleared successfully',
       };
     } catch (error: any) {
-      console.error('Error clearing cache:', error);
+      console.error('Error clearing cache:', safeErrorSummary(error));
       throw new Error('Failed to clear cache');
     }
   }),
@@ -68,7 +69,7 @@ export const cacheRouter = router({
           message: `Cache pattern 'explore:${input.pattern}:*' cleared successfully`,
         };
       } catch (error: any) {
-        console.error('Error clearing cache pattern:', error);
+        console.error('Error clearing cache pattern:', safeErrorSummary(error));
         throw new Error('Failed to clear cache pattern');
       }
     }),

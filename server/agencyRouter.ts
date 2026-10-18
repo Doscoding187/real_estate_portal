@@ -48,6 +48,7 @@ import {
 } from '../drizzle/schema';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
+import { safeErrorSummary } from './_core/safeError';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -1503,7 +1504,7 @@ async function createViewingNotification(input: {
       isRead: 0,
     });
   } catch (error) {
-    console.warn('[agency.viewings] Notification insert skipped', error);
+    console.warn('[agency.viewings] Notification insert skipped', safeErrorSummary(error));
   }
 }
 
@@ -9380,7 +9381,7 @@ export const agencyRouter = router({
           isEnabled: Boolean(branding.isEnabled),
         };
       } catch (error) {
-        console.error('[agency.getBranding] Error:', error);
+        console.error('[agency.getBranding] Error:', safeErrorSummary(error));
         // Return default on error
         return {
           companyName: 'Real Estate Portal',

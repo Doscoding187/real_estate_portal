@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { contentApprovalService } from './services/contentApprovalService';
 import { requireAuth } from './_core/auth';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 const ensureNonEmptyString = (value: unknown): string | null => {
@@ -44,7 +45,7 @@ const ensureNonEmptyString = (value: unknown): string | null => {
 
     res.status(201).json(queueItem);
   } catch (error: any) {
-    console.error('Error submitting content for approval:', error);
+    console.error('Error submitting content for approval:', safeErrorSummary(error));
 
     if (error.message === 'Partner not found') {
       return res.status(404).json({ error: error.message });
@@ -94,7 +95,7 @@ router.get('/approval-queue', requireAuth, async (req, res) => {
 
     res.json(queue);
   } catch (error: any) {
-    console.error('Error fetching approval queue:', error);
+    console.error('Error fetching approval queue:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -142,7 +143,7 @@ router.post('/:id/review', requireAuth, async (req, res) => {
 
     res.json({ message: 'Content reviewed successfully' });
   } catch (error: any) {
-    console.error('Error reviewing content:', error);
+    console.error('Error reviewing content:', safeErrorSummary(error));
 
     if (error.message === 'Queue item not found') {
       return res.status(404).json({ error: error.message });
@@ -176,7 +177,7 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
 
     res.json({ message: 'Content flagged successfully' });
   } catch (error: any) {
-    console.error('Error flagging content:', error);
+    console.error('Error flagging content:', safeErrorSummary(error));
 
     if (error.message === 'Content not found') {
       return res.status(404).json({ error: error.message });
@@ -215,7 +216,7 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
 
     res.json(stats);
   } catch (error: any) {
-    console.error('Error fetching partner review stats:', error);
+    console.error('Error fetching partner review stats:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -264,7 +265,7 @@ router.post('/:id/flag', requireAuth, async (req, res) => {
 
     res.json(validation);
   } catch (error: any) {
-    console.error('Error validating content:', error);
+    console.error('Error validating content:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });

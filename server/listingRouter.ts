@@ -77,6 +77,7 @@ import {
 } from './services/listingContentCustody';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
 import { LandLaunchContainmentError } from './services/landLaunchContainmentService';
+import { safeErrorSummary } from './_core/safeError';
 
 function rejectGenericCommercialWorkflow(propertyType: unknown): void {
   if (!isCommercialMarketingPropertyType(propertyType)) return;
@@ -623,7 +624,7 @@ export const listingRouter = router({
         createdAt: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Error creating listing:', error);
+      console.error('Error creating listing:', safeErrorSummary(error));
       // Re-throw TRPC errors
       if (error instanceof TRPCError) {
         throw error;
@@ -887,7 +888,7 @@ export const listingRouter = router({
           status: requiresReviewBeforePublicUpdate ? 'pending_review' : undefined,
         };
       } catch (error) {
-        console.error('Error updating listing:', error);
+        console.error('Error updating listing:', safeErrorSummary(error));
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -981,7 +982,7 @@ export const listingRouter = router({
         agent,
       };
     } catch (error) {
-      console.error('Error fetching listing:', error);
+      console.error('Error fetching listing:', safeErrorSummary(error));
       if (error instanceof TRPCError) throw error;
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1031,7 +1032,7 @@ export const listingRouter = router({
             !isDedicatedLandWorkflowListingRecord(listing as Record<string, unknown>),
         );
       } catch (error) {
-        console.error('Error fetching user listings:', error);
+        console.error('Error fetching user listings:', safeErrorSummary(error));
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to fetch listings' });
       }
     }),
@@ -1069,7 +1070,7 @@ export const listingRouter = router({
 
         return { success: true };
       } catch (error) {
-        console.error('Error archiving listing:', error);
+        console.error('Error archiving listing:', safeErrorSummary(error));
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1127,7 +1128,7 @@ export const listingRouter = router({
 
         return { success: true };
       } catch (error) {
-        console.error('Error deleting listing:', error);
+        console.error('Error deleting listing:', safeErrorSummary(error));
 
         // If it's already a TRPCError, re-throw it
         if (error instanceof TRPCError) {
@@ -1226,7 +1227,7 @@ export const listingRouter = router({
         ) {
           throw new TRPCError({ code: 'BAD_REQUEST', message: error.message });
         }
-        console.error('Error generating media upload URL:', error);
+        console.error('Error generating media upload URL:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate upload URL',
@@ -1336,7 +1337,7 @@ export const listingRouter = router({
         return analytics;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        console.error('Error fetching analytics:', error);
+        console.error('Error fetching analytics:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch analytics',
@@ -1495,7 +1496,7 @@ export const listingRouter = router({
           propertyId,
         };
       } catch (error) {
-        console.error('Error fetching leads:', error);
+        console.error('Error fetching leads:', safeErrorSummary(error));
         if (error instanceof TRPCError) {
           throw error;
         }
@@ -1876,7 +1877,7 @@ export const listingRouter = router({
 
         return { success: true, status: 'pending_review' };
       } catch (error) {
-        console.error('Error submitting for review:', error);
+        console.error('Error submitting for review:', safeErrorSummary(error));
 
         if (!(error instanceof TRPCError)) {
           await recordSubmitFailure(
@@ -1949,7 +1950,7 @@ export const listingRouter = router({
 
         return { success: true };
       } catch (error) {
-        console.error('Error promoting listing:', error);
+        console.error('Error promoting listing:', safeErrorSummary(error));
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2001,7 +2002,7 @@ export const listingRouter = router({
 
         return { success: true };
       } catch (error) {
-        console.error('Error approving listing:', error);
+        console.error('Error approving listing:', safeErrorSummary(error));
         throw mapListingLifecycleError(error, 'Failed to approve listing');
       }
     }),
@@ -2044,7 +2045,7 @@ export const listingRouter = router({
 
         return { success: true };
       } catch (error) {
-        console.error('Error rejecting listing:', error);
+        console.error('Error rejecting listing:', safeErrorSummary(error));
         throw mapListingLifecycleError(error, 'Failed to reject listing');
       }
     }),
@@ -2070,7 +2071,7 @@ export const listingRouter = router({
 
         return queueItems.slice(input.offset, input.offset + input.limit);
       } catch (error) {
-        console.error('Error fetching approval queue:', error);
+        console.error('Error fetching approval queue:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch approval queue',
