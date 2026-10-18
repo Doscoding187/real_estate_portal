@@ -15,6 +15,7 @@ import {
   formatPartnerDateTime,
   formatPartnerEventSource,
   formatPartnerProcessOwner,
+  summarizePartnerReferralWorkflow,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -99,7 +100,9 @@ export default function PartnerReferralDetailPage() {
     Number(referral.dealId),
     recordedViewings,
   );
-  const nextActionHint = formatPartnerDealGuidance(
+  const workflowProgress = (referral as any).workflowProgress;
+  const processSummary = summarizePartnerReferralWorkflow(workflowProgress);
+  const nextActionHint = processSummary || formatPartnerDealGuidance(
     referral.status,
     Number(referral.dealId),
     recordedViewings,
@@ -107,7 +110,6 @@ export default function PartnerReferralDetailPage() {
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
-  const workflowProgress = (referral as any).workflowProgress;
   const processSteps = Array.isArray(workflowProgress?.steps) ? workflowProgress.steps : [];
   const progressByStepKey = new Map<string, any>(
     (Array.isArray(workflowProgress?.progress) ? workflowProgress.progress : []).map((item: any) => [
@@ -175,7 +177,7 @@ export default function PartnerReferralDetailPage() {
                       `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
                     );
                     const body = encodeURIComponent(
-                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nNext action: ${nextActionHint}\n\nThanks.`,
+                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nCurrent progress: ${nextActionHint}\n\nThanks.`,
                     );
                     window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
                   }}
