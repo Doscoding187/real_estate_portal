@@ -2,11 +2,11 @@ import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
   affordabilityAssessments,
-  developmentManagerAssignments,
   developmentRequiredDocuments,
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionManagerAssignments,
   distributionPrograms,
   users,
 } from '../../drizzle/schema';
@@ -111,17 +111,17 @@ export async function pickManagerForDevelopment(
   const db = await resolveDb(options?.db);
   const [primaryAssignment] = await db
     .select({
-      managerUserId: developmentManagerAssignments.managerUserId,
+      managerUserId: distributionManagerAssignments.managerUserId,
     })
-    .from(developmentManagerAssignments)
+    .from(distributionManagerAssignments)
     .where(
       and(
-        eq(developmentManagerAssignments.developmentId, developmentId),
-        eq(developmentManagerAssignments.isActive, 1),
-        eq(developmentManagerAssignments.isPrimary, 1),
+        eq(distributionManagerAssignments.developmentId, developmentId),
+        eq(distributionManagerAssignments.isActive, 1),
+        eq(distributionManagerAssignments.isPrimary, 1),
       ),
     )
-    .orderBy(desc(developmentManagerAssignments.assignedAt))
+    .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
   return primaryAssignment?.managerUserId ? Number(primaryAssignment.managerUserId) : null;
