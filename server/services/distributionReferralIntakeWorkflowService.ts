@@ -165,6 +165,7 @@ export async function getPartnerReferralIntakeRequirements(input: {
     namedRecipients: policy.configuration.namedRecipients,
     signatureMethod: policy.configuration.signatureMethod,
     identityEvidence: policy.configuration.identityEvidence,
+    workflowSteps: policy.configuration.workflowSteps,
     requiredEvidenceTypes: [...REQUIRED_EVIDENCE_TYPES],
     maxUploadBytes: Math.min(
       policy.configuration.identityEvidence.maxFileBytes,

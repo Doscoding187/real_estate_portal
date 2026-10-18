@@ -14,6 +14,7 @@ import {
   formatPartnerDealStatus,
   formatPartnerDateTime,
   formatPartnerEventSource,
+  formatPartnerProcessOwner,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -26,26 +27,6 @@ function processStepTypeLabel(stepType: unknown) {
     closure: 'Completion',
   };
   return labels[String(stepType || '').toLowerCase()] || 'Process step';
-}
-
-function processOwnerLabel(ownerRole: unknown) {
-  const owner = String(ownerRole || '').trim();
-  if (!owner) return null;
-
-  const normalized = owner.toLowerCase().replace(/[\s_-]+/g, ' ');
-  const knownLabels: Record<string, string> = {
-    partner: 'You',
-    referrer: 'You',
-    'referral partner': 'You',
-    'distribution team': 'Property Listify team',
-    'distribution manager': 'Property Listify team',
-    manager: 'Property Listify team',
-    admin: 'Property Listify team',
-    developer: 'Developer team',
-    'developer team': 'Developer team',
-  };
-
-  return knownLabels[normalized] || owner.replace(/[_-]+/g, ' ');
 }
 
 export default function PartnerReferralDetailPage() {
@@ -305,7 +286,7 @@ export default function PartnerReferralDetailPage() {
                             ? 'Required to continue'
                             : 'As needed'}
                         </p>
-                        {step.ownerRole ? <p>Handled by: {processOwnerLabel(step.ownerRole)}</p> : null}
+                        {step.ownerRole ? <p>Handled by: {formatPartnerProcessOwner(step.ownerRole)}</p> : null}
                         {step.partnerInstructions ? (
                           <p className="whitespace-pre-line text-sm leading-5 text-foreground/80">
                             {step.partnerInstructions}

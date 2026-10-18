@@ -509,6 +509,8 @@ export default function PartnerDevelopmentsPage() {
         <ProgramRequirementsDialog
           open={Boolean(selectedItem)}
           onOpenChange={open => !open && setSelectedItem(null)}
+          developmentId={Number(selectedItem.developmentId)}
+          referralProcessAvailable={Boolean(selectedItem.opportunity?.openForReferral)}
           item={selectedItem}
         />
       ) : null}

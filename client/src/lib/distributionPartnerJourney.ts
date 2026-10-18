@@ -120,6 +120,26 @@ export function formatPartnerEventSource(roleValue: unknown) {
   return 'Team update';
 }
 
+export function formatPartnerProcessOwner(ownerRole: unknown) {
+  const owner = String(ownerRole || '').trim();
+  if (!owner) return null;
+
+  const normalized = owner.toLowerCase().replace(/[\s_-]+/g, ' ');
+  const knownLabels: Record<string, string> = {
+    partner: 'You',
+    referrer: 'You',
+    'referral partner': 'You',
+    'distribution team': 'Property Listify team',
+    'distribution manager': 'Property Listify team',
+    manager: 'Property Listify team',
+    admin: 'Property Listify team',
+    developer: 'Developer team',
+    'developer team': 'Developer team',
+  };
+
+  return knownLabels[normalized] || owner.replace(/[_-]+/g, ' ');
+}
+
 export function formatPartnerDateTime(value: unknown) {
   if (!value) return 'Date not available';
   const parsed = new Date(String(value));
