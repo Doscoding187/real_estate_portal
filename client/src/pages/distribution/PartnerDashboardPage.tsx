@@ -229,7 +229,7 @@ export default function PartnerDashboardPage() {
     ...(payoutSummary.counts.approved > 0 ? [{
       label: 'Approved for payment',
       value: formatPayoutTotals(payoutSummary.amounts.approved),
-      supportingText: `${payoutSummary.counts.approved} approved record${payoutSummary.counts.approved === 1 ? '' : 's'} · payment timing follows program terms`,
+      supportingText: `${payoutSummary.counts.approved} approved record${payoutSummary.counts.approved === 1 ? '' : 's'} · no estimated payment date is recorded`,
       icon: <CircleDollarSign className="h-4 w-4" />,
     }] : []),
     ...(payoutSummary.counts.paid > 0 ? [{
