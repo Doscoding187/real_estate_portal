@@ -105,13 +105,34 @@ export async function buildDistributionReferralTermsSnapshot(input: {
     .limit(1);
 
   if (!program) return null;
-  const commissionModel = String(program.commissionModel || '');
-  const payoutPercent = Number(program.defaultCommissionPercent || 0);
-  const payoutAmount = Number(program.defaultCommissionAmount || 0);
-  const currencyCode = String(program.currencyCode || '').trim().toUpperCase();
+  const referrerCommissionType =
+    program.referrerCommissionType === 'flat' || program.referrerCommissionType === 'percentage'
+      ? program.referrerCommissionType
+      : null;
+  const referrerCommissionValue = Number(program.referrerCommissionValue || 0);
+  const referrerCommissionBasis =
+    program.referrerCommissionBasis === 'sale_price' ||
+    program.referrerCommissionBasis === 'base_price'
+      ? program.referrerCommissionBasis
+      : null;
+  if (referrerCommissionType === 'percentage' && input.marketMode === 'rent') {
+    throw new Error(
+      'Percentage referral payouts are not configured for rental referrals. Set a fixed referral payout before accepting rental referrals.',
+    );
+  }
+  const currencyCode = String(program.currencyCode || '')
+    .trim()
+    .toUpperCase();
   const payoutTermsConfigured =
-    (commissionModel === 'flat_percentage' && Number.isFinite(payoutPercent) && payoutPercent > 0) ||
-    (commissionModel === 'fixed_amount' && Number.isFinite(payoutAmount) && payoutAmount > 0);
+    referrerCommissionType === 'flat' &&
+    Number.isFinite(referrerCommissionValue) &&
+    referrerCommissionValue > 0
+      ? true
+      : referrerCommissionType === 'percentage' &&
+        Number.isFinite(referrerCommissionValue) &&
+        referrerCommissionValue > 0 &&
+        (referrerCommissionBasis === 'sale_price' || referrerCommissionBasis === 'base_price') &&
+        input.marketMode === 'sale';
   if (
     Number(program.isActive) !== 1 ||
     Number(program.isReferralEnabled) !== 1 ||
@@ -172,7 +193,9 @@ export async function buildDistributionReferralTermsSnapshot(input: {
         and(
           eq(developmentRequiredDocuments.developmentId, input.developmentId),
           eq(developmentRequiredDocuments.category, 'client_required_document'),
-          inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
+          inArray(developmentRequiredDocuments.documentCode, [
+            ...DISTRIBUTION_PROCESS_DOCUMENT_CODES,
+          ]),
           eq(developmentRequiredDocuments.isActive, 1),
           eq(developmentRequiredDocuments.isRequired, 1),
         ),
@@ -193,7 +216,9 @@ export async function buildDistributionReferralTermsSnapshot(input: {
     totalMode.priceFrom <= 0 ||
     totalMode.priceTo < totalMode.priceFrom
   ) {
-    throw new Error(`The current Developer projection has no marketable ${input.marketMode} inventory.`);
+    throw new Error(
+      `The current Developer projection has no marketable ${input.marketMode} inventory.`,
+    );
   }
 
   const developerSalesSnapshot = {
@@ -240,9 +265,9 @@ export async function buildDistributionReferralTermsSnapshot(input: {
       commissionModel: program.commissionModel,
       defaultCommissionPercent: program.defaultCommissionPercent,
       defaultCommissionAmount: program.defaultCommissionAmount,
-      referrerCommissionType: program.referrerCommissionType,
-      referrerCommissionValue: program.referrerCommissionValue,
-      referrerCommissionBasis: program.referrerCommissionBasis,
+      referrerCommissionType,
+      referrerCommissionValue,
+      referrerCommissionBasis,
       platformCommissionType: program.platformCommissionType,
       platformCommissionValue: program.platformCommissionValue,
       platformCommissionBasis: program.platformCommissionBasis,

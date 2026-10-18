@@ -86,27 +86,11 @@ function formatPayout(program: typeof distributionPrograms.$inferSelect) {
   }
   if (payoutType === 'percentage' && Number.isFinite(percent) && percent > 0) {
     const basis = program.referrerCommissionBasis?.replace(/_/g, ' ');
-    return `${percent}% referral payout${basis ? ` of ${basis}` : ''}`;
+    return basis
+      ? `${percent}% referral payout of ${basis}`
+      : 'Percentage referral payout basis not configured';
   }
-
-  // The pre-existing program form still writes the generic payout model.
-  // Keep its display accurate while that form is being reconciled with the
-  // explicit referrer payout fields above.
-  if (
-    (program.commissionModel === 'fixed_amount' || program.commissionModel === 'flat_amount') &&
-    Number.isFinite(Number(program.defaultCommissionAmount)) &&
-    Number(program.defaultCommissionAmount) > 0
-  ) {
-    return `${currency === 'ZAR' ? 'R' : `${currency} `}${Math.round(Number(program.defaultCommissionAmount)).toLocaleString('en-ZA')} referral payout`;
-  }
-  if (
-    program.commissionModel === 'flat_percentage' &&
-    Number.isFinite(Number(program.defaultCommissionPercent)) &&
-    Number(program.defaultCommissionPercent) > 0
-  ) {
-    return `${Number(program.defaultCommissionPercent)}% referral payout`;
-  }
-  return 'Referral payout terms configured';
+  return 'Referral payout terms not configured';
 }
 
 async function getPublisherScopedDevelopmentIds(

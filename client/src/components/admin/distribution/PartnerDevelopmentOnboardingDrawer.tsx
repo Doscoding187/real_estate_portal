@@ -72,6 +72,9 @@ type ProgramReadiness = {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType?: 'flat' | 'percentage' | null;
+    referrerCommissionValue?: number | null;
+    referrerCommissionBasis?: 'sale_price' | 'base_price' | null;
     payoutMilestone: string | null;
     currencyCode: string | null;
     tierAccessPolicy: string | null;
@@ -87,6 +90,7 @@ type BrandOnboardingPreset = {
   commissionModel: 'flat_percentage' | 'flat_amount';
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
+  referrerCommissionBasis?: 'sale_price' | 'base_price' | null;
   tierAccessPolicy: 'restricted' | 'open' | 'invite_only';
   payoutMilestone:
     | 'attorney_instruction'
@@ -315,11 +319,12 @@ export function ReadinessStatusChips({ readiness }: { readiness?: ProgramReadine
 
   const { state } = readiness;
   const hasPayoutValue =
-    state.commissionModel === 'flat_percentage'
-      ? Boolean(state.defaultCommissionPercent && state.defaultCommissionPercent > 0)
-      : state.commissionModel === 'flat_amount'
-        ? Boolean(state.defaultCommissionAmount && state.defaultCommissionAmount > 0)
-        : false;
+    Boolean(
+      state.referrerCommissionType &&
+      state.referrerCommissionValue &&
+      state.referrerCommissionValue > 0,
+    ) &&
+    (state.referrerCommissionType !== 'percentage' || Boolean(state.referrerCommissionBasis));
 
   return (
     <div className="flex flex-wrap gap-1">
@@ -356,11 +361,12 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
 
   const { state } = readiness;
   const hasPayoutValue =
-    state.commissionModel === 'flat_percentage'
-      ? Boolean(state.defaultCommissionPercent && state.defaultCommissionPercent > 0)
-      : state.commissionModel === 'flat_amount'
-        ? Boolean(state.defaultCommissionAmount && state.defaultCommissionAmount > 0)
-        : false;
+    Boolean(
+      state.referrerCommissionType &&
+      state.referrerCommissionValue &&
+      state.referrerCommissionValue > 0,
+    ) &&
+    (state.referrerCommissionType !== 'percentage' || Boolean(state.referrerCommissionBasis));
   const checklist = [
     {
       label: 'Create referral setup',
@@ -375,7 +381,7 @@ function ReadinessChecklist({ readiness }: { readiness?: ProgramReadiness | null
     {
       label: 'Set referral payout value',
       done: hasPayoutValue,
-      help: 'Document eligibility, calculation basis for percentages, and payout timing in program terms; this field stores only the value.',
+      help: 'Set the value and, for percentage payouts, the calculation basis that will be frozen on each referral.',
     },
     {
       label: 'Choose payout trigger',
@@ -483,6 +489,9 @@ function DevelopmentProgramConfigPanel({
   );
   const [defaultCommissionPercent, setDefaultCommissionPercent] = useState('');
   const [defaultCommissionAmount, setDefaultCommissionAmount] = useState('');
+  const [referrerCommissionBasis, setReferrerCommissionBasis] = useState<
+    'sale_price' | 'base_price' | ''
+  >('');
   const [tierAccessPolicy, setTierAccessPolicy] = useState<'restricted' | 'open' | 'invite_only'>(
     'restricted',
   );
@@ -505,6 +514,7 @@ function DevelopmentProgramConfigPanel({
     setDefaultCommissionAmount(
       preset.defaultCommissionAmount != null ? String(preset.defaultCommissionAmount) : '',
     );
+    setReferrerCommissionBasis(preset.referrerCommissionBasis || '');
     setTierAccessPolicy(preset.tierAccessPolicy);
     setPayoutMilestone(preset.payoutMilestone);
     setPayoutMilestoneNotes(preset.payoutMilestoneNotes || '');
@@ -534,6 +544,9 @@ function DevelopmentProgramConfigPanel({
     );
     setDefaultCommissionAmount(
       String(readiness?.state.defaultCommissionAmount ?? program.defaultCommissionAmount ?? ''),
+    );
+    setReferrerCommissionBasis(
+      readiness?.state.referrerCommissionBasis || program.referrerCommissionBasis || '',
     );
     setTierAccessPolicy(
       (readiness?.state.tierAccessPolicy || program.tierAccessPolicy || 'restricted') as
@@ -793,6 +806,10 @@ function DevelopmentProgramConfigPanel({
         commissionModel === 'flat_amount' && defaultCommissionAmount !== ''
           ? Number(defaultCommissionAmount)
           : null,
+      referrerCommissionBasis:
+        commissionModel === 'flat_percentage' && referrerCommissionBasis
+          ? referrerCommissionBasis
+          : null,
       tierAccessPolicy,
       payoutMilestone,
       payoutMilestoneNotes:
@@ -825,6 +842,10 @@ function DevelopmentProgramConfigPanel({
       defaultCommissionAmount:
         commissionModel === 'flat_amount' && defaultCommissionAmount !== ''
           ? Number(defaultCommissionAmount)
+          : null,
+      referrerCommissionBasis:
+        commissionModel === 'flat_percentage' && referrerCommissionBasis
+          ? referrerCommissionBasis
           : null,
       tierAccessPolicy,
       payoutMilestone,
@@ -1213,10 +1234,27 @@ function DevelopmentProgramConfigPanel({
                 }
               />
               {commissionModel === 'flat_percentage' ? (
-                <p className="text-[11px] text-amber-700">
-                  The calculation basis is not captured here. Document the agreed basis in the
-                  program terms before enabling this payout model.
-                </p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs font-medium text-slate-700">Percentage calculation basis</p>
+                  <Select
+                    value={referrerCommissionBasis}
+                    onValueChange={value =>
+                      setReferrerCommissionBasis(value as 'sale_price' | 'base_price')
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a price basis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sale_price">Sale price</SelectItem>
+                      <SelectItem value="base_price">Base price</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-slate-500">
+                    Percentage payouts are available for sale referrals. Rental referrals need a
+                    fixed payout.
+                  </p>
+                </div>
               ) : null}
             </div>
           </div>

@@ -47,7 +47,10 @@ import {
 } from './services/distributionDeveloperReadPort';
 import { authService } from './_core/auth';
 import { EmailService } from './_core/emailService';
-import { ensureCommissionEntryForDeal } from './services/distributionCommissionService';
+import {
+  ensureCommissionEntryForDeal,
+  readFrozenPayoutTerms,
+} from './services/distributionCommissionService';
 import { buildDistributionManagerInviteUrl } from '../shared/distributionManagerInvite';
 import {
   upsertBrandPartnershipWithAudit,
@@ -496,7 +499,9 @@ function toNumberOrNull(value: unknown) {
 }
 
 async function getDevelopmentWorkspaceReferencesByIds(developmentIds: number[]) {
-  const ids = [...new Set(developmentIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0))];
+  const ids = [
+    ...new Set(developmentIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0)),
+  ];
   const references: DevelopmentSalesWorkspaceReference[] = [];
   for (let index = 0; index < ids.length; index += 200) {
     references.push(
@@ -630,10 +635,7 @@ function getDefaultOnboardingRequiredDocuments(): RequiredDocumentTemplateSeed[]
   return templates;
 }
 
-async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
-  db: any;
-  developmentId: number;
-}) {
+async function seedDevelopmentRequiredDocumentsIfEmpty(input: { db: any; developmentId: number }) {
   const [existingRow] = await input.db
     .select({ id: developmentRequiredDocuments.id })
     .from(developmentRequiredDocuments)
@@ -641,10 +643,9 @@ async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
       and(
         eq(developmentRequiredDocuments.developmentId, input.developmentId),
         eq(developmentRequiredDocuments.category, 'client_required_document'),
-        inArray(
-          developmentRequiredDocuments.documentCode,
-          [...DISTRIBUTION_PROCESS_DOCUMENT_CODES],
-        ),
+        inArray(developmentRequiredDocuments.documentCode, [
+          ...DISTRIBUTION_PROCESS_DOCUMENT_CODES,
+        ]),
         eq(developmentRequiredDocuments.isActive, 1),
       ),
     )
@@ -754,8 +755,7 @@ async function assertPartnerTermsAccess(db: any, user: { id: number; role: strin
 
   throw new TRPCError({
     code: 'FORBIDDEN',
-    message:
-      'An active Distribution Network identity is required to access partner program terms.',
+    message: 'An active Distribution Network identity is required to access partner program terms.',
   });
 }
 
@@ -1264,6 +1264,9 @@ async function listProgramsForAdmin() {
         commissionModel: distributionPrograms.commissionModel,
         defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
         defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+        referrerCommissionType: distributionPrograms.referrerCommissionType,
+        referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+        referrerCommissionBasis: distributionPrograms.referrerCommissionBasis,
         tierAccessPolicy: distributionPrograms.tierAccessPolicy,
         payoutMilestone: distributionPrograms.payoutMilestone,
         payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
@@ -1298,6 +1301,7 @@ const upsertProgramInput = z.object({
   commissionModel: z.enum(['flat_percentage', 'flat_amount']),
   defaultCommissionPercent: z.number().min(0).max(100).nullable().optional(),
   defaultCommissionAmount: z.number().int().min(0).nullable().optional(),
+  referrerCommissionBasis: z.enum(['sale_price', 'base_price']).nullable().optional(),
   tierAccessPolicy: z.enum(['open', 'restricted', 'invite_only']),
   payoutMilestone: z.enum([
     'attorney_instruction',
@@ -1383,6 +1387,15 @@ async function upsertProgram(
         | 'hybrid',
       defaultCommissionPercent: toNumberOrNull(input.defaultCommissionPercent),
       defaultCommissionAmount: toNumberOrNull(input.defaultCommissionAmount),
+      referrerCommissionType: input.commissionModel === 'flat_percentage' ? 'percentage' : 'flat',
+      referrerCommissionValue:
+        input.commissionModel === 'flat_percentage'
+          ? toNumberOrNull(input.defaultCommissionPercent)
+          : toNumberOrNull(input.defaultCommissionAmount),
+      referrerCommissionBasis:
+        input.commissionModel === 'flat_percentage'
+          ? (input.referrerCommissionBasis ?? null)
+          : null,
       tierAccessPolicy: input.tierAccessPolicy,
       payoutMilestone: input.payoutMilestone,
       currencyCode: input.currencyCode,
@@ -1408,6 +1421,13 @@ async function upsertProgram(
       input.defaultCommissionPercent === undefined ? null : input.defaultCommissionPercent,
     defaultCommissionAmount:
       input.defaultCommissionAmount === undefined ? null : input.defaultCommissionAmount,
+    referrerCommissionType: input.commissionModel === 'flat_percentage' ? 'percentage' : 'flat',
+    referrerCommissionValue:
+      input.commissionModel === 'flat_percentage'
+        ? (input.defaultCommissionPercent ?? null)
+        : (input.defaultCommissionAmount ?? null),
+    referrerCommissionBasis:
+      input.commissionModel === 'flat_percentage' ? (input.referrerCommissionBasis ?? null) : null,
     tierAccessPolicy: input.tierAccessPolicy,
     payoutMilestone: input.payoutMilestone,
     payoutMilestoneNotes:
@@ -1758,12 +1778,12 @@ const adminDistributionRouter = router({
             search: input?.search?.trim() || undefined,
             limit: input?.limit ?? 100,
           });
-          const visibleReferences = (input?.includeUnpublished ?? false)
-            ? references
-            : references.filter(
-                reference =>
-                  reference.isPublished && reference.approvalStatus === 'approved',
-              );
+          const visibleReferences =
+            (input?.includeUnpublished ?? false)
+              ? references
+              : references.filter(
+                  reference => reference.isPublished && reference.approvalStatus === 'approved',
+                );
           if (!visibleReferences.length) return [];
 
           const developmentIds = visibleReferences.map(reference => reference.developmentId);
@@ -1876,6 +1896,17 @@ const adminDistributionRouter = router({
                       | 'hybrid',
                     defaultCommissionPercent: toNumberOrNull(program.defaultCommissionPercent),
                     defaultCommissionAmount: toNumberOrNull(program.defaultCommissionAmount),
+                    referrerCommissionType:
+                      program.referrerCommissionType === 'flat' ||
+                      program.referrerCommissionType === 'percentage'
+                        ? program.referrerCommissionType
+                        : null,
+                    referrerCommissionValue: toNumberOrNull(program.referrerCommissionValue),
+                    referrerCommissionBasis:
+                      program.referrerCommissionBasis === 'sale_price' ||
+                      program.referrerCommissionBasis === 'base_price'
+                        ? program.referrerCommissionBasis
+                        : null,
                     tierAccessPolicy: program.tierAccessPolicy as
                       | 'open'
                       | 'restricted'
@@ -1916,8 +1947,7 @@ const adminDistributionRouter = router({
                 lifecycle: projection.campaign.lifecycle,
                 isPublished: reference.isPublished,
                 approvalStatus: reference.approvalStatus,
-                publishedEligible:
-                  reference.isPublished && reference.approvalStatus === 'approved',
+                publishedEligible: reference.isPublished && reference.approvalStatus === 'approved',
                 inventory: {
                   phaseScope: projection.inventory.phaseScope,
                   modes:
@@ -1942,6 +1972,9 @@ const adminDistributionRouter = router({
                       commissionModel: program.commissionModel,
                       defaultCommissionPercent: toNumberOrNull(program.defaultCommissionPercent),
                       defaultCommissionAmount: toNumberOrNull(program.defaultCommissionAmount),
+                      referrerCommissionType: program.referrerCommissionType,
+                      referrerCommissionValue: toNumberOrNull(program.referrerCommissionValue),
+                      referrerCommissionBasis: program.referrerCommissionBasis,
                       tierAccessPolicy: program.tierAccessPolicy,
                       payoutMilestone: program.payoutMilestone,
                       payoutMilestoneNotes: program.payoutMilestoneNotes,
@@ -4454,7 +4487,6 @@ const adminDistributionRouter = router({
             agentId: Number(deal.agentId),
             dealAmount: Number(deal.dealAmount ?? 0),
             commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
-            affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
             referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
             referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest,
             commissionTriggerStage: deal.commissionTriggerStage as
@@ -4621,9 +4653,9 @@ const adminDistributionRouter = router({
 
       return rows.map(row => ({
         ...row,
-          developmentName:
-            developmentReferences.get(Number(row.developmentId))?.displayName ||
-            `Development #${row.developmentId}`,
+        developmentName:
+          developmentReferences.get(Number(row.developmentId))?.displayName ||
+          `Development #${row.developmentId}`,
         agentDisplayName:
           userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
         agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
@@ -4928,8 +4960,7 @@ const managerDistributionRouter = router({
 
       return rows.map(row => ({
         ...row,
-        developmentName:
-          row.developmentId == null ? null : `Development #${row.developmentId}`,
+        developmentName: row.developmentId == null ? null : `Development #${row.developmentId}`,
         assignedAgentName:
           String(row.assignedAgentDisplayName || '').trim() ||
           [row.assignedAgentFirstName, row.assignedAgentLastName].filter(Boolean).join(' ') ||
@@ -5456,7 +5487,8 @@ const managerDistributionRouter = router({
       await assertDistributionSchemaReady('distribution.referralIntakeWorkflow');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
       const deal = await getDealById(db, input.dealId);
-      if (!deal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+      if (!deal)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
       if (ctx.user!.role !== 'super_admin') {
         await assertManagerScope(db, ctx.user!.id, {
           programId: Number(deal.programId),
@@ -5481,7 +5513,8 @@ const managerDistributionRouter = router({
       await assertDistributionSchemaReady('distribution.referralIntakeWorkflow');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
       const deal = await getDealById(db, input.dealId);
-      if (!deal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+      if (!deal)
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
       if (ctx.user!.role !== 'super_admin') {
         await assertManagerScope(db, ctx.user!.id, {
           programId: Number(deal.programId),
@@ -6231,6 +6264,132 @@ const managerDistributionRouter = router({
       return await buildDealTimelinePayload(db, deal as DealTimelineDealRow);
     }),
 
+  recordDealPayoutBasis: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        amount: z.number().int().positive().max(1_000_000_000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      const [deal] = await db
+        .select({
+          id: distributionDeals.id,
+          programId: distributionDeals.programId,
+          developmentId: distributionDeals.developmentId,
+          currentStage: distributionDeals.currentStage,
+          managerUserId: distributionDeals.managerUserId,
+          commissionTriggerStage: distributionDeals.commissionTriggerStage,
+          commissionStatus: distributionDeals.commissionStatus,
+          dealAmount: distributionDeals.dealAmount,
+          commissionBaseAmount: distributionDeals.commissionBaseAmount,
+          referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+          referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
+        })
+        .from(distributionDeals)
+        .where(eq(distributionDeals.id, input.dealId))
+        .limit(1);
+
+      if (!deal) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution deal not found.' });
+      }
+
+      if (ctx.user!.role !== 'super_admin') {
+        await assertManagerScope(db, ctx.user!.id, {
+          programId: deal.programId,
+          developmentId: deal.developmentId,
+        });
+        assertManagerOwnsDeal(ctx.user!.id, toNumberOrNull(deal.managerUserId));
+      }
+      assertDealIsMutable(deal.currentStage, 'record the referral payout calculation basis');
+
+      const frozenTerms = readFrozenPayoutTerms(
+        deal.referralTermsSnapshotJson,
+        deal.referralTermsSnapshotDigest,
+      );
+      if (
+        !frozenTerms ||
+        frozenTerms.referrerCommissionType !== 'percentage' ||
+        !frozenTerms.referrerCommissionBasis
+      ) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'This referral has no valid frozen percentage payout basis to record.',
+        });
+      }
+      const payoutBasis = frozenTerms.referrerCommissionBasis;
+
+      const stageOrder = DISTRIBUTION_PIPELINE_STAGE_ORDER;
+      const currentStageIndex = stageOrder.indexOf(deal.currentStage as DistributionDealStage);
+      const triggerStageIndex = stageOrder.indexOf(
+        deal.commissionTriggerStage as DistributionDealStage,
+      );
+      if (
+        currentStageIndex < 0 ||
+        triggerStageIndex < 0 ||
+        currentStageIndex >= triggerStageIndex ||
+        deal.commissionStatus === 'pending' ||
+        deal.commissionStatus === 'paid'
+      ) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'The payout basis can only be recorded before its payout milestone is reached.',
+        });
+      }
+
+      const [existingEntry] = await db
+        .select({ id: distributionCommissionEntries.id })
+        .from(distributionCommissionEntries)
+        .where(eq(distributionCommissionEntries.dealId, deal.id))
+        .limit(1);
+      if (existingEntry) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'A referral payout record already exists; its calculation basis is locked.',
+        });
+      }
+
+      const previousAmount =
+        payoutBasis === 'sale_price'
+          ? Number(deal.dealAmount || 0)
+          : Number(deal.commissionBaseAmount || 0);
+      const amountUpdate =
+        payoutBasis === 'sale_price'
+          ? { dealAmount: input.amount }
+          : { commissionBaseAmount: input.amount };
+
+      await db.transaction(async tx => {
+        await tx
+          .update(distributionDeals)
+          .set(amountUpdate)
+          .where(eq(distributionDeals.id, deal.id));
+        await tx.insert(distributionDealEvents).values({
+          dealId: deal.id,
+          fromStage: deal.currentStage,
+          toStage: deal.currentStage,
+          eventType: 'validation',
+          actorUserId: ctx.user!.id,
+          metadata: {
+            source: 'manager.recordDealPayoutBasis',
+            basis: payoutBasis,
+            previousAmount,
+            recordedAmount: input.amount,
+            currencyCode: frozenTerms.currencyCode,
+          } as any,
+          notes: `Recorded referral payout ${payoutBasis.replace(/_/g, ' ')}.`,
+        });
+      });
+
+      return await getDealChecklist(input.dealId, ctx.user!.id, {
+        skipAssignmentCheck: ctx.user!.role === 'super_admin',
+      });
+    }),
+
   advanceDealStage: protectedProcedure
     .input(
       z.object({
@@ -6404,7 +6563,6 @@ const managerDistributionRouter = router({
             agentId: Number(deal.agentId),
             dealAmount: Number(deal.dealAmount ?? 0),
             commissionBaseAmount: Number(deal.commissionBaseAmount ?? 0),
-            affordabilityPurchasePrice: Number(deal.affordabilityPurchasePrice ?? 0),
             referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
             referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest,
             commissionTriggerStage: deal.commissionTriggerStage as
@@ -6685,7 +6843,11 @@ const partnerDistributionRouter = router({
         userId: Number(ctx.user!.id),
         role: String(ctx.user!.role || ''),
       };
-      await assertPartnerDevelopmentProgramAccess({ db, actor, developmentId: input.developmentId });
+      await assertPartnerDevelopmentProgramAccess({
+        db,
+        actor,
+        developmentId: input.developmentId,
+      });
       await assertPartnerDevelopmentReferralOpen({ db, developmentId: input.developmentId });
       return await getPartnerReferralIntakeRequirements({
         developmentId: input.developmentId,
@@ -6711,7 +6873,11 @@ const partnerDistributionRouter = router({
         userId: Number(ctx.user!.id),
         role: String(ctx.user!.role || ''),
       };
-      await assertPartnerDevelopmentProgramAccess({ db, actor, developmentId: input.developmentId });
+      await assertPartnerDevelopmentProgramAccess({
+        db,
+        actor,
+        developmentId: input.developmentId,
+      });
       await assertPartnerDevelopmentReferralOpen({ db, developmentId: input.developmentId });
       return await createPartnerReferralIntakeSession({
         ...input,
@@ -7011,8 +7177,7 @@ const referrerDistributionRouter = router({
       const { items } = await listPartnerProgramTerms({
         actor: { userId: agentId, role: String(ctx.user!.role || '') },
       });
-      const currentTier =
-        (await getCurrentTierByAgentIds(db, [agentId])).get(agentId) || null;
+      const currentTier = (await getCurrentTierByAgentIds(db, [agentId])).get(agentId) || null;
 
       return items.map(item => ({
         id: null,
@@ -7683,9 +7848,7 @@ const developerDistributionRouter = router({
             truncated: false,
           };
         }
-        programConditions.push(
-          inArray(distributionPrograms.developmentId, scopedDevelopmentIds),
-        );
+        programConditions.push(inArray(distributionPrograms.developmentId, scopedDevelopmentIds));
       }
 
       const programRows = await db

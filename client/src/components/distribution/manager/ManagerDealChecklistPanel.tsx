@@ -21,6 +21,11 @@ type DealChecklist = {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType?: 'flat' | 'percentage' | null;
+    referrerCommissionValue?: number | null;
+    referrerCommissionBasis?: 'sale_price' | 'base_price' | null;
+    payoutBasisAmount?: number | null;
+    canRecordPayoutBasis?: boolean;
   };
   requiredDocuments: Array<{
     templateId: number;
@@ -52,12 +57,13 @@ type DealChecklist = {
 
 function formatReferralPayout(checklist: DealChecklist) {
   const summary = checklist.commissionSummary;
-  if (summary.commissionModel === 'flat_percentage' && summary.defaultCommissionPercent) {
-    return `${summary.defaultCommissionPercent}% (calculation basis not configured)`;
+  if (summary.referrerCommissionType === 'percentage' && summary.referrerCommissionValue) {
+    const basis = summary.referrerCommissionBasis?.replace(/_/g, ' ');
+    return `${summary.referrerCommissionValue}% of ${basis || 'basis not configured'}`;
   }
-  if (summary.commissionModel === 'flat_amount' && summary.defaultCommissionAmount) {
+  if (summary.referrerCommissionType === 'flat' && summary.referrerCommissionValue) {
     const currency = checklist.currencyCode || 'ZAR';
-    return `${currency} ${summary.defaultCommissionAmount}`;
+    return `${currency} ${Math.round(summary.referrerCommissionValue).toLocaleString('en-ZA')}`;
   }
   return 'Not configured';
 }
@@ -71,6 +77,8 @@ export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
   isBatchSaving,
+  isSavingPayoutBasis,
+  onRecordPayoutBasis,
   onUpdateDocumentStatus,
   onMarkAllRequiredReceived,
   onMarkAllRequiredVerified,
@@ -78,6 +86,8 @@ export function ManagerDealChecklistPanel({
   checklist: DealChecklist;
   savingTemplateId: number | null;
   isBatchSaving?: boolean;
+  isSavingPayoutBasis?: boolean;
+  onRecordPayoutBasis?: (amount: number) => Promise<void>;
   onUpdateDocumentStatus: (input: {
     templateId: number;
     status: DealDocumentStatus;
@@ -91,6 +101,7 @@ export function ManagerDealChecklistPanel({
   const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
   const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
   const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
+  const [payoutBasisAmount, setPayoutBasisAmount] = useState('');
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -107,6 +118,14 @@ export function ManagerDealChecklistPanel({
     setFileUrlByTemplateId(nextUrls);
     setFileNameByTemplateId(nextNames);
   }, [checklist.requiredDocuments]);
+
+  useEffect(() => {
+    setPayoutBasisAmount(
+      checklist.commissionSummary.payoutBasisAmount == null
+        ? ''
+        : String(checklist.commissionSummary.payoutBasisAmount),
+    );
+  }, [checklist.commissionSummary.payoutBasisAmount]);
 
   const orderedDocuments = useMemo(
     () =>
@@ -153,9 +172,66 @@ export function ManagerDealChecklistPanel({
         </CardContent>
       </Card>
 
+      {checklist.commissionSummary.referrerCommissionType === 'percentage' ? (
+        <Card className="border-sky-200">
+          <CardHeader>
+            <CardTitle>Percentage payout calculation basis</CardTitle>
+            <CardDescription>
+              Record the{' '}
+              {checklist.commissionSummary.referrerCommissionBasis?.replace(/_/g, ' ') ||
+                'configured price basis'}{' '}
+              amount from the applicable transaction documents. The assigned Distribution team uses
+              it to calculate the referral payout terms frozen for this referral.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-3">
+            <div className="min-w-56 space-y-1">
+              <Label htmlFor="payout-basis-amount">
+                Recorded amount ({checklist.currencyCode || 'ZAR'})
+              </Label>
+              <Input
+                id="payout-basis-amount"
+                type="number"
+                min="1"
+                step="1"
+                value={payoutBasisAmount}
+                disabled={
+                  !checklist.commissionSummary.canRecordPayoutBasis || Boolean(isSavingPayoutBasis)
+                }
+                onChange={event => setPayoutBasisAmount(event.target.value)}
+              />
+            </div>
+            {checklist.commissionSummary.canRecordPayoutBasis ? (
+              <Button
+                disabled={
+                  Boolean(isSavingPayoutBasis) ||
+                  !Number.isInteger(Number(payoutBasisAmount)) ||
+                  Number(payoutBasisAmount) <= 0
+                }
+                onClick={() => void onRecordPayoutBasis?.(Number(payoutBasisAmount))}
+              >
+                {isSavingPayoutBasis
+                  ? 'Saving…'
+                  : checklist.commissionSummary.payoutBasisAmount
+                    ? 'Update payout basis'
+                    : 'Record payout basis'}
+              </Button>
+            ) : (
+              <p className="text-xs text-slate-600">
+                {checklist.commissionSummary.payoutBasisAmount
+                  ? 'The payout basis is recorded and locked.'
+                  : 'The payout basis cannot be recorded at this stage. Ask the Distribution manager to review this referral.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className={checklist.computed.payoutReady ? 'border-emerald-300' : 'border-amber-300'}>
         <CardHeader>
-          <CardTitle className={checklist.computed.payoutReady ? 'text-emerald-700' : 'text-amber-700'}>
+          <CardTitle
+            className={checklist.computed.payoutReady ? 'text-emerald-700' : 'text-amber-700'}
+          >
             {checklist.computed.payoutReady ? 'Payout Ready' : 'Payout Not Ready'}
           </CardTitle>
           <CardDescription>
@@ -180,7 +256,9 @@ export function ManagerDealChecklistPanel({
       <Card>
         <CardHeader>
           <CardTitle>Document Checklist</CardTitle>
-          <CardDescription>Update received and verification status per required document.</CardDescription>
+          <CardDescription>
+            Update received and verification status per required document.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 rounded border bg-slate-50 p-2">
@@ -200,7 +278,9 @@ export function ManagerDealChecklistPanel({
             >
               Mark All Required as Verified
             </Button>
-            {isBatchSaving ? <p className="self-center text-xs text-blue-600">Applying batch update...</p> : null}
+            {isBatchSaving ? (
+              <p className="self-center text-xs text-blue-600">Applying batch update...</p>
+            ) : null}
           </div>
           {orderedDocuments.map(document => (
             <div key={document.templateId} className="rounded border p-3">

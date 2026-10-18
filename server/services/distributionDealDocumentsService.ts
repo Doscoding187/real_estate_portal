@@ -2,15 +2,16 @@ import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
   distributionDealDocuments,
+  distributionCommissionEntries,
   distributionDeals,
   distributionManagerAssignments,
-  distributionPrograms,
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import { readFrozenPayoutTerms } from './distributionCommissionService';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
 
@@ -32,6 +33,11 @@ export type DealChecklistPayload = {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType: 'flat' | 'percentage' | null;
+    referrerCommissionValue: number | null;
+    referrerCommissionBasis: 'sale_price' | 'base_price' | null;
+    payoutBasisAmount: number | null;
+    canRecordPayoutBasis: boolean;
   };
   requiredDocuments: Array<{
     templateId: number;
@@ -81,14 +87,11 @@ function toNumberOrNull(value: unknown) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function normalizeCommissionModel(value: unknown) {
-  const model = value ? String(value) : null;
-  if (!model) return null;
-  if (model === 'fixed_amount') return 'flat_amount';
-  return model;
-}
-
-function formatUserDisplayName(row: { name?: string | null; firstName?: string | null; lastName?: string | null }) {
+function formatUserDisplayName(row: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}) {
   if (row.name) return row.name;
   const fullName = [row.firstName, row.lastName].filter(Boolean).join(' ').trim();
   return fullName || undefined;
@@ -127,7 +130,10 @@ async function assertAssignedManagerForDevelopment(
     });
   }
 
-  if (typeof input.dealManagerUserId !== 'number' || input.dealManagerUserId !== input.actorUserId) {
+  if (
+    typeof input.dealManagerUserId !== 'number' ||
+    input.dealManagerUserId !== input.actorUserId
+  ) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'This deal is assigned to a different manager.',
@@ -142,8 +148,15 @@ async function getDealScope(db: any, dealId: number) {
       externalRef: distributionDeals.externalRef,
       buyerName: distributionDeals.buyerName,
       developmentId: distributionDeals.developmentId,
+      programId: distributionDeals.programId,
       currentStage: distributionDeals.currentStage,
       managerUserId: distributionDeals.managerUserId,
+      dealAmount: distributionDeals.dealAmount,
+      commissionBaseAmount: distributionDeals.commissionBaseAmount,
+      commissionTriggerStage: distributionDeals.commissionTriggerStage,
+      commissionStatus: distributionDeals.commissionStatus,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
     })
     .from(distributionDeals)
     .where(eq(distributionDeals.id, dealId))
@@ -161,9 +174,18 @@ async function getDealScope(db: any, dealId: number) {
     dealRef: String(deal.externalRef || `DEAL-${deal.dealId}`),
     buyerName: deal.buyerName || null,
     developmentId: Number(deal.developmentId),
+    programId: Number(deal.programId),
     developmentName: `Development #${deal.developmentId}`,
     currentStage: deal.currentStage ? String(deal.currentStage) : null,
     managerUserId: deal.managerUserId ? Number(deal.managerUserId) : null,
+    dealAmount: Number(deal.dealAmount ?? 0),
+    commissionBaseAmount: toNumberOrNull(deal.commissionBaseAmount),
+    commissionTriggerStage: deal.commissionTriggerStage
+      ? String(deal.commissionTriggerStage)
+      : null,
+    commissionStatus: String(deal.commissionStatus || ''),
+    referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
+    referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
   };
 }
 
@@ -183,23 +205,19 @@ export async function getDealChecklist(
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
-  const [program] = await db
-    .select({
-      id: distributionPrograms.id,
-      commissionModel: distributionPrograms.commissionModel,
-      defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-      payoutMilestone: distributionPrograms.payoutMilestone,
-      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-      currencyCode: distributionPrograms.currencyCode,
-    })
-    .from(distributionPrograms)
-    .where(eq(distributionPrograms.developmentId, dealScope.developmentId))
+  const frozenPayoutTerms = readFrozenPayoutTerms(
+    dealScope.referralTermsSnapshotJson,
+    dealScope.referralTermsSnapshotDigest,
+  );
+  const [existingPayoutEntry] = await db
+    .select({ id: distributionCommissionEntries.id })
+    .from(distributionCommissionEntries)
+    .where(eq(distributionCommissionEntries.dealId, dealScope.dealId))
     .limit(1);
 
-  const templates = (await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)).filter(
-    template => template.isActive && template.isRequired,
-  );
+  const templates = (
+    await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
+  ).filter(template => template.isActive && template.isRequired);
 
   const templateIds = templates.map(template => Number(template.id));
   const persistedDealDocs = templateIds.length
@@ -297,9 +315,11 @@ export async function getDealChecklist(
 
   const requiredOnly = requiredDocuments.filter(document => document.isRequired);
   const requiredCount = requiredOnly.length;
-  const verifiedRequiredCount = requiredOnly.filter(document => document.status === 'verified').length;
+  const verifiedRequiredCount = requiredOnly.filter(
+    document => document.status === 'verified',
+  ).length;
   const allRequiredVerified = requiredCount > 0 && verifiedRequiredCount >= requiredCount;
-  const payoutMilestone = program?.payoutMilestone ? String(program.payoutMilestone) : null;
+  const payoutMilestone = frozenPayoutTerms?.payoutMilestone || null;
   const payoutMilestoneEvaluation = evaluatePayoutMilestone({
     payoutMilestone,
     currentStage: dealScope.currentStage,
@@ -330,16 +350,62 @@ export async function getDealChecklist(
     buyerName: dealScope.buyerName,
     developmentId: dealScope.developmentId,
     developmentName: dealScope.developmentName,
-    programId: program ? Number(program.id) : null,
+    programId: dealScope.programId,
     payoutMilestone,
-    payoutMilestoneNotes: program?.payoutMilestoneNotes
-      ? String(program.payoutMilestoneNotes)
-      : null,
-    currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
+    payoutMilestoneNotes: frozenPayoutTerms?.payoutMilestoneNotes || null,
+    currencyCode: frozenPayoutTerms?.currencyCode || null,
     commissionSummary: {
-      commissionModel: normalizeCommissionModel(program?.commissionModel),
-      defaultCommissionPercent: toNumberOrNull(program?.defaultCommissionPercent),
-      defaultCommissionAmount: toNumberOrNull(program?.defaultCommissionAmount),
+      commissionModel: frozenPayoutTerms?.commissionModel || null,
+      defaultCommissionPercent:
+        frozenPayoutTerms?.referrerCommissionType === 'percentage'
+          ? frozenPayoutTerms.referrerCommissionValue
+          : null,
+      defaultCommissionAmount:
+        frozenPayoutTerms?.referrerCommissionType === 'flat'
+          ? frozenPayoutTerms.referrerCommissionValue
+          : null,
+      referrerCommissionType:
+        frozenPayoutTerms?.referrerCommissionType === 'flat' ||
+        frozenPayoutTerms?.referrerCommissionType === 'percentage'
+          ? frozenPayoutTerms.referrerCommissionType
+          : null,
+      referrerCommissionValue: frozenPayoutTerms?.referrerCommissionValue || null,
+      referrerCommissionBasis:
+        frozenPayoutTerms?.referrerCommissionBasis === 'sale_price' ||
+        frozenPayoutTerms?.referrerCommissionBasis === 'base_price'
+          ? frozenPayoutTerms.referrerCommissionBasis
+          : null,
+      payoutBasisAmount:
+        frozenPayoutTerms?.referrerCommissionBasis === 'sale_price'
+          ? dealScope.dealAmount > 0
+            ? dealScope.dealAmount
+            : null
+          : frozenPayoutTerms?.referrerCommissionBasis === 'base_price'
+            ? dealScope.commissionBaseAmount
+            : null,
+      canRecordPayoutBasis: (() => {
+        const rank: Record<string, number> = {
+          viewing_scheduled: 1,
+          viewing_completed: 2,
+          application_submitted: 3,
+          contract_signed: 4,
+          bond_approved: 5,
+          commission_pending: 6,
+          commission_paid: 7,
+          cancelled: 99,
+        };
+        const triggerRank = dealScope.commissionTriggerStage
+          ? rank[dealScope.commissionTriggerStage]
+          : undefined;
+        return Boolean(
+          frozenPayoutTerms?.referrerCommissionType === 'percentage' &&
+          triggerRank &&
+          (rank[dealScope.currentStage || ''] || 0) < triggerRank &&
+          !existingPayoutEntry &&
+          dealScope.commissionStatus !== 'pending' &&
+          dealScope.commissionStatus !== 'paid',
+        );
+      })(),
     },
     requiredDocuments,
     computed: {
@@ -373,10 +439,7 @@ export async function upsertDealDocumentStatus(
   const template = (
     await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
   ).find(
-    candidate =>
-      candidate.id === input.templateId &&
-      candidate.isActive &&
-      candidate.isRequired,
+    candidate => candidate.id === input.templateId && candidate.isActive && candidate.isRequired,
   );
 
   if (!template) {

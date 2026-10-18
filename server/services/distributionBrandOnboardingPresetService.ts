@@ -25,6 +25,7 @@ export const brandOnboardingPresetSchema = z.object({
   commissionModel: z.enum(['flat_percentage', 'flat_amount']),
   defaultCommissionPercent: z.number().min(0).nullable(),
   defaultCommissionAmount: z.number().int().min(0).nullable(),
+  referrerCommissionBasis: z.enum(['sale_price', 'base_price']).nullable().optional().default(null),
   tierAccessPolicy: z.enum(['restricted', 'open', 'invite_only']),
   payoutMilestone: z.enum([
     'attorney_instruction',
@@ -58,6 +59,7 @@ function normalizePreset(input: BrandOnboardingPreset): BrandOnboardingPreset {
   return {
     ...input,
     currencyCode: input.currencyCode.trim().toUpperCase(),
+    referrerCommissionBasis: input.referrerCommissionBasis ?? null,
     payoutMilestoneNotes: input.payoutMilestoneNotes?.trim() || null,
     documents: input.documents
       .map((document, index) => ({

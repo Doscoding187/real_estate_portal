@@ -2,6 +2,9 @@ type ProgramActivationInput = {
   commissionModel: 'flat_percentage' | 'tiered_percentage' | 'fixed_amount' | 'hybrid' | null;
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
+  referrerCommissionType: 'flat' | 'percentage' | null;
+  referrerCommissionValue: number | null;
+  referrerCommissionBasis: 'sale_price' | 'base_price' | null;
   tierAccessPolicy: 'open' | 'restricted' | 'invite_only' | null;
   payoutMilestone:
     | 'attorney_instruction'
@@ -66,6 +69,26 @@ export function getProgramActivationReadiness(input: ProgramActivationInput) {
     if (typeof input.defaultCommissionAmount !== 'number' || input.defaultCommissionAmount <= 0) {
       missingRequirements.push('defaultCommissionAmount');
     }
+  }
+
+  if (input.referrerCommissionType !== 'flat' && input.referrerCommissionType !== 'percentage') {
+    missingRequirements.push('referrerCommissionType');
+  }
+
+  if (
+    typeof input.referrerCommissionValue !== 'number' ||
+    !Number.isFinite(input.referrerCommissionValue) ||
+    input.referrerCommissionValue <= 0
+  ) {
+    missingRequirements.push('referrerCommissionValue');
+  }
+
+  if (
+    input.referrerCommissionType === 'percentage' &&
+    input.referrerCommissionBasis !== 'sale_price' &&
+    input.referrerCommissionBasis !== 'base_price'
+  ) {
+    missingRequirements.push('referrerCommissionBasis');
   }
 
   if (!input.tierAccessPolicy) {

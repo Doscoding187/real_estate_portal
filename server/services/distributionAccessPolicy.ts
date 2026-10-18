@@ -287,6 +287,18 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
       code: 'COMMISSION_MISSING',
       message: 'Referral payout terms are still being prepared.',
     },
+    readiness_referrerCommissionType: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_referrerCommissionValue: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_referrerCommissionBasis: {
+      code: 'COMMISSION_BASIS_MISSING',
+      message: 'The referral payout calculation basis is still being prepared.',
+    },
     readiness_tierAccessPolicy: {
       code: 'ACCESS_RULES_MISSING',
       message: 'This opportunity is still being prepared.',
@@ -391,8 +403,10 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const developmentVisible = projection.campaign.visible === true;
   const hasMarketableInventory =
     projection.inventory.phaseScope !== 'unscoped-hidden' &&
-    Object.values(projection.inventory.modes).some(
-      mode => Boolean(mode && mode.availableCount > 0 && mode.priceFrom > 0 && mode.priceTo >= mode.priceFrom),
+    Object.values(projection.inventory.modes).some(mode =>
+      Boolean(
+        mode && mode.availableCount > 0 && mode.priceFrom > 0 && mode.priceTo >= mode.priceFrom,
+      ),
     );
 
   const [program] = await input.db
@@ -403,6 +417,9 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       commissionModel: distributionPrograms.commissionModel,
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+      referrerCommissionType: distributionPrograms.referrerCommissionType,
+      referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+      referrerCommissionBasis: distributionPrograms.referrerCommissionBasis,
       tierAccessPolicy: distributionPrograms.tierAccessPolicy,
       payoutMilestone: distributionPrograms.payoutMilestone,
       currencyCode: distributionPrograms.currencyCode,
@@ -450,7 +467,9 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       and(
         eq(developmentRequiredDocuments.developmentId, developmentId),
         eq(developmentRequiredDocuments.category, 'client_required_document'),
-        inArray(developmentRequiredDocuments.documentCode, [...DISTRIBUTION_PROCESS_DOCUMENT_CODES]),
+        inArray(developmentRequiredDocuments.documentCode, [
+          ...DISTRIBUTION_PROCESS_DOCUMENT_CODES,
+        ]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),
@@ -469,6 +488,20 @@ export async function evaluateDevelopmentDistributionAccess(input: {
             program.defaultCommissionAmount === null
               ? null
               : Number(program.defaultCommissionAmount),
+          referrerCommissionType:
+            program.referrerCommissionType === 'flat' ||
+            program.referrerCommissionType === 'percentage'
+              ? program.referrerCommissionType
+              : null,
+          referrerCommissionValue:
+            program.referrerCommissionValue === null
+              ? null
+              : Number(program.referrerCommissionValue),
+          referrerCommissionBasis:
+            program.referrerCommissionBasis === 'sale_price' ||
+            program.referrerCommissionBasis === 'base_price'
+              ? program.referrerCommissionBasis
+              : null,
           tierAccessPolicy: program.tierAccessPolicy,
           payoutMilestone: program.payoutMilestone,
           currencyCode: program.currencyCode,

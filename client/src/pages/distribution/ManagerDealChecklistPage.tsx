@@ -61,6 +61,7 @@ export default function ManagerDealChecklistPage() {
 
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
   const downloadIntakeEvidenceMutation = trpc.distribution.manager.downloadDealReferralIntakeEvidence.useMutation();
+  const recordPayoutBasisMutation = trpc.distribution.manager.recordDealPayoutBasis.useMutation();
 
   useEffect(() => {
     if (loading) return;
@@ -188,6 +189,16 @@ export default function ManagerDealChecklistPage() {
     }
   }
 
+  async function handleRecordPayoutBasis(amount: number) {
+    try {
+      const updatedChecklist = await recordPayoutBasisMutation.mutateAsync({ dealId, amount });
+      setLocalChecklist(updatedChecklist);
+      toast.success('Referral payout calculation basis recorded.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to record referral payout calculation basis.');
+    }
+  }
+
   if (loading || checklistQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -237,6 +248,8 @@ export default function ManagerDealChecklistPage() {
           checklist={localChecklist}
           savingTemplateId={savingTemplateId}
           isBatchSaving={isBatchSaving}
+          isSavingPayoutBasis={recordPayoutBasisMutation.isPending}
+          onRecordPayoutBasis={handleRecordPayoutBasis}
           onUpdateDocumentStatus={handleUpdateDocumentStatus}
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}

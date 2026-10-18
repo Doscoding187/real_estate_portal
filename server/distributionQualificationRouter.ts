@@ -1379,7 +1379,6 @@ export const distributionQualificationRouter = router({
         buyerName: referral.clientName,
         buyerEmail: email,
         buyerPhone: phone,
-        dealAmount: Number(latestAssessment.affordabilityMax || 0),
         currentStage: 'viewing_scheduled',
         commissionStatus: 'not_ready',
       });
