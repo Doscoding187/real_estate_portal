@@ -1,4 +1,5 @@
 import { db } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 import { sql } from 'drizzle-orm';
 
 async function main() {
@@ -27,6 +28,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch(err => {
-    console.error(err);
+    console.error('check-db-counts failed:', safeErrorSummary(err));
     process.exit(1);
   });

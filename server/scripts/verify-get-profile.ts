@@ -1,4 +1,5 @@
 import { developerRouter } from '../developerRouter';
+import { safeErrorSummary } from '../_core/safeError';
 import { TRPCError } from '@trpc/server';
 import { getDb } from '../db';
 import * as details from '../db-connection';
@@ -105,6 +106,6 @@ async function run() {
 }
 
 run().catch(err => {
-  console.error(err);
+  console.error('verify-get-profile failed:', safeErrorSummary(err));
   process.exit(1);
 });
