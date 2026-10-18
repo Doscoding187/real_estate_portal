@@ -16,7 +16,7 @@ import { trpc } from '@/lib/trpc';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
+type PartnerType = 'agent' | 'individual' | '';
 type BuyerIntent = 'ready' | 'regular' | 'exploring' | '';
 
 type FormState = {
@@ -28,9 +28,7 @@ type FormState = {
 };
 
 const PARTNER_LABELS: Record<Exclude<PartnerType, ''>, string> = {
-  independent_agent: 'Independent Property Agent',
-  small_brokerage: 'Small Brokerage',
-  referral_partner: 'Referral Partner',
+  agent: 'Property Agent',
   individual: 'Individual Referrer',
 };
 
@@ -293,11 +291,9 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
                 label="I am a..."
                 value={form.partnerType}
                 onChange={v => setForm(p => ({ ...p, partnerType: v as PartnerType }))}
-                placeholder="Select role"
+                placeholder="Select one"
               >
-                <option value="independent_agent">Independent Property Agent</option>
-                <option value="small_brokerage">Small Brokerage</option>
-                <option value="referral_partner">Referral Partner</option>
+                <option value="agent">Property Agent</option>
                 <option value="individual">Individual Referrer</option>
               </SelectField>
 

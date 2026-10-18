@@ -8488,12 +8488,7 @@ export const distributionRouter = router({
         fullName: z.string().trim().min(2).max(200),
         email: z.string().trim().email().max(320),
         phone: z.string().trim().min(7).max(50),
-        partnerType: z.enum([
-          'independent_agent',
-          'small_brokerage',
-          'referral_partner',
-          'individual',
-        ]),
+        partnerType: z.enum(['agent', 'individual']),
         notes: z.string().max(2000).optional(),
       }),
     )

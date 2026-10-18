@@ -10,13 +10,11 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import '@/styles/advertise-responsive.css';
 
-type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
+type PartnerType = 'agent' | 'individual' | '';
 
 const ACCOUNT_LOGIN_PATH = '/login?next=/distribution/partner/overview';
 const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
-  independent_agent: 'Independent Property Agent',
-  small_brokerage: 'Small Brokerage',
-  referral_partner: 'Referral Partner',
+  agent: 'Property Agent',
   individual: 'Individual Referrer',
 };
 
@@ -222,9 +220,7 @@ export default function DistributionReferralApplyPage() {
                             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
                           >
                             <option value="">Select role</option>
-                            <option value="independent_agent">Independent Property Agent</option>
-                            <option value="small_brokerage">Small Brokerage</option>
-                            <option value="referral_partner">Referral Partner</option>
+                            <option value="agent">Property Agent</option>
                             <option value="individual">Individual Referrer</option>
                           </select>
                         </div>
