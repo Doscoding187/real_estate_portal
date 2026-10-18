@@ -7,7 +7,11 @@ import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatPartnerDealStatus } from '@/lib/distributionPartnerJourney';
+import {
+  formatPartnerDealStatus,
+  formatPartnerPayoutRecordState,
+  getPartnerPayoutRecordState,
+} from '@/lib/distributionPartnerJourney';
 
 type EntryStatusFilter = 'all' | 'pending' | 'approved' | 'paid' | 'cancelled';
 
@@ -16,15 +20,6 @@ function formatCurrency(value: number | null | undefined, currency = 'ZAR') {
   if (!Number.isFinite(amount)) return 'R 0';
   if (currency === 'ZAR') return `R ${amount.toLocaleString('en-ZA')}`;
   return `${currency} ${amount.toLocaleString('en-US')}`;
-}
-
-function formatStatus(value: string | null | undefined) {
-  const status = String(value || '').toLowerCase();
-  if (status === 'pending') return 'Pending approval';
-  if (status === 'approved') return 'Approved';
-  if (status === 'paid') return 'Paid';
-  if (status === 'cancelled') return 'Cancelled';
-  return 'Update pending';
 }
 
 function formatCurrencyTotals(amounts: Record<string, number>) {
@@ -60,16 +55,23 @@ export default function PartnerCommissionsPage() {
   const summary = useMemo(() => {
     const rows = commissionsQuery.data || [];
     return rows.reduce(
-      (acc: Record<'pending' | 'approved' | 'paid', Record<string, number>>, row: any) => {
-        const status = String(row.entryStatus || '').toLowerCase();
+      (
+        acc: Record<'potential' | 'pending' | 'approved' | 'paid', Record<string, number>>,
+        row: any,
+      ) => {
+        const state = getPartnerPayoutRecordState(row.entryStatus, row.dealStage);
         const amount = Number(row.commissionAmount || 0);
         const currency = String(row.currency || 'ZAR').toUpperCase();
-        if (status === 'pending' || status === 'approved' || status === 'paid') {
-          acc[status][currency] = (acc[status][currency] || 0) + amount;
+        const bucket = state === 'potential' ? 'potential' :
+          state === 'pending_approval' ? 'pending' :
+            state === 'approved' ? 'approved' :
+              state === 'paid' ? 'paid' : null;
+        if (bucket) {
+          acc[bucket][currency] = (acc[bucket][currency] || 0) + amount;
         }
         return acc;
       },
-      { pending: {}, approved: {}, paid: {} },
+      { potential: {}, pending: {}, approved: {}, paid: {} },
     );
   }, [commissionsQuery.data]);
 
@@ -113,7 +115,7 @@ export default function PartnerCommissionsPage() {
                 onChange={event => setStatusFilter(event.target.value as EntryStatusFilter)}
               >
                 <option value="all">All</option>
-                <option value="pending">Pending</option>
+                <option value="pending">Potential or pending approval</option>
                 <option value="approved">Approved</option>
                 <option value="paid">Paid</option>
                 <option value="cancelled">Cancelled</option>
@@ -125,11 +127,17 @@ export default function PartnerCommissionsPage() {
         <Card className="mb-4">
           <CardHeader>
             <CardTitle>Recorded payout totals</CardTitle>
-            <CardDescription>Amounts are grouped by currency and reflect the records currently on file.</CardDescription>
+            <CardDescription>
+              Potential amounts use the saved referral terms. They are not payable until the opportunity’s eligibility trigger is recorded.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-3">
+          <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded border bg-surface p-3">
-              <p className="text-xs text-slate-500">Pending</p>
+              <p className="text-xs text-slate-500">Potential</p>
+              <p className="text-lg font-semibold text-slate-700">{formatCurrencyTotals(summary.potential)}</p>
+            </div>
+            <div className="rounded border bg-surface p-3">
+              <p className="text-xs text-slate-500">Pending approval</p>
               <p className="text-lg font-semibold text-amber-700">{formatCurrencyTotals(summary.pending)}</p>
             </div>
             <div className="rounded border bg-surface p-3">
@@ -167,10 +175,18 @@ export default function PartnerCommissionsPage() {
                     {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
                   </div>
                   <div className="text-right">
+                    <p className="text-[10px] text-slate-500">
+                      {getPartnerPayoutRecordState(row.entryStatus, row.dealStage) === 'potential'
+                        ? 'Potential referral payout'
+                        : 'Referral payout amount'}
+                    </p>
                     <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
                     <div className="mt-1 flex flex-wrap justify-end gap-1">
-                      <Badge variant="secondary">{formatStatus(row.entryStatus)}</Badge>
-                      {row.triggerStage ? <Badge variant="outline">Payout milestone: {formatPartnerDealStatus(row.triggerStage, Number(row.dealId))}</Badge> : null}
+                      <Badge variant="secondary">
+                        {formatPartnerPayoutRecordState(
+                          getPartnerPayoutRecordState(row.entryStatus, row.dealStage),
+                        )}
+                      </Badge>
                     </div>
                   </div>
                 </div>

@@ -9,11 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   formatPartnerDealStatus,
   formatPartnerDateTime,
+  getPartnerPayoutRecordState,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 import {
   ArrowRight,
-  CalendarDays,
   CircleDollarSign,
   Home,
   Loader2,
@@ -91,10 +91,13 @@ export default function PartnerDashboardPage() {
       new Date(String(viewing.scheduledStartAt)).getTime() >= Date.now(),
   );
   const payoutCounts = useMemo(() => {
-    const counts = { pending: 0, approved: 0, paid: 0 };
+    const counts = { potential: 0, pending: 0, approved: 0, paid: 0 };
     for (const entry of payoutsQuery.data || []) {
-      const status = String(entry.entryStatus || '').toLowerCase();
-      if (status === 'pending' || status === 'approved' || status === 'paid') counts[status] += 1;
+      const state = getPartnerPayoutRecordState(entry.entryStatus, entry.dealStage);
+      if (state === 'potential') counts.potential += 1;
+      if (state === 'pending_approval') counts.pending += 1;
+      if (state === 'approved') counts.approved += 1;
+      if (state === 'paid') counts.paid += 1;
     }
     return counts;
   }, [payoutsQuery.data]);
@@ -168,8 +171,8 @@ export default function PartnerDashboardPage() {
   }
 
   const firstName = String(user?.name || '').trim().split(/\s+/)[0];
-  const hasAnyActivity = deals.length > 0 || payoutCounts.pending > 0 || payoutCounts.approved > 0 ||
-    payoutCounts.paid > 0 || upcomingViewings.length > 0;
+  const hasAnyActivity = deals.length > 0 || payoutCounts.potential > 0 || payoutCounts.pending > 0 ||
+    payoutCounts.approved > 0 || payoutCounts.paid > 0 || upcomingViewings.length > 0;
 
   return (
     <ReferralAppShell>
@@ -209,15 +212,15 @@ export default function PartnerDashboardPage() {
               icon={<Home className="h-4 w-4" />}
             />
             <MetricCard
-              label="Upcoming viewings"
-              value={String(upcomingViewings.length)}
-              supportingText="Only viewings with a recorded booking"
-              icon={<CalendarDays className="h-4 w-4" />}
+              label="Potential referral payouts"
+              value={String(payoutCounts.potential)}
+              supportingText="Eligibility trigger not yet confirmed"
+              icon={<CircleDollarSign className="h-4 w-4" />}
             />
             <MetricCard
-              label="Referral payouts in progress"
+              label="Payouts pending or approved"
               value={String(payoutCounts.pending + payoutCounts.approved)}
-              supportingText={`${payoutCounts.pending} pending · ${payoutCounts.approved} approved`}
+              supportingText={`${payoutCounts.pending} awaiting approval · ${payoutCounts.approved} approved`}
               icon={<CircleDollarSign className="h-4 w-4" />}
             />
             <MetricCard

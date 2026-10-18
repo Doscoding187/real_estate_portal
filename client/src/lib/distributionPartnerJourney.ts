@@ -140,6 +140,58 @@ export function formatPartnerProcessOwner(ownerRole: unknown) {
   return knownLabels[normalized] || owner.replace(/[_-]+/g, ' ');
 }
 
+export type PartnerPayoutRecordState =
+  | 'potential'
+  | 'pending_approval'
+  | 'approved'
+  | 'paid'
+  | 'cancelled'
+  | 'deal_closed'
+  | 'needs_review'
+  | 'unknown';
+
+export function getPartnerPayoutRecordState(
+  entryStatusValue: unknown,
+  dealStageValue: unknown,
+): PartnerPayoutRecordState {
+  const entryStatus = String(entryStatusValue || '').trim().toLowerCase();
+  const dealStage = String(dealStageValue || '').trim().toLowerCase();
+  const preEligibilityStages = new Set([
+    'viewing_scheduled',
+    'viewing_completed',
+    'application_submitted',
+    'contract_signed',
+    'bond_approved',
+  ]);
+
+  if (entryStatus === 'paid') {
+    return dealStage === 'commission_paid' ? 'paid' : 'needs_review';
+  }
+  if (entryStatus === 'approved') {
+    return dealStage === 'commission_pending' ? 'approved' : 'needs_review';
+  }
+  if (entryStatus === 'cancelled') return 'cancelled';
+  if (entryStatus !== 'pending' || !dealStage) return 'unknown';
+  if (dealStage === 'commission_pending') return 'pending_approval';
+  if (dealStage === 'commission_paid') return 'needs_review';
+  if (dealStage === 'cancelled') return 'deal_closed';
+  return preEligibilityStages.has(dealStage) ? 'potential' : 'unknown';
+}
+
+export function formatPartnerPayoutRecordState(state: PartnerPayoutRecordState) {
+  const labels: Record<PartnerPayoutRecordState, string> = {
+    potential: 'Awaiting eligibility trigger',
+    pending_approval: 'Pending approval',
+    approved: 'Approved for payment',
+    paid: 'Paid',
+    cancelled: 'Cancelled',
+    deal_closed: 'Deal closed before eligibility',
+    needs_review: 'Payout status needs review',
+    unknown: 'Update pending',
+  };
+  return labels[state];
+}
+
 export function formatPartnerDateTime(value: unknown) {
   if (!value) return 'Date not available';
   const parsed = new Date(String(value));
