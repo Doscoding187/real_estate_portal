@@ -26,6 +26,15 @@ type ProgramPromotion = {
   highlightBullets?: string[];
 };
 
+const PAYOUT_TRIGGER_LABELS: Record<string, string> = {
+  attorney_instruction: 'Attorney instruction',
+  attorney_signing: 'Attorney signing',
+  bond_approval: 'Home finance approval',
+  transfer_registration: 'Transfer registration',
+  occupation: 'Occupation',
+  custom: 'Custom program trigger',
+};
+
 type PartnerProgramTermsInput = {
   actor: DistributionPartnerActor;
   cataloguePublisherId?: number;
@@ -171,7 +180,8 @@ export type PartnerProgramTermsItem = {
   developerProjectionObservedAt: string;
   computed: {
     commissionDisplay: string;
-    payoutDisplay: string;
+    payoutTriggerDisplay: string;
+    payoutTriggerNotes: string | null;
     requiredDocsSummary: string;
   };
   opportunity: {
@@ -353,7 +363,10 @@ export async function listPartnerProgramTerms(
         developerProjectionObservedAt: projection.observedAt,
         computed: {
           commissionDisplay: formatPayout(program),
-          payoutDisplay: program.payoutMilestoneNotes || `Paid after ${String(program.payoutMilestone || 'qualifying milestone').replace(/_/g, ' ')}`,
+          payoutTriggerDisplay: program.payoutMilestone
+            ? PAYOUT_TRIGGER_LABELS[String(program.payoutMilestone)] || 'Custom program trigger'
+            : 'Not configured',
+          payoutTriggerNotes: String(program.payoutMilestoneNotes || '').trim() || null,
           requiredDocsSummary: requiredDocuments.length
             ? `${requiredDocuments.filter(document => document.isRequired).length} required referral documents`
             : 'No referral documents required',

@@ -56,6 +56,15 @@ type ReferralTermsSnapshot = {
   }>;
 };
 
+const PAYOUT_TRIGGER_LABELS: Record<string, string> = {
+  attorney_instruction: 'Attorney instruction',
+  attorney_signing: 'Attorney signing',
+  bond_approval: 'Home finance approval',
+  transfer_registration: 'Transfer registration',
+  occupation: 'Occupation',
+  custom: 'Custom program trigger',
+};
+
 function formatSnapshotPrice(value: number) {
   return new Intl.NumberFormat('en-ZA', { maximumFractionDigits: 0 }).format(value);
 }
@@ -82,7 +91,7 @@ function toSnapshotItem(snapshot: ReferralTermsSnapshot) {
       : snapshot.program?.referrerCommissionType === 'percentage'
         ? `${value}% referral payout${basis ? ` of ${basis}` : ''}`
         : `${currency === 'ZAR' ? 'R' : `${currency} `}${Math.round(value).toLocaleString('en-ZA')} referral payout`;
-  const milestone = String(snapshot.program?.payoutMilestone || '').replace(/_/g, ' ');
+  const milestone = String(snapshot.program?.payoutMilestone || '');
   const notes = String(snapshot.program?.payoutMilestoneNotes || '').trim();
   const requiredDocuments = (snapshot.requiredDocuments || [])
     .filter(document => document.category === 'client_required_document')
@@ -100,7 +109,10 @@ function toSnapshotItem(snapshot: ReferralTermsSnapshot) {
       snapshot.developerSalesSnapshot?.campaign.name || `Development #${snapshot.developmentId || 0}`,
     computed: {
       commissionDisplay,
-      payoutDisplay: milestone ? (notes ? `${milestone} (${notes})` : milestone) : 'Payout rules not configured',
+      payoutTriggerDisplay: milestone
+        ? PAYOUT_TRIGGER_LABELS[milestone] || 'Custom program trigger'
+        : 'Not configured',
+      payoutTriggerNotes: notes || null,
       requiredDocsSummary: requiredDocuments.length
         ? `${requiredDocuments.length} required document${requiredDocuments.length === 1 ? '' : 's'}`
         : 'No required documents configured',
@@ -190,9 +202,19 @@ export function PayoutRulesDisclosure({
             <span className="font-medium">{item.computed.commissionDisplay || 'Terms not configured yet'}</span>
           </p>
           <p>
-            <span className="text-slate-500">Paid after:</span>{' '}
-            <span className="font-medium">{item.computed.payoutDisplay || 'Terms not configured yet'}</span>
+            <span className="text-slate-500">Payout eligibility trigger:</span>{' '}
+            <span className="font-medium">{item.computed.payoutTriggerDisplay || 'Not configured'}</span>
           </p>
+          <p>
+            <span className="text-slate-500">Payment timing:</span>{' '}
+            <span className="font-medium">Not specified in these terms</span>
+          </p>
+          {item.computed.payoutTriggerNotes ? (
+            <p>
+              <span className="text-slate-500">Trigger details:</span>{' '}
+              <span className="font-medium">{item.computed.payoutTriggerNotes}</span>
+            </p>
+          ) : null}
           <p>
             <span className="text-slate-500">Application documents:</span>{' '}
             <span className="font-medium">

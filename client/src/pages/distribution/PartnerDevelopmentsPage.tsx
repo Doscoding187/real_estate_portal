@@ -396,11 +396,19 @@ export default function PartnerDevelopmentsPage() {
                           <p className="mt-1 text-sm font-semibold">
                             {item.computed.commissionDisplay || 'Payout terms configured'}
                           </p>
-                          {item.computed.payoutDisplay ? (
+                          {item.computed.payoutTriggerDisplay ? (
                             <p className="mt-1 text-xs text-muted-foreground">
-                              {item.computed.payoutDisplay}
+                              Payout eligibility trigger: {item.computed.payoutTriggerDisplay}
                             </p>
                           ) : null}
+                          {item.computed.payoutTriggerNotes ? (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Trigger details: {item.computed.payoutTriggerNotes}
+                            </p>
+                          ) : null}
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Payment timing: Not specified in these terms
+                          </p>
                         </div>
                       </div>
 
