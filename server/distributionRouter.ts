@@ -93,6 +93,10 @@ import {
 } from './services/distributionPartnerTermsService';
 import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
 import {
+  checkfitV1InputSchema,
+  runCheckfitV1,
+} from './services/checkfitV1Service';
+import {
   getDistributionReferralIntakePolicy,
   publishDistributionReferralIntakePolicy,
   saveDistributionReferralIntakePolicyDraft,
@@ -8527,6 +8531,15 @@ export const distributionRouter = router({
       assertDistributionEnabled();
       return listPublicDistributionOpportunities(input.developmentIds);
     }),
+
+  calculateCheckfit: publicProcedure.input(checkfitV1InputSchema).mutation(async ({ input }) => {
+    assertDistributionEnabled();
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+    }
+    return await runCheckfitV1({ db, input });
+  }),
 
   submitReferrerApplication: publicProcedure
     .input(
