@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
+import { cn } from '@/lib/utils';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ReferralIntakePausedCard } from '@/components/distribution/partner/ReferralIntakePausedCard';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { CheckCircle2, FileCheck2, Loader2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, FileCheck2, Info, Loader2, Send, ShieldCheck } from 'lucide-react';
 
 type MarketMode = 'sale' | 'rent';
 type IntakeEvidenceType =
@@ -58,6 +58,28 @@ function formatPrice(mode: any, marketMode: MarketMode) {
   const to = mode.priceTo === mode.priceFrom ? null : `R${Math.round(mode.priceTo).toLocaleString('en-ZA')}`;
   const range = to ? `${from} – ${to}` : from;
   return marketMode === 'rent' ? `${range} / month` : range;
+}
+
+function StepHeading({
+  step,
+  title,
+  description,
+}: {
+  step: number;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e7f0fd] text-[13px] font-semibold text-[#1d6fe3]">
+        {step}
+      </span>
+      <div>
+        <h2 className="text-[16px] font-semibold text-[#0b1c3f]">{title}</h2>
+        <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
 }
 
 export default function PartnerSubmitReferralPage() {
@@ -194,30 +216,56 @@ export default function PartnerSubmitReferralPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-8 sm:px-6">
-        <header className="space-y-2">
-          <p className="text-sm font-semibold text-primary">Distribution Network</p>
-          <h1 className="text-2xl font-bold text-foreground">Introduce someone to a property opportunity</h1>
-          <p className="text-sm leading-6 text-muted-foreground">
+      <main className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-10 pt-7 md:px-7">
+        <section>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0f8] bg-[#eff5fe] px-3 py-1 text-[12px] font-medium text-[#1d6fe3]">
+            <Send className="h-3.5 w-3.5" /> Start a referral
+          </span>
+          <h1 className="mt-3 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
+            Introduce someone to a property opportunity
+          </h1>
+          <p className="mt-2 max-w-3xl text-[15px] leading-6 text-muted-foreground">
             We’ll guide you through permission and documents first. Once those are ready, you can
             share their details and follow the introduction from My deals.
           </p>
-        </header>
+        </section>
+
+        <section className="grid gap-4 rounded-xl border border-[#cfe0f8] bg-[#eff5fe] p-5 text-[12.5px] leading-5 text-[#33507e] md:grid-cols-2 md:p-6">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+            <p>
+              <span className="font-semibold text-[#0b1c3f]">Permission and documents come first.</span>{' '}
+              The steps below ask for the person’s agreement and signed documents before any contact
+              details are shared.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+            <p>
+              <span className="font-semibold text-[#0b1c3f]">Nothing is shared until they agree.</span>{' '}
+              You can stop at any step. Documents are stored with the referral only for the
+              responsible team to review.
+            </p>
+          </div>
+        </section>
 
         {programsQuery.isLoading ? (
-          <Card><CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading available opportunities…</CardContent></Card>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading available opportunities…
+          </div>
         ) : eligibleDevelopments.length === 0 ? (
           <ReferralIntakePausedCard />
         ) : (
           <>
-            <Card>
-              <CardHeader>
-                <CardTitle>1. Choose an opportunity and market</CardTitle>
-                <CardDescription>Choose the option and whether the person wants to buy or rent. Prices and availability are checked again when you send the introduction.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
+            <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+              <StepHeading
+                step={1}
+                title="Choose an opportunity and market"
+                description="Choose the option and whether the person wants to buy or rent. Prices and availability are checked again when you send the introduction."
+              />
+              <div className="mt-4 space-y-3">
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
                   value={developmentId || ''}
                   onChange={event => {
                     setDevelopmentId(Number(event.target.value));
@@ -240,9 +288,15 @@ export default function PartnerSubmitReferralPage() {
                           type="button"
                           disabled={!available}
                           onClick={() => setMarketMode(mode)}
-                          className={`rounded-lg border p-3 text-left ${marketMode === mode ? 'border-primary bg-primary/5' : 'border-border'} ${!available ? 'cursor-not-allowed opacity-50' : ''}`}
+                          className={cn(
+                            'rounded-xl border p-3.5 text-left transition',
+                            marketMode === mode
+                              ? 'border-[#1d6fe3] bg-[#eff5fe]'
+                              : 'border-border bg-white hover:border-[#9cc0ee]',
+                            !available && 'cursor-not-allowed opacity-50',
+                          )}
                         >
-                          <span className="block text-sm font-semibold">{mode === 'sale' ? 'Buy' : 'Rent'}</span>
+                          <span className="block text-sm font-semibold text-[#0b1c3f]">{mode === 'sale' ? 'Buy' : 'Rent'}</span>
                           <span className="mt-1 block text-xs text-muted-foreground">
                             {available ? `${projection.availableCount} available · ${formatPrice(projection, mode)}` : 'Not currently available'}
                           </span>
@@ -251,35 +305,38 @@ export default function PartnerSubmitReferralPage() {
                     })}
                   </div>
                 ) : null}
-              </CardContent>
-            </Card>
+              </div>
+            </section>
 
             {!selectedDevelopment?.opportunity?.openForReferral ? (
               <ReferralIntakePausedCard />
             ) : requirementsQuery.isLoading ? (
-              <Card><CardContent className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading the documents for this opportunity…</CardContent></Card>
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading the documents for this opportunity…
+              </div>
             ) : requirementsQuery.isError || !requirementsQuery.data ? (
               <ReferralIntakePausedCard />
             ) : !sessionUuid ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>2. Confirm the prospect has seen the documents</CardTitle>
-                  <CardDescription>Review these documents with the person. We’ll ask for their contact details after the signed documents and ID are added.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                <StepHeading
+                  step={2}
+                  title="Confirm the prospect has seen the documents"
+                  description="Review these documents with the person. We’ll ask for their contact details after the signed documents and ID are added."
+                />
+                <div className="mt-4 space-y-4">
                   {[requirementsQuery.data.sharingPermissionDocument, requirementsQuery.data.privacyNoticeDocument].map(document => (
-                    <section key={`${document.title}-${document.version}`} className="rounded-md border p-3">
+                    <section key={`${document.title}-${document.version}`} className="rounded-lg border border-border p-3.5">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold">{document.title} · version {document.version}</p>
+                        <p className="text-sm font-semibold text-[#0b1c3f]">{document.title} · version {document.version}</p>
                         <Button type="button" size="sm" variant="outline" onClick={() => window.print()}>Print</Button>
                       </div>
                       <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">{document.content}</p>
                     </section>
                   ))}
-                  <div className="rounded-md bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
-                    <p><strong>Why their details are shared:</strong> {requirementsQuery.data.sharingPurpose}</p>
-                    <p className="mt-1"><strong>Who will receive them:</strong> {requirementsQuery.data.namedRecipients.map(recipient => `${recipient.name} · ${recipient.organization} (${recipient.role})`).join('; ')}</p>
-                    <p className="mt-1"><strong>How to sign:</strong> {requirementsQuery.data.signatureMethod}</p>
+                  <div className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-xs leading-5 text-[#33507e]">
+                    <p><strong className="text-[#0b1c3f]">Why their details are shared:</strong> {requirementsQuery.data.sharingPurpose}</p>
+                    <p className="mt-1"><strong className="text-[#0b1c3f]">Who will receive them:</strong> {requirementsQuery.data.namedRecipients.map(recipient => `${recipient.name} · ${recipient.organization} (${recipient.role})`).join('; ')}</p>
+                    <p className="mt-1"><strong className="text-[#0b1c3f]">How to sign:</strong> {requirementsQuery.data.signatureMethod}</p>
                   </div>
                   <label className="flex items-start gap-2 text-sm">
                     <input type="checkbox" checked={confirmedPermission} onChange={event => setConfirmedPermission(event.target.checked)} className="mt-1" />
@@ -290,6 +347,7 @@ export default function PartnerSubmitReferralPage() {
                     <span>I shared the privacy notice and explained who will receive their details.</span>
                   </label>
                   <Button
+                    variant="conversion"
                     disabled={!marketMode || !selectedModeProjection || !confirmedPermission || !confirmedPrivacyNotice || startSessionMutation.isPending}
                     onClick={() => startSessionMutation.mutate({
                       developmentId: Number(developmentId),
@@ -299,23 +357,24 @@ export default function PartnerSubmitReferralPage() {
                   >
                     {startSessionMutation.isPending ? 'Starting…' : 'Continue to add documents'}
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             ) : (
               <>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" />3. Add the signed documents</CardTitle>
-                    <CardDescription>These documents confirm permission and identity. They are stored with the referral for the responsible team to review.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                  <StepHeading
+                    step={3}
+                    title="Add the signed documents"
+                    description="These documents confirm permission and identity. They are stored with the referral for the responsible team to review."
+                  />
+                  <div className="mt-4 space-y-4">
                     {REQUIRED_EVIDENCE.map(item => {
                       const uploaded = uploadedTypes.has(item.type);
                       return (
-                        <div key={item.type} className="flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div key={item.type} className="flex flex-col gap-3 rounded-lg border border-border p-3.5 sm:flex-row sm:items-center sm:justify-between">
                           <div>
-                            <p className="flex items-center gap-2 text-sm font-semibold">
-                              {uploaded ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <FileCheck2 className="h-4 w-4 text-muted-foreground" />}
+                            <p className="flex items-center gap-2 text-sm font-semibold text-[#0b1c3f]">
+                              {uploaded ? <CheckCircle2 className="h-4 w-4 text-[#2f8f4e]" /> : <FileCheck2 className="h-4 w-4 text-muted-foreground" />}
                               {item.title}
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">{item.instructions}</p>
@@ -335,32 +394,33 @@ export default function PartnerSubmitReferralPage() {
                       );
                     })}
                     {requirementsQuery.data.creditReport.enabled ? (
-                      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm">
-                        <p className="font-semibold text-amber-950">Credit checks need separate permission</p>
-                        <p className="mt-1 text-xs text-amber-900">This introduction does not request a credit report. If a later step needs one, the person must separately sign the authorization for {requirementsQuery.data.creditReport.providerName}.</p>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-amber-950">{requirementsQuery.data.creditReport.authorizationDocument?.content}</p>
-                        <label className="mt-3 block text-xs font-medium text-amber-950">Add the signed authorization (optional for this introduction)
+                      <div className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-3.5 text-sm">
+                        <p className="font-semibold text-[#b07a1e]">Credit checks need separate permission</p>
+                        <p className="mt-1 text-xs text-[#b07a1e]">This introduction does not request a credit report. If a later step needs one, the person must separately sign the authorization for {requirementsQuery.data.creditReport.providerName}.</p>
+                        <p className="mt-2 whitespace-pre-wrap text-xs text-[#b07a1e]">{requirementsQuery.data.creditReport.authorizationDocument?.content}</p>
+                        <label className="mt-3 block text-xs font-medium text-[#b07a1e]">Add the signed authorization (optional for this introduction)
                           <Input type="file" accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(',')} className="mt-2 bg-white" disabled={uploadEvidenceMutation.isPending} onChange={event => { const file = event.currentTarget.files?.[0]; void uploadEvidence('credit_authorization', file); event.currentTarget.value = ''; }} />
                         </label>
                       </div>
                     ) : null}
                     {intakeComplete ? (
-                      <p className="rounded-md bg-green-50 p-3 text-sm text-green-800">The required documents are ready. You can now add the person’s contact details below.</p>
+                      <p className="rounded-lg border border-[#cde9d2] bg-[#f5fcf6] p-3.5 text-sm text-[#2f8f4e]">The required documents are ready. You can now add the person’s contact details below.</p>
                     ) : (
                       <p className="text-xs text-muted-foreground">Add all three required documents to continue.</p>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </section>
 
                 {intakeComplete ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>4. Add their contact details</CardTitle>
-                      <CardDescription>The team responsible for this opportunity will use these details to follow up. You can track recorded updates in My deals.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                        <p className="font-semibold">{selectedDevelopment?.developmentName}</p>
+                  <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                    <StepHeading
+                      step={4}
+                      title="Add their contact details"
+                      description="The team responsible for this opportunity will use these details to follow up. You can track recorded updates in My deals."
+                    />
+                    <div className="mt-4 space-y-3">
+                      <div className="rounded-lg border border-border bg-surface p-3.5 text-sm">
+                        <p className="font-semibold text-[#0b1c3f]">{selectedDevelopment?.developmentName}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{marketMode ? `${marketMode === 'sale' ? 'Sale' : 'Rental'} · ${formatPrice(selectedModeProjection, marketMode)}` : 'Choose sale or rental above'}</p>
                       </div>
                       <Input placeholder="Full name" autoComplete="off" value={buyerName} onChange={event => setBuyerName(event.target.value)} />
@@ -370,8 +430,9 @@ export default function PartnerSubmitReferralPage() {
                       </div>
                       <Input placeholder="Your reference (optional)" autoComplete="off" value={clientReference} onChange={event => setClientReference(event.target.value)} />
                       <Textarea placeholder="Anything you’d like the team to know? Don’t include ID or financial account numbers." rows={4} value={buyerNotes} onChange={event => setBuyerNotes(event.target.value)} />
-                      {eligibilityError ? <p role="alert" className="rounded bg-red-50 p-3 text-sm text-red-700">{eligibilityError}</p> : null}
+                      {eligibilityError ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{eligibilityError}</p> : null}
                       <Button
+                        variant="conversion"
                         className="w-full"
                         disabled={
                           submitReferralMutation.isPending ||
@@ -396,8 +457,8 @@ export default function PartnerSubmitReferralPage() {
                       >
                         {submitReferralMutation.isPending ? 'Sending…' : 'Send introduction'}
                       </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </section>
                 ) : null}
               </>
             )}

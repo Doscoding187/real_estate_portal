@@ -2,16 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { ChevronRight, CreditCard, Info, Loader2, Search, ShieldCheck } from 'lucide-react';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   describePartnerPayoutRecordState,
+  formatPartnerDateTime,
   formatPartnerDealStatus,
   formatPartnerPayoutRecordState,
   getPartnerPayoutRecordState,
+  type PartnerPayoutRecordState,
   type PartnerViewingRecord,
 } from '@/lib/distributionPartnerJourney';
 
@@ -24,11 +25,24 @@ function formatCurrency(value: number | null | undefined, currency = 'ZAR') {
   return `${currency} ${amount.toLocaleString('en-US')}`;
 }
 
+function formatRecordAmount(value: unknown, currency: unknown) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return 'Amount not recorded';
+  return formatCurrency(amount, String(currency || 'ZAR').toUpperCase());
+}
+
 function formatCurrencyTotals(amounts: Record<string, number>) {
   const rows = Object.entries(amounts)
     .filter(([, amount]) => amount > 0)
     .map(([currency, amount]) => formatCurrency(amount, currency));
   return rows.length ? rows.join(' · ') : '—';
+}
+
+function payoutStateChipClass(state: PartnerPayoutRecordState) {
+  if (state === 'paid') return 'border-[#cde9d2] bg-[#f5fcf6] text-[#2f8f4e]';
+  if (state === 'approved') return 'border-[#cfe0f8] bg-[#eff5fe] text-[#33507e]';
+  if (state === 'pending_approval') return 'border-[#f5d9a8] bg-[#fffbf2] text-[#b07a1e]';
+  return 'border-border bg-surface text-muted-foreground';
 }
 
 export default function PartnerCommissionsPage() {
@@ -91,33 +105,122 @@ export default function PartnerCommissionsPage() {
 
   if (loading || commissionsQuery.isLoading || viewingsQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-6xl px-4 pb-8 pt-6 md:px-7">
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>My referral payouts</CardTitle>
-            <CardDescription>
-              Follow payout amounts, approval, and confirmed payment. This page shows recorded states; it does not promise a payment date.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-2">
+      <main className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-10 pt-7 md:px-7">
+        <section>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0f8] bg-[#eff5fe] px-3 py-1 text-[12px] font-medium text-[#1d6fe3]">
+            <CreditCard className="h-3.5 w-3.5" /> Referral payouts
+          </span>
+          <h1 className="mt-3 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
+            Track every referral payout
+          </h1>
+          <p className="mt-2 max-w-3xl text-[15px] leading-6 text-muted-foreground">
+            Follow payout amounts, approval, and confirmed payment. This page shows recorded states;
+            it does not promise a payment date.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/developments')}>
+              <Search className="mr-2 h-4 w-4" /> Find opportunities
+            </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
               My deals
             </Button>
-            <Button variant="outline" onClick={() => setLocation('/distribution/partner/developments')}>
-              Find opportunities
-            </Button>
-            <label className="ml-auto flex items-center gap-2 text-sm">
+          </div>
+        </section>
+
+        <section className="grid gap-4 rounded-xl border border-[#cfe0f8] bg-[#eff5fe] p-5 text-[12.5px] leading-5 text-[#33507e] md:grid-cols-2 md:p-6">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+            <p>
+              <span className="font-semibold text-[#0b1c3f]">States are recorded, not promised.</span>{' '}
+              Each record shows the latest payout state recorded for a deal. Payment timing is never
+              guaranteed on this page.
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+            <p>
+              <span className="font-semibold text-[#0b1c3f]">Amounts follow the saved programme terms.</span>{' '}
+              Potential amounts use the saved referral terms until the deal's eligibility trigger is
+              recorded.
+            </p>
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+          <h2 className="text-lg font-semibold text-[#0b1c3f]">Recorded payout totals</h2>
+          <p className="mt-1 text-[13.5px] leading-5 text-muted-foreground">
+            Potential amounts use the saved referral terms. They are not payable until the
+            opportunity's eligibility trigger is recorded.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-border bg-surface p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Potential
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-[#0b1c3f]">
+                {formatCurrencyTotals(summary.potential)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#b07a1e]">
+                Pending approval
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-[#b07a1e]">
+                {formatCurrencyTotals(summary.pending)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#33507e]">
+                Approved
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-[#33507e]">
+                {formatCurrencyTotals(summary.approved)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[#cde9d2] bg-[#f5fcf6] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#2f8f4e]">
+                Paid
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-[#2f8f4e]">
+                {formatCurrencyTotals(summary.paid)}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {commissionsQuery.error ? (
+          <div className="rounded-xl border border-[#f5d9a8] bg-[#fffbf2] p-4 text-sm text-[#b07a1e] shadow-sm" role="alert">
+            We could not load your referral payout records. Refresh and try again.
+          </div>
+        ) : null}
+        {viewingsQuery.error ? (
+          <div className="rounded-xl border border-[#f5d9a8] bg-[#fffbf2] p-4 text-sm text-[#b07a1e] shadow-sm">
+            We could not load viewing information, so some deal progress may be unavailable. Your
+            referral payout records are still shown below.
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-[14px] font-semibold text-[#0b1c3f]">
+            Showing {filteredRows.length} payout record{filteredRows.length === 1 ? '' : 's'}
+          </p>
+        </div>
+
+        <section className="rounded-xl border border-border bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4 md:px-5">
+            <h2 className="text-lg font-semibold text-[#0b1c3f]">Referral payout records</h2>
+            <label className="flex items-center gap-2 text-[13px] text-muted-foreground">
               Status
               <select
-                className="h-9 rounded border border-input bg-background px-2"
+                className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-normal text-foreground"
                 value={statusFilter}
                 onChange={event => setStatusFilter(event.target.value as EntryStatusFilter)}
               >
@@ -128,54 +231,9 @@ export default function PartnerCommissionsPage() {
                 <option value="cancelled">Cancelled</option>
               </select>
             </label>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>Recorded payout totals</CardTitle>
-            <CardDescription>
-              Potential amounts use the saved referral terms. They are not payable until the opportunity’s eligibility trigger is recorded.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded border bg-surface p-3">
-              <p className="text-xs text-slate-500">Potential</p>
-              <p className="text-lg font-semibold text-slate-700">{formatCurrencyTotals(summary.potential)}</p>
-            </div>
-            <div className="rounded border bg-surface p-3">
-              <p className="text-xs text-slate-500">Pending approval</p>
-              <p className="text-lg font-semibold text-amber-700">{formatCurrencyTotals(summary.pending)}</p>
-            </div>
-            <div className="rounded border bg-surface p-3">
-              <p className="text-xs text-slate-500">Approved</p>
-              <p className="text-lg font-semibold text-blue-700">{formatCurrencyTotals(summary.approved)}</p>
-            </div>
-            <div className="rounded border bg-surface p-3">
-              <p className="text-xs text-slate-500">Paid</p>
-              <p className="text-lg font-semibold text-green-700">{formatCurrencyTotals(summary.paid)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {commissionsQuery.error ? (
-          <Card>
-            <CardContent className="py-6 text-sm text-red-600">{commissionsQuery.error.message}</CardContent>
-          </Card>
-        ) : null}
-        {viewingsQuery.error ? (
-          <Card>
-            <CardContent className="py-4 text-sm text-amber-800">
-              We could not load viewing information, so some deal progress may be unavailable. Your referral payout records are still shown below.
-            </CardContent>
-          </Card>
-        ) : null}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Referral Payout Records</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+          <div className="space-y-3 p-4 md:p-5">
             {filteredRows.map((row: any) => {
               const payoutState = getPartnerPayoutRecordState(row.entryStatus, row.dealStage);
               const dealStage = String(row.dealStage || '').toLowerCase();
@@ -186,42 +244,88 @@ export default function PartnerCommissionsPage() {
               return (
                 <button
                   key={row.id}
-                  className="w-full rounded border bg-white p-3 text-left transition hover:border-blue-300"
+                  type="button"
+                  className="w-full rounded-xl border border-border bg-white p-4 text-left shadow-sm transition hover:border-[#9cc0ee] hover:shadow-md md:p-5"
                   onClick={() => setLocation(`/distribution/partner/referrals/${Number(row.dealId)}`)}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{row.developmentName || 'Development'}</p>
-                      <p className="text-xs text-slate-500">Deal #{row.dealId} · {dealProgressLabel}</p>
-                      {row.buyerName ? <p className="mt-1 text-xs text-slate-600">Person introduced: {row.buyerName}</p> : null}
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-slate-500">
-                        {payoutState === 'potential' ? 'Potential referral payout' : 'Referral payout amount'}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">{formatCurrency(row.commissionAmount, row.currency)}</p>
-                      <div className="mt-1 flex flex-wrap justify-end gap-1">
-                        <Badge variant="secondary">{formatPartnerPayoutRecordState(payoutState)}</Badge>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-[16px] font-semibold text-[#0b1c3f]">
+                          {row.developmentName || 'Development'}
+                        </p>
+                        <span
+                          className={cn(
+                            'rounded-full border px-2.5 py-1 text-[11px] font-medium',
+                            payoutStateChipClass(payoutState),
+                          )}
+                        >
+                          {formatPartnerPayoutRecordState(payoutState)}
+                        </span>
                       </div>
+                      <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+                        Deal #{row.dealId} · {dealProgressLabel}
+                      </p>
+                      {row.buyerName ? (
+                        <p className="mt-1.5 text-[12.5px] text-muted-foreground">
+                          Person introduced: {row.buyerName}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-[12.5px] leading-5 text-muted-foreground">
+                        {describePartnerPayoutRecordState(payoutState)}
+                      </p>
+                      {row.approvedAt || row.paidAt || row.paymentReference ? (
+                        <div className="mt-2 flex flex-wrap gap-3 text-[11.5px] text-muted-foreground">
+                          {row.approvedAt ? (
+                            <span>Approved: {formatPartnerDateTime(row.approvedAt)}</span>
+                          ) : null}
+                          {row.paidAt ? <span>Paid: {formatPartnerDateTime(row.paidAt)}</span> : null}
+                          {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                    {describePartnerPayoutRecordState(payoutState)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                    {row.approvedAt ? <span>Approved: {String(row.approvedAt)}</span> : null}
-                    {row.paidAt ? <span>Paid: {String(row.paidAt)}</span> : null}
-                    {row.paymentReference ? <span>Ref: {row.paymentReference}</span> : null}
+                    <div className="flex w-full shrink-0 flex-col items-start gap-2 sm:w-56 sm:items-end">
+                      <div className="w-full rounded-lg border border-border bg-surface p-3.5 sm:text-right">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {payoutState === 'potential' ? 'Potential referral payout' : 'Referral payout amount'}
+                        </p>
+                        <p className="mt-1.5 text-[15px] font-semibold text-[#0b1c3f]">
+                          {formatRecordAmount(row.commissionAmount, row.currency)}
+                        </p>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#1d6fe3]">
+                        View deal <ChevronRight className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
                   </div>
                 </button>
               );
             })}
 
             {!commissionsQuery.error && !filteredRows.length ? (
-              <p className="py-6 text-center text-sm text-slate-500">No referral payout records found for this filter yet.</p>
+              <div className="py-8 text-center">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e7f0fd] text-[#1d6fe3]">
+                  <CreditCard className="h-5 w-5" />
+                </span>
+                <h3 className="mt-3 text-lg font-semibold text-[#0b1c3f]">
+                  {(commissionsQuery.data || []).length
+                    ? 'No payout records for this filter'
+                    : 'Referral payout records will appear here'}
+                </h3>
+                <p className="mx-auto mt-2 max-w-lg text-[13.5px] leading-5 text-muted-foreground">
+                  {(commissionsQuery.data || []).length
+                    ? 'Choose another status to see the rest of your payout records.'
+                    : 'Records appear when a referral reaches its payout eligibility trigger. Potential amounts are shown before they become payable.'}
+                </p>
+                {(commissionsQuery.data || []).length ? (
+                  <Button variant="outline" className="mt-4" onClick={() => setStatusFilter('all')}>
+                    Show all records
+                  </Button>
+                ) : null}
+              </div>
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </main>
     </ReferralAppShell>
   );

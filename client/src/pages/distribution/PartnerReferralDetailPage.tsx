@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { FileText, Loader2, UserRound, WalletCards } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { FileText, Loader2, Mail, UserRound, WalletCards } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
@@ -28,6 +28,15 @@ function processStepTypeLabel(stepType: unknown) {
     closure: 'Completion',
   };
   return labels[String(stepType || '').toLowerCase()] || 'Process step';
+}
+
+function dealStatusChipClass(statusValue: unknown) {
+  const status = String(statusValue || '').toLowerCase();
+  if (status === 'commission_paid') return 'border-[#cde9d2] bg-[#f5fcf6] text-[#2f8f4e]';
+  if (['cancelled', 'lost', 'declined'].includes(status)) {
+    return 'border-border bg-surface text-muted-foreground';
+  }
+  return 'border-[#cfe0f8] bg-[#eff5fe] text-[#33507e]';
 }
 
 export default function PartnerReferralDetailPage() {
@@ -61,8 +70,8 @@ export default function PartnerReferralDetailPage() {
 
   if (loading || referralQuery.isLoading || viewingsQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f7f6f3]">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -70,12 +79,10 @@ export default function PartnerReferralDetailPage() {
   if (referralQuery.error || viewingsQuery.error) {
     return (
       <ReferralAppShell>
-        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
-          <Card>
-            <CardContent className="py-6 text-sm text-red-600">
-              {referralQuery.error?.message || 'We could not confirm the latest viewing information. Refresh and try again.'}
-            </CardContent>
-          </Card>
+        <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-7 md:px-7">
+          <div className="rounded-xl border border-[#f5d9a8] bg-[#fffbf2] p-4 text-sm text-[#b07a1e] shadow-sm" role="alert">
+            {referralQuery.error?.message || 'We could not confirm the latest viewing information. Refresh and try again.'}
+          </div>
         </main>
       </ReferralAppShell>
     );
@@ -85,10 +92,10 @@ export default function PartnerReferralDetailPage() {
   if (!referral) {
     return (
       <ReferralAppShell>
-        <main className="mx-auto w-full max-w-4xl px-4 pb-8 pt-6 md:px-7">
-          <Card>
-            <CardContent className="py-6 text-sm text-slate-500">Referral not found.</CardContent>
-          </Card>
+        <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-7 md:px-7">
+          <div className="rounded-xl border border-border bg-white p-6 text-sm text-muted-foreground shadow-sm">
+            Referral not found.
+          </div>
         </main>
       </ReferralAppShell>
     );
@@ -123,111 +130,118 @@ export default function PartnerReferralDetailPage() {
 
   return (
     <ReferralAppShell>
-      <main className="mx-auto w-full max-w-[1180px] px-4 pb-10 pt-6 md:px-7">
-        <Card className="mb-5 overflow-hidden border-primary/15 bg-white shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4 bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-6 py-5 text-white">
-            <div>
-              <p className="text-[10px] font-semibold uppercase text-blue-100">My deal</p>
-              <h1 className="mt-1 text-[28px] font-semibold">{referral.development.name}</h1>
-              <p className="mt-2 text-[13px] text-[#ece6da]">Deal #{referral.dealId}</p>
+      <main className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-10 pt-7 md:px-7">
+        <section>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0f8] bg-[#eff5fe] px-3 py-1 text-[12px] font-medium text-[#1d6fe3]">
+            <FileText className="h-3.5 w-3.5" /> My deal
+          </span>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-[30px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
+                {referral.development.name}
+              </h1>
+              <p className="mt-1.5 text-[13px] text-muted-foreground">
+                Deal #{referral.dealId} · Introduced {formatPartnerDateTime(referral.createdAt)}
+              </p>
             </div>
-            <Badge className="bg-white text-primary hover:bg-white">{statusLabel}</Badge>
+            <span
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-[12px] font-medium',
+                dealStatusChipClass(referral.status),
+              )}
+            >
+              {statusLabel}
+            </span>
           </div>
-          <CardContent className="flex flex-wrap gap-2 bg-primary/5 py-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
               Back to my deals
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/developments')}>
               Find opportunities
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className="mb-5 border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <WalletCards className="h-4 w-4 text-primary" />
-              Current progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
-              {nextActionHint}
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Last recorded update: {formatPartnerDateTime(referral.updatedAt)}
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-center gap-2">
+            <WalletCards className="h-4 w-4 text-[#1d6fe3]" />
+            <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Current progress</h2>
+          </div>
+          <div className="mt-4 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-sm text-[#33507e]">
+            {nextActionHint}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Last recorded update: {formatPartnerDateTime(referral.updatedAt)}
+          </p>
+          {referral.manager?.displayName ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Responsible contact: {referral.manager.displayName}
             </p>
-            {referral.manager?.displayName ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Responsible contact: {referral.manager.displayName}
-              </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['commission_pending', 'commission_paid'].includes(String(referral.status || '').toLowerCase()) ? (
+              <Button variant="conversion" size="sm" onClick={() => setLocation('/distribution/partner/payouts')}>
+                View referral payout
+              </Button>
             ) : null}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {['commission_pending', 'commission_paid'].includes(String(referral.status || '').toLowerCase()) ? (
-                <Button size="sm" onClick={() => setLocation('/distribution/partner/payouts')}>
-                  View referral payout
-                </Button>
-              ) : null}
-              {referral.manager?.email ? (
-                <Button
-                  size="sm"
-                  variant="conversion"
-                  onClick={() => {
-                    const subject = encodeURIComponent(
-                      `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
-                    );
-                    const body = encodeURIComponent(
-                      `Hi,\n\nI am following up on deal #${referral.dealId}.\nCurrent progress: ${nextActionHint}\n\nThanks.`,
-                    );
-                    window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
-                  }}
-                >
-                  Contact the responsible team
-                </Button>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
+            {referral.manager?.email ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const subject = encodeURIComponent(
+                    `Referral follow-up: Deal #${referral.dealId} - ${referral.development.name}`,
+                  );
+                  const body = encodeURIComponent(
+                    `Hi,\n\nI am following up on deal #${referral.dealId}.\nCurrent progress: ${nextActionHint}\n\nThanks.`,
+                  );
+                  window.open(`mailto:${referral.manager?.email}?subject=${subject}&body=${body}`);
+                }}
+              >
+                <Mail className="mr-1.5 h-3.5 w-3.5" /> Contact the responsible team
+              </Button>
+            ) : null}
+          </div>
+        </section>
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-          <Card className="border-primary/15 bg-white shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <UserRound className="h-4 w-4 text-primary" />
-                Referral Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-[#1d6fe3]" />
+              <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Referral Summary</h2>
+            </div>
+            <div className="mt-4 space-y-2 text-sm">
               <p>
-                <span className="text-slate-500">Introduced:</span> {formatPartnerDateTime(referral.createdAt)}
+                <span className="text-muted-foreground">Introduced:</span> {formatPartnerDateTime(referral.createdAt)}
               </p>
               {referral.marketMode ? (
                 <p>
-                  <span className="text-slate-500">Looking to:</span>{' '}
+                  <span className="text-muted-foreground">Looking to:</span>{' '}
                   {referral.marketMode === 'sale' ? 'Buy' : 'Rent'}
                 </p>
               ) : null}
               <p>
-                <span className="text-slate-500">Person introduced:</span> {referral.buyer.name || 'Not provided'}
+                <span className="text-muted-foreground">Person introduced:</span> {referral.buyer.name || 'Not provided'}
               </p>
               <p>
-                <span className="text-slate-500">Phone:</span> {referral.buyer.phone || 'Not provided'}
+                <span className="text-muted-foreground">Phone:</span> {referral.buyer.phone || 'Not provided'}
               </p>
               <p>
-                <span className="text-slate-500">Email:</span> {referral.buyer.email || 'Not provided'}
+                <span className="text-muted-foreground">Email:</span> {referral.buyer.email || 'Not provided'}
               </p>
               {referral.manager ? (
                 <p>
-                  <span className="text-slate-500">Assigned manager:</span>{' '}
+                  <span className="text-muted-foreground">Assigned manager:</span>{' '}
                   {referral.manager.displayName || `User #${referral.manager.userId}`}
                 </p>
               ) : (
                 <p>
-                  <span className="text-slate-500">Assigned manager:</span> Pending assignment
+                  <span className="text-muted-foreground">Assigned manager:</span> Pending assignment
                 </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
           <PayoutRulesDisclosure
             developmentId={Number(referral.development.developmentId)}
@@ -236,24 +250,22 @@ export default function PartnerReferralDetailPage() {
           />
         </div>
 
-        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle>Steps for this opportunity</CardTitle>
-            <CardDescription>
-              These steps were saved when this referral started. The responsible team updates each step as the deal progresses.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+          <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Steps for this opportunity</h2>
+          <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">
+            These steps were saved when this referral started. The responsible team updates each step as the deal progresses.
+          </p>
+          <div className="mt-4">
             {processSteps.length ? (
               <ol className="space-y-3">
                 {processSteps.map((step: any, index: number) => (
-                  <li key={`${String(step.stepKey || index)}-${index}`} className="flex items-start gap-3 rounded-md border border-primary/10 bg-white p-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                  <li key={`${String(step.stepKey || index)}-${index}`} className="flex items-start gap-3 rounded-lg border border-border bg-white p-3.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#e7f0fd] text-sm font-semibold text-[#1d6fe3]">
                       {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="font-medium text-foreground">
+                        <p className="font-medium text-[#0b1c3f]">
                           {String(step.stepLabel || 'Next step to be confirmed')}
                         </p>
                         <Badge variant={progressByStepKey.get(String(step.stepKey))?.status === 'completed' ? 'default' : 'secondary'}>
@@ -281,12 +293,12 @@ export default function PartnerReferralDetailPage() {
                         ) : null}
                       </div>
                       {progressByStepKey.get(String(step.stepKey))?.partnerUpdate ? (
-                        <div className="mt-3 rounded-md bg-primary/5 p-3">
-                          <p className="whitespace-pre-line text-sm text-foreground">
+                        <div className="mt-3 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
+                          <p className="whitespace-pre-line text-sm text-[#33507e]">
                             {progressByStepKey.get(String(step.stepKey)).partnerUpdate}
                           </p>
                           {progressByStepKey.get(String(step.stepKey))?.updatedAt ? (
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-1 text-xs text-[#33507e]/80">
                               Updated {formatPartnerDateTime(progressByStepKey.get(String(step.stepKey)).updatedAt)}
                             </p>
                           ) : null}
@@ -297,37 +309,35 @@ export default function PartnerReferralDetailPage() {
                 ))}
               </ol>
             ) : workflowProgress === null ? (
-              <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-3.5 text-sm text-[#b07a1e]">
                 The saved process details could not be verified. Contact the responsible team for your next step.
               </p>
             ) : (
-              <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-dashed border-border p-3.5 text-sm text-muted-foreground">
                 The steps for this opportunity have not been added yet. Follow the recorded updates here for now.
               </p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 text-primary" />
-              Documents for this referral
-            </CardTitle>
-            <CardDescription>
-              This checklist is saved from the referral’s original program requirements. Later program edits do not change it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-[#1d6fe3]" />
+            <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Documents for this referral</h2>
+          </div>
+          <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">
+            This checklist is saved from the referral’s original program requirements. Later program edits do not change it.
+          </p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
                 Secure file storage and delivery to the developer are not connected yet. The responsible team will coordinate the document handover for this referral.
               </p>
               {applicationDocuments.map((document: any) => (
-                <div key={document.documentCode} className="rounded-md border border-primary/15 bg-white p-3 text-sm">
+                <div key={document.documentCode} className="rounded-lg border border-border bg-white p-3.5 text-sm">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-foreground">{document.documentLabel}</p>
+                      <p className="font-semibold text-[#0b1c3f]">{document.documentLabel}</p>
                       <p className="text-xs text-muted-foreground">{document.documentCode}</p>
                     </div>
                     <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
@@ -343,7 +353,7 @@ export default function PartnerReferralDetailPage() {
                     </Badge>
                   </div>
                   {document.status === 'unavailable' ? (
-                    <p className="mt-2 text-xs text-amber-800">
+                    <p className="mt-2 text-xs text-[#b07a1e]">
                       This saved requirement is no longer available in the document library. Contact the responsible team.
                     </p>
                   ) : null}
@@ -355,51 +365,49 @@ export default function PartnerReferralDetailPage() {
                 </div>
               ))}
               {!applicationDocuments.length && documentRequirementsSnapshotAvailable ? (
-                <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+                <p className="rounded-lg border border-dashed border-border p-3.5 text-sm text-muted-foreground">
                   No referral documents were required when this referral was submitted.
                 </p>
               ) : null}
               {!applicationDocuments.length && !documentRequirementsSnapshotAvailable ? (
-                <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-3.5 text-sm text-[#b07a1e]">
                   This older referral does not contain a saved document checklist. Contact the responsible team before uploading files.
                 </p>
               ) : null}
             </div>
 
-            <div className="rounded-md border border-primary/15 bg-white p-3">
-              <p className="text-sm font-semibold text-foreground">Developer documents</p>
+            <div className="rounded-lg border border-border bg-surface p-3.5">
+              <p className="text-sm font-semibold text-[#0b1c3f]">Developer documents</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 No additional developer documents are available for this opportunity yet.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card className="mt-5 border-primary/15 bg-white shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="h-4 w-4 text-primary" />
-              Timeline
-            </CardTitle>
-            <CardDescription>Latest referral lifecycle events.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-[#1d6fe3]" />
+            <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Timeline</h2>
+          </div>
+          <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">Latest referral lifecycle events.</p>
+          <div className="mt-4 space-y-2">
             {(referral.timeline || []).map((event, index) => (
-              <div key={`${event.at}-${index}`} className="rounded-md border border-primary/15 bg-primary/5/40 p-3">
+              <div key={`${event.at}-${index}`} className="rounded-lg border border-border bg-surface p-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-medium">{formatPartnerDealEvent(event.event)}</p>
+                  <p className="font-medium text-[#0b1c3f]">{formatPartnerDealEvent(event.event)}</p>
                   <Badge variant="secondary">{formatPartnerEventSource(event.byRole)}</Badge>
                 </div>
-                <p className="text-xs text-slate-500">{formatPartnerDateTime(event.at)}</p>
+                <p className="text-xs text-muted-foreground">{formatPartnerDateTime(event.at)}</p>
                 {event.note ? <p className="mt-1 text-sm">{event.note}</p> : null}
               </div>
             ))}
 
             {!referral.timeline?.length ? (
-              <p className="text-sm text-slate-500">No timeline events yet.</p>
+              <p className="text-sm text-muted-foreground">No timeline events yet.</p>
             ) : null}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </main>
     </ReferralAppShell>
   );

@@ -1,44 +1,21 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerDashboardPage from './PartnerDashboardPage';
 
-const TEST_ASSESSMENT_ID = '11111111-1111-1111-1111-111111111111';
-
 const {
   mockUseAuth,
-  mockUseLocation,
   mockSetLocation,
-  mockCreateAssessmentMutation,
-  mockGetAssessmentQuery,
-  mockGetMatchesQuery,
-  mockReferrerStatusQuery,
-  mockReferrerMyAccessQuery,
-  mockReferrerMyPipelineQuery,
-  mockReferrerMyViewingsQuery,
-  mockReferrerMyCommissionEntriesQuery,
-  mockPartnerListMyReferralsQuery,
-  mockPartnerListEligibleDevelopmentsQuery,
-  mockPartnerListProgramTermsQuery,
-  state,
+  mockStatusQuery,
+  mockPipelineQuery,
+  mockViewingsQuery,
+  mockCommissionEntriesQuery,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
-  mockUseLocation: vi.fn(),
   mockSetLocation: vi.fn(),
-  mockCreateAssessmentMutation: vi.fn(),
-  mockGetAssessmentQuery: vi.fn(),
-  mockGetMatchesQuery: vi.fn(),
-  mockReferrerStatusQuery: vi.fn(),
-  mockReferrerMyAccessQuery: vi.fn(),
-  mockReferrerMyPipelineQuery: vi.fn(),
-  mockReferrerMyViewingsQuery: vi.fn(),
-  mockReferrerMyCommissionEntriesQuery: vi.fn(),
-  mockPartnerListMyReferralsQuery: vi.fn(),
-  mockPartnerListEligibleDevelopmentsQuery: vi.fn(),
-  mockPartnerListProgramTermsQuery: vi.fn(),
-  state: {
-    hasAssessment: false,
-    hasMatches: false,
-  },
+  mockStatusQuery: vi.fn(),
+  mockPipelineQuery: vi.fn(),
+  mockViewingsQuery: vi.fn(),
+  mockCommissionEntriesQuery: vi.fn(),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -49,7 +26,7 @@ vi.mock('wouter', async () => {
   const actual = await vi.importActual<typeof import('wouter')>('wouter');
   return {
     ...actual,
-    useLocation: () => mockUseLocation(),
+    useLocation: () => ['/distribution/partner/overview', mockSetLocation],
   };
 });
 
@@ -60,42 +37,11 @@ vi.mock('@/components/referral/ReferralAppShell', () => ({
 vi.mock('@/lib/trpc', () => ({
   trpc: {
     distribution: {
-      partner: {
-        createAffordabilityAssessment: {
-          useMutation: (...args: unknown[]) => mockCreateAssessmentMutation(...args),
-        },
-        getAffordabilityAssessment: {
-          useQuery: (...args: unknown[]) => mockGetAssessmentQuery(...args),
-        },
-        getAffordabilityMatches: {
-          useQuery: (...args: unknown[]) => mockGetMatchesQuery(...args),
-        },
-        listMyReferrals: {
-          useQuery: (...args: unknown[]) => mockPartnerListMyReferralsQuery(...args),
-        },
-        listEligibleDevelopmentsForSubmission: {
-          useQuery: (...args: unknown[]) => mockPartnerListEligibleDevelopmentsQuery(...args),
-        },
-        listProgramTerms: {
-          useQuery: (...args: unknown[]) => mockPartnerListProgramTermsQuery(...args),
-        },
-      },
       referrer: {
-        status: {
-          useQuery: (...args: unknown[]) => mockReferrerStatusQuery(...args),
-        },
-        myAccess: {
-          useQuery: (...args: unknown[]) => mockReferrerMyAccessQuery(...args),
-        },
-        myPipeline: {
-          useQuery: (...args: unknown[]) => mockReferrerMyPipelineQuery(...args),
-        },
-        myViewings: {
-          useQuery: (...args: unknown[]) => mockReferrerMyViewingsQuery(...args),
-        },
-        myCommissionEntries: {
-          useQuery: (...args: unknown[]) => mockReferrerMyCommissionEntriesQuery(...args),
-        },
+        status: { useQuery: (...args: unknown[]) => mockStatusQuery(...args) },
+        myPipeline: { useQuery: (...args: unknown[]) => mockPipelineQuery(...args) },
+        myViewings: { useQuery: (...args: unknown[]) => mockViewingsQuery(...args) },
+        myCommissionEntries: { useQuery: (...args: unknown[]) => mockCommissionEntriesQuery(...args) },
       },
     },
   },
@@ -104,244 +50,134 @@ vi.mock('@/lib/trpc', () => ({
 describe('PartnerDashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    state.hasAssessment = false;
-    state.hasMatches = false;
+    window.localStorage.clear();
 
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       loading: false,
+      user: { id: 1, name: 'Individual Referrer Preview', role: 'visitor' },
     });
-    mockUseLocation.mockReturnValue(['/distribution/partner', mockSetLocation]);
-
-    mockReferrerStatusQuery.mockReturnValue({
-      data: { accessCount: 3 },
+    mockStatusQuery.mockReturnValue({
+      data: { hasIdentity: true },
       isLoading: false,
-      error: null,
+      isError: false,
     });
-    mockReferrerMyAccessQuery.mockReturnValue({
+    mockPipelineQuery.mockReturnValue({
+      data: { deals: [], stageCounts: {}, stageOrder: [] },
+      isLoading: false,
+      isError: false,
+    });
+    mockViewingsQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
+    mockCommissionEntriesQuery.mockReturnValue({ data: [], isLoading: false, isError: false });
+  });
+
+  it('renders the journey framing with honest empty states', () => {
+    render(<PartnerDashboardPage />);
+
+    expect(
+      screen.getByRole('heading', { name: 'Turn introductions into property opportunities.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Start with the person you have in mind')).toBeInTheDocument();
+    expect(screen.getByText('Understand their needs')).toBeInTheDocument();
+    expect(screen.getByText('Find suitable properties')).toBeInTheDocument();
+    expect(screen.getByText("Introduce when they're ready")).toBeInTheDocument();
+
+    expect(screen.getByText('Needs your attention')).toBeInTheDocument();
+    expect(
+      screen.getByText('No outstanding actions. Confirmed requests will appear here.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Your introductions will appear here. Updates appear when recorded.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('No confirmed payouts yet.')).toBeInTheDocument();
+    expect(screen.getByText('Based on programme terms')).toBeInTheDocument();
+  });
+
+  it('keeps preliminary affordability disabled and truthful', () => {
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getByLabelText('Monthly income')).toBeDisabled();
+    expect(screen.getByLabelText('Deposit')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Buy' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Rent' })).toBeDisabled();
+    expect(screen.getByText(/Preliminary affordability is not active yet/)).toBeInTheDocument();
+  });
+
+  it('surfaces recorded activity without inventing states', () => {
+    mockPipelineQuery.mockReturnValue({
+      data: {
+        deals: [
+          { id: 87, currentStage: 'lead' },
+          { id: 88, currentStage: 'viewing_scheduled' },
+        ],
+        stageCounts: { lead: 1, viewing_scheduled: 1 },
+        stageOrder: ['lead', 'viewing_scheduled'],
+      },
+      isLoading: false,
+      isError: false,
+    });
+    mockViewingsQuery.mockReturnValue({
       data: [
         {
-          developmentId: 10,
+          id: 7,
+          dealId: 88,
+          status: 'scheduled',
+          scheduledStartAt: new Date(Date.now() + 86_400_000).toISOString(),
           developmentName: 'Waterfall Estate',
-          city: 'Midrand',
-          province: 'Gauteng',
-          priceFrom: 850000,
-          priceTo: 1200000,
-          accessStatus: 'active',
-          commissionModel: 'flat_amount',
-          defaultCommissionAmount: 25000,
-          defaultCommissionPercent: null,
-          unitTypes: [],
         },
       ],
       isLoading: false,
-      error: null,
+      isError: false,
     });
-    mockReferrerMyPipelineQuery.mockReturnValue({
-      data: {
-        stageOrder: ['lead', 'viewing_scheduled', 'commission_paid'],
-        stageCounts: { lead: 1, viewing_scheduled: 0, commission_paid: 0 },
-        deals: [
-          {
-            id: 88,
-            developmentName: 'Waterfall Estate',
-            buyerName: 'Jane Doe',
-            currentStage: 'lead',
-            commissionStatus: 'pending',
-            documentsComplete: false,
-            updatedAt: '2026-04-10T10:00:00.000Z',
-          },
-        ],
-      },
-      isLoading: false,
-      error: null,
-    });
-    mockReferrerMyViewingsQuery.mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: null,
-    });
-    mockReferrerMyCommissionEntriesQuery.mockReturnValue({
-      data: [],
-      isLoading: false,
-      error: null,
-    });
-    mockPartnerListMyReferralsQuery.mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockPartnerListEligibleDevelopmentsQuery.mockReturnValue({
-      data: {
-        items: [
-          {
-            developmentId: 10,
-            developmentName: 'Waterfall Estate',
-            city: 'Midrand',
-            province: 'Gauteng',
-          program: {
-            commissionModel: 'flat_amount',
-            defaultCommissionAmount: 25000,
-            defaultCommissionPercent: null,
-          },
-          opportunity: {
-            status: 'ready',
-            reasonCodes: [],
-            nextAction: 'submit_referral',
-            friendlyMessage: 'Ready for buyer referrals.',
-          },
+    mockCommissionEntriesQuery.mockReturnValue({
+      data: [
+        {
+          entryStatus: 'pending',
+          dealStage: 'viewing_scheduled',
+          currency: 'ZAR',
+          commissionAmount: 25000,
         },
       ],
-      },
       isLoading: false,
-      error: null,
-    });
-    mockPartnerListProgramTermsQuery.mockReturnValue({
-      data: {
-        items: [
-          {
-            developmentId: 10,
-            developmentName: 'Waterfall Estate',
-            city: 'Midrand',
-            province: 'Gauteng',
-          program: {
-            commissionModel: 'flat_amount',
-            defaultCommissionAmount: 25000,
-            defaultCommissionPercent: null,
-          },
-          opportunity: {
-            status: 'ready',
-            reasonCodes: [],
-            nextAction: 'submit_referral',
-            friendlyMessage: 'Ready for buyer referrals.',
-          },
-        },
-      ],
-      },
-      isLoading: false,
-      error: null,
-    });
-
-    mockCreateAssessmentMutation.mockImplementation((opts: any) => ({
-      isPending: false,
-      mutate: () => {
-        state.hasAssessment = true;
-        opts?.onSuccess?.({ assessmentId: TEST_ASSESSMENT_ID });
-      },
-    }));
-
-    mockGetAssessmentQuery.mockImplementation((input: any) => ({
-      data:
-        state.hasAssessment && input?.assessmentId === TEST_ASSESSMENT_ID
-          ? {
-              assessmentId: TEST_ASSESSMENT_ID,
-              outputs: {
-                maxMonthlyRepayment: 12000,
-                purchasePrice: 950000,
-                confidenceLabel: 'Strong Match',
-              },
-            }
-          : null,
-      isLoading: false,
-      error: null,
-    }));
-
-    mockGetMatchesQuery.mockImplementation((input: any) => ({
-      data:
-        state.hasMatches && input?.assessmentId === TEST_ASSESSMENT_ID
-          ? {
-              matchSnapshotId: '22222222-2222-2222-2222-222222222222',
-              matches: [
-                {
-                  developmentId: 10,
-                  developmentName: 'Waterfall Estate',
-                  area: 'Midrand',
-                  purchasePrice: 850000,
-                  bestFitRatio: 0.92,
-                },
-              ],
-            }
-          : null,
-      isFetching: false,
-      error: null,
-      refetch: vi.fn(async () => {
-        state.hasMatches = true;
-        return { data: null } as any;
-      }),
-    }));
-  });
-
-  it('shows WhatsApp share action after pre-qual and match fetch', async () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
-
-    const rendered = render(<PartnerDashboardPage />);
-
-    fireEvent.change(screen.getByPlaceholderText('Gross income monthly (required)'), {
-      target: { value: '45000' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Run Pre-Qualification' }));
-
-    await waitFor(() => expect(state.hasAssessment).toBe(true));
-    rendered.rerender(<PartnerDashboardPage />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Get Matched Developments' }));
-    await waitFor(() => expect(state.hasMatches).toBe(true));
-    rendered.rerender(<PartnerDashboardPage />);
-
-    const shareBtn = screen.getByRole('button', { name: 'Share via WhatsApp' });
-    expect(shareBtn).toBeInTheDocument();
-
-    fireEvent.click(shareBtn);
-    expect(openSpy).toHaveBeenCalled();
-    expect(openSpy.mock.calls[0]?.[0]).toContain('wa.me');
-  });
-
-  it('renders the engagement lanes and opportunity reward actions', () => {
-    render(<PartnerDashboardPage />);
-
-    expect(screen.getByText('Find Opportunity')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Match Buyer' })).toBeInTheDocument();
-    expect(screen.getByText('Track Earnings')).toBeInTheDocument();
-    expect(screen.getByText('Open Sales Inventory')).toBeInTheDocument();
-    expect(screen.getAllByText(/R 25\s000/)).not.toHaveLength(0);
-  });
-
-  it('shows five opportunity cards and keeps the final card as view all opportunities', () => {
-    mockReferrerMyAccessQuery.mockReturnValue({
-      data: Array.from({ length: 6 }, (_, index) => ({
-        developmentId: index + 1,
-        developmentName: `Demo Development ${index + 1}`,
-        city: 'Johannesburg',
-        province: 'Gauteng',
-        priceFrom: 900000 + index * 100000,
-        priceTo: 1200000 + index * 100000,
-        accessStatus: 'active',
-        commissionModel: 'flat_amount',
-        defaultCommissionAmount: 25000,
-        defaultCommissionPercent: null,
-        unitTypes: [],
-      })),
-      isLoading: false,
-      error: null,
-    });
-    mockPartnerListEligibleDevelopmentsQuery.mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-      error: null,
-    });
-    mockPartnerListProgramTermsQuery.mockReturnValue({
-      data: { items: [] },
-      isLoading: false,
-      error: null,
+      isError: false,
     });
 
     render(<PartnerDashboardPage />);
 
-    expect(screen.getAllByText('Demo Development 1')).not.toHaveLength(0);
-    expect(screen.getByText('Demo Development 5')).toBeInTheDocument();
-    expect(screen.queryByText('Demo Development 6')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /View all opportunities/i })).not.toHaveLength(0);
-    expect(screen.getByText('1 more development waiting in the sales inventory.')).toBeInTheDocument();
-    expect(screen.queryByText('Readiness')).not.toBeInTheDocument();
+    const attentionCard = screen.getByRole('button', { name: /Needs your attention/ });
+    expect(within(attentionCard).getByText('1')).toBeInTheDocument();
+    expect(within(attentionCard).getByText(/Next: Waterfall Estate/)).toBeInTheDocument();
+
+    const dealsCard = screen.getByRole('button', { name: /Deals in progress/ });
+    expect(within(dealsCard).getByText('2')).toBeInTheDocument();
+    expect(within(dealsCard).getByText(/recorded steps/)).toBeInTheDocument();
+
+    const payoutsCard = screen.getByRole('button', { name: /Referral payouts/ });
+    expect(within(payoutsCard).getByText('Potential only — not yet payable.')).toBeInTheDocument();
+    expect(within(payoutsCard).getByText(/R ?25.?000/)).toBeInTheDocument();
+  });
+
+  it('counts shortlists saved in this browser for this account', () => {
+    window.localStorage.setItem(
+      'property-listify:distribution-shortlist:v1:partner:1:sale',
+      JSON.stringify({ 12: { searchSummary: 'Midrand · Buy · 2 beds' } }),
+    );
+
+    render(<PartnerDashboardPage />);
+
+    expect(screen.getByText(/1 saved on this device/)).toBeInTheDocument();
+  });
+
+  it('links journey actions to their destinations', () => {
+    render(<PartnerDashboardPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /How it works/ }));
+    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/how-it-works');
+
+    fireEvent.click(screen.getByRole('button', { name: /View my deals/ }));
+    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/referrals');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Find opportunities/ })[0]);
+    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/developments');
   });
 });

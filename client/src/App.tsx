@@ -169,6 +169,7 @@ const ManagerDealChecklistPage = lazy(
   () => import('./pages/distribution/ManagerDealChecklistPage'),
 );
 const PartnerDashboardPage = lazy(() => import('./pages/distribution/PartnerDashboardPage'));
+const PartnerHowItWorksPage = lazy(() => import('./pages/distribution/PartnerHowItWorksPage'));
 const PartnerSubmitReferralPage = lazy(
   () => import('./pages/distribution/PartnerSubmitReferralPage'),
 );
@@ -634,6 +635,7 @@ function Router() {
             <Redirect to="/distribution/partner/overview" />
           </Route>
           <Route path="/distribution/partner/overview" component={PartnerDashboardPage} />
+          <Route path="/distribution/partner/how-it-works" component={PartnerHowItWorksPage} />
           <Route path="/distribution/partner/developments">
             <DistributionPartnerIdentityGate>
               <PartnerDevelopmentsPage />
