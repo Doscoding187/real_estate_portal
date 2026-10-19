@@ -8,6 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
+import {
+  publicShortlistStorageKey,
+  readSavedSelections,
+} from '@/components/distribution/distributionShortlistStorage';
+import { readCheckfitSnapshot } from '@/components/distribution/distributionCheckfitStorage';
 import '@/styles/advertise-responsive.css';
 
 type PartnerType = 'agent' | 'individual' | '';
@@ -44,6 +49,18 @@ export default function DistributionReferralApplyPage() {
     }
     return null;
   }, []);
+
+  const carried = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const shortlistCount =
+      Object.keys(readSavedSelections(publicShortlistStorageKey('sale'))).length +
+      Object.keys(readSavedSelections(publicShortlistStorageKey('rent'))).length;
+    const checkfit = readCheckfitSnapshot();
+    if (shortlistCount === 0 && !checkfit) return null;
+    return { shortlistCount, checkfit };
+  }, []);
+
+  const formatRand = (value: number) => `R${Math.round(value).toLocaleString('en-ZA')}`;
 
   const notes = useMemo(() => {
     let baseNote = !form.partnerType
@@ -139,6 +156,37 @@ export default function DistributionReferralApplyPage() {
                   Distribution access will be attached to that account.
                 </p>
               </div>
+
+              {carried ? (
+                <div className="mb-5 rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm text-slate-700">
+                  <p className="mb-2 font-semibold text-slate-900">Carried from this browser</p>
+                  <ul className="space-y-1">
+                    {carried.shortlistCount > 0 ? (
+                      <li>
+                        Your shortlist has{' '}
+                        <strong>
+                          {carried.shortlistCount} selected option
+                          {carried.shortlistCount === 1 ? '' : 's'}
+                        </strong>
+                        . After you join and sign in on this browser, you can import them into your
+                        partner catalogue.
+                      </li>
+                    ) : null}
+                    {carried.checkfit ? (
+                      <li>
+                        Your check-fit shows an indicative purchase price up to{' '}
+                        <strong>{formatRand(carried.checkfit.result.estimatedPurchasePrice)}</strong>{' '}
+                        at {carried.checkfit.assumptions.annualInterestRate.toFixed(2)}% interest.
+                        Indicative only — not an approval. It stays on this device.
+                      </li>
+                    ) : null}
+                  </ul>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Same-browser convenience only. This is not a saved assessment or a submitted
+                    referral.
+                  </p>
+                </div>
+              ) : null}
 
               <Card className="border-slate-200 bg-white shadow-[0_16px_34px_-18px_rgba(15,23,42,0.18)]">
                 <CardContent className="p-6 sm:p-8">

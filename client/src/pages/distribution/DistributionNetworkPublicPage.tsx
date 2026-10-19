@@ -5,6 +5,7 @@ import {
   PropertyOpportunityShortlist,
   type ShortlistOption,
 } from '@/components/distribution/PropertyOpportunityShortlist';
+import { CheckfitCard } from '@/components/distribution/CheckfitCard';
 import {
   ArrowRight,
   Building2,
@@ -571,6 +572,11 @@ export default function DistributionNetworkPublicPage() {
               </div>
             </div>
           </section>
+
+          <CheckfitCard
+            marketMode={marketMode}
+            onStartIntroduction={() => setLocation('/distribution-network/apply')}
+          />
 
           {/* PROBLEM FRAMING / WHY THIS WORKS */}
           <section id="problem-framing" className="bg-slate-50 py-16 md:py-24">
