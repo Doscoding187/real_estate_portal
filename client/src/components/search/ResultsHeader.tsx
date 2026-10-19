@@ -1,4 +1,4 @@
-import { Bell, List, Map as MapIcon, SlidersHorizontal } from 'lucide-react';
+import { Bell, List, Map as MapIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -21,9 +21,7 @@ interface ResultsHeaderProps {
   sortBy: SortOption;
   onViewModeChange: (mode: ViewMode) => void;
   onSortChange: (sort: SortOption) => void;
-  onOpenFilters?: () => void;
   onSaveSearch?: () => void;
-  showMobileFilterButton?: boolean;
 }
 export function ResultsHeader({
   title = 'Properties',
@@ -35,9 +33,7 @@ export function ResultsHeader({
   sortBy,
   onViewModeChange,
   onSortChange,
-  onOpenFilters,
   onSaveSearch,
-  showMobileFilterButton = true,
 }: ResultsHeaderProps) {
   const hasSettledCount = !isLoading && !hasError && typeof resultCount === 'number';
   const countLabel = isLoading
@@ -72,17 +68,6 @@ export function ResultsHeader({
 
         {!isLoading && !hasError ? (
           <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-            {showMobileFilterButton && onOpenFilters ? (
-              <Button
-                variant="outline"
-                className="h-10 rounded-lg border-slate-200 bg-white text-slate-700 lg:hidden"
-                onClick={onOpenFilters}
-              >
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Filters
-              </Button>
-            ) : null}
-
             {onSaveSearch ? (
               <Button
                 type="button"
