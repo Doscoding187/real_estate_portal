@@ -6,6 +6,7 @@ import {
   estimateBrochureQualifyingIncome,
   formatBrochureCurrencyRange,
   getBrochureUnitRows,
+  getMinimumBrochureQualifyingIncome,
   type BrochureAffordability,
   type BrochureItem,
 } from '../distributionBrochure';
@@ -101,6 +102,51 @@ describe('distribution brochure', () => {
     expect(visibleRows.map(row => row.unit.id)).toEqual(['small', 'large']);
     expect(hiddenUnitCount).toBe(0);
     expect(visibleRows[0]?.referencePrice).toBe(900_000);
+  });
+
+  it('derives the minimum qualifying income from the lowest priced sale unit', () => {
+    expect(getMinimumBrochureQualifyingIncome(brochureItem())).toBeCloseTo(38_271.23, 2);
+    expect(
+      getMinimumBrochureQualifyingIncome(
+        brochureItem({
+          unitTypes: [
+            {
+              id: 'small',
+              name: 'Small unit',
+              modes: { sale: { priceFrom: 500_000, priceTo: 600_000 } },
+            },
+            {
+              id: 'large',
+              name: 'Large unit',
+              modes: { sale: { priceFrom: 900_000, priceTo: 900_000 } },
+            },
+          ],
+        }),
+      ),
+    ).toBeCloseTo(16_639.66, 2);
+  });
+
+  it('returns no minimum qualifying income without a rate or priced sale units', () => {
+    expect(
+      getMinimumBrochureQualifyingIncome(
+        brochureItem({
+          affordability: { ...affordability, available: false, annualInterestRate: null },
+        }),
+      ),
+    ).toBeNull();
+    expect(
+      getMinimumBrochureQualifyingIncome(
+        brochureItem({
+          unitTypes: [
+            {
+              id: 'rent-only',
+              name: 'Rental unit',
+              modes: { rent: { priceFrom: 9000, priceTo: 9000 } },
+            },
+          ],
+        }),
+      ),
+    ).toBeNull();
   });
 
   it('caps the brochure table and reports hidden units', () => {

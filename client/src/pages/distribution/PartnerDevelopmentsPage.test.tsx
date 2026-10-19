@@ -122,6 +122,17 @@ function buildItem(overrides: Record<string, unknown> = {}) {
         },
       },
     ],
+    affordability: {
+      policyVersion: 'checkfit_v1',
+      available: true,
+      annualInterestRate: 10.5,
+      rateSource: 'sarb_prime_rate',
+      rateSourceLabel: 'SARB prime rate (platform settings)',
+      rateUpdatedAt: null,
+      termMonths: 240,
+      repaymentAllowanceRatio: 0.3,
+      disclaimers: [],
+    },
     requiredDocuments: [],
     sourceDocuments: [],
     developerProjectionRevision: 'rev-1',
@@ -213,13 +224,17 @@ describe('PartnerDevelopmentsPage', () => {
     expect(activeCard.getByText('4 homes available')).toBeInTheDocument();
     expect(activeCard.getByText(/R1\s000\s000 – R1\s500\s000/)).toBeInTheDocument();
     expect(activeCard.getByText('Open for referral')).toBeInTheDocument();
-    expect(activeCard.getByRole('button', { name: 'Add to shortlist' })).toBeEnabled();
+    expect(activeCard.getByText(/Minimum qualifying income/)).toBeInTheDocument();
+    expect(activeCard.getByText(/R\s?33\s279/)).toBeInTheDocument();
+    expect(activeCard.getByRole('button', { name: /View details/ })).toBeInTheDocument();
+    expect(activeCard.getByRole('button', { name: /Brochure/ })).toBeInTheDocument();
+    expect(activeCard.queryByRole('button', { name: /shortlist/i })).not.toBeInTheDocument();
 
     const pausedCard = cardFor('Ridge View Estate');
     expect(pausedCard.getByText('Awaiting availability')).toBeInTheDocument();
     expect(pausedCard.getByText('Current price not yet published')).toBeInTheDocument();
     expect(pausedCard.getByText('Referral access: check programme')).toBeInTheDocument();
-    expect(pausedCard.getByRole('button', { name: 'Add to shortlist' })).toBeDisabled();
+    expect(pausedCard.queryByText(/Minimum qualifying income/)).not.toBeInTheDocument();
   });
 
   it('opens the units dialog with published units and starts a referral', () => {
@@ -276,17 +291,40 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.getByText('Showing 1 opportunity')).toBeInTheDocument();
   });
 
-  it('adds an available development to the shortlist and updates the bottom bar', () => {
+  it('hides the minimum qualifying income when the affordability rate is unavailable', () => {
+    mockListProgramTermsQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: {
+        items: [
+          buildItem({
+            affordability: {
+              policyVersion: 'checkfit_v1',
+              available: false,
+              annualInterestRate: null,
+              rateSource: 'sarb_prime_rate',
+              rateSourceLabel: 'SARB prime rate (platform settings)',
+              rateUpdatedAt: null,
+              termMonths: 240,
+              repaymentAllowanceRatio: 0.3,
+              disclaimers: [],
+            },
+          }),
+        ],
+      },
+    });
+
     render(<PartnerDevelopmentsPage />);
 
-    expect(screen.getByText(/0 of 5 selected/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create shareable shortlist' })).toBeDisabled();
+    expect(screen.queryByText(/Minimum qualifying income/)).not.toBeInTheDocument();
+    expect(cardFor('Hillside Gardens').getByText(/R1\s000\s000 – R1\s500\s000/)).toBeInTheDocument();
+  });
 
-    fireEvent.click(cardFor('Hillside Gardens').getByRole('button', { name: 'Add to shortlist' }));
+  it('removes the shortlist workflow from the partner developments page', () => {
+    render(<PartnerDevelopmentsPage />);
 
-    expect(cardFor('Hillside Gardens').getByRole('button', { name: 'In shortlist' })).toBeInTheDocument();
-    expect(screen.getByText(/1 of 5 selected/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Create shareable shortlist' })).toBeEnabled();
+    expect(screen.queryByText(/Your shortlist/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /shortlist/i })).not.toBeInTheDocument();
   });
 
   it('keeps the check-fit panel disabled with an honest explanation', () => {

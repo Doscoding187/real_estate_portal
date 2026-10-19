@@ -2,27 +2,26 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
   ArrowRight,
-  Bookmark,
   Building2,
   Calculator,
   Camera,
   CheckCircle2,
-  CheckSquare,
   FileText,
   Info,
   Loader2,
   MapPin,
   Search,
   ShieldCheck,
-  Square,
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
 import { DevelopmentUnitsDialog } from '@/components/distribution/partner/DevelopmentUnitsDialog';
 import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
-import { ShortlistPrintView } from '@/components/distribution/ShortlistPrintView';
-import { useDistributionShortlist } from '@/components/distribution/useDistributionShortlist';
+import {
+  formatBrochureCurrency,
+  getMinimumBrochureQualifyingIncome,
+} from '@/lib/distributionBrochure';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -55,7 +54,7 @@ function bedroomMatchesFilter(bedrooms: number | null, label: string, filter: Di
 }
 
 export default function PartnerDevelopmentsPage() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
@@ -134,60 +133,6 @@ export default function PartnerDevelopmentsPage() {
     });
   }, [filteredItems, marketMode, sort]);
 
-  const shortlistOptions = useMemo(
-    () =>
-      allItems.map((item: any) => {
-        const mode = item.inventory?.modes?.[marketMode] as OpportunityModeProjection | undefined;
-        const modeIsPublished = hasPublishedMode(mode);
-        const currencyCode = item.program?.currencyCode || 'ZAR';
-        return {
-          id: item.developmentId,
-          marketable: modeIsPublished,
-          name: item.developmentName,
-          location: [item.city, item.province].filter(Boolean).join(', '),
-          imageUrl: item.imageUrl,
-          priceLabel: modeIsPublished
-            ? formatOpportunityModePrice(mode, currencyCode, marketMode === 'rent')
-            : 'Price not yet published',
-          availabilityLabel: modeIsPublished
-            ? `${mode.availableCount} ${marketMode === 'sale' ? 'homes' : 'rentals'} currently listed`
-            : 'Availability not yet published',
-          propertyDetails: (item.unitTypes || [])
-            .filter((unitType: any) => hasPublishedMode(unitType?.modes?.[marketMode]))
-            .map((unitType: any) => {
-              const unitMode = unitType.modes[marketMode] as OpportunityModeProjection;
-              return `${unitType.name}${unitType.bedrooms === null || unitType.bedrooms === undefined ? '' : ` · ${unitType.bedrooms} bed${unitType.bedrooms === 1 ? '' : 's'}`} · ${formatOpportunityModePrice(unitMode, currencyCode, marketMode === 'rent')}`;
-            }),
-          description: item.campaign?.description || item.campaign?.tagline || null,
-        };
-      }),
-    [allItems, marketMode],
-  );
-  const {
-    maxOptions,
-    selectedOptions,
-    selectedIds,
-    toggleOption,
-    publicSelectionCount,
-    importMessage,
-    importPublicShortlist,
-  } = useDistributionShortlist({
-    marketMode,
-    searchSummary: [
-      marketMode === 'sale' ? 'Looking to buy' : 'Looking to rent',
-      priceBand !== 'any'
-        ? DISTRIBUTION_PRICE_BANDS[marketMode].find(band => band.key === priceBand)?.label
-        : 'Any listed price',
-      search.trim() ? `Area or development: ${search.trim()}` : 'Any area',
-      bedroomFilter
-        ? DISTRIBUTION_BEDROOM_FILTERS.find(option => String(option.key) === bedroomFilter)?.label
-        : 'Any bedroom count',
-    ].filter(Boolean).join(' · '),
-    storageScope: `partner:${user?.id ?? 'unknown'}`,
-    currentOpportunities: shortlistOptions,
-  });
-  const shortlistById = new Map(shortlistOptions.map(option => [String(option.id), option]));
-
   const scrollToCheckFit = () => {
     document.getElementById('check-fit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
@@ -219,8 +164,8 @@ export default function PartnerDevelopmentsPage() {
             Find the right property for someone you know
           </h1>
           <p className="mt-2 max-w-3xl text-[15px] leading-6 text-muted-foreground">
-            Explore current sale or rental options first. Check fit, compare real opportunities, and
-            build a shortlist before making an introduction.
+            Explore current sale or rental options first. Check fit and compare real opportunities
+            before making an introduction.
           </p>
         </section>
 
@@ -353,7 +298,12 @@ export default function PartnerDevelopmentsPage() {
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div>
               {sortedItems.length ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div
+                  role="region"
+                  aria-label="Development opportunities"
+                  tabIndex={0}
+                  className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1"
+                >
                   {sortedItems.map((item: any) => {
                     const mode = item.inventory?.modes?.[marketMode] as
                       | OpportunityModeProjection
@@ -367,14 +317,14 @@ export default function PartnerDevelopmentsPage() {
                     const imageCount = Array.isArray(item.campaign?.images)
                       ? item.campaign.images.length
                       : 0;
-                    const shortlistOption = shortlistById.get(String(item.developmentId));
-                    const shortlisted = selectedIds.has(String(item.developmentId));
                     const description = item.campaign?.description || item.campaign?.tagline;
+                    const minimumQualifyingIncome =
+                      marketMode === 'sale' ? getMinimumBrochureQualifyingIncome(item) : null;
 
                     return (
                       <article
                         key={item.developmentId}
-                        className="flex flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm"
+                        className="flex w-[86%] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:w-[calc((100%_-_1.5rem)/2.3)] xl:w-[calc((100%_-_1.5rem)/3_+_6px)]"
                       >
                         <div className="relative">
                           {item.imageUrl ? (
@@ -455,6 +405,21 @@ export default function PartnerDevelopmentsPage() {
                             ) : null}
                           </div>
 
+                          {minimumQualifyingIncome ? (
+                            <p
+                              className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-5 text-[#33507e]"
+                              title="Indicative only: a 240-month bond at the SARB prime rate (platform settings) with repayments at 30% of gross monthly income. Not a lender decision."
+                            >
+                              <Calculator className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1d6fe3]" />
+                              <span>
+                                Minimum qualifying income{' '}
+                                <span className="font-semibold text-[#0b1c3f]">
+                                  {formatBrochureCurrency(minimumQualifyingIncome)}
+                                </span>
+                              </span>
+                            </p>
+                          ) : null}
+
                           {description ? (
                             <p className="mt-2 line-clamp-3 text-[13px] leading-5 text-muted-foreground">
                               {description}
@@ -478,39 +443,20 @@ export default function PartnerDevelopmentsPage() {
                               : 'Referral access: check programme'}
                           </p>
 
-                          <div className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
-                            <button
-                              type="button"
-                              disabled={!shortlistOption?.marketable}
-                              aria-pressed={shortlisted}
-                              onClick={() => shortlistOption && toggleOption(shortlistOption)}
-                              className={cn(
-                                'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-[13px] font-medium transition',
-                                shortlisted
-                                  ? 'border-[#1d6fe3] bg-[#eff5fe] text-[#1d6fe3]'
-                                  : 'border-border bg-white text-slate-600 hover:border-[#9cc0ee] hover:text-[#1d6fe3]',
-                                !shortlistOption?.marketable && 'cursor-not-allowed opacity-60',
-                              )}
-                            >
-                              {shortlisted ? (
-                                <CheckSquare className="h-4 w-4" />
-                              ) : (
-                                <Square className="h-4 w-4" />
-                              )}
-                              {shortlisted ? 'In shortlist' : 'Add to shortlist'}
-                            </button>
+                          <div className="mt-auto flex items-center gap-1.5 border-t border-border pt-3">
                             <Button
                               variant="outline"
-                              className="flex-1"
+                              className="flex-1 whitespace-nowrap px-2.5 text-[13px]"
                               onClick={() => setUnitsItem(item)}
                             >
-                              View details <ArrowRight className="ml-2 h-4 w-4" />
+                              View details <ArrowRight className="ml-1 h-3.5 w-3.5" />
                             </Button>
                             <Button
                               variant="outline"
+                              className="whitespace-nowrap px-2.5 text-[13px]"
                               onClick={() => setBrochureItem(item)}
                             >
-                              <FileText className="mr-2 h-4 w-4" /> Brochure
+                              <FileText className="mr-1 h-3.5 w-3.5" /> Brochure
                             </Button>
                           </div>
                         </div>
@@ -617,46 +563,6 @@ export default function PartnerDevelopmentsPage() {
             </aside>
           </div>
         )}
-
-        <section className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-white p-4 shadow-sm md:px-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#e7f0fd] text-[#1d6fe3]">
-            <Bookmark className="h-4 w-4" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[14px] font-semibold text-[#0b1c3f]">
-              Your shortlist{' '}
-              <span className="font-normal text-muted-foreground">
-                · {selectedOptions.length} of {maxOptions} selected
-              </span>
-            </p>
-            <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">
-              Save or export options to discuss before sharing anyone's details. The shortlist is
-              for discussion — it is not a credit decision or a saved referral.
-            </p>
-            {publicSelectionCount > 0 ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <p className="text-[12px] text-muted-foreground">
-                  You have {publicSelectionCount} option{publicSelectionCount === 1 ? '' : 's'} in
-                  your public shortlist for this search.
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={importPublicShortlist}>
-                  Continue with public shortlist
-                </Button>
-              </div>
-            ) : null}
-            {importMessage ? (
-              <p role="status" className="mt-1 text-[12px] text-muted-foreground">{importMessage}</p>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!selectedOptions.length}
-            onClick={() => window.print()}
-          >
-            Create shareable shortlist
-          </Button>
-        </section>
       </main>
 
       {unitsItem ? (
@@ -696,8 +602,6 @@ export default function PartnerDevelopmentsPage() {
           item={requirementsItem}
         />
       ) : null}
-
-      <ShortlistPrintView marketMode={marketMode} selectedOptions={selectedOptions} />
     </ReferralAppShell>
   );
 }

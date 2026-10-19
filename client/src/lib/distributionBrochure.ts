@@ -142,12 +142,9 @@ export function estimateBrochureQualifyingIncome(
   return Number.isFinite(income) && income > 0 ? income : null;
 }
 
-export function getBrochureUnitRows(item: BrochureItem): {
-  visibleRows: BrochureUnitRow[];
-  hiddenUnitCount: number;
-} {
+function buildBrochureUnitRows(item: BrochureItem): BrochureUnitRow[] {
   const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
-  const rows = unitTypes.flatMap(unit => {
+  return unitTypes.flatMap(unit => {
     const saleMode = unit.modes?.sale;
     const priceFrom = positiveNumber(saleMode?.priceFrom);
     const priceTo = positiveNumber(saleMode?.priceTo) ?? priceFrom;
@@ -165,6 +162,13 @@ export function getBrochureUnitRows(item: BrochureItem): {
       },
     ];
   });
+}
+
+export function getBrochureUnitRows(item: BrochureItem): {
+  visibleRows: BrochureUnitRow[];
+  hiddenUnitCount: number;
+} {
+  const rows = buildBrochureUnitRows(item);
 
   rows.sort((left, right) => {
     const leftSize = positiveNumber(left.unit.size) ?? Number.MAX_SAFE_INTEGER;
@@ -178,6 +182,13 @@ export function getBrochureUnitRows(item: BrochureItem): {
     visibleRows,
     hiddenUnitCount: Math.max(rows.length - visibleRows.length, 0),
   };
+}
+
+export function getMinimumBrochureQualifyingIncome(item: BrochureItem): number | null {
+  const incomes = buildBrochureUnitRows(item)
+    .map(row => row.qualifyingIncome)
+    .filter((income): income is number => typeof income === 'number' && income > 0);
+  return incomes.length ? Math.min(...incomes) : null;
 }
 
 export function getBrochureHighlights(item: BrochureItem): string[] {
