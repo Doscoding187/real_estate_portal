@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearch } from 'wouter';
 import { ArrowRight, Bell, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
 import { ListingNavbar } from '@/components/ListingNavbar';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/carousel';
 import {
   LocationTrendingFeedSection,
+  type FeedResolution,
   type FeedTab,
 } from '@/components/location/LocationTrendingFeedSection';
 import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
@@ -54,6 +55,15 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const path = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
   const [areaSearch, setAreaSearch] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
+  const [feedResolutions, setFeedResolutions] = useState<Partial<Record<FeedTab, FeedResolution>>>(
+    {},
+  );
+
+  const handleFeedResolution = useCallback((tab: FeedTab, resolution: FeedResolution) => {
+    setFeedResolutions(previous =>
+      previous[tab] === resolution ? previous : { ...previous, [tab]: resolution },
+    );
+  }, []);
   const suburbQuery = trpc.locationPages.getSuburbData.useQuery(
     { provinceSlug, citySlug, suburbSlug },
     { retry: false, staleTime: 300000 },
@@ -198,14 +208,31 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const buyJourneyEnabled = isHomepageHeroJourneyEnabled('buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
   const developmentsJourneyEnabled = isHomepageHeroJourneyEnabled('developments');
+  const enabledFeedTabs = useMemo<FeedTab[]>(() => {
+    const tabs: FeedTab[] = [];
+    if (buyJourneyEnabled) tabs.push('buy');
+    if (rentJourneyEnabled) tabs.push('rent');
+    if (developmentsJourneyEnabled) tabs.push('developments');
+    return tabs;
+  }, [buyJourneyEnabled, developmentsJourneyEnabled, rentJourneyEnabled]);
+  const isRailVisible = useCallback(
+    (tab: FeedTab) => feedResolutions[tab] !== 'empty',
+    [feedResolutions],
+  );
+  const visibleFeedTabs = enabledFeedTabs.filter(isRailVisible);
+  const showRailFallback =
+    hasRecordedListings && enabledFeedTabs.length > 0 && visibleFeedTabs.length === 0;
+  const showInventorySection = visibleFeedTabs.length > 0 || showRailFallback;
   const guideJourneyLinks = [
-    ...(buyJourneyEnabled
+    ...(buyJourneyEnabled && isRailVisible('buy')
       ? [{ id: 'for-sale', label: 'For sale', count: Number(stats?.saleCount || 0) }]
       : []),
-    ...(rentJourneyEnabled
+    ...(rentJourneyEnabled && isRailVisible('rent')
       ? [{ id: 'for-rent', label: 'Rentals', count: Number(stats?.rentalCount || 0) }]
       : []),
-    ...(developmentsJourneyEnabled ? [{ id: 'new-developments', label: 'Developments' }] : []),
+    ...(developmentsJourneyEnabled && isRailVisible('developments')
+      ? [{ id: 'new-developments', label: 'Developments' }]
+      : []),
     { id: 'area-snapshot', label: 'Area snapshot' },
     ...(hasRecordedListings ? [{ id: 'market-insights', label: 'Market insights' }] : []),
     ...(!hasRecordedListings ? [{ id: 'supply-guidance', label: 'Keep looking' }] : []),
@@ -345,8 +372,14 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             </span>
           </div>
           <div className="suburb-guide-hero__actions">
-            <a className="suburb-guide-hero__action" href="#suburb-inventory">
-              Explore homes in {verifiedSuburb.name} <ArrowRight size={16} aria-hidden="true" />
+            <a
+              className="suburb-guide-hero__action"
+              href={hasRecordedListings ? '#suburb-inventory' : '#supply-guidance'}
+            >
+              {hasRecordedListings
+                ? `Explore homes in ${verifiedSuburb.name}`
+                : 'See where to look next'}{' '}
+              <ArrowRight size={16} aria-hidden="true" />
             </a>
             <a
               className="suburb-guide-hero__action suburb-guide-hero__action--secondary"
@@ -541,72 +574,104 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           />
         ) : null}
 
-        {buyJourneyEnabled ? (
-          <div id="suburb-inventory">
-            <LocationTrendingFeedSection
-              sectionId="for-sale"
-              locationName={verifiedSuburb.name}
-              province={verifiedSuburb.provinceName}
-              city={verifiedSuburb.cityName}
-              suburb={verifiedSuburb.name}
-              maxItems={8}
-              activeTab="buy"
-              neutralMode={false}
-              visibleTabs={['buy']}
-              viewAllHref={viewAllHref}
-              standardizeDevelopmentUnitCards
-              cardLayout="carousel"
-              showTabs={false}
-              sectionClassName="suburb-guide-feed-panel"
-              headingEyebrow="FOR SALE · RECENTLY LISTED"
-              headingTitle={`Homes for sale in ${verifiedSuburb.name}`}
-              headingDescription="Browse available homes and off-plan units in this selected area."
-            />
+        {showInventorySection ? (
+          <div id="suburb-inventory" className="suburb-guide-inventory">
+            {buyJourneyEnabled && isRailVisible('buy') ? (
+              <LocationTrendingFeedSection
+                sectionId="for-sale"
+                locationName={verifiedSuburb.name}
+                province={verifiedSuburb.provinceName}
+                city={verifiedSuburb.cityName}
+                suburb={verifiedSuburb.name}
+                maxItems={8}
+                activeTab="buy"
+                neutralMode={false}
+                visibleTabs={['buy']}
+                viewAllHref={viewAllHref}
+                standardizeDevelopmentUnitCards
+                cardLayout="carousel"
+                showTabs={false}
+                hideWhenEmpty
+                onFeedResolutionChange={handleFeedResolution}
+                sectionClassName="suburb-guide-feed-panel"
+                headingEyebrow="FOR SALE · RECENTLY LISTED"
+                headingTitle={`Homes for sale in ${verifiedSuburb.name}`}
+                headingDescription="Browse available homes and off-plan units in this selected area."
+              />
+            ) : null}
+
+            {rentJourneyEnabled && isRailVisible('rent') ? (
+              <LocationTrendingFeedSection
+                sectionId="for-rent"
+                locationName={verifiedSuburb.name}
+                province={verifiedSuburb.provinceName}
+                city={verifiedSuburb.cityName}
+                suburb={verifiedSuburb.name}
+                maxItems={8}
+                activeTab="rent"
+                neutralMode={false}
+                visibleTabs={['rent']}
+                viewAllHref={viewAllHref}
+                standardizeDevelopmentUnitCards
+                cardLayout="carousel"
+                showTabs={false}
+                hideWhenEmpty
+                onFeedResolutionChange={handleFeedResolution}
+                sectionClassName="suburb-guide-feed-panel"
+                headingEyebrow="FOR RENT · RECENTLY LISTED"
+                headingTitle={`Homes to rent in ${verifiedSuburb.name}`}
+                headingDescription="Browse rentals and available rental units in this selected area."
+              />
+            ) : null}
+
+            {developmentsJourneyEnabled && isRailVisible('developments') ? (
+              <LocationTrendingFeedSection
+                sectionId="new-developments"
+                locationName={verifiedSuburb.name}
+                province={verifiedSuburb.provinceName}
+                city={verifiedSuburb.cityName}
+                suburb={verifiedSuburb.name}
+                maxItems={8}
+                activeTab="developments"
+                neutralMode={false}
+                visibleTabs={['developments']}
+                viewAllHref={viewAllHref}
+                cardLayout="carousel"
+                requirePhotoReadyDevelopments
+                showTabs={false}
+                hideWhenEmpty
+                onFeedResolutionChange={handleFeedResolution}
+                sectionClassName="suburb-guide-feed-panel suburb-guide-development-panel"
+                headingEyebrow="PROJECTS IN THIS AREA"
+                headingTitle={`New developments in ${verifiedSuburb.name}`}
+                headingDescription="Browse projects separately from resale homes. Open a project to see its published unit offers—sale, rental or auction terms where available."
+              />
+            ) : null}
+
+            {showRailFallback ? (
+              <section
+                className="suburb-guide-feeds-fallback"
+                aria-labelledby="suburb-guide-feeds-fallback-title"
+              >
+                <h2 id="suburb-guide-feeds-fallback-title">
+                  No listing cards to show in {verifiedSuburb.name} right now
+                </h2>
+                <p>
+                  {totalListings.toLocaleString('en-ZA')} published{' '}
+                  {totalListings === 1 ? 'listing is' : 'listings are'} recorded for this area, but
+                  no displayable cards could be assembled right now. Open the full search to see
+                  every eligible result.
+                </p>
+                <div className="suburb-guide-feeds-fallback__actions">
+                  {viewAllHref.buy ? <Link href={viewAllHref.buy}>View all homes</Link> : null}
+                  {viewAllHref.rent ? <Link href={viewAllHref.rent}>View all rentals</Link> : null}
+                  {viewAllHref.developments ? (
+                    <Link href={viewAllHref.developments}>View all developments</Link>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
           </div>
-        ) : null}
-
-        {rentJourneyEnabled ? (
-          <LocationTrendingFeedSection
-            sectionId="for-rent"
-            locationName={verifiedSuburb.name}
-            province={verifiedSuburb.provinceName}
-            city={verifiedSuburb.cityName}
-            suburb={verifiedSuburb.name}
-            maxItems={8}
-            activeTab="rent"
-            neutralMode={false}
-            visibleTabs={['rent']}
-            viewAllHref={viewAllHref}
-            standardizeDevelopmentUnitCards
-            cardLayout="carousel"
-            showTabs={false}
-            sectionClassName="suburb-guide-feed-panel"
-            headingEyebrow="FOR RENT · RECENTLY LISTED"
-            headingTitle={`Homes to rent in ${verifiedSuburb.name}`}
-            headingDescription="Browse rentals and available rental units in this selected area."
-          />
-        ) : null}
-
-        {developmentsJourneyEnabled ? (
-          <LocationTrendingFeedSection
-            sectionId="new-developments"
-            locationName={verifiedSuburb.name}
-            province={verifiedSuburb.provinceName}
-            city={verifiedSuburb.cityName}
-            suburb={verifiedSuburb.name}
-            maxItems={8}
-            activeTab="developments"
-            neutralMode={false}
-            visibleTabs={['developments']}
-            viewAllHref={viewAllHref}
-            cardLayout="carousel"
-            requirePhotoReadyDevelopments
-            showTabs={false}
-            sectionClassName="suburb-guide-feed-panel suburb-guide-development-panel"
-            headingEyebrow="PROJECTS IN THIS AREA"
-            headingTitle={`New developments in ${verifiedSuburb.name}`}
-            headingDescription="Browse projects separately from resale homes. Open a project to see its published unit offers—sale, rental or auction terms where available."
-          />
         ) : null}
 
         {context ? (

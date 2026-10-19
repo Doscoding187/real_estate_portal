@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   feedInputs: [] as Array<{ tab: string; suburb?: string }>,
   suburbInputs: [] as Array<{ provinceSlug: string; citySlug: string; suburbSlug: string }>,
   suburbData: null as Record<string, unknown> | null,
+  feedItems: {} as Record<string, Array<Record<string, unknown>>>,
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -39,7 +40,12 @@ vi.mock('@/lib/trpc', () => ({
       getHomeTrendingFeed: {
         useQuery: (input: { tab: string; suburb?: string }) => {
           mocks.feedInputs.push(input);
-          return { data: { items: [] }, isLoading: false, isError: false, refetch: vi.fn() };
+          return {
+            data: { items: mocks.feedItems[input.tab] ?? [] },
+            isLoading: false,
+            isError: false,
+            refetch: vi.fn(),
+          };
         },
       },
     },
@@ -117,11 +123,59 @@ function suburbData(name: string, slug: string) {
   };
 }
 
+function zeroSupplyData() {
+  return {
+    ...suburbData('Sandton', 'sandton'),
+    stats: { totalListings: 0, saleCount: 0, rentalCount: 0 },
+  };
+}
+
+function feedItem(tab: string) {
+  if (tab === 'developments') {
+    return {
+      id: 'development-1',
+      kind: 'development',
+      title: 'Sandton Heights',
+      city: 'Johannesburg',
+      suburb: 'Sandton',
+      priceFrom: 1_200_000,
+      priceTo: 2_400_000,
+      image: 'https://cdn.example.com/development.jpg',
+      href: '/developments/sandton-heights',
+      status: 'selling',
+      availabilityState: 'available',
+    };
+  }
+  return {
+    id: `${tab}-listing-1`,
+    kind: 'listing',
+    title: `Sandton ${tab} home`,
+    city: 'Johannesburg',
+    suburb: 'Sandton',
+    priceFrom: 1_500_000,
+    priceTo: null,
+    image: 'https://cdn.example.com/home.jpg',
+    href: `/property/${tab}-listing-1`,
+    listingType: tab === 'rent' ? 'rent' : 'sale',
+    bedrooms: 3,
+    bathrooms: 2,
+  };
+}
+
+function withFeedItems(tabs: string[]) {
+  mocks.feedItems = {
+    buy: tabs.includes('buy') ? [feedItem('buy')] : [],
+    rent: tabs.includes('rent') ? [feedItem('rent')] : [],
+    developments: tabs.includes('developments') ? [feedItem('developments')] : [],
+  };
+}
+
 describe('SuburbGuidePage transaction lanes', () => {
   beforeEach(() => {
     mocks.feedInputs.length = 0;
     mocks.suburbInputs.length = 0;
     mocks.suburbData = suburbData('Sandton', 'sandton');
+    withFeedItems(['buy', 'rent', 'developments']);
   });
 
   it('keeps sale, rental and development discovery separate and removes transaction tabs from projects', () => {
@@ -139,8 +193,14 @@ describe('SuburbGuidePage transaction lanes', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'What’s around Sandton?' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /new developments and rentals/i })).toBeNull();
-    expect(container.querySelector('#new-developments [role="group"]')).toBeNull();
-    expect(mocks.feedInputs.map(input => input.tab)).toEqual(['buy', 'rent', 'developments']);
+    expect(
+      container.querySelector('#new-developments [aria-label="Sandton property type"]'),
+    ).toBeNull();
+    expect(Array.from(new Set(mocks.feedInputs.map(input => input.tab)))).toEqual([
+      'buy',
+      'rent',
+      'developments',
+    ]);
     expect(mocks.feedInputs.every(input => input.suburb === 'Sandton')).toBe(true);
   });
 
@@ -173,7 +233,11 @@ describe('SuburbGuidePage transaction lanes', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'What’s around Rosebank?' })).toBeInTheDocument();
     expect(screen.queryByText(/Region E/i)).toBeNull();
-    expect(mocks.feedInputs.map(input => input.tab)).toEqual(['buy', 'rent', 'developments']);
+    expect(Array.from(new Set(mocks.feedInputs.map(input => input.tab)))).toEqual([
+      'buy',
+      'rent',
+      'developments',
+    ]);
     expect(mocks.feedInputs.every(input => input.suburb === 'Rosebank')).toBe(true);
   });
 
@@ -195,10 +259,8 @@ describe('SuburbGuidePage transaction lanes', () => {
   });
 
   it('guides zero-supply suburbs with nearby, city-wide, alert and seller actions', () => {
-    mocks.suburbData = {
-      ...suburbData('Sandton', 'sandton'),
-      stats: { totalListings: 0, saleCount: 0, rentalCount: 0 },
-    };
+    mocks.suburbData = zeroSupplyData();
+    withFeedItems([]);
 
     const { container } = render(
       <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
@@ -217,9 +279,7 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(
       band.getByRole('link', { name: /Search all of Johannesburg/ }).getAttribute('href'),
     ).toContain('johannesburg');
-    expect(
-      band.getByRole('link', { name: /Set a Sandton listing alert/ }).getAttribute('href'),
-    ).toContain('sandton');
+    expect(band.getByRole('link', { name: /Set a Sandton listing alert/ })).toBeInTheDocument();
     expect(band.getByRole('link', { name: /Selling or letting in Sandton\?/ })).toHaveAttribute(
       'href',
       '/advertise/sell/agencies',
@@ -231,6 +291,55 @@ describe('SuburbGuidePage transaction lanes', () => {
       'Market insights',
     );
     expect(screen.queryByRole('heading', { name: /Compare the listings in Sandton/ })).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Homes for sale in Sandton' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Homes for sale in Sandton' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Homes to rent in Sandton' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'New developments in Sandton' })).toBeNull();
+    expect(container.querySelector('#suburb-inventory')).toBeNull();
+    const nav = container.querySelector('.suburb-guide-quick-nav');
+    expect(nav).not.toHaveTextContent('For sale');
+    expect(nav).not.toHaveTextContent('Rentals');
+    expect(screen.getByRole('link', { name: /See where to look next/ })).toHaveAttribute(
+      'href',
+      '#supply-guidance',
+    );
+  });
+
+  it('keeps off-plan development rails visible below the guidance band for zero-supply suburbs', () => {
+    mocks.suburbData = zeroSupplyData();
+    withFeedItems(['developments']);
+
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(container.querySelector('#supply-guidance')).not.toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'New developments in Sandton' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Homes for sale in Sandton' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Homes to rent in Sandton' })).toBeNull();
+    const nav = container.querySelector('.suburb-guide-quick-nav');
+    expect(nav).toHaveTextContent('Developments');
+    expect(nav).not.toHaveTextContent('For sale');
+    expect(nav).not.toHaveTextContent('Rentals');
+    expect(container.querySelector('#suburb-inventory')).not.toBeNull();
+  });
+
+  it('routes to search when listings are published but no rail can assemble cards', () => {
+    mocks.suburbData = suburbData('Sandton', 'sandton');
+    withFeedItems([]);
+
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(container.querySelector('#supply-guidance')).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Homes for sale in Sandton' })).toBeNull();
+    expect(
+      screen.getByRole('heading', { name: 'No listing cards to show in Sandton right now' }),
+    ).toBeInTheDocument();
+    expect(container.querySelector('#suburb-inventory')).not.toBeNull();
+    expect(screen.getByRole('link', { name: 'View all homes' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View all rentals' })).toBeInTheDocument();
   });
 });

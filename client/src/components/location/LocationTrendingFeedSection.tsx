@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { SimpleDevelopmentCard } from '@/components/SimpleDevelopmentCard';
@@ -23,6 +23,8 @@ export type FeedTab =
   | 'plot_land'
   | 'commercial';
 
+export type FeedResolution = 'loading' | 'error' | 'empty' | 'items';
+
 interface LocationTrendingFeedSectionProps {
   sectionId?: string;
   locationName: string;
@@ -43,6 +45,8 @@ interface LocationTrendingFeedSectionProps {
   headingEyebrow?: string;
   headingTitle?: string;
   headingDescription?: string;
+  hideWhenEmpty?: boolean;
+  onFeedResolutionChange?: (tab: FeedTab, resolution: FeedResolution) => void;
 }
 
 type TrendingFeedItem = {
@@ -126,6 +130,8 @@ export function LocationTrendingFeedSection({
   headingEyebrow,
   headingTitle,
   headingDescription,
+  hideWhenEmpty = false,
+  onFeedResolutionChange,
 }: LocationTrendingFeedSectionProps) {
   const [internalTab, setInternalTab] = useState<FeedTab | null>(neutralMode ? null : 'buy');
   const rentJourneyEnabled = isHomepageHeroJourneyEnabled('rent');
@@ -169,6 +175,26 @@ export function LocationTrendingFeedSection({
       Boolean(getPrimaryDevelopmentImageUrl(item.image)),
   );
   const items = eligibleItems.slice(0, maxItems);
+  const resolution: FeedResolution =
+    !activeTab || sharedLivingHandsOff
+      ? 'empty'
+      : feedQuery.isLoading
+        ? 'loading'
+        : feedQuery.isError
+          ? 'error'
+          : items.length > 0
+            ? 'items'
+            : 'empty';
+
+  useEffect(() => {
+    if (activeTab) {
+      onFeedResolutionChange?.(activeTab, resolution);
+    }
+  }, [activeTab, onFeedResolutionChange, resolution]);
+
+  if (hideWhenEmpty && activeTab && resolution === 'empty') {
+    return null;
+  }
   const visibleCardCount = cardLayout === 'wide' ? 2 : 4;
   const hasCarouselOverflow = items.length > visibleCardCount;
   const carouselItemBasis =
