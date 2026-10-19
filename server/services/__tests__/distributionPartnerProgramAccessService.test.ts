@@ -1,65 +1,126 @@
 import { describe, expect, it } from 'vitest';
-import { partnerHasSpecificProgramEntitlement } from '../distributionPartnerProgramAccessService';
+import { TRPCError } from '@trpc/server';
+import {
+  distributionAgentAccess,
+  distributionAgentTiers,
+  distributionIdentities,
+  distributionPrograms,
+} from '../../../drizzle/schema';
+import {
+  assertPartnerDevelopmentProgramAccess,
+  listPartnerAccessibleDevelopmentIds,
+} from '../distributionPartnerProgramAccessService';
 
-const activeTierOneGrant = {
-  programId: 21,
-  developmentId: 42,
-  minTierRequired: 'tier_1',
-  accessStatus: 'active',
-};
+function createFakeDb(input: { identityRows?: unknown[]; candidateRows?: unknown[] }) {
+  const tablesRead: unknown[] = [];
+  const db = {
+    tablesRead,
+    select: () => ({
+      from: (table: unknown) => {
+        tablesRead.push(table);
+        const identityRows = input.identityRows ?? [];
+        const candidateRows = input.candidateRows ?? [];
+        const chain: any = {
+          where: () => chain,
+          innerJoin: () => chain,
+          limit: () =>
+            Promise.resolve(table === distributionIdentities ? identityRows : candidateRows),
+          then: (resolve: (value: unknown) => unknown) =>
+            Promise.resolve(table === distributionPrograms ? candidateRows : []).then(resolve),
+        };
+        return chain;
+      },
+    }),
+  };
+  return db;
+}
 
-describe('Distribution partner program entitlement', () => {
-  it('does not treat an open program or partner identity as an actor-specific grant', () => {
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: undefined,
-        currentTier: 'tier_1',
-      }),
-    ).toBe(false);
+function referrerActor() {
+  return { userId: 101, role: 'visitor' };
+}
+
+describe('Distribution partner opportunity availability', () => {
+  it('rejects an actor without an active referrer identity', async () => {
+    const db = createFakeDb({ identityRows: [] });
+    await expect(
+      listPartnerAccessibleDevelopmentIds({ db, actor: referrerActor() }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
-  it('allows a partner only with an active grant for the same development and enough tier', () => {
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: activeTierOneGrant,
-        currentTier: 'tier_1',
-      }),
-    ).toBe(true);
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: { ...activeTierOneGrant, developmentId: 43 },
-        currentTier: 'tier_1',
-      }),
-    ).toBe(false);
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: activeTierOneGrant,
-        currentTier: null,
-      }),
-    ).toBe(false);
+  it('returns every active referral-enabled opportunity without reading access grants', async () => {
+    const db = createFakeDb({
+      identityRows: [{ id: 1 }],
+      candidateRows: [
+        { programId: 7, developmentId: 42 },
+        { programId: 8, developmentId: 43 },
+      ],
+    });
+
+    const ids = await listPartnerAccessibleDevelopmentIds({
+      db,
+      actor: referrerActor(),
+    });
+
+    expect(ids).toEqual([42, 43]);
+    expect(db.tablesRead).not.toContain(distributionAgentAccess);
+    expect(db.tablesRead).not.toContain(distributionAgentTiers);
   });
 
-  it.each(['paused', 'revoked'])('rejects a %s specific program grant', accessStatus => {
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: { ...activeTierOneGrant, accessStatus },
-        currentTier: 'tier_4',
-      }),
-    ).toBe(false);
+  it('deduplicates development ids across candidate programs', async () => {
+    const db = createFakeDb({
+      identityRows: [{ id: 1 }],
+      candidateRows: [
+        { programId: 7, developmentId: 42 },
+        { programId: 9, developmentId: 42 },
+      ],
+    });
+
+    await expect(
+      listPartnerAccessibleDevelopmentIds({ db, actor: referrerActor() }),
+    ).resolves.toEqual([42]);
   });
 
-  it('rejects a grant whose minimum tier exceeds the partner tier', () => {
-    expect(
-      partnerHasSpecificProgramEntitlement({
-        developmentId: 42,
-        grant: { ...activeTierOneGrant, minTierRequired: 'tier_3' },
-        currentTier: 'tier_2',
+  it('returns no ids when an empty development filter is requested', async () => {
+    const db = createFakeDb({
+      identityRows: [{ id: 1 }],
+      candidateRows: [{ programId: 7, developmentId: 42 }],
+    });
+
+    await expect(
+      listPartnerAccessibleDevelopmentIds({
+        db,
+        actor: referrerActor(),
+        requestedDevelopmentIds: [],
       }),
-    ).toBe(false);
+    ).resolves.toEqual([]);
+  });
+
+  it('lets a super admin inspect availability without a referrer identity', async () => {
+    const db = createFakeDb({
+      identityRows: [],
+      candidateRows: [{ programId: 7, developmentId: 42 }],
+    });
+
+    await expect(
+      listPartnerAccessibleDevelopmentIds({
+        db,
+        actor: { userId: 1, role: 'super_admin' },
+      }),
+    ).resolves.toEqual([42]);
+  });
+
+  it('rejects a development outside the active referral network', async () => {
+    const db = createFakeDb({
+      identityRows: [{ id: 1 }],
+      candidateRows: [{ programId: 7, developmentId: 42 }],
+    });
+
+    await expect(
+      assertPartnerDevelopmentProgramAccess({ db, actor: referrerActor(), developmentId: 99 }),
+    ).rejects.toBeInstanceOf(TRPCError);
+
+    await expect(
+      assertPartnerDevelopmentProgramAccess({ db, actor: referrerActor(), developmentId: 42 }),
+    ).resolves.toBeUndefined();
   });
 });

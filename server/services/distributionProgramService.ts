@@ -130,7 +130,7 @@ export async function ensureDistributionProgramForDevelopment(
     commissionModel: 'flat_percentage',
     defaultCommissionPercent: null,
     defaultCommissionAmount: null,
-    tierAccessPolicy: 'restricted',
+    tierAccessPolicy: 'open',
     payoutMilestone: 'attorney_signing',
     payoutMilestoneNotes: null,
     currencyCode: 'ZAR',

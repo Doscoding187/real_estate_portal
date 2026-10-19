@@ -13,6 +13,10 @@ import {
 import { getDb } from '../db-connection';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import {
+  resolveDistributionPreviewDemoInventory,
+  type DistributionPreviewDemoUnitType,
+} from './distributionPreviewDemoInventory';
 
 export type DevelopmentSalesMode = 'for_sale' | 'for_rent';
 
@@ -120,6 +124,37 @@ function revisionFor(payload: Omit<DevelopmentSalesProjection, 'observedAt' | 'r
   return `sha256:${createHash('sha256').update(JSON.stringify(payload), 'utf8').digest('hex')}`;
 }
 
+function toDistributionPreviewDemoUnitType(row: {
+  id: string;
+  name: string;
+  description: string | null;
+  bedrooms: number;
+  bathrooms: string;
+  unitSize: number | null;
+  basePriceFrom: string;
+  basePriceTo: string | null;
+  availableUnits: number;
+  isActive: number | null;
+}): DistributionPreviewDemoUnitType {
+  const numeric = (value: string | null): number | null => {
+    if (value === null) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    description: row.description || null,
+    bedrooms: Number(row.bedrooms),
+    bathrooms: Number(row.bathrooms),
+    unitSize: row.unitSize === null ? null : Number(row.unitSize),
+    basePriceFrom: numeric(row.basePriceFrom),
+    basePriceTo: numeric(row.basePriceTo),
+    availableUnits: Number(row.availableUnits || 0),
+    isActive: Number(row.isActive || 0) === 1,
+  };
+}
+
 /**
  * Developer-owned read boundary for Distribution and other server consumers.
  * Campaign publication uses the canonical Developer eligibility policy.
@@ -143,6 +178,7 @@ export async function getDevelopmentSalesProjection(
         cataloguePublisherId: developments.cataloguePublisherId,
         name: developments.name,
         marketingName: developments.marketingName,
+        slug: developments.slug,
         tagline: developments.tagline,
         description: developments.description,
         developmentType: developments.developmentType,
@@ -184,9 +220,19 @@ export async function getDevelopmentSalesProjection(
         id: unitTypes.id,
         developmentId: unitTypes.developmentId,
         isActive: unitTypes.isActive,
+        name: unitTypes.name,
+        description: unitTypes.description,
+        bedrooms: unitTypes.bedrooms,
+        bathrooms: unitTypes.bathrooms,
+        unitSize: unitTypes.unitSize,
+        basePriceFrom: unitTypes.basePriceFrom,
+        basePriceTo: unitTypes.basePriceTo,
+        availableUnits: unitTypes.availableUnits,
+        displayOrder: unitTypes.displayOrder,
       })
       .from(unitTypes)
-      .where(eq(unitTypes.developmentId, developmentId)),
+      .where(eq(unitTypes.developmentId, developmentId))
+      .orderBy(asc(unitTypes.displayOrder), asc(unitTypes.id)),
     row.publisher?.developerOrganisationId == null
       ? Promise.resolve([{ activeOperatorCount: 0 }])
       : db
@@ -236,6 +282,29 @@ export async function getDevelopmentSalesProjection(
     activeSupersessionSource: activeSupersessionRows.length > 0,
   });
   const publicationVisible = publication.eligible;
+
+  // Synthetic stock is exposed only for an exactly governed preview demo
+  // development; real inventory stays fail-closed to the unscoped-hidden shape.
+  const demoInventory = publicationVisible
+    ? resolveDistributionPreviewDemoInventory({
+        development: {
+          slug: row.development.slug,
+          transactionType: row.development.transactionType,
+          isPublished: row.development.isPublished,
+          approvalStatus: row.development.approvalStatus,
+          inventoryMode: row.development.inventoryMode,
+        },
+        publisher: row.publisher
+          ? {
+              authorityKind: row.publisher.authorityKind,
+              isVisible: row.publisher.isVisible,
+              sourceAttribution: row.publisher.sourceAttribution,
+            }
+          : null,
+        unitTypes: unitTypeRows.map(toDistributionPreviewDemoUnitType),
+        activeSupersession: activeSupersessionRows.length > 0,
+      })
+    : null;
 
   const activePhases =
     publicationVisible && row.development.status === 'selling'
@@ -314,13 +383,15 @@ export async function getDevelopmentSalesProjection(
       province: publicationVisible ? String(row.development.province) : '',
       images: publicationVisible ? publicImageUrls(row.development.images) : [],
     },
-    inventory: {
-      mode: row.development.inventoryMode,
-      phaseScope: 'unscoped-hidden' as const,
-      modes: {} as Partial<Record<DevelopmentSalesMode, DevelopmentSalesModeProjection>>,
-      phases: [] as Array<{ id: number; name: string; phaseNumber: number }>,
-      unitTypes: [] as DevelopmentSalesProjection['inventory']['unitTypes'],
-    },
+    inventory:
+      demoInventory ??
+      ({
+        mode: row.development.inventoryMode,
+        phaseScope: 'unscoped-hidden' as const,
+        modes: {} as Partial<Record<DevelopmentSalesMode, DevelopmentSalesModeProjection>>,
+        phases: [] as Array<{ id: number; name: string; phaseNumber: number }>,
+        unitTypes: [] as DevelopmentSalesProjection['inventory']['unitTypes'],
+      } as const),
     contacts,
     resources: [] as [],
   };

@@ -329,10 +329,9 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(distributionSource).toContain(
       'eq(distributionPrograms.developmentId, params.developmentId)',
     );
-    expect(distributionSource).toContain(
-      'eq(distributionAgentAccess.developmentId, params.developmentId)',
-    );
-    expect(distributionSource).toContain('COUNT(DISTINCT ${distributionAgentAccess.agentId})');
+    expect(distributionSource).toContain("eq(distributionIdentities.identityType, 'referrer')");
+    expect(distributionSource).toContain('COUNT(DISTINCT ${distributionIdentities.userId})');
+    expect(distributionSource).not.toContain('distributionAgentAccess');
     expect(distributionSource).not.toContain("manageHref: '/");
   });
 

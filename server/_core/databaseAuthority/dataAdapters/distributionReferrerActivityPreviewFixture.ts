@@ -1,8 +1,14 @@
+import { createHash } from 'node:crypto';
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import { assessAuthorizedDatabaseReadiness } from '../readiness';
 import type { ResolvedDatabaseAuthority } from '../types';
+import {
+  DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX,
+  DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
+} from '../../../../shared/distributionPreviewDemo';
+import { distributionReferralIntakePolicyConfigurationSchema } from '../../../../shared/distributionReferralIntake';
 import {
   assertOperation,
   queryRows,
@@ -20,7 +26,7 @@ import {
 } from './distributionReferrerPreviewFixture';
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION =
-  'distribution-referrer-activity-preview-v1' as const;
+  'distribution-referrer-activity-preview-v2' as const;
 
 const EXPECTED_MANAGER = Object.freeze({
   openId: 'distribution-referrer-activity-manager-v1',
@@ -76,6 +82,180 @@ const EXPECTED_COMMISSION_ENTRY = Object.freeze({
   currency: 'ZAR',
 });
 
+function deterministicUuid(label: string): string {
+  const hex = stableDigest(label);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+const EXPECTED_DEMO_PUBLISHER = Object.freeze({
+  slug: `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}ridge-estate-brand-v2`,
+  name: 'Preview Demo Developer (Sample)',
+  authorityKind: 'platform_reference',
+  publisherType: 'developer',
+  sourceAttribution: DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
+  isVisible: 1,
+});
+
+const EXPECTED_DEMO_DEVELOPMENT = Object.freeze({
+  slug: `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}ridge-estate-v2`,
+  name: 'Preview Demo Ridge Estate (Sample)',
+  marketingName: 'Preview Demo Ridge Estate (Sample)',
+  developmentType: 'residential',
+  city: 'Midrand',
+  province: 'Gauteng',
+  suburb: 'Waterfall',
+  transactionType: 'for_sale',
+  isPublished: 1,
+  approvalStatus: 'approved',
+  status: 'selling',
+  inventoryMode: 'itemized',
+});
+
+const EXPECTED_DEMO_UNIT_TYPES = Object.freeze([
+  Object.freeze({
+    id: deterministicUuid(`${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}unit-2-bedroom-v2`),
+    name: 'Sample 2-Bedroom Apartment',
+    bedrooms: 2,
+    bathrooms: '2.0',
+    unitSize: 78,
+    basePriceFrom: '1150000.00',
+    availableUnits: 4,
+    totalUnits: 6,
+    displayOrder: 1,
+  }),
+  Object.freeze({
+    id: deterministicUuid(`${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}unit-3-bedroom-v2`),
+    name: 'Sample 3-Bedroom Apartment',
+    bedrooms: 3,
+    bathrooms: '2.0',
+    unitSize: 105,
+    basePriceFrom: '1650000.00',
+    availableUnits: 2,
+    totalUnits: 4,
+    displayOrder: 2,
+  }),
+]);
+
+const EXPECTED_DEMO_PROGRAM = Object.freeze({
+  isReferralEnabled: 1,
+  isActive: 1,
+  commissionModel: 'flat_percentage',
+  defaultCommissionPercent: '2.50',
+  referrerCommissionType: 'percentage',
+  referrerCommissionValue: '2.50',
+  referrerCommissionBasis: 'sale_price',
+  tierAccessPolicy: 'open',
+  payoutMilestone: 'transfer_registration',
+  currencyCode: 'ZAR',
+});
+
+const EXPECTED_DEMO_PARTNERSHIP = Object.freeze({ status: 'active' });
+
+const EXPECTED_DEMO_ACCESS = Object.freeze({
+  status: 'included',
+  submissionAllowed: 1,
+  excludedByMandate: 0,
+  excludedByExclusivity: 0,
+});
+
+const EXPECTED_DEMO_MANAGER_ASSIGNMENT = Object.freeze({
+  isPrimary: 1,
+  isActive: 1,
+  workloadCapacity: 0,
+  timezone: 'Africa/Johannesburg',
+});
+
+const EXPECTED_DEMO_REQUIRED_DOCUMENTS = Object.freeze([
+  Object.freeze({
+    documentCode: 'id_document',
+    documentLabel: 'Sample buyer ID document',
+    sortOrder: 1,
+  }),
+  Object.freeze({
+    documentCode: 'proof_of_address',
+    documentLabel: 'Sample proof of address',
+    sortOrder: 2,
+  }),
+]);
+
+const DEMO_POLICY_CONFIGURATION = Object.freeze({
+  sharingPermissionDocument: {
+    version: 'preview-demo-v2',
+    title: 'Sample referral permission',
+    content:
+      'This synthetic preview permission records that the prospect agreed to share their details with the sample sales team for this demonstration referral.',
+  },
+  privacyNoticeDocument: {
+    version: 'preview-demo-v2',
+    title: 'Sample privacy notice',
+    content:
+      'This synthetic preview notice explains how a demonstration referral would treat prospect information; it is not a production privacy notice.',
+  },
+  sharingPurpose: 'Sample referral introduction for local preview review.',
+  namedRecipients: [
+    {
+      name: 'Preview Sales Manager',
+      organization: 'Preview Demo Developer (Sample)',
+      role: 'Sales manager',
+    },
+  ],
+  signatureMethod: 'Electronic acceptance during the preview intake session.',
+  identityEvidence: {
+    acceptedEvidenceTypes: ['South African ID document', 'Passport'],
+    allowedMimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+    maxFileBytes: 5242880,
+    verificationInstructions:
+      'Upload a clear copy of the identity document for this preview review.',
+    authorizedRoles: ['Sales manager'],
+  },
+  retention: {
+    abandonedIntake: { days: 30, startsFrom: 'draft_created' },
+    sharingPermission: { days: 365, startsFrom: 'evidence_captured' },
+    identityEvidence: { days: 365, startsFrom: 'evidence_captured' },
+    activeReferral: { days: 365, startsFrom: 'referral_submitted' },
+    withdrawnReferral: { days: 365, startsFrom: 'referral_withdrawn' },
+    closedReferral: { days: 2555, startsFrom: 'referral_closed' },
+  },
+  workflowSteps: [
+    {
+      key: 'preview-introduction',
+      title: 'Preview introduction review',
+      partnerInstructions:
+        'Confirm prospect consent and upload the required documents for this preview referral.',
+      ownerRole: 'Sales manager',
+      isBlocking: true,
+    },
+  ],
+  creditReport: {
+    enabled: false,
+    providerName: null,
+    providerApprovalReference: null,
+    authorizationDocument: null,
+  },
+});
+
+const EXPECTED_DEMO_POLICY = Object.freeze({
+  policyVersion: 1,
+  status: 'active',
+  approvalReference: 'PREVIEW-DEMO-INTAKE-POLICY-V2',
+});
+
+const DEMO_POLICY_CONFIGURATION_DIGEST = createHash('sha256')
+  .update(canonicalJson(DEMO_POLICY_CONFIGURATION), 'utf8')
+  .digest('hex');
+
 const FIXTURE_PAYLOAD = Object.freeze({
   version: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
   scope: 'referrer-dashboard-sample-activity-only',
@@ -89,6 +269,20 @@ const FIXTURE_PAYLOAD = Object.freeze({
   deal: EXPECTED_DEAL,
   viewing: EXPECTED_VIEWING,
   commissionEntry: EXPECTED_COMMISSION_ENTRY,
+  demo: {
+    publisher: EXPECTED_DEMO_PUBLISHER,
+    development: EXPECTED_DEMO_DEVELOPMENT,
+    unitTypes: EXPECTED_DEMO_UNIT_TYPES,
+    program: EXPECTED_DEMO_PROGRAM,
+    partnership: EXPECTED_DEMO_PARTNERSHIP,
+    access: EXPECTED_DEMO_ACCESS,
+    managerAssignment: EXPECTED_DEMO_MANAGER_ASSIGNMENT,
+    requiredDocuments: EXPECTED_DEMO_REQUIRED_DOCUMENTS,
+    intakePolicy: {
+      ...EXPECTED_DEMO_POLICY,
+      configurationDigest: DEMO_POLICY_CONFIGURATION_DIGEST,
+    },
+  },
 });
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST = stableDigest(FIXTURE_PAYLOAD);
@@ -107,6 +301,15 @@ export type DistributionReferrerActivityPreviewEvidence = AdapterEvidence & {
     deal: PreparedState;
     viewing: ViewingState;
     commissionEntry: PreparedState;
+    demoPublisher: PreparedState;
+    demoDevelopment: PreparedState;
+    demoUnitTypes: PreparedState;
+    demoProgram: PreparedState;
+    demoPartnership: PreparedState;
+    demoAccess: PreparedState;
+    demoManagerAssignment: PreparedState;
+    demoRequiredDocuments: PreparedState;
+    demoIntakePolicy: PreparedState;
   };
   sample: {
     developmentId: number;
@@ -115,6 +318,11 @@ export type DistributionReferrerActivityPreviewEvidence = AdapterEvidence & {
     viewingId: number;
     commissionEntryId: number;
     viewingScheduledStartAt: string;
+    demoPublisherId: number;
+    demoDevelopmentId: number;
+    demoProgramId: number;
+    demoUnitTypeIds: string[];
+    demoIntakePolicyReleaseId: number;
   };
   verified: {
     migrationHead: string;
@@ -127,6 +335,12 @@ export type DistributionReferrerActivityPreviewEvidence = AdapterEvidence & {
     potentialPayoutPending: true;
     noProgramGrant: true;
     noLedgerOrValidation: true;
+    demoOpportunityPublished: true;
+    demoInventoryGoverned: true;
+    demoProgramReady: true;
+    demoNetworkAccessIncluded: true;
+    demoPrimaryManagerAssigned: true;
+    demoIntakePolicyActive: true;
   };
 };
 
@@ -389,6 +603,381 @@ export function assertDistributionReferrerActivityCommissionEntry(
   requireExact(rowValue(row, 'currency'), EXPECTED_COMMISSION_ENTRY.currency, 'commission currency');
 }
 
+export function assertDistributionReferrerActivityDemoPublisher(row: Row): void {
+  requireExact(rowValue(row, 'slug'), EXPECTED_DEMO_PUBLISHER.slug, 'demo publisher slug');
+  requireExact(rowValue(row, 'name'), EXPECTED_DEMO_PUBLISHER.name, 'demo publisher name');
+  requireExact(
+    rowValue(row, 'authority_kind'),
+    EXPECTED_DEMO_PUBLISHER.authorityKind,
+    'demo publisher authority kind',
+  );
+  requireExact(
+    rowValue(row, 'publisher_type'),
+    EXPECTED_DEMO_PUBLISHER.publisherType,
+    'demo publisher type',
+  );
+  requireExact(
+    rowValue(row, 'source_attribution'),
+    EXPECTED_DEMO_PUBLISHER.sourceAttribution,
+    'demo publisher source attribution',
+  );
+  requireExact(
+    rowValue(row, 'is_visible'),
+    EXPECTED_DEMO_PUBLISHER.isVisible,
+    'demo publisher visibility',
+  );
+}
+
+export function classifyDistributionReferrerActivityDemoPublisher(row: Row | null): {
+  state: PreparedState;
+} {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoPublisher(row);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoDevelopment(
+  row: Row,
+  publisherId: number,
+): void {
+  requireExact(rowValue(row, 'slug'), EXPECTED_DEMO_DEVELOPMENT.slug, 'demo development slug');
+  requireExact(rowValue(row, 'name'), EXPECTED_DEMO_DEVELOPMENT.name, 'demo development name');
+  requireExact(
+    rowValue(row, 'marketing_name'),
+    EXPECTED_DEMO_DEVELOPMENT.marketingName,
+    'demo development marketing name',
+  );
+  requireExact(
+    rowValue(row, 'developmentType'),
+    EXPECTED_DEMO_DEVELOPMENT.developmentType,
+    'demo development type',
+  );
+  requireExact(rowValue(row, 'city'), EXPECTED_DEMO_DEVELOPMENT.city, 'demo development city');
+  requireExact(
+    rowValue(row, 'province'),
+    EXPECTED_DEMO_DEVELOPMENT.province,
+    'demo development province',
+  );
+  requireExact(rowValue(row, 'suburb'), EXPECTED_DEMO_DEVELOPMENT.suburb, 'demo development suburb');
+  requireExact(
+    rowValue(row, 'transaction_type'),
+    EXPECTED_DEMO_DEVELOPMENT.transactionType,
+    'demo development transaction type',
+  );
+  requireExact(
+    rowValue(row, 'isPublished'),
+    EXPECTED_DEMO_DEVELOPMENT.isPublished,
+    'demo development publication state',
+  );
+  requireExact(
+    rowValue(row, 'approval_status'),
+    EXPECTED_DEMO_DEVELOPMENT.approvalStatus,
+    'demo development approval status',
+  );
+  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_DEVELOPMENT.status, 'demo development status');
+  requireExact(
+    rowValue(row, 'inventory_mode'),
+    EXPECTED_DEMO_DEVELOPMENT.inventoryMode,
+    'demo development inventory mode',
+  );
+  requireExact(
+    rowValue(row, 'catalogue_publisher_id'),
+    publisherId,
+    'demo development publisher ID',
+  );
+  if (!rowValue(row, 'publishedAt')) {
+    throw new Error('Distribution referrer activity preview fixture demo development is unpublished.');
+  }
+}
+
+export function classifyDistributionReferrerActivityDemoDevelopment(
+  row: Row | null,
+  publisherId: number,
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoDevelopment(row, publisherId);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoUnitTypes(rows: Row[]): void {
+  if (rows.length !== EXPECTED_DEMO_UNIT_TYPES.length) {
+    throw new Error(
+      'Distribution referrer activity preview fixture demo unit types do not match the governed set.',
+    );
+  }
+  for (const expected of EXPECTED_DEMO_UNIT_TYPES) {
+    const row = rows.find(candidate => comparable(rowValue(candidate, 'name')) === expected.name);
+    if (!row) {
+      throw new Error(
+        `Distribution referrer activity preview fixture is missing demo unit type ${expected.name}.`,
+      );
+    }
+    requireExact(rowValue(row, 'id'), expected.id, 'demo unit type ID');
+    requireExact(rowValue(row, 'bedrooms'), expected.bedrooms, 'demo unit type bedrooms');
+    requireExact(rowValue(row, 'bathrooms'), expected.bathrooms, 'demo unit type bathrooms');
+    requireExact(rowValue(row, 'unit_size'), expected.unitSize, 'demo unit type size');
+    requireExact(
+      rowValue(row, 'base_price_from'),
+      expected.basePriceFrom,
+      'demo unit type base price',
+    );
+    requireExact(
+      rowValue(row, 'available_units'),
+      expected.availableUnits,
+      'demo unit type available units',
+    );
+    requireExact(rowValue(row, 'total_units'), expected.totalUnits, 'demo unit type total units');
+    requireExact(rowValue(row, 'display_order'), expected.displayOrder, 'demo unit type order');
+    requireExact(rowValue(row, 'is_active'), 1, 'demo unit type active state');
+  }
+}
+
+export function assertDistributionReferrerActivityDemoProgram(row: Row, developmentId: number): void {
+  requireExact(
+    rowValue(row, 'development_id'),
+    developmentId,
+    'demo program development ID',
+  );
+  requireExact(
+    rowValue(row, 'is_referral_enabled'),
+    EXPECTED_DEMO_PROGRAM.isReferralEnabled,
+    'demo program referral state',
+  );
+  requireExact(rowValue(row, 'is_active'), EXPECTED_DEMO_PROGRAM.isActive, 'demo program active state');
+  requireExact(
+    rowValue(row, 'commission_model'),
+    EXPECTED_DEMO_PROGRAM.commissionModel,
+    'demo program commission model',
+  );
+  requireExact(
+    rowValue(row, 'default_commission_percent'),
+    EXPECTED_DEMO_PROGRAM.defaultCommissionPercent,
+    'demo program default commission percent',
+  );
+  requireExact(
+    rowValue(row, 'referrer_commission_type'),
+    EXPECTED_DEMO_PROGRAM.referrerCommissionType,
+    'demo program referrer commission type',
+  );
+  requireExact(
+    rowValue(row, 'referrer_commission_value'),
+    EXPECTED_DEMO_PROGRAM.referrerCommissionValue,
+    'demo program referrer commission value',
+  );
+  requireExact(
+    rowValue(row, 'referrer_commission_basis'),
+    EXPECTED_DEMO_PROGRAM.referrerCommissionBasis,
+    'demo program referrer commission basis',
+  );
+  requireExact(
+    rowValue(row, 'tier_access_policy'),
+    EXPECTED_DEMO_PROGRAM.tierAccessPolicy,
+    'demo program tier access policy',
+  );
+  requireExact(
+    rowValue(row, 'payout_milestone'),
+    EXPECTED_DEMO_PROGRAM.payoutMilestone,
+    'demo program payout milestone',
+  );
+  requireExact(rowValue(row, 'currency_code'), EXPECTED_DEMO_PROGRAM.currencyCode, 'demo program currency');
+}
+
+export function classifyDistributionReferrerActivityDemoProgram(
+  row: Row | null,
+  developmentId: number,
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoProgram(row, developmentId);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoPartnership(row: Row, publisherId: number): void {
+  requireExact(
+    rowValue(row, 'catalogue_publisher_id'),
+    publisherId,
+    'demo partnership publisher ID',
+  );
+  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_PARTNERSHIP.status, 'demo partnership status');
+}
+
+export function classifyDistributionReferrerActivityDemoPartnership(
+  row: Row | null,
+  publisherId: number,
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoPartnership(row, publisherId);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoAccess(
+  row: Row,
+  expected: { developmentId: number; brandPartnershipId: number; publisherId: number },
+): void {
+  requireExact(rowValue(row, 'development_id'), expected.developmentId, 'demo access development ID');
+  requireExact(
+    rowValue(row, 'brand_partnership_id'),
+    expected.brandPartnershipId,
+    'demo access partnership ID',
+  );
+  requireExact(
+    rowValue(row, 'catalogue_publisher_id'),
+    expected.publisherId,
+    'demo access publisher ID',
+  );
+  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_ACCESS.status, 'demo access status');
+  requireExact(
+    rowValue(row, 'submission_allowed'),
+    EXPECTED_DEMO_ACCESS.submissionAllowed,
+    'demo access submission allowed',
+  );
+  requireExact(
+    rowValue(row, 'excluded_by_mandate'),
+    EXPECTED_DEMO_ACCESS.excludedByMandate,
+    'demo access mandate exclusion',
+  );
+  requireExact(
+    rowValue(row, 'excluded_by_exclusivity'),
+    EXPECTED_DEMO_ACCESS.excludedByExclusivity,
+    'demo access exclusivity exclusion',
+  );
+}
+
+export function classifyDistributionReferrerActivityDemoAccess(
+  row: Row | null,
+  expected: { developmentId: number; brandPartnershipId: number; publisherId: number },
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoAccess(row, expected);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoManagerAssignment(
+  row: Row,
+  expected: { developmentId: number; managerUserId: number },
+): void {
+  requireExact(
+    rowValue(row, 'development_id'),
+    expected.developmentId,
+    'demo manager assignment development ID',
+  );
+  requireExact(
+    rowValue(row, 'manager_user_id'),
+    expected.managerUserId,
+    'demo manager assignment manager ID',
+  );
+  requireExact(
+    rowValue(row, 'is_primary'),
+    EXPECTED_DEMO_MANAGER_ASSIGNMENT.isPrimary,
+    'demo manager assignment primary state',
+  );
+  requireExact(
+    rowValue(row, 'is_active'),
+    EXPECTED_DEMO_MANAGER_ASSIGNMENT.isActive,
+    'demo manager assignment active state',
+  );
+  requireExact(
+    rowValue(row, 'workload_capacity'),
+    EXPECTED_DEMO_MANAGER_ASSIGNMENT.workloadCapacity,
+    'demo manager assignment workload',
+  );
+  requireExact(
+    rowValue(row, 'timezone'),
+    EXPECTED_DEMO_MANAGER_ASSIGNMENT.timezone,
+    'demo manager assignment timezone',
+  );
+}
+
+export function classifyDistributionReferrerActivityDemoManagerAssignment(
+  row: Row | null,
+  expected: { developmentId: number; managerUserId: number },
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoManagerAssignment(row, expected);
+  return { state: 'reused' };
+}
+
+export function assertDistributionReferrerActivityDemoRequiredDocuments(rows: Row[]): void {
+  for (const expected of EXPECTED_DEMO_REQUIRED_DOCUMENTS) {
+    const matches = rows.filter(
+      row => comparable(rowValue(row, 'document_code')) === expected.documentCode,
+    );
+    if (matches.length !== 1) {
+      throw new Error(
+        `Distribution referrer activity preview fixture requires exactly one demo document ${expected.documentCode}.`,
+      );
+    }
+    const row = matches[0];
+    requireExact(rowValue(row, 'document_label'), expected.documentLabel, 'demo document label');
+    requireExact(rowValue(row, 'sort_order'), expected.sortOrder, 'demo document order');
+    requireExact(rowValue(row, 'is_required'), 1, 'demo document required state');
+    requireExact(rowValue(row, 'is_active'), 1, 'demo document active state');
+    requireExact(
+      rowValue(row, 'category'),
+      'client_required_document',
+      'demo document category',
+    );
+  }
+  if (rows.length !== EXPECTED_DEMO_REQUIRED_DOCUMENTS.length) {
+    throw new Error(
+      'Distribution referrer activity preview fixture demo required documents do not match the governed set.',
+    );
+  }
+}
+
+export function assertDistributionReferrerActivityDemoIntakePolicy(
+  row: Row,
+  programId: number,
+): void {
+  requireExact(rowValue(row, 'program_id'), programId, 'demo intake policy program ID');
+  requireExact(
+    rowValue(row, 'policy_version'),
+    EXPECTED_DEMO_POLICY.policyVersion,
+    'demo intake policy version',
+  );
+  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_POLICY.status, 'demo intake policy status');
+  requireExact(
+    rowValue(row, 'approval_reference'),
+    EXPECTED_DEMO_POLICY.approvalReference,
+    'demo intake policy approval reference',
+  );
+  requireExact(
+    rowValue(row, 'configuration_digest'),
+    DEMO_POLICY_CONFIGURATION_DIGEST,
+    'demo intake policy configuration digest',
+  );
+  const rawConfiguration = rowValue(row, 'configuration');
+  let parsed: unknown = rawConfiguration;
+  if (typeof rawConfiguration === 'string') {
+    try {
+      parsed = JSON.parse(rawConfiguration);
+    } catch {
+      throw new Error(
+        'Distribution referrer activity preview fixture demo intake policy configuration is not valid JSON.',
+      );
+    }
+  }
+  const result = distributionReferralIntakePolicyConfigurationSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error(
+      'Distribution referrer activity preview fixture demo intake policy configuration fails the canonical policy schema.',
+    );
+  }
+  requireExact(
+    canonicalJson(result.data),
+    canonicalJson(DEMO_POLICY_CONFIGURATION),
+    'demo intake policy configuration',
+  );
+}
+
+export function classifyDistributionReferrerActivityDemoIntakePolicy(
+  row: Row | null,
+  programId: number,
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityDemoIntakePolicy(row, programId);
+  return { state: 'reused' };
+}
+
 async function findReferrerUser(connection: AuthoritySqlConnection): Promise<Row | null> {
   const rows = await queryRows(
     connection,
@@ -492,6 +1081,141 @@ async function findCommissionEntry(
     [dealId, EXPECTED_COMMISSION_ENTRY.triggerStage],
   );
   return requireOneOrNone(rows, 'sample commission entry');
+}
+
+async function findDemoPublisher(connection: AuthoritySqlConnection): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, authority_kind, publisher_type, name, slug, source_attribution, is_visible
+       FROM catalogue_publishers
+      WHERE slug = ?
+      ORDER BY id`,
+    [EXPECTED_DEMO_PUBLISHER.slug],
+  );
+  return requireOneOrNone(rows, 'demo catalogue publisher');
+}
+
+async function findDemoDevelopment(connection: AuthoritySqlConnection): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, catalogue_publisher_id, name, marketing_name, slug, developmentType, city,
+            province, suburb, transaction_type, isPublished, publishedAt, approval_status,
+            status, inventory_mode
+       FROM developments
+      WHERE slug = ?
+      ORDER BY id`,
+    [EXPECTED_DEMO_DEVELOPMENT.slug],
+  );
+  return requireOneOrNone(rows, 'demo development');
+}
+
+async function listDemoUnitTypes(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<Row[]> {
+  return await queryRows(
+    connection,
+    `SELECT id, name, bedrooms, bathrooms, unit_size, base_price_from, available_units,
+            total_units, display_order, is_active
+       FROM unit_types
+      WHERE development_id = ?
+      ORDER BY display_order, id`,
+    [developmentId],
+  );
+}
+
+async function findDemoProgram(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, development_id, is_referral_enabled, is_active, commission_model,
+            default_commission_percent, referrer_commission_type, referrer_commission_value,
+            referrer_commission_basis, tier_access_policy, payout_milestone, currency_code
+       FROM distribution_programs
+      WHERE development_id = ?
+      ORDER BY id`,
+    [developmentId],
+  );
+  return requireOneOrNone(rows, 'demo distribution program');
+}
+
+async function findDemoPartnership(
+  connection: AuthoritySqlConnection,
+  publisherId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, catalogue_publisher_id, status
+       FROM distribution_brand_partnerships
+      WHERE catalogue_publisher_id = ?
+      ORDER BY id`,
+    [publisherId],
+  );
+  return requireOneOrNone(rows, 'demo brand partnership');
+}
+
+async function findDemoAccess(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, development_id, brand_partnership_id, catalogue_publisher_id, status,
+            submission_allowed, excluded_by_mandate, excluded_by_exclusivity
+       FROM distribution_development_access
+      WHERE development_id = ?
+      ORDER BY id`,
+    [developmentId],
+  );
+  return requireOneOrNone(rows, 'demo development access');
+}
+
+async function findDemoManagerAssignment(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+  managerUserId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, development_id, manager_user_id, is_primary, workload_capacity, timezone, is_active
+       FROM development_manager_assignments
+      WHERE development_id = ? AND manager_user_id = ?
+      ORDER BY id`,
+    [developmentId, managerUserId],
+  );
+  return requireOneOrNone(rows, 'demo manager assignment');
+}
+
+async function listDemoRequiredDocuments(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<Row[]> {
+  return await queryRows(
+    connection,
+    `SELECT id, document_code, document_label, category, sort_order, is_required, is_active
+       FROM development_required_documents
+      WHERE development_id = ?
+      ORDER BY sort_order, id`,
+    [developmentId],
+  );
+}
+
+async function findDemoIntakePolicy(
+  connection: AuthoritySqlConnection,
+  programId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, program_id, policy_version, status, configuration, configuration_digest,
+            approval_reference, published_at
+       FROM distribution_referral_intake_policy_releases
+      WHERE program_id = ? AND status = 'active'
+      ORDER BY policy_version DESC, id`,
+    [programId],
+  );
+  return requireOneOrNone(rows, 'demo intake policy release');
 }
 
 async function insertIdOf(
@@ -700,6 +1424,265 @@ async function ensureCommissionEntry(
   return { id, state: 'created' };
 }
 
+async function ensureDemoPublisher(
+  connection: AuthoritySqlConnection,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoPublisher(connection);
+  const classification = classifyDistributionReferrerActivityDemoPublisher(existing);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo publisher ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO catalogue_publishers
+      (authority_kind, publisher_type, developer_organisation_id, name, slug, source_attribution,
+       is_visible)
+     VALUES ('platform_reference', 'developer', NULL, ?, ?, ?, 1)`,
+    [
+      EXPECTED_DEMO_PUBLISHER.name,
+      EXPECTED_DEMO_PUBLISHER.slug,
+      EXPECTED_DEMO_PUBLISHER.sourceAttribution,
+    ],
+    'demo catalogue publisher',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoDevelopment(
+  connection: AuthoritySqlConnection,
+  publisherId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoDevelopment(connection);
+  const classification = classifyDistributionReferrerActivityDemoDevelopment(existing, publisherId);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo development ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO developments
+      (catalogue_publisher_id, name, marketing_name, slug, developmentType, city, province,
+       suburb, transaction_type, isPublished, publishedAt, approval_status, status,
+       inventory_mode)
+     VALUES (?, ?, ?, ?, 'residential', ?, ?, ?, 'for_sale', 1, ?, 'approved', 'selling',
+             'itemized')`,
+    [
+      publisherId,
+      EXPECTED_DEMO_DEVELOPMENT.name,
+      EXPECTED_DEMO_DEVELOPMENT.marketingName,
+      EXPECTED_DEMO_DEVELOPMENT.slug,
+      EXPECTED_DEMO_DEVELOPMENT.city,
+      EXPECTED_DEMO_DEVELOPMENT.province,
+      EXPECTED_DEMO_DEVELOPMENT.suburb,
+      mysqlTimestamp(new Date()),
+    ],
+    'demo development',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoUnitTypes(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<{ state: PreparedState }> {
+  const existing = await listDemoUnitTypes(connection, developmentId);
+  if (existing.length > 0) {
+    assertDistributionReferrerActivityDemoUnitTypes(existing);
+    return { state: 'reused' };
+  }
+
+  for (const unitType of EXPECTED_DEMO_UNIT_TYPES) {
+    await connection.execute(
+      `INSERT INTO unit_types
+        (id, development_id, name, bedrooms, bathrooms, unit_size, base_price_from,
+         available_units, total_units, display_order, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        unitType.id,
+        developmentId,
+        unitType.name,
+        unitType.bedrooms,
+        unitType.bathrooms,
+        unitType.unitSize,
+        unitType.basePriceFrom,
+        unitType.availableUnits,
+        unitType.totalUnits,
+        unitType.displayOrder,
+      ],
+    );
+  }
+  return { state: 'created' };
+}
+
+async function ensureDemoProgram(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoProgram(connection, developmentId);
+  const classification = classifyDistributionReferrerActivityDemoProgram(existing, developmentId);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo program ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO distribution_programs
+      (development_id, is_referral_enabled, is_active, commission_model,
+       default_commission_percent, referrer_commission_type, referrer_commission_value,
+       referrer_commission_basis, tier_access_policy, payout_milestone, currency_code)
+     VALUES (?, 1, 1, 'flat_percentage', '2.50', 'percentage', '2.50', 'sale_price', 'open',
+             'transfer_registration', 'ZAR')`,
+    [developmentId],
+    'demo distribution program',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoPartnership(
+  connection: AuthoritySqlConnection,
+  publisherId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoPartnership(connection, publisherId);
+  const classification = classifyDistributionReferrerActivityDemoPartnership(existing, publisherId);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo partnership ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO distribution_brand_partnerships (catalogue_publisher_id, status, partnered_at)
+     VALUES (?, 'active', ?)`,
+    [publisherId, mysqlTimestamp(new Date())],
+    'demo brand partnership',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoAccess(
+  connection: AuthoritySqlConnection,
+  expected: { developmentId: number; brandPartnershipId: number; publisherId: number },
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoAccess(connection, expected.developmentId);
+  const classification = classifyDistributionReferrerActivityDemoAccess(existing, expected);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo access ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO distribution_development_access
+      (development_id, brand_partnership_id, catalogue_publisher_id, status, submission_allowed,
+       excluded_by_mandate, excluded_by_exclusivity, included_at)
+     VALUES (?, ?, ?, 'included', 1, 0, 0, ?)`,
+    [
+      expected.developmentId,
+      expected.brandPartnershipId,
+      expected.publisherId,
+      mysqlTimestamp(new Date()),
+    ],
+    'demo development access',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoManagerAssignment(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+  managerUserId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const expected = { developmentId, managerUserId };
+  const existing = await findDemoManagerAssignment(connection, developmentId, managerUserId);
+  const classification = classifyDistributionReferrerActivityDemoManagerAssignment(
+    existing,
+    expected,
+  );
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo manager assignment ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO development_manager_assignments
+      (development_id, manager_user_id, is_primary, workload_capacity, timezone, is_active)
+     VALUES (?, ?, 1, 0, 'Africa/Johannesburg', 1)`,
+    [developmentId, managerUserId],
+    'demo manager assignment',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureDemoRequiredDocuments(
+  connection: AuthoritySqlConnection,
+  developmentId: number,
+): Promise<{ state: PreparedState }> {
+  const existing = await listDemoRequiredDocuments(connection, developmentId);
+  if (existing.length > 0) {
+    assertDistributionReferrerActivityDemoRequiredDocuments(existing);
+    return { state: 'reused' };
+  }
+
+  for (const document of EXPECTED_DEMO_REQUIRED_DOCUMENTS) {
+    await connection.execute(
+      `INSERT INTO development_required_documents
+        (development_id, document_code, document_label, category, is_required, sort_order,
+         is_active)
+       VALUES (?, ?, ?, 'client_required_document', 1, ?, 1)`,
+      [developmentId, document.documentCode, document.documentLabel, document.sortOrder],
+    );
+  }
+  return { state: 'created' };
+}
+
+async function ensureDemoIntakePolicy(
+  connection: AuthoritySqlConnection,
+  programId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findDemoIntakePolicy(connection, programId);
+  const classification = classifyDistributionReferrerActivityDemoIntakePolicy(existing, programId);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'demo intake policy release ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO distribution_referral_intake_policy_releases
+      (program_id, policy_version, status, configuration, configuration_digest,
+       approval_reference, published_at)
+     VALUES (?, 1, 'active', ?, ?, ?, ?)`,
+    [
+      programId,
+      JSON.stringify(DEMO_POLICY_CONFIGURATION),
+      DEMO_POLICY_CONFIGURATION_DIGEST,
+      EXPECTED_DEMO_POLICY.approvalReference,
+      mysqlTimestamp(new Date()),
+    ],
+    'demo intake policy release',
+  );
+  return { id, state: 'created' };
+}
+
 async function assertNoProgramGrantOrAgentProfile(
   connection: AuthoritySqlConnection,
   userId: number,
@@ -809,6 +1792,73 @@ async function verifyFixture(input: {
   });
   const commissionEntryId = asPositiveId(rowValue(entry, 'id'), 'commission entry ID');
 
+  const demoPublisher = await findDemoPublisher(input.connection);
+  if (!demoPublisher) {
+    throw new Error('Distribution referrer activity preview fixture demo publisher is missing.');
+  }
+  assertDistributionReferrerActivityDemoPublisher(demoPublisher);
+  const demoPublisherId = asPositiveId(rowValue(demoPublisher, 'id'), 'demo publisher ID');
+
+  const demoDevelopment = await findDemoDevelopment(input.connection);
+  if (!demoDevelopment) {
+    throw new Error('Distribution referrer activity preview fixture demo development is missing.');
+  }
+  assertDistributionReferrerActivityDemoDevelopment(demoDevelopment, demoPublisherId);
+  const demoDevelopmentId = asPositiveId(rowValue(demoDevelopment, 'id'), 'demo development ID');
+
+  const demoUnitTypes = await listDemoUnitTypes(input.connection, demoDevelopmentId);
+  assertDistributionReferrerActivityDemoUnitTypes(demoUnitTypes);
+
+  const demoProgram = await findDemoProgram(input.connection, demoDevelopmentId);
+  if (!demoProgram) {
+    throw new Error('Distribution referrer activity preview fixture demo program is missing.');
+  }
+  assertDistributionReferrerActivityDemoProgram(demoProgram, demoDevelopmentId);
+  const demoProgramId = asPositiveId(rowValue(demoProgram, 'id'), 'demo program ID');
+
+  const demoPartnership = await findDemoPartnership(input.connection, demoPublisherId);
+  if (!demoPartnership) {
+    throw new Error('Distribution referrer activity preview fixture demo partnership is missing.');
+  }
+  assertDistributionReferrerActivityDemoPartnership(demoPartnership, demoPublisherId);
+  const demoPartnershipId = asPositiveId(rowValue(demoPartnership, 'id'), 'demo partnership ID');
+
+  const demoAccess = await findDemoAccess(input.connection, demoDevelopmentId);
+  if (!demoAccess) {
+    throw new Error('Distribution referrer activity preview fixture demo development access is missing.');
+  }
+  assertDistributionReferrerActivityDemoAccess(demoAccess, {
+    developmentId: demoDevelopmentId,
+    brandPartnershipId: demoPartnershipId,
+    publisherId: demoPublisherId,
+  });
+
+  const demoManagerAssignment = await findDemoManagerAssignment(
+    input.connection,
+    demoDevelopmentId,
+    managerId,
+  );
+  if (!demoManagerAssignment) {
+    throw new Error('Distribution referrer activity preview fixture demo manager assignment is missing.');
+  }
+  assertDistributionReferrerActivityDemoManagerAssignment(demoManagerAssignment, {
+    developmentId: demoDevelopmentId,
+    managerUserId: managerId,
+  });
+
+  const demoRequiredDocuments = await listDemoRequiredDocuments(input.connection, demoDevelopmentId);
+  assertDistributionReferrerActivityDemoRequiredDocuments(demoRequiredDocuments);
+
+  const demoIntakePolicy = await findDemoIntakePolicy(input.connection, demoProgramId);
+  if (!demoIntakePolicy) {
+    throw new Error('Distribution referrer activity preview fixture demo intake policy is missing.');
+  }
+  assertDistributionReferrerActivityDemoIntakePolicy(demoIntakePolicy, demoProgramId);
+  const demoIntakePolicyReleaseId = asPositiveId(
+    rowValue(demoIntakePolicy, 'id'),
+    'demo intake policy release ID',
+  );
+
   const validations = await queryRows(
     input.connection,
     'SELECT id FROM distribution_viewing_validations WHERE deal_id = ? ORDER BY id',
@@ -837,6 +1887,12 @@ async function verifyFixture(input: {
       potentialPayoutPending: true,
       noProgramGrant: true,
       noLedgerOrValidation: true,
+      demoOpportunityPublished: true,
+      demoInventoryGoverned: true,
+      demoProgramReady: true,
+      demoNetworkAccessIncluded: true,
+      demoPrimaryManagerAssigned: true,
+      demoIntakePolicyActive: true,
     },
     sample: {
       developmentId,
@@ -845,6 +1901,11 @@ async function verifyFixture(input: {
       viewingId,
       commissionEntryId,
       viewingScheduledStartAt: scheduled.text,
+      demoPublisherId,
+      demoDevelopmentId,
+      demoProgramId,
+      demoUnitTypeIds: demoUnitTypes.map(row => String(rowValue(row, 'id'))),
+      demoIntakePolicyReleaseId,
     },
   };
 }
@@ -902,7 +1963,43 @@ export async function prepareDistributionReferrerActivityPreviewFixture(input: {
       developmentId: development.id,
       agentId: referrerUserId,
     });
-    return { manager, development, program, deal, viewing, commissionEntry };
+    const demoPublisher = await ensureDemoPublisher(input.connection);
+    const demoDevelopment = await ensureDemoDevelopment(input.connection, demoPublisher.id);
+    const demoUnitTypes = await ensureDemoUnitTypes(input.connection, demoDevelopment.id);
+    const demoProgram = await ensureDemoProgram(input.connection, demoDevelopment.id);
+    const demoPartnership = await ensureDemoPartnership(input.connection, demoPublisher.id);
+    const demoAccess = await ensureDemoAccess(input.connection, {
+      developmentId: demoDevelopment.id,
+      brandPartnershipId: demoPartnership.id,
+      publisherId: demoPublisher.id,
+    });
+    const demoManagerAssignment = await ensureDemoManagerAssignment(
+      input.connection,
+      demoDevelopment.id,
+      manager.id,
+    );
+    const demoRequiredDocuments = await ensureDemoRequiredDocuments(
+      input.connection,
+      demoDevelopment.id,
+    );
+    const demoIntakePolicy = await ensureDemoIntakePolicy(input.connection, demoProgram.id);
+    return {
+      manager,
+      development,
+      program,
+      deal,
+      viewing,
+      commissionEntry,
+      demoPublisher,
+      demoDevelopment,
+      demoUnitTypes,
+      demoProgram,
+      demoPartnership,
+      demoAccess,
+      demoManagerAssignment,
+      demoRequiredDocuments,
+      demoIntakePolicy,
+    };
   });
 
   const result = await verifyFixture({
@@ -922,6 +2019,15 @@ export async function prepareDistributionReferrerActivityPreviewFixture(input: {
       deal: prepared.deal.state,
       viewing: prepared.viewing.state,
       commissionEntry: prepared.commissionEntry.state,
+      demoPublisher: prepared.demoPublisher.state,
+      demoDevelopment: prepared.demoDevelopment.state,
+      demoUnitTypes: prepared.demoUnitTypes.state,
+      demoProgram: prepared.demoProgram.state,
+      demoPartnership: prepared.demoPartnership.state,
+      demoAccess: prepared.demoAccess.state,
+      demoManagerAssignment: prepared.demoManagerAssignment.state,
+      demoRequiredDocuments: prepared.demoRequiredDocuments.state,
+      demoIntakePolicy: prepared.demoIntakePolicy.state,
     },
     sample: result.sample,
     verified: result.verified,
@@ -966,6 +2072,15 @@ export async function verifyDistributionReferrerActivityPreviewFixture(input: {
       deal: 'reused',
       viewing: 'reused',
       commissionEntry: 'reused',
+      demoPublisher: 'reused',
+      demoDevelopment: 'reused',
+      demoUnitTypes: 'reused',
+      demoProgram: 'reused',
+      demoPartnership: 'reused',
+      demoAccess: 'reused',
+      demoManagerAssignment: 'reused',
+      demoRequiredDocuments: 'reused',
+      demoIntakePolicy: 'reused',
     },
     sample: result.sample,
     verified: result.verified,

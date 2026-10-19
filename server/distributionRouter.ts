@@ -7207,8 +7207,8 @@ const referrerDistributionRouter = router({
 
       await assertDistributionIdentity(db, ctx.user!, 'referrer');
       const agentId = Number(ctx.user!.id);
-      // Paused/revoked grants and grants below the actor's tier are omitted from this
-      // partner-facing list, even when a legacy caller requests them.
+      // Individual opportunity access grants are retired; every open program
+      // on an included development is available to this referrer identity.
       const { items } = await listPartnerProgramTerms({
         actor: { userId: agentId, role: String(ctx.user!.role || '') },
       });

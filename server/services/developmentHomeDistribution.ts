@@ -1,9 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import {
-  distributionAgentAccess,
-  distributionIdentities,
-  distributionPrograms,
-} from '../../drizzle/schema';
+import { distributionIdentities, distributionPrograms } from '../../drizzle/schema';
 import type { getDb } from '../db';
 
 export type DevelopmentHomeDistribution = {
@@ -39,9 +35,11 @@ export function deriveDevelopmentHomeDistribution(
 
 /**
  * The Home route establishes development ownership before this read. This
- * helper only reads the canonical program plus the same active-access and
- * active-referrer-identity eligibility authority used by developer settings.
- * There is no development-scoped management route, so V1 returns no action.
+ * helper only reads the canonical program plus the active-referrer-identity
+ * eligibility authority used by developer settings. Individual opportunity
+ * access grants are retired, so every active referrer is eligible for an
+ * enabled program. There is no development-scoped management route, so V1
+ * returns no action.
  */
 export async function getDevelopmentHomeDistribution(params: {
   db: DbExecutor;
@@ -67,20 +65,12 @@ export async function getDevelopmentHomeDistribution(params: {
   }
 
   const [eligible] = await params.db
-    .select({ count: sql<number>`COUNT(DISTINCT ${distributionAgentAccess.agentId})` })
-    .from(distributionAgentAccess)
-    .innerJoin(
-      distributionIdentities,
-      and(
-        eq(distributionIdentities.userId, distributionAgentAccess.agentId),
-        eq(distributionIdentities.identityType, 'referrer'),
-        eq(distributionIdentities.active, 1),
-      ),
-    )
+    .select({ count: sql<number>`COUNT(DISTINCT ${distributionIdentities.userId})` })
+    .from(distributionIdentities)
     .where(
       and(
-        eq(distributionAgentAccess.developmentId, params.developmentId),
-        eq(distributionAgentAccess.accessStatus, 'active'),
+        eq(distributionIdentities.identityType, 'referrer'),
+        eq(distributionIdentities.active, 1),
       ),
     );
 

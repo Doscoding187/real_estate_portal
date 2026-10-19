@@ -209,9 +209,11 @@ async function projectionAndReference(developmentId: number) {
 }
 
 /**
- * Builds partner catalogue details only after Distribution has confirmed this
- * actor's program entitlement and the Developer projection confirms campaign
- * visibility. Inventory facts always come from the current projection.
+ * Builds partner catalogue details only after Distribution has confirmed the
+ * actor holds an active referrer identity and the programme and development
+ * are part of the published referral network (active referral-enabled
+ * programme on an included development). Inventory facts always come from the
+ * current projection.
  */
 export async function listPartnerProgramTerms(
   input: PartnerProgramTermsInput,

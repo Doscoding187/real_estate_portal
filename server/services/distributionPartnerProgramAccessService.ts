@@ -1,8 +1,6 @@
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, inArray, isNull, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, type SQL } from 'drizzle-orm';
 import {
-  distributionAgentAccess,
-  distributionAgentTiers,
   distributionBrandPartnerships,
   distributionDevelopmentAccess,
   distributionIdentities,
@@ -18,19 +16,6 @@ type DbExecutor = any;
 type CandidateProgram = {
   programId: number;
   developmentId: number;
-};
-type ActorProgramGrant = {
-  programId: number;
-  developmentId: number;
-  minTierRequired: string;
-  accessStatus: string;
-};
-
-const TIER_RANK: Record<string, number> = {
-  tier_1: 1,
-  tier_2: 2,
-  tier_3: 3,
-  tier_4: 4,
 };
 
 function boolFromTinyInt(value: unknown) {
@@ -62,6 +47,13 @@ async function assertPartnerIdentity(db: DbExecutor, actor: DistributionPartnerA
   }
 }
 
+/**
+ * A candidate opportunity is an active, referral-enabled program whose
+ * development is included in an active brand partnership. Availability is a
+ * property of the published opportunity, not of a per-referrer approval:
+ * Property Listify has retired individual opportunity access grants, so every
+ * active referrer identity may act on every open program.
+ */
 async function listCandidatePrograms(
   db: DbExecutor,
   requestedDevelopmentIds?: number[],
@@ -70,6 +62,7 @@ async function listCandidatePrograms(
 
   const conditions = [
     eq(distributionPrograms.isActive, 1),
+    eq(distributionPrograms.isReferralEnabled, 1),
     eq(distributionDevelopmentAccess.status, 'included'),
     eq(distributionDevelopmentAccess.excludedByMandate, 0),
     eq(distributionDevelopmentAccess.excludedByExclusivity, 0),
@@ -101,69 +94,6 @@ async function listCandidatePrograms(
   }));
 }
 
-async function getActorProgramGrants(
-  db: DbExecutor,
-  actor: DistributionPartnerActor,
-  programIds: number[],
-): Promise<Map<number, ActorProgramGrant>> {
-  if (!programIds.length) return new Map();
-  const rows = await db
-    .select({
-      programId: distributionAgentAccess.programId,
-      developmentId: distributionAgentAccess.developmentId,
-      minTierRequired: distributionAgentAccess.minTierRequired,
-      accessStatus: distributionAgentAccess.accessStatus,
-    })
-    .from(distributionAgentAccess)
-    .where(
-      and(
-        eq(distributionAgentAccess.agentId, actor.userId),
-        inArray(distributionAgentAccess.programId, programIds),
-      ),
-    );
-
-  return new Map(
-    rows.map((row: any) => [Number(row.programId), {
-      programId: Number(row.programId),
-      developmentId: Number(row.developmentId),
-      minTierRequired: String(row.minTierRequired || 'tier_1'),
-      accessStatus: String(row.accessStatus || ''),
-    }]),
-  );
-}
-
-async function getCurrentTier(db: DbExecutor, userId: number) {
-  const [row] = await db
-    .select({ tier: distributionAgentTiers.tier })
-    .from(distributionAgentTiers)
-    .where(and(eq(distributionAgentTiers.agentId, userId), isNull(distributionAgentTiers.effectiveTo)))
-    .orderBy(desc(distributionAgentTiers.id))
-    .limit(1);
-  return row?.tier ? String(row.tier) : null;
-}
-
-function grantMeetsTier(grant: ActorProgramGrant, currentTier: string | null) {
-  const requiredRank = TIER_RANK[grant.minTierRequired];
-  const currentRank = currentTier ? TIER_RANK[currentTier] : undefined;
-  return requiredRank !== undefined && currentRank !== undefined && currentRank >= requiredRank;
-}
-
-export function partnerHasSpecificProgramEntitlement(input: {
-  developmentId: number;
-  grant: ActorProgramGrant | undefined;
-  currentTier: string | null;
-}) {
-  const { developmentId, grant, currentTier } = input;
-
-  // Program visibility policy never creates an actor entitlement. Every
-  // partner, including one applying to an open program, needs an explicit
-  // active grant for this development and a sufficient Distribution tier.
-  if (!grant || grant.accessStatus !== 'active' || grant.developmentId !== developmentId) {
-    return false;
-  }
-  return grantMeetsTier(grant, currentTier);
-}
-
 export async function listPartnerAccessibleDevelopmentIds(input: {
   db: DbExecutor;
   actor: DistributionPartnerActor;
@@ -171,26 +101,7 @@ export async function listPartnerAccessibleDevelopmentIds(input: {
 }) {
   await assertPartnerIdentity(input.db, input.actor);
   const candidates = await listCandidatePrograms(input.db, input.requestedDevelopmentIds);
-  if (!candidates.length) return [];
-
-  const grants = await getActorProgramGrants(
-    input.db,
-    input.actor,
-    candidates.map(candidate => candidate.programId),
-  );
-  const currentTier = Array.from(grants.values()).some(grant => grant.accessStatus === 'active')
-    ? await getCurrentTier(input.db, input.actor.userId)
-    : null;
-
-  return candidates
-    .filter(candidate =>
-      partnerHasSpecificProgramEntitlement({
-        developmentId: candidate.developmentId,
-        grant: grants.get(candidate.programId),
-        currentTier,
-      }),
-    )
-    .map(candidate => candidate.developmentId);
+  return [...new Set(candidates.map(candidate => candidate.developmentId))];
 }
 
 export async function assertPartnerDevelopmentProgramAccess(input: {
@@ -206,7 +117,7 @@ export async function assertPartnerDevelopmentProgramAccess(input: {
   if (!accessibleIds.includes(input.developmentId)) {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'You do not have access to this Distribution opportunity.',
+      message: 'This Distribution opportunity is not part of the active referral network.',
     });
   }
 }

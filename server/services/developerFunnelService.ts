@@ -6,7 +6,6 @@ import {
   cataloguePublishers,
   developerOrganisationMemberships,
   developerOrganisations,
-  distributionAgentAccess,
   distributionIdentities,
   distributionPrograms,
   leadActivities,
@@ -243,30 +242,35 @@ async function isDistributionPartnerEligibleForDevelopment(params: {
   developmentId: number;
   partnerUserId: number;
 }): Promise<boolean> {
-  const [row] = await db
-    .select({ id: distributionAgentAccess.id })
-    .from(distributionAgentAccess)
-    .innerJoin(distributionPrograms, eq(distributionAgentAccess.programId, distributionPrograms.id))
-    .innerJoin(
-      distributionIdentities,
-      and(
-        eq(distributionIdentities.userId, distributionAgentAccess.agentId),
-        eq(distributionIdentities.identityType, 'referrer'),
-      ),
-    )
-    .where(
-      and(
-        eq(distributionAgentAccess.developmentId, params.developmentId),
-        eq(distributionAgentAccess.agentId, params.partnerUserId),
-        eq(distributionAgentAccess.accessStatus, 'active'),
-        eq(distributionPrograms.isActive, 1),
-        eq(distributionPrograms.isReferralEnabled, 1),
-        eq(distributionIdentities.active, 1),
-      ),
-    )
-    .limit(1);
+  // Opportunity availability is a property of the open program, not of a
+  // per-referrer grant: any active referrer identity is eligible for an
+  // active, referral-enabled program on this development.
+  const [[program], [identity]] = await Promise.all([
+    db
+      .select({ id: distributionPrograms.id })
+      .from(distributionPrograms)
+      .where(
+        and(
+          eq(distributionPrograms.developmentId, params.developmentId),
+          eq(distributionPrograms.isActive, 1),
+          eq(distributionPrograms.isReferralEnabled, 1),
+        ),
+      )
+      .limit(1),
+    db
+      .select({ id: distributionIdentities.id })
+      .from(distributionIdentities)
+      .where(
+        and(
+          eq(distributionIdentities.userId, params.partnerUserId),
+          eq(distributionIdentities.identityType, 'referrer'),
+          eq(distributionIdentities.active, 1),
+        ),
+      )
+      .limit(1),
+  ]);
 
-  return !!row;
+  return Boolean(program?.id) && Boolean(identity?.id);
 }
 
 export function deriveCanonicalLeadStage(lead: LeadStageRow): LeadStage {
@@ -1142,58 +1146,18 @@ export async function getDeveloperDistributionSettings(params: {
   const isActive = Number(program?.isActive || 0) === 1;
   const isReferralEnabled = Number(program?.isReferralEnabled || 0) === 1;
   const distributionEnabled = isActive && isReferralEnabled;
-  const accessModel = !program
-    ? ('unknown' as const)
-    : program.tierAccessPolicy === 'open'
-      ? ('open' as const)
-      : program.tierAccessPolicy === 'invite_only'
-        ? ('partner_based' as const)
-        : ('tier_based' as const);
 
-  const eligibleRows = await db
-    .select({
-      agentId: distributionAgentAccess.agentId,
-      minTierRequired: distributionAgentAccess.minTierRequired,
-    })
-    .from(distributionAgentAccess)
-    .innerJoin(
-      distributionIdentities,
+  // Individual opportunity access grants are retired: every active referrer
+  // identity is eligible for an active, referral-enabled program.
+  const [referrerCount] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(distributionIdentities)
+    .where(
       and(
-        eq(distributionIdentities.userId, distributionAgentAccess.agentId),
         eq(distributionIdentities.identityType, 'referrer'),
         eq(distributionIdentities.active, 1),
       ),
-    )
-    .where(
-      and(
-        eq(distributionAgentAccess.developmentId, params.developmentId),
-        eq(distributionAgentAccess.accessStatus, 'active'),
-      ),
     );
-
-  const eligiblePartnerIds = new Set<number>();
-  const eligiblePartnersByTier: Record<'tier_1' | 'tier_2' | 'tier_3' | 'tier_4', number> = {
-    tier_1: 0,
-    tier_2: 0,
-    tier_3: 0,
-    tier_4: 0,
-  };
-
-  for (const row of eligibleRows) {
-    const agentId = Number(row.agentId || 0);
-    if (agentId > 0) eligiblePartnerIds.add(agentId);
-    const tier = row.minTierRequired as keyof typeof eligiblePartnersByTier;
-    if (tier && tier in eligiblePartnersByTier) {
-      eligiblePartnersByTier[tier] += 1;
-    }
-  }
-
-  const allowedTiers =
-    program?.tierAccessPolicy === 'open'
-      ? ['tier_1', 'tier_2', 'tier_3', 'tier_4']
-      : (Object.entries(eligiblePartnersByTier)
-          .filter(([, count]) => count > 0)
-          .map(([tier]) => tier) as Array<'tier_1' | 'tier_2' | 'tier_3' | 'tier_4'>);
 
   return {
     developmentId: String(params.developmentId),
@@ -1202,16 +1166,13 @@ export async function getDeveloperDistributionSettings(params: {
     distributionEnabled,
     isActive,
     isReferralEnabled,
-    accessModel,
     tierAccessPolicy: program?.tierAccessPolicy || null,
     commissionModel: program?.commissionModel || null,
     defaultCommissionPercent:
       program?.defaultCommissionPercent != null ? Number(program.defaultCommissionPercent) : null,
     defaultCommissionAmount:
       program?.defaultCommissionAmount != null ? Number(program.defaultCommissionAmount) : null,
-    eligiblePartnerCount: eligiblePartnerIds.size,
-    eligiblePartnersByTier,
-    allowedTiers,
+    eligiblePartnerCount: Number(referrerCount?.count || 0),
     updatedAt: program?.updatedAt || null,
     availableOwnerTypes: distributionEnabled
       ? getAvailableLeadOwnerTypes(true)
@@ -1259,7 +1220,7 @@ export async function setDeveloperDistributionEnabled(params: {
       isActive: 1,
       isReferralEnabled: 1,
       commissionModel: 'flat_percentage',
-      tierAccessPolicy: 'restricted',
+      tierAccessPolicy: 'open',
       createdBy: params.userId,
       updatedBy: params.userId,
     });
