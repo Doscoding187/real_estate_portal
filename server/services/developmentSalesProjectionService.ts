@@ -17,6 +17,11 @@ import {
   resolveDistributionPreviewDemoInventory,
   type DistributionPreviewDemoUnitType,
 } from './distributionPreviewDemoInventory';
+import {
+  type DistributionMediaAsset,
+  type DistributionMediaAssetType,
+  type DistributionUnitMedia,
+} from '../../shared/distributionUnitMedia';
 
 export type DevelopmentSalesMode = 'for_sale' | 'for_rent';
 
@@ -60,6 +65,7 @@ export interface DevelopmentSalesProjection {
       bathrooms: number | null;
       size: number | null;
       imageUrl: string | null;
+      media: DistributionUnitMedia;
       modes: Partial<Record<DevelopmentSalesMode, DevelopmentSalesModeProjection>>;
     }>;
   };
@@ -120,6 +126,96 @@ function publicImageUrls(value: unknown): string[] {
   return [...new Set(urls)];
 }
 
+function parseStoredJson(value: unknown): unknown {
+  let current = value;
+  for (let depth = 0; depth < 2; depth += 1) {
+    if (typeof current !== 'string') break;
+    try {
+      current = JSON.parse(current);
+    } catch {
+      return current;
+    }
+  }
+  return current;
+}
+
+function projectMediaCollection(
+  value: unknown,
+  options: {
+    maxEntries: number;
+    defaultType: DistributionMediaAssetType;
+    allowedTypes: readonly DistributionMediaAssetType[];
+  },
+): DistributionMediaAsset[] {
+  let entries: unknown[] = [];
+  if (Array.isArray(value)) {
+    entries = value;
+  } else if (typeof value === 'string' && value.trim()) {
+    const parsed = parseStoredJson(value);
+    entries = Array.isArray(parsed) ? parsed : [];
+  } else if (value && typeof value === 'object') {
+    entries = [value];
+  }
+
+  const assets = entries.flatMap(entry => {
+    if (typeof entry === 'string') {
+      const url = safeImageUrl(entry);
+      return url ? [{ url, fileName: null, type: options.defaultType }] : [];
+    }
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    const url = safeImageUrl(record.url ?? record.imageUrl ?? record.src);
+    if (!url) return [];
+    const rawFileName = typeof record.fileName === 'string' ? record.fileName.trim() : '';
+    const requestedType = typeof record.type === 'string' ? record.type : '';
+    const type = options.allowedTypes.includes(requestedType as DistributionMediaAssetType)
+      ? (requestedType as DistributionMediaAssetType)
+      : options.defaultType;
+    return [
+      {
+        url,
+        fileName: rawFileName ? rawFileName.slice(0, 255) : null,
+        type,
+      },
+    ];
+  });
+
+  const unique: DistributionMediaAsset[] = [];
+  const seen = new Set<string>();
+  for (const asset of assets) {
+    if (seen.has(asset.url)) continue;
+    seen.add(asset.url);
+    unique.push(asset);
+    if (unique.length >= options.maxEntries) break;
+  }
+  return unique;
+}
+
+export function projectUnitMedia(value: unknown): DistributionUnitMedia {
+  const media = parseStoredJson(value);
+  const record =
+    media && typeof media === 'object' && !Array.isArray(media)
+      ? (media as Record<string, unknown>)
+      : {};
+  return {
+    gallery: projectMediaCollection(record.gallery, {
+      maxEntries: 12,
+      defaultType: 'image',
+      allowedTypes: ['image'],
+    }),
+    floorPlans: projectMediaCollection(record.floorPlans, {
+      maxEntries: 8,
+      defaultType: 'pdf',
+      allowedTypes: ['image', 'pdf'],
+    }),
+    renders: projectMediaCollection(record.renders, {
+      maxEntries: 8,
+      defaultType: 'image',
+      allowedTypes: ['image', 'video'],
+    }),
+  };
+}
+
 function revisionFor(payload: Omit<DevelopmentSalesProjection, 'observedAt' | 'revision'>): string {
   return `sha256:${createHash('sha256').update(JSON.stringify(payload), 'utf8').digest('hex')}`;
 }
@@ -135,6 +231,7 @@ function toDistributionPreviewDemoUnitType(row: {
   basePriceTo: string | null;
   availableUnits: number;
   isActive: number | null;
+  baseMedia: unknown;
 }): DistributionPreviewDemoUnitType {
   const numeric = (value: string | null): number | null => {
     if (value === null) return null;
@@ -152,6 +249,7 @@ function toDistributionPreviewDemoUnitType(row: {
     basePriceTo: numeric(row.basePriceTo),
     availableUnits: Number(row.availableUnits || 0),
     isActive: Number(row.isActive || 0) === 1,
+    media: projectUnitMedia(row.baseMedia),
   };
 }
 
@@ -229,6 +327,7 @@ export async function getDevelopmentSalesProjection(
         basePriceTo: unitTypes.basePriceTo,
         availableUnits: unitTypes.availableUnits,
         displayOrder: unitTypes.displayOrder,
+        baseMedia: unitTypes.baseMedia,
       })
       .from(unitTypes)
       .where(eq(unitTypes.developmentId, developmentId))

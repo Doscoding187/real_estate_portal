@@ -19,12 +19,46 @@ import {
   type DistributionPartnerActor,
 } from './distributionPartnerProgramAccessService';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import {
+  CHECKFIT_V1_DISCLAIMERS,
+  CHECKFIT_V1_POLICY,
+  resolveCheckfitV1Rate,
+} from './checkfitV1Service';
+import type { DistributionUnitMedia } from '../../shared/distributionUnitMedia';
 
 type ProgramPromotion = {
   headline?: string | null;
   description?: string | null;
   highlightBullets?: string[];
 };
+
+export type PartnerAffordabilityAssumptions = {
+  policyVersion: typeof CHECKFIT_V1_POLICY.version;
+  available: boolean;
+  annualInterestRate: number | null;
+  rateSource: typeof CHECKFIT_V1_POLICY.rateSourceKey;
+  rateSourceLabel: string;
+  rateUpdatedAt: string | null;
+  termMonths: number;
+  repaymentAllowanceRatio: number;
+  disclaimers: string[];
+};
+
+function partnerAffordabilityAssumptions(
+  rate: Awaited<ReturnType<typeof resolveCheckfitV1Rate>>,
+): PartnerAffordabilityAssumptions {
+  return {
+    policyVersion: CHECKFIT_V1_POLICY.version,
+    available: rate !== null,
+    annualInterestRate: rate?.annualInterestRate ?? null,
+    rateSource: CHECKFIT_V1_POLICY.rateSourceKey,
+    rateSourceLabel: CHECKFIT_V1_POLICY.rateSourceLabel,
+    rateUpdatedAt: rate?.rateUpdatedAt ?? null,
+    termMonths: CHECKFIT_V1_POLICY.termMonths,
+    repaymentAllowanceRatio: CHECKFIT_V1_POLICY.repaymentAllowanceRatio,
+    disclaimers: [...CHECKFIT_V1_DISCLAIMERS],
+  };
+}
 
 const PAYOUT_TRIGGER_LABELS: Record<string, string> = {
   attorney_instruction: 'Attorney instruction',
@@ -164,6 +198,7 @@ export type PartnerProgramTermsItem = {
     bathrooms: number | null;
     size: number | null;
     imageUrl: string | null;
+    media: DistributionUnitMedia;
     modes: Partial<Record<PartnerMode, PartnerModeProjection>>;
   }>;
   requiredDocuments: Array<{
@@ -176,6 +211,7 @@ export type PartnerProgramTermsItem = {
   }>;
   /** Developer resources remain unavailable until an authorized delivery path exists. */
   sourceDocuments: [];
+  affordability: PartnerAffordabilityAssumptions;
   developerProjectionRevision: string;
   developerProjectionObservedAt: string;
   computed: {
@@ -221,6 +257,9 @@ export async function listPartnerProgramTerms(
   const db = await getDb();
   if (!db) throw new Error('Database not available');
   if (input.developmentIds?.length === 0) return { items: [] };
+
+  const rate = await resolveCheckfitV1Rate(db);
+  const affordability = partnerAffordabilityAssumptions(rate);
 
   const accessibleIds: number[] = await listPartnerAccessibleDevelopmentIds({
     db,
@@ -350,6 +389,7 @@ export async function listPartnerProgramTerms(
           bathrooms: unitType.bathrooms,
           size: unitType.size,
           imageUrl: unitType.imageUrl,
+          media: unitType.media,
           modes: partnerModes(unitType.modes),
         })) : [],
         requiredDocuments: requiredDocuments.map(document => ({
@@ -361,6 +401,7 @@ export async function listPartnerProgramTerms(
           sortOrder: document.sortOrder,
         })),
         sourceDocuments: [] as [],
+        affordability,
         developerProjectionRevision: projection.revision,
         developerProjectionObservedAt: projection.observedAt,
         computed: {

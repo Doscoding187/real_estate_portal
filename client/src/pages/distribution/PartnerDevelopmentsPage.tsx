@@ -8,6 +8,7 @@ import {
   Camera,
   CheckCircle2,
   CheckSquare,
+  FileText,
   Info,
   Loader2,
   MapPin,
@@ -19,6 +20,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
 import { DevelopmentUnitsDialog } from '@/components/distribution/partner/DevelopmentUnitsDialog';
+import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
 import { ShortlistPrintView } from '@/components/distribution/ShortlistPrintView';
 import { useDistributionShortlist } from '@/components/distribution/useDistributionShortlist';
 import { trpc } from '@/lib/trpc';
@@ -61,6 +63,7 @@ export default function PartnerDevelopmentsPage() {
   const [bedroomFilter, setBedroomFilter] = useState('');
   const [sort, setSort] = useState<SortOption>('recommended');
   const [unitsItem, setUnitsItem] = useState<any | null>(null);
+  const [brochureItem, setBrochureItem] = useState<any | null>(null);
   const [requirementsItem, setRequirementsItem] = useState<any | null>(null);
 
   useEffect(() => {
@@ -191,6 +194,7 @@ export default function PartnerDevelopmentsPage() {
 
   const startReferral = (item: any) => {
     setUnitsItem(null);
+    setBrochureItem(null);
     setLocation(
       `/distribution/partner/submit?developmentId=${item.developmentId}&marketMode=${marketMode}`,
     );
@@ -502,6 +506,12 @@ export default function PartnerDevelopmentsPage() {
                             >
                               View details <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setBrochureItem(item)}
+                            >
+                              <FileText className="mr-2 h-4 w-4" /> Brochure
+                            </Button>
                           </div>
                         </div>
                       </article>
@@ -660,6 +670,20 @@ export default function PartnerDevelopmentsPage() {
             setRequirementsItem(unitsItem);
             setUnitsItem(null);
           }}
+          onOpenBrochure={() => {
+            setBrochureItem(unitsItem);
+            setUnitsItem(null);
+          }}
+        />
+      ) : null}
+
+      {brochureItem ? (
+        <DevelopmentBrochureDialog
+          open={Boolean(brochureItem)}
+          onOpenChange={open => !open && setBrochureItem(null)}
+          item={brochureItem}
+          canStartReferral={Boolean(brochureItem.opportunity?.openForReferral)}
+          onStartReferral={() => startReferral(brochureItem)}
         />
       ) : null}
 

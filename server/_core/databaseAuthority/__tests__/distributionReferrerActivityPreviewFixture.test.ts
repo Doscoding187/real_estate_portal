@@ -185,6 +185,35 @@ const demoUnitTypes = [
     total_units: 6,
     display_order: 1,
     is_active: 1,
+    base_media: JSON.stringify({
+      gallery: [
+        {
+          id: 'demo-2-bedroom-gallery-1',
+          url: '/placeholders/development_placeholder_1_1763712033438.png',
+          isPrimary: true,
+        },
+        {
+          id: 'demo-2-bedroom-gallery-2',
+          url: '/placeholders/development_placeholder_2_1763712057181.png',
+          isPrimary: false,
+        },
+      ],
+      floorPlans: [
+        {
+          id: 'demo-2-bedroom-plan-1',
+          url: '/properties/f0xp6VWeaZSN.jpg',
+          type: 'image',
+          fileName: 'sample-2-bedroom-floor-plan.jpg',
+        },
+      ],
+      renders: [
+        {
+          id: 'demo-2-bedroom-render-1',
+          url: '/placeholders/development_placeholder_3_1763712078958.png',
+          type: 'image',
+        },
+      ],
+    }),
   },
   {
     id: deterministicUuid('distribution-preview-demo-unit-3-bedroom-v2'),
@@ -197,6 +226,35 @@ const demoUnitTypes = [
     total_units: 4,
     display_order: 2,
     is_active: 1,
+    base_media: JSON.stringify({
+      gallery: [
+        {
+          id: 'demo-3-bedroom-gallery-1',
+          url: '/properties/35t5znQJ1v9V.jpg',
+          isPrimary: true,
+        },
+        {
+          id: 'demo-3-bedroom-gallery-2',
+          url: '/properties/40O7UI0lbxUn.jpg',
+          isPrimary: false,
+        },
+      ],
+      floorPlans: [
+        {
+          id: 'demo-3-bedroom-plan-1',
+          url: '/properties/cb6IeI4pBCAG.jpg',
+          type: 'image',
+          fileName: 'sample-3-bedroom-floor-plan.jpg',
+        },
+      ],
+      renders: [
+        {
+          id: 'demo-3-bedroom-render-1',
+          url: '/placeholders/development_placeholder_4_1763712099609.png',
+          type: 'image',
+        },
+      ],
+    }),
   },
 ];
 
@@ -273,7 +331,7 @@ const demoIntakePolicy = {
 describe('Distribution referrer activity preview adapter', () => {
   it('declares a versioned dashboard sample-activity plus governed demo fixture without touching grants', () => {
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION).toBe(
-      'distribution-referrer-activity-preview-v2',
+      'distribution-referrer-activity-preview-v3',
     );
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     const source = readFileSync(
@@ -290,7 +348,9 @@ describe('Distribution referrer activity preview adapter', () => {
     expect(source).toContain('INSERT INTO unit_types');
     expect(source).toContain('INSERT INTO distribution_referral_intake_policy_releases');
     expect(source).not.toMatch(/UPDATE\s+developments/i);
-    expect(source).not.toMatch(/UPDATE\s+unit_types/i);
+    expect(source.match(/UPDATE\s+unit_types/gi) ?? []).toHaveLength(1);
+    expect(source).toContain('UPDATE unit_types SET base_media = ?');
+    expect(source).not.toMatch(/UPDATE\s+unit_types\s+SET\s+(?!base_media)/i);
     expect(source).not.toMatch(/DELETE\s+FROM/i);
     expect(source).not.toMatch(
       /INSERT\s+INTO\s+distribution_(agent_access|commission_ledger|viewing_validations)/i,
@@ -498,6 +558,15 @@ describe('Distribution referrer activity preview adapter', () => {
         { ...demoUnitTypes[1], name: 'Sample 4-Bedroom Apartment' },
       ]),
     ).toThrow('missing demo unit type');
+    expect(() =>
+      assertDistributionReferrerActivityDemoUnitTypes([
+        {
+          ...demoUnitTypes[0],
+          base_media: JSON.stringify({ gallery: [], floorPlans: [], renders: [] }),
+        },
+        demoUnitTypes[1],
+      ]),
+    ).toThrow('demo unit type media');
   });
 
   it('creates or reuses only the exact open demo referral program', () => {

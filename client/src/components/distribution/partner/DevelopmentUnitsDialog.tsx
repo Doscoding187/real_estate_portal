@@ -1,4 +1,12 @@
-import { ArrowRight, Building2, CalendarDays, CheckCircle2, Info, MapPin } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  CalendarDays,
+  CheckCircle2,
+  FileText,
+  Info,
+  MapPin,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +23,7 @@ import {
   hasPublishedMode,
   type OpportunityModeProjection,
 } from '@/lib/distributionOpportunityFormat';
+import { UnitMediaFolder } from './UnitMediaFolder';
 
 export function DevelopmentUnitsDialog({
   open,
@@ -23,6 +32,7 @@ export function DevelopmentUnitsDialog({
   marketMode,
   onStartReferral,
   onOpenHowReferring,
+  onOpenBrochure,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +40,7 @@ export function DevelopmentUnitsDialog({
   marketMode: 'sale' | 'rent';
   onStartReferral: () => void;
   onOpenHowReferring: () => void;
+  onOpenBrochure?: () => void;
 }) {
   const mode = item?.inventory?.modes?.[marketMode] as OpportunityModeProjection | undefined;
   const modeIsPublished = hasPublishedMode(mode);
@@ -116,34 +127,34 @@ export function DevelopmentUnitsDialog({
                   unitType?.size ? `${unitType.size} m²` : null,
                 ].filter(Boolean);
                 return (
-                  <div
-                    key={unitType.id}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#0b1c3f]">{unitType.name}</p>
-                      {details.length ? (
-                        <p className="mt-0.5 text-[12px] text-muted-foreground">
-                          {details.join(' · ')}
-                        </p>
-                      ) : null}
-                    </div>
-                    <div className="text-right">
-                      {unitIsPublished ? (
-                        <>
-                          <p className="text-[13.5px] font-semibold text-[#0b1c3f]">
-                            {formatOpportunityModePrice(unitMode, currencyCode, marketMode === 'rent')}
+                  <div key={unitType.id} className="rounded-lg border border-border p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#0b1c3f]">{unitType.name}</p>
+                        {details.length ? (
+                          <p className="mt-0.5 text-[12px] text-muted-foreground">
+                            {details.join(' · ')}
                           </p>
-                          <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                            {unitMode.availableCount} available
+                        ) : null}
+                      </div>
+                      <div className="text-right">
+                        {unitIsPublished ? (
+                          <>
+                            <p className="text-[13.5px] font-semibold text-[#0b1c3f]">
+                              {formatOpportunityModePrice(unitMode, currencyCode, marketMode === 'rent')}
+                            </p>
+                            <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                              {unitMode.availableCount} available
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-[12px] text-muted-foreground">
+                            Not currently available
                           </p>
-                        </>
-                      ) : (
-                        <p className="text-[12px] text-muted-foreground">
-                          Not currently available
-                        </p>
-                      )}
+                        )}
+                      </div>
                     </div>
+                    <UnitMediaFolder unitName={unitType.name} media={unitType.media} />
                   </div>
                 );
               })}
@@ -162,6 +173,11 @@ export function DevelopmentUnitsDialog({
           ) : null}
 
           <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+            {onOpenBrochure ? (
+              <Button variant="outline" onClick={onOpenBrochure}>
+                <FileText className="mr-2 h-4 w-4" /> Brochure
+              </Button>
+            ) : null}
             <Button variant="outline" onClick={onOpenHowReferring}>
               How referring works
             </Button>

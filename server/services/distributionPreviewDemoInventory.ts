@@ -2,6 +2,10 @@ import {
   DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
   isDistributionPreviewDemoSlug,
 } from '../../shared/distributionPreviewDemo';
+import {
+  emptyDistributionUnitMedia,
+  type DistributionUnitMedia,
+} from '../../shared/distributionUnitMedia';
 
 export type DistributionPreviewDemoMode = 'for_sale' | 'for_rent';
 
@@ -23,6 +27,7 @@ export type DistributionPreviewDemoUnitType = {
   basePriceTo: number | null;
   availableUnits: number;
   isActive: boolean;
+  media?: DistributionUnitMedia;
 };
 
 export type DistributionPreviewDemoInventory = {
@@ -38,6 +43,7 @@ export type DistributionPreviewDemoInventory = {
     bathrooms: number | null;
     size: number | null;
     imageUrl: string | null;
+    media: DistributionUnitMedia;
     modes: Partial<Record<DistributionPreviewDemoMode, DistributionPreviewDemoModeFacts>>;
   }>;
 };
@@ -123,6 +129,7 @@ export function resolveDistributionPreviewDemoInventory(input: {
     .map(unitType => {
       const modes = saleModeFor(unitType);
       if (!modes) return null;
+      const media = unitType.media ?? emptyDistributionUnitMedia();
       return {
         id: unitType.id,
         name: unitType.name,
@@ -130,7 +137,8 @@ export function resolveDistributionPreviewDemoInventory(input: {
         bedrooms: unitType.bedrooms,
         bathrooms: unitType.bathrooms,
         size: unitType.unitSize,
-        imageUrl: null,
+        imageUrl: media.gallery[0]?.url ?? media.renders[0]?.url ?? null,
+        media,
         modes: { for_sale: modes } as Partial<
           Record<DistributionPreviewDemoMode, DistributionPreviewDemoModeFacts>
         >,

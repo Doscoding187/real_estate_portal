@@ -26,7 +26,7 @@ import {
 } from './distributionReferrerPreviewFixture';
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION =
-  'distribution-referrer-activity-preview-v2' as const;
+  'distribution-referrer-activity-preview-v3' as const;
 
 const EXPECTED_MANAGER = Object.freeze({
   openId: 'distribution-referrer-activity-manager-v1',
@@ -99,6 +99,15 @@ function canonicalJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function parseStoredJson(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 const EXPECTED_DEMO_PUBLISHER = Object.freeze({
   slug: `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}ridge-estate-brand-v2`,
   name: 'Preview Demo Developer (Sample)',
@@ -134,6 +143,35 @@ const EXPECTED_DEMO_UNIT_TYPES = Object.freeze([
     availableUnits: 4,
     totalUnits: 6,
     displayOrder: 1,
+    baseMedia: Object.freeze({
+      gallery: Object.freeze([
+        Object.freeze({
+          id: 'demo-2-bedroom-gallery-1',
+          url: '/placeholders/development_placeholder_1_1763712033438.png',
+          isPrimary: true,
+        }),
+        Object.freeze({
+          id: 'demo-2-bedroom-gallery-2',
+          url: '/placeholders/development_placeholder_2_1763712057181.png',
+          isPrimary: false,
+        }),
+      ]),
+      floorPlans: Object.freeze([
+        Object.freeze({
+          id: 'demo-2-bedroom-plan-1',
+          url: '/properties/f0xp6VWeaZSN.jpg',
+          type: 'image',
+          fileName: 'sample-2-bedroom-floor-plan.jpg',
+        }),
+      ]),
+      renders: Object.freeze([
+        Object.freeze({
+          id: 'demo-2-bedroom-render-1',
+          url: '/placeholders/development_placeholder_3_1763712078958.png',
+          type: 'image',
+        }),
+      ]),
+    }),
   }),
   Object.freeze({
     id: deterministicUuid(`${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}unit-3-bedroom-v2`),
@@ -145,6 +183,35 @@ const EXPECTED_DEMO_UNIT_TYPES = Object.freeze([
     availableUnits: 2,
     totalUnits: 4,
     displayOrder: 2,
+    baseMedia: Object.freeze({
+      gallery: Object.freeze([
+        Object.freeze({
+          id: 'demo-3-bedroom-gallery-1',
+          url: '/properties/35t5znQJ1v9V.jpg',
+          isPrimary: true,
+        }),
+        Object.freeze({
+          id: 'demo-3-bedroom-gallery-2',
+          url: '/properties/40O7UI0lbxUn.jpg',
+          isPrimary: false,
+        }),
+      ]),
+      floorPlans: Object.freeze([
+        Object.freeze({
+          id: 'demo-3-bedroom-plan-1',
+          url: '/properties/cb6IeI4pBCAG.jpg',
+          type: 'image',
+          fileName: 'sample-3-bedroom-floor-plan.jpg',
+        }),
+      ]),
+      renders: Object.freeze([
+        Object.freeze({
+          id: 'demo-3-bedroom-render-1',
+          url: '/placeholders/development_placeholder_4_1763712099609.png',
+          type: 'image',
+        }),
+      ]),
+    }),
   }),
 ]);
 
@@ -699,6 +766,29 @@ export function classifyDistributionReferrerActivityDemoDevelopment(
   return { state: 'reused' };
 }
 
+function assertDemoUnitTypeScalarFields(
+  row: Row,
+  expected: (typeof EXPECTED_DEMO_UNIT_TYPES)[number],
+): void {
+  requireExact(rowValue(row, 'id'), expected.id, 'demo unit type ID');
+  requireExact(rowValue(row, 'bedrooms'), expected.bedrooms, 'demo unit type bedrooms');
+  requireExact(rowValue(row, 'bathrooms'), expected.bathrooms, 'demo unit type bathrooms');
+  requireExact(rowValue(row, 'unit_size'), expected.unitSize, 'demo unit type size');
+  requireExact(
+    rowValue(row, 'base_price_from'),
+    expected.basePriceFrom,
+    'demo unit type base price',
+  );
+  requireExact(
+    rowValue(row, 'available_units'),
+    expected.availableUnits,
+    'demo unit type available units',
+  );
+  requireExact(rowValue(row, 'total_units'), expected.totalUnits, 'demo unit type total units');
+  requireExact(rowValue(row, 'display_order'), expected.displayOrder, 'demo unit type order');
+  requireExact(rowValue(row, 'is_active'), 1, 'demo unit type active state');
+}
+
 export function assertDistributionReferrerActivityDemoUnitTypes(rows: Row[]): void {
   if (rows.length !== EXPECTED_DEMO_UNIT_TYPES.length) {
     throw new Error(
@@ -712,23 +802,12 @@ export function assertDistributionReferrerActivityDemoUnitTypes(rows: Row[]): vo
         `Distribution referrer activity preview fixture is missing demo unit type ${expected.name}.`,
       );
     }
-    requireExact(rowValue(row, 'id'), expected.id, 'demo unit type ID');
-    requireExact(rowValue(row, 'bedrooms'), expected.bedrooms, 'demo unit type bedrooms');
-    requireExact(rowValue(row, 'bathrooms'), expected.bathrooms, 'demo unit type bathrooms');
-    requireExact(rowValue(row, 'unit_size'), expected.unitSize, 'demo unit type size');
+    assertDemoUnitTypeScalarFields(row, expected);
     requireExact(
-      rowValue(row, 'base_price_from'),
-      expected.basePriceFrom,
-      'demo unit type base price',
+      canonicalJson(parseStoredJson(rowValue(row, 'base_media'))),
+      canonicalJson(expected.baseMedia),
+      'demo unit type media',
     );
-    requireExact(
-      rowValue(row, 'available_units'),
-      expected.availableUnits,
-      'demo unit type available units',
-    );
-    requireExact(rowValue(row, 'total_units'), expected.totalUnits, 'demo unit type total units');
-    requireExact(rowValue(row, 'display_order'), expected.displayOrder, 'demo unit type order');
-    requireExact(rowValue(row, 'is_active'), 1, 'demo unit type active state');
   }
 }
 
@@ -1116,7 +1195,7 @@ async function listDemoUnitTypes(
   return await queryRows(
     connection,
     `SELECT id, name, bedrooms, bathrooms, unit_size, base_price_from, available_units,
-            total_units, display_order, is_active
+            total_units, display_order, is_active, base_media
        FROM unit_types
       WHERE development_id = ?
       ORDER BY display_order, id`,
@@ -1494,16 +1573,40 @@ async function ensureDemoUnitTypes(
 ): Promise<{ state: PreparedState }> {
   const existing = await listDemoUnitTypes(connection, developmentId);
   if (existing.length > 0) {
-    assertDistributionReferrerActivityDemoUnitTypes(existing);
-    return { state: 'reused' };
+    if (existing.length !== EXPECTED_DEMO_UNIT_TYPES.length) {
+      throw new Error(
+        'Distribution referrer activity preview fixture demo unit types do not match the governed set.',
+      );
+    }
+    let mediaUpdated = false;
+    for (const expected of EXPECTED_DEMO_UNIT_TYPES) {
+      const row = existing.find(
+        candidate => comparable(rowValue(candidate, 'name')) === expected.name,
+      );
+      if (!row) {
+        throw new Error(
+          `Distribution referrer activity preview fixture is missing demo unit type ${expected.name}.`,
+        );
+      }
+      assertDemoUnitTypeScalarFields(row, expected);
+      const storedMedia = parseStoredJson(rowValue(row, 'base_media'));
+      if (canonicalJson(storedMedia) !== canonicalJson(expected.baseMedia)) {
+        await connection.execute(`UPDATE unit_types SET base_media = ? WHERE id = ?`, [
+          JSON.stringify(expected.baseMedia),
+          expected.id,
+        ]);
+        mediaUpdated = true;
+      }
+    }
+    return { state: mediaUpdated ? 'created' : 'reused' };
   }
 
   for (const unitType of EXPECTED_DEMO_UNIT_TYPES) {
     await connection.execute(
       `INSERT INTO unit_types
         (id, development_id, name, bedrooms, bathrooms, unit_size, base_price_from,
-         available_units, total_units, display_order, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+         available_units, total_units, display_order, is_active, base_media)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
       [
         unitType.id,
         developmentId,
@@ -1515,6 +1618,7 @@ async function ensureDemoUnitTypes(
         unitType.availableUnits,
         unitType.totalUnits,
         unitType.displayOrder,
+        JSON.stringify(unitType.baseMedia),
       ],
     );
   }

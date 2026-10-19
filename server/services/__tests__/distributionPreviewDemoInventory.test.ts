@@ -31,6 +31,11 @@ const twoBedroom: DistributionPreviewDemoUnitType = {
   basePriceTo: null,
   availableUnits: 4,
   isActive: true,
+  media: {
+    gallery: [{ url: '/demo/2bed-gallery.jpg', fileName: null, type: 'image' }],
+    floorPlans: [{ url: '/demo/2bed-plan.pdf', fileName: '2-bed-plan.pdf', type: 'pdf' }],
+    renders: [{ url: '/demo/2bed-render.png', fileName: null, type: 'image' }],
+  },
 };
 
 const threeBedroom: DistributionPreviewDemoUnitType = {
@@ -153,6 +158,19 @@ describe('distribution preview demo inventory', () => {
       priceFrom: 1650000,
       priceTo: 1725000,
       priceBasis: 'purchase_price',
+    });
+  });
+
+  it('carries sanitized unit media and derives the primary image from the gallery', () => {
+    const inventory = resolveDistributionPreviewDemoInventory(governedInput());
+
+    expect(inventory?.unitTypes[0]?.imageUrl).toBe('/demo/2bed-gallery.jpg');
+    expect(inventory?.unitTypes[0]?.media).toEqual(twoBedroom.media);
+    expect(inventory?.unitTypes[1]?.imageUrl).toBeNull();
+    expect(inventory?.unitTypes[1]?.media).toEqual({
+      gallery: [],
+      floorPlans: [],
+      renders: [],
     });
   });
 
