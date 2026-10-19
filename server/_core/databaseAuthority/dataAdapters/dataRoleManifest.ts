@@ -14,6 +14,10 @@ import {
   CANONICAL_GEOGRAPHY_VERSION,
 } from './canonicalGeography';
 import {
+  CANONICAL_PLATFORM_SETTINGS_DIGEST,
+  CANONICAL_PLATFORM_SETTINGS_VERSION,
+} from './canonicalPlatformSettings';
+import {
   LISTING_PREVIEW_FIXTURE_DIGEST,
   LISTING_PREVIEW_FIXTURE_VERSION,
 } from './listingPreviewFixture';
@@ -118,6 +122,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['place-release-preview'],
+    },
+    {
+      key: 'reference.platform-settings',
+      role: 'reference',
+      adapter: 'canonical-platform-settings',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/canonicalPlatformSettings.ts',
+      version: CANONICAL_PLATFORM_SETTINGS_VERSION,
+      digest: CANONICAL_PLATFORM_SETTINGS_DIGEST,
+      prepareCommand: 'db:platform-settings:prepare',
+      verifyCommand: 'db:platform-settings:verify',
+      prepareOperation: 'reference-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-checkfit'],
     },
     {
       key: 'foundation.launch-access',

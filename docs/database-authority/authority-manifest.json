@@ -57,6 +57,8 @@
     "db:distribution-referrer-preview:verify",
     "db:distribution-referrer-activity:prepare",
     "db:distribution-referrer-activity:verify",
+    "db:platform-settings:prepare",
+    "db:platform-settings:verify",
     "db:reference:prepare",
     "db:reference:verify",
     "db:foundation:prepare",

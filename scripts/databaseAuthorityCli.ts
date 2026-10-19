@@ -75,6 +75,10 @@ import {
   DATA_ROLE_MANIFEST,
 } from '../server/_core/databaseAuthority/dataAdapters/dataRoleManifest';
 import {
+  prepareCanonicalPlatformSettings,
+  verifyCanonicalPlatformSettings,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
+import {
   prepareCanonicalFoundation,
   verifyCanonicalFoundation,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalFoundation';
@@ -196,6 +200,8 @@ type Command =
   | 'schema:tidb-audit'
   | 'reference:prepare'
   | 'reference:verify'
+  | 'platform-settings:prepare'
+  | 'platform-settings:verify'
   | 'foundation:prepare'
   | 'foundation:verify'
   | 'scenario:prepare'
@@ -927,6 +933,24 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'platform-settings:prepare' || command === 'platform-settings:verify') {
+    const isPrepare = command === 'platform-settings:prepare';
+    const operation: DatabaseOperation = isPrepare ? 'reference-seed' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        isPrepare
+          ? await prepareCanonicalPlatformSettings({ authority, decision, connection })
+          : await verifyCanonicalPlatformSettings({ authority, decision, connection }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
@@ -1234,6 +1258,8 @@ const commands = new Set<Command>([
   'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
+  'platform-settings:prepare',
+  'platform-settings:verify',
   'places:prepare',
   'places:verify',
   'places:prepare-national',

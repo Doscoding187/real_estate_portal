@@ -237,6 +237,8 @@
     "db:prospect-journey-e2e:drop": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:drop",
     "db:prospect-journey-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:reset",
     "db:readiness": "tsx scripts/databaseAuthorityCli.ts readiness",
+    "db:platform-settings:prepare": "tsx scripts/databaseAuthorityCli.ts platform-settings:prepare",
+    "db:platform-settings:verify": "tsx scripts/databaseAuthorityCli.ts platform-settings:verify",
     "db:reference:prepare": "tsx scripts/databaseAuthorityCli.ts reference:prepare",
     "db:reference:verify": "tsx scripts/databaseAuthorityCli.ts reference:verify",
     "db:release-commercial-quote-terms-recovery:apply": "tsx scripts/databaseAuthorityCli.ts release-commercial-quote-terms-recovery:apply",
