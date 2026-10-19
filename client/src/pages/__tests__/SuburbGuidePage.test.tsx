@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   feedInputs: [] as Array<{ tab: string; suburb?: string }>,
@@ -175,5 +175,62 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(screen.queryByText(/Region E/i)).toBeNull();
     expect(mocks.feedInputs.map(input => input.tab)).toEqual(['buy', 'rent', 'developments']);
     expect(mocks.feedInputs.every(input => input.suburb === 'Rosebank')).toBe(true);
+  });
+
+  it('offers a nearby-area and search handoff next to the primary hero action', () => {
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(screen.getByRole('link', { name: /Explore homes in Sandton/ })).toHaveAttribute(
+      'href',
+      '#suburb-inventory',
+    );
+    expect(screen.getByRole('link', { name: 'Compare nearby areas' })).toHaveAttribute(
+      'href',
+      '#city-areas',
+    );
+    expect(container.querySelector('#supply-guidance')).toBeNull();
+    expect(container.querySelector('#market-insights')).not.toBeNull();
+  });
+
+  it('guides zero-supply suburbs with nearby, city-wide, alert and seller actions', () => {
+    mocks.suburbData = {
+      ...suburbData('Sandton', 'sandton'),
+      stats: { totalListings: 0, saleCount: 0, rentalCount: 0 },
+    };
+
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    const guidance = container.querySelector('#supply-guidance');
+    expect(guidance).not.toBeNull();
+    const band = within(guidance as HTMLElement);
+    expect(
+      band.getByRole('heading', { name: 'No published resale listings in Sandton right now' }),
+    ).toBeInTheDocument();
+    expect(band.getByRole('link', { name: /Compare nearby areas/ })).toHaveAttribute(
+      'href',
+      '#city-areas',
+    );
+    expect(
+      band.getByRole('link', { name: /Search all of Johannesburg/ }).getAttribute('href'),
+    ).toContain('johannesburg');
+    expect(
+      band.getByRole('link', { name: /Set a Sandton listing alert/ }).getAttribute('href'),
+    ).toContain('sandton');
+    expect(band.getByRole('link', { name: /Selling or letting in Sandton\?/ })).toHaveAttribute(
+      'href',
+      '/advertise/sell/agencies',
+    );
+
+    expect(container.querySelector('#market-insights')).toBeNull();
+    expect(container.querySelector('.suburb-guide-quick-nav')).toHaveTextContent('Keep looking');
+    expect(container.querySelector('.suburb-guide-quick-nav')).not.toHaveTextContent(
+      'Market insights',
+    );
+    expect(screen.queryByRole('heading', { name: /Compare the listings in Sandton/ })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Homes for sale in Sandton' })).toBeInTheDocument();
   });
 });

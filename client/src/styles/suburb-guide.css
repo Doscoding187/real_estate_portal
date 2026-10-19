@@ -135,12 +135,19 @@
   font-weight: 700;
 }
 
+.suburb-guide-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1.45rem;
+}
+
 .suburb-guide-hero__action {
   display: inline-flex;
   min-height: 44px;
   align-items: center;
   gap: 0.55rem;
-  margin-top: 1.45rem;
   border-radius: 0.6rem;
   background: #fff;
   padding: 0.68rem 1rem;
@@ -156,6 +163,82 @@
 .suburb-guide-hero__action:hover {
   transform: translateY(-1px);
   background: #eaf4fb;
+}
+
+.suburb-guide-hero__action--secondary {
+  border: 1px solid rgb(255 255 255 / 55%);
+  background: rgb(8 28 47 / 42%);
+  color: #fff;
+}
+
+.suburb-guide-hero__action--secondary:hover {
+  background: rgb(8 28 47 / 62%);
+}
+
+.suburb-guide-guidance {
+  border: 1px solid #dfe8f1;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1.6rem clamp(1rem, 2.5vw, 1.9rem) 1.5rem;
+  box-shadow: 0 12px 32px rgb(15 42 65 / 5%);
+}
+
+.suburb-guide-guidance__actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+
+.suburb-guide-guidance__card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  border: 1px solid #e2eaf2;
+  border-radius: 0.85rem;
+  background: #f8fbfd;
+  padding: 1rem;
+  color: #14324c;
+  text-decoration: none;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease,
+    background-color 150ms ease;
+}
+
+.suburb-guide-guidance__card:hover {
+  transform: translateY(-1px);
+  border-color: #b9d4e8;
+  background: #f1f8fd;
+}
+
+.suburb-guide-guidance__icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  background: #e4f0fa;
+  color: #21679e;
+}
+
+.suburb-guide-guidance__card strong {
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.suburb-guide-guidance__card span:last-child {
+  color: #5b6f84;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.suburb-guide-guidance__note {
+  margin: 1.1rem 0 0;
+  color: #66778b;
+  font-size: 0.78rem;
+  line-height: 1.55;
 }
 
 .suburb-guide-quick-nav {
@@ -1719,6 +1802,7 @@
 @media (prefers-reduced-motion: reduce) {
   .suburb-guide-hero__action,
   .suburb-guide-area-card a,
+  .suburb-guide-guidance__card,
   .suburb-guide-market__metric,
   .suburb-guide-neighbour-card,
   .suburb-guide-professional-card {

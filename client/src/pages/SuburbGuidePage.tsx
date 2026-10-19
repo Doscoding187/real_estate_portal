@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearch } from 'wouter';
-import { ArrowRight, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
+import { ArrowRight, Bell, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { MetaControl } from '@/components/seo/MetaControl';
@@ -175,6 +175,21 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     };
   }, [location]);
 
+  const totalListings = Number(stats?.totalListings || 0);
+  const hasRecordedListings = totalListings > 0;
+  const citySearchHref = useMemo(() => {
+    if (!verifiedSuburb) return `/${provinceSlug}/${citySlug}`;
+    const cityLocation: LocationNode = {
+      id: encodeCanonicalLocationId('city', Number(verifiedSuburb.cityId)),
+      canonicalLocationId: encodeCanonicalLocationId('city', Number(verifiedSuburb.cityId)),
+      name: verifiedSuburb.cityName,
+      type: 'city',
+      slug: verifiedSuburb.citySlug,
+      provinceSlug: verifiedSuburb.provinceSlug,
+    };
+    return buildBuySearchUrl({ selectedLocations: [cityLocation] });
+  }, [citySlug, provinceSlug, verifiedSuburb]);
+
   const buyHref = viewAllHref.buy || '#suburb-inventory';
   const saleAndRentCount = Number(stats?.saleCount || 0) + Number(stats?.rentalCount || 0);
   const saleShare =
@@ -190,11 +205,10 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     ...(rentJourneyEnabled
       ? [{ id: 'for-rent', label: 'Rentals', count: Number(stats?.rentalCount || 0) }]
       : []),
-    ...(developmentsJourneyEnabled
-      ? [{ id: 'new-developments', label: 'Developments' }]
-      : []),
+    ...(developmentsJourneyEnabled ? [{ id: 'new-developments', label: 'Developments' }] : []),
     { id: 'area-snapshot', label: 'Area snapshot' },
-    { id: 'market-insights', label: 'Market insights' },
+    ...(hasRecordedListings ? [{ id: 'market-insights', label: 'Market insights' }] : []),
+    ...(!hasRecordedListings ? [{ id: 'supply-guidance', label: 'Keep looking' }] : []),
     ...(context ? [{ id: 'city-context', label: 'City context' }] : []),
     ...(suburbCenter ? [{ id: 'local-area', label: 'Local area' }] : []),
     { id: 'city-areas', label: 'Explore more areas' },
@@ -330,9 +344,17 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
               {verifiedSuburb.cityName}, {verifiedSuburb.provinceName}
             </span>
           </div>
-          <a className="suburb-guide-hero__action" href="#suburb-inventory">
-            Explore homes in {verifiedSuburb.name} <ArrowRight size={16} aria-hidden="true" />
-          </a>
+          <div className="suburb-guide-hero__actions">
+            <a className="suburb-guide-hero__action" href="#suburb-inventory">
+              Explore homes in {verifiedSuburb.name} <ArrowRight size={16} aria-hidden="true" />
+            </a>
+            <a
+              className="suburb-guide-hero__action suburb-guide-hero__action--secondary"
+              href="#city-areas"
+            >
+              Compare nearby areas
+            </a>
+          </div>
         </div>
       </header>
 
@@ -358,7 +380,9 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
         >
           <div className="suburb-guide-market__heading">
             <div>
-              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">LOCAL MARKET SNAPSHOT</p>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                LOCAL MARKET SNAPSHOT
+              </p>
               <h2 id="suburb-guide-market-title">What’s available in {verifiedSuburb.name}</h2>
               <p>Current Property Listify inventory for this exact area.</p>
             </div>
@@ -439,7 +463,76 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           </div>
         </section>
 
-        {marketInsights ? (
+        {!hasRecordedListings ? (
+          <section
+            id="supply-guidance"
+            className="suburb-guide-guidance"
+            aria-labelledby="suburb-guide-guidance-title"
+          >
+            <div className="suburb-guide-section-heading">
+              <div>
+                <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                  KEEP LOOKING · {verifiedSuburb.cityName.toUpperCase()}
+                </p>
+                <h2 id="suburb-guide-guidance-title">
+                  No published resale listings in {verifiedSuburb.name} right now
+                </h2>
+                <p>
+                  Property Listify currently records no eligible resale homes for sale or rent in{' '}
+                  {verifiedSuburb.name}. Off-plan projects are listed separately below. Here is
+                  where to go next:
+                </p>
+              </div>
+            </div>
+            <div className="suburb-guide-guidance__actions">
+              <a className="suburb-guide-guidance__card" href="#city-areas">
+                <span className="suburb-guide-guidance__icon">
+                  <MapPin size={18} aria-hidden="true" />
+                </span>
+                <strong>Compare nearby areas</strong>
+                <span>
+                  Suburbs with current published listings appear first in the{' '}
+                  {verifiedSuburb.cityName} directory.
+                </span>
+              </a>
+              <Link className="suburb-guide-guidance__card" href={citySearchHref}>
+                <span className="suburb-guide-guidance__icon">
+                  <Search size={18} aria-hidden="true" />
+                </span>
+                <strong>Search all of {verifiedSuburb.cityName}</strong>
+                <span>
+                  Widen the area on the main search while keeping the same journey and filters.
+                </span>
+              </Link>
+              <Link
+                className="suburb-guide-guidance__card"
+                href={viewAllHref.buy || citySearchHref}
+              >
+                <span className="suburb-guide-guidance__icon">
+                  <Bell size={18} aria-hidden="true" />
+                </span>
+                <strong>Set a {verifiedSuburb.name} listing alert</strong>
+                <span>
+                  Save this exact-area search on the results page and we’ll notify you when new
+                  listings are published.
+                </span>
+              </Link>
+              <Link className="suburb-guide-guidance__card" href="/advertise/sell/agencies">
+                <span className="suburb-guide-guidance__icon">
+                  <Building2 size={18} aria-hidden="true" />
+                </span>
+                <strong>Selling or letting in {verifiedSuburb.name}?</strong>
+                <span>Reach agencies and agents that work in your area.</span>
+              </Link>
+            </div>
+            <p className="suburb-guide-guidance__note">
+              These figures reflect current published supply on Property Listify, not a measure of
+              all homes or buyer demand in {verifiedSuburb.name}.
+            </p>
+          </section>
+        ) : null}
+
+        {marketInsights && hasRecordedListings ? (
           <SuburbMarketInsights
             suburbName={verifiedSuburb.name}
             data={marketInsights}
@@ -599,9 +692,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
         >
           <div className="suburb-guide-section-heading">
             <div>
-              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
-                EXPLORE MORE AREAS
-              </p>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">EXPLORE MORE AREAS</p>
               <h2 id="suburb-guide-areas-title">
                 More suburbs to compare in {verifiedSuburb.cityName}
               </h2>
@@ -722,7 +813,6 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             </p>
           )}
         </section>
-
       </main>
     </SuburbGuideShell>
   );
