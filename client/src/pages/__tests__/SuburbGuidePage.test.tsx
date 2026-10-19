@@ -47,6 +47,7 @@ vi.mock('@/lib/trpc', () => ({
 }));
 
 vi.mock('wouter', () => ({
+  useSearch: () => '',
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}

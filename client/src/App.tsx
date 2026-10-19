@@ -189,7 +189,7 @@ const DistributionReferralApplyPage = lazy(
 
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
-const SuburbPage = lazy(() => import('./pages/SuburbPage'));
+const SuburbGuidePage = lazy(() => import('./pages/SuburbGuidePage'));
 
 function LegacyDeveloperAuthoringRedirect() {
   const query = typeof window === 'undefined' ? '' : window.location.search;
@@ -722,7 +722,7 @@ function Router() {
           <Route path="/:province/:city/:suburb">
             {params =>
               isCanonicalProvinceSlug(params.province) ? (
-                <SuburbPage params={params as any} />
+                <SuburbGuidePage params={params as any} />
               ) : (
                 <NotFound />
               )

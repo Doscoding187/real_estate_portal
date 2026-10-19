@@ -7,7 +7,6 @@ import {
   developments,
   cataloguePublishers,
   developerOrganisations,
-  suburbPriceAnalytics,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, inArray, getTableColumns, type SQL } from 'drizzle-orm';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
@@ -489,12 +488,7 @@ export const locationPagesService = {
   /**
    * Get data for Suburb Page (Level 3)
    */
-  async getSuburbData(
-    provinceSlug: string,
-    citySlug: string,
-    suburbSlug: string,
-    options?: { includeInventoryPreview?: boolean },
-  ) {
+  async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
     console.log(
       `[LocationPages] getSuburbData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}", suburbSlug="${suburbSlug}"`,
     );
@@ -559,44 +553,6 @@ export const locationPagesService = {
       eligibleProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
     );
 
-    // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
-    let localProperties: any[] = [];
-    if (options?.includeInventoryPreview ?? true) {
-      try {
-        localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
-      } catch (error) {
-        console.warn('[LocationPages] Properties preview projection failed for suburb', error);
-        throw error;
-      }
-    }
-
-    // 4. Market Insights (Price Analytics)
-    let analytics: any = null;
-    try {
-      [analytics] = await db
-        .select()
-        .from(suburbPriceAnalytics)
-        .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
-        .limit(1);
-    } catch (error) {
-      console.warn('[LocationPages] suburbPriceAnalytics query failed', error);
-      throw error;
-    }
-
-    // 5. AI Insights & Reviews — wrap import + calls so module failures don't crash
-    let insights: any = null;
-    let reviews: any[] = [];
-    try {
-      const { locationInsightsService } = await import('./locationInsightsService');
-      insights = await locationInsightsService.getInsights(suburb.id, suburb.name, suburb.cityName);
-      reviews = await locationInsightsService.getReviews(suburb.id);
-    } catch (error) {
-      console.warn(
-        '[LocationPages] locationInsightsService failed, returning null insights',
-        error,
-      );
-    }
-
     return {
       suburb,
       stats: {
@@ -606,10 +562,6 @@ export const locationPagesService = {
         saleCount,
       },
       marketInsights,
-      listings: localProperties,
-      analytics: analytics || null,
-      insights,
-      reviews,
     };
   },
 };

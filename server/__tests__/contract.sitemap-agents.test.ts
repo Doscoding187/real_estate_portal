@@ -1,12 +1,23 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDbMock } = vi.hoisted(() => ({ getDbMock: vi.fn() }));
+const { getDbMock, publishedCityGuides } = vi.hoisted(() => ({
+  getDbMock: vi.fn(),
+  publishedCityGuides: [] as Array<{ provinceSlug: string; slug: string }>,
+}));
 
 vi.mock('../db-connection', () => ({
   getDb: getDbMock,
 }));
 
+vi.mock('../../shared/cityGuideContent', () => ({
+  getPublishedCityGuides: () => publishedCityGuides,
+}));
+
 import sitemapRouter from '../routes/sitemap';
+
+beforeEach(() => {
+  publishedCityGuides.length = 0;
+});
 
 function makeFakeDb(rows: Array<Record<string, unknown>>) {
   const db = {
@@ -121,6 +132,23 @@ describe('province editorial sitemap readiness', () => {
     const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
     expect(capture.body).toContain('<urlset');
     expect(capture.body).not.toContain('<loc>');
+    expect(getDbMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('city editorial sitemap readiness', () => {
+  it('no longer advertises the transactional geography sitemap', async () => {
+    const capture = await requestAgentsSitemap([], '/sitemap.xml');
+    expect(capture.body).toContain('/sitemap-guides.xml');
+    expect(capture.body).not.toContain('/sitemap-areas.xml');
+  });
+
+  it('lists published city guides without requiring inventory', async () => {
+    publishedCityGuides.push({ provinceSlug: 'gauteng', slug: 'johannesburg' });
+    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
+    expect(capture.body).toContain(
+      '<loc>https://www.propertylistifysa.co.za/gauteng/johannesburg</loc>',
+    );
     expect(getDbMock).not.toHaveBeenCalled();
   });
 });

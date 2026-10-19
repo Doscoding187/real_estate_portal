@@ -1,7 +1,9 @@
 import { cityGuideInitialHtml } from '../../shared/cityGuideHtml';
 import { getCityGuideContent } from '../../shared/cityGuideContent';
+import { PROVINCE_SLUGS } from '../../shared/location-contract';
 import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
 import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
+import { isSuburbGuidePilot } from '../../shared/suburbGuidePolicy';
 
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const DEFAULT_SITE_NAME = 'Property Listify';
@@ -116,6 +118,34 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
         cityGuide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
       siteName: DEFAULT_SITE_NAME,
     };
+
+  const suburbGuide =
+    pathSegments.length === 3 && PROVINCE_SLUGS.includes(pathSegments[0].toLowerCase())
+      ? {
+          provinceSlug: pathSegments[0].toLowerCase(),
+          citySlug: pathSegments[1].toLowerCase(),
+          suburbSlug: pathSegments[2].toLowerCase(),
+        }
+      : undefined;
+  if (suburbGuide) {
+    const suburbCityGuide = getCityGuideContent(suburbGuide.provinceSlug, suburbGuide.citySlug);
+    const suburbName = humanizeSegment(suburbGuide.suburbSlug);
+    const cityName = humanizeSegment(suburbGuide.citySlug);
+    const indexable =
+      isSuburbGuidePilot(suburbGuide.provinceSlug, suburbGuide.citySlug, suburbGuide.suburbSlug) &&
+      suburbCityGuide?.status === 'published' &&
+      !parsedUrl.search;
+
+    return {
+      title: `${suburbName} property guide: homes, rentals & developments | ${DEFAULT_SITE_NAME}`,
+      description: `Explore homes for sale, rentals and new developments in ${suburbName}, ${cityName}.`,
+      canonicalUrl: absoluteUrl(
+        `/${suburbGuide.provinceSlug}/${suburbGuide.citySlug}/${suburbGuide.suburbSlug}`,
+      ),
+      robots: indexable ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+  }
 
   if (pathname === '/') {
     return {

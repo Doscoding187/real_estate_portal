@@ -166,6 +166,45 @@ describe('locationPagesService canonical hierarchy', () => {
     expect(suburbLookup.where).toHaveBeenCalledTimes(1);
   });
 
+  it('returns the suburb guide projection without inventory, analytics, or insight work', async () => {
+    const db = makeDb([
+      [
+        {
+          id: 81,
+          name: 'Sandton',
+          slug: 'sandton',
+          cityId: 12,
+          cityName: 'Johannesburg',
+          citySlug: 'johannesburg',
+          provinceName: 'Gauteng',
+          provinceSlug: 'gauteng',
+          latitude: '-26.1076',
+          longitude: '28.0567',
+        },
+      ],
+      [],
+    ]);
+    getDb.mockResolvedValue(db);
+
+    const result = await locationPagesService.getSuburbData('gauteng', 'johannesburg', 'sandton');
+
+    expect(result).toEqual({
+      suburb: expect.objectContaining({ id: 81, slug: 'sandton' }),
+      stats: { totalListings: 0, avgPrice: 0, rentalCount: 0, saleCount: 0 },
+      marketInsights: expect.objectContaining({
+        minimumPriceSample: 10,
+        sale: expect.objectContaining({ listingCount: 0 }),
+        rent: expect.objectContaining({ listingCount: 0 }),
+      }),
+    });
+    expect(result).not.toHaveProperty('listings');
+    expect(result).not.toHaveProperty('analytics');
+    expect(result).not.toHaveProperty('insights');
+    expect(result).not.toHaveProperty('reviews');
+    expect(db.select).toHaveBeenCalledTimes(2);
+    expect(resolvePublicPropertyEligibilities).not.toHaveBeenCalled();
+  });
+
   it('does not fetch a city listing preview in neutral mode', async () => {
     const db = makeDb([
       [

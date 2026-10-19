@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'wouter';
+import { Link, useSearch } from 'wouter';
 import { ArrowRight, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
@@ -29,6 +29,7 @@ import { getCityGuideImage } from '@/lib/cityGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { encodeCanonicalLocationId } from '@shared/locationAuthority';
 import { getCityGuideContent } from '@shared/cityGuideContent';
+import { isSuburbGuidePilot } from '@shared/suburbGuidePolicy';
 import type { LocationNode } from '@/types/location';
 import '@/styles/suburb-guide.css';
 
@@ -48,13 +49,13 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const provinceSlug = params.province.toLowerCase();
   const citySlug = params.city.toLowerCase();
   const suburbSlug = params.suburb.toLowerCase();
-  const isSandton =
-    provinceSlug === 'gauteng' && citySlug === 'johannesburg' && suburbSlug === 'sandton';
+  const isSandton = isSuburbGuidePilot(provinceSlug, citySlug, suburbSlug);
+  const search = useSearch();
   const path = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
   const [areaSearch, setAreaSearch] = useState('');
   const [imageFailed, setImageFailed] = useState(false);
   const suburbQuery = trpc.locationPages.getSuburbData.useQuery(
-    { provinceSlug, citySlug, suburbSlug, includeInventoryPreview: true },
+    { provinceSlug, citySlug, suburbSlug },
     { retry: false, staleTime: 300000 },
   );
   const cityQuery = trpc.locationPages.getCityData.useQuery(
@@ -265,7 +266,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
         description={description}
         canonicalUrl={toAbsoluteUrl(path)}
         image={cityImage ? toAbsoluteUrl(cityImage.hero) : undefined}
-        forceNoIndex={!isSandton || cityGuide?.status !== 'published'}
+        forceNoIndex={!isSandton || cityGuide?.status !== 'published' || Boolean(search)}
         structuredData={[
           {
             '@context': 'https://schema.org',

@@ -87,7 +87,7 @@ export function NearbyAmenitiesMap({
   const getNearbyAmenities = trpc.location.getNearbyAmenities.useQuery({
     latitude: mapCenter[0],
     longitude: mapCenter[1],
-    radius: searchRadius,
+    radius: searchRadius * 1000,
     types: Object.entries(enabledTypes)
       .filter(([_, enabled]) => enabled)
       .map(([type]) => type),

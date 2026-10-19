@@ -97,7 +97,6 @@ export const locationPagesRouter = router({
         provinceSlug: z.string(),
         citySlug: z.string(),
         suburbSlug: z.string(),
-        includeInventoryPreview: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -105,7 +104,6 @@ export const locationPagesRouter = router({
         input.provinceSlug,
         input.citySlug,
         input.suburbSlug,
-        { includeInventoryPreview: input.includeInventoryPreview },
       );
     }),
 

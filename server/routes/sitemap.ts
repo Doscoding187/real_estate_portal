@@ -1,21 +1,14 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { type Request, type Response, Router } from 'express';
 
-import {
-  agents,
-  cities,
-  developments,
-  cataloguePublishers,
-  properties,
-  provinces,
-  suburbs,
-} from '../../drizzle/schema';
+import { agents, cataloguePublishers, developments, properties } from '../../drizzle/schema';
 import { ENV } from '../_core/env';
 import { getDb } from '../db-connection';
 import { APPROVED_AGENT, buildAgentPublicSlug } from '../services/agentPublicProfileService';
 import { publicDevelopmentEligibilityConditions } from '../services/publicDevelopmentEligibility';
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 
+import { getPublishedCityGuides } from '../../shared/cityGuideContent';
 import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
 
 const router = Router();
@@ -25,7 +18,6 @@ const TEXT_CONTENT_TYPE = 'text/plain; charset=utf-8';
 const SITEMAP_CACHE_CONTROL = 'public, max-age=300, stale-while-revalidate=3600';
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const LIVE_PROPERTY_STATUSES = ['available', 'published'] as const;
-const AREA_LISTING_TYPES = ['sale', 'rent'] as const;
 const DEFAULT_PUBLIC_SITE_URL = CANONICAL_PUBLIC_ORIGIN;
 
 type SitemapUrlEntry = {
@@ -149,14 +141,6 @@ function sendXml(res: Response, xml: string) {
   res.status(200).send(xml);
 }
 
-function listingTypeToPathPrefix(
-  listingType: string,
-): '/property-for-sale' | '/property-to-rent' | null {
-  if (listingType === 'sale') return '/property-for-sale';
-  if (listingType === 'rent') return '/property-to-rent';
-  return null;
-}
-
 router.get('/robots.txt', (_req, res) => {
   const robots = [
     'User-agent: *',
@@ -180,7 +164,6 @@ router.get('/sitemap.xml', (req, res) => {
   const xml = buildSitemapIndex(
     [
       '/sitemap-listings.xml',
-      '/sitemap-areas.xml',
       '/sitemap-developments.xml',
       '/sitemap-agents.xml',
       '/sitemap-static.xml',
@@ -194,13 +177,17 @@ router.get('/sitemap.xml', (req, res) => {
 
 // Editorial publication, not inventory presence, determines guide sitemap eligibility.
 router.get('/sitemap-guides.xml', (req, res) => {
+  const baseUrl = resolveBaseUrl(req);
   sendXml(
     res,
-    buildUrlSet(
-      getPublishedProvinceGuides().map(guide => ({
-        loc: toAbsoluteUrl(`/${guide.slug}`, resolveBaseUrl(req)),
+    buildUrlSet([
+      ...getPublishedProvinceGuides().map(guide => ({
+        loc: toAbsoluteUrl(`/${guide.slug}`, baseUrl),
       })),
-    ),
+      ...getPublishedCityGuides().map(guide => ({
+        loc: toAbsoluteUrl(`/${guide.provinceSlug}/${guide.slug}`, baseUrl),
+      })),
+    ]),
   );
 });
 
@@ -314,151 +301,6 @@ router.get('/sitemap-developments.xml', async (_req, res, next) => {
     );
 
     sendXml(res, xml);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/sitemap-areas.xml', async (_req, res, next) => {
-  try {
-    const baseUrl = resolveBaseUrl(_req);
-    const db = await getDb();
-    if (!db) {
-      throw new Error('Database not available');
-    }
-
-    const candidateIds = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(
-        and(
-          inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
-          inArray(properties.listingType, [...AREA_LISTING_TYPES]),
-          sql`${properties.sourceListingId} IS NOT NULL`,
-        ),
-      );
-    const eligiblePropertyIds = await resolvePublicPropertyEligibilityIds(
-      candidateIds.map(row => Number(row.id)),
-    );
-    if (eligiblePropertyIds.length === 0) {
-      sendXml(res, buildUrlSet([]));
-      return;
-    }
-
-    const provinceRows = await db
-      .select({
-        listingType: properties.listingType,
-        provinceSlug: provinces.slug,
-        updatedAt: sql<string>`MAX(${properties.updatedAt})`,
-      })
-      .from(properties)
-      .innerJoin(provinces, eq(properties.provinceId, provinces.id))
-      .where(
-        and(
-          inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
-          inArray(properties.id, eligiblePropertyIds),
-          inArray(properties.listingType, [...AREA_LISTING_TYPES]),
-          sql`COALESCE(${provinces.slug}, '') <> ''`,
-        ),
-      )
-      .groupBy(properties.listingType, provinces.id, provinces.slug);
-
-    const cityRows = await db
-      .select({
-        listingType: properties.listingType,
-        provinceSlug: provinces.slug,
-        citySlug: cities.slug,
-        updatedAt: sql<string>`MAX(${properties.updatedAt})`,
-      })
-      .from(properties)
-      .innerJoin(cities, eq(properties.cityId, cities.id))
-      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-      .where(
-        and(
-          inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
-          inArray(properties.id, eligiblePropertyIds),
-          inArray(properties.listingType, [...AREA_LISTING_TYPES]),
-          sql`COALESCE(${provinces.slug}, '') <> ''`,
-          sql`COALESCE(${cities.slug}, '') <> ''`,
-        ),
-      )
-      .groupBy(properties.listingType, provinces.id, provinces.slug, cities.id, cities.slug);
-
-    const suburbRows = await db
-      .select({
-        listingType: properties.listingType,
-        provinceSlug: provinces.slug,
-        citySlug: cities.slug,
-        suburbSlug: suburbs.slug,
-        updatedAt: sql<string>`MAX(${properties.updatedAt})`,
-      })
-      .from(properties)
-      .innerJoin(suburbs, eq(properties.suburbId, suburbs.id))
-      .innerJoin(cities, eq(suburbs.cityId, cities.id))
-      .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-      .where(
-        and(
-          inArray(properties.status, [...LIVE_PROPERTY_STATUSES]),
-          inArray(properties.id, eligiblePropertyIds),
-          inArray(properties.listingType, [...AREA_LISTING_TYPES]),
-          sql`COALESCE(${provinces.slug}, '') <> ''`,
-          sql`COALESCE(${cities.slug}, '') <> ''`,
-          sql`COALESCE(${suburbs.slug}, '') <> ''`,
-        ),
-      )
-      .groupBy(
-        properties.listingType,
-        provinces.id,
-        provinces.slug,
-        cities.id,
-        cities.slug,
-        suburbs.id,
-        suburbs.slug,
-      );
-
-    const entries: SitemapUrlEntry[] = [
-      ...provinceRows
-        .map(row => {
-          const prefix = listingTypeToPathPrefix(String(row.listingType || ''));
-          if (!prefix || !row.provinceSlug) return null;
-          return {
-            loc: toAbsoluteUrl(`${prefix}/${row.provinceSlug}`, baseUrl),
-            lastmod: row.updatedAt,
-            changefreq: 'daily',
-            priority: 0.8,
-          } satisfies SitemapUrlEntry;
-        })
-        .filter((entry): entry is SitemapUrlEntry => entry !== null),
-      ...cityRows
-        .map(row => {
-          const prefix = listingTypeToPathPrefix(String(row.listingType || ''));
-          if (!prefix || !row.provinceSlug || !row.citySlug) return null;
-          return {
-            loc: toAbsoluteUrl(`${prefix}/${row.provinceSlug}/${row.citySlug}`, baseUrl),
-            lastmod: row.updatedAt,
-            changefreq: 'daily',
-            priority: 0.8,
-          } satisfies SitemapUrlEntry;
-        })
-        .filter((entry): entry is SitemapUrlEntry => entry !== null),
-      ...suburbRows
-        .map(row => {
-          const prefix = listingTypeToPathPrefix(String(row.listingType || ''));
-          if (!prefix || !row.provinceSlug || !row.citySlug || !row.suburbSlug) return null;
-          return {
-            loc: toAbsoluteUrl(
-              `${prefix}/${row.provinceSlug}/${row.citySlug}/${row.suburbSlug}`,
-              baseUrl,
-            ),
-            lastmod: row.updatedAt,
-            changefreq: 'daily',
-            priority: 0.7,
-          } satisfies SitemapUrlEntry;
-        })
-        .filter((entry): entry is SitemapUrlEntry => entry !== null),
-    ];
-
-    sendXml(res, buildUrlSet(entries));
   } catch (error) {
     next(error);
   }

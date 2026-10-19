@@ -257,3 +257,6 @@ export const CITY_GUIDE_CONTENT: readonly CityGuideContent[] = [johannesburg];
 export function getCityGuideContent(province: string, city: string) {
   return CITY_GUIDE_CONTENT.find(guide => guide.provinceSlug === province && guide.slug === city);
 }
+export function getPublishedCityGuides() {
+  return CITY_GUIDE_CONTENT.filter(guide => guide.status === 'published');
+}

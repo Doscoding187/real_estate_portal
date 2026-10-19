@@ -46,4 +46,18 @@ describe('NearbyAmenitiesMap', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(refetch).toHaveBeenCalledOnce();
   });
+
+  it('requests the provider search in metres for the displayed kilometre radius', () => {
+    mocks.nearbyQuery.mockReturnValue({
+      data: [],
+      isError: false,
+      isLoading: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    });
+
+    render(<NearbyAmenitiesMap center={[-26.1076, 28.0567]} radius={2} showControls={false} />);
+
+    expect(mocks.nearbyQuery.mock.calls[0][0]).toMatchObject({ radius: 2000 });
+  });
 });
