@@ -235,7 +235,7 @@ describe('locationPagesService canonical hierarchy', () => {
     expect(db.select).toHaveBeenCalledTimes(4);
   });
 
-  it('preserves unavailable locality aggregates instead of converting them to zero', async () => {
+  it('gates locality medians by the canonical priced-listing sample', async () => {
     const db = makeDb([
       [
         {
@@ -256,12 +256,6 @@ describe('locationPagesService canonical hierarchy', () => {
           id: 1,
           name: 'Sandton',
           slug: 'sandton',
-          listingCount: 0,
-          avgPrice: null,
-          avgSalePrice: null,
-          avgRentalPrice: null,
-          propertiesForSale: 0,
-          propertiesForRent: 0,
         },
       ],
       [],
@@ -274,10 +268,14 @@ describe('locationPagesService canonical hierarchy', () => {
 
     expect(result?.topLocalities[0]).toMatchObject({
       name: 'Sandton',
-      avgSalePrice: null,
-      avgRentalPrice: null,
+      listingCount: 0,
       propertiesForSale: 0,
       propertiesForRent: 0,
+      minimumPriceSample: 10,
+      medianSalePrice: null,
+      pricedListingsForSale: 0,
+      medianRentalPrice: null,
+      pricedListingsForRent: 0,
     });
   });
 

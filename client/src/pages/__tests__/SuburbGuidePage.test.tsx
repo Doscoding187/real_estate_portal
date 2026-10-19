@@ -31,7 +31,45 @@ vi.mock('@/lib/trpc', () => ({
       },
       getCityData: {
         useQuery: () => ({
-          data: { city: { id: 4 }, suburbs: [] },
+          data: {
+            city: { id: 4 },
+            suburbs: [
+              {
+                id: 81,
+                name: 'Sandton',
+                slug: 'sandton',
+                listingCount: 8,
+                propertiesForSale: 5,
+                propertiesForRent: 3,
+              },
+              {
+                id: 82,
+                name: 'Rosebank',
+                slug: 'rosebank',
+                listingCount: 4,
+                propertiesForSale: 3,
+                propertiesForRent: 1,
+                minimumPriceSample: 10,
+                medianSalePrice: 3_200_000,
+                pricedListingsForSale: 12,
+                medianRentalPrice: null,
+                pricedListingsForRent: 2,
+              },
+              {
+                id: 83,
+                name: 'Bryanston',
+                slug: 'bryanston',
+                listingCount: 0,
+                propertiesForSale: 0,
+                propertiesForRent: 0,
+                minimumPriceSample: 10,
+                medianSalePrice: null,
+                pricedListingsForSale: 0,
+                medianRentalPrice: null,
+                pricedListingsForRent: 0,
+              },
+            ],
+          },
           isLoading: false,
           isError: false,
           refetch: vi.fn(),
@@ -373,6 +411,33 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(container.querySelector('#suburb-inventory')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'View all homes' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all rentals' })).toBeInTheDocument();
+  });
+
+  it('compares the current suburb with nearby areas using gated medians', () => {
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    const cityAreas = container.querySelector('#city-areas');
+    expect(cityAreas).not.toBeNull();
+    const table = within(cityAreas as HTMLElement).getByRole('table');
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+
+    expect(within(table).getByText('This guide')).toBeInTheDocument();
+    expect(within(table).getByText('R2.8M')).toBeInTheDocument();
+    expect(within(table).getByText('3 of 5 priced')).toBeInTheDocument();
+    expect(within(table).getByText('R3.2M')).toBeInTheDocument();
+    expect(within(table).getByText('2 of 10 priced')).toBeInTheDocument();
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+    expect(within(table).getByRole('link', { name: /Rosebank/ })).toHaveAttribute(
+      'href',
+      '/gauteng/johannesburg/rosebank',
+    );
+    expect(within(table).getByRole('link', { name: /Bryanston/ })).toHaveAttribute(
+      'href',
+      '/gauteng/johannesburg/bryanston',
+    );
   });
 
   it('sends signed-out visitors to sign in before setting a suburb alert', () => {

@@ -1049,6 +1049,98 @@
   white-space: nowrap;
 }
 
+.suburb-guide-compare-wrap {
+  margin-top: 0.35rem;
+  overflow-x: auto;
+  border: 1px solid #e0e8ef;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(15 42 65 / 4%);
+}
+
+.suburb-guide-compare {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.suburb-guide-compare th,
+.suburb-guide-compare td {
+  border-bottom: 1px solid #eef3f7;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.suburb-guide-compare tbody tr:last-child th,
+.suburb-guide-compare tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.suburb-guide-compare thead th {
+  background: #f6fafd;
+  color: #5b6f84;
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.suburb-guide-compare tbody th {
+  color: #17344f;
+  font-weight: 750;
+}
+
+.suburb-guide-compare__row:hover {
+  background: #f8fbfd;
+}
+
+.suburb-guide-compare__row--current {
+  background: #f2f8fd;
+}
+
+.suburb-guide-compare__row--current:hover {
+  background: #eef6fc;
+}
+
+.suburb-guide-compare__name {
+  margin-right: 0.5rem;
+}
+
+.suburb-guide-compare__badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #e4f0fa;
+  padding: 0.1rem 0.5rem;
+  color: #21679e;
+  font-size: 0.66rem;
+  font-weight: 760;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.suburb-guide-compare__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #1d5d8a;
+  text-decoration: none;
+}
+
+.suburb-guide-compare__link:hover {
+  text-decoration: underline;
+}
+
+.suburb-guide-compare__note {
+  margin: 0.75rem 0 0;
+  color: #66778b;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
 .suburb-guide-neighbour-card {
   display: flex;
   min-height: 175px;

@@ -5,13 +5,6 @@ import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { MetaControl } from '@/components/seo/MetaControl';
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
-import {
   LocationTrendingFeedSection,
   type FeedResolution,
   type FeedTab,
@@ -21,6 +14,7 @@ import { NearbyAmenitiesMap } from '@/components/location/NearbyAmenitiesMap';
 import { SuburbMarketInsights } from '@/components/location/SuburbMarketInsights';
 import { SuburbListingAlert } from '@/components/location/SuburbListingAlert';
 import { trpc } from '@/lib/trpc';
+import { formatZARCompact } from '@/lib/utils';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
   buildBuySearchUrl,
@@ -45,6 +39,21 @@ function displaySlug(value: string) {
     .filter(Boolean)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function compareCount(value: unknown): string {
+  const count = Number(value);
+  return Number.isFinite(count) ? count.toLocaleString('en-ZA') : '—';
+}
+
+function compareMedian(median: unknown, priced: unknown, minimumSample: unknown): string {
+  const price = Number(median);
+  if (Number.isFinite(price) && price > 0) return formatZARCompact(price);
+  const pricedCount = Number(priced);
+  const sample = Number(minimumSample);
+  if (!Number.isFinite(pricedCount) || pricedCount <= 0) return '—';
+  if (!Number.isFinite(sample) || sample <= 0) return '—';
+  return `${pricedCount.toLocaleString('en-ZA')} of ${sample.toLocaleString('en-ZA')} priced`;
 }
 
 export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
@@ -87,6 +96,10 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     if (!Array.isArray(rows)) return [];
     return rows.filter((area: any) => area.slug && area.slug !== suburbSlug);
   }, [cityQuery.data, suburbSlug]);
+  const comparisonSampleMinimum =
+    Number(marketInsights?.minimumPriceSample || 0) ||
+    Number((otherAreas[0] as any)?.minimumPriceSample || 0) ||
+    0;
   const areaSearchTerm = areaSearch.trim();
   const isAreaSearchActive = areaSearchTerm.length >= 2;
   const areaSearchQuery = trpc.location.searchLocations.useQuery(
@@ -822,57 +835,87 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
               </button>
             </div>
           ) : visibleAreas.length > 0 ? (
-            <div className="suburb-guide-area-carousel group/suburb-areas">
-              <Carousel
-                className="w-full min-w-0"
-                opts={{ align: 'start', loop: visibleAreas.length > 4 }}
-              >
-                <CarouselContent className="-ml-3 pb-2">
+            <div className="suburb-guide-compare-wrap">
+              <table className="suburb-guide-compare">
+                <caption className="sr-only">
+                  Current published supply and sample-gated asking-price medians for{' '}
+                  {verifiedSuburb.name} and nearby suburbs in {verifiedSuburb.cityName}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Suburb</th>
+                    <th scope="col">For sale</th>
+                    <th scope="col">To rent</th>
+                    <th scope="col">Median sale</th>
+                    <th scope="col">Median rent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="suburb-guide-compare__row suburb-guide-compare__row--current">
+                    <th scope="row">
+                      <span className="suburb-guide-compare__name">{verifiedSuburb.name}</span>
+                      <span className="suburb-guide-compare__badge">This guide</span>
+                    </th>
+                    <td>{compareCount(stats?.saleCount)}</td>
+                    <td>{compareCount(stats?.rentalCount)}</td>
+                    <td>
+                      {compareMedian(
+                        marketInsights?.sale.medianPrice,
+                        marketInsights?.sale.pricedListingCount,
+                        marketInsights?.minimumPriceSample,
+                      )}
+                    </td>
+                    <td>
+                      {compareMedian(
+                        marketInsights?.rent.medianPrice,
+                        marketInsights?.rent.pricedListingCount,
+                        marketInsights?.minimumPriceSample,
+                      )}
+                    </td>
+                  </tr>
                   {visibleAreas.map((area: any) => (
-                    <CarouselItem
-                      key={area.id}
-                      className="basis-[84%] pl-3 sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
-                    >
-                      <Link
-                        className="suburb-guide-neighbour-card"
-                        href={
-                          area.guideHref ||
-                          area.canonicalPath ||
-                          `/${provinceSlug}/${citySlug}/${area.slug}`
-                        }
-                      >
-                        <span className="suburb-guide-neighbour-card__icon">
-                          <MapPin size={17} aria-hidden="true" />
-                        </span>
-                        <span className="suburb-guide-neighbour-card__name">{area.name}</span>
-                        <span className="suburb-guide-neighbour-card__count">
-                          {area.listingCount != null && Number.isFinite(Number(area.listingCount))
-                            ? Number(area.listingCount) > 0
-                              ? `${Number(area.listingCount).toLocaleString('en-ZA')} published ${Number(area.listingCount) === 1 ? 'listing' : 'listings'}`
-                              : 'No eligible listings yet'
-                            : 'Open verified suburb guide'}
-                        </span>
-                        {area.propertiesForSale != null || area.propertiesForRent != null ? (
-                          <span className="suburb-guide-neighbour-card__mix">
-                            {Number(area.propertiesForSale || 0).toLocaleString('en-ZA')} for sale
-                            <span aria-hidden="true"> · </span>
-                            {Number(area.propertiesForRent || 0).toLocaleString('en-ZA')} to rent
-                          </span>
-                        ) : null}
-                        <span className="suburb-guide-neighbour-card__action">
-                          Explore guide <ArrowRight size={14} aria-hidden="true" />
-                        </span>
-                      </Link>
-                    </CarouselItem>
+                    <tr key={area.id} className="suburb-guide-compare__row">
+                      <th scope="row">
+                        <Link
+                          className="suburb-guide-compare__link"
+                          href={
+                            area.guideHref ||
+                            area.canonicalPath ||
+                            `/${provinceSlug}/${citySlug}/${area.slug}`
+                          }
+                        >
+                          {area.name}
+                          <ArrowRight size={14} aria-hidden="true" />
+                        </Link>
+                      </th>
+                      <td>{compareCount(area.propertiesForSale)}</td>
+                      <td>{compareCount(area.propertiesForRent)}</td>
+                      <td>
+                        {compareMedian(
+                          area.medianSalePrice,
+                          area.pricedListingsForSale,
+                          area.minimumPriceSample,
+                        )}
+                      </td>
+                      <td>
+                        {compareMedian(
+                          area.medianRentalPrice,
+                          area.pricedListingsForRent,
+                          area.minimumPriceSample,
+                        )}
+                      </td>
+                    </tr>
                   ))}
-                </CarouselContent>
-                {visibleAreas.length > 4 ? (
-                  <>
-                    <CarouselPrevious className="suburb-guide-carousel-arrow -left-3" />
-                    <CarouselNext className="suburb-guide-carousel-arrow -right-3" />
-                  </>
-                ) : null}
-              </Carousel>
+                </tbody>
+              </table>
+              <p className="suburb-guide-compare__note">
+                Counts are current published supply on Property Listify. Medians use published
+                asking prices and appear once the priced sample reaches
+                {comparisonSampleMinimum > 0
+                  ? ` ${comparisonSampleMinimum.toLocaleString('en-ZA')} listings`
+                  : ' the required size'}
+                ; other cells show the priced sample recorded so far.
+              </p>
             </div>
           ) : (
             <p className="suburb-guide-area-empty">

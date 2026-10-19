@@ -383,14 +383,19 @@ export const locationPagesService = {
           const rentalProperties = suburbProperties.filter(
             property => property.listingType === 'rent',
           );
+          const marketInsights = buildSuburbMarketInsights(
+            suburbProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
+          );
           return {
             ...suburb,
             listingCount: suburbProperties.length,
-            avgPrice: averagePropertyPrice(suburbProperties),
-            avgSalePrice: averagePropertyPrice(saleProperties),
-            avgRentalPrice: averagePropertyPrice(rentalProperties),
             propertiesForSale: saleProperties.length,
             propertiesForRent: rentalProperties.length,
+            minimumPriceSample: marketInsights.minimumPriceSample,
+            medianSalePrice: marketInsights.sale.medianPrice,
+            pricedListingsForSale: marketInsights.sale.pricedListingCount,
+            medianRentalPrice: marketInsights.rent.medianPrice,
+            pricedListingsForRent: marketInsights.rent.pricedListingCount,
           };
         })
         .sort(
