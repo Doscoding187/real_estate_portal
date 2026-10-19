@@ -302,6 +302,8 @@ const demoRequiredDocuments = [
     document_code: 'id_document',
     document_label: 'Sample buyer ID document',
     category: 'client_required_document',
+    template_file_url: null,
+    template_file_name: null,
     sort_order: 1,
     is_required: 1,
     is_active: 1,
@@ -311,8 +313,32 @@ const demoRequiredDocuments = [
     document_code: 'proof_of_address',
     document_label: 'Sample proof of address',
     category: 'client_required_document',
+    template_file_url: null,
+    template_file_name: null,
     sort_order: 2,
     is_required: 1,
+    is_active: 1,
+  },
+  {
+    id: 1210,
+    document_code: 'custom',
+    document_label: 'Sample price list',
+    category: 'developer_document',
+    template_file_url: '/properties/f0xp6VWeaZSN.jpg',
+    template_file_name: 'sample-price-list.jpg',
+    sort_order: 3,
+    is_required: 0,
+    is_active: 1,
+  },
+  {
+    id: 1211,
+    document_code: 'custom',
+    document_label: 'Sample site plan',
+    category: 'developer_document',
+    template_file_url: '/properties/cb6IeI4pBCAG.jpg',
+    template_file_name: 'sample-site-plan.jpg',
+    sort_order: 4,
+    is_required: 0,
     is_active: 1,
   },
 ];
@@ -331,7 +357,7 @@ const demoIntakePolicy = {
 describe('Distribution referrer activity preview adapter', () => {
   it('declares a versioned dashboard sample-activity plus governed demo fixture without touching grants', () => {
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION).toBe(
-      'distribution-referrer-activity-preview-v3',
+      'distribution-referrer-activity-preview-v4',
     );
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     const source = readFileSync(
@@ -666,23 +692,36 @@ describe('Distribution referrer activity preview adapter', () => {
     ).not.toThrow();
     expect(() =>
       assertDistributionReferrerActivityDemoRequiredDocuments([demoRequiredDocuments[0]]),
-    ).toThrow('exactly one demo document proof_of_address');
+    ).toThrow('exactly one demo document client_required_document:Sample proof of address');
     expect(() =>
       assertDistributionReferrerActivityDemoRequiredDocuments([
         demoRequiredDocuments[0],
         { ...demoRequiredDocuments[1], document_label: 'Something else' },
       ]),
-    ).toThrow('demo document label');
+    ).toThrow('exactly one demo document client_required_document:Sample proof of address');
     expect(() =>
       assertDistributionReferrerActivityDemoRequiredDocuments([
         ...demoRequiredDocuments,
         {
           ...demoRequiredDocuments[0],
-          id: 1211,
+          id: 1212,
           document_code: 'proof_of_income',
         },
       ]),
     ).toThrow('do not match the governed set');
+    expect(() =>
+      assertDistributionReferrerActivityDemoRequiredDocuments([
+        ...demoRequiredDocuments.slice(0, 2),
+        { ...demoRequiredDocuments[2], template_file_url: '/other.jpg' },
+        demoRequiredDocuments[3],
+      ]),
+    ).toThrow('demo document template URL');
+    expect(() =>
+      assertDistributionReferrerActivityDemoRequiredDocuments([
+        ...demoRequiredDocuments.slice(0, 3),
+        { ...demoRequiredDocuments[3], is_required: 1 },
+      ]),
+    ).toThrow('demo document required state');
   });
 
   it('creates or reuses only the exact active demo intake policy release', () => {

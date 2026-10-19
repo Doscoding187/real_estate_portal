@@ -209,8 +209,14 @@ export type PartnerProgramTermsItem = {
     isRequired: boolean;
     sortOrder: number;
   }>;
-  /** Developer resources remain unavailable until an authorized delivery path exists. */
-  sourceDocuments: [];
+  sourceDocuments: Array<{
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl: string;
+    fileName: string | null;
+    sortOrder: number;
+  }>;
   affordability: PartnerAffordabilityAssumptions;
   developerProjectionRevision: string;
   developerProjectionObservedAt: string;
@@ -335,7 +341,30 @@ export async function listPartnerProgramTerms(
       const inventoryIsScoped = projection.inventory.phaseScope !== 'unscoped-hidden';
       const modes = inventoryIsScoped ? partnerModes(projection.inventory.modes) : {};
       const marketable = inventoryIsScoped && hasMarketableMode(projection.inventory.modes);
-      const requiredDocuments = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
+      const documentTemplates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
+      const requiredDocuments = documentTemplates.filter(
+        document => document.isActive && document.category === 'client_required_document',
+      );
+      const sourceDocuments = documentTemplates.flatMap(document => {
+        if (
+          !document.isActive ||
+          document.isRequired ||
+          document.category !== 'developer_document' ||
+          !document.templateFileUrl
+        ) {
+          return [];
+        }
+        return [
+          {
+            templateId: document.id,
+            documentCode: document.documentCode,
+            documentLabel: document.documentLabel,
+            fileUrl: document.templateFileUrl,
+            fileName: document.templateFileName,
+            sortOrder: document.sortOrder,
+          },
+        ];
+      });
       const openForReferral = evaluation.submitReady;
       const friendlyMessage = !marketable
         ? 'This campaign is visible, but no priced sale or rental inventory is currently available.'
@@ -400,7 +429,7 @@ export async function listPartnerProgramTerms(
           isRequired: document.isRequired,
           sortOrder: document.sortOrder,
         })),
-        sourceDocuments: [] as [],
+        sourceDocuments,
         affordability,
         developerProjectionRevision: projection.revision,
         developerProjectionObservedAt: projection.observedAt,

@@ -53,7 +53,7 @@ Exploring or printing a shortlist is not a referral. Submitting a referral does 
 - Submission rechecks the actor's entitlement, active program, campaign visibility, open-for-referral status, and current Developer projection for the selected sale/rent mode.
 - The referral stores the selected mode, Developer projection revision and displayed terms, and applicable Distribution terms snapshot.
 - Referral consent and identity evidence remain private Distribution records. Developer sales collateral is a different document category.
-- Keep Developer resource links empty until an authorized delivery path exists. Do not describe current file access as revocable.
+- Partner-visible development collateral is an admin-uploaded Distribution-owned copy recorded on the development's document configuration. Show a resource only when an active, non-required record has a safe file URL, and describe it as information sharing, not as revocable Developer delivery. Do not write collateral into Developer Engine records or promise withdrawal.
 - Distribution must not write inventory. An inventory change goes through a guarded Developer Engine command.
 
 ### 5. Follow a deal
@@ -80,6 +80,7 @@ The initial state must mean “referral received.” A viewing status may appear
 - Income-based assessment and matches fail closed. The retired calculator's fixed 11.75% rate, 240-month term, and 30% repayment ratio are no longer callable; browse-by-listed-price remains available and is not presented as qualification.
 - The existing `affordability_assessments` table requires an authenticated actor and gross monthly income, with assumptions and outputs stored as required JSON. It is not a safe store for public browse-only searches: doing so would require inventing income/model values. `affordability_match_snapshots` has a generic JSON payload that could carry projection revision and selected mode, but it depends on an assessment and has no guest owner or explicit versioned shortlist contract. Distribution runtime no longer reads or writes these tables; do not reuse them by filling fake values or storing prospect details before the guided referral evidence step. Their schema declarations remain pending the shared schema decision.
 - Permission and identity evidence are collected before prospect details. Secure document storage and delivery to the developer are not connected.
+- Partner-visible property information lists admin-uploaded Distribution copies from active developer-resource records with a safe file URL. Entries without an uploaded file, inactive entries, and required application templates are excluded; the flow never reads the Developer Engine's `development_documents` bank.
 - Opportunity-specific process steps and partner-visible updates are shown on Overview, My Deals, and deal detail. Referral payout states are shown separately and no processing date is promised.
 - New deals still use the legacy `viewing_scheduled` database stage as their initial state. The partner UI presents “Referral received” unless a real viewing exists, but the persisted state is not yet correct.
 

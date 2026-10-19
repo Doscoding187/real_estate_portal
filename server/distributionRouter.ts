@@ -136,6 +136,7 @@ import {
   DISTRIBUTION_PROCESS_DOCUMENT_CODES,
   isMissingRequiredDocumentsSchemaError,
   listDevelopmentRequiredDocumentsOrEmpty,
+  sanitizeDevelopmentDocumentUrl,
 } from './services/distributionRequiredDocumentsService';
 import {
   brandOnboardingPresetSchema,
@@ -591,9 +592,13 @@ type DevelopmentRequiredDocumentCode =
   | 'proof_of_income'
   | 'bank_statement'
   | 'pre_approval'
+  | 'signed_offer_to_purchase'
+  | 'sale_agreement'
+  | 'attorney_instruction_letter'
+  | 'transfer_documents'
   | 'custom';
 
-type DevelopmentDocumentCategory = 'client_required_document';
+type DevelopmentDocumentCategory = 'developer_document' | 'client_required_document';
 
 type RequiredDocumentTemplateSeed = {
   category: DevelopmentDocumentCategory;
@@ -2725,15 +2730,24 @@ const adminDistributionRouter = router({
         documents: z.array(
           z.object({
             id: z.number().int().positive().optional(),
+            category: z
+              .enum(['developer_document', 'client_required_document'])
+              .default('client_required_document'),
             documentCode: z.enum([
               'id_document',
               'proof_of_address',
               'proof_of_income',
               'bank_statement',
               'pre_approval',
+              'signed_offer_to_purchase',
+              'sale_agreement',
+              'attorney_instruction_letter',
+              'transfer_documents',
               'custom',
             ]),
             documentLabel: z.string().trim().min(2).max(160),
+            templateFileUrl: z.string().trim().max(2048).nullable().optional(),
+            templateFileName: z.string().trim().max(255).nullable().optional(),
             isRequired: z.boolean().default(true),
             sortOrder: z.number().int().min(0).default(0),
             isActive: z.boolean().default(true),
@@ -2741,14 +2755,22 @@ const adminDistributionRouter = router({
         ),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
 
       const normalizedDocuments = input.documents.map((document, index) => ({
         id: document.id,
-        category: 'client_required_document' as const,
+        category: document.category,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
+        templateFileUrl:
+          document.category === 'developer_document'
+            ? sanitizeDevelopmentDocumentUrl(document.templateFileUrl)
+            : null,
+        templateFileName:
+          document.category === 'developer_document'
+            ? document.templateFileName?.trim().slice(0, 255) || null
+            : null,
         isRequired: document.isRequired,
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
         isActive: document.isActive,
@@ -2758,7 +2780,9 @@ const adminDistributionRouter = router({
         if (document.documentCode === 'custom') return false;
         return (
           normalizedDocuments.findIndex(
-            candidate => candidate.documentCode === document.documentCode,
+            candidate =>
+              candidate.category === document.category &&
+              candidate.documentCode === document.documentCode,
           ) !== index
         );
       });
@@ -2772,7 +2796,7 @@ const adminDistributionRouter = router({
       const customLabelCounts = new Map<string, number>();
       for (const document of normalizedDocuments) {
         if (document.documentCode !== 'custom') continue;
-        const key = document.documentLabel.toLowerCase();
+        const key = `${document.category}:${document.documentLabel.toLowerCase()}`;
         customLabelCounts.set(key, (customLabelCounts.get(key) || 0) + 1);
       }
       const duplicateCustomLabel = Array.from(customLabelCounts.entries()).find(
@@ -2781,7 +2805,10 @@ const adminDistributionRouter = router({
       if (duplicateCustomLabel) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: `Custom document labels must be unique per development. Duplicate label: ${duplicateCustomLabel}.`,
+          message: `Custom document labels must be unique per category. Duplicate label: ${duplicateCustomLabel
+            .split(':')
+            .slice(1)
+            .join(':')}.`,
         });
       }
 
@@ -2793,7 +2820,11 @@ const adminDistributionRouter = router({
         developmentId: number;
         documentCode: string;
         documentLabel: string;
-        category: 'client_required_document';
+        category: DevelopmentDocumentCategory;
+        templateFileUrl: string | null;
+        templateFileName: string | null;
+        templateUploadedAt: string | null;
+        templateUploadedBy: number | null;
         isRequired: boolean;
         sortOrder: number;
         isActive: boolean;
@@ -2819,10 +2850,10 @@ const adminDistributionRouter = router({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
                   category: document.category,
-                  templateFileUrl: null,
-                  templateFileName: null,
-                  templateUploadedAt: null,
-                  templateUploadedBy: null,
+                  templateFileUrl: document.templateFileUrl,
+                  templateFileName: document.templateFileName,
+                  templateUploadedAt: document.templateFileUrl ? sql`CURRENT_TIMESTAMP` : null,
+                  templateUploadedBy: document.templateFileUrl ? ctx.user.id : null,
                   isRequired: document.isRequired ? 1 : 0,
                   sortOrder: document.sortOrder,
                   isActive: document.isActive ? 1 : 0,
@@ -2841,10 +2872,10 @@ const adminDistributionRouter = router({
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
               category: document.category,
-              templateFileUrl: null,
-              templateFileName: null,
-              templateUploadedAt: null,
-              templateUploadedBy: null,
+              templateFileUrl: document.templateFileUrl,
+              templateFileName: document.templateFileName,
+              templateUploadedAt: document.templateFileUrl ? sql`CURRENT_TIMESTAMP` : null,
+              templateUploadedBy: document.templateFileUrl ? ctx.user.id : null,
               isRequired: document.isRequired ? 1 : 0,
               sortOrder: document.sortOrder,
               isActive: document.isActive ? 1 : 0,
@@ -2870,17 +2901,16 @@ const adminDistributionRouter = router({
               documentCode: developmentRequiredDocuments.documentCode,
               documentLabel: developmentRequiredDocuments.documentLabel,
               category: developmentRequiredDocuments.category,
+              templateFileUrl: developmentRequiredDocuments.templateFileUrl,
+              templateFileName: developmentRequiredDocuments.templateFileName,
+              templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
+              templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
               isRequired: developmentRequiredDocuments.isRequired,
               sortOrder: developmentRequiredDocuments.sortOrder,
               isActive: developmentRequiredDocuments.isActive,
             })
             .from(developmentRequiredDocuments)
-            .where(
-              and(
-                eq(developmentRequiredDocuments.developmentId, input.developmentId),
-                eq(developmentRequiredDocuments.category, 'client_required_document'),
-              ),
-            )
+            .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
             .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
 
           return rows.map(row => ({
@@ -2888,7 +2918,20 @@ const adminDistributionRouter = router({
             developmentId: Number(row.developmentId),
             documentCode: String(row.documentCode),
             documentLabel: String(row.documentLabel || ''),
-            category: 'client_required_document' as const,
+            category:
+              String(row.category || 'client_required_document') === 'developer_document'
+                ? ('developer_document' as const)
+                : ('client_required_document' as const),
+            templateFileUrl: sanitizeDevelopmentDocumentUrl(row.templateFileUrl),
+            templateFileName:
+              typeof row.templateFileName === 'string' && row.templateFileName.trim()
+                ? row.templateFileName.trim().slice(0, 255)
+                : null,
+            templateUploadedAt: row.templateUploadedAt || null,
+            templateUploadedBy:
+              row.templateUploadedBy === null || row.templateUploadedBy === undefined
+                ? null
+                : Number(row.templateUploadedBy),
             isRequired: boolFromTinyInt(row.isRequired),
             sortOrder: Number(row.sortOrder || 0),
             isActive: boolFromTinyInt(row.isActive),

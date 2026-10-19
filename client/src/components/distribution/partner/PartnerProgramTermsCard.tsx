@@ -31,12 +31,12 @@ export type ProgramTermsItem = {
     sortOrder: number;
   }>;
   sourceDocuments?: Array<{
-    id: number;
-    title: string;
-    documentType: string;
-    category: string;
-    version: number;
-    downloadable: boolean;
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl: string;
+    fileName: string | null;
+    sortOrder: number;
   }>;
   computed: {
     commissionDisplay: string;

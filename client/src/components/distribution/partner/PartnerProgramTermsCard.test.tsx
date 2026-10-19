@@ -63,20 +63,20 @@ const itemFixture: ProgramTermsItem = {
   ],
   sourceDocuments: [
     {
-      id: 201,
-      title: 'Unit / house plans',
-      documentType: 'site_plan',
-      category: 'property_information',
-      version: 2,
-      downloadable: true,
+      templateId: 201,
+      documentCode: 'custom',
+      documentLabel: 'Unit / house plans',
+      fileUrl: 'https://cdn.example.test/unit-plans.pdf',
+      fileName: 'unit-plans.pdf',
+      sortOrder: 1,
     },
     {
-      id: 202,
-      title: 'Site map',
-      documentType: 'site_map',
-      category: 'property_information',
-      version: 1,
-      downloadable: false,
+      templateId: 202,
+      documentCode: 'custom',
+      documentLabel: 'Site map',
+      fileUrl: 'https://cdn.example.test/site-map.pdf',
+      fileName: 'site-map.pdf',
+      sortOrder: 2,
     },
   ],
   computed: {
@@ -117,7 +117,12 @@ describe('PartnerProgramTermsCard', () => {
     expect(within(dialog).getByText('Property information')).toBeInTheDocument();
     expect(within(dialog).getByText('Unit / house plans')).toBeInTheDocument();
     expect(within(dialog).getByText('Site map')).toBeInTheDocument();
-    expect(within(dialog).getByText('Shared resource')).toBeInTheDocument();
-    expect(within(dialog).getByText('Information only')).toBeInTheDocument();
+    expect(within(dialog).getByText('unit-plans.pdf')).toBeInTheDocument();
+    expect(within(dialog).getByText('site-map.pdf')).toBeInTheDocument();
+    const openLinks = within(dialog).getAllByRole('link', { name: /open/i });
+    expect(openLinks.map(link => link.getAttribute('href'))).toEqual([
+      'https://cdn.example.test/unit-plans.pdf',
+      'https://cdn.example.test/site-map.pdf',
+    ]);
   });
 });

@@ -47,16 +47,26 @@ type ManagerOption = {
   label: string;
 };
 
+type ClientDocumentCode =
+  | 'id_document'
+  | 'proof_of_address'
+  | 'proof_of_income'
+  | 'bank_statement'
+  | 'pre_approval'
+  | 'custom';
+
 type RequiredDocumentDraft = {
   id?: number;
+  category?: 'developer_document' | 'client_required_document';
   documentCode:
-    | 'id_document'
-    | 'proof_of_address'
-    | 'proof_of_income'
-    | 'bank_statement'
-    | 'pre_approval'
-    | 'custom';
+    | ClientDocumentCode
+    | 'signed_offer_to_purchase'
+    | 'sale_agreement'
+    | 'attorney_instruction_letter'
+    | 'transfer_documents';
   documentLabel: string;
+  templateFileUrl?: string | null;
+  templateFileName?: string | null;
   isRequired: boolean;
   isActive: boolean;
   sortOrder: number;
@@ -103,7 +113,13 @@ type BrandOnboardingPreset = {
   currencyCode: string;
   isActive: boolean;
   primaryManagerUserId: number | null;
-  documents: RequiredDocumentDraft[];
+  documents: Array<{
+    documentCode: ClientDocumentCode;
+    documentLabel: string;
+    isRequired: boolean;
+    isActive: boolean;
+    sortOrder: number;
+  }>;
 };
 
 type BrochureConfigDraft = {
@@ -148,12 +164,27 @@ const clientDocumentCodeOptions: Array<{
   { value: 'custom', label: 'Custom Client Document' },
 ];
 
+const developerDocumentCodeOptions: Array<{
+  value: RequiredDocumentDraft['documentCode'];
+  label: string;
+}> = [
+  { value: 'custom', label: 'Custom Resource' },
+  { value: 'sale_agreement', label: 'Sale Agreement' },
+  { value: 'signed_offer_to_purchase', label: 'Offer to Purchase' },
+  { value: 'attorney_instruction_letter', label: 'Attorney Instruction Letter' },
+  { value: 'transfer_documents', label: 'Transfer Documents' },
+];
+
 const documentCodeLabelMap: Record<RequiredDocumentDraft['documentCode'], string> = {
   id_document: 'ID Document',
   proof_of_address: 'Proof of Address',
   proof_of_income: 'Payslips / Proof of Income',
   bank_statement: 'Bank Statement',
   pre_approval: 'Pre-Approval',
+  signed_offer_to_purchase: 'Offer to Purchase',
+  sale_agreement: 'Sale Agreement',
+  attorney_instruction_letter: 'Attorney Instruction Letter',
+  transfer_documents: 'Transfer Documents',
   custom: 'Custom Document',
 };
 
@@ -476,6 +507,7 @@ function DevelopmentProgramConfigPanel({
   const upsertProgramMutation = trpc.distribution.admin.upsertProgram.useMutation();
   const assignManagerMutation = trpc.distribution.admin.assignManagerToDevelopment.useMutation();
   const setDocsMutation = trpc.distribution.admin.setDevelopmentRequiredDocuments.useMutation();
+  const presignUploadMutation = trpc.upload.presign.useMutation();
   const setBrochureConfigMutation =
     trpc.distribution.admin.setDevelopmentBrochureConfig.useMutation();
   const setReferralEnabledMutation =
@@ -502,6 +534,8 @@ function DevelopmentProgramConfigPanel({
   const [isActive, setIsActive] = useState(true);
   const [primaryManagerUserId, setPrimaryManagerUserId] = useState<string>('');
   const [documents, setDocuments] = useState<RequiredDocumentDraft[]>([]);
+  const [sourceDocuments, setSourceDocuments] = useState<RequiredDocumentDraft[]>([]);
+  const [uploadingDocumentIndex, setUploadingDocumentIndex] = useState<number | null>(null);
   const [brochureConfig, setBrochureConfig] = useState<BrochureConfigDraft>(getEmptyBrochureConfig);
   const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
   const [isPolicyEditorOpen, setIsPolicyEditorOpen] = useState(false);
@@ -574,13 +608,20 @@ function DevelopmentProgramConfigPanel({
       .sort((a: any, b: any) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0))
       .map((document: any) => ({
         id: Number(document.id),
+        category:
+          document.category === 'developer_document'
+            ? ('developer_document' as const)
+            : ('client_required_document' as const),
         documentCode: document.documentCode as RequiredDocumentDraft['documentCode'],
         documentLabel: String(document.documentLabel || ''),
+        templateFileUrl: String(document.templateFileUrl || '') || null,
+        templateFileName: String(document.templateFileName || '') || null,
         isRequired: Boolean(document.isRequired),
         isActive: Boolean(document.isActive),
         sortOrder: Number(document.sortOrder || 0),
       }));
-    setDocuments(list);
+    setDocuments(list.filter(document => document.category === 'client_required_document'));
+    setSourceDocuments(list.filter(document => document.category === 'developer_document'));
   }, [docsQuery.data, development.developmentId]);
 
   useEffect(() => {
@@ -606,6 +647,8 @@ function DevelopmentProgramConfigPanel({
     setBrochureConfigMutation.isPending ||
     setReferralEnabledMutation.isPending ||
     setBrandPresetMutation.isPending ||
+    presignUploadMutation.isPending ||
+    uploadingDocumentIndex !== null ||
     isApplyingTemplate;
   const readinessStatus = getAdminReadinessStatus(readinessQuery.data as ProgramReadiness | null);
 
@@ -667,6 +710,83 @@ function DevelopmentProgramConfigPanel({
   function resolveDocumentLabel(document: RequiredDocumentDraft) {
     const typedLabel = document.documentLabel.trim();
     return typedLabel || documentCodeLabelMap[document.documentCode] || 'Custom Document';
+  }
+
+  function updateSourceDocumentAtIndex(
+    index: number,
+    updater: (document: RequiredDocumentDraft) => RequiredDocumentDraft,
+  ) {
+    setSourceDocuments(current =>
+      current.map((item, itemIndex) => (itemIndex === index ? updater(item) : item)),
+    );
+  }
+
+  function swapSourceDocumentOrder(fromIndex: number, toIndex: number) {
+    setSourceDocuments(current => {
+      if (toIndex < 0 || toIndex >= current.length) return current;
+      const next = [...current];
+      const temp = next[toIndex];
+      next[toIndex] = next[fromIndex];
+      next[fromIndex] = temp;
+      return next.map((item, itemIndex) => ({ ...item, sortOrder: itemIndex }));
+    });
+  }
+
+  function removeSourceDocument(index: number) {
+    setSourceDocuments(current =>
+      current
+        .filter((_, itemIndex) => itemIndex !== index)
+        .map((item, itemIndex) => ({ ...item, sortOrder: itemIndex })),
+    );
+  }
+
+  function addSourceDocument() {
+    setSourceDocuments(current => [
+      ...current,
+      {
+        category: 'developer_document',
+        documentCode: 'custom',
+        documentLabel: '',
+        templateFileUrl: null,
+        templateFileName: null,
+        isRequired: false,
+        isActive: true,
+        sortOrder: current.length,
+      },
+    ]);
+  }
+
+  async function handleSourceDocumentUpload(index: number, file: File | null) {
+    if (!file) return;
+    setUploadingDocumentIndex(index);
+    try {
+      const uploaded = await presignUploadMutation.mutateAsync({
+        filename: file.name,
+        contentType: file.type,
+        propertyId: `distribution-development-${development.developmentId}`,
+      });
+      const uploadResponse = await fetch(uploaded.url, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!uploadResponse.ok) {
+        throw new Error(`File upload failed (${uploadResponse.status}).`);
+      }
+      updateSourceDocumentAtIndex(index, item => ({
+        ...item,
+        templateFileUrl: uploaded.publicUrl,
+        templateFileName: file.name,
+        documentLabel:
+          item.documentLabel.trim() ||
+          file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim(),
+      }));
+      toast.success('Resource file uploaded');
+    } catch (error: any) {
+      toast.error(error?.message || 'Resource file upload failed');
+    } finally {
+      setUploadingDocumentIndex(null);
+    }
   }
 
   function renderDocumentSection(input: {
@@ -821,14 +941,30 @@ function DevelopmentProgramConfigPanel({
   function buildDocumentsInput(targetDevelopmentId: number, preserveIds: boolean) {
     return {
       developmentId: targetDevelopmentId,
-      documents: documents.map((document, index) => ({
-        id: preserveIds ? document.id : undefined,
-        documentCode: document.documentCode,
-        documentLabel: resolveDocumentLabel(document),
-        isRequired: document.isRequired,
-        sortOrder: index,
-        isActive: document.isActive,
-      })),
+      documents: [
+        ...documents.map((document, index) => ({
+          id: preserveIds ? document.id : undefined,
+          category: 'client_required_document' as const,
+          documentCode: document.documentCode,
+          documentLabel: resolveDocumentLabel(document),
+          templateFileUrl: null,
+          templateFileName: null,
+          isRequired: document.isRequired,
+          sortOrder: index,
+          isActive: document.isActive,
+        })),
+        ...sourceDocuments.map((document, index) => ({
+          id: preserveIds ? document.id : undefined,
+          category: 'developer_document' as const,
+          documentCode: document.documentCode,
+          documentLabel: resolveDocumentLabel(document),
+          templateFileUrl: document.templateFileUrl?.trim() || null,
+          templateFileName: document.templateFileName?.trim() || null,
+          isRequired: false,
+          sortOrder: index,
+          isActive: document.isActive,
+        })),
+      ],
     };
   }
 
@@ -855,7 +991,7 @@ function DevelopmentProgramConfigPanel({
       isActive,
       primaryManagerUserId: primaryManagerUserId ? Number(primaryManagerUserId) : null,
       documents: documents.map((document, index) => ({
-        documentCode: document.documentCode,
+        documentCode: document.documentCode as ClientDocumentCode,
         documentLabel: resolveDocumentLabel(document),
         isRequired: document.isRequired,
         isActive: document.isActive,
@@ -1414,6 +1550,126 @@ function DevelopmentProgramConfigPanel({
         addLabel: 'Add Process Document',
         sectionId: 'section-client-docs',
       })}
+
+      <Card id="section-developer-resources">
+        <CardHeader>
+          <CardTitle className="text-base">Developer Resources</CardTitle>
+          <CardDescription>
+            Upload Distribution-owned copies of plans, price lists, site maps, and other property
+            information to share with referrers. These files are informational and do not change
+            referral requirements.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {sourceDocuments.map((document, index) => (
+            <div key={`${document.id || 'new'}-${index}`} className="rounded border p-2">
+              <div className="grid gap-2 md:grid-cols-[minmax(220px,1.4fr)_minmax(220px,1fr)_auto_auto_auto]">
+                <Input
+                  value={document.documentLabel}
+                  placeholder="Site map, price list, house plans"
+                  onChange={event =>
+                    updateSourceDocumentAtIndex(index, item => ({
+                      ...item,
+                      documentLabel: event.target.value,
+                    }))
+                  }
+                />
+                <Select
+                  value={document.documentCode}
+                  onValueChange={value =>
+                    updateSourceDocumentAtIndex(index, item => ({
+                      ...item,
+                      documentCode: value as RequiredDocumentDraft['documentCode'],
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {developerDocumentCodeOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2 rounded border px-2 text-xs">
+                  <span>Shared</span>
+                  <Switch
+                    checked={document.isActive}
+                    onCheckedChange={checked =>
+                      updateSourceDocumentAtIndex(index, item => ({
+                        ...item,
+                        isActive: checked,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => swapSourceDocumentOrder(index, index - 1)}
+                    disabled={index === 0}
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => swapSourceDocumentOrder(index, index + 1)}
+                    disabled={index === sourceDocuments.length - 1}
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <Button size="icon" variant="destructive" onClick={() => removeSourceDocument(index)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2">
+                <Input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg"
+                  disabled={isSaving || uploadingDocumentIndex === index}
+                  onChange={event => {
+                    const file = event.target.files?.[0] || null;
+                    void handleSourceDocumentUpload(index, file);
+                    event.currentTarget.value = '';
+                  }}
+                />
+                {document.templateFileUrl ? (
+                  <a
+                    href={document.templateFileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    {document.templateFileName || 'Uploaded file'}
+                  </a>
+                ) : (
+                  <p className="text-xs text-slate-500">No file uploaded yet.</p>
+                )}
+                {uploadingDocumentIndex === index ? (
+                  <span className="text-xs text-slate-500">Uploading...</span>
+                ) : null}
+              </div>
+            </div>
+          ))}
+
+          {!sourceDocuments.length ? (
+            <div className="rounded border border-dashed p-3 text-sm text-slate-500">
+              No developer resources uploaded yet.
+            </div>
+          ) : null}
+
+          <Button variant="outline" onClick={addSourceDocument} disabled={isSaving}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Resource File
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-white p-3">
         {readinessStatus === 'enabled_blocked' ? (

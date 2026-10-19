@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
 import { formatPartnerProcessOwner } from '@/lib/distributionPartnerJourney';
 
@@ -20,12 +21,12 @@ type ProgramTermsItem = {
     sortOrder: number;
   }>;
   sourceDocuments?: Array<{
-    id: number;
-    title: string;
-    documentType: string;
-    category: string;
-    version: number;
-    downloadable: boolean;
+    templateId: number;
+    documentCode: string;
+    documentLabel: string;
+    fileUrl: string;
+    fileName: string | null;
+    sortOrder: number;
   }>;
 };
 
@@ -60,7 +61,7 @@ export function ProgramRequirementsDialog({
     return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
   });
   const sourceDocuments = [...(item.sourceDocuments || [])].sort(
-    (a, b) => a.title.localeCompare(b.title) || a.id - b.id,
+    (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || a.templateId - b.templateId,
   );
 
   return (
@@ -135,18 +136,20 @@ export function ProgramRequirementsDialog({
             <div className="mt-2 space-y-2">
               {sourceDocuments.map(document => (
                 <div
-                  key={document.id}
+                  key={document.templateId}
                   className="flex items-center justify-between gap-2 rounded border bg-slate-50 p-2"
                 >
                   <div>
-                    <p className="font-medium">{document.title}</p>
+                    <p className="font-medium">{document.documentLabel}</p>
                     <p className="text-xs text-slate-500">
-                      {document.documentType} · version {document.version}
+                      {document.fileName || 'Shared property information'}
                     </p>
                   </div>
-                  <Badge variant="secondary">
-                    {document.downloadable ? 'Shared resource' : 'Information only'}
-                  </Badge>
+                  <Button asChild size="sm" variant="outline">
+                    <a href={document.fileUrl} target="_blank" rel="noreferrer">
+                      Open
+                    </a>
+                  </Button>
                 </div>
               ))}
               {!sourceDocuments.length ? (

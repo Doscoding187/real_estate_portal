@@ -318,7 +318,7 @@ describe('distribution admin schema guards', () => {
     ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
       message:
-        'Custom document labels must be unique per development. Duplicate label: price structure.',
+        'Custom document labels must be unique per category. Duplicate label: price structure.',
     });
 
     expect(mockGetDb).not.toHaveBeenCalled();

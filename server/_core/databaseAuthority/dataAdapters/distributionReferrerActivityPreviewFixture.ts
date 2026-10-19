@@ -26,7 +26,7 @@ import {
 } from './distributionReferrerPreviewFixture';
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION =
-  'distribution-referrer-activity-preview-v3' as const;
+  'distribution-referrer-activity-preview-v4' as const;
 
 const EXPECTED_MANAGER = Object.freeze({
   openId: 'distribution-referrer-activity-manager-v1',
@@ -246,14 +246,40 @@ const EXPECTED_DEMO_MANAGER_ASSIGNMENT = Object.freeze({
 
 const EXPECTED_DEMO_REQUIRED_DOCUMENTS = Object.freeze([
   Object.freeze({
+    category: 'client_required_document',
     documentCode: 'id_document',
     documentLabel: 'Sample buyer ID document',
+    templateFileUrl: null,
+    templateFileName: null,
+    isRequired: 1,
     sortOrder: 1,
   }),
   Object.freeze({
+    category: 'client_required_document',
     documentCode: 'proof_of_address',
     documentLabel: 'Sample proof of address',
+    templateFileUrl: null,
+    templateFileName: null,
+    isRequired: 1,
     sortOrder: 2,
+  }),
+  Object.freeze({
+    category: 'developer_document',
+    documentCode: 'custom',
+    documentLabel: 'Sample price list',
+    templateFileUrl: '/properties/f0xp6VWeaZSN.jpg',
+    templateFileName: 'sample-price-list.jpg',
+    isRequired: 0,
+    sortOrder: 3,
+  }),
+  Object.freeze({
+    category: 'developer_document',
+    documentCode: 'custom',
+    documentLabel: 'Sample site plan',
+    templateFileUrl: '/properties/cb6IeI4pBCAG.jpg',
+    templateFileName: 'sample-site-plan.jpg',
+    isRequired: 0,
+    sortOrder: 4,
   }),
 ]);
 
@@ -978,22 +1004,29 @@ export function classifyDistributionReferrerActivityDemoManagerAssignment(
 export function assertDistributionReferrerActivityDemoRequiredDocuments(rows: Row[]): void {
   for (const expected of EXPECTED_DEMO_REQUIRED_DOCUMENTS) {
     const matches = rows.filter(
-      row => comparable(rowValue(row, 'document_code')) === expected.documentCode,
+      row =>
+        comparable(rowValue(row, 'category')) === expected.category &&
+        comparable(rowValue(row, 'document_code')) === expected.documentCode &&
+        comparable(rowValue(row, 'document_label')) === expected.documentLabel,
     );
     if (matches.length !== 1) {
       throw new Error(
-        `Distribution referrer activity preview fixture requires exactly one demo document ${expected.documentCode}.`,
+        `Distribution referrer activity preview fixture requires exactly one demo document ${expected.category}:${expected.documentLabel}.`,
       );
     }
     const row = matches[0];
-    requireExact(rowValue(row, 'document_label'), expected.documentLabel, 'demo document label');
     requireExact(rowValue(row, 'sort_order'), expected.sortOrder, 'demo document order');
-    requireExact(rowValue(row, 'is_required'), 1, 'demo document required state');
+    requireExact(rowValue(row, 'is_required'), expected.isRequired, 'demo document required state');
     requireExact(rowValue(row, 'is_active'), 1, 'demo document active state');
     requireExact(
-      rowValue(row, 'category'),
-      'client_required_document',
-      'demo document category',
+      rowValue(row, 'template_file_url'),
+      expected.templateFileUrl,
+      'demo document template URL',
+    );
+    requireExact(
+      rowValue(row, 'template_file_name'),
+      expected.templateFileName,
+      'demo document template file name',
     );
   }
   if (rows.length !== EXPECTED_DEMO_REQUIRED_DOCUMENTS.length) {
@@ -1273,7 +1306,8 @@ async function listDemoRequiredDocuments(
 ): Promise<Row[]> {
   return await queryRows(
     connection,
-    `SELECT id, document_code, document_label, category, sort_order, is_required, is_active
+    `SELECT id, document_code, document_label, category, template_file_url, template_file_name,
+            sort_order, is_required, is_active
        FROM development_required_documents
       WHERE development_id = ?
       ORDER BY sort_order, id`,
@@ -1739,21 +1773,39 @@ async function ensureDemoRequiredDocuments(
   developmentId: number,
 ): Promise<{ state: PreparedState }> {
   const existing = await listDemoRequiredDocuments(connection, developmentId);
-  if (existing.length > 0) {
-    assertDistributionReferrerActivityDemoRequiredDocuments(existing);
-    return { state: 'reused' };
-  }
+  let inserted = 0;
 
   for (const document of EXPECTED_DEMO_REQUIRED_DOCUMENTS) {
+    const matches = existing.filter(
+      row =>
+        comparable(rowValue(row, 'category')) === document.category &&
+        comparable(rowValue(row, 'document_code')) === document.documentCode &&
+        comparable(rowValue(row, 'document_label')) === document.documentLabel,
+    );
+    if (matches.length > 0) continue;
+
     await connection.execute(
       `INSERT INTO development_required_documents
-        (development_id, document_code, document_label, category, is_required, sort_order,
-         is_active)
-       VALUES (?, ?, ?, 'client_required_document', 1, ?, 1)`,
-      [developmentId, document.documentCode, document.documentLabel, document.sortOrder],
+        (development_id, document_code, document_label, category, template_file_url,
+         template_file_name, is_required, sort_order, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [
+        developmentId,
+        document.documentCode,
+        document.documentLabel,
+        document.category,
+        document.templateFileUrl,
+        document.templateFileName,
+        document.isRequired,
+        document.sortOrder,
+      ],
     );
+    inserted += 1;
   }
-  return { state: 'created' };
+
+  const rows = await listDemoRequiredDocuments(connection, developmentId);
+  assertDistributionReferrerActivityDemoRequiredDocuments(rows);
+  return { state: inserted > 0 ? 'created' : 'reused' };
 }
 
 async function ensureDemoIntakePolicy(
