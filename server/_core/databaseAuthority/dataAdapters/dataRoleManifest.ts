@@ -26,6 +26,10 @@ import {
   DISTRIBUTION_REFERRER_PREVIEW_VERSION,
 } from './distributionReferrerPreviewFixture';
 import {
+  DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST,
+  DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
+} from './distributionReferrerActivityPreviewFixture';
+import {
   PLE_PUBLICATION_ENTITLEMENT_DIGEST,
   PLE_PUBLICATION_ENTITLEMENT_VERSION,
 } from './plePublicationEntitlement';
@@ -157,6 +161,23 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       digest: DISTRIBUTION_REFERRER_PREVIEW_DIGEST,
       prepareCommand: 'db:distribution-referrer-preview:prepare',
       verifyCommand: 'db:distribution-referrer-preview:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-partner-preview'],
+    },
+    {
+      key: 'demo.distribution-referrer-activity-preview',
+      role: 'demo',
+      adapter: 'distribution-referrer-activity-preview',
+      adapterPath:
+        'server/_core/databaseAuthority/dataAdapters/distributionReferrerActivityPreviewFixture.ts',
+      version: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
+      digest: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST,
+      prepareCommand: 'db:distribution-referrer-activity:prepare',
+      verifyCommand: 'db:distribution-referrer-activity:verify',
       prepareOperation: 'demo-seed',
       verifyOperation: 'verification',
       targetClasses: DISPOSABLE_TARGETS,

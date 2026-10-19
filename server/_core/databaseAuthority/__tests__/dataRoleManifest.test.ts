@@ -20,6 +20,7 @@ describe('Database Authority data-role manifest', () => {
       'foundation.launch-access',
       'demo.listing-preview-authentication',
       'demo.distribution-individual-referrer-preview',
+      'demo.distribution-referrer-activity-preview',
       'demo.homepage-journey-preview',
       'demo.local-journey',
       'scenario.search-to-lead',

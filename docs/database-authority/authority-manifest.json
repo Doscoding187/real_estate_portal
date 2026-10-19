@@ -55,6 +55,8 @@
     "db:authority:service:recover",
     "db:distribution-referrer-preview:prepare",
     "db:distribution-referrer-preview:verify",
+    "db:distribution-referrer-activity:prepare",
+    "db:distribution-referrer-activity:verify",
     "db:reference:prepare",
     "db:reference:verify",
     "db:foundation:prepare",

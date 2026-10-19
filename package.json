@@ -207,6 +207,8 @@
     "db:homepage-preview:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts homepage-preview:verify",
     "db:distribution-referrer-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts distribution-referrer-preview:prepare",
     "db:distribution-referrer-preview:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts distribution-referrer-preview:verify",
+    "db:distribution-referrer-activity:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts distribution-referrer-activity:prepare",
+    "db:distribution-referrer-activity:verify": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts distribution-referrer-activity:verify",
     "db:listing-performance-e2e:drop": "tsx scripts/retiredDatabaseMutation.ts db:listing-performance-e2e:drop",
     "db:listing-performance-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:listing-performance-e2e:reset",
     "db:listing-preview:prepare": "cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts listing-preview:prepare",

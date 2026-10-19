@@ -273,6 +273,26 @@ campaign, an active Distribution opportunity, and an explicit program grant
 for this partner. Referral submissions remain unavailable until their current
 Developer projection can be rechecked.
 
+### Distribution referrer sample activity preview
+
+The referrer dashboard reads the account's own Distribution pipeline, upcoming
+viewings, and commission entries. To render those cards with representative
+data, prepare the registered sample-activity lane after the individual-referrer
+login exists:
+
+```bash
+pnpm db:distribution-referrer-activity:prepare
+pnpm db:distribution-referrer-activity:verify
+```
+
+This adapter creates one unpublished synthetic development, one restricted
+referral-enabled program, one sample deal at `viewing_scheduled`, one upcoming
+viewing, and one pending pre-eligibility commission entry for the referrer
+preview account. It never creates program grants, commission ledger rows, or
+viewing validations, and it refuses to modify an existing development. Public
+opportunity discovery reads the Developer sales projection, so these synthetic
+rows cannot surface as catalogue entries.
+
 ## Visual Testing Walkthrough
 
 1. Start the app:
@@ -293,6 +313,8 @@ pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
 pnpm db:distribution-referrer-preview:prepare
 pnpm db:distribution-referrer-preview:verify
+pnpm db:distribution-referrer-activity:prepare
+pnpm db:distribution-referrer-activity:verify
 pnpm dev
 ```
 
@@ -303,8 +325,10 @@ this workflow does not create retired agency demo records or the fixed
 The supported data lanes are intentionally separate. `db:reference:*` owns
 canonical geography, `db:foundation:*` owns Launch Access products and
 entitlements, `db:listing-preview:*` owns the small listing-preview auth demo,
-`db:homepage-preview:*` owns the full manual homepage journey preview,
-`db:scenario:*` owns Search-to-Lead acceptance rows, and the two
+`db:distribution-referrer-preview:*` owns the referrer-only login,
+`db:distribution-referrer-activity:*` owns the referrer dashboard sample
+activity, `db:homepage-preview:*` owns the full manual homepage journey
+preview, `db:scenario:*` owns Search-to-Lead acceptance rows, and the two
 `db:ple-*:*` commands own their isolated PLE test fixtures. Inspect their
 independent versions and digests with `pnpm db:data:manifest`.
 
