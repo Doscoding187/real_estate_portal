@@ -1,8 +1,10 @@
 import { defineConfig } from '@playwright/test';
 import base from './playwright.config';
 
+const CHROME_PROJECTS = new Set(['Desktop Chrome', 'Mobile Pixel']);
+
 const chromeProjects = (base.projects ?? []).map((project) =>
-  project.name === 'Desktop Chrome'
+  CHROME_PROJECTS.has(project.name)
     ? { ...project, use: { ...project.use, channel: 'chrome' as const } }
     : project,
 );

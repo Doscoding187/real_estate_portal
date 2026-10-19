@@ -1,7 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page, type Route } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
+import { buildPublicPropertyDetailPresentation } from '../../shared/public-property-detail-presentation';
+import { expect, test } from '../helpers/audit-network';
 
 const EVIDENCE_DIR = process.env.BUY_EVIDENCE_DIR || '/tmp/property-listify-ultra-buy-evidence';
 
@@ -216,6 +218,26 @@ const propertyDetails = {
   },
 };
 
+const detailPresentation = buildPublicPropertyDetailPresentation({
+  listingType: 'sale',
+  propertyType: 'house',
+  price: 4_950_000,
+  corePropertyInformation: propertyDetails.corePropertyInformation,
+  featuresContext: propertyDetails.featuresContext,
+  pricingContract: propertyDetails.pricingContract,
+  publicLocation: {
+    address: '17 Fourth Avenue',
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    precision: 'street',
+    latitude: 0,
+    longitude: 0,
+  },
+  media: imageUrls.map(() => ({ mediaType: 'image' as const })),
+  photoCount: imageUrls.length,
+  hasVirtualTour: false,
+});
+
 const detailResult = {
   property: {
     id: 501,
@@ -244,6 +266,7 @@ const detailResult = {
     features: ['Solar backup', 'Private garden', 'Dedicated study'],
     propertyDetails,
     pricingContract: propertyDetails.pricingContract,
+    detailPresentation,
     publicIdentity: agentIdentity,
     images: imageUrls.map((url, index) => ({
       id: index + 1,
@@ -439,8 +462,12 @@ test('desktop buyer moves from canonical discovery to detail and one durable enq
   await expect(heroSearchButton).toBeEnabled();
   await heroSearchButton.click();
 
+  const cityAreaPicker = page.getByRole('dialog');
+  await expect(cityAreaPicker).toBeVisible();
+  await cityAreaPicker.getByRole('button', { name: /Browse all Johannesburg/ }).click();
+
   await expect(page).toHaveURL(/\/property-for-sale\?.*locationId=city%3A12/);
-  await expect(page.getByRole('status').filter({ hasText: '3 properties' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '3 verified listings' })).toBeVisible();
   await expect(page.getByRole('heading', { name: searchCards[0].title })).toBeVisible();
   await expect(page.getByText('Naledi Mokoena').first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
@@ -460,12 +487,15 @@ test('desktop buyer moves from canonical discovery to detail and one durable enq
     fullPage: true,
   });
 
-  await page.getByRole('button', { name: 'View all photos' }).click();
-  await expect(page.getByRole('dialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Next photo' }).click();
-  await expect(
-    page.getByRole('dialog').getByAltText(`${searchCards[0].title} - Image 2`),
-  ).toBeVisible();
+  await page
+    .getByRole('button', { name: `Open photo gallery for ${searchCards[0].title}` })
+    .click();
+  const photoGallery = page.getByRole('dialog', {
+    name: `${searchCards[0].title} photo gallery`,
+  });
+  await expect(photoGallery).toBeVisible();
+  await photoGallery.getByRole('button', { name: 'Next photo' }).click();
+  await expect(photoGallery.getByAltText(`${searchCards[0].title} - Image 2`)).toBeVisible();
   await page.keyboard.press('Escape');
 
   await page.getByRole('button', { name: 'Send enquiry' }).first().click();
