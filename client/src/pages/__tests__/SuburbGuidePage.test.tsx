@@ -1,11 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 const mocks = vi.hoisted(() => ({
   feedInputs: [] as Array<{ tab: string; suburb?: string }>,
   suburbInputs: [] as Array<{ provinceSlug: string; citySlug: string; suburbSlug: string }>,
   suburbData: null as Record<string, unknown> | null,
   feedItems: {} as Record<string, Array<Record<string, unknown>>>,
+  alertMutations: [] as Array<{
+    name?: string;
+    criteria?: Record<string, unknown>;
+    notificationFrequency?: string;
+  }>,
+  setLocationCalls: [] as string[],
+  authState: { isAuthenticated: false, loading: false },
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -36,6 +43,17 @@ vi.mock('@/lib/trpc', () => ({
         useQuery: () => ({ data: [], isFetching: false, isError: false, refetch: vi.fn() }),
       },
     },
+    savedSearch: {
+      create: {
+        useMutation: (options?: { onSuccess?: () => void }) => ({
+          mutate: (input: Record<string, unknown>) => {
+            mocks.alertMutations.push(input);
+            options?.onSuccess?.();
+          },
+          isPending: false,
+        }),
+      },
+    },
     developer: {
       getHomeTrendingFeed: {
         useQuery: (input: { tab: string; suburb?: string }) => {
@@ -54,11 +72,21 @@ vi.mock('@/lib/trpc', () => ({
 
 vi.mock('wouter', () => ({
   useSearch: () => '',
+  useLocation: () => [
+    '/gauteng/johannesburg/sandton',
+    (to: string) => {
+      mocks.setLocationCalls.push(to);
+    },
+  ],
   Link: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
     <a href={href} {...props}>
       {children}
     </a>
   ),
+}));
+
+vi.mock('@/_core/hooks/useAuth', () => ({
+  useAuth: () => ({ ...mocks.authState, user: null, refresh: vi.fn(), logout: vi.fn() }),
 }));
 
 vi.mock('@/components/ListingNavbar', () => ({ ListingNavbar: () => <nav /> }));
@@ -174,6 +202,10 @@ describe('SuburbGuidePage transaction lanes', () => {
   beforeEach(() => {
     mocks.feedInputs.length = 0;
     mocks.suburbInputs.length = 0;
+    mocks.alertMutations.length = 0;
+    mocks.setLocationCalls.length = 0;
+    mocks.authState.isAuthenticated = false;
+    mocks.authState.loading = false;
     mocks.suburbData = suburbData('Sandton', 'sandton');
     withFeedItems(['buy', 'rent', 'developments']);
   });
@@ -279,7 +311,7 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(
       band.getByRole('link', { name: /Search all of Johannesburg/ }).getAttribute('href'),
     ).toContain('johannesburg');
-    expect(band.getByRole('link', { name: /Set a Sandton listing alert/ })).toBeInTheDocument();
+    expect(band.getByRole('button', { name: /Set a Sandton listing alert/ })).toBeInTheDocument();
     expect(band.getByRole('link', { name: /Selling or letting in Sandton\?/ })).toHaveAttribute(
       'href',
       '/advertise/sell/agencies',
@@ -341,5 +373,47 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(container.querySelector('#suburb-inventory')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'View all homes' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View all rentals' })).toBeInTheDocument();
+  });
+
+  it('sends signed-out visitors to sign in before setting a suburb alert', () => {
+    mocks.suburbData = zeroSupplyData();
+    withFeedItems([]);
+
+    render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Set a Sandton listing alert/ }));
+
+    expect(mocks.alertMutations).toHaveLength(0);
+    expect(mocks.setLocationCalls).toHaveLength(1);
+    expect(mocks.setLocationCalls[0]).toMatch(/^\/login\?next=/);
+  });
+
+  it('saves a canonical suburb alert for a signed-in visitor', () => {
+    mocks.authState.isAuthenticated = true;
+
+    render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alert me' }));
+
+    expect(mocks.alertMutations).toHaveLength(1);
+    expect(mocks.alertMutations[0]).toMatchObject({
+      name: 'New listings in Sandton',
+      notificationFrequency: 'weekly',
+    });
+    expect(mocks.alertMutations[0].criteria).toMatchObject({
+      province: 'gauteng',
+      city: 'johannesburg',
+      suburb: 'sandton',
+      locationId: 'suburb:81',
+    });
+    expect(mocks.setLocationCalls).toHaveLength(0);
+    expect(screen.getByRole('link', { name: 'Review alerts' })).toHaveAttribute(
+      'href',
+      '/dashboard#alerts',
+    );
   });
 });

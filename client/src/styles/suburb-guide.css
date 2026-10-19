@@ -212,6 +212,107 @@
   background: #f1f8fd;
 }
 
+.suburb-guide-guidance__card--action {
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.suburb-guide-guidance__card--action:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.suburb-guide-guidance__card--static {
+  cursor: default;
+}
+
+.suburb-guide-guidance__card--static:hover {
+  transform: none;
+  border-color: #e2eaf2;
+  background: #f8fbfd;
+}
+
+.suburb-guide-guidance__card--static a {
+  color: #1d5d8a;
+  font-weight: 700;
+}
+
+.suburb-guide-alert-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid #d9e6f1;
+  border-radius: 0.9rem;
+  background: #f4faff;
+  padding: 0.85rem 1rem;
+  color: #1d5d8a;
+}
+
+.suburb-guide-alert-strip p {
+  flex: 1 1 320px;
+  margin: 0;
+  color: #44607a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.suburb-guide-alert-strip strong {
+  color: #17344f;
+}
+
+.suburb-guide-alert-strip button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 0.4rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: #1d5d8a;
+  padding: 0.55rem 0.95rem;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.suburb-guide-alert-strip button:hover {
+  background: #17527b;
+}
+
+.suburb-guide-alert-strip button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.suburb-guide-alert-strip a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid #bcd7ea;
+  border-radius: 0.6rem;
+  background: #fff;
+  padding: 0.55rem 0.85rem;
+  color: #1d5d8a;
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.suburb-guide-alert-strip a:hover {
+  border-color: #94bedd;
+  background: #f5faff;
+}
+
+.suburb-guide-alert-strip--saved {
+  border-color: #bfe3cf;
+  background: #f2fbf6;
+  color: #1f7a4d;
+}
+
 .suburb-guide-guidance__icon {
   display: inline-flex;
   width: 34px;

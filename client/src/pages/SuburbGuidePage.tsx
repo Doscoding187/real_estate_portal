@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Link, useSearch } from 'wouter';
-import { ArrowRight, Bell, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
+import { ArrowRight, Building2, Home, KeyRound, MapPin, Search } from 'lucide-react';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Footer } from '@/components/Footer';
 import { MetaControl } from '@/components/seo/MetaControl';
@@ -19,6 +19,7 @@ import {
 import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
 import { NearbyAmenitiesMap } from '@/components/location/NearbyAmenitiesMap';
 import { SuburbMarketInsights } from '@/components/location/SuburbMarketInsights';
+import { SuburbListingAlert } from '@/components/location/SuburbListingAlert';
 import { trpc } from '@/lib/trpc';
 import { isHomepageHeroJourneyEnabled } from '@/lib/publicNavigation';
 import {
@@ -537,19 +538,13 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                   Widen the area on the main search while keeping the same journey and filters.
                 </span>
               </Link>
-              <Link
-                className="suburb-guide-guidance__card"
-                href={viewAllHref.buy || citySearchHref}
-              >
-                <span className="suburb-guide-guidance__icon">
-                  <Bell size={18} aria-hidden="true" />
-                </span>
-                <strong>Set a {verifiedSuburb.name} listing alert</strong>
-                <span>
-                  Save this exact-area search on the results page and we’ll notify you when new
-                  listings are published.
-                </span>
-              </Link>
+              <SuburbListingAlert
+                suburbName={verifiedSuburb.name}
+                suburbId={verifiedSuburb.id}
+                suburbSlug={verifiedSuburb.slug}
+                citySlug={verifiedSuburb.citySlug}
+                provinceSlug={verifiedSuburb.provinceSlug}
+              />
               <Link className="suburb-guide-guidance__card" href="/advertise/sell/agencies">
                 <span className="suburb-guide-guidance__icon">
                   <Building2 size={18} aria-hidden="true" />
@@ -671,6 +666,15 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 </div>
               </section>
             ) : null}
+
+            <SuburbListingAlert
+              variant="inline"
+              suburbName={verifiedSuburb.name}
+              suburbId={verifiedSuburb.id}
+              suburbSlug={verifiedSuburb.slug}
+              citySlug={verifiedSuburb.citySlug}
+              provinceSlug={verifiedSuburb.provinceSlug}
+            />
           </div>
         ) : null}
 
