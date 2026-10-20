@@ -921,7 +921,7 @@ export const distributionDealDocuments = mysqlTable(
       .references(() => distributionDeals.id, { onDelete: 'cascade' }),
     developmentRequiredDocumentId: int('development_required_document_id')
       .notNull()
-      .references(() => developmentRequiredDocuments.id, { onDelete: 'cascade' }),
+      .references(() => developmentRequiredDocuments.id, { onDelete: 'restrict' }),
     status: mysqlEnum(
       'status',
       DISTRIBUTION_DEAL_DOCUMENT_STATUS_VALUES as unknown as [string, ...string[]],

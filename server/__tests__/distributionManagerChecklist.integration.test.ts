@@ -70,6 +70,36 @@ function uniqueIds(ids: number[]) {
   return Array.from(new Set(ids.filter(Boolean)));
 }
 
+function underlyingMySqlError(error: unknown): Record<string, unknown> {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4; depth += 1) {
+    if (!current || typeof current !== 'object') break;
+    const candidate = current as Record<string, unknown>;
+    if (
+      typeof candidate.code === 'string' ||
+      typeof candidate.errno === 'number' ||
+      typeof candidate.sqlMessage === 'string'
+    ) {
+      return candidate;
+    }
+    current = candidate.cause;
+  }
+  throw new Error('Database constraint rejection did not expose the underlying MySQL error.');
+}
+
+async function expectMySqlConstraintViolation(
+  query: PromiseLike<unknown>,
+  expected: Record<string, unknown>,
+): Promise<void> {
+  const failure = await query.then(
+    () => {
+      throw new Error('Expected the database operation to be rejected by a constraint.');
+    },
+    error => error,
+  );
+  expect(underlyingMySqlError(failure)).toMatchObject(expected);
+}
+
 function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -430,6 +460,53 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     createdState.userIds = [];
     createdState.viewingIds = [];
     createdState.validationIds = [];
+  });
+
+  it('prevents required-template deletion while deal-document status exists', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const templateId = seed.templateIds[0];
+
+    await expectMySqlConstraintViolation(
+      db
+        .delete(developmentRequiredDocuments)
+        .where(eq(developmentRequiredDocuments.id, templateId)),
+      {
+        code: 'ER_ROW_IS_REFERENCED_2',
+        errno: 1451,
+        sqlMessage: expect.stringContaining(
+          'fk_distribution_deal_documents_required_document_restrict',
+        ),
+      },
+    );
+
+    const [statusRow] = await db
+      .select({ id: distributionDealDocuments.id })
+      .from(distributionDealDocuments)
+      .where(
+        and(
+          eq(distributionDealDocuments.dealId, seed.dealId),
+          eq(distributionDealDocuments.developmentRequiredDocumentId, templateId),
+        ),
+      )
+      .limit(1);
+    expect(statusRow?.id).toBeTruthy();
+
+    await db
+      .delete(distributionDealDocuments)
+      .where(
+        and(
+          eq(distributionDealDocuments.dealId, seed.dealId),
+          eq(distributionDealDocuments.developmentRequiredDocumentId, templateId),
+        ),
+      );
+    await db
+      .delete(developmentRequiredDocuments)
+      .where(eq(developmentRequiredDocuments.id, templateId));
   });
 
   it('blocks checklist access for a manager not assigned to the development', async () => {

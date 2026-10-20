@@ -519,9 +519,10 @@ describe('migration execution authority', () => {
         '0138_distribution_deal_event_from_referral_received_stage.sql',
         '0139_distribution_deal_event_to_referral_received_stage.sql',
         '0140_distribution_deal_referral_received_backfill.sql',
+        '0141_distribution_deal_required_document_fk_restrict.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0140_distribution_deal_referral_received_backfill.sql',
+      '0141_distribution_deal_required_document_fk_restrict.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
