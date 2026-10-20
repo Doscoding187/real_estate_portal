@@ -18,7 +18,7 @@
  * The GeoNames extract is expected at the path recorded in the source manifest, or at
  * $GEONAMES_ZA_PATH. Its licence is CC BY 4.0 and it must keep its original bytes.
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -75,6 +75,7 @@ export function buildCorroboration() {
   const names = readJsonl(join(ADMISSION, 'gauteng_place_names_v0.1.jsonl'));
   const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'));
 
+  const evidence = readJsonl(join(ADMISSION, 'gauteng_place_evidence_v0.1.jsonl'));
   const held = new Set(
     admitted
       .filter(row => row.licensing_classification === 'osm_only_odbl_provisional')
@@ -126,11 +127,20 @@ export function buildCorroboration() {
   const rows = readFileSync(GEONAMES, 'utf8').split('\n').filter(Boolean);
   const provinceCode = PROVINCE_ADMIN1.gauteng;
   let inProvince = 0;
+  const licensedSettlements = [];
   for (const line of rows) {
     const columns = line.split('\t');
     if (columns[GN.country] !== 'ZA') continue;
     if (columns[GN.admin1] !== provinceCode) continue;
     inProvince += 1;
+    if (columns[GN.featureClass] === 'P') {
+      licensedSettlements.push({
+        name: columns[GN.name],
+        latitude: Number(columns[GN.lat]),
+        longitude: Number(columns[GN.lon]),
+        municipality: municipalityByCode.get(columns[GN.admin2]) || null,
+      });
+    }
     // A place is named in more than one way. The primary name and every alternate name are
     // indexed, because the OSM name and the GeoNames name for the same place are often not
     // the same string.
@@ -152,6 +162,19 @@ export function buildCorroboration() {
       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
+
+  // The source records behind each held place, so a reviewer can look the original record up.
+  const sourceRecords = new Map();
+  for (const row of evidence) {
+    if (!row.place_id) continue;
+    const ids = String(row.note || '').match(/sr:osm:[^|\s]+/g) || [];
+    if (!ids.length) continue;
+    if (!sourceRecords.has(row.place_id)) sourceRecords.set(row.place_id, []);
+    sourceRecords.get(row.place_id).push(...ids);
+  }
+
+  const nearestDistance = (settlement, latitude, longitude) =>
+    distanceKm(latitude, longitude, settlement.latitude, settlement.longitude);
 
   const results = [];
   for (const placeId of held) {
@@ -191,6 +214,17 @@ export function buildCorroboration() {
     }
 
     const contextName = context ? normaliseName(context) : '';
+    let nearest = null;
+    if (hasPoint) {
+      let best = Infinity;
+      for (const settlement of licensedSettlements) {
+        const distance = nearestDistance(settlement, latitude, longitude);
+        if (distance < best) {
+          best = distance;
+          nearest = settlement;
+        }
+      }
+    }
     results.push({
       placeId,
       name: nameRow?.name || null,
@@ -205,6 +239,15 @@ export function buildCorroboration() {
         );
       }),
       matchedName,
+      sourceRecords: [...new Set(sourceRecords.get(placeId) || [])],
+      placeType: place?.place_type || null,
+      latitude: hasPoint ? latitude : null,
+      longitude: hasPoint ? longitude : null,
+      nearestLicensedSettlement: nearest ? nearest.name : null,
+      nearestDistanceKm: nearest
+        ? Math.round(nearestDistance(nearest, latitude, longitude) * 10) / 10
+        : null,
+      nearestMunicipality: nearest ? nearest.municipality : null,
       sourceRows: candidates.slice(0, 3).map(candidate => ({
         geonameid: candidate[GN.geonameid],
         name: candidate[GN.name],
@@ -244,8 +287,16 @@ export function buildCorroboration() {
   const contextUnproven = results.filter(
     result => result.corroborated && !result.contextAgrees && result.administrativeContext,
   );
+  for (const result of results) {
+    if (!result.corroborated) result.disposition = 'unmatched';
+    else if (result.contextAgrees || !result.administrativeContext)
+      result.disposition = 'corroborated';
+    else result.disposition = 'context_unproven';
+  }
+
   return {
     available: true,
+    places: results,
     held: held.size,
     provinceRows: inProvince,
     corroborated: corroborated.length,
@@ -280,10 +331,51 @@ export function buildCorroboration() {
   };
 }
 
+function buildReviewCsv(report) {
+  const header = [
+    'name',
+    'place_type',
+    'administrative_context',
+    'latitude',
+    'longitude',
+    'nearest_licensed_settlement',
+    'nearest_distance_km',
+    'source_records',
+    'disposition',
+  ].join(',');
+  const escape = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const rows = report.places.map(place =>
+    [
+      escape(place.name),
+      escape(place.placeType),
+      escape(place.administrativeContext),
+      escape(place.latitude),
+      escape(place.longitude),
+      escape(place.nearestLicensedSettlement),
+      escape(place.nearestDistanceKm),
+      escape(place.sourceRecords.join(' ')),
+      escape(place.disposition),
+    ].join(','),
+  );
+  return [header, ...rows].join('\n');
+}
+
 function main() {
   const report = buildCorroboration();
   if (process.argv.includes('--json')) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    return;
+  }
+  const reviewIndex = process.argv.indexOf('--review');
+  if (reviewIndex !== -1) {
+    const target = process.argv[reviewIndex + 1];
+    if (!target) {
+      console.error('osm-corroboration: --review needs an output path.');
+      process.exitCode = 1;
+      return;
+    }
+    writeFileSync(target, `${buildReviewCsv(report)}\n`);
+    console.log(`place-readiness: wrote the held place review to ${target}`);
     return;
   }
   if (!report.available) {
