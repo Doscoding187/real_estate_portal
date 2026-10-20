@@ -1,6 +1,6 @@
 import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
 import { publicSearchService } from './publicSearchService';
-import { listVerifiedCityScopes, resolveVerifiedProvinceScope } from './geographyAuthorityService';
+import { listVerifiedPlaceScopes, resolveVerifiedProvinceScope } from './geographyAuthorityService';
 
 /** Editorial links require exact verified parent/child identities; no widening or name fallback. */
 export async function getProvinceGuidePlaces(provinceSlug: string) {
@@ -9,12 +9,12 @@ export async function getProvinceGuidePlaces(provinceSlug: string) {
   const province = await resolveVerifiedProvinceScope(provinceSlug);
   if (!province) return null;
   const slugs = [
-    ...new Set(guide.regions.flatMap(region => region.places.map(place => place.citySlug))),
+    ...new Set(guide.regions.flatMap(region => region.places.map(place => place.placeSlug))),
   ];
-  const cities = await listVerifiedCityScopes({ provinceId: province.id, slugs });
+  const places = await listVerifiedPlaceScopes({ provinceId: province.id, slugs });
   return {
     province,
-    cities,
+    places,
   };
 }
 

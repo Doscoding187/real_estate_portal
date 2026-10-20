@@ -10,12 +10,12 @@ export interface ProvinceGuideRegion {
   summary: string;
   paragraphs: readonly string[];
   consider: string;
-  places: readonly { name: string; citySlug: string }[];
+  places: readonly { name: string; placeSlug: string }[];
   sourceIds: readonly string[];
 }
 export interface ProvinceDiscoveryPlace {
   name: string;
-  citySlug: string;
+  placeSlug: string;
   regionId: string;
   caption: string;
 }
@@ -68,11 +68,12 @@ const gauteng: ProvinceGuideContent = {
       consider:
         'Compare specific neighbourhoods around your daily destination. A citywide result is useful for browsing, but it should not decide your commute for you.',
       places: [
-        { name: 'Johannesburg', citySlug: 'johannesburg' },
-        { name: 'Randburg', citySlug: 'randburg' },
-        { name: 'Midrand', citySlug: 'midrand' },
-        { name: 'Roodepoort', citySlug: 'roodepoort' },
-        { name: 'Soweto', citySlug: 'soweto' },
+        { name: 'Johannesburg', placeSlug: 'johannesburg' },
+        { name: 'Sandton', placeSlug: 'sandton' },
+        { name: 'Randburg', placeSlug: 'randburg' },
+        { name: 'Midrand', placeSlug: 'midrand' },
+        { name: 'Roodepoort', placeSlug: 'roodepoort' },
+        { name: 'Soweto', placeSlug: 'soweto' },
       ],
       sourceIds: ['joburg', 'gautrain'],
     },
@@ -90,9 +91,9 @@ const gauteng: ProvinceGuideContent = {
       consider:
         'Shortlist around your campus, workplace or regular destination first. Check the full trip, including the distance from the station or main road to the property.',
       places: [
-        { name: 'Pretoria', citySlug: 'pretoria' },
-        { name: 'Centurion', citySlug: 'centurion' },
-        { name: 'Bronkhorstspruit', citySlug: 'bronkhorstspruit' },
+        { name: 'Pretoria', placeSlug: 'pretoria' },
+        { name: 'Centurion', placeSlug: 'centurion' },
+        { name: 'Bronkhorstspruit', placeSlug: 'bronkhorstspruit' },
       ],
       sourceIds: ['tshwane', 'tshwane-east', 'gautrain'],
     },
@@ -110,11 +111,11 @@ const gauteng: ProvinceGuideContent = {
       consider:
         'Use an individual town as your next step. If airport access matters, check the actual route and property surroundings rather than relying on the “East Rand” label.',
       places: [
-        { name: 'Benoni', citySlug: 'benoni' },
-        { name: 'Boksburg', citySlug: 'boksburg' },
-        { name: 'Alberton', citySlug: 'alberton' },
-        { name: 'Kempton Park', citySlug: 'kempton-park' },
-        { name: 'Germiston', citySlug: 'germiston' },
+        { name: 'Benoni', placeSlug: 'benoni' },
+        { name: 'Boksburg', placeSlug: 'boksburg' },
+        { name: 'Alberton', placeSlug: 'alberton' },
+        { name: 'Kempton Park', placeSlug: 'kempton-park' },
+        { name: 'Germiston', placeSlug: 'germiston' },
       ],
       sourceIds: ['ekurhuleni', 'gautrain'],
     },
@@ -132,10 +133,10 @@ const gauteng: ProvinceGuideContent = {
       consider:
         'For a smallholding or rural property, ask about land use, road access, water, electricity and maintenance responsibilities before comparing it with a suburban home.',
       places: [
-        { name: 'Krugersdorp', citySlug: 'krugersdorp' },
-        { name: 'Randfontein', citySlug: 'randfontein' },
-        { name: 'Carletonville', citySlug: 'carletonville' },
-        { name: 'Magaliesburg', citySlug: 'magaliesburg' },
+        { name: 'Krugersdorp', placeSlug: 'krugersdorp' },
+        { name: 'Randfontein', placeSlug: 'randfontein' },
+        { name: 'Carletonville', placeSlug: 'carletonville' },
+        { name: 'Magaliesburg', placeSlug: 'magaliesburg' },
       ],
       sourceIds: ['west-rand', 'joburg'],
     },
@@ -153,10 +154,10 @@ const gauteng: ProvinceGuideContent = {
       consider:
         'Decide whether you want a town neighbourhood, a smaller settlement or a waterside setting. Then investigate that location on its own terms.',
       places: [
-        { name: 'Vereeniging', citySlug: 'vereeniging' },
-        { name: 'Vanderbijlpark', citySlug: 'vanderbijlpark' },
-        { name: 'Meyerton', citySlug: 'meyerton' },
-        { name: 'Heidelberg', citySlug: 'heidelberg' },
+        { name: 'Vereeniging', placeSlug: 'vereeniging' },
+        { name: 'Vanderbijlpark', placeSlug: 'vanderbijlpark' },
+        { name: 'Meyerton', placeSlug: 'meyerton' },
+        { name: 'Heidelberg', placeSlug: 'heidelberg' },
       ],
       sourceIds: ['sedibeng', 'metsimaholo'],
     },
@@ -173,31 +174,31 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Johannesburg',
-          citySlug: 'johannesburg',
+          placeSlug: 'johannesburg',
           regionId: 'johannesburg',
           caption: 'Explore the city’s many sides',
         },
         {
           name: 'Pretoria',
-          citySlug: 'pretoria',
+          placeSlug: 'pretoria',
           regionId: 'tshwane',
           caption: 'Look closer at the capital city',
         },
         {
           name: 'Randburg',
-          citySlug: 'randburg',
+          placeSlug: 'randburg',
           regionId: 'johannesburg',
           caption: 'Explore the local neighbourhoods',
         },
         {
           name: 'Midrand',
-          citySlug: 'midrand',
+          placeSlug: 'midrand',
           regionId: 'johannesburg',
           caption: 'Between Johannesburg and Pretoria',
         },
         {
           name: 'Centurion',
-          citySlug: 'centurion',
+          placeSlug: 'centurion',
           regionId: 'tshwane',
           caption: 'A different starting point in Tshwane',
         },
@@ -214,19 +215,19 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Johannesburg',
-          citySlug: 'johannesburg',
+          placeSlug: 'johannesburg',
           regionId: 'johannesburg',
           caption: 'Botanical Garden & Emmarentia Dam',
         },
         {
           name: 'Pretoria',
-          citySlug: 'pretoria',
+          placeSlug: 'pretoria',
           regionId: 'tshwane',
           caption: 'Pretoria National Botanical Garden',
         },
         {
           name: 'Roodepoort',
-          citySlug: 'roodepoort',
+          placeSlug: 'roodepoort',
           regionId: 'johannesburg',
           caption: 'Walter Sisulu National Botanical Garden',
         },
@@ -243,25 +244,25 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Johannesburg',
-          citySlug: 'johannesburg',
+          placeSlug: 'johannesburg',
           regionId: 'johannesburg',
           caption: 'Start with the Park Station corridor',
         },
         {
           name: 'Midrand',
-          citySlug: 'midrand',
+          placeSlug: 'midrand',
           regionId: 'johannesburg',
           caption: 'Explore around the Midrand connection',
         },
         {
           name: 'Centurion',
-          citySlug: 'centurion',
+          placeSlug: 'centurion',
           regionId: 'tshwane',
           caption: 'Compare your door-to-door journey',
         },
         {
           name: 'Pretoria',
-          citySlug: 'pretoria',
+          placeSlug: 'pretoria',
           regionId: 'tshwane',
           caption: 'Pretoria & Hatfield connections',
         },
@@ -278,31 +279,31 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Benoni',
-          citySlug: 'benoni',
+          placeSlug: 'benoni',
           regionId: 'ekurhuleni',
           caption: 'Explore a different East Rand town',
         },
         {
           name: 'Boksburg',
-          citySlug: 'boksburg',
+          placeSlug: 'boksburg',
           regionId: 'ekurhuleni',
           caption: 'Get to know the town and its areas',
         },
         {
           name: 'Alberton',
-          citySlug: 'alberton',
+          placeSlug: 'alberton',
           regionId: 'ekurhuleni',
           caption: 'A southern starting point',
         },
         {
           name: 'Kempton Park',
-          citySlug: 'kempton-park',
+          placeSlug: 'kempton-park',
           regionId: 'ekurhuleni',
           caption: 'Explore the airport-side town',
         },
         {
           name: 'Germiston',
-          citySlug: 'germiston',
+          placeSlug: 'germiston',
           regionId: 'ekurhuleni',
           caption: 'Look closer at the local context',
         },
@@ -319,25 +320,25 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Krugersdorp',
-          citySlug: 'krugersdorp',
+          placeSlug: 'krugersdorp',
           regionId: 'west-rand',
           caption: 'A starting point in Mogale City',
         },
         {
           name: 'Randfontein',
-          citySlug: 'randfontein',
+          placeSlug: 'randfontein',
           regionId: 'west-rand',
           caption: 'Explore Rand West City',
         },
         {
           name: 'Magaliesburg',
-          citySlug: 'magaliesburg',
+          placeSlug: 'magaliesburg',
           regionId: 'west-rand',
           caption: 'Look beyond a suburban setting',
         },
         {
           name: 'Meyerton',
-          citySlug: 'meyerton',
+          placeSlug: 'meyerton',
           regionId: 'sedibeng',
           caption: 'Get to know the Midvaal side',
         },
@@ -354,19 +355,19 @@ const gauteng: ProvinceGuideContent = {
       places: [
         {
           name: 'Vereeniging',
-          citySlug: 'vereeniging',
+          placeSlug: 'vereeniging',
           regionId: 'sedibeng',
           caption: 'Discover southern Gauteng',
         },
         {
           name: 'Vanderbijlpark',
-          citySlug: 'vanderbijlpark',
+          placeSlug: 'vanderbijlpark',
           regionId: 'sedibeng',
           caption: 'Explore the Vaal side',
         },
         {
           name: 'Meyerton',
-          citySlug: 'meyerton',
+          placeSlug: 'meyerton',
           regionId: 'sedibeng',
           caption: 'A starting point in Midvaal',
         },

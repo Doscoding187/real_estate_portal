@@ -4,18 +4,28 @@ const { database, search } = vi.hoisted(() => ({ database: vi.fn(), search: vi.f
 vi.mock('../../db', () => ({ getDb: database }));
 vi.mock('../publicSearchService', () => ({ publicSearchService: { searchInventory: search } }));
 import { getProvinceGuideInventory, getProvinceGuidePlaces } from '../provinceGuideService';
-const chain = { from: vi.fn(), where: vi.fn(), limit: vi.fn(), orderBy: vi.fn() };
+const chain = {
+  from: vi.fn(),
+  where: vi.fn(),
+  limit: vi.fn(),
+  orderBy: vi.fn(),
+  innerJoin: vi.fn(),
+};
 beforeEach(() => {
-  for (const method of ['from', 'where'] as const) chain[method].mockReturnValue(chain);
+  for (const method of ['from', 'where', 'innerJoin'] as const)
+    chain[method].mockReturnValue(chain);
   chain.limit.mockResolvedValue([{ id: 3, name: 'Gauteng', slug: 'gauteng' }]);
-  chain.orderBy.mockResolvedValue([{ id: 18, name: 'Pretoria', slug: 'pretoria' }]);
+  // The first ordered read is the city scopes, the second is the suburb scopes.
+  chain.orderBy
+    .mockResolvedValueOnce([{ id: 18, name: 'Pretoria', slug: 'pretoria' }])
+    .mockResolvedValueOnce([]);
   database.mockResolvedValue({ select: vi.fn(() => chain) });
 });
 describe('Province guide geography and platform availability', () => {
   it('resolves exact verified parent/child identities without depending on inventory', async () => {
     const result = await getProvinceGuidePlaces('gauteng');
     expect(result?.province.canonicalLocationId).toBe('province:3');
-    expect(result?.cities[0].canonicalLocationId).toBe('city:18');
+    expect(result?.places[0].canonicalLocationId).toBe('city:18');
     const dialect = new MySqlDialect();
     const parent = dialect.sqlToQuery(chain.where.mock.calls[0][0]);
     const child = dialect.sqlToQuery(chain.where.mock.calls[1][0]);
@@ -26,11 +36,41 @@ describe('Province guide geography and platform availability', () => {
     expect(search).not.toHaveBeenCalled();
   });
   it('does not guess between duplicate city identities', async () => {
-    chain.orderBy.mockResolvedValue([
-      { id: 18, name: 'Pretoria', slug: 'pretoria' },
-      { id: 19, name: 'Pretoria', slug: 'pretoria' },
-    ]);
-    expect((await getProvinceGuidePlaces('gauteng'))?.cities).toEqual([]);
+    chain.orderBy.mockReset();
+    chain.orderBy
+      .mockResolvedValueOnce([
+        { id: 18, name: 'Pretoria', slug: 'pretoria' },
+        { id: 19, name: 'Pretoria', slug: 'pretoria' },
+      ])
+      .mockResolvedValueOnce([]);
+    expect((await getProvinceGuidePlaces('gauteng'))?.places).toEqual([]);
+  });
+
+  it('resolves a referenced suburb to its own scope under its city', async () => {
+    chain.orderBy.mockReset();
+    chain.orderBy
+      .mockResolvedValueOnce([{ id: 18, name: 'Johannesburg', slug: 'johannesburg' }])
+      .mockResolvedValueOnce([
+        { id: 91, name: 'Sandton', slug: 'sandton', citySlug: 'johannesburg' },
+      ]);
+    const result = await getProvinceGuidePlaces('gauteng');
+    const suburb = result?.places.find(place => place.level === 'suburb');
+    expect(suburb).toMatchObject({
+      level: 'suburb',
+      slug: 'sandton',
+      parentCitySlug: 'johannesburg',
+      canonicalLocationId: 'suburb:91',
+    });
+  });
+
+  it('refuses a slug claimed by both a city and a suburb', async () => {
+    chain.orderBy.mockReset();
+    chain.orderBy
+      .mockResolvedValueOnce([{ id: 18, name: 'Central', slug: 'central' }])
+      .mockResolvedValueOnce([
+        { id: 91, name: 'Central', slug: 'central', citySlug: 'johannesburg' },
+      ]);
+    expect((await getProvinceGuidePlaces('gauteng'))?.places).toEqual([]);
   });
   it('does not widen an unresolved or ambiguous province', async () => {
     chain.limit.mockResolvedValue([]);

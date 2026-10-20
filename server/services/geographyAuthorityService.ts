@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { cities, provinces } from '../../drizzle/schema';
+import { cities, provinces, suburbs } from '../../drizzle/schema';
 import { CITY_GUIDE_FEATURES } from '../../shared/cityGuideFeatures';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import { getDb } from '../db';
@@ -38,6 +38,17 @@ export interface RuntimeCityScope {
   canonicalLocationId: string;
 }
 
+export interface RuntimePlaceScope {
+  /** A city or town scope, or a suburb scope under a city. */
+  level: 'city' | 'suburb';
+  id: number;
+  name: string;
+  slug: string;
+  /** The city a suburb scope sits under. Absent for a city scope. */
+  parentCitySlug?: string;
+  canonicalLocationId: string;
+}
+
 export interface RuntimeCityGuideCandidate extends RuntimeCityScope {
   provinceName: string;
   provinceSlug: string;
@@ -64,19 +75,20 @@ export async function resolveVerifiedProvinceScope(
 }
 
 /**
- * The verified cities of one province that claim the requested slugs. A slug claimed by more
- * than one row is refused rather than resolved, so a consumer can never link to an ambiguous
- * place.
+ * The place scopes a province guide may link to, resolved by their exact slug within the
+ * province. A slug is a city scope or a suburb scope under one of the province's cities.
+ * A slug claimed by more than one place is refused rather than guessed, and a suburb whose
+ * own city is not usable is refused with it.
  */
-export async function listVerifiedCityScopes(input: {
+export async function listVerifiedPlaceScopes(input: {
   provinceId: number;
   slugs: readonly string[];
-}): Promise<RuntimeCityScope[]> {
+}): Promise<RuntimePlaceScope[]> {
   const db = await getDb();
   const slugs = [...new Set(input.slugs.filter(Boolean))];
   if (!slugs.length) return [];
 
-  const rows = await db
+  const cityRows = await db
     .select({ id: cities.id, name: cities.name, slug: cities.slug })
     .from(cities)
     .where(
@@ -88,17 +100,53 @@ export async function listVerifiedCityScopes(input: {
     )
     .orderBy(asc(cities.name), asc(cities.id));
 
-  const frequency = new Map<string | null, number>();
-  for (const city of rows) frequency.set(city.slug, (frequency.get(city.slug) || 0) + 1);
+  const suburbRows = await db
+    .select({
+      id: suburbs.id,
+      name: suburbs.name,
+      slug: suburbs.slug,
+      citySlug: cities.slug,
+    })
+    .from(suburbs)
+    .innerJoin(cities, eq(suburbs.cityId, cities.id))
+    .where(
+      and(
+        eq(cities.provinceId, input.provinceId),
+        eq(cities.status, 'verified'),
+        eq(suburbs.status, 'verified'),
+        inArray(suburbs.slug, slugs),
+      ),
+    )
+    .orderBy(asc(suburbs.name), asc(suburbs.id));
 
-  return rows
-    .filter(city => city.slug && frequency.get(city.slug) === 1)
-    .map(city => ({
-      id: city.id,
-      name: city.name,
-      slug: city.slug!,
-      canonicalLocationId: encodeCanonicalLocationId('city', city.id),
-    }));
+  const claims = new Map<string, number>();
+  for (const row of [...cityRows, ...suburbRows]) {
+    claims.set(row.slug, (claims.get(row.slug) || 0) + 1);
+  }
+
+  const places: RuntimePlaceScope[] = [];
+  for (const row of cityRows) {
+    if (claims.get(row.slug) !== 1) continue;
+    places.push({
+      level: 'city',
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      canonicalLocationId: encodeCanonicalLocationId('city', row.id),
+    });
+  }
+  for (const row of suburbRows) {
+    if (claims.get(row.slug) !== 1) continue;
+    places.push({
+      level: 'suburb',
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      parentCitySlug: row.citySlug,
+      canonicalLocationId: encodeCanonicalLocationId('suburb', row.id),
+    });
+  }
+  return places;
 }
 
 /**

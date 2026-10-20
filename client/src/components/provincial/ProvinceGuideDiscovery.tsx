@@ -17,10 +17,14 @@ import {
 import type { ProvinceGuideContent, ProvinceDiscoveryPlace } from '@shared/provinceGuideContent';
 import { getCityGuideImage, getProvinceGuideImage } from '@/lib/cityGuideImages';
 
-export interface VerifiedGuideCity {
+export interface VerifiedGuidePlace {
   name: string;
   slug: string;
   canonicalLocationId: string;
+  /** A city or town scope, or a suburb scope under a city. */
+  level?: 'city' | 'suburb';
+  /** The city a suburb scope sits under. Absent for a city scope. */
+  parentCitySlug?: string | null;
 }
 const COLLECTION_ICONS = {
   city: Building2,
@@ -117,14 +121,14 @@ function DiscoveryImage({
   place: ProvinceDiscoveryPlace;
 }) {
   const candidates = [
-    getCityGuideImage(guide.slug, place.citySlug),
+    getCityGuideImage(guide.slug, place.placeSlug),
     getProvinceGuideImage(guide.slug),
   ].filter(
     (item, index, items) =>
       item && items.findIndex(other => other?.thumbnail === item.thumbnail) === index,
   );
   const [failed, setFailed] = useState(0);
-  useEffect(() => setFailed(0), [guide.slug, place.citySlug]);
+  useEffect(() => setFailed(0), [guide.slug, place.placeSlug]);
   const image = candidates[failed];
   return (
     <span className="guide-place-image">
@@ -154,23 +158,31 @@ function DiscoveryImage({
 function PlaceCard({
   guide,
   place,
-  verifiedCities,
+  verifiedPlaces,
   regionFallback = true,
 }: {
   guide: ProvinceGuideContent;
   place: ProvinceDiscoveryPlace;
-  verifiedCities: readonly VerifiedGuideCity[];
+  verifiedPlaces: readonly VerifiedGuidePlace[];
   regionFallback?: boolean;
 }) {
-  const city = verifiedCities.find(
-    item => item.slug === place.citySlug && item.canonicalLocationId,
+  const resolved = verifiedPlaces.find(
+    item => item.slug === place.placeSlug && item.canonicalLocationId,
   );
-  const href = city
-    ? `/${guide.slug}/${city.slug}`
+  const href = resolved
+    ? resolved.level === 'suburb' && resolved.parentCitySlug
+      ? `/${guide.slug}/${resolved.parentCitySlug}/${resolved.slug}`
+      : `/${guide.slug}/${resolved.slug}`
     : regionFallback
       ? `#region-${place.regionId}`
       : undefined;
-  const action = city ? 'Explore guide' : regionFallback ? 'Read region guide' : 'Place to know';
+  const action = resolved
+    ? resolved.level === 'suburb'
+      ? 'Explore suburb guide'
+      : 'Explore guide'
+    : regionFallback
+      ? 'Read region guide'
+      : 'Place to know';
   const content = (
     <>
       <DiscoveryImage guide={guide} place={place} />
@@ -184,8 +196,8 @@ function PlaceCard({
       </span>
     </>
   );
-  return city ? (
-    <Link href={href!} aria-label={`Explore ${place.name} city guide`} className="guide-place-card">
+  return resolved ? (
+    <Link href={href!} aria-label={`Explore ${place.name} guide`} className="guide-place-card">
       {content}
     </Link>
   ) : href ? (
@@ -275,10 +287,10 @@ export function PlaceRow({
 
 export function ProvinceLifestyleDiscovery({
   guide,
-  verifiedCities,
+  verifiedPlaces,
 }: {
   guide: ProvinceGuideContent;
-  verifiedCities: readonly VerifiedGuideCity[];
+  verifiedPlaces: readonly VerifiedGuidePlace[];
 }) {
   const prefix = useId();
   const [active, setActive] = useState(guide.collections[0].id);
@@ -320,8 +332,8 @@ export function ProvinceLifestyleDiscovery({
           {active === collection.id && (
             <PlaceRow label="Places to explore" refreshKey={collection.id}>
               {collection.places.map(place => (
-                <div role="listitem" key={place.citySlug}>
-                  <PlaceCard place={place} guide={guide} verifiedCities={verifiedCities} />
+                <div role="listitem" key={place.placeSlug}>
+                  <PlaceCard place={place} guide={guide} verifiedPlaces={verifiedPlaces} />
                 </div>
               ))}
             </PlaceRow>
@@ -348,10 +360,10 @@ export function ProvinceLifestyleDiscovery({
 
 export function ProvinceRegionDiscovery({
   guide,
-  verifiedCities,
+  verifiedPlaces,
 }: {
   guide: ProvinceGuideContent;
-  verifiedCities: readonly VerifiedGuideCity[];
+  verifiedPlaces: readonly VerifiedGuidePlace[];
 }) {
   const prefix = useId();
   const [active, setActive] = useState(guide.regions[0].id);
@@ -434,10 +446,10 @@ export function ProvinceRegionDiscovery({
                 {active === region.id && (
                   <PlaceRow label={`Places in ${region.name}`} refreshKey={region.id}>
                     {region.places.map(place => (
-                      <div role="listitem" key={place.citySlug}>
+                      <div role="listitem" key={place.placeSlug}>
                         <PlaceCard
                           guide={guide}
-                          verifiedCities={verifiedCities}
+                          verifiedPlaces={verifiedPlaces}
                           regionFallback={false}
                           place={{ ...place, regionId: region.id, caption: region.strapline }}
                         />
