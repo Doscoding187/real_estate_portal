@@ -60,6 +60,7 @@ function normaliseName(value) {
 const GN = {
   geonameid: 0,
   name: 1,
+  alternates: 3,
   lat: 4,
   lon: 5,
   featureClass: 6,
@@ -81,9 +82,13 @@ export function buildCorroboration() {
   );
 
   const preferredNames = new Map();
+  const namesByPlace = new Map();
   for (const row of names) {
-    if (row.name_role !== 'preferred_public') continue;
-    if (!preferredNames.has(row.place_id)) preferredNames.set(row.place_id, row);
+    if (!preferredNames.has(row.place_id) && row.name_role === 'preferred_public') {
+      preferredNames.set(row.place_id, row);
+    }
+    if (!namesByPlace.has(row.place_id)) namesByPlace.set(row.place_id, []);
+    namesByPlace.get(row.place_id).push(row);
   }
 
   // The source index: normalised name plus the administrative context, from the licensed extract.
@@ -126,9 +131,16 @@ export function buildCorroboration() {
     if (columns[GN.country] !== 'ZA') continue;
     if (columns[GN.admin1] !== provinceCode) continue;
     inProvince += 1;
-    const key = normaliseName(columns[GN.name]);
-    if (!sourceIndex.has(key)) sourceIndex.set(key, []);
-    sourceIndex.get(key).push(columns);
+    // A place is named in more than one way. The primary name and every alternate name are
+    // indexed, because the OSM name and the GeoNames name for the same place are often not
+    // the same string.
+    const names = [columns[GN.name], ...String(columns[GN.alternates] || '').split(',')];
+    for (const candidate of names) {
+      const key = normaliseName(candidate);
+      if (!key) continue;
+      if (!sourceIndex.has(key)) sourceIndex.set(key, []);
+      if (!sourceIndex.get(key).includes(columns)) sourceIndex.get(key).push(columns);
+    }
   }
 
   const distanceKm = (lat1, lon1, lat2, lon2) => {
@@ -153,16 +165,31 @@ export function buildCorroboration() {
     const hasPoint = Number.isFinite(latitude) && Number.isFinite(longitude);
 
     // The same place is the same name at the same point, inside the governed merge distance.
-    const candidates = (sourceIndex.get(name) || []).filter(candidate => {
-      if (!hasPoint) return false;
-      const distance = distanceKm(
-        latitude,
-        longitude,
-        Number(candidate[GN.lat]),
-        Number(candidate[GN.lon]),
-      );
-      return distance <= GOVERNED_MAX_MERGE_KM;
-    });
+    // The place may be known by more than one name, and the source may use a different one.
+    const placeNames = [
+      ...new Set(
+        (namesByPlace.get(placeId) || []).map(row => normaliseName(row.name)).filter(Boolean),
+      ),
+    ];
+    const seen = new Set();
+    const candidates = [];
+    let matchedName = null;
+    for (const candidateName of placeNames) {
+      for (const candidate of sourceIndex.get(candidateName) || []) {
+        if (seen.has(candidate[GN.geonameid])) continue;
+        if (!hasPoint) continue;
+        const distance = distanceKm(
+          latitude,
+          longitude,
+          Number(candidate[GN.lat]),
+          Number(candidate[GN.lon]),
+        );
+        if (distance > GOVERNED_MAX_MERGE_KM) continue;
+        seen.add(candidate[GN.geonameid]);
+        candidates.push(candidate);
+        if (!matchedName) matchedName = candidateName;
+      }
+    }
 
     const contextName = context ? normaliseName(context) : '';
     results.push({
@@ -178,6 +205,7 @@ export function buildCorroboration() {
           (municipalityName.includes(contextName) || contextName.includes(municipalityName))
         );
       }),
+      matchedName,
       sourceRows: candidates.slice(0, 3).map(candidate => ({
         geonameid: candidate[GN.geonameid],
         name: candidate[GN.name],
@@ -199,14 +227,32 @@ export function buildCorroboration() {
     });
   }
 
-  const corroborated = results.filter(result => result.corroborated);
+  // A place is corroborated when a clean-licensed source asserts its name at its point and
+  // the municipality agrees. A place with no administrative context cannot be corroborated
+  // by that test, so it is reported separately rather than counted.
+  // Three honest buckets.
+  //
+  // corroborated      a clean-licensed source asserts the name at the point and the
+  //                    municipality agrees. The place can be re-sourced and released.
+  // context unproven  a clean-licensed source asserts the name at the point, but the two
+  //                    municipalities differ. The place is real; which municipality owns it
+  //                    is a parent-edge question for the governed admission path, not a
+  //                    licence question. These are routed, not discarded.
+  // unmatched         no clean-licensed source asserts the name at the point.
+  const corroborated = results.filter(
+    result => result.corroborated && (result.contextAgrees || !result.administrativeContext),
+  );
+  const contextUnproven = results.filter(
+    result => result.corroborated && !result.contextAgrees && result.administrativeContext,
+  );
   return {
     available: true,
     held: held.size,
     provinceRows: inProvince,
     corroborated: corroborated.length,
     corroboratedWithExactContext: corroborated.filter(result => result.contextAgrees).length,
-    notCorroborated: results.length - corroborated.length,
+    contextUnproven: contextUnproven.length,
+    notCorroborated: results.length - corroborated.length - contextUnproven.length,
     byAdministrativeContext: corroborated.reduce((acc, result) => {
       const key = result.administrativeContext || 'unknown';
       acc[key] = (acc[key] || 0) + 1;
@@ -219,6 +265,14 @@ export function buildCorroboration() {
           `${result.name} (${result.administrativeContext}) → geonameid ${result.sourceRows[0].geonameid} ` +
           `${result.sourceRows[0].municipality || 'unknown municipality'}, ${result.sourceRows[0].distanceKm}km, ` +
           `context ${result.contextAgrees ? 'agrees' : 'differs'}`,
+      ),
+    contextUnprovenExamples: contextUnproven
+      .slice(0, 12)
+      .map(
+        result =>
+          `${result.name} (${result.administrativeContext}) -> ${
+            result.sourceRows[0].municipality || 'unknown municipality'
+          }, ${result.sourceRows[0].distanceKm}km`,
       ),
     unmatchedExamples: results
       .filter(result => !result.corroborated)
@@ -249,7 +303,8 @@ function main() {
   console.log(
     `  of which the administrative context matches exactly: ${report.corroboratedWithExactContext}`,
   );
-  console.log(`Not corroborated: ${report.notCorroborated}`);
+  console.log(`Corroborated, municipality to be resolved: ${report.contextUnproven}`);
+  console.log(`Not corroborated by any clean-licensed source: ${report.notCorroborated}`);
   if (Object.keys(report.byAdministrativeContext).length) {
     console.log('\nCorroborated by context:');
     for (const [context, count] of Object.entries(report.byAdministrativeContext).sort(
