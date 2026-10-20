@@ -10,6 +10,7 @@ export const DISTRIBUTION_PROCESS_DOCUMENT_CODES = [
   'proof_of_income',
   'bank_statement',
   'pre_approval',
+  'transfer_documents',
   'custom',
 ] as const;
 

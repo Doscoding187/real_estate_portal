@@ -314,14 +314,6 @@ export async function createReferralDeal(
     });
   }
 
-  const intakeSession = await getCompletePartnerReferralIntakeSession({
-    sessionUuid: input.intakeSessionUuid,
-    partnerUserId: input.actorUserId,
-    developmentId: input.developmentId,
-    db,
-  });
-  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
-
   const normalizedClientReference = String(input.clientReference || '').trim() || null;
   if (normalizedClientReference) {
     const existing = await findExistingByClientReference(db, {
@@ -343,6 +335,14 @@ export async function createReferralDeal(
       };
     }
   }
+
+  const intakeSession = await getCompletePartnerReferralIntakeSession({
+    sessionUuid: input.intakeSessionUuid,
+    partnerUserId: input.actorUserId,
+    developmentId: input.developmentId,
+    db,
+  });
+  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
 
   const duplicateByBuyer = await findDuplicateByBuyerIdentity(db, {
     actorUserId: input.actorUserId,

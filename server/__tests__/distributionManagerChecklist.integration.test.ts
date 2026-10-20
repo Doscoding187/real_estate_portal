@@ -148,7 +148,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
 
   const requiredDocsCount = Math.max(0, options.requiredDocsCount ?? 2);
   const includePrimaryAssignment = options.includePrimaryAssignment ?? true;
-  const payoutMilestone = options.payoutMilestone ?? 'attorney_signing';
+  const payoutMilestone = options.payoutMilestone ?? 'bond_approval';
   const templateDocumentCodes = options.templateDocumentCodes ?? [
     'id_document',
     'proof_of_address',
@@ -216,6 +216,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   const terms = {
     version: 2,
     marketMode: 'sale',
+    developmentId,
     program: {
       referrerCommissionType: 'flat',
       referrerCommissionValue: 1000,
@@ -246,6 +247,16 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
   });
   const dealId = Number((dealInsert as any).insertId || 0);
   createdState.dealIds.push(dealId);
+
+  if (templateIds.length) {
+    await db.insert(distributionDealDocuments).values(
+      templateIds.map(templateId => ({
+        dealId,
+        developmentRequiredDocumentId: templateId,
+        status: 'pending' as const,
+      })),
+    );
+  }
 
   return {
     managerUserId,
@@ -517,6 +528,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   it('computes payout readiness true when all required docs are verified', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
     const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
 
     for (const templateId of seed.templateIds) {
       await caller.distribution.manager.updateDealDocumentStatus({
@@ -639,7 +651,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
   });
 
-  it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {
+  it('directs admin commission_paid transitions to the payout record flow', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
     const adminCaller = buildCaller(seed.managerUserId, 'super_admin');
     await setDealStage(seed.dealId, 'commission_pending');
@@ -650,18 +662,8 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         toStage: 'commission_paid',
       }),
     ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-    });
-
-    await expect(
-      adminCaller.distribution.admin.transitionDealStage({
-        dealId: seed.dealId,
-        toStage: 'commission_paid',
-        force: true,
-      }),
-    ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
-      message: 'Forced admin deal-stage transitions require justification notes.',
+      message: expect.stringContaining('Mark the referral payout record paid'),
     });
 
     await expect(
@@ -671,9 +673,9 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         force: true,
         notes: 'Manual payout override approved by ops lead.',
       }),
-    ).resolves.toMatchObject({
-      success: true,
-      stage: 'commission_paid',
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('Mark the referral payout record paid'),
     });
   });
 

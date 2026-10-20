@@ -1,12 +1,15 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { randomUUID } from 'node:crypto';
-import { eq, inArray } from 'drizzle-orm';
+import { createHash, randomUUID } from 'node:crypto';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
+import { createDefaultReferralWorkflowSteps } from '../../shared/distributionReferralIntake';
 import {
-  affordabilityAssessments,
-  affordabilityMatchSnapshots,
+  DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX,
+  DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
+} from '../../shared/distributionPreviewDemo';
+import {
   cataloguePublishers,
   developmentRequiredDocuments,
   developmentManagerAssignments,
@@ -16,7 +19,12 @@ import {
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionIdentities,
   distributionPrograms,
+  distributionReferralIntakeEvidence,
+  distributionReferralIntakeEvents,
+  distributionReferralIntakePolicyReleases,
+  distributionReferralIntakeSessions,
   unitTypes,
   users,
 } from '../../drizzle/schema';
@@ -26,7 +34,6 @@ import {
   upsertDevelopmentAccess,
 } from '../services/distributionAccessRepository';
 
-// Requires DATABASE_URL test DB; skipped in local env when not set.
 const hasDb = Boolean(process.env.DATABASE_URL);
 const INTEGRATION_TIMEOUT_MS = 30_000;
 const describeWithDb: typeof describe = hasDb
@@ -44,8 +51,8 @@ const createdState = {
   accessIds: [] as number[],
   assignmentIds: [] as number[],
   dealIds: [] as number[],
-  assessmentIds: [] as string[],
-  snapshotIds: [] as string[],
+  intakePolicyReleaseIds: [] as number[],
+  intakeSessionUuids: [] as string[],
   requiredDocumentIds: [] as number[],
 };
 
@@ -55,6 +62,18 @@ function uniqueIds(values: number[]) {
 
 function uniqueStringIds(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 function createCaller(userId: number, role: 'agent' | 'agency_admin' | 'visitor' | 'super_admin') {
@@ -85,17 +104,29 @@ async function insertUser(role: 'agent' | 'agency_admin' | 'visitor' | 'super_ad
   return userId;
 }
 
+async function insertReferrerIdentity(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db.insert(distributionIdentities).values({
+    userId,
+    identityType: 'referrer',
+    active: 1,
+    displayName: `Referrer ${userId}`,
+  });
+}
+
 async function insertDevelopment(name: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const curatorUserId = await insertUser('super_admin');
+  const demoSlug = `${DISTRIBUTION_PREVIEW_DEMO_SLUG_PREFIX}${suffix}`;
   const publisher = await cataloguePublisherService.createPlatformReferencePublisher({
     brandName: `${name} Publisher`,
     slug: `distribution-brand-${suffix}`,
     identityType: 'developer',
-    sourceAttribution: 'Publicly available referral integration fixture source',
+    sourceAttribution: DISTRIBUTION_PREVIEW_DEMO_SOURCE_ATTRIBUTION,
     isVisible: true,
     createdBy: curatorUserId,
   });
@@ -104,11 +135,13 @@ async function insertDevelopment(name: string) {
 
   const [insertResult] = await db.insert(developments).values({
     name,
+    slug: demoSlug,
     developmentType: 'residential',
     city: 'Johannesburg',
     province: 'Gauteng',
     cataloguePublisherId,
     transactionType: 'for_sale',
+    inventoryMode: 'aggregate',
     isPublished: 1,
     approvalStatus: 'approved',
     publishedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
@@ -151,6 +184,9 @@ async function insertProgram(input: {
     commissionModel: 'flat_percentage',
     defaultCommissionPercent: 2.5,
     defaultCommissionAmount: null,
+    referrerCommissionType: 'percentage',
+    referrerCommissionValue: '2.50',
+    referrerCommissionBasis: 'sale_price',
     tierAccessPolicy: input.tierAccessPolicy || 'open',
     payoutMilestone: 'transfer_registration',
     payoutMilestoneNotes: null,
@@ -239,70 +275,164 @@ async function insertRequiredDocument(developmentId: number) {
   return documentId;
 }
 
-async function insertAssessment(input: {
-  actorUserId: number;
-  purchasePrice: number;
-  includeSnapshot?: boolean;
-}) {
+function buildPolicyConfiguration() {
+  return {
+    sharingPermissionDocument: {
+      version: '1.0',
+      title: 'Prospect sharing permission',
+      content: 'The prospect agrees that their details may be shared with the developer.',
+    },
+    privacyNoticeDocument: {
+      version: '1.0',
+      title: 'Privacy notice',
+      content: 'The prospect has received the privacy notice for this referral.',
+    },
+    sharingPurpose: 'To introduce the prospect to the developer sales team.',
+    namedRecipients: [
+      {
+        name: 'Developer Sales Lead',
+        organization: 'Developer Sales',
+        role: 'Sales lead',
+      },
+    ],
+    signatureMethod: 'Signed electronic acknowledgement',
+    identityEvidence: {
+      acceptedEvidenceTypes: ['South African identity document'],
+      allowedMimeTypes: ['application/pdf', 'image/png'],
+      maxFileBytes: 1024 * 1024,
+      verificationInstructions: 'Verify that the identity document matches the prospect.',
+      authorizedRoles: ['Developer team'],
+    },
+    retention: {
+      abandonedIntake: { days: 30, startsFrom: 'draft_created' },
+      sharingPermission: { days: 365, startsFrom: 'evidence_captured' },
+      identityEvidence: { days: 365, startsFrom: 'evidence_captured' },
+      activeReferral: { days: 365, startsFrom: 'referral_submitted' },
+      withdrawnReferral: { days: 365, startsFrom: 'referral_withdrawn' },
+      closedReferral: { days: 365, startsFrom: 'referral_closed' },
+    },
+    workflowSteps: createDefaultReferralWorkflowSteps(),
+    creditReport: {
+      enabled: false,
+      providerName: null,
+      providerApprovalReference: null,
+      authorizationDocument: null,
+    },
+  };
+}
+
+async function insertActiveIntakePolicy(programId: number, actorUserId: number) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
-  const id = randomUUID();
-  await db.insert(affordabilityAssessments).values({
-    id,
-    actorUserId: input.actorUserId,
-    grossIncomeMonthly: 50000,
-    deductionsMonthly: 0,
-    depositAmount: 0,
-    assumptionsJson: {
-      interestRateAnnual: 11.75,
-      termMonths: 240,
-      maxRepaymentRatio: 0.3,
-      calcVersion: 'v1',
-    } as any,
-    outputsJson: {
-      maxMonthlyRepayment: 15000,
-      indicativeLoanAmount: input.purchasePrice,
-      indicativePurchaseMin: input.purchasePrice,
-      indicativePurchaseMax: input.purchasePrice,
-      purchasePrice: input.purchasePrice,
-      confidenceLabel: 'Indicative - needs credit verification',
-      confidenceLevel: 'standard',
-    } as any,
-    locationFilterJson: null,
-  });
-  createdState.assessmentIds.push(id);
+  const configuration = buildPolicyConfiguration();
+  const configurationDigest = createHash('sha256')
+    .update(canonicalJson(configuration), 'utf8')
+    .digest('hex');
 
-  let snapshotId: string | null = null;
-  if (input.includeSnapshot) {
-    snapshotId = randomUUID();
-    await db.insert(affordabilityMatchSnapshots).values({
-      id: snapshotId,
-      assessmentId: id,
-      matchesJson: {
-        assessmentId: id,
-        generatedAt: new Date().toISOString(),
-        purchasePrice: input.purchasePrice,
-        matches: [],
-      } as any,
+  const [insertResult] = await db.insert(distributionReferralIntakePolicyReleases).values({
+    programId,
+    policyVersion: 1,
+    status: 'active',
+    configuration: configuration as any,
+    configurationDigest,
+    approvalReference: `TEST-APPROVAL-${Date.now()}`,
+    publishedBy: actorUserId,
+    publishedAt: sql`CURRENT_TIMESTAMP`,
+    createdBy: actorUserId,
+    updatedBy: actorUserId,
+  });
+
+  const releaseId = Number((insertResult as any).insertId || 0);
+  createdState.intakePolicyReleaseIds.push(releaseId);
+  return releaseId;
+}
+
+function evidenceBase64() {
+  return Buffer.from(
+    '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n',
+    'utf8',
+  ).toString('base64');
+}
+
+async function completeIntake(input: {
+  caller: ReturnType<typeof createCaller>;
+  developmentId: number;
+}) {
+  const session = await input.caller.distribution.partner.createReferralIntakeSession({
+    developmentId: input.developmentId,
+    confirmedPermission: true,
+    confirmedPrivacyNotice: true,
+  });
+  createdState.intakeSessionUuids.push(session.sessionUuid);
+
+  const base64Content = evidenceBase64();
+  for (const evidenceType of [
+    'sharing_permission',
+    'privacy_notice',
+    'identity_document',
+  ] as const) {
+    await input.caller.distribution.partner.uploadReferralIntakeEvidence({
+      sessionUuid: session.sessionUuid,
+      evidenceType,
+      mimeType: 'application/pdf',
+      base64Content,
     });
-    createdState.snapshotIds.push(snapshotId);
   }
 
+  return session.sessionUuid;
+}
+
+async function seedScenario(input?: {
+  isActive?: boolean;
+  isReferralEnabled?: boolean;
+  includeSecondaryManagerFirst?: boolean;
+}) {
+  const actorUserId = await insertUser('agent');
+  await insertReferrerIdentity(actorUserId);
+  const managerUserId = await insertUser('agent');
+  const caller = createCaller(actorUserId, 'agent');
+
+  const developmentId = await insertDevelopment(`Referral Flow ${Date.now()}`);
+  const programId = await insertProgram({
+    developmentId,
+    isActive: input?.isActive ?? true,
+    isReferralEnabled: input?.isReferralEnabled ?? true,
+  });
+
+  if (input?.includeSecondaryManagerFirst) {
+    const nonPrimaryManagerId = await insertUser('agent');
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId: nonPrimaryManagerId,
+      isPrimary: false,
+      isActive: true,
+    });
+  }
+
+  await insertManagerAssignment({
+    developmentId,
+    managerUserId,
+    isPrimary: true,
+    isActive: true,
+  });
+  const templateId = await insertRequiredDocument(developmentId);
+  await insertNetworkAccess(developmentId, actorUserId);
+  await insertActiveIntakePolicy(programId, actorUserId);
+  const intakeSessionUuid = await completeIntake({ caller, developmentId });
+
   return {
-    assessmentId: id,
-    matchSnapshotId: snapshotId,
+    actorUserId,
+    managerUserId,
+    caller,
+    developmentId,
+    programId,
+    templateId,
+    intakeSessionUuid,
   };
 }
 
 describeWithDb('distribution.partner.submitReferral integration', () => {
-  // Fixture cleanup runs once per file, not per test. Every entity is created
-  // with a unique suffix, so no test depends on a previous test's deletion for
-  // isolation. Per-test delete cascades take next-key/gap locks on the shared
-  // auto-increment keyspaces (users, catalogue_publishers, developments) while
-  // sibling worker files insert their own fixtures into the same gaps; under
-  // the parallel disposable-DB runner this produced intermittent
-  // ER_LOCK_DEADLOCK failures whose victim statement varied between runs.
   afterAll(async () => {
     const db = await getDb();
     if (!db) return;
@@ -314,14 +444,31 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(distributionDeals).where(inArray(distributionDeals.id, dealIds));
     }
 
-    const snapshotIds = uniqueStringIds(createdState.snapshotIds);
-    if (snapshotIds.length) {
-      await db.delete(affordabilityMatchSnapshots).where(inArray(affordabilityMatchSnapshots.id, snapshotIds));
+    const sessionUuids = uniqueStringIds(createdState.intakeSessionUuids);
+    if (sessionUuids.length) {
+      const sessions = await db
+        .select({ id: distributionReferralIntakeSessions.id })
+        .from(distributionReferralIntakeSessions)
+        .where(inArray(distributionReferralIntakeSessions.sessionUuid, sessionUuids));
+      const sessionIds = sessions.map(row => Number(row.id));
+      if (sessionIds.length) {
+        await db
+          .delete(distributionReferralIntakeEvidence)
+          .where(inArray(distributionReferralIntakeEvidence.sessionId, sessionIds));
+        await db
+          .delete(distributionReferralIntakeEvents)
+          .where(inArray(distributionReferralIntakeEvents.sessionId, sessionIds));
+        await db
+          .delete(distributionReferralIntakeSessions)
+          .where(inArray(distributionReferralIntakeSessions.id, sessionIds));
+      }
     }
 
-    const assessmentIds = uniqueStringIds(createdState.assessmentIds);
-    if (assessmentIds.length) {
-      await db.delete(affordabilityAssessments).where(inArray(affordabilityAssessments.id, assessmentIds));
+    const intakePolicyReleaseIds = uniqueIds(createdState.intakePolicyReleaseIds);
+    if (intakePolicyReleaseIds.length) {
+      await db
+        .delete(distributionReferralIntakePolicyReleases)
+        .where(inArray(distributionReferralIntakePolicyReleases.id, intakePolicyReleaseIds));
     }
 
     const assignmentIds = uniqueIds(createdState.assignmentIds);
@@ -340,7 +487,9 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     const accessIds = uniqueIds(createdState.accessIds);
     if (accessIds.length) {
-      await db.delete(distributionDevelopmentAccess).where(inArray(distributionDevelopmentAccess.id, accessIds));
+      await db
+        .delete(distributionDevelopmentAccess)
+        .where(inArray(distributionDevelopmentAccess.id, accessIds));
     }
 
     const brandPartnershipIds = uniqueIds(createdState.brandPartnershipIds);
@@ -386,106 +535,61 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.accessIds = [];
     createdState.assignmentIds = [];
     createdState.dealIds = [];
-    createdState.assessmentIds = [];
-    createdState.snapshotIds = [];
+    createdState.intakePolicyReleaseIds = [];
+    createdState.intakeSessionUuids = [];
     createdState.requiredDocumentIds = [];
   });
 
-  it('blocks submission when program is inactive or referrals are disabled', async () => {
-    const actorUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
+  it('blocks submission when the program is inactive or referrals are disabled', async () => {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
 
-    const inactiveDevelopmentId = await insertDevelopment(`Inactive Program ${Date.now()}`);
-    await insertProgram({
-      developmentId: inactiveDevelopmentId,
-      isActive: false,
-      isReferralEnabled: true,
-    });
-    await insertManagerAssignment({
-      developmentId: inactiveDevelopmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(inactiveDevelopmentId);
-    await insertNetworkAccess(inactiveDevelopmentId, actorUserId);
+    const inactiveScenario = await seedScenario();
+    await db
+      .update(distributionPrograms)
+      .set({ isActive: 0 })
+      .where(eq(distributionPrograms.id, inactiveScenario.programId));
 
-    const inactiveError = (await caller.distribution.partner
+    const inactiveError = (await inactiveScenario.caller.distribution.partner
       .submitReferral({
-        developmentId: inactiveDevelopmentId,
+        developmentId: inactiveScenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: inactiveScenario.intakeSessionUuid,
         buyerName: 'Inactive Buyer',
       })
-      .catch(error => error)) as TRPCError & {
-      data?: {
-        errorCode: string;
-        reasons: Array<{ code: string; message: string }>;
-      };
-    };
+      .catch(error => error)) as TRPCError;
 
     expect(inactiveError).toBeInstanceOf(TRPCError);
-    expect(inactiveError.data?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
-    expect(inactiveError.data?.reasons).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'PROGRAM_INACTIVE' })]),
-    );
+    expect(inactiveError.code).toBe('FORBIDDEN');
+    expect(inactiveError.message).toContain('not part of the active referral network');
 
-    const disabledDevelopmentId = await insertDevelopment(`Disabled Program ${Date.now()}`);
-    await insertProgram({
-      developmentId: disabledDevelopmentId,
-      isActive: true,
-      isReferralEnabled: false,
-    });
-    await insertManagerAssignment({
-      developmentId: disabledDevelopmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(disabledDevelopmentId);
-    await insertNetworkAccess(disabledDevelopmentId, actorUserId);
+    const disabledScenario = await seedScenario();
+    await db
+      .update(distributionPrograms)
+      .set({ isReferralEnabled: 0 })
+      .where(eq(distributionPrograms.id, disabledScenario.programId));
 
-    const disabledError = (await caller.distribution.partner
+    const disabledError = (await disabledScenario.caller.distribution.partner
       .submitReferral({
-        developmentId: disabledDevelopmentId,
+        developmentId: disabledScenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: disabledScenario.intakeSessionUuid,
         buyerName: 'Disabled Buyer',
       })
-      .catch(error => error)) as TRPCError & {
-      data?: {
-        errorCode: string;
-        reasons: Array<{ code: string; message: string }>;
-      };
-    };
+      .catch(error => error)) as TRPCError;
 
     expect(disabledError).toBeInstanceOf(TRPCError);
-    expect(disabledError.data?.errorCode).toBe('PROGRAM_NOT_ELIGIBLE');
-    expect(disabledError.data?.reasons).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: 'REFERRALS_DISABLED' })]),
-    );
+    expect(disabledError.code).toBe('FORBIDDEN');
+    expect(disabledError.message).toContain('not part of the active referral network');
   }, INTEGRATION_TIMEOUT_MS);
 
   it('allows submission when program is eligible', async () => {
-    const actorUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
+    const scenario = await seedScenario();
 
-    const developmentId = await insertDevelopment(`Eligible Program ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
-      tierAccessPolicy: 'open',
-    });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-
-    const result = await caller.distribution.partner.submitReferral({
-      developmentId,
+    const result = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Eligible Buyer',
       buyerEmail: `buyer-${Date.now()}@example.com`,
     });
@@ -494,20 +598,20 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     expect(Number(result.dealId)).toBeGreaterThan(0);
     expect(result.status).toBe('submitted');
-    expect(Number(result.managerUserId)).toBe(Number(managerUserId));
+    expect(Number(result.managerUserId)).toBe(Number(scenario.managerUserId));
   }, INTEGRATION_TIMEOUT_MS);
 
-  it('allows the submitting referrer to upload application documents for manager review', async () => {
+  it('requires the complete intake evidence before submission', async () => {
     const actorUserId = await insertUser('agent');
+    await insertReferrerIdentity(actorUserId);
     const managerUserId = await insertUser('agent');
     const caller = createCaller(actorUserId, 'agent');
 
-    const developmentId = await insertDevelopment(`Document Upload ${Date.now()}`);
-    await insertProgram({
+    const developmentId = await insertDevelopment(`Incomplete Intake ${Date.now()}`);
+    const programId = await insertProgram({
       developmentId,
       isActive: true,
       isReferralEnabled: true,
-      tierAccessPolicy: 'open',
     });
     await insertManagerAssignment({
       developmentId,
@@ -515,123 +619,85 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       isPrimary: true,
       isActive: true,
     });
-    const documentId = await insertRequiredDocument(developmentId);
+    await insertRequiredDocument(developmentId);
     await insertNetworkAccess(developmentId, actorUserId);
+    await insertActiveIntakePolicy(programId, actorUserId);
 
-    const submitted = await caller.distribution.partner.submitReferral({
+    const session = await caller.distribution.partner.createReferralIntakeSession({
       developmentId,
+      confirmedPermission: true,
+      confirmedPrivacyNotice: true,
+    });
+    createdState.intakeSessionUuids.push(session.sessionUuid);
+
+    const error = (await caller.distribution.partner
+      .submitReferral({
+        developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: session.sessionUuid,
+        buyerName: 'Incomplete Buyer',
+      })
+      .catch(err => err)) as TRPCError;
+
+    expect(error).toBeInstanceOf(TRPCError);
+    expect(error.code).toBe('PRECONDITION_FAILED');
+    expect(error.message).toContain('Upload the signed sharing permission');
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('keeps secure application-document upload paused', async () => {
+    const scenario = await seedScenario();
+    const submitted = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Document Buyer',
       buyerEmail: `document-buyer-${Date.now()}@example.com`,
     });
     createdState.dealIds.push(Number(submitted.dealId));
 
-    const result = await caller.distribution.partner.submitReferralDocument({
-      dealId: Number(submitted.dealId),
-      templateId: documentId,
-      submittedFileUrl: 'https://example.com/signed-id.pdf',
-      submittedFileName: 'signed-id.pdf',
+    await expect(
+      scenario.caller.distribution.partner.submitReferralDocument({
+        dealId: Number(submitted.dealId),
+        templateId: scenario.templateId,
+      }),
+    ).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: expect.stringContaining('Secure deal-document storage'),
     });
-
-    expect(result.success).toBe(true);
-    expect(result.docProgress).toMatchObject({
-      requiredCount: 1,
-      verifiedRequiredCount: 0,
-    });
-    expect(result.applicationDocuments).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          templateId: documentId,
-          status: 'received',
-          submittedFileName: 'signed-id.pdf',
-        }),
-      ]),
-    );
-
-    const detail = await caller.distribution.partner.getReferral({ dealId: Number(submitted.dealId) });
-    expect(detail.docProgress).toMatchObject({
-      requiredCount: 1,
-      verifiedRequiredCount: 0,
-    });
-    expect(detail.applicationDocuments).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          templateId: documentId,
-          status: 'received',
-          submittedFileUrl: 'https://example.com/signed-id.pdf',
-        }),
-      ]),
-    );
   }, INTEGRATION_TIMEOUT_MS);
 
   it('selects primary active manager for assignment', async () => {
-    const actorUserId = await insertUser('agent');
-    const nonPrimaryManagerId = await insertUser('agent');
-    const primaryManagerId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
+    const scenario = await seedScenario({ includeSecondaryManagerFirst: true });
 
-    const developmentId = await insertDevelopment(`Primary Manager ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
-    });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId: nonPrimaryManagerId,
-      isPrimary: false,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId: primaryManagerId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-
-    const result = await caller.distribution.partner.submitReferral({
-      developmentId,
+    const result = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Primary Assigned Buyer',
       buyerPhone: `+27${Date.now().toString().slice(-9)}`,
     });
 
     createdState.dealIds.push(Number(result.dealId));
-    expect(Number(result.managerUserId)).toBe(Number(primaryManagerId));
+    expect(Number(result.managerUserId)).toBe(Number(scenario.managerUserId));
   }, INTEGRATION_TIMEOUT_MS);
 
   it('supports idempotent submission via clientReference', async () => {
-    const actorUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
-
-    const developmentId = await insertDevelopment(`Idempotent Program ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
-    });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-
+    const scenario = await seedScenario();
     const clientReference = `CLIENT-REF-${Date.now()}`;
-    const first = await caller.distribution.partner.submitReferral({
-      developmentId,
+
+    const first = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Idempotent Buyer',
       clientReference,
     });
     createdState.dealIds.push(Number(first.dealId));
 
-    const second = await caller.distribution.partner.submitReferral({
-      developmentId,
+    const second = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Idempotent Buyer',
       clientReference,
     });
@@ -640,169 +706,35 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(Boolean((second as any).wasDuplicate)).toBe(true);
   }, INTEGRATION_TIMEOUT_MS);
 
-  it("blocks attaching another partner's assessmentId", async () => {
-    const ownerUserId = await insertUser('agent');
-    const actorUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
-
-    const developmentId = await insertDevelopment(`Assessment Ownership ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
-    });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-
-    const assessment = await insertAssessment({
-      actorUserId: ownerUserId,
-      purchasePrice: 1200000,
-      includeSnapshot: false,
-    });
-
-    const error = (await caller.distribution.partner
-      .submitReferral({
-        developmentId,
-        buyerName: 'Ownership Blocked',
-        assessmentId: assessment.assessmentId,
-      })
-      .catch(err => err)) as TRPCError;
-
-    expect(error).toBeInstanceOf(TRPCError);
-    expect(error.code).toBe('BAD_REQUEST');
-    expect(error.message).toContain('assessmentId is invalid or not accessible');
-  }, INTEGRATION_TIMEOUT_MS);
-
-  it('attaching assessment creates snapshot when missing and stores lock linkage', async () => {
-    const actorUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const caller = createCaller(actorUserId, 'agent');
-    const db = await getDb();
-    if (!db) throw new Error('Database not available');
-
-    const developmentId = await insertDevelopment(`Assessment Attach ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
-    });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorUserId);
-
-    const assessment = await insertAssessment({
-      actorUserId,
-      purchasePrice: 1350000,
-      includeSnapshot: false,
-    });
-
-    const beforeSnapshots = await db
-      .select({ id: affordabilityMatchSnapshots.id })
-      .from(affordabilityMatchSnapshots)
-      .where(eq(affordabilityMatchSnapshots.assessmentId, assessment.assessmentId));
-    expect(beforeSnapshots.length).toBe(0);
-
-    const result = await caller.distribution.partner.submitReferral({
-      developmentId,
-      buyerName: 'Snapshot Attach Buyer',
-      assessmentId: assessment.assessmentId,
-    });
-    createdState.dealIds.push(Number(result.dealId));
-
-    const [deal] = await db
-      .select({
-        assessmentId: distributionDeals.affordabilityAssessmentId,
-        matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
-        affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
-      })
-      .from(distributionDeals)
-      .where(eq(distributionDeals.id, Number(result.dealId)))
-      .limit(1);
-
-    expect(String(deal?.assessmentId || '')).toBe(assessment.assessmentId);
-    expect(String(deal?.matchSnapshotId || '')).not.toBe('');
-    expect(Number(deal?.affordabilityPurchasePrice || 0)).toBeGreaterThan(0);
-
-    const snapshotRows = await db
-      .select({
-        id: affordabilityMatchSnapshots.id,
-      })
-      .from(affordabilityMatchSnapshots)
-      .where(eq(affordabilityMatchSnapshots.assessmentId, assessment.assessmentId));
-    expect(snapshotRows.length).toBe(1);
-    createdState.snapshotIds.push(String(snapshotRows[0].id));
-
-    const [assessmentRow] = await db
-      .select({
-        lockedAt: affordabilityAssessments.lockedAt,
-        lockedByDealId: affordabilityAssessments.lockedByDealId,
-      })
-      .from(affordabilityAssessments)
-      .where(eq(affordabilityAssessments.id, assessment.assessmentId))
-      .limit(1);
-    expect(assessmentRow?.lockedAt).toBeTruthy();
-    expect(Number(assessmentRow?.lockedByDealId || 0)).toBe(Number(result.dealId));
-
-    const affordabilityEvents = await db
-      .select({
-        note: distributionDealEvents.notes,
-      })
-      .from(distributionDealEvents)
-      .where(eq(distributionDealEvents.dealId, Number(result.dealId)));
-    expect(
-      affordabilityEvents.some(event => String(event.note || '').includes('Affordability Snapshot Attached')),
-    ).toBe(true);
-  }, INTEGRATION_TIMEOUT_MS);
-
   it('listMyReferrals returns only the actor own referrals', async () => {
-    const actorAUserId = await insertUser('agent');
+    const scenario = await seedScenario();
     const actorBUserId = await insertUser('agent');
-    const managerUserId = await insertUser('agent');
-    const callerA = createCaller(actorAUserId, 'agent');
+    await insertReferrerIdentity(actorBUserId);
     const callerB = createCaller(actorBUserId, 'agent');
-
-    const developmentId = await insertDevelopment(`Ownership Program ${Date.now()}`);
-    await insertProgram({
-      developmentId,
-      isActive: true,
-      isReferralEnabled: true,
+    const sessionB = await completeIntake({
+      caller: callerB,
+      developmentId: scenario.developmentId,
     });
-    await insertManagerAssignment({
-      developmentId,
-      managerUserId,
-      isPrimary: true,
-      isActive: true,
-    });
-    await insertRequiredDocument(developmentId);
-    await insertNetworkAccess(developmentId, actorAUserId);
 
-    const actorADeal = await callerA.distribution.partner.submitReferral({
-      developmentId,
+    const actorADeal = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
       buyerName: 'Actor A Buyer',
       buyerEmail: `actor-a-${Date.now()}@example.com`,
     });
     createdState.dealIds.push(Number(actorADeal.dealId));
 
     const actorBDeal = await callerB.distribution.partner.submitReferral({
-      developmentId,
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: sessionB,
       buyerName: 'Actor B Buyer',
       buyerEmail: `actor-b-${Date.now()}@example.com`,
     });
     createdState.dealIds.push(Number(actorBDeal.dealId));
 
-    const actorAReferrals = await callerA.distribution.partner.listMyReferrals({
+    const actorAReferrals = await scenario.caller.distribution.partner.listMyReferrals({
       limit: 50,
     });
     const actorADealIds = actorAReferrals.items.map(item => Number(item.dealId));
