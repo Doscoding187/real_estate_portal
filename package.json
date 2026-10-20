@@ -234,6 +234,7 @@
     "db:prospect-journey-e2e:reset": "tsx scripts/retiredDatabaseMutation.ts db:prospect-journey-e2e:reset",
     "db:readiness": "tsx scripts/databaseAuthorityCli.ts readiness",
     "db:reference:prepare": "tsx scripts/databaseAuthorityCli.ts reference:prepare",
+    "db:reference:verify-state": "tsx scripts/verify-reference-release.ts",
     "db:reference:verify": "tsx scripts/databaseAuthorityCli.ts reference:verify",
     "db:release-commercial-quote-terms-recovery:apply": "tsx scripts/databaseAuthorityCli.ts release-commercial-quote-terms-recovery:apply",
     "db:release-commercial-quote-terms-recovery:plan": "tsx scripts/databaseAuthorityCli.ts release-commercial-quote-terms-recovery:plan",
