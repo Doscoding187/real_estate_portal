@@ -1,4 +1,5 @@
 import { getDb } from "../server/db";
+import { safeErrorSummary } from '../server/_core/safeError';
 
 /**
  * Verification script for Property Results Optimization migration
@@ -195,6 +196,6 @@ verifyMigration()
     process.exit(0);
   })
   .catch((error) => {
-    console.error("\n💥 Verification failed with error:", error);
+    console.error("\n💥 Verification failed with error:", safeErrorSummary(error));
     process.exit(1);
   });

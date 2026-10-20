@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CheckCircle2, Mail, Phone, User, MessageSquare, TrendingUp } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { createLeadCaptureRequestId, publicLeadConsent } from '@/lib/leadCapture';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 interface LeadCaptureFormProps {
   developmentId: number;
@@ -43,6 +44,7 @@ export function LeadCaptureForm({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [consentError, setConsentError] = useState(false);
@@ -79,6 +81,12 @@ export function LeadCaptureForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const currentPhoneError = agentProfilePhoneError(phone);
+    if (currentPhoneError) {
+      setPhoneError(currentPhoneError);
+      return;
+    }
 
     if (!consentAccepted) {
       setConsentError(true);
@@ -190,7 +198,9 @@ export function LeadCaptureForm({
 
         {/* Phone */}
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number</Label>
+          <Label htmlFor="phone">
+            Phone Number <span className="text-red-500">*</span>
+          </Label>
           <div className="relative">
             <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
@@ -198,10 +208,15 @@ export function LeadCaptureForm({
               type="tel"
               placeholder="+27 12 345 6789"
               value={phone}
-              onChange={e => setPhone(e.target.value)}
+              onChange={e => {
+                setPhone(e.target.value);
+                setPhoneError(agentProfilePhoneError(e.target.value));
+              }}
+              required
               className="pl-10"
             />
           </div>
+          {phoneError && <p className="text-xs text-red-600">{phoneError}</p>}
         </div>
 
         {/* Message */}

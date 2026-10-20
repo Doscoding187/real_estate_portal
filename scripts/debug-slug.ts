@@ -2,6 +2,7 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +38,7 @@ async function main() {
       console.log('FAILURE: Development NOT found (returned null).');
     }
   } catch (error) {
-    console.error('ERROR during query:', error);
+    console.error('ERROR during query:', safeErrorSummary(error));
   }
   process.exit(0);
 }

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { getPublicDevelopmentBySlug } from '../server/services/developmentService';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function testQuery() {
   console.log('\n--- Testing getPublicDevelopmentBySlug ---');
@@ -24,7 +25,7 @@ async function testQuery() {
       console.log('  3. SQL error (check logs above)');
     }
   } catch (error) {
-    console.error('\n❌ Query error:', error);
+    console.error('\n❌ Query error:', safeErrorSummary(error));
   }
 
   process.exit(0);

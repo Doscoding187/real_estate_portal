@@ -1,0 +1,128 @@
+{
+  "evidenceClass": "local-load-rehearsal-not-the-hosted-24h-gate",
+  "generatedAt": "2026-10-17T14:05:13.105Z",
+  "authority": {
+    "targetClass": "disposable-worktree",
+    "targetFingerprintHash": "9d420a2d33cd03f906aee882931bfb7eda6401806c207d954da4ea6bcfc8fa09"
+  },
+  "config": {
+    "durationSeconds": 60,
+    "rps": 5,
+    "concurrency": 4,
+    "scenarios": [],
+    "evidenceOut": "docs/architecture/launch-readiness-and-product-convergence/evidence/b17-load-rehearsal-metrics-2026-10-17/rehearsal-60s-5rps.json"
+  },
+  "thresholds": {
+    "read": {
+      "errorRateMax": 0.001,
+      "p95MsMax": 750,
+      "p99MsMax": 2000
+    },
+    "write": {
+      "errorRateMax": 0.001,
+      "p95MsMax": 1000,
+      "p99MsMax": 2000
+    },
+    "connectionLease": {
+      "p95MsMax": 250
+    }
+  },
+  "achievedRps": 5.01,
+  "elapsedSeconds": 59.82,
+  "scenarios": [
+    {
+      "name": "property-detail",
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 10.79,
+      "p95Ms": 27.12,
+      "p99Ms": 76.8,
+      "maxMs": 76.8,
+      "kind": "read",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "name": "property-related-feed",
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 32.87,
+      "p95Ms": 47.9,
+      "p99Ms": 73.07,
+      "maxMs": 73.07,
+      "kind": "read",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "name": "property-detail-view",
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 24.79,
+      "p95Ms": 37.81,
+      "p99Ms": 39.56,
+      "maxMs": 39.56,
+      "kind": "write",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "name": "search-typed-city",
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 27.01,
+      "p95Ms": 43.27,
+      "p99Ms": 70.76,
+      "maxMs": 70.76,
+      "kind": "read",
+      "pass": true,
+      "failures": []
+    },
+    {
+      "name": "search-typed-province",
+      "requests": 60,
+      "errors": 0,
+      "errorRate": 0,
+      "p50Ms": 26.83,
+      "p95Ms": 43.4,
+      "p99Ms": 71.53,
+      "maxMs": 71.53,
+      "kind": "read",
+      "pass": true,
+      "failures": []
+    }
+  ],
+  "connectionLease": {
+    "name": "connection-lease",
+    "requests": 4140,
+    "errors": 0,
+    "errorRate": 0,
+    "p50Ms": 0.02,
+    "p95Ms": 0.56,
+    "p99Ms": 1.52,
+    "maxMs": 7.17,
+    "pass": true,
+    "failures": []
+  },
+  "cleanup": {
+    "snapshotRows": 1,
+    "restoredViews": true,
+    "error": null
+  },
+  "unavailableScenarios": [],
+  "notes": [
+    "Bounded local smoke rehearsal of public read procedures and one public detail-view write path.",
+    "Not the B17 24-hour representative workload, resource-headroom, restart/backlog, backup/restore or provider recovery evidence.",
+    "View counters touched by the write scenario are restored from a pre-run snapshot.",
+    "Connection-lease latency observes the authorized runtime pool only; no SQL or pool configuration is changed.",
+    "Workload started 2026-10-17T14:04:13.258Z."
+  ],
+  "verdict": {
+    "pass": true,
+    "failures": []
+  }
+}

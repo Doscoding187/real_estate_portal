@@ -73,6 +73,29 @@ const leadSummary = {
   },
 };
 
+const portfolioLeadSummary = {
+  ...leadSummary,
+  demand: {
+    ...leadSummary.demand,
+    capturedLeadCount: 8,
+  },
+  funnel: {
+    ...leadSummary.funnel,
+    stages: {
+      new: 1,
+      contacted: 1,
+      qualified: 1,
+      viewing: 1,
+      offer: 1,
+      dealInProgress: 1,
+      closedWon: 1,
+      closedLost: 1,
+    },
+    openLeadCount: 6,
+    closedWonCount: 1,
+  },
+};
+
 describe('developer operating home', () => {
   it('keeps a blank changes-requested review authoritative', () => {
     const summary = buildDevelopmentOperatingSummary({
@@ -137,7 +160,7 @@ describe('developer operating home', () => {
       } as any,
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [],
-      leadSummary,
+      leadSummary: portfolioLeadSummary,
       commercialAccess: {
         eligible: true,
         reason: 'active_launch_access',
@@ -151,7 +174,7 @@ describe('developer operating home', () => {
       development: validDevelopment as any,
       persistedUnitTypes: [validUnitType] as any,
       reviewRows: [],
-      leadSummary,
+      leadSummary: portfolioLeadSummary,
       commercialAccess: {
         eligible: true,
         reason: 'active_launch_access',
@@ -184,7 +207,20 @@ describe('developer operating home', () => {
         trackedDevelopmentCount: 2,
         configuredDevelopmentCount: 2,
       },
-      leads: { capturedLeadCount: 4, openLeadCount: 2 },
+      leads: {
+        capturedLeadCount: 16,
+        openLeadCount: 12,
+        stageCounts: {
+          new: 2,
+          contacted: 2,
+          qualified: 2,
+          viewing: 2,
+          offer: 2,
+          dealInProgress: 2,
+          closedWon: 2,
+          closedLost: 2,
+        },
+      },
     });
     expect(home.portfolio.nextAction?.developmentId).toBe(43);
   });

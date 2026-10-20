@@ -16,6 +16,7 @@ import {
 } from './publicPropertyEligibilityService';
 import { getPublicPropertyMarketFact, toPublicPropertyDetailDto } from './publicPropertyDto';
 import { buildSuburbMarketInsights } from './suburbMarketInsights';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * IMPROVED Service for handling location page data aggregation
@@ -325,7 +326,10 @@ export const locationPagesService = {
         eq(properties.provinceId, province.id),
       );
     } catch (error) {
-      console.warn('[LocationPages] Public property eligibility failed for province', error);
+      console.warn(
+        '[LocationPages] Public property eligibility failed for province',
+        safeErrorSummary(error),
+      );
       throw error;
     }
 
@@ -356,7 +360,7 @@ export const locationPagesService = {
         )
         .slice(0, 12);
     } catch (error) {
-      console.warn('[LocationPages] City list query failed for province', error);
+      console.warn('[LocationPages] City list query failed for province', safeErrorSummary(error));
       throw error;
     }
 
@@ -380,7 +384,10 @@ export const locationPagesService = {
         )
         .limit(6);
     } catch (error) {
-      console.warn('[LocationPages] Developments query failed for province', error);
+      console.warn(
+        '[LocationPages] Developments query failed for province',
+        safeErrorSummary(error),
+      );
       throw error;
     }
 
@@ -409,7 +416,10 @@ export const locationPagesService = {
         )
         .slice(0, 10);
     } catch (error) {
-      console.warn('[LocationPages] Trending suburbs query failed for province', error);
+      console.warn(
+        '[LocationPages] Trending suburbs query failed for province',
+        safeErrorSummary(error),
+      );
       throw error;
     }
 
@@ -603,7 +613,7 @@ export const locationPagesService = {
           .slice(0, 10),
       };
     } catch (error) {
-      console.error('[LocationPages] Error in getCityData:', error);
+      console.error('[LocationPages] Error in getCityData:', safeErrorSummary(error));
       throw error;
     }
   },
@@ -660,7 +670,10 @@ export const locationPagesService = {
         eq(properties.suburbId, suburb.id),
       );
     } catch (error) {
-      console.warn('[LocationPages] Public property eligibility failed for suburb', error);
+      console.warn(
+        '[LocationPages] Public property eligibility failed for suburb',
+        safeErrorSummary(error),
+      );
       throw error;
     }
 
@@ -681,7 +694,10 @@ export const locationPagesService = {
         cityName: suburb.cityName,
       });
     } catch (error) {
-      console.warn('[LocationPages] Suburb development summary failed', error);
+      console.warn(
+        '[LocationPages] Suburb development summary failed',
+        safeErrorSummary(error),
+      );
     }
 
     return {

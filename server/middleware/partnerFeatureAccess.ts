@@ -17,6 +17,7 @@ import {
   canPerformAction,
   type SubscriptionFeatures,
 } from '../services/partnerSubscriptionService';
+import { safeErrorSummary } from '../_core/safeError';
 
 // =====================================================
 // MIDDLEWARE
@@ -61,7 +62,7 @@ export function requirePartnerFeature(feature: keyof SubscriptionFeatures) {
 
       next();
     } catch (error) {
-      console.error('Feature access check failed:', error);
+      console.error('Feature access check failed:', safeErrorSummary(error));
       res.status(500).json({ error: 'Failed to check feature access' });
     }
   };
@@ -103,7 +104,7 @@ export function requirePartnerAction(
 
       next();
     } catch (error) {
-      console.error('Action permission check failed:', error);
+      console.error('Action permission check failed:', safeErrorSummary(error));
       res.status(500).json({ error: 'Failed to check action permission' });
     }
   };
@@ -136,7 +137,7 @@ export async function attachPartnerSubscription(req: Request, res: Response, nex
 
     next();
   } catch (error) {
-    console.error('Failed to attach subscription:', error);
+    console.error('Failed to attach subscription:', safeErrorSummary(error));
     next();
   }
 }

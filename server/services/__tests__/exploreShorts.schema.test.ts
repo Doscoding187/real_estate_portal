@@ -8,6 +8,7 @@ import {
 } from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import fc from 'fast-check';
+import { safeErrorSummary } from '../../_core/safeError';
 
 /**
  * Feature: property-explore-shorts, Property 16: Platform integration
@@ -30,7 +31,7 @@ describe.skip('Explore Shorts Database Schema [LEGACY - uses exploreShorts]', ()
       await db.execute(sql`SELECT 1 FROM explore_highlight_tags LIMIT 1`);
       await db.execute(sql`SELECT 1 FROM explore_user_preferences LIMIT 1`);
     } catch (error) {
-      console.error('Tables not found. Run migration first:', error);
+      console.error('Tables not found. Run migration first:', safeErrorSummary(error));
       throw error;
     }
   });

@@ -19,5 +19,6 @@ describe('isPublicDeveloperProfilePath', () => {
     // rendered a publisher projection for slug "activities").
     expect(isPublicDeveloperProfilePath('/developer/activities')).toBe(false);
     expect(isPublicDeveloperProfilePath('/developer/units')).toBe(false);
+    expect(isPublicDeveloperProfilePath('/developer/documents')).toBe(false);
   });
 });

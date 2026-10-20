@@ -3,6 +3,7 @@
  * Run: npx tsx server/scripts/verify-publish-sanitization.ts
  */
 import { persistUnitTypes } from '../services/developmentService';
+import { safeErrorSummary } from '../_core/safeError';
 
 async function main() {
   const inserted: any[] = [];
@@ -78,6 +79,6 @@ async function main() {
 
 main().catch(err => {
   console.error('verify-publish-sanitization: FAIL');
-  console.error(err);
+  console.error('verify-publish-sanitization failed:', safeErrorSummary(err));
   process.exit(1);
 });

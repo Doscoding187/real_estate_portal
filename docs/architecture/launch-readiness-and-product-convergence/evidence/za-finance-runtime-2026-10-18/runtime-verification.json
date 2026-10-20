@@ -1,0 +1,65 @@
+{
+  "outcome": "PASS",
+  "results": [
+    {
+      "operation": "PutObject/GetObject",
+      "outcome": "PASS"
+    },
+    {
+      "operation": "bucket-list",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "bucket-versioning",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "bucket-policy",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "bucket-encryption",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "version-read",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "outside-prefix-write",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "object-delete",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "backup-read",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "backup-write",
+      "status": 403,
+      "code": "AccessDenied"
+    },
+    {
+      "operation": "cross-media-write",
+      "status": 403,
+      "code": "AccessDenied"
+    }
+  ],
+  "retainedTestObject": true,
+  "runtimePermissionsExercised": true,
+  "productionBindingsChanged": false,
+  "migrationCompleted": false,
+  "hostedOwnerIsolationVerified": false,
+  "infrastructureWritePermissionsTested": false
+}

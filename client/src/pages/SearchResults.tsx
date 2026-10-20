@@ -900,7 +900,7 @@ export default function SearchResults({
 
       {/* prettier-ignore */}
       <main id="main-content" tabIndex={-1} className="outline-none">
-      <div className="mx-auto w-full max-w-[1480px] px-4 pb-32 pt-44 sm:px-6 md:pt-24 lg:px-8 lg:pb-16">
+      <div className="mx-auto w-full max-w-[1480px] px-4 pb-32 pt-6 sm:px-6 md:pt-24 lg:px-8 lg:pb-16">
         <div className="w-full">
           {/* Header Section */}
           <div className="mb-5">
@@ -939,7 +939,6 @@ export default function SearchResults({
               sortBy={sortBy}
               onViewModeChange={setViewMode}
               onSortChange={handleSortChange}
-              onOpenFilters={() => setIsMobileFilterOpen(true)}
               onSaveSearch={handleSaveSearch}
             />
           </div>

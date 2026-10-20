@@ -8,6 +8,7 @@
 import { redisCache, ExploreCacheKeys, CacheTTL } from '../lib/redis';
 import type { InferSelectModel } from 'drizzle-orm';
 import { exploreContent, exploreDiscoveryVideos } from '../../drizzle/schema';
+import { safeErrorSummary } from '../_core/safeError';
 
 type ExploreContent = InferSelectModel<typeof exploreContent>;
 type ExploreDiscoveryVideo = InferSelectModel<typeof exploreDiscoveryVideos>;
@@ -237,7 +238,7 @@ export async function warmUpCache(
 
     console.log('[Cache] Warm-up complete');
   } catch (error) {
-    console.error('[Cache] Warm-up failed:', error);
+    console.error('[Cache] Warm-up failed:', safeErrorSummary(error));
   }
 }
 

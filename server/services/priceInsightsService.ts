@@ -4,6 +4,7 @@ import { properties } from '../../drizzle/schema/listings';
 import { developments, unitTypes } from '../../drizzle/schema/developments';
 import { provinces, cities, suburbs, locations } from '../../drizzle/schema/locations';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
+import { safeErrorSummary } from '../_core/safeError';
 
 export interface CityInsights {
   cityName: string;
@@ -244,7 +245,7 @@ class PriceInsightsService {
       this.cache.set(cacheKey, { data: insights, timestamp: Date.now() });
       return insights;
     } catch (error) {
-      console.error('Error fetching all city insights:', error);
+      console.error('Error fetching all city insights:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -287,7 +288,7 @@ class PriceInsightsService {
         confidence,
       };
     } catch (error) {
-      console.error(`Error fetching insights for city ${cityId}:`, error);
+      console.error(`Error fetching insights for city ${cityId}:`, safeErrorSummary(error));
       throw error;
     }
   }
@@ -317,7 +318,7 @@ class PriceInsightsService {
         confidence: calculateConfidence(row.listingCount),
       }));
     } catch (error) {
-      console.error(`Error fetching micromarkets for city ${cityId}:`, error);
+      console.error(`Error fetching micromarkets for city ${cityId}:`, safeErrorSummary(error));
       throw error;
     }
   }

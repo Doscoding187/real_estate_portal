@@ -48,6 +48,8 @@ export type AgencyLead = {
   firstResponseMinutes?: number | null;
   firstResponseOverdue?: boolean;
   firstResponseDueAt?: string | Date | null;
+  firstOutreachOverdue?: boolean;
+  firstOutreachDueAt?: string | Date | null;
   nextFollowUp?: string | Date | null;
   createdAt?: string | Date | null;
   agentId?: number | null;
@@ -163,7 +165,7 @@ export type LeadSignals = {
   newLeadCount: number;
   unassignedCount: number;
   contactedFollowUpCount: number;
-  firstResponseOverdueCount: number;
+  firstOutreachOverdueCount: number;
   viewingCount: number;
   offerCount: number;
 };
@@ -230,6 +232,8 @@ export type WorkspaceContentProps = {
   setLeadSearch: (value: string) => void;
   leadStatus: string;
   setLeadStatus: (value: string) => void;
+  leadOwner: string;
+  setLeadOwner: (value: string) => void;
   leadSource: string;
   setLeadSource: (value: string) => void;
   uniqueSources: string[];

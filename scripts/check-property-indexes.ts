@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -51,7 +52,7 @@ async function checkIndexes() {
     await connection.end();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', safeErrorSummary(error));
     if (connection) await connection.end();
     process.exit(1);
   }

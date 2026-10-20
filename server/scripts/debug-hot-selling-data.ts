@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, unitTypes } from '../../drizzle/schema';
 
 async function debugHotSellingData() {
@@ -58,6 +59,6 @@ async function debugHotSellingData() {
 }
 
 debugHotSellingData().catch(err => {
-  console.error(err);
+  console.error('debug-hot-selling-data failed:', safeErrorSummary(err));
   process.exit(1);
 });

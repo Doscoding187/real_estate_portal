@@ -34,7 +34,9 @@ describe('commercial monetization S0 authority containment', () => {
     const service = readRepoFile('server/services/subscriptionService.ts');
 
     expect(router).toContain('rejectLegacyDeveloperTrialCategory');
-    expect(router).toContain('Legacy agent and developer subscription administration is retired');
+    expect(router).toContain('Legacy agent subscription operations are retired.');
+    expect(router).toContain('Legacy developer subscription operations are retired.');
+    expect(router).toContain('Legacy developer free trials are retired.');
     expect(router).toContain("plan.category !== 'developer'");
     expect(router).toContain("sp.category NOT IN ('agent', 'developer')");
     expect(service).toContain('Legacy free trials for launch audiences are retired');

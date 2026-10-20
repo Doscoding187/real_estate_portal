@@ -1,9 +1,9 @@
 # Developer homepage and public journey review
 
-Date: 14 October 2026  
-Branch: `feat/homepage-ux-review-20261013`  
-Reviewed application commit: `6d78213e0`  
-Preview: http://localhost:3010  
+Date: 14 October 2026<br>
+Branch: `feat/homepage-ux-review-20261013`<br>
+Reviewed application commit: `6d78213e0`<br>
+Preview: http://localhost:3010<br>
 Screenshots and evidence: `/home/edwardspc/Desktop/Dev/review-artifacts/developer-journey-review-20261014`
 
 ## Verdict

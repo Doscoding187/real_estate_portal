@@ -7,6 +7,7 @@ import {
   assertDeployedTrustProxyConfiguration,
   loadAppRuntimeEnv,
   resolveAppRuntimeEnv,
+  resolveHttpListenHost,
 } from '../runtimeBootstrap';
 
 const tempDirs: string[] = [];
@@ -135,5 +136,29 @@ describe('loadAppRuntimeEnv', () => {
 
     expect(env.DATABASE_URL).toBe('mysql://user:pass@host/prod');
     expect(env.DATABASE_MIGRATION_URL).toBeUndefined();
+  });
+});
+
+describe('local visual journey listener', () => {
+  const local = {
+    PROPERTY_LISTIFY_LOCAL_VISUAL_JOURNEY: 'true',
+    NODE_ENV: 'test',
+    APP_ENV: 'test',
+    DATABASE_AUTHORITY_PARENT_FINGERPRINT: 'owned-target',
+    DATABASE_AUTHORITY_CORRELATION_ID: 'local-run',
+  };
+  it('binds the governed demo exclusively to loopback', () => {
+    expect(resolveHttpListenHost(local)).toBe('127.0.0.1');
+    expect(resolveHttpListenHost({ NODE_ENV: 'production' })).toBe('0.0.0.0');
+  });
+  it.each([
+    { APP_ENV: 'production' },
+    { NODE_ENV: 'development' },
+    { DATABASE_AUTHORITY_PARENT_FINGERPRINT: '' },
+    { DATABASE_AUTHORITY_CORRELATION_ID: '' },
+    { RAILWAY_ENVIRONMENT_NAME: 'production' },
+    { VERCEL_ENV: 'preview' },
+  ])('rejects an unwrapped or deployed demo %j', override => {
+    expect(() => resolveHttpListenHost({ ...local, ...override })).toThrow('authority-wrapped');
   });
 });

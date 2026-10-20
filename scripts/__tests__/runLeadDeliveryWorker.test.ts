@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClaimedLeadDeliveryAttempt } from '../../server/services/leadDeliveryService';
 
 const previousSkipDbInit = process.env.SKIP_DB_INIT;
@@ -36,7 +36,11 @@ vi.mock('../../server/services/publisherLeadService', () => ({
 }));
 
 describe('one-shot hosted lead worker', () => {
+  let baselineExitCode: number | undefined;
+
   beforeEach(() => {
+    baselineExitCode = process.exitCode;
+    process.exitCode = undefined;
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getWorkerDb.mockResolvedValue(mocks.database);
@@ -44,6 +48,10 @@ describe('one-shot hosted lead worker', () => {
     mocks.backlog.mockResolvedValue({});
     mocks.dispatchPublisher.mockResolvedValue({ status: 'delivered' });
     vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    process.exitCode = baselineExitCode;
   });
 
   it('passes its admitted database to publisher dispatch and drains the pool', async () => {
@@ -84,6 +92,25 @@ describe('one-shot hosted lead worker', () => {
   it('drains the worker database when the durable batch fails', async () => {
     mocks.runWorker.mockRejectedValue(new Error('durable batch failed'));
     await expect(import('../runLeadDeliveryWorker')).rejects.toThrow('durable batch failed');
+    expect(mocks.shutdownDb).toHaveBeenCalledOnce();
+  });
+
+  it('exits clean when the run and backlog carry no attention states', async () => {
+    mocks.runWorker.mockResolvedValue({ claimed: 1, completed: 1, unknown: 0 });
+    mocks.backlog.mockResolvedValue({ completed: 1 });
+    await import('../runLeadDeliveryWorker');
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it.each([
+    ['an unknown provider outcome in this run', { unknown: 1 }, {}],
+    ['a durable unknown backlog', { unknown: 0 }, { unknown: 1 }],
+    ['an exhausted retry budget', { unknown: 0 }, { exhausted: 1 }],
+  ])('signals operator attention with exit code 2 for %s', async (_label, run, backlog) => {
+    mocks.runWorker.mockResolvedValue({ claimed: 1, completed: 0, ...run });
+    mocks.backlog.mockResolvedValue(backlog);
+    await import('../runLeadDeliveryWorker');
+    expect(process.exitCode).toBe(2);
     expect(mocks.shutdownDb).toHaveBeenCalledOnce();
   });
 });

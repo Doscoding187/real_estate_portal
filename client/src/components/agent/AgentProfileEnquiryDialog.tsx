@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,6 +20,7 @@ import {
   publicLeadConsent,
 } from '@/lib/leadCapture';
 import { trpc } from '@/lib/trpc';
+import { agentProfilePhoneError } from '@shared/agentProfilePhone';
 
 type AgentProfileEnquiryDialogProps = {
   agentId: number;
@@ -27,6 +28,7 @@ type AgentProfileEnquiryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmitted?: () => void;
+  presentation?: 'dialog' | 'inline';
 };
 
 type AgentProfileEnquiryForm = {
@@ -57,7 +59,13 @@ export function AgentProfileEnquiryDialog({
   open,
   onOpenChange,
   onSubmitted,
+  presentation = 'dialog',
 }: AgentProfileEnquiryDialogProps) {
+  const inline = presentation === 'inline';
+  const fieldPrefix = useId();
+  const Header = inline ? 'header' : DialogHeader;
+  const Title = inline ? 'h3' : DialogTitle;
+  const Description = inline ? 'p' : DialogDescription;
   const [form, setForm] = useState<AgentProfileEnquiryForm>(emptyForm);
   const [captureRequestId, setCaptureRequestId] = useState(() => createLeadCaptureRequestId());
   const [acknowledgement, setAcknowledgement] = useState<string | null>(null);
@@ -106,11 +114,19 @@ export function AgentProfileEnquiryDialog({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (createLeadMutation.isPending) return;
 
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
       const message = 'Please complete your name, email address and message.';
       setSubmissionError(message);
       toast.error(message);
+      return;
+    }
+
+    const phoneError = agentProfilePhoneError(form.phone);
+    if (phoneError) {
+      setSubmissionError(phoneError);
+      toast.error(phoneError);
       return;
     }
 
@@ -134,149 +150,167 @@ export function AgentProfileEnquiryDialog({
       leadSource: 'agent_profile',
       website: form.website,
       captureRequestId,
-      consent: publicLeadConsent('agent_profile_enquiry_dialog'),
+      consent: publicLeadConsent(
+        inline ? 'agent_profile_enquiry_inline' : 'agent_profile_enquiry_dialog',
+      ),
     });
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-w-[520px] sm:p-6"
-        data-testid="agent-profile-enquiry-dialog"
-      >
-        {acknowledgement ? (
-          <div className="space-y-5 py-2" role="status" aria-live="polite">
-            <DialogHeader>
-              <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
-              </div>
-              <DialogTitle>Enquiry received</DialogTitle>
-              <DialogDescription className="text-sm leading-6 text-slate-600">
-                {acknowledgement}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-              Property Listify has recorded your enquiry against {agentName}&rsquo;s public profile,
-              so the agent can continue the conversation in their workspace.
+  const content = (
+    <>
+      {acknowledgement ? (
+        <div className="space-y-5 py-2" role="status" aria-live="polite">
+          <Header>
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+              <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
             </div>
-            <Button type="button" className="w-full" onClick={() => onOpenChange(false)}>
-              Done
-            </Button>
+            <Title>Enquiry received</Title>
+            <Description className="text-sm leading-6 text-slate-600">
+              {acknowledgement}
+            </Description>
+          </Header>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+            Property Listify has recorded your enquiry against {agentName}&rsquo;s public profile,
+            so the agent can continue the conversation in their workspace.
           </div>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Send an enquiry</DialogTitle>
-              <DialogDescription className="leading-6">
-                Your enquiry goes directly to {agentName}&rsquo;s Property Listify workspace. They
-                can use it to follow up and help with your property plans.
-              </DialogDescription>
-            </DialogHeader>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              if (inline) {
+                setForm(emptyForm());
+                setCaptureRequestId(createLeadCaptureRequestId());
+                setAcknowledgement(null);
+              } else onOpenChange(false);
+            }}
+          >
+            {inline ? 'Send another enquiry' : 'Done'}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Header>
+            <Title>{inline ? 'Send me a quick message' : 'Send an enquiry'}</Title>
+            <Description className="leading-6">
+              Your enquiry goes directly to {agentName}&rsquo;s Property Listify workspace. They can
+              use it to follow up and help with your property plans.
+            </Description>
+          </Header>
 
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="agent-profile-enquiry-name">
-                  Your name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="agent-profile-enquiry-name"
-                  value={form.name}
-                  onChange={event => update('name', event.target.value)}
-                  placeholder="Your full name"
-                  maxLength={200}
-                  autoComplete="name"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="agent-profile-enquiry-form mt-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor={`${fieldPrefix}-name`}>
+                Your name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id={`${fieldPrefix}-name`}
+                value={form.name}
+                onChange={event => update('name', event.target.value)}
+                placeholder="Your full name"
+                maxLength={200}
+                autoComplete="name"
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="agent-profile-enquiry-email">
-                  Email address <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="agent-profile-enquiry-email"
-                  type="email"
-                  value={form.email}
-                  onChange={event => update('email', event.target.value)}
-                  placeholder="you@example.com"
-                  maxLength={320}
-                  autoComplete="email"
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${fieldPrefix}-phone`}>
+                Phone number <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id={`${fieldPrefix}-phone`}
+                type="tel"
+                value={form.phone}
+                onChange={event => update('phone', event.target.value)}
+                placeholder="082 123 4567"
+                maxLength={50}
+                autoComplete="tel"
+                required
+                aria-invalid={!!submissionError && !!agentProfilePhoneError(form.phone)}
+                aria-describedby={`${fieldPrefix}-phone-help`}
+              />
+              <p id={`${fieldPrefix}-phone-help`} className="text-xs text-slate-500">
+                The agent can use this number to follow up about your enquiry.
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="agent-profile-enquiry-phone">Phone number</Label>
-                <Input
-                  id="agent-profile-enquiry-phone"
-                  type="tel"
-                  value={form.phone}
-                  onChange={event => update('phone', event.target.value)}
-                  placeholder="+27 12 345 6789"
-                  maxLength={50}
-                  autoComplete="tel"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${fieldPrefix}-email`}>
+                Email address <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id={`${fieldPrefix}-email`}
+                type="email"
+                value={form.email}
+                onChange={event => update('email', event.target.value)}
+                placeholder="you@example.com"
+                maxLength={320}
+                autoComplete="email"
+                required
+              />
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="agent-profile-enquiry-message">
-                  How can {agentName} help? <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="agent-profile-enquiry-message"
-                  value={form.message}
-                  onChange={event => update('message', event.target.value)}
-                  placeholder="Tell the agent a little about what you are looking for…"
-                  maxLength={5000}
-                  rows={5}
-                  required
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${fieldPrefix}-message`}>
+                {inline ? 'Message' : `How can ${agentName} help?`}{' '}
+                <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id={`${fieldPrefix}-message`}
+                value={form.message}
+                onChange={event => update('message', event.target.value)}
+                placeholder="Tell the agent a little about what you are looking for…"
+                maxLength={5000}
+                rows={5}
+                required
+              />
+            </div>
 
-              <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
-                <Label htmlFor="agent-profile-enquiry-website">Website</Label>
-                <Input
-                  id="agent-profile-enquiry-website"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  value={form.website}
-                  onChange={event => update('website', event.target.value)}
-                />
-              </div>
+            <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <Label htmlFor={`${fieldPrefix}-website`}>Website</Label>
+              <Input
+                id={`${fieldPrefix}-website`}
+                tabIndex={-1}
+                autoComplete="off"
+                value={form.website}
+                onChange={event => update('website', event.target.value)}
+              />
+            </div>
 
-              <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <Checkbox
-                  id="agent-profile-enquiry-consent"
-                  checked={form.consentAccepted}
-                  onCheckedChange={checked => update('consentAccepted', checked === true)}
-                />
-                <Label
-                  htmlFor="agent-profile-enquiry-consent"
-                  className="text-xs leading-5 text-slate-600"
+            <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <Checkbox
+                id={`${fieldPrefix}-consent`}
+                checked={form.consentAccepted}
+                onCheckedChange={checked => update('consentAccepted', checked === true)}
+              />
+              <Label
+                htmlFor={`${fieldPrefix}-consent`}
+                className="text-xs leading-5 text-slate-600"
+              >
+                I agree to be contacted about this enquiry. See our{' '}
+                <a
+                  className="text-primary underline"
+                  href="/legal/privacy"
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  I agree to be contacted about this enquiry. See our{' '}
-                  <a
-                    className="text-primary underline"
-                    href="/legal/privacy"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Privacy Notice
-                  </a>
-                  .
-                </Label>
+                  Privacy Notice
+                </a>
+                .
+              </Label>
+            </div>
+
+            {submissionError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-800"
+              >
+                {submissionError}
               </div>
+            )}
 
-              {submissionError && (
-                <div
-                  role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-800"
-                >
-                  {submissionError}
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2">
+              {!inline && (
                 <Button
                   type="button"
                   variant="outline"
@@ -286,23 +320,40 @@ export function AgentProfileEnquiryDialog({
                 >
                   Not now
                 </Button>
-                <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
-                  {createLeadMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send enquiry
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </>
-        )}
+              )}
+
+              <Button type="submit" className="flex-1" disabled={createLeadMutation.isPending}>
+                {createLeadMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send enquiry
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </>
+      )}
+    </>
+  );
+  if (inline)
+    return (
+      <div className="as-inline-enquiry" data-testid="agent-profile-enquiry-inline">
+        {content}
+      </div>
+    );
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-h-[calc(100dvh-1rem)] overflow-y-auto p-4 sm:max-w-[520px] sm:p-6"
+        data-testid="agent-profile-enquiry-dialog"
+      >
+        {content}
       </DialogContent>
     </Dialog>
   );

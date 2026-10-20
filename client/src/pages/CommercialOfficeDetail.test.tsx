@@ -183,6 +183,9 @@ describe('CommercialOfficeDetail', () => {
     fireEvent.change(screen.getByPlaceholderText('Email'), {
       target: { value: 'tenant@example.com' },
     });
+    fireEvent.change(screen.getByPlaceholderText('Phone number *'), {
+      target: { value: '082 123 4567' },
+    });
     fireEvent.change(
       screen.getByPlaceholderText(
         'Tell the advertiser about your space, term and operational requirements',
@@ -197,6 +200,7 @@ describe('CommercialOfficeDetail', () => {
       expect.objectContaining({
         name: 'A Tenant',
         email: 'tenant@example.com',
+        phone: '082 123 4567',
         message: 'We need 500 kVA and docks.',
         listingId: 801,
         commercialAvailabilityId: 901,
@@ -209,5 +213,22 @@ describe('CommercialOfficeDetail', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Your enquiry was sent to the responsible verified advertiser.',
     );
+  });
+
+  it('keeps the commercial enquiry disabled until a valid phone number is supplied', () => {
+    render(<CommercialOfficeDetail />);
+    const requestButton = screen.getByRole('button', { name: 'Request information' });
+
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'A Tenant' } });
+    fireEvent.change(screen.getByPlaceholderText('Email'), {
+      target: { value: 'tenant@example.com' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(requestButton).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Phone number *'), {
+      target: { value: '082 123 4567' },
+    });
+    expect(requestButton).toBeEnabled();
   });
 });

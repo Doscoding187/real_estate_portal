@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { calculateAffordabilityCompanion } from '../services/affordabilityCompanion';
+import { safeErrorSummary } from '../_core/safeError';
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.post('/calculate', async (req, res) => {
       });
     }
 
-    console.error('Affordability calculation error:', error);
+    console.error('Affordability calculation error:', safeErrorSummary(error));
     res.status(500).json({
       error: {
         code: 'CALCULATION_ERROR',

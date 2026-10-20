@@ -13,6 +13,7 @@ import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
+import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 
 const affordabilityDataSchema = z
   .object({
@@ -98,7 +99,11 @@ export const leadsRouter = router({
           unitBathrooms: z.number().nonnegative().optional(),
           name: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.name).trim().min(1),
           email: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.email).trim().email(),
-          phone: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.phone).trim().optional(),
+          phone: z
+            .string()
+            .max(PUBLIC_LEAD_INPUT_LIMITS.phone)
+            .trim()
+            .min(1, 'Please enter your phone number.'),
           message: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.message).trim().optional(),
           leadType: z.enum(['inquiry', 'viewing_request', 'offer', 'callback']).optional(),
           source: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
@@ -119,6 +124,14 @@ export const leadsRouter = router({
           consent: leadConsentSchema.optional(),
         })
         .superRefine((input, refinementContext) => {
+          const phoneError = agentProfilePhoneError(input.phone);
+          if (phoneError) {
+            refinementContext.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['phone'],
+              message: phoneError,
+            });
+          }
           if (input.commercialAvailabilityId && !input.listingId) {
             refinementContext.addIssue({
               code: z.ZodIssueCode.custom,
@@ -157,7 +170,6 @@ export const leadsRouter = router({
       if (input.website && input.website.trim().length > 0) {
         logLeadEvent('honeypot_trigger', {
           requestId,
-          ip,
           ownerType,
           ownerId,
           developmentId: input.developmentId ?? null,
@@ -176,7 +188,6 @@ export const leadsRouter = router({
       if (!(await checkPublicLeadRateLimit(ip, ctx.res))) {
         logLeadEvent('rate_limit_trigger', {
           requestId,
-          ip,
           ownerType,
           ownerId,
           developmentId: input.developmentId ?? null,
@@ -196,7 +207,6 @@ export const leadsRouter = router({
 
       logLeadEvent('lead_accepted', {
         requestId,
-        ip,
         ownerType,
         ownerId,
         developmentId: input.developmentId ?? null,

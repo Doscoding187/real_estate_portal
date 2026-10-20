@@ -92,6 +92,10 @@ import {
   verifyListingPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
 import {
+  prepareLocalJourneyPreview,
+  verifyLocalJourneyPreview,
+} from '../server/_core/databaseAuthority/dataAdapters/localJourneyPreview';
+import {
   prepareHomepageJourneyPreviewFixture,
   verifyHomepageJourneyPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture';
@@ -190,6 +194,8 @@ type Command =
   | 'scenario:verify'
   | 'listing-preview:prepare'
   | 'listing-preview:verify'
+  | 'local-journey:prepare'
+  | 'local-journey:verify'
   | 'homepage-preview:prepare'
   | 'homepage-preview:verify'
   | 'ple-publication-entitlement:prepare'
@@ -919,8 +925,32 @@ async function run(command: Command): Promise<void> {
     command === 'listing-preview:prepare' ||
     command === 'listing-preview:verify' ||
     command === 'homepage-preview:prepare' ||
-    command === 'homepage-preview:verify'
+    command === 'homepage-preview:verify' ||
+    command === 'local-journey:prepare' ||
+    command === 'local-journey:verify'
   ) {
+    if (command.startsWith('local-journey:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const authority = authorityFor(
+        isPrepare ? 'demo-seed' : 'verification',
+        isPrepare ? 'local-owner' : undefined,
+      );
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        print(
+          await (isPrepare ? prepareLocalJourneyPreview : verifyLocalJourneyPreview)({
+            authority,
+            decision,
+            connection,
+          }),
+        );
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
     if (command.startsWith('listing-preview:')) {
       const isPrepare = command.endsWith(':prepare');
       const operation = isPrepare ? 'demo-seed' : 'verification';
@@ -1156,6 +1186,8 @@ const commands = new Set<Command>([
   'scenario:verify',
   'listing-preview:prepare',
   'listing-preview:verify',
+  'local-journey:prepare',
+  'local-journey:verify',
   'homepage-preview:prepare',
   'homepage-preview:verify',
   'ple-publication-entitlement:prepare',

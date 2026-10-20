@@ -1,4 +1,13 @@
-import { ArrowRight, BarChart3, Bell, CalendarDays, Home, LineChart, Target, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  Home,
+  LineChart,
+  Target,
+  Users,
+} from 'lucide-react';
 import {
   Bar as RechartsBar,
   BarChart as RechartsBarChart,
@@ -144,9 +153,28 @@ export function PipelineSnapshot({
   leadsTotal: number;
   onNavigate: (workspace: WorkspaceId) => void;
 }) {
+  const statusCounts = new Map<string, number>();
+  conversion.byStatus.forEach(row => {
+    const status =
+      row.status === 'qualified'
+        ? 'contacted'
+        : row.status === 'viewing'
+          ? 'viewing_scheduled'
+          : row.status;
+    statusCounts.set(status, (statusCounts.get(status) || 0) + Number(row.count || 0));
+  });
+  const knownStatuses = new Set(PIPELINE_STAGES.map(stage => stage.key));
   const statusRows = conversion.byStatus.length
-    ? conversion.byStatus
-    : PIPELINE_STAGES.map(stage => ({ status: stage.key, count: 0, percentage: 0 }));
+    ? [
+        ...PIPELINE_STAGES.filter(stage => statusCounts.has(stage.key)).map(stage => ({
+          status: stage.key,
+          count: statusCounts.get(stage.key) || 0,
+        })),
+        ...Array.from(statusCounts)
+          .filter(([status]) => !knownStatuses.has(status))
+          .map(([status, count]) => ({ status, count })),
+      ]
+    : PIPELINE_STAGES.map(stage => ({ status: stage.key, count: 0 }));
   return (
     <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
       <CardHeader className="pb-2">
@@ -181,7 +209,7 @@ export function PipelineSnapshot({
             indicatorClassName="bg-emerald-600"
           />
         </div>
-        {statusRows.slice(0, 5).map(row => {
+        {statusRows.map(row => {
           const stage = PIPELINE_STAGES.find(item => item.key === row.status);
           const classes = toneClasses(stage?.tone || 'slate');
           return (

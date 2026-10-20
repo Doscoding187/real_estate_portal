@@ -195,6 +195,9 @@ describe('PropertyContactModal recipient-action custody', () => {
     fireEvent.change(screen.getByLabelText(/Email Address/), {
       target: { value: 'buyer@example.com' },
     });
+    fireEvent.change(screen.getByLabelText(/Phone Number/), {
+      target: { value: '082 123 4567' },
+    });
     fireEvent.change(screen.getByLabelText(/Message/), {
       target: { value: 'Please share more details.' },
     });
@@ -203,7 +206,12 @@ describe('PropertyContactModal recipient-action custody', () => {
 
     expect(testState.mutate).toHaveBeenCalledTimes(1);
     const payload = testState.mutate.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(payload).toMatchObject({ propertyId: 502 });
+    expect(payload).toMatchObject({
+      propertyId: 502,
+      phone: '082 123 4567',
+      message: 'Please share more details.',
+      leadType: 'inquiry',
+    });
     expect(payload).not.toHaveProperty('agentId');
     expect(payload).not.toHaveProperty('agencyId');
   });
@@ -221,12 +229,43 @@ describe('PropertyContactModal recipient-action custody', () => {
       />,
     );
 
-    expect(screen.getAllByText('General enquiry').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ask about this property').length).toBeGreaterThan(0);
     expect(screen.queryByText('Make an Offer')).not.toBeInTheDocument();
     expect(screen.queryByText('Financing Options')).not.toBeInTheDocument();
     expect(screen.queryByText('+27 82 000 0000')).not.toBeInTheDocument();
     expect(screen.queryByText('agency@example.com')).not.toBeInTheDocument();
     expect(screen.getByRole('dialog')).toHaveClass('max-h-[calc(100dvh-1rem)]', 'overflow-y-auto');
+    expect(screen.getByLabelText(/Phone Number/)).toBeRequired();
+  });
+
+  it('requires a valid phone number before submitting a property enquiry', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={507}
+        propertyTitle="Phone-required listing"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Your Name/), {
+      target: { value: 'Prospective Buyer' },
+    });
+    fireEvent.change(screen.getByLabelText(/Email Address/), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Message/), {
+      target: { value: 'Please share more details.' },
+    });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+
+    expect(testState.mutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('phone number');
+
+    fireEvent.change(screen.getByLabelText(/Phone Number/), { target: { value: '082 123 4567' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+    expect(testState.mutate).toHaveBeenCalledTimes(1);
   });
 
   it('presents a viewing as a delivered request rather than a guaranteed appointment or follow-up', () => {
@@ -286,5 +325,62 @@ describe('PropertyContactModal recipient-action custody', () => {
     );
     expect(screen.getByLabelText(/Your Name/)).toHaveValue('Prospective Buyer');
     expect(screen.getByLabelText(/Message/)).toHaveValue('Please share more details.');
+  });
+  it('prefills the property-specific message without sending or accepting contact consent', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={506}
+        propertyTitle="Garden home"
+      />,
+    );
+    expect(screen.getByLabelText(/Message/)).toHaveValue(
+      "Hi, I'm interested in Garden home. Is it still available?",
+    );
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(testState.mutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText(/Your Name/), { target: { value: 'Test buyer' } });
+    fireEvent.change(screen.getByLabelText(/Email Address/), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone Number/), {
+      target: { value: '082 123 4567' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Send enquiry' }).closest('form')!);
+    expect(testState.mutate).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Please agree to be contacted');
+  });
+  it('preserves a custom supplied message and names the property after verified delivery', () => {
+    render(
+      <PropertyContactModal
+        isOpen
+        onClose={vi.fn()}
+        propertyId={506}
+        propertyTitle="Garden home"
+        initialMessage="Can I view on Saturday?"
+      />,
+    );
+    expect(screen.getByLabelText(/Message/)).toHaveValue('Can I view on Saturday?');
+    publishSuccess({
+      deliveryStatus: 'delivered',
+      leadCustody: 'verified_customer_recipient',
+      recipientType: 'agent',
+      recipientId: 33,
+    });
+    expect(screen.getByText('Garden home', { exact: true })).toBeInTheDocument();
+  });
+  it('refreshes the message and clears consent when switching to a different property', () => {
+    const props = { isOpen: true, onClose: vi.fn(), propertyId: 506, propertyTitle: 'First home' };
+    const view = render(<PropertyContactModal {...props} />);
+    fireEvent.change(screen.getByLabelText(/Message/), { target: { value: 'My edited message.' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    view.rerender(<PropertyContactModal {...props} agentName="Updated display name" />);
+    expect(screen.getByLabelText(/Message/)).toHaveValue('My edited message.');
+    view.rerender(<PropertyContactModal {...props} propertyId={507} propertyTitle="Second home" />);
+    expect(screen.getByLabelText(/Message/)).toHaveValue(
+      "Hi, I'm interested in Second home. Is it still available?",
+    );
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
   });
 });

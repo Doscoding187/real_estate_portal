@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import { safeErrorSummary } from '../_core/safeError';
 config({ path: '.env.local' });
 import { getDb } from '../db-connection';
 import {
@@ -86,7 +87,7 @@ async function run() {
       console.log('NO RESULTS FOUND with the service query logic');
     }
   } catch (err) {
-    console.error('Error running query:', err);
+    console.error('Error running query:', safeErrorSummary(err));
   }
   process.exit(0);
 }

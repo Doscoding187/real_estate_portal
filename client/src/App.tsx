@@ -348,7 +348,7 @@ function Router() {
           </Route>
           <Route path="/agent/calendar">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <Redirect to="/agent/productivity" />
+              <Redirect to="/agent/productivity?tab=calendar" />
             </RequireRole>
           </Route>
           <Route path="/agent/productivity">
@@ -389,6 +389,8 @@ function Router() {
               <AgentReferrals />
             </RequireRole>
           </Route>
+          <Route path="/agents/:slug/properties" component={AgentMicrosite} />
+          <Route path="/a/:slug/properties" component={AgentMicrosite} />
           <Route path="/agents/:slug" component={AgentMicrosite} />
           <Route path="/a/:slug" component={AgentMicrosite} />
           <Route path="/agent/profile/:agentId" component={AgentPublicProfile} />

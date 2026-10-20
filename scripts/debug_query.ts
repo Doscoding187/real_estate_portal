@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 dotenv.config();
 import { db, getDb } from '../server/db';
 import { sql } from 'drizzle-orm';
@@ -18,7 +19,7 @@ async function run() {
     const result = await db.execute(sql.raw(query));
     console.log(JSON.stringify(result[0], null, 2));
   } catch (error) {
-    console.error('Error executing query:', error);
+    console.error('Error executing query:', safeErrorSummary(error));
   }
 
   process.exit(0);

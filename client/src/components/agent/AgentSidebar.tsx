@@ -35,7 +35,7 @@ const OPERATE_LINKS = [
   { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
   { label: 'Seller Growth', href: '/agent/canvassing', icon: MapPinned },
-  { label: 'Calendar', href: '/agent/productivity', icon: CalendarDays },
+  { label: 'Calendar', href: '/agent/productivity?tab=calendar', icon: CalendarDays },
 ] as const;
 
 const GROW_LINKS = [
@@ -220,7 +220,7 @@ function SidebarSection({
       </p>
       <div className="space-y-1">
         {items.map(item => {
-          const isActive = currentPath === item.href;
+          const isActive = currentPath === item.href.split('?')[0];
 
           return (
             <button

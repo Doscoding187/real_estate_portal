@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { managerialAuditLogs } from '../../drizzle/schema';
 
 const {
   mockDb,
@@ -41,6 +42,7 @@ vi.mock('../services/cataloguePublisherContextService', () => ({
 
 import {
   DevelopmentHomeInputSchema,
+  UpdateUnitAvailabilityInputSchema,
   deriveDevelopmentHomeLifecycleState,
   isDevelopmentHomePublicEligible,
   developerRouter,
@@ -56,6 +58,8 @@ function developmentHomeQuerySource() {
   const end = source.indexOf('\n  getDevelopments: protectedProcedure', start);
   return source.slice(start, end);
 }
+
+let availabilityHistoryFixture: unknown[] = [];
 
 type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycleState>[0];
 
@@ -104,12 +108,23 @@ function configureDevelopmentQuery(
   const select = vi.fn(() => {
     const result = results[selectCall++] ?? [];
     const value = result instanceof Error ? Promise.reject(result) : Promise.resolve(result);
-    const chain = Object.assign(value, {
-      limit: vi.fn(() => value),
-      orderBy: vi.fn(() => chain),
-      groupBy: vi.fn(() => chain),
-    });
-    return { from: vi.fn(() => ({ where: vi.fn(() => chain) })) };
+    const buildChain = (chainResult: unknown[]) => {
+      const chainValue = Promise.resolve(chainResult);
+      const chain = Object.assign(chainValue, {
+        limit: vi.fn(() => chain),
+        orderBy: vi.fn(() => chain),
+        groupBy: vi.fn(() => chain),
+        leftJoin: vi.fn(() => chain),
+        where: vi.fn(() => chain),
+      });
+      return chain;
+    };
+    const chain = buildChain(value as unknown[]);
+    return {
+      from: vi.fn((table: unknown) =>
+        table === managerialAuditLogs ? buildChain(availabilityHistoryFixture) : chain,
+      ),
+    };
   });
   mockGetDb.mockResolvedValue({ select });
   mockDb.select = select;
@@ -128,6 +143,7 @@ function callerFor(user: { id: number; role: 'property_developer' | 'super_admin
 describe('developer.getDevelopmentHome Slice 1 contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    availabilityHistoryFixture = [];
     mockRequireDeveloperProfileByUserId.mockResolvedValue({ id: 11 });
     mockGetBrandProfileById.mockResolvedValue({
       id: 77,
@@ -164,6 +180,72 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
         }).success,
       ).toBe(false);
     }
+  });
+
+  it('requires a useful, bounded reason for live availability changes', () => {
+    const base = { developmentId: 42, unitTypeId: 'unit-type-1', availableUnits: 3 };
+    expect(
+      UpdateUnitAvailabilityInputSchema.safeParse({ ...base, reason: 'Reconciled stock' }).success,
+    ).toBe(true);
+    expect(
+      UpdateUnitAvailabilityInputSchema.safeParse({ ...base, reason: '  too short  ' }).success,
+    ).toBe(false);
+    expect(
+      UpdateUnitAvailabilityInputSchema.safeParse({ ...base, reason: 'x'.repeat(501) }).success,
+    ).toBe(false);
+  });
+
+  it('scopes recent availability history to the authorized development and exposes no actor email', () => {
+    const query = developmentHomeQuerySource();
+    expect(query).toContain('eq(managerialAuditLogs.targetId, row.id)');
+    expect(query).toContain("eq(managerialAuditLogs.targetType, 'development')");
+    expect(query).toContain('AuditActions.DEVELOPER_UNIT_AVAILABILITY_UPDATED');
+    expect(query).toContain('actorName: users.name');
+    expect(query).not.toContain('actorEmail');
+  });
+
+  it('returns only well-formed availability history records for the owned development', async () => {
+    availabilityHistoryFixture = [
+      {
+        id: 17,
+        metadata: JSON.stringify({
+          unitTypeId: 'unit-type-1',
+          unitTypeName: 'Two Bedroom Apartment',
+          reason: 'Reconciled stock after a confirmed sale.',
+        }),
+        beforeData: JSON.stringify({ availableUnits: 4 }),
+        afterData: JSON.stringify({ availableUnits: 3 }),
+        createdAt: '2026-10-16 08:30:00',
+        actorName: 'Edward Banda',
+      },
+      {
+        id: 18,
+        metadata: '{invalid json',
+        beforeData: null,
+        afterData: null,
+        createdAt: '2026-10-15 08:30:00',
+        actorName: 'Other',
+      },
+    ];
+    configureDevelopmentQuery([ownedDevelopment]);
+
+    const home = await callerFor({ id: 5, role: 'property_developer' }).getDevelopmentHome({
+      developmentId: 42,
+      range: '30d',
+    });
+
+    expect(home.availabilityHistory).toEqual([
+      {
+        id: 17,
+        actorName: 'Edward Banda',
+        createdAt: '2026-10-16 08:30:00',
+        unitTypeId: 'unit-type-1',
+        unitTypeName: 'Two Bedroom Apartment',
+        previousAvailableUnits: 4,
+        availableUnits: 3,
+        reason: 'Reconciled stock after a confirmed sale.',
+      },
+    ]);
   });
 
   it('derives public eligibility only from approved and published state', () => {
@@ -332,7 +414,7 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
       totalUnits: 10,
       availableUnits: 4,
       reservedUnits: 2,
-      derivedSoldUnits: 4,
+      unclassifiedRemainderUnits: 4,
       pricing: { kind: 'sale', from: 1000000, to: 1000000 },
     });
     const query = developmentHomeQuerySource();
@@ -492,7 +574,9 @@ describe('developer.getDevelopmentHome Slice 1 contract', () => {
     expect(query).toContain(
       "operatingAs.publisherType !== 'developer' && operatingAs.publisherType !== 'hybrid'",
     );
-    expect(query).toContain('eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId)');
+    expect(query).toContain(
+      'eq(developments.cataloguePublisherId, operatingAs.cataloguePublisherId)',
+    );
     expect(query).not.toContain('input.developerId');
     expect(query).not.toContain('input.brandId');
     expect(query).not.toContain('input.ownerId');

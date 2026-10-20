@@ -1,9 +1,9 @@
 # Homepage city and metro scope audit
 
-Date: 14 October 2026  
-Branch: `feat/homepage-ux-review-20261013`  
-Starting commit: `1ed2d6a0d`  
-Local preview: http://localhost:3010  
+Date: 14 October 2026<br>
+Branch: `feat/homepage-ux-review-20261013`<br>
+Starting commit: `1ed2d6a0d`<br>
+Local preview: http://localhost:3010<br>
 Artifacts: `/home/edwardspc/Desktop/Dev/review-artifacts/home-metro-audit-20261014`
 
 ## Decision applies to every supported city

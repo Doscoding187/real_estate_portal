@@ -20,7 +20,7 @@ scope is reopened and preparation does not add a ninth acceptance.
 | B15 supplier/certificate, exact copy approval, consent implementation, local verification and proportionate internal review | **CLOSED within completed local/decision scope**; existing receipts retained in packets 34–40 | No repeat review/approval of unchanged facts or text.                                                                                                                                                                                     |
 | B15 full gate                                                                                                               | **EVIDENCE INCOMPLETE — controlled installation and hosted acceptance outstanding**           | Complete exact-source integration, canonical schema/copy/grant execution and customer acceptance in the existing packet 40.                                                                                                               |
 | B14                                                                                                                         | **ACTIVE — operating readiness**                                                              | All four founder desk cases are CLOSED in packet 37; remaining B14 work is hosted contacts/queues, delivery and pause/resumption in the existing shared exercise.                                                                      |
-| SA finance/proof storage (B11/B15)                                                                                          | **IMPLEMENTATION PREPARED; new object storage, migration and recovery NOT VERIFIED**          | Domestic primary/backup provision and readback, runtime denial/positive probes, synthetic recovery, then bounded migration and current bindings. Existing Azure financial DB location/backups were re-read without a database connection. |
+| SA finance/proof storage (B11/B15)                                                                                          | **RUNTIME PROBES AND SYNTHETIC RECOVERY EXERCISED — migration and bindings NOT EXERCISED**    | Control plane provisioned and read back in [packet 50](50-za-finance-storage-control-plane-verified-2026-10-17.md); dedicated runtime credential issued encrypted and bounded positive/denial probes plus synthetic restore-from-backup recovered in [packet 51](51-za-finance-runtime-credential-and-recovery-preparation-2026-10-18.md). Bounded migration, hosted owner isolation and current bindings remain. |
 | B08/B09/B10/B11/B13/B16/B17/B18                                                                                             | **Required remaining execution unchanged**                                                    | Admission, custody/delivery/storage/enquiry checks, release integration, recovery/capacity and final founder paid GO. B17 retains its 24-hour workload.                                                                                   |
 
 This is a progression decision, not a legal-compliance certification or paid
@@ -28,6 +28,66 @@ opening. An accountant or external legal/privacy adviser is not a prerequisite
 to continued implementation. Handle a concrete unresolved condition only at
 its affected operation. The historical September disposition below is retained
 as dated evidence and does not override this current reconciliation.
+
+## Current register reconciliation — 2026-10-17
+
+Evidence reconciliation of every complete LRC finding against the integrated
+production source `main` at `da6c21bae4c151acca0714b49189b911333b29d9` (tree
+`9bfeb0fb883c311721a56610c4f66aa769c35f32`). Every repository commit cited by
+the LRC complete records was re-checked: 95 of 96 are contained in `main` — 92
+through the accepted integration merge `5c3f7eab4` (2026-09-30; promoted by
+PR #583, required checks passed, with the failed Vercel preview retained as the
+founder-accepted non-gating exception) and three through PR #632 (`15c719435`)
+— with the single exception of the senior-audit reference commit `a9dbb7ee9`,
+which is evidence, not a correction. The complete records now read
+`integrated verified`;
+`Production verification` remains `Pending` because no hosted or deployed
+artifact was executed. This is a status correction for integration already
+delivered. It does not reopen an accepted scope, add a new one, authorise
+hosted execution or paid activation, or change B08–B18, LRC-SUPPORT-001 or the
+paid-opening NO-GO.
+
+| Field | Authority |
+| --- | --- |
+| Packet | [Launch register integration reconciliation — 2026-10-17](41-launch-register-integration-reconciliation-2026-10-17.md) |
+| Exact source | `main` `da6c21bae`; CI Pipeline and Frontend Build Guard success at that SHA |
+| Updated | Every complete LRC record whose correction is integrated (including the PAY enabled-release containment supplement); compact index updated in the same change |
+| Unchanged | B01 CLOSED decision, B08–B18 execution dispositions, LRC-SUPPORT-001 (owner-blocked), paid-opening NO-GO |
+
+## Founder decisions recorded — 2026-10-17
+
+Edward's answers to the [packet 47 briefs](47-founder-decision-briefs-2026-10-17.md)
+are recorded in [packet 49](49-founder-decisions-recorded-2026-10-17.md) with
+the provider-document evidence. Effective changes:
+
+| Brief | Recorded decision | Effect |
+| --- | --- | --- |
+| D1 support channels | `support@`/`info@` designation confirmed; mailboxes not available yet and deferred with the hosted runtime resume | LRC-SUPPORT-001 stays in progress; remaining proof is mailbox availability and one inbound/reply demonstration |
+| D2 email accounts | Consented test recipient `enetechsa@gmail.com`; sender default `mail@propertylistifysa.co.za`; supervised window when hosting resumes | B10 real-delivery proof still outstanding |
+| D3 provider contracts | Railway DPA executed 2026-10-17; Azure Microsoft Customer Agreement read back; Resend DPA retrieved; Vercel stays Hobby until after launch | Provider personal-data chain recorded; Vercel plan revisited before paid/commercial opening |
+| D4 B17 F7 package | Provisional forecast floor accepted; recovery objectives accepted; restore budget minimal after verified quote; backup destination = separate same-region bucket | B17 planning inputs recorded; window still held on hosted resume |
+| D5 hosted admission | September static-egress gate **withdrawn** (no static outbound IP required); Edward is the only operator; window supervised when hosting resumes | The [B08 dependency](#b08-protected-database-disposition--2026-09-24) is released without Railway Pro spend; single-operator coverage accepted |
+| D6 af-south-1 | Provisioning of the domestic proof bucket plus same-region backup bucket authorized; eu-north-1 retained | Attended CloudShell run completed 2026-10-17; control plane provisioned and verified in [packet 50](50-za-finance-storage-control-plane-verified-2026-10-17.md); runtime probes, recovery and migration remain |
+| D7 finance facts | Year-end = last day of February (28/29); no residual foreign tax-record flow; EFR001 not needed | B15 finance-storage condition satisfied; selector derives per-record return state |
+
+No acceptance scope changes, no hosted or paid execution, and the paid-opening
+NO-GO remains. Each affected gate still needs its own execution and evidence.
+
+## B17 window admission prepared — 2026-10-18
+
+[Packet 53](53-b17-window-and-driver-admission-2026-10-18.md) records the
+remaining packet-48 admission decisions and admits the hosted load driver under
+the [packet-45](45-b17-hosted-window-runbook-2026-10-17.md) review requirement:
+
+| Item | Recorded | Effect |
+| --- | --- | --- |
+| W1 write mix | Read-only 24-hour run plus a separate bounded smoke-write step (`--duration-seconds` floor; the rate-plan run never enables the write) | No hosted write-volume claim; writes remain local calibration |
+| W2 rate plan | Provisional plan accepted as the accepted plan (5/s sustained, 2×20/s peaks, 30-min 40/s double peak) | Driver's encoded plan stands; replacements require a reviewed amendment before the test |
+| W3 operational card | Incident log, abort channel (abort-file + signal), escalation and coverage defaults accepted | Packet-45 entry criterion 6 prepared; log opened at T-2 |
+| Driver admission | Packet-48 candidate admitted at base `7706e93bc`, module hashes pinned (30/30 tests) | Entry criterion 5 tooling complete; window admission record drafted but ineffective until hosting resume and B08/B09/B11–B14/B16 |
+
+B17 stays **OPEN — RECOVERY / CAPACITY**; no window opens, no spend is
+authorized and the paid-opening NO-GO is unchanged.
 
 ## Paid MVP working disposition — 2026-09-30
 
@@ -140,26 +200,26 @@ Do not reuse identifiers. A corrected finding retains its original ID and gains 
 
 This index is for navigation and programme oversight. Its **Full record** column must link to the matching complete record in this document once a real finding exists; the expected anchor form is `#lrc-search-001`.
 
-| Issue ID        | Date observed | Page or journey                    | Severity | Owning engine                          | Launch decision                             | Status      | Full record                |
-| --------------- | ------------- | ---------------------------------- | -------- | -------------------------------------- | ------------------------------------------- | ----------- | -------------------------- |
-| LRC-AUTH-001    | 2026-09-13    | Account recovery                   | L1       | Authentication                         | Fix now                                     | in progress | [Record](#lrc-auth-001)    |
-| LRC-AUTH-001    | 2026-09-16    | Direct administrator review entry  | L1       | Authentication / administrative review boundary | Fix now                              | in progress | [Supplement](#lrc-auth-001-administrator-review-route-supplement--2026-09-16) |
-| LRC-PUBLISH-001 | 2026-09-13    | Listing publication preflight      | L1       | Property Listing Engine                | Fix now                                     | in progress | [Record](#lrc-publish-001) |
-| LRC-PAY-001     | 2026-09-13    | Billing/activation containment     | L1       | Commercial access / publication        | Fix now                                     | in progress | [Record](#lrc-pay-001)     |
-| LRC-PAY-001     | 2026-09-17    | B01 paid offer and launch boundary | L1       | Commercial access / billing / journeys | Founder-approved policy; retain runtime gate | CLOSED — Founder approved | [B01 decision](#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17) |
-| LRC-MEM-001     | 2026-09-13    | Agency affiliation, private work, and public recommendations | L0       | Agency membership / private-work authority | Fix now                                   | in progress | [Record](#lrc-mem-001)     |
-| LRC-AGY-001     | 2026-09-13    | Agency entitlement and lead access | L1       | Commercial access / lead custody       | Fix before agency launch                    | in progress | [Record](#lrc-agy-001)     |
-| LRC-INVITE-001  | 2026-09-15    | Deferred agency invitation validity | L1       | Agency onboarding / membership delivery | Fix before controlled team activation       | in progress | [Record](#lrc-invite-001)  |
-| LRC-INVITE-002  | 2026-09-15    | Queued invitation acceptance containment | L1       | Agency onboarding / membership authority | Fix before controlled team activation       | in progress | [Record](#lrc-invite-002)  |
-| LRC-GEO-001     | 2026-09-15    | Agent coverage identity             | L1       | Agent onboarding / public discovery / recipient eligibility | Fix now | in progress | [Record](#lrc-geo-001)     |
-| LRC-AGENT-001      | 2026-09-15    | Independent-Agent public onboarding truthfulness             | L1       | Agent onboarding / public commercial presentation           | Fix now; retain pre-payment boundary                                  | in progress | [Record](#lrc-agent-001)      |
-| LRC-ADVERTISE-001  | 2026-09-15    | Shared public advertising and Developer preparation entry    | L1       | Public onboarding / commercial presentation                | Fix now; retain pre-payment boundary                                  | in progress | [Record](#lrc-advertise-001)  |
-| LRC-DEV-001        | 2026-09-15    | Developer approval and trust-control truthfulness           | L1       | Developer identity review / public professional presence   | Fix now; retain pre-payment commercial gate                           | in progress | [Record](#lrc-dev-001)        |
-| LRC-COMMERCIAL-001 | 2026-09-15 | Commercial lead generic viewing boundary | L1 | Agency lead workflow / Commercial | Fix now; retain dedicated workflow | in progress | [Record](#lrc-commercial-001) |
-| LRC-LEAD-001    | 2026-09-14    | Platform-custody recovery audit     | L1       | Lead delivery / operations             | Fix now                                     | in progress | [Record](#lrc-lead-001)    |
-| LRC-LAND-001    | 2026-09-13    | Land public visibility containment | L0       | Land / commercial-publication boundary | Contain now; defer from pre-payment cohort and public exposure | in progress | [Record](#lrc-land-001)    |
-| LRC-LAND-001 | 2026-10-14 | Public specialist search entry | L0 boundary retained | Land / public discovery | Enable consumer search UI; retain publication containment | in progress | [Supplement](#lrc-land-001-public-search-entry-supplement--2026-10-14) |
-| LRC-SUPPORT-001 | 2026-09-13    | Assisted support and disclosures   | L1       | Stakeholder operations                 | Implement bounded intake; fix before controlled real-world onboarding | in progress | [Record](#lrc-support-001) |
+| Issue ID           | Date observed | Page or journey                                              | Severity             | Owning engine                                               | Launch decision                                                       | Status                    | Full record                                                                            |
+| ------------------ | ------------- | ------------------------------------------------------------ | -------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
+| LRC-AUTH-001       | 2026-09-13    | Account recovery                                             | L1                   | Authentication                                              | Fix now                                                               | integrated verified       | [Record](#lrc-auth-001)                                                                |
+| LRC-AUTH-001       | 2026-09-16    | Direct administrator review entry                            | L1                   | Authentication / administrative review boundary             | Fix now                                                               | integrated verified       | [Supplement](#lrc-auth-001-administrator-review-route-supplement--2026-09-16)          |
+| LRC-PUBLISH-001    | 2026-09-13    | Listing publication preflight                                | L1                   | Property Listing Engine                                     | Fix now                                                               | integrated verified       | [Record](#lrc-publish-001)                                                             |
+| LRC-PAY-001        | 2026-09-13    | Billing/activation containment                               | L1                   | Commercial access / publication                             | Fix now                                                               | integrated verified       | [Record](#lrc-pay-001)                                                                 |
+| LRC-PAY-001        | 2026-09-17    | B01 paid offer and launch boundary                           | L1                   | Commercial access / billing / journeys                      | Founder-approved policy; retain runtime gate                          | CLOSED — Founder approved | [B01 decision](#lrc-pay-001-b01-founder-commercial-and-operating-decision--2026-09-17) |
+| LRC-MEM-001        | 2026-09-13    | Agency affiliation, private work, and public recommendations | L0                   | Agency membership / private-work authority                  | Fix now                                                               | integrated verified       | [Record](#lrc-mem-001)                                                                 |
+| LRC-AGY-001        | 2026-09-13    | Agency entitlement and lead access                           | L1                   | Commercial access / lead custody                            | Fix before agency launch                                              | integrated verified       | [Record](#lrc-agy-001)                                                                 |
+| LRC-INVITE-001     | 2026-09-15    | Deferred agency invitation validity                          | L1                   | Agency onboarding / membership delivery                     | Fix before controlled team activation                                 | integrated verified       | [Record](#lrc-invite-001)                                                              |
+| LRC-INVITE-002     | 2026-09-15    | Queued invitation acceptance containment                     | L1                   | Agency onboarding / membership authority                    | Fix before controlled team activation                                 | integrated verified       | [Record](#lrc-invite-002)                                                              |
+| LRC-GEO-001        | 2026-09-15    | Agent coverage identity                                      | L1                   | Agent onboarding / public discovery / recipient eligibility | Fix now                                                               | integrated verified       | [Record](#lrc-geo-001)                                                                 |
+| LRC-AGENT-001      | 2026-09-15    | Independent-Agent public onboarding truthfulness             | L1                   | Agent onboarding / public commercial presentation           | Fix now; retain pre-payment boundary                                  | integrated verified       | [Record](#lrc-agent-001)                                                               |
+| LRC-ADVERTISE-001  | 2026-09-15    | Shared public advertising and Developer preparation entry    | L1                   | Public onboarding / commercial presentation                 | Fix now; retain pre-payment boundary                                  | integrated verified       | [Record](#lrc-advertise-001)                                                           |
+| LRC-DEV-001        | 2026-09-15    | Developer approval and trust-control truthfulness            | L1                   | Developer identity review / public professional presence    | Fix now; retain pre-payment commercial gate                           | integrated verified       | [Record](#lrc-dev-001)                                                                 |
+| LRC-COMMERCIAL-001 | 2026-09-15    | Commercial lead generic viewing boundary                     | L1                   | Agency lead workflow / Commercial                           | Fix now; retain dedicated workflow                                    | integrated verified       | [Record](#lrc-commercial-001)                                                          |
+| LRC-LEAD-001       | 2026-09-14    | Platform-custody recovery audit                              | L1                   | Lead delivery / operations                                  | Fix now                                                               | integrated verified       | [Record](#lrc-lead-001)                                                                |
+| LRC-LAND-001       | 2026-09-13    | Land public visibility containment                           | L0                   | Land / commercial-publication boundary                      | Contain now; defer from pre-payment cohort and public exposure        | integrated verified       | [Record](#lrc-land-001)                                                                |
+| LRC-LAND-001       | 2026-10-14    | Public specialist search entry                               | L0 boundary retained | Land / public discovery                                     | Enable consumer search UI; retain publication containment             | integrated verified       | [Supplement](#lrc-land-001-public-search-entry-supplement--2026-10-14)                 |
+| LRC-SUPPORT-001    | 2026-09-13    | Assisted support and disclosures                             | L1                   | Stakeholder operations                                      | Implement bounded intake; fix before controlled real-world onboarding | in progress               | [Record](#lrc-support-001)                                                             |
 
 ## Complete per-finding record
 
@@ -182,9 +242,9 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Launch decision                         | Fix now                                                                                                                      |
 | Approved implementation branch/worktree | verify/mvp-closure-post-577 / /home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577                    |
 | Pull request or commit                  | c6c9f1330ae3910bfbad7021735b231e90e984b0; 3d2e01488755376486d96e2242f83d08895c8a62                                        |
-| Integrated verification                 | Pending; local branch evidence only                                                                                          |
+| Integrated verification | Pending; local branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected access or deployment                                                                                   |
-| Status                                  | in progress                                                                                                                  |
+| Status | integrated verified |
 | Notes                                   | UTC parsing fixed. `3d2e0148` shares placeholder-aware key/sender validation across runtime and preflight, permits local fallback only in development/test, returns uniform unavailable responses before account lookup, and keeps configured-provider failures neutral. The 4-file/20-test boundary suite, 15 local HTTP checks, typecheck, and 35-file/293-test static suite passed. Await integration and real provider/sender delivery verification. |
 
 ### LRC-AUTH-001 administrator-review route supplement — 2026-09-16
@@ -206,9 +266,9 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Launch decision | Fix now; preserve server-side listing custody and reviewer authority. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`ddbb7e58`](https://github.com/Doscoding187/real_estate_portal/commit/ddbb7e5893d2bd65361103f227887fd4c1f2e9b1) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement operation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | This correction adds the existing client role guard to the retained route; it does not change listing queries, server privileges, schema/data, payments, entitlements, publication, providers, or Land policy. The browser proof is anonymous direct entry; generic `RequireRole` coverage proves matching/non-matching role behavior. |
 
 ### LRC-PUBLISH-001
@@ -230,9 +290,9 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Launch decision                         | Fix now                                                                                                                   |
 | Approved implementation branch/worktree | verify/mvp-closure-post-577 / /home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577                 |
 | Pull request or commit                  | c6c9f1330ae3910bfbad7021735b231e90e984b0                                                                                  |
-| Integrated verification                 | Pending; local branch evidence only                                                                                       |
+| Integrated verification | Pending; local branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected access or deployment                                                                                |
-| Status                                  | in progress                                                                                                               |
+| Status | integrated verified |
 | Notes                                   | Authorized database instance now passed to readiness evaluators; HTTP 200 proven. Publication remains separately blocked. |
 
 ### LRC-PAY-001
@@ -254,9 +314,9 @@ This index is for navigation and programme oversight. Its **Full record** column
 | Launch decision                         | Fix now                                                                                                                                                                                                                                                                                                                                      |
 | Approved implementation branch/worktree | verify/mvp-closure-post-577 / /home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577                                                                                                                                                                                                                                    |
 | Pull request or commit                  | c8c35fde44d00ff8b2ce83ca73fcb32dd522e9bc; e9909ab6be90323a881f07a267777c64b1e075d3                                                                                                                                                                                                                                                        |
-| Integrated verification                 | Local candidate only: exact-target HTTP PASS; post-fixture-congruency full authority-wrapped suite 633 files passed/9 skipped and 4,216 tests passed/67 skipped; e9909ab6 focused client 2 files/10 tests, agency onboarding contracts 2 files/9 tests, governed browser 2 tests, typecheck, static authority 35 files/293 tests, and targeted ESLint with zero errors. Not merged or hosted-CI verified. |
+| Integrated verification | Local candidate only: exact-target HTTP PASS; post-fixture-congruency full authority-wrapped suite 633 files passed/9 skipped and 4,216 tests passed/67 skipped; e9909ab6 focused client 2 files/10 tests, agency onboarding contracts 2 files/9 tests, governed browser 2 tests, typecheck, static authority 35 files/293 tests, and targeted ESLint with zero errors. Not merged or hosted-CI verified. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected access, deployment, provider configuration, or charge performed                                                                                                                                                                                                                                                        |
-| Status                                  | in progress                                                                                                                                                                                                                                                                                                                                  |
+| Status | integrated verified |
 | Notes                                   | Test fixtures may model paid states only under Vitest. Commit `e50dbe95` corrects the expired-term expectation without activating a paid runtime route. Commit `e9909ab6` proves agent and agency-owner browser paths retain preparation-only state; its agency result persists a canonical `pending_payment` preference but zero invoices and presents private-inventory preparation rather than a payment action. It does not prove canonical invitation/member acceptance, a completed browser server draft, payment, or publishing transition. No development or deployed environment variable enables activation. No free publishing policy, privilege bypass, or payment mutation was introduced. LRC-LAND-001 now supplies task-branch source containment for the separate Land route; integration and production verification remain open.   |
 
 ### LRC-PAY-001 B01 founder commercial and operating decision — 2026-09-17
@@ -335,6 +395,11 @@ future workspace feature.
 | Edward is the founder-approved sole finance/support operator for the first 10–20 customers, with daily weekday checks and a new-sales/payment-activation pause for an absence longer than one business day. No backup is appointed; the monitored queue and unavailable/resume procedure still require a hosted rehearsal. | B14                   |
 | Invoice/payment disclosure, VAT wording, Terms/Privacy, cancellation/refund/dispute text and the current placeholder/broken legal links need legal/accounting review based on the closed B01 policy and recorded supplier identity.                                                                                                                                                                                                               | B15                   |
 
+Reconciled 2026-10-17: the overpayment reconciliation, paid-term
+expiry/enquiry/renewal and developer term-notice dependencies above are
+addressed in integrated source; the PPRA/copy and finance/support rows remain
+as stated. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md).
+
 ### LRC-PAY-001 enabled-release containment supplement — 2026-09-25
 
 | Field | Record |
@@ -354,9 +419,9 @@ future workspace feature.
 | Launch decision | Fix within B03; consume shared evidence in B07. Do not enable release first. |
 | Approved implementation branch/worktree | Pending next bounded assignment; this branch is audit/reconciliation only |
 | Pull request or commit | Finding in candidate PR #580; correction pending |
-| Integrated verification | Pending; candidate is not on main |
+| Integrated verification | Reconciled 2026-10-17: containment fix `f3f99f806` is contained in `main` at `da6c21bae` through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed). Product-less `paid_mvp_release` activation is rejected at `commercialActivationPolicy.ts:337`, with regression coverage at `commercial-launch-access-s4.integration.test.ts:738`; production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no payment/entitlement mutation performed |
-| Status | OPEN — senior review failed |
+| Status | integrated verified |
 | Notes | B01 policy remains closed. Retain proven fixed terms, account ownership and custody. Reject unsupported persisted plans; verify production-mode negative cases. |
 
 ### LRC-MEM-001
@@ -378,9 +443,9 @@ future workspace feature.
 | Launch decision                         | Fix now                                                                                                                                                                                                                                                                                                                                                                         |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577`                                                                                                                                                                                                                                                                   |
 | Pull request or commit                  | `cf1f93e6f2148a1fc434571475ecd9f18c646bfa`; `5f37d3d1c14130f9078a17ea267e951547e65564`; `0eaf2cc806d157f4e6b378721db48e69cef3ffb6`; `32ce7524b642519300a5ae6daddac5ae2c393486`; `47e059efaf3404db0f16d3f86b7a577ddb4f1ff3`; `a0fc9e8b95be1275844e11aaed4bf57bc1ff2bd3`                                                                                                                                                                                                                                                       |
-| Integrated verification                 | Pending; all cited corrections are verified on the task branch only and have not been merged to the hosted candidate.                                                                                                                                                                                                                                                                |
+| Integrated verification | Pending; all cited corrections are verified on the task branch only and have not been merged to the hosted candidate. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system accessed.                                                                                                                                                                                                                                                                                                                                          |
-| Status                                  | in progress                                                                                                                                                                                                                                                                                                                                                                     |
+| Status | integrated verified |
 | Notes                                   | Goal 1 is **VERIFIED** on the task branch: forged/absent/suspended/removed membership cannot mint agency attribution, legitimate invitation and agency-principal setup remain functional, and ambiguous current membership fails closed. `5f37d3d1` extends that same authority to private seller-prospect work, assignment, and legacy agency analytics; it proves a suspended member retains historical profile IDs but loses those private capabilities. `0eaf2cc8` also proves the former agency retains its materialized inventory while losing visibility of a later unaffiliated draft. `32ce7524` applies the same exact-tenant decision before private performance, queue, commission, and daily-work paths; it directly proves the former member loses those APIs while active-member performance and commission regressions remain intact. `47e059ef` applies it to viewing, deal, offer, and transaction entries; active same-agency viewing and deal workflows remain intact while a suspended member loses viewing and deal-workspace access. `a0fc9e8b` applies the same membership truth to Agent Home inventory, dashboard, scheduling, commission, export, and generic property work while preserving unaffiliated/preparation paths. The separate `listify_test` canvassing integration did not run on the task target, and no hosted or production claim is made. Commit `e50dbe95` updates an agency performance fixture to establish canonical membership rather than revive profile-only affiliation. Keep this register item in progress until integration and later hosted/production verification. |
 
 #### LRC-MEM-001 public-recommendation authority supplement — 2026-09-15
@@ -402,9 +467,9 @@ future workspace feature.
 | Launch decision | Fix now; integrate and host-verify before treating public recommendations as launch-ready |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`049e2a92`](https://github.com/Doscoding187/real_estate_portal/commit/049e2a92fa2b025d4ad589d9d8a63b40489b9db6) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The correction batches the existing current-membership helper, resolves agency name/logo from canonical membership, and preserves personal-entitlement recommendations without agency attribution. It changes no schema, migration, data, payment, entitlement, publication, provider, deployment, credential, or protected operation. |
 
 ### LRC-AGY-001
@@ -426,9 +491,9 @@ future workspace feature.
 | Launch decision                         | Fix before agency launch                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577`; Goals 2–10 are VERIFIED locally within their stated boundaries. |
 | Pull request or commit                  | `af9fd6f2` (Goal 2), `16a23cd9` (Goal 3), `a403d31d` (Goal 4), `74bff0f9` (Goal 5), `9acfea2f` (Goal 6), `c4df6600` (Goals 7–8), `f9086ef4` (Goal 9), `fbf592cc` (Goal 10), `e9909ab6` (agency-owner pre-payment browser/setup truthfulness), `72dd80e0` (review correction/re-entry), `a2a4e52` (public discovery/enquiry/CRM browser evidence), and `4d0b1517` (viewing UTC wire boundary) |
-| Integrated verification                 | Pending; Goals 2–10 have exact-target local HTTP/database, focused regression, and stated Chromium evidence only. |
+| Integrated verification | Pending; Goals 2–10 have exact-target local HTTP/database, focused regression, and stated Chromium evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system accessed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| Status                                  | in progress                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Status | integrated verified |
 | Notes                                   | Goals 3–10 close the canonical agency commercial-owner, fixed-term-expiry, review/publication, public discovery, enquiry custody, CRM continuity, and scoped platform-recovery gaps in one local operating acceptance without enabling normal-runtime commercial activation. `e9909ab6` proves owner identity/setup and truthful pre-payment preparation; `72dd80e0`/`a2a4e52` prove the separate member review/public/lead/CRM browser slices with persisted state. They do not create one continuous browser path through invitation delivery/acceptance, activate payment, or establish a live cohort. Goal 8 separates receipt of new marketplace opportunities from authority to work existing custody and fails closed for stale agency membership. Goal 9 provides only internal CRM/platform manual recovery; it makes no provider-delivery promise. Hosted integration, external provider reliability, and production verification remain open. Do not require a second individual purchase for agency operation. |
 
 
@@ -451,9 +516,9 @@ future workspace feature.
 | Launch decision | Fix before agency launch |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`1ca5fac2`](https://github.com/Doscoding187/real_estate_portal/commit/1ca5fac21e740f657ca54582157eb805c0f82932) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The public profile remains visible under the pre-payment presence model, but a direct enquiry is accepted only when the selected agent has a current valid professional eligibility path. Successful direct contact remains agent custody; this supplement does not assert agency-administrator CRM access, browser contact-modal behavior, provider delivery, or a live commercial route. The paid state used by the regression is a disposable-target fixture only. |
 
 ### LRC-AGY-001 viewing UTC wire-boundary supplement — 2026-09-15
@@ -475,9 +540,9 @@ future workspace feature.
 | Launch decision | Fix now before controlled agency operations. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`4d0b1517`](https://github.com/Doscoding187/real_estate_portal/commit/4d0b1517) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The interrupted broad authority invocation is evidence of discovery only and is not claimed as a post-fix full-suite result. The correction does not change the Africa/Johannesburg operating-date contract, stored timestamp, schema, migration, membership/tenant authority, payment, entitlement, Land, provider, or deployment policy. |
 
 ### LRC-AGY-001 client operating-date and viewing-input supplement — 2026-09-15
@@ -499,9 +564,9 @@ future workspace feature.
 | Launch decision | Fix now before controlled agency operations. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`fa8f9101`](https://github.com/Doscoding187/real_estate_portal/commit/fa8f9101); [`40a37c37`](https://github.com/Doscoding187/real_estate_portal/commit/40a37c37) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The localized parsing rule applies only to agency viewing inputs. It preserves stored UTC values and explicit API instants, and does not claim browser/hosted evidence or change generic follow-up, deal, transaction, payment, entitlement, Land, migration, or deployment policy. The earlier interrupted broad invocation remains non-passing evidence only. |
 
 ### LRC-AGY-001 public preparation-entry supplement — 2026-09-15
@@ -523,9 +588,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the controlled pre-payment Agency cohort and commercial gate. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`02788ff2`](https://github.com/Doscoding187/real_estate_portal/commit/02788ff2) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The correction conditionally renders the retained catalog-driven Agency commercial page only when `COMMERCIAL_ACTIVATION_STATE.enabled` becomes true under a separately authorized future release. In normal runtime it does not load the catalog, issue an invoice, request payment, activate publishing, grant team access, or market paid Agency access. The browser proof opens the real public entry, the role-specific registration dialog, and the existing persisted Agency onboarding path. It does not establish a live paid Agency cohort, provider delivery, hosted operation, or authority to change the commercial model. |
 
 
@@ -548,9 +613,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the controlled pre-payment Agency cohort and commercial gate. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`d48544b9`](https://github.com/Doscoding187/real_estate_portal/commit/d48544b9a6c33de954821cbf06c0cac33f6dc0af) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The commercial component remains retained behind the existing future enabled-state decision. The first full browser execution failed only because a new non-exact `Private inventory` assertion matched five elements; its snapshot showed the correct screen. The selector was corrected and the focused browser flow plus final complete suite passed. This is a test diagnostic, not evidence of a product, migration, or database failure. The correction did not issue invoices, accept proofs, change an entitlement, publish inventory, or alter provider/deployment settings. |
 
 ### LRC-AGY-001 acquisition continuity and candidate review supplement — 2026-09-16
@@ -565,7 +630,8 @@ future workspace feature.
 | Candidate evidence | [Consolidated review packet](../database-transition-and-launch/mvp-candidate-review-packet.md) binds the frozen SHA and required full checks plus both governed browser suites. Earlier green checks do not cover the full candidate. |
 | Acceptance and next milestone | Whole-branch review, exact-head hosted CI, approved integration and hosted verification against the actual merged artifact. Limit changes to defects blocking the packet's acceptance criteria. |
 | Remaining launch gates | Owner decisions for monitored support, final disclosures and real email; commercial activation and protected release retain separate existing approvals. |
-| Status | In progress: local acquisition gap closed with explicit fixtures; consolidated review/integration/hosted acceptance outstanding. |
+| Integrated verification | Integrated through accepted-release merge `5c3f7eab4` (PR #583); the local acquisition run recorded above remains the execution evidence. Consolidated hosted acceptance remains outstanding and production verification is pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
+| Status | integrated verified |
 
 ### LRC-INVITE-001
 
@@ -586,9 +652,9 @@ future workspace feature.
 | Launch decision | Fix before controlled team activation |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`0c440207`](https://github.com/Doscoding187/real_estate_portal/commit/0c4402078ffaced5664f6993dac3fe8f6d0ed504) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no provider, protected system, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The correction rotates only an elapsed, missing, or malformed queued token after the pre-existing canonical paid-access delivery gate permits delivery. It does not broaden membership authority or turn deferred onboarding into a free team-access path. The activated test fixture uses the local mock/log mail transport and is not provider-delivery evidence. |
 
 
@@ -611,9 +677,9 @@ future workspace feature.
 | Launch decision | Fix before controlled team activation |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`415a9472`](https://github.com/Doscoding187/real_estate_portal/commit/415a947261a65c160f4fb77c39712050bab35b8) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The shared canonical agency paid-access check now gates both future delivery and direct acceptance before any membership write. Browser evidence retrieves the token only from the exact local target as a counterfactual because provider delivery remains deferred; it records no token. The active-term fixtures are test-only lifecycle evidence, not an approved live commercial route. |
 
 
@@ -637,9 +703,9 @@ future workspace feature.
 | Launch decision                         | Fix now |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit                  | [`f40ca8a3`](https://github.com/Doscoding187/real_estate_portal/commit/f40ca8a3bbed5bfc1f0ffeb675b2c9d10397f35e) |
-| Integrated verification                 | Pending; source and local exact-target/browser evidence only. |
+| Integrated verification | Pending; source and local exact-target/browser evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system, live data, deployment, or operating channel accessed. |
-| Status                                  | in progress |
+| Status | integrated verified |
 | Notes                                   | Historic CSV, bare-label JSON, malformed, and unavailable coverage values intentionally fail closed until the agent reselects current canonical locations. No migration, manual data repair, `agent_coverage_areas` promotion, payment/entitlement change, or release action occurred. The property-listing geography contract remains unchanged. |
 
 ### LRC-COMMERCIAL-001
@@ -661,9 +727,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the dedicated Commercial workflow and do not route Commercial enquiries through generic viewing operations. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`d1545579`](https://github.com/Doscoding187/real_estate_portal/commit/d1545579fda2c32b466af4cf68ff6929c2e2be2b) |
-| Integrated verification | Pending; exact task-branch source and local-target evidence only. |
+| Integrated verification | Pending; exact task-branch source and local-target evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, or Commercial launch cohort accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The correction preserves `requireAgencyLead` ahead of Commercial detection, so it does not weaken tenant custody. It changes no Commercial publication, payment, entitlement, provider-delivery, migration, or Land policy. The first cohort remains controlled pre-payment onboarding; Commercial paid operation remains separately blocked. |
 
 
@@ -686,9 +752,9 @@ future workspace feature.
 | Launch decision | Fixed locally before any Commercial cohort; keep Commercial paid operation separately blocked. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`551d63fe`](https://github.com/Doscoding187/real_estate_portal/commit/551d63fe) |
-| Integrated verification | Pending; exact task-branch local evidence only. |
+| Integrated verification | Pending; exact task-branch local evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, entitlement activation, or Commercial cohort accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The correction does not enable publication, payments, finance activation, provider delivery, a Land lifecycle, migration, or release. It makes a shared delivery predicate stricter for a matching canonical Land membership, but hard Land containment remains in force. The paid agency term used by the target acceptance is an isolated fixture and is not a live onboarding route. |
 
 ### LRC-LEAD-001
@@ -710,9 +776,9 @@ future workspace feature.
 | Launch decision                         | Fix now |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit                  | `f9086ef4` |
-| Integrated verification                 | Pending; local exact-target evidence only. |
+| Integrated verification | Pending; local exact-target evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system, external provider, or deployment accessed. |
-| Status                                  | in progress |
+| Status | integrated verified |
 | Notes                                   | The first-cohort fallback is internal CRM custody plus staffed platform handling for explicitly platform-managed/manual custody. It does not prove or authorize external email reliability, worker supervision, provider reconciliation, payment activation, or a paid launch. |
 
 ### LRC-LAND-001
@@ -734,9 +800,9 @@ future workspace feature.
 | Launch decision                         | Contain now; defer from the pre-payment onboarding cohort and public exposure |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit                  | `335838dff0c746b860eaaf2930412d4b38540db5`; `62ec0eede830e96eafc69dfd9e4f42a9645aa1ee`; `0280e9dd74b7fa9ed33da782427c27b56e80d6c2` |
-| Integrated verification                 | Pending; local exact-target and source evidence only. |
+| Integrated verification | Pending; local exact-target and source evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system, provider, or deployment accessed. |
-| Status                                  | in progress |
+| Status | integrated verified |
 | Notes                                   | The corrections preserve LRC-PAY-001’s commercial gate and existing Land records, geography contract, and four central public classifications. The generic Developer row supplement rejects new/retained Land authoring and public transitions while preserving rows for a separately authorized Land decision. The draft supplement rejects both supported payload shapes before writes and preserves retained draft records by preventing an update/relabel bypass. Neither correction adds a migration, deletion, payment activation, entitlement mutation, provider change, free publishing policy, or live onboarding route. An isolated paid-entitlement fixture remains test-only. |
 
 ### LRC-LAND-001 public search entry supplement — 2026-10-14
@@ -745,7 +811,7 @@ future workspace feature.
 | --- | --- |
 | Issue ID | LRC-LAND-001; supplement only, original publication finding remains open |
 | Date observed | 2026-10-14; local verification continued 2026-10-15 |
-| Exact Git SHA | Parent `90d46bcef`; implementation is the successor local commit on `feat/homepage-ux-review-20261013` |
+| Exact Git SHA | Parent `90d46bcef`; saved implementation tip `43243be47`; reconciliation candidate `846f0b540` |
 | Page or journey | Homepage and province consumer journey selection; public specialist Land search/detail |
 | URL | `/:province?journey=land`, `/plots-and-land`, `/land/:slug` |
 | User role | Anonymous consumer |
@@ -756,11 +822,11 @@ future workspace feature.
 | Severity | L0 publication boundary retained; presentation change |
 | Owning engine | Land / public discovery / province UX |
 | Launch decision | Enable public search entry per Edward's 14 October request; retain first-cohort publication containment and hosted journey-release manifest requirements |
-| Approved implementation branch/worktree | `feat/homepage-ux-review-20261013` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-ux-review-20261013` |
-| Pull request or commit | Local successor to `90d46bcef`; no push or PR |
-| Integrated verification | Pending; isolated local review only |
+| Approved implementation branch/worktree | Original `feat/homepage-ux-review-20261013`; reconciled on `reconcile/homepage-ux-review-20261016` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-reconciliation-20261016` |
+| Pull request or commit | [PR #632](https://github.com/Doscoding187/real_estate_portal/pull/632); candidate merge commit `846f0b540` |
+| Integrated verification | Reconciled 2026-10-17: cited commits (`846f0b540`, `43243be47`) are contained in `main` at `da6c21bae` through PR #632 (merge `15c719435`; required checks passed including Vercel); `landPublicRouter.ts:30,33` gates public search/detail in current source; production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no deployment or protected operation |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | `isLandPublicDiscoveryAvailable` governs consumer entry separately from unchanged `isLandVerticalAvailable`. Existing server containment tests continue to pass. No schema, runtime query, seed, fixture, payment or publication change. This supplement does not close the original publication finding or authorize Land stock publication. |
 
 ### LRC-SUPPORT-001
@@ -782,7 +848,7 @@ future workspace feature.
 | Launch decision                         | Fix before controlled real-world onboarding                                                                                                                                                                                                                        |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577`                                                                                                                                                         |
 | Pull request or commit                  | `144e90d1531d2e85a407e5dabecfb4124c8394bf`                                                                                                                                                                                                                          |
-| Integrated verification                 | Pending; exact task-branch local source and execution evidence only.                                                                                                                                                                                               |
+| Integrated verification | Pending; exact task-branch local source and execution evidence only. Reconciled 2026-10-17: no correction integration to verify; finding remains blocked on the owner-supplied support channel and final legal authority; status unchanged. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). 2026-10-17 founder update: the `support@`/`info@` channel designation is confirmed (packets 37, 49) and mailbox availability is deferred with the hosted runtime resume, so the remaining proof is mailbox availability plus one inbound/reply demonstration. |
 | Production verification                 | Pending; no hosted contact-channel or staffing confirmation.                                                                                                                                                                                                        |
 | Status                                  | in progress                                                                                                                                                                                                                                                         |
 | Notes                                   | **BLOCKED pending owner-supplied operating and legal authority.** The bounded correction makes intake durable and makes the admin queue distinguish review-only Agent/Agency/Developer/Other requests from manager identity provisioning. It does not claim monitoring or legal readiness. The 2026-09-15 audit confirmed no approved public operator/contact, cadence, escalation path, or final Terms/Privacy authority in the repository. `BILLING_SUPPORT_EMAIL` belongs to disabled manual-EFT preflight and repository values are examples/tests, so it cannot be repurposed as a public support or legal contact without owner approval. Before external onboarding, the owner must supply the operating channel and approved disclosure/data-handling commitments. No membership, role, lead custody, payment, entitlement, or publishing state is changed by this queue. |
@@ -806,9 +872,9 @@ future workspace feature.
 | Launch decision                         | Fix now; retain the pre-payment boundary and defer independent-Agent paid-operation claims.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Pull request or commit                  | [`7c939831`](https://github.com/Doscoding187/real_estate_portal/commit/7c939831); [`e1ccc2c8`](https://github.com/Doscoding187/real_estate_portal/commit/e1ccc2c8349b66887e8ab145cc772887f1322550)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Integrated verification                 | Pending; local task-branch evidence only.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification                 | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Status                                  | in progress                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Status | integrated verified |
 | Notes                                   | The public and authenticated corrections conditionally render their retained catalog-driven commercial components only if `COMMERCIAL_ACTIVATION_STATE.enabled` becomes true under a separately authorized future release. In normal runtime the direct package page makes no commercial catalog, onboarding-status, billing, or invoice call; unavailable select-payment and renewal actions map to clear private preparation. The browser proof enters the real registration path, proves verification, canonical coverage, persisted private preparation, authenticated direct-route containment, and publication containment. This does not establish a paid independent-Agent customer journey, provider delivery, hosted operation, or authority to market paid Agent access. |
 
 ### LRC-AGENT-001 preparation-lock wording supplement — 2026-09-16
@@ -830,9 +896,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment commercial gate. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`217aa1df`](https://github.com/Doscoding187/real_estate_portal/commit/217aa1df288bd7fdda32ee862570876677b0f523) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, entitlement activation, or live customer account was accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The initial browser assertion entered analytics before the established dashboard-unlock threshold and was redirected to setup as designed. It was corrected to enter after the core contact and canonical coverage checkpoints; this is a test diagnostic only, with no database recovery, migration, or runtime guard change. |
 
 ### LRC-ADVERTISE-001
@@ -854,9 +920,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment boundary and defer Developer and all other paid-operation claims. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`234ca6e4`](https://github.com/Doscoding187/real_estate_portal/commit/234ca6e4f2c4833f5784300a1edb9ee016f2c386); [`32224b0a`](https://github.com/Doscoding187/real_estate_portal/commit/32224b0ada4e34a1e9222d702d8fa46963bc88f2); [`9cd6d3e3`](https://github.com/Doscoding187/real_estate_portal/commit/9cd6d3e37163b22eab4aa3a82d90616906c14db0) |
-| Integrated verification | Pending; local task-branch browser, source, and exact-target evidence only. |
+| Integrated verification | Pending; local task-branch browser, source, and exact-target evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The normal public components, including the direct plans route, avoid commercial-catalog loading and retain their former catalog-driven pages only behind the existing separately authorized enabled state. The Developer browser slice proves public entry, registration, verification, pending organisation submission, active owner membership, first-party publisher-scoped private draft persistence, and browser resume. The separately recorded `LRC-DEV-001` proves only the authorised approval-to-professional-presence boundary: approval exposes a verified public brand while retaining `missing_launch_access` and no public projects. The initial raw SQL assertion used stale `draft_name` rather than canonical `draftName`; it was corrected and rerun without a migration, recovery, fallback, or product-code change. No schema, payment, entitlement, publication, provider, or deployment state changed. |
 
 ### LRC-ADVERTISE-001 legacy activation-route supplement — 2026-09-16
@@ -878,9 +944,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment commercial gate. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`a0ceea70`](https://github.com/Doscoding187/real_estate_portal/commit/a0ceea70940e3ee3f84b7118a0470e3b4c7b4631) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The retained `ActivationGate` source is no longer mounted by the public router. This correction makes no payment, entitlement, publication, provider, deployment, or protected-operation change. |
 
 ### LRC-DEV-001
@@ -902,9 +968,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment commercial gate and treat public approved-brand visibility as identity presence, not public project activation. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`bb402332`](https://github.com/Doscoding187/real_estate_portal/commit/bb402332d3bbb2b82d26c060540c09d3cfb715e3); [`589135ce`](https://github.com/Doscoding187/real_estate_portal/commit/589135cef7f48fe94076220e12b4ea07191e7ce9); [`ada578a2`](https://github.com/Doscoding187/real_estate_portal/commit/ada578a2ae2226df0497bb8769911fa668b85149) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, entitlement activation, or live reviewer account was accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The authority test proves that a property-developer caller receives `FORBIDDEN` on approval, while the super-admin review transition makes the profile discoverable only after approval. It proves `getDeveloperPublicationAccess` remains `eligible: false` with `missing_launch_access`, and the same public publisher has no public projects. The direct unwrapped Vitest invocation skipped because that harness omits `DATABASE_URL`; the governed `pnpm test:authority` rerun is the retained database evidence. The authenticated plans correction makes no catalog, subscription, or invoice call in normal runtime and directs the inactive workspace to private developments. This record does not turn the public brand into a paid directory, a project publication route, a prospect-enquiry channel, or a commercial activation path. |
 
 ### LRC-DEV-001 authenticated subscription-route supplement — 2026-09-16
@@ -926,9 +992,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment commercial gate. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`bb89b2b9`](https://github.com/Doscoding187/real_estate_portal/commit/bb89b2b92ff421e54e9fe864e71112b2947b05f6) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, entitlement activation, or live customer account was accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The retained commercial panel is selected only by the existing separately authorised enabled-state decision. This change neither provides a free publishing entitlement nor establishes a paid Developer route. |
 
 ### LRC-DEV-001 legacy authoring-route supplement — 2026-09-16
@@ -950,9 +1016,9 @@ future workspace feature.
 | Launch decision | Fix now; retain the pre-payment commercial gate and the existing Developer/organisation authority boundary. |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577` |
 | Pull request or commit | [`3ad9b1f5`](https://github.com/Doscoding187/real_estate_portal/commit/3ad9b1f5b0541a6931e6e5da1e14c758e7f18232) |
-| Integrated verification | Pending; local task-branch evidence only. |
+| Integrated verification | Pending; local task-branch evidence only. Reconciled 2026-10-17: source-containment verified in `main` at `da6c21bae` (tree `9bfeb0fb8`) through accepted-release integration merge `5c3f7eab4` (PR #583; required checks passed); production verification remains pending. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
 | Production verification | Pending; no protected system, provider, deployment, payment, or entitlement activation accessed. |
-| Status | in progress |
+| Status | integrated verified |
 | Notes | The nested status hook is configurable only so a workspace that already owns a contextual auth return URL can prevent the duplicate context-free redirect. Default hook behavior elsewhere is unchanged. No database recovery, migration, payment, entitlement, publication, provider, or deployment operation occurred. |
 
 The compact index does not replace the complete issue record. Add one complete record under a heading using the stable issue ID when a genuine finding is first registered.

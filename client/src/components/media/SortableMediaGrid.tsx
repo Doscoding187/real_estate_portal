@@ -14,6 +14,8 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -57,6 +59,8 @@ export interface SortableMediaGridProps {
   onSetPrimary?: (id: string) => void;
   onPreview?: (id: string) => void;
   className?: string;
+  /** Listing authoring can drag the whole preview instead of a small grip. */
+  dragFromPreview?: boolean;
 }
 
 interface SortableMediaItemProps {
@@ -64,6 +68,7 @@ interface SortableMediaItemProps {
   onRemove: (id: string) => void;
   onSetPrimary?: (id: string) => void;
   onPreview?: (id: string) => void;
+  dragFromPreview?: boolean;
 }
 
 /**
@@ -74,8 +79,17 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
   onRemove,
   onSetPrimary,
   onPreview,
+  dragFromPreview = false,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: item.id,
   });
 
@@ -123,26 +137,43 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
         </div>
       )}
 
+      {dragFromPreview && (
+        <button
+          type="button"
+          ref={setActivatorNodeRef}
+          {...attributes}
+          {...listeners}
+          aria-label={`Reorder ${item.type === 'image' ? 'photo' : item.type}: ${item.fileName || `item ${item.displayOrder + 1}`}`}
+          className="absolute inset-0 cursor-grab touch-manipulation select-none focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-blue-500 active:cursor-grabbing"
+        />
+      )}
+
       {/* Overlay with actions */}
       <div
         className={cn(
           'absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent',
-          'opacity-0 group-hover:opacity-100 transition-opacity',
+          dragFromPreview
+            ? 'pointer-events-none opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity'
+            : 'opacity-0 group-hover:opacity-100 transition-opacity',
         )}
       >
         {/* Drag Handle - THIS is where drag starts */}
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute top-2 left-2 p-1.5 bg-white/90 rounded-md cursor-grab active:cursor-grabbing hover:bg-white"
-        >
-          <GripVertical className="w-4 h-4 text-gray-700" />
-        </div>
+        {!dragFromPreview && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="absolute top-2 left-2 p-1.5 bg-white/90 rounded-md cursor-grab active:cursor-grabbing hover:bg-white"
+          >
+            <GripVertical className="w-4 h-4 text-gray-700" />
+          </div>
+        )}
 
         {/* Action Buttons */}
-        <div className="absolute top-2 right-2 flex gap-1">
+        <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
           {onPreview && (
             <Button
+              type="button"
+              aria-label={`Preview ${item.fileName || item.type}`}
               variant="ghost"
               size="sm"
               onClick={() => onPreview(item.id)}
@@ -152,6 +183,8 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
             </Button>
           )}
           <Button
+            type="button"
+            aria-label={`Remove ${item.fileName || item.type}`}
             variant="ghost"
             size="sm"
             onClick={() => onRemove(item.id)}
@@ -176,6 +209,7 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
 
           {onSetPrimary && item.type === 'image' && (
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               onClick={() => onSetPrimary(item.id)}
@@ -195,7 +229,12 @@ const SortableMediaItem: React.FC<SortableMediaItemProps> = ({
 
       {/* Primary Badge (always visible when not hovering) */}
       {item.isPrimary && (
-        <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold flex items-center gap-1 shadow-lg group-hover:opacity-0 transition-opacity">
+        <div
+          className={cn(
+            'absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white rounded-md text-xs font-semibold flex items-center gap-1 shadow-lg pointer-events-none',
+            !dragFromPreview && 'group-hover:opacity-0 transition-opacity',
+          )}
+        >
           <Star className="w-3 h-3 fill-current" />
           Primary
         </div>
@@ -214,13 +253,15 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
   onSetPrimary,
   onPreview,
   className,
+  dragFromPreview = false,
 }) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const pointer = useSensor(PointerSensor);
+  const mouse = useSensor(MouseSensor, { activationConstraint: { distance: 6 } });
+  const touch = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } });
+  const keyboard = useSensor(KeyboardSensor, {
+    coordinateGetter: sortableKeyboardCoordinates,
+  });
+  const sensors = useSensors(...(dragFromPreview ? [mouse, touch, keyboard] : [pointer, keyboard]));
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -228,6 +269,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
     if (over && active.id !== over.id) {
       const oldIndex = media.findIndex(item => item.id === active.id);
       const newIndex = media.findIndex(item => item.id === over.id);
+      if (oldIndex < 0 || newIndex < 0) return;
 
       const reorderedMedia = arrayMove(media, oldIndex, newIndex).map((item, index) => ({
         ...item,
@@ -258,6 +300,7 @@ export const SortableMediaGrid: React.FC<SortableMediaGridProps> = ({
               onRemove={onRemove}
               onSetPrimary={onSetPrimary}
               onPreview={onPreview}
+              dragFromPreview={dragFromPreview}
             />
           ))}
         </div>

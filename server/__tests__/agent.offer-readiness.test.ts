@@ -1,6 +1,7 @@
 import { MySqlDialect } from 'drizzle-orm/mysql-core';
 import { describe, expect, it, vi } from 'vitest';
 import { __agentOfferReadinessTestHooks } from '../agentRouter';
+import { requireAgentLeadOfferReadiness } from '../services/agentLeadOfferReadinessService';
 import { serializeAgentLeadOfferReadiness } from '../../shared/agentLeadOfferReadiness';
 
 type OfferReadinessHook = typeof __agentOfferReadinessTestHooks.getAgentOfferReadiness;
@@ -53,5 +54,28 @@ describe('agent offer-readiness lookup', () => {
       canMoveToOffer: true,
       blockers: [],
     });
+  });
+
+  it('rejects incomplete readiness through the shared route guard', async () => {
+    const incomplete = JSON.stringify(
+      serializeAgentLeadOfferReadiness({
+        viewingCompleted: true,
+        feedbackLogged: false,
+        affordabilityConfirmed: true,
+      }),
+    );
+    const { db } = createOfferReadinessDb(incomplete);
+
+    await expect(
+      requireAgentLeadOfferReadiness(
+        db as unknown as Parameters<typeof requireAgentLeadOfferReadiness>[0],
+        {
+          id: 91,
+          agentId: 24,
+          lastContactedAt: '2026-09-02 10:00:00',
+          qualificationStatus: 'qualified',
+        } as Parameters<OfferReadinessHook>[1],
+      ),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
   });
 });

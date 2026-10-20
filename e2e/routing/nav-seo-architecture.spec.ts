@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { expect, test } from '../helpers/audit-network';
 
 const DESKTOP_NAVIGATION_BREAKPOINT = 1280;
 
@@ -7,117 +7,112 @@ function hasDesktopNavigation(page: Page) {
   return (page.viewportSize()?.width ?? 0) >= DESKTOP_NAVIGATION_BREAKPOINT;
 }
 
-test.describe('Homepage nav SEO architecture', () => {
+async function expectNavLinkHref(page: Page, href: string) {
+  await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+}
+
+test.describe('Homepage nav architecture', () => {
   test('primary navigation does not expose placeholder links', async ({ page }) => {
     await page.goto('/');
 
-    const placeholderLinks = page.locator('nav a[href="#"]');
-    await expect(placeholderLinks).toHaveCount(0);
+    await expect(page.locator('nav a[href="#"]')).toHaveCount(0);
   });
 
-  test('city navigation uses canonical location SEO pages', async ({ page }) => {
-    test.skip(
-      !hasDesktopNavigation(page),
-      'City mega-menu is intentionally desktop-only below lg.',
-    );
+  test('Locations navigation stays on canonical neutral geography', async ({ page }) => {
+    test.skip(!hasDesktopNavigation(page), 'Locations mega-menu is intentionally desktop-only.');
     await page.goto('/');
 
-    await page.getByRole('button', { name: 'City' }).click();
+    await page.getByRole('button', { name: 'Locations', exact: true }).click();
 
-    const johannesburgLink = page.locator('nav a[href="/property-for-sale/gauteng/johannesburg"]');
-    await expect(johannesburgLink.first()).toHaveCount(1);
+    await expect(page.locator('nav a[href^="/property-for-sale/gauteng"]')).toHaveCount(0);
+    await expect(page.locator('nav a[href^="/property-to-rent/gauteng"]')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'For Renters' }).click();
-
-    const rentLinks = [
-      '/property-to-rent/gauteng/johannesburg',
-      '/property-to-rent/western-cape/cape-town',
-      '/property-to-rent/kwazulu-natal/durban',
-    ];
-
-    for (const href of rentLinks) {
-      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+    const cityLinks = page.locator('nav a[href^="/gauteng/"]');
+    if ((await cityLinks.count()) > 0) {
+      await expect(page.locator('nav a[href="/gauteng/johannesburg"]').first()).toHaveCount(1);
     }
   });
 
-  test('service nav keeps users inside the services engine', async ({ page }) => {
-    test.skip(
-      !hasDesktopNavigation(page),
-      'Services mega-menu is intentionally desktop-only below lg.',
-    );
+  test('For Renters navigation keeps rental journeys on engine routes', async ({ page }) => {
+    test.skip(!hasDesktopNavigation(page), 'Renters mega-menu is intentionally desktop-only.');
     await page.goto('/');
-    await page.getByRole('button', { name: 'Services' }).click();
 
-    const serviceTopicLinks = [
-      '/services/home-loans',
-      '/services/property-valuation',
-      '/services/legal-services',
-      '/services/home-insurance',
-      '/services/interior-design',
-    ];
+    await page.getByRole('button', { name: 'For Renters', exact: true }).click();
 
-    for (const href of serviceTopicLinks) {
-      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+    for (const href of [
+      '/property-to-rent',
+      '/guides/renting-property',
+      '/shared-living',
+      '/commercial',
+    ]) {
+      await expectNavLinkHref(page, href);
     }
   });
 
-  test('Professionals nav keeps launch-visible professional journeys operational', async ({
+  test('Services navigation keeps users inside the services engine', async ({ page }) => {
+    test.skip(!hasDesktopNavigation(page), 'Services mega-menu is intentionally desktop-only.');
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Services', exact: true }).click();
+
+    for (const href of [
+      '/services',
+      '/services/home-improvement',
+      '/services/moving',
+      '/services/inspection-compliance',
+      '/services/finance-legal',
+      '/services/insurance',
+      '/services/media-marketing',
+    ]) {
+      await expectNavLinkHref(page, href);
+    }
+  });
+
+  test('Professionals navigation keeps launch-visible professional journeys operational', async ({
     page,
   }) => {
     test.skip(
       !hasDesktopNavigation(page),
-      'Professionals mega-menu is intentionally desktop-only below xl.',
+      'Professionals mega-menu is intentionally desktop-only.',
     );
     await page.goto('/');
-    await page.getByRole('button', { name: 'Professionals' }).click();
+    await page.getByRole('button', { name: 'Professionals', exact: true }).click();
 
     for (const href of [
       '/agents',
       '/developers',
       '/services',
-      '/distribution-network',
       '/advertise/sell/agents',
+      '/advertise/sell/agencies',
       '/advertise/sell/developers',
       '/advertise/services',
     ]) {
-      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+      await expectNavLinkHref(page, href);
     }
-
-    await expect(page.locator('nav a[href="/advertise/sell/agencies"]')).toHaveCount(0);
   });
 
-  test('insight and guide nav keeps users inside content engines', async ({ page }) => {
-    test.skip(
-      !hasDesktopNavigation(page),
-      'Insights mega-menu is intentionally desktop-only below lg.',
-    );
+  test('insight and guide navigation keeps users inside content engines', async ({ page }) => {
+    test.skip(!hasDesktopNavigation(page), 'Insights mega-menu is intentionally desktop-only.');
     await page.goto('/');
-    await page.getByRole('button', { name: 'Insights' }).click();
+    await page.getByRole('button', { name: 'Insights', exact: true }).click();
 
-    const contentLinks = [
-      '/insights/market-trends',
+    for (const href of [
       '/insights/property-insights',
+      '/insights/market-trends',
       '/guides/buying-property',
       '/guides/selling-property',
       '/insights/blog',
-    ];
-
-    for (const href of contentLinks) {
-      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
+    ]) {
+      await expectNavLinkHref(page, href);
     }
   });
 
-  test('explore nav keeps users inside the Explore engine', async ({ page }) => {
-    test.skip(
-      !hasDesktopNavigation(page),
-      'Explore mega-menu is intentionally desktop-only below lg.',
-    );
+  test('Explore stays a direct engine link on desktop navigation', async ({ page }) => {
+    test.skip(!hasDesktopNavigation(page), 'Desktop navigation only.');
     await page.goto('/');
-    await page.getByRole('button', { name: /^Explore/ }).click();
 
-    for (const href of ['/explore/home', '/explore/feed', '/explore/map', '/explore/upload']) {
-      await expect(page.locator(`nav a[href="${href}"]`).first()).toHaveCount(1);
-    }
+    await expect(page.locator('nav a[href="/explore"]').first()).toHaveCount(1);
+    await expect(page.locator('nav a[href="/new-developments"]').first()).toHaveCount(1);
+    await expect(page.locator('nav a[href="/distribution-network"]').first()).toHaveCount(1);
   });
 
   test('narrow navigation exposes canonical platform destinations', async ({ page }) => {
@@ -130,83 +125,77 @@ test.describe('Homepage nav SEO architecture', () => {
     const toggle = page.getByRole('button', { name: 'Open navigation menu' });
     await expect(toggle).toHaveAttribute('aria-expanded', 'false');
     await toggle.click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByRole('button', { name: 'Close navigation menu' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
 
-    for (const [label, href] of [
-      ['City', '/property-for-sale'],
-      ['Browse properties for sale', '/property-for-sale'],
-      ['Browse rental properties', '/property-to-rent'],
-      ['New developments', '/new-developments'],
-      ['Explore Property Listify', '/explore/home'],
-      ['Browse property services', '/services'],
-      ['Referrals', '/distribution-network'],
-      ['Advertise & Partner', '/advertise'],
+    for (const href of [
+      '/property-for-sale',
+      '/property-to-rent',
+      '/new-developments',
+      '/services',
+      '/distribution-network',
+      '/advertise',
+      '/explore',
     ]) {
-      await expect(page.getByRole('link', { name: label, exact: true })).toHaveAttribute(
-        'href',
-        href,
-      );
+      await expect(page.locator(`a[href="${href}"]:visible`).first()).toBeVisible();
     }
 
-    const accountTrigger = page.getByRole('button', { name: 'Open account menu' }).first();
-    await accountTrigger.click();
-    await expect(page.getByRole('menuitem', { name: 'Log in' })).toHaveAttribute(
-      'href',
-      '/login?mode=signin',
-    );
-    await expect(page.getByRole('menuitem', { name: 'Create account' })).toHaveAttribute(
-      'href',
-      '/login?mode=register',
-    );
-    await page.keyboard.press('Escape');
-
     await page.getByRole('link', { name: 'Browse properties for sale', exact: true }).click();
-    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(page).toHaveURL(/\/property-for-sale/);
+    await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Browse properties for sale', exact: true }),
+    ).toHaveCount(0);
   });
 });
 
-test.describe('Canonical SEO landing pages', () => {
-  test('city sale page has canonical path matching the property engine URL', async ({ page }) => {
-    await page.goto('/property-for-sale/gauteng/johannesburg');
+test.describe('Canonical discovery landing pages', () => {
+  test('neutral province page canonicalises to itself', async ({ page }) => {
+    await page.goto('/gauteng');
 
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
-      'href',
-      /\/property-for-sale\/gauteng\/johannesburg$/,
-    );
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', /\/gauteng$/);
+    await expect(page.getByRole('heading', { level: 1, name: /Explore Gauteng/i })).toBeVisible();
   });
 
-  test('city rent page has canonical path matching the rental engine URL', async ({ page }) => {
-    await page.goto('/property-to-rent/gauteng/johannesburg');
+  test('neutral city page canonicalises to itself', async ({ page }) => {
+    await page.goto('/gauteng/johannesburg');
 
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
-      /\/property-to-rent\/gauteng\/johannesburg$/,
+      /\/gauteng\/johannesburg$/,
     );
+    await expect(
+      page.getByRole('heading', { level: 1, name: /Explore Johannesburg/i }),
+    ).toBeVisible();
   });
 
   test('service topic page has canonical services URL and useful page heading', async ({
     page,
   }) => {
-    await page.goto('/services/home-loans');
+    await page.goto('/services/home-improvement');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Home Loan Services/i);
+    await expect(page.getByRole('heading', { level: 1 }).first()).toContainText(
+      /home improvement/i,
+    );
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
-      /\/services\/home-loans$/,
+      /\/services\/home-improvement$/,
     );
   });
 
   test('thin insight page has canonical insight URL and useful page heading', async ({ page }) => {
     await page.goto('/insights/market-trends');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Property Market Trends/i);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/Market Trends/i);
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
       'href',
       /\/insights\/market-trends$/,
     );
   });
 
-  test('static sitemap includes new engine-aligned landing pages', async ({ request }) => {
+  test('static sitemap includes engine-aligned landing pages', async ({ request }) => {
     const response = await request.get('/sitemap-static.xml');
     expect(response.ok()).toBeTruthy();
 

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 
 import { notifications } from '../../drizzle/schema';
 import { getDb } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 
 const DEFAULT_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -266,7 +267,7 @@ class CommercialTermNoticeScheduler {
       console.info('[commercialTermNoticeScheduler] tick completed', { sent, at: this.lastSucceededAt });
     } catch (error) {
       this.lastFailedAt = new Date().toISOString();
-      console.error('[commercialTermNoticeScheduler] tick failed', error);
+      console.error('[commercialTermNoticeScheduler] tick failed', safeErrorSummary(error));
     } finally {
       this.running = false;
     }

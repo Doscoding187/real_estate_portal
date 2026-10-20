@@ -4,6 +4,7 @@ import { developerSubscriptionService } from '../services/developerSubscriptionS
 import { getDb } from '../db.ts';
 import { developments, developers, users, developmentApprovalQueue } from '../../drizzle/schema.ts';
 import { eq, desc } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 async function verifyApprovalWorkflow() {
   console.log('Starting Approval Workflow Verification...');
@@ -119,6 +120,6 @@ async function verifyApprovalWorkflow() {
 }
 
 verifyApprovalWorkflow().catch(err => {
-  console.error('Unhandled error:', err);
+  console.error('Unhandled error:', safeErrorSummary(err));
   process.exit(1);
 });

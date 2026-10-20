@@ -44,6 +44,7 @@ import {
   rankNearbyAmenities,
   type NearbyAmenity,
 } from '../shared/nearbyAmenities';
+import { safeErrorSummary } from './_core/safeError';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -506,7 +507,7 @@ export const locationRouter = router({
 
         return rankNearbyAmenities(processed, limit ?? NEARBY_AMENITY_DEFAULT_LIMIT);
       } catch (error) {
-        console.error('Error fetching nearby amenities:', error);
+        console.error('Error fetching nearby amenities:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Nearby amenities are temporarily unavailable',
@@ -940,7 +941,7 @@ export const locationRouter = router({
           },
         };
       } catch (error) {
-        console.error('Geocoding error:', error);
+        console.error('Geocoding error:', safeErrorSummary(error));
         return {
           success: false,
           error: 'Geocoding failed',

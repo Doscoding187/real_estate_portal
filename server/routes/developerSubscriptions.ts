@@ -3,6 +3,7 @@ import { developerSubscriptionService } from '../services/developerSubscriptionS
 import { getDeveloperByUserId } from '../services/developerService';
 import { requireAuth } from '../middleware/auth';
 import { z } from 'zod';
+import { safeErrorSummary } from '../_core/safeError';
 
 const router = Router();
 
@@ -54,7 +55,7 @@ router.get('/:developerId/subscription', requireAuth, async (req, res) => {
     const trialStatus = await developerSubscriptionService.checkTrialExpiration(developerId);
     return res.json({ subscription, trialStatus });
   } catch (error) {
-    console.error('Error fetching developer subscription:', error);
+    console.error('Error fetching developer subscription:', safeErrorSummary(error));
     return res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch subscription details' },
     });
@@ -99,7 +100,7 @@ router.post('/:developerId/subscription/upgrade', requireAuth, async (req, res) 
       status: 'sales_assisted',
     });
   } catch (error) {
-    console.error('Error handling developer subscription upgrade:', error);
+    console.error('Error handling developer subscription upgrade:', safeErrorSummary(error));
     return res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to request a subscription change' },
     });
@@ -135,7 +136,7 @@ router.get('/:developerId/subscription/limits/:limitType', requireAuth, async (r
     const limitCheck = await developerSubscriptionService.checkLimit(developerId, limitType);
     return res.json(limitCheck);
   } catch (error) {
-    console.error('Error checking developer subscription limit:', error);
+    console.error('Error checking developer subscription limit:', safeErrorSummary(error));
     return res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to check subscription limit' },
     });

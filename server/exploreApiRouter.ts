@@ -23,6 +23,7 @@ import { exploreFeedService } from './services/exploreFeedService';
 import { exploreAgencyService } from './services/exploreAgencyService';
 import { requireUser } from './_core/requireUser';
 import { resolveCurrentAgencyMembershipForAgent } from './services/agencyMembershipService';
+import { safeErrorSummary } from './_core/safeError';
 
 /**
  * Helper function to verify agency access
@@ -101,7 +102,7 @@ export const exploreApiRouter = router({
         });
         return { success: true, data: feed };
       } catch (error) {
-        console.error('[exploreApiRouter] getFeed error:', error);
+        console.error('[exploreApiRouter] getFeed error:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Legacy Explore feed is unavailable; use discovery.getFeed.',
@@ -363,7 +364,7 @@ export const exploreApiRouter = router({
         return { success: true, data: analytics };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
-        console.error('[exploreApiRouter] getAgencyAnalytics error:', error);
+        console.error('[exploreApiRouter] getAgencyAnalytics error:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to get agency analytics',
@@ -389,7 +390,7 @@ export const exploreApiRouter = router({
         );
         return { success: true, data: recommendations };
       } catch (error) {
-        console.error('[exploreApiRouter] getRecommendations error:', error);
+        console.error('[exploreApiRouter] getRecommendations error:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Legacy Explore recommendations are unavailable; use discovery.getFeed.',

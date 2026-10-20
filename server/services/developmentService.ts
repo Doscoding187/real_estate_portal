@@ -19,6 +19,7 @@ import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligi
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
+import { AuditActions } from '../_core/auditLog';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { publicDevelopmentDetailService } from './publicDevelopmentDetailService';
 import {
@@ -37,10 +38,12 @@ import {
   developmentDrafts,
   developmentApprovalQueue,
   developmentSupersessions,
+  managerialAuditLogs,
   leads,
   locations,
   distributionPrograms,
 } from '../../drizzle/schema';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ===========================================================================
 // TYPES
@@ -48,7 +51,6 @@ import {
 
 type DevelopmentRow = InferSelectModel<typeof developments>;
 type UnitTypeRow = InferSelectModel<typeof unitTypes>;
-type DevelopmentPhaseRow = InferSelectModel<typeof developmentPhases>;
 
 interface CreateDevelopmentData {
   unitTypes?: unknown[];
@@ -141,6 +143,17 @@ function normalizeAmenities(amenities: unknown): string[] {
   }
 
   return [];
+}
+
+function rejectPhaseArrayWrite(data: CreateDevelopmentData): void {
+  if (!Object.prototype.hasOwnProperty.call(data, 'phases')) return;
+  if (Array.isArray(data.phases) && data.phases.length === 0) return;
+
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Non-empty phase arrays cannot be saved through development create or update. Phase and release management is not connected to the current inventory authority, so no phase changes were applied.',
+  });
 }
 
 type TransactionType = 'for_sale' | 'for_rent' | 'auction';
@@ -1074,6 +1087,8 @@ export async function createDevelopment(
   metadata: DevelopmentMetadata = {},
   operatingContext?: { cataloguePublisherId: number } | null,
 ) {
+  rejectPhaseArrayWrite(data);
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -1083,7 +1098,6 @@ export async function createDevelopment(
     amenities: amenitiesData,
     estateSpecs: estateSpecsData,
     specifications: specificationsData,
-    phases: phasesData,
     highlights: highlightsData,
     features: featuresData,
     videos: videosData,
@@ -1544,6 +1558,8 @@ export async function updateDevelopment(
   data: CreateDevelopmentData,
   operatingContext?: { cataloguePublisherId: number } | null,
 ) {
+  rejectPhaseArrayWrite(data);
+
   console.log('[updateDevelopment] Starting update for development:', id);
   console.log('[updateDevelopment] Payload keys:', Object.keys(data));
 
@@ -1581,7 +1597,6 @@ export async function updateDevelopment(
     amenities: amenitiesData,
     estateSpecs: estateSpecsData,
     specifications: specificationsData,
-    phases: phasesData,
     highlights: highlightsData,
     features: featuresData,
     videos: videosData,
@@ -2034,11 +2049,6 @@ export async function updateDevelopment(
       console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
     }
 
-    // Phases (must respect INT auto_increment ids)
-    if (phasesData !== undefined && Array.isArray(phasesData)) {
-      await persistDevelopmentPhases(writeDb, id, phasesData);
-    }
-
     return updated;
   };
 
@@ -2131,6 +2141,7 @@ export async function updateDeveloperUnitAvailability(
   unitTypeId: string,
   userId: number,
   availableUnits: number,
+  reason: string,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -2139,6 +2150,14 @@ export async function updateDeveloperUnitAvailability(
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: 'Available units must be a non-negative whole number.',
+    });
+  }
+
+  const normalizedReason = typeof reason === 'string' ? reason.trim() : '';
+  if (normalizedReason.length < 10 || normalizedReason.length > 500) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Enter a reason between 10 and 500 characters.',
     });
   }
 
@@ -2211,10 +2230,32 @@ export async function updateDeveloperUnitAvailability(
       });
     }
 
+    const previousAvailableUnits = Math.max(0, Number(unit.availableUnits || 0));
+    if (availableUnits === previousAvailableUnits) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Choose a different availability count before saving.',
+      });
+    }
+
     await tx
       .update(unitTypes)
       .set({ availableUnits, updatedAt: mysqlDateTime() })
       .where(and(eq(unitTypes.id, unitTypeId), eq(unitTypes.developmentId, developmentId)));
+
+    await tx.insert(managerialAuditLogs).values({
+      actorUserId: userId,
+      action: AuditActions.DEVELOPER_UNIT_AVAILABILITY_UPDATED,
+      targetType: 'development',
+      targetId: developmentId,
+      beforeData: { availableUnits: previousAvailableUnits },
+      afterData: { availableUnits },
+      metadata: {
+        unitTypeId: unit.id,
+        unitTypeName: unit.name,
+        reason: normalizedReason,
+      },
+    });
 
     return {
       success: true as const,
@@ -2225,7 +2266,7 @@ export async function updateDeveloperUnitAvailability(
         totalUnits,
         availableUnits,
         reservedUnits,
-        derivedSoldUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
+        unclassifiedRemainderUnits: Math.max(totalUnits - availableUnits - reservedUnits, 0),
       },
     };
   });
@@ -2533,86 +2574,6 @@ export async function persistUnitTypes(
 }
 
 // ===========================================================================
-// PERSIST DEVELOPMENT PHASES
-// ===========================================================================
-async function persistDevelopmentPhases(
-  db: any,
-  developmentId: number,
-  phasesData: any[],
-): Promise<void> {
-  console.log(`[persistDevelopmentPhases] Processing ${phasesData?.length ?? 0} phases`);
-
-  const safePhases = Array.isArray(phasesData) ? phasesData : [];
-
-  // 1) Load existing phase IDs (INT)
-  const existingPhases = await db
-    .select({ id: developmentPhases.id })
-    .from(developmentPhases)
-    .where(eq(developmentPhases.developmentId, developmentId));
-
-  const existingIds = new Set<number>(
-    existingPhases.map((p: any) => Number(p.id)).filter((n: number) => Number.isFinite(n)),
-  );
-
-  // 2) Normalize incoming IDs (INT)
-  const incomingIds = new Set<number>(
-    safePhases
-      .filter(p => p?.id !== undefined && p?.id !== null && p?.id !== '')
-      .map(p => Number(p.id))
-      .filter(n => Number.isFinite(n)),
-  );
-
-  // 3) Delete removed phases (full-sync)
-  const idsToDelete = Array.from(existingIds).filter(id => !incomingIds.has(id));
-  if (idsToDelete.length > 0) {
-    await db
-      .delete(developmentPhases)
-      .where(
-        and(
-          eq(developmentPhases.developmentId, developmentId),
-          inArray(developmentPhases.id, idsToDelete),
-        ),
-      );
-  }
-
-  // 4) Upsert phases
-  for (const phase of safePhases) {
-    const hasId = phase?.id !== undefined && phase?.id !== null && phase?.id !== '';
-    const phaseId = hasId ? Number(phase.id) : null;
-
-    const phasePayload: any = {
-      developmentId,
-      name: phase?.name || 'Unnamed Phase',
-      description: phase?.description || null,
-      status: phase?.status || 'planning',
-      completionDate: phase?.completionDate || null,
-      totalUnits: phase?.totalUnits ?? null,
-      availableUnits: phase?.availableUnits ?? null,
-      media: JSON.stringify(phase?.media || {}),
-    };
-
-    if (phaseId !== null && Number.isFinite(phaseId)) {
-      // UPDATE (scoped by developmentId for safety)
-      await db
-        .update(developmentPhases)
-        .set(phasePayload)
-        .where(
-          and(
-            eq(developmentPhases.developmentId, developmentId),
-            eq(developmentPhases.id, phaseId),
-          ),
-        );
-    } else {
-      // INSERT (do NOT include id; DB auto-increments it)
-      await db.insert(developmentPhases).values({
-        ...phasePayload,
-        createdAt: mysqlDateTime(),
-      });
-    }
-  }
-}
-
-// ===========================================================================
 // GET DEVELOPMENT WITH PHASES
 // ===========================================================================
 
@@ -2704,10 +2665,7 @@ export async function getDevelopmentWithPhases(id: number, cataloguePublisherId?
       baseMedia: parse((u as any).baseMedia, { gallery: [], floorPlans: [], renders: [] }),
     })),
 
-    phases: (phasesData || []).map(p => ({
-      ...p,
-      media: parse((p as any).media, {}),
-    })),
+    phases: phasesData || [],
   };
 }
 
@@ -3918,7 +3876,7 @@ export async function saveDraft(
     const [result] = await db.insert(developmentDrafts).values(draftPayload);
     return { draftId: result.insertId };
   } catch (error: any) {
-    console.error('[saveDraft] Error:', error);
+    console.error('[saveDraft] Error:', safeErrorSummary(error));
     throw new Error(`Failed to save draft: ${error.message}`);
   }
 }

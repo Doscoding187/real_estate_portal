@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { validateLeadTransition } from '../leadTransitionService';
+import {
+  isTwoWayContactOutcome,
+  leadStatusTimestamps,
+  validateLeadTransition,
+} from '../leadTransitionService';
 
 const viewingLead = (overrides: Record<string, unknown> = {}) =>
   ({
@@ -24,12 +28,64 @@ describe('lead transition offer-readiness override', () => {
       validateLeadTransition(viewingLead({ lastContactedAt: null }), 'offer_sent', {
         qualificationConfirmed: true,
       }),
-    ).toThrow('Lead must be contacted before offer work.');
+    ).toThrow('A two-way buyer contact must be recorded before offer work.');
   });
 
   it('keeps qualification mandatory when no readiness confirmation exists', () => {
     expect(() => validateLeadTransition(viewingLead(), 'offer_sent')).toThrow(
       'Qualification must be recorded before offer work.',
     );
+  });
+});
+
+describe('two-way buyer contact outcomes', () => {
+  it.each(['reached', 'replied', 'viewing_booked', 'not_interested'])(
+    'recognizes %s as a two-way interaction',
+    outcome => {
+      expect(isTwoWayContactOutcome(outcome)).toBe(true);
+    },
+  );
+
+  it.each(['no_answer', 'voicemail', 'invalid_contact', 'follow_up_required', 'other'])(
+    'does not treat %s as a two-way interaction',
+    outcome => {
+      expect(isTwoWayContactOutcome(outcome)).toBe(false);
+    },
+  );
+});
+
+describe('lead stage timestamps', () => {
+  it('records first outreach and two-way contact when a viewing is booked', () => {
+    const now = '2026-10-15 09:00:00';
+    const timestamps = leadStatusTimestamps(
+      {
+        status: 'new',
+        firstRespondedAt: null,
+        lastContactedAt: null,
+      } as unknown as Parameters<typeof leadStatusTimestamps>[0],
+      'viewing_scheduled',
+      now,
+    );
+
+    expect(timestamps).toMatchObject({
+      firstRespondedAt: now,
+      lastContactedAt: now,
+      funnelStage: 'viewing',
+    });
+  });
+
+  it('records the offer funnel stage when a submitted offer advances the lead', () => {
+    const timestamps = leadStatusTimestamps(
+      {
+        status: 'viewing_scheduled',
+        firstRespondedAt: '2026-10-14 09:00:00',
+        lastContactedAt: '2026-10-14 09:00:00',
+        funnelStage: 'viewing',
+      } as unknown as Parameters<typeof leadStatusTimestamps>[0],
+      'offer_sent',
+      '2026-10-15 09:00:00',
+    );
+
+    expect(timestamps.funnelStage).toBe('offer');
   });
 });

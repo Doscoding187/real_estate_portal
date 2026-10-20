@@ -24,6 +24,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  formatLeadActivityDate,
+  getLeadActivityPresentation,
+} from '@/lib/leadActivityPresentation';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { SourcePerformancePanel } from '../growth/GrowthPanels';
@@ -31,12 +35,15 @@ import { PIPELINE_STAGES } from '../workspace/constants';
 import { EmptyPanel, ErrorPanel, SectionTitle } from '../workspace/WorkspacePrimitives';
 import { PipelineSnapshot } from '../workspace/WorkspacePanels';
 import type { AgencyLead, WorkspaceContentProps } from '../workspace/types';
-import { formatAge, formatDate, numberLabel, sourceLabel, toneClasses } from '../workspace/utils';
+import { formatAge, formatDate, numberLabel, sourceLabel } from '../workspace/utils';
+
+import { AgencyLeadBoard } from './AgencyLeadBoard';
 
 const STATUS_OPTIONS = PIPELINE_STAGES.map(stage => stage.key);
 const STATUS_LABELS = new Map(PIPELINE_STAGES.map(stage => [stage.key, stage.label]));
 
 function statusLabel(status?: string | null) {
+  if (status === 'qualified') return 'Qualified (existing record)';
   return STATUS_LABELS.get(String(status || 'new')) || String(status || 'new').replace(/_/g, ' ');
 }
 
@@ -91,6 +98,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     null;
   const assignableAgents = assignableAgentsQuery.data || [];
   const selectedAgentId = selectedLead?.agentId ? String(selectedLead.agentId) : 'unassigned';
+  const statusOptions =
+    selectedLead?.status === 'qualified' ? [...STATUS_OPTIONS, 'qualified'] : STATUS_OPTIONS;
 
   useEffect(() => {
     if (!selectedLead || selectedLead.id === draftLeadId) return;
@@ -118,7 +127,9 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
       utils.agency.getDashboardStats.invalidate(),
       utils.agency.getLeadConversionStats.invalidate(),
       utils.agency.getAgentLeaderboard.invalidate(),
-      selectedLeadId ? utils.agency.getLeadDetail.invalidate({ leadId: selectedLeadId }) : Promise.resolve(),
+      selectedLeadId
+        ? utils.agency.getLeadDetail.invalidate({ leadId: selectedLeadId })
+        : Promise.resolve(),
     ]);
   };
 
@@ -216,7 +227,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
     <section className="space-y-5">
       <Card className="border-slate-200 bg-white shadow-sm">
         <CardContent className="p-4">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_180px_180px_190px]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_170px_190px_190px_180px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
@@ -237,6 +248,29 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
               {PIPELINE_STAGES.map(stage => (
                 <option key={stage.key} value={stage.key}>
                   {stage.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by agent"
+              value={props.leadOwner}
+              onChange={event => props.setLeadOwner(event.target.value)}
+              className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
+            >
+              <option value="all">All agents</option>
+              <option value="unassigned">Unassigned</option>
+              {props.leadOwner !== 'all' &&
+              props.leadOwner !== 'unassigned' &&
+              !assignableAgents.some(agent => String(agent.id) === props.leadOwner) ? (
+                <option value={props.leadOwner}>
+                  {props.leads.find(lead => String(lead.agentId) === props.leadOwner)?.agent
+                    ?.name ||
+                    `Agent #${props.leadOwner}`}
+                </option>
+              ) : null}
+              {assignableAgents.map(agent => (
+                <option key={agent.id} value={String(agent.id)}>
+                  {agent.name}
                 </option>
               ))}
             </select>
@@ -287,8 +321,8 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
         </CardContent>
       </Card>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="border-slate-200 bg-white shadow-sm">
+      <section className="min-w-0 space-y-5">
+        <Card className="min-w-0 border-slate-200 bg-white shadow-sm">
           <CardHeader className="pb-2">
             <SectionTitle
               icon={MessageSquare}
@@ -302,7 +336,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
               <div className="h-44 animate-pulse rounded-lg bg-slate-100" />
             ) : null}
             {!props.isLoading.leads && props.leadView === 'kanban' ? (
-              <KanbanLeads leads={props.filteredLeads} onOpen={openLead} />
+              <AgencyLeadBoard leads={props.filteredLeads} onOpen={openLead} />
             ) : null}
             {!props.isLoading.leads && props.leadView === 'table' ? (
               <>
@@ -316,17 +350,22 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
             ) : null}
           </CardContent>
         </Card>
-        <div className="space-y-5">
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
           <PipelineSnapshot
             conversion={props.conversion}
             leadsTotal={Math.max(props.conversion.total, props.filteredLeads.length, 1)}
             onNavigate={props.onNavigate}
           />
-          <SourcePerformancePanel data={props.sourceEfficiencyData} />
+          <div className="min-w-0 overflow-hidden rounded-lg">
+            <SourcePerformancePanel data={props.sourceEfficiencyData} />
+          </div>
         </div>
       </section>
 
-      <Dialog open={Boolean(selectedLeadId)} onOpenChange={open => !open && setSelectedLeadId(null)}>
+      <Dialog
+        open={Boolean(selectedLeadId)}
+        onOpenChange={open => !open && setSelectedLeadId(null)}
+      >
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>{selectedLead?.name || 'Lead detail'}</DialogTitle>
@@ -345,7 +384,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
 
                 <Card className="border-slate-200">
                   <CardHeader className="pb-2">
-                    <SectionTitle icon={Phone} title="Record buyer contact" eyebrow="Keep the next action explicit" />
+                    <SectionTitle
+                      icon={Phone}
+                      title="Record buyer contact"
+                      eyebrow="Keep the next action explicit"
+                    />
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -356,7 +399,9 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
                         {['call', 'whatsapp', 'email', 'sms', 'other'].map(channel => (
-                          <option key={channel} value={channel}>{channel.replace(/_/g, ' ')}</option>
+                          <option key={channel} value={channel}>
+                            {channel.replace(/_/g, ' ')}
+                          </option>
                         ))}
                       </select>
                       <select
@@ -365,8 +410,20 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                         onChange={event => setContactOutcome(event.target.value)}
                         className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm"
                       >
-                        {['reached', 'replied', 'no_answer', 'voicemail', 'viewing_booked', 'follow_up_required', 'not_interested', 'invalid_contact', 'other'].map(outcome => (
-                          <option key={outcome} value={outcome}>{outcome.replace(/_/g, ' ')}</option>
+                        {[
+                          'reached',
+                          'replied',
+                          'no_answer',
+                          'voicemail',
+                          'viewing_booked',
+                          'follow_up_required',
+                          'not_interested',
+                          'invalid_contact',
+                          'other',
+                        ].map(outcome => (
+                          <option key={outcome} value={outcome}>
+                            {outcome.replace(/_/g, ' ')}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -376,27 +433,29 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       onChange={event => setContactSummary(event.target.value)}
                       placeholder="What happened?"
                     />
-                    {!['not_interested', 'invalid_contact'].includes(contactOutcome) ? (
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Input
-                          aria-label="Buyer contact next action"
-                          value={contactNextAction}
-                          onChange={event => setContactNextAction(event.target.value)}
-                          placeholder="Required next action"
-                        />
-                        <Input
-                          aria-label="Buyer contact next follow-up"
-                          type="datetime-local"
-                          value={contactFollowUpAt}
-                          onChange={event => setContactFollowUpAt(event.target.value)}
-                        />
-                      </div>
-                    ) : null}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input
+                        aria-label="Buyer contact next action"
+                        value={contactNextAction}
+                        onChange={event => setContactNextAction(event.target.value)}
+                        placeholder={
+                          ['not_interested', 'invalid_contact'].includes(contactOutcome)
+                            ? 'Review and decide whether to mark lost'
+                            : 'Required next action'
+                        }
+                      />
+                      <Input
+                        aria-label="Buyer contact next follow-up"
+                        type="datetime-local"
+                        value={contactFollowUpAt}
+                        onChange={event => setContactFollowUpAt(event.target.value)}
+                      />
+                    </div>
                     <Button
                       disabled={
                         busy ||
                         !contactSummary.trim() ||
-                        (!['not_interested', 'invalid_contact'].includes(contactOutcome) && !contactNextAction.trim()) ||
+                        !contactNextAction.trim() ||
                         (contactOutcome === 'follow_up_required' && !contactFollowUpAt)
                       }
                       onClick={() =>
@@ -405,9 +464,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                           channel: contactChannel as any,
                           outcome: contactOutcome as any,
                           summary: contactSummary.trim(),
-                          nextAction: ['not_interested', 'invalid_contact'].includes(contactOutcome)
-                            ? undefined
-                            : contactNextAction.trim(),
+                          nextAction: contactNextAction.trim(),
                           nextFollowUp: contactFollowUpAt || undefined,
                         })
                       }
@@ -446,21 +503,39 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                   <CardContent>
                     {selectedLead.activities?.length ? (
                       <div className="space-y-3">
-                        {selectedLead.activities.map(activity => (
-                          <div key={activity.id} className="rounded-lg border border-slate-200 p-3">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <Badge variant="outline" className="capitalize">
-                                {activity.type.replace(/_/g, ' ')}
-                              </Badge>
-                              <span className="text-xs text-slate-500">
-                                {formatDate(activity.createdAt)}
-                              </span>
+                        {selectedLead.activities.map(activity => {
+                          const presentation = getLeadActivityPresentation(activity);
+
+                          return (
+                            <div
+                              key={activity.id}
+                              className="rounded-lg border border-slate-200 p-3"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'capitalize',
+                                    presentation.isFollowUpCompletion &&
+                                      'border-emerald-200 text-emerald-700',
+                                    presentation.isViewingScheduled &&
+                                      'border-sky-200 text-sky-700',
+                                  )}
+                                >
+                                  {presentation.label}
+                                </Badge>
+                                <span className="text-xs text-slate-500">
+                                  {presentation.isFollowUpCompletion
+                                    ? `on ${formatLeadActivityDate(activity.createdAt)}`
+                                    : formatDate(activity.createdAt)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-slate-700">
+                                {presentation.description}
+                              </p>
                             </div>
-                            <p className="mt-2 text-sm leading-6 text-slate-700">
-                              {activity.description || 'Activity recorded.'}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <EmptyPanel
@@ -516,12 +591,22 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       onChange={event => setDraftStatus(event.target.value)}
                       className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm"
                     >
-                      {STATUS_OPTIONS.map(status => (
-                        <option key={status} value={status}>
-                          {statusLabel(status)}
+                      {statusOptions.map(status => (
+                        <option
+                          key={status}
+                          value={status}
+                          disabled={selectedLead.status === 'qualified' && status === 'contacted'}
+                        >
+                          {status === 'qualified'
+                            ? 'Qualified (existing record)'
+                            : statusLabel(status)}
                         </option>
                       ))}
                     </select>
+                    <p className="text-xs leading-5 text-slate-500">
+                      A call or message attempt does not change the stage. Use Connected only after
+                      the buyer replies or a two-way conversation happens.
+                    </p>
                     {draftStatus === 'lost' ? (
                       <Input
                         value={lostReason}
@@ -537,9 +622,23 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     />
                     {selectedLead.readiness && !selectedLead.readiness.canMoveToOffer ? (
                       <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                        {selectedLead.readiness.blockers.join(' ')}
+                        <p className="font-semibold">Before moving to Offer</p>
+                        <p className="mt-1 text-xs leading-5">
+                          The buyer’s contact and qualification information must be ready. Review
+                          and resolve the outstanding items below; completing a viewing alone does
+                          not confirm buyer qualification.
+                        </p>
+                        <ul className="mt-2 list-disc space-y-1 pl-4">
+                          {selectedLead.readiness.blockers.map((blocker, index) => (
+                            <li key={`${index}-${blocker}`}>{blocker}</li>
+                          ))}
+                        </ul>
                       </div>
                     ) : null}
+                    <p className="text-xs leading-5 text-slate-500">
+                      Updating the stage changes this CRM record. It does not send an offer document
+                      or confirm a sale.
+                    </p>
                     <Button
                       disabled={busy || draftStatus === selectedLead.status}
                       onClick={() =>
@@ -571,7 +670,7 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                     <Textarea
                       value={followUpNote}
                       onChange={event => setFollowUpNote(event.target.value)}
-                      placeholder="Follow-up note"
+                      placeholder="What happened, and what should happen next?"
                     />
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -589,11 +688,11 @@ export function AgencyLeadsWorkspace(props: WorkspaceContentProps) {
                       </Button>
                       <Button
                         variant="outline"
-                        disabled={busy || !selectedLead.nextFollowUp}
+                        disabled={busy || !selectedLead.nextFollowUp || !followUpNote.trim()}
                         onClick={() =>
                           completeFollowUp.mutate({
                             leadId: selectedLead.id,
-                            note: 'Follow-up completed from agency workspace.',
+                            note: followUpNote.trim(),
                           })
                         }
                       >
@@ -703,7 +802,11 @@ function LeadContextCard({ lead }: { lead: AgencyLead }) {
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <InfoBlock label="Contact" value={lead.email || lead.phone || 'No contact'} icon={Phone} />
+          <InfoBlock
+            label="Contact"
+            value={lead.email || lead.phone || 'No contact'}
+            icon={Phone}
+          />
           <InfoBlock
             label="Listing"
             value={commercial?.listingTitle || lead.property?.title || 'No listing context'}
@@ -761,72 +864,7 @@ function InfoBlock({
   );
 }
 
-function KanbanLeads({
-  leads,
-  onOpen,
-}: {
-  leads: AgencyLead[];
-  onOpen: (lead: AgencyLead) => void;
-}) {
-  return (
-    <div className="grid gap-3 overflow-x-auto pb-2 xl:grid-cols-4">
-      {PIPELINE_STAGES.slice(0, 6).map(stage => {
-        const stageLeads = leads.filter(lead => (lead.status || 'new') === stage.key).slice(0, 8);
-        const classes = toneClasses(stage.tone);
-        return (
-          <div key={stage.key} className="min-w-64 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <span className={cn('h-2 w-2 rounded-full', classes.dot)} />
-                {stage.label}
-              </span>
-              <Badge variant="outline" className="bg-white">
-                {stageLeads.length}
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              {stageLeads.map(lead => (
-                <button
-                  key={lead.id}
-                  type="button"
-                  onClick={() => onOpen(lead)}
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-teal-300 hover:bg-teal-50/40"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-slate-950">{lead.name}</p>
-                    {lead.overdueFollowUp ? <Clock3 className="h-4 w-4 text-rose-500" /> : null}
-                  </div>
-                  <p className="mt-1 truncate text-xs text-slate-500">
-                    {lead.email || lead.phone || 'No contact'}
-                  </p>
-                  {lead.commercial ? (
-                    <p className="mt-2 truncate text-xs font-medium text-emerald-700">
-                      Commercial · {lead.commercial.listingTitle} · {lead.commercial.spaceIdentifier}
-                    </p>
-                  ) : null}
-                  <p className="mt-2 truncate text-xs text-slate-500">
-                    {lead.agent?.name || 'Unassigned'} · {sourceLabel(lead.leadSource || lead.source)}
-                  </p>
-                </button>
-              ))}
-              {!stageLeads.length ? (
-                <p className="py-6 text-center text-sm text-slate-400">No leads</p>
-              ) : null}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function LeadTable({
-  leads,
-  onOpen,
-}: {
-  leads: AgencyLead[];
-  onOpen: (lead: AgencyLead) => void;
-}) {
+function LeadTable({ leads, onOpen }: { leads: AgencyLead[]; onOpen: (lead: AgencyLead) => void }) {
   if (!leads.length) {
     return (
       <EmptyPanel
@@ -851,18 +889,28 @@ function LeadTable({
           className="grid gap-2 border-t border-slate-200 px-4 py-3 text-sm lg:grid-cols-[minmax(180px,1fr)_150px_150px_140px_120px] lg:items-center"
         >
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
+            <p className="truncate font-semibold text-slate-950">
+              {lead.name || `Lead #${lead.id}`}
+            </p>
             <p className="truncate text-xs text-slate-500">
-              {lead.commercial?.listingTitle || lead.property?.title || lead.email || lead.phone || 'No context'}
+              {lead.commercial?.listingTitle ||
+                lead.property?.title ||
+                lead.email ||
+                lead.phone ||
+                'No context'}
             </p>
           </div>
-          <span className={cn('truncate text-slate-500', !lead.agentId && 'font-medium text-amber-700')}>
+          <span
+            className={cn('truncate text-slate-500', !lead.agentId && 'font-medium text-amber-700')}
+          >
             {lead.agent?.name || 'Unassigned'}
           </span>
           <Badge variant="outline" className="w-fit border-slate-200 capitalize text-slate-600">
             {statusLabel(lead.status)}
           </Badge>
-          <span className={cn('text-slate-500', lead.overdueFollowUp && 'font-medium text-rose-600')}>
+          <span
+            className={cn('text-slate-500', lead.overdueFollowUp && 'font-medium text-rose-600')}
+          >
             {lead.nextFollowUp ? formatDate(lead.nextFollowUp) : lead.nextAction || 'Review'}
           </span>
           <Button variant="outline" size="sm" onClick={() => onOpen(lead)}>
@@ -927,7 +975,10 @@ export function LeadRow({ lead }: { lead: AgencyLead }) {
       <div className="min-w-0">
         <p className="truncate font-semibold text-slate-950">{lead.name || `Lead #${lead.id}`}</p>
         <p className="truncate text-sm text-slate-500">
-          {lead.commercial?.listingTitle || lead.property?.title || lead.message || 'No listing context'}
+          {lead.commercial?.listingTitle ||
+            lead.property?.title ||
+            lead.message ||
+            'No listing context'}
         </p>
       </div>
       <Badge variant="outline" className="w-fit capitalize">

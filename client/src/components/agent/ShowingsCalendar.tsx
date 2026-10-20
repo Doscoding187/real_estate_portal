@@ -1,6 +1,13 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import {
+  calendarTimestamp,
+  calendarDayKey,
+  calendarDateTimeInput,
+  calendarDays,
+  calendarDateRange,
+} from '@/lib/agentCalendar';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -37,6 +44,7 @@ interface ShowingProperty {
 interface Showing {
   id: number;
   listingId: number | null;
+  leadId?: number | null;
   scheduledAt: string | Date | null;
   durationMinutes?: number | null;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
@@ -51,6 +59,8 @@ interface Showing {
 
 interface CalendarViewProps {
   className?: string;
+  initialDate?: Date | null;
+  initialBookingOpen?: boolean;
 }
 
 const VIEW_MODES = [
@@ -65,8 +75,7 @@ function getShowingScheduledDate(showing: Showing): Date | null {
   const value = showing.scheduledAt;
   if (!value) return null;
 
-  const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return calendarTimestamp(value);
 }
 
 function formatShowingTime(showing: Showing) {
@@ -84,52 +93,35 @@ function formatShowingDateTime(showing: Showing) {
   return date ? date.toLocaleString() : 'Scheduling pending';
 }
 
-export function ShowingsCalendar({ className }: CalendarViewProps) {
+export function ShowingsCalendar({
+  className,
+  initialDate,
+  initialBookingOpen = false,
+}: CalendarViewProps) {
   const [, setLocation] = useLocation();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(initialDate || new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(
+    initialBookingOpen ? null : initialDate || null,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<
     'cancelled' | 'completed' | 'scheduled' | 'no_show' | ''
   >('');
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(initialBookingOpen);
+  const bookingDate = new Date(initialDate || currentDate);
+  bookingDate.setHours(9, 0, 0, 0);
   const [bookingForm, setBookingForm] = useState({
     listingId: '',
     visitorName: '',
-    scheduledAt: '',
+    scheduledAt: initialBookingOpen ? calendarDateTimeInput(bookingDate) : '',
     durationMinutes: '30',
     notes: '',
   });
 
   const utils = trpc.useUtils();
 
-  // Get start and end dates for current view
-  const getDateRange = () => {
-    const start = new Date(currentDate);
-    const end = new Date(currentDate);
-
-    switch (viewMode) {
-      case 'month':
-        start.setDate(1);
-        start.setDate(start.getDate() - start.getDay());
-        end.setMonth(end.getMonth() + 1, 0);
-        end.setDate(end.getDate() + (6 - end.getDay()));
-        break;
-      case 'week':
-        start.setDate(start.getDate() - start.getDay());
-        end.setDate(start.getDate() + 6);
-        break;
-      case 'day':
-        // Single day view
-        break;
-    }
-
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    };
-  };
+  const dateRange = calendarDateRange(currentDate, viewMode);
 
   // Fetch showings for the current date range
   const {
@@ -137,12 +129,14 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     isLoading,
     error: showingsError,
   } = trpc.agent.getMyShowings.useQuery({
-    startDate: getDateRange().start,
-    endDate: getDateRange().end,
+    startDate: dateRange.start,
+    endDate: dateRange.end,
     status: statusFilter || undefined,
   });
   const { data: availableListings = [] } = trpc.agent.getShowingListingOptions.useQuery();
   const resolvedListings = availableListings;
+  const { data: pipeline } = trpc.agent.getLeadsPipeline.useQuery({ filters: {} });
+  const leads = pipeline ? Object.values(pipeline).flat() : [];
 
   // Update showing status mutation
   const updateShowingStatusMutation = trpc.agent.updateShowingStatus.useMutation({
@@ -177,6 +171,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
     switch (viewMode) {
       case 'month':
+        newDate.setDate(1);
         newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
         break;
       case 'week':
@@ -188,10 +183,12 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
     }
 
     setCurrentDate(newDate);
+    setSelectedDate(null);
   };
 
   const goToToday = () => {
     setCurrentDate(new Date());
+    setSelectedDate(null);
   };
 
   const openBookingDialog = () => {
@@ -201,158 +198,117 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
 
     setBookingForm(prev => ({
       ...prev,
-      scheduledAt: prev.scheduledAt || defaultDateTime.toISOString().slice(0, 16),
+      scheduledAt: prev.scheduledAt || calendarDateTimeInput(defaultDateTime),
     }));
     setIsBookingOpen(true);
   };
 
-  const resolvedShowings = showings.filter(showing => Boolean(getShowingScheduledDate(showing)));
-
-  const getShowingsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return resolvedShowings.filter((showing: Showing) => {
-      const scheduledDate = getShowingScheduledDate(showing);
-      if (!scheduledDate) return false;
-      const showingDate = scheduledDate.toISOString().split('T')[0];
-      return showingDate === dateStr;
+  // Resolve display context through existing owned inventory and lead identities.
+  const resolvedShowings: Showing[] = showings
+    .filter(showing => Boolean(getShowingScheduledDate(showing)))
+    .map(showing => {
+      const listing = resolvedListings.find(listing => listing.id === showing.listingId);
+      const lead = leads.find(lead => lead.id === showing.leadId);
+      return {
+        ...showing,
+        property: showing.property ?? listing ?? null,
+        client:
+          showing.client ??
+          (lead ? { name: lead.name, email: lead.email, phone: lead.phone } : null),
+      };
     });
-  };
 
-  const filteredShowings = resolvedShowings.filter((showing: Showing) => {
-    if (
-      searchQuery &&
-      !showing.property?.title?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !showing.client?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
+  const filteredShowings = resolvedShowings.filter(showing => {
+    const query = searchQuery.trim().toLowerCase();
+    return (
+      !query ||
+      showing.property?.title?.toLowerCase().includes(query) ||
+      showing.client?.name?.toLowerCase().includes(query)
+    );
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'no_show':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
+  const getShowingsForDate = (date: Date) =>
+    filteredShowings.filter(showing => {
+      const scheduledDate = getShowingScheduledDate(showing);
+      return scheduledDate && calendarDayKey(scheduledDate) === calendarDayKey(date);
+    });
 
-  const renderMonthView = () => {
-    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const startOfCalendar = new Date(startOfMonth);
-    startOfCalendar.setDate(startOfCalendar.getDate() - startOfCalendar.getDay());
+  const showingTitle = (showing: Showing) =>
+    showing.property?.title ||
+    (showing.listingId ? `Listing #${showing.listingId}` : 'Property viewing');
+  const updateStatus = (showingId: number, status: Showing['status']) =>
+    updateShowingStatusMutation.mutate({ showingId, status });
 
-    const days: ReactNode[] = [];
-    const today = new Date();
-
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(startOfCalendar);
-      date.setDate(startOfCalendar.getDate() + i);
-
-      const dayShowings = getShowingsForDate(date);
-      const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-      const isToday = date.toDateString() === today.toDateString();
-      const isSelected = selectedDate?.toDateString() === date.toDateString();
-
-      days.push(
-        <div
-          key={i}
-          className={`min-h-32 p-2 border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors ${
-            !isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''
-          } ${isToday ? 'bg-blue-50' : ''} ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-          onClick={() => setSelectedDate(date)}
-        >
-          <div className={`text-sm font-medium mb-1 ${isToday ? 'text-blue-600' : ''}`}>
-            {date.getDate()}
-          </div>
-          <div className="space-y-1">
-            {dayShowings.slice(0, 3).map((showing: Showing) => (
-              <div
-                key={showing.id}
-                className={`text-xs p-1 rounded truncate border ${getStatusColor(showing.status)}`}
-                title={`${showing.property?.title || 'Property'} - ${formatShowingTime(showing)}`}
-              >
-                <div className="font-medium">{formatShowingTime(showing)}</div>
-                <div className="truncate">{showing.property?.title || 'Property'}</div>
-              </div>
-            ))}
-            {dayShowings.length > 3 && (
-              <div className="text-xs text-gray-500">+{dayShowings.length - 3} more</div>
-            )}
-          </div>
-        </div>,
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-7 gap-0 border border-gray-200 rounded-lg overflow-hidden">
+  const renderCalendar = () => (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="bg-gray-100 p-3 text-center text-sm font-medium">
+          <div key={day} className="py-2 text-center text-xs font-semibold text-slate-500">
             {day}
           </div>
         ))}
-        {days}
       </div>
-    );
-  };
-
-  const renderShowingsList = () => {
-    if (!selectedDate) return null;
-
-    const dayShowings = getShowingsForDate(selectedDate);
-
-    if (dayShowings.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            No showings scheduled for {selectedDate.toLocaleDateString()}
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-            Showings for {selectedDate.toLocaleDateString()}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {dayShowings.map((showing: Showing) => (
-              <ShowingCard
-                key={showing.id}
-                showing={showing}
-                onStatusUpdate={(showingId, status) =>
-                  updateShowingStatusMutation.mutate({ showingId, status })
-                }
-                isUpdating={updateShowingStatusMutation.isPending}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
+      <div className="grid grid-cols-7">
+        {calendarDays(currentDate, viewMode).map(date => {
+          const dayShowings = getShowingsForDate(date);
+          const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+          const isToday = calendarDayKey(date) === calendarDayKey(new Date());
+          const fullDate = date.toLocaleDateString('en-ZA', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          });
+          return (
+            <button
+              type="button"
+              key={calendarDayKey(date)}
+              aria-label={`${fullDate}, ${dayShowings.length} ${dayShowings.length === 1 ? 'viewing' : 'viewings'}`}
+              className={`flex min-w-0 min-h-24 flex-col items-stretch border-b border-r border-slate-200 p-1.5 text-left align-top transition hover:bg-blue-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:min-h-36 sm:p-2 ${!isCurrentMonth ? 'bg-slate-50 text-slate-400' : ''} ${isToday ? 'bg-blue-50/60' : ''}`}
+              onClick={() => setSelectedDate(date)}
+            >
+              <span
+                className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? 'bg-primary text-white' : ''}`}
+              >
+                {date.getDate()}
+              </span>
+              <span className="block space-y-1">
+                {dayShowings.slice(0, 2).map(showing => (
+                  <span
+                    key={showing.id}
+                    title={`${formatShowingTime(showing)} · ${showingTitle(showing)}`}
+                    className={`block min-w-0 rounded-md border p-1 text-[10px] leading-tight sm:text-xs ${getStatusColor(showing.status)}`}
+                  >
+                    <span className="block font-semibold">{formatShowingTime(showing)}</span>
+                    <span className="hidden sm:line-clamp-2">{showingTitle(showing)}</span>
+                    <span className="hidden truncate opacity-80 lg:block">
+                      {showing.client?.name}
+                    </span>
+                    <span className="sm:hidden">Viewing</span>
+                  </span>
+                ))}
+                {dayShowings.length > 2 && (
+                  <span className="block text-[10px] font-medium text-primary sm:text-xs">
+                    +{dayShowings.length - 2} more
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <CalendarIcon className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-bold">Showings Calendar</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={openBookingDialog} className="gap-2">
             <Plus className="h-4 w-4" />
             Book Showing
@@ -360,13 +316,14 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search properties..."
+              placeholder="Search properties or visitors..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10 w-full sm:w-56"
             />
           </div>
           <select
+            aria-label="Filter showing status"
             value={statusFilter}
             onChange={e =>
               setStatusFilter(
@@ -387,12 +344,22 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
       {/* Calendar Controls */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigateDate('prev')}>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Previous period"
+                onClick={() => navigateDate('prev')}
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigateDate('next')}>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Next period"
+                onClick={() => navigateDate('next')}
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" onClick={goToToday}>
@@ -400,11 +367,11 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               </Button>
             </div>
 
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-base font-semibold sm:text-lg">
               {currentDate.toLocaleDateString('en-US', {
                 month: 'long',
                 year: 'numeric',
-                ...(viewMode === 'week' && { day: 'numeric' }),
+                ...(viewMode !== 'month' && { day: 'numeric' }),
               })}
             </h3>
 
@@ -414,7 +381,10 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
                   key={mode.id}
                   variant={viewMode === mode.id ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setViewMode(mode.id)}
+                  onClick={() => {
+                    setViewMode(mode.id);
+                    setSelectedDate(null);
+                  }}
                 >
                   {mode.label}
                 </Button>
@@ -452,51 +422,100 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
         </Card>
       ) : (
         <>
-          {viewMode === 'month' && renderMonthView()}
-
-          {/* Selected Date Showings */}
-          {selectedDate && renderShowingsList()}
-
-          {/* All Showings List */}
-          {!selectedDate && filteredShowings.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>All Showings ({filteredShowings.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {filteredShowings.map((showing: Showing) => (
-                    <ShowingCard
-                      key={showing.id}
-                      showing={showing}
-                      onStatusUpdate={(showingId, status) =>
-                        updateShowingStatusMutation.mutate({ showingId, status })
-                      }
-                      isUpdating={updateShowingStatusMutation.isPending}
-                    />
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {viewMode !== 'day' ? (
+            renderCalendar()
+          ) : (
+            <div className="space-y-3">
+              {getShowingsForDate(currentDate).map(showing => (
+                <ShowingCard
+                  key={showing.id}
+                  showing={showing}
+                  onStatusUpdate={updateStatus}
+                  isUpdating={updateShowingStatusMutation.isPending}
+                />
+              ))}
+              {getShowingsForDate(currentDate).length === 0 && (
+                <p className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
+                  No viewings for this date.
+                </p>
+              )}
+            </div>
           )}
-
-          {!selectedDate && filteredShowings.length === 0 && (
-            <Card>
-              <CardContent className="p-6 text-center text-muted-foreground">
-                No showings found for the selected range.
-              </CardContent>
-            </Card>
+          {viewMode !== 'day' && (
+            <p className="text-sm text-muted-foreground">
+              Select a date to see its viewings and record an outcome.
+            </p>
           )}
         </>
       )}
+
+      <Dialog
+        open={Boolean(selectedDate)}
+        onOpenChange={open => {
+          if (!open) setSelectedDate(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedDate?.toLocaleDateString('en-ZA', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </DialogTitle>
+            <DialogDescription>
+              Viewings scheduled for this date. Record an outcome after the appointment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {isLoading && <p className="text-muted-foreground">Loading viewings...</p>}
+            {showingsError && (
+              <p className="text-muted-foreground">
+                Unable to load viewings. Close this window and retry.
+              </p>
+            )}
+            {!isLoading &&
+              !showingsError &&
+              selectedDate &&
+              getShowingsForDate(selectedDate).map(showing => (
+                <ShowingCard
+                  key={showing.id}
+                  showing={showing}
+                  onStatusUpdate={updateStatus}
+                  isUpdating={updateShowingStatusMutation.isPending}
+                />
+              ))}
+            {!isLoading &&
+              !showingsError &&
+              selectedDate &&
+              getShowingsForDate(selectedDate).length === 0 && (
+                <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+                  No viewings for this date.
+                </p>
+              )}
+            <Button
+              variant="outline"
+              onClick={() => {
+                openBookingDialog();
+                setSelectedDate(null);
+              }}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Book a viewing on this date
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isBookingOpen} onOpenChange={setIsBookingOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Book Showing</DialogTitle>
             <DialogDescription>
-              Create a real showing record for one of your listings. This writes to the canonical
-              scheduling workflow.
+              Choose a property, visitor and time for the viewing.
             </DialogDescription>
           </DialogHeader>
 
@@ -505,8 +524,7 @@ export function ShowingsCalendar({ className }: CalendarViewProps) {
               <label className="text-sm font-medium">Listing</label>
               {availableListings.length === 0 ? (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                  No schedulable inventory is currently available. Publish the listing so its
-                  canonical property projection exists before booking showings.
+                  No published properties are available for booking. Publish a listing first.
                 </div>
               ) : null}
               <select
@@ -614,10 +632,13 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-semibold">{showing.property?.title || 'Property Showing'}</h4>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h4 className="font-semibold">
+                {showing.property?.title ||
+                  (showing.listingId ? `Listing #${showing.listingId}` : 'Property viewing')}
+              </h4>
               <Badge className={`${getStatusColor(showing.status)}`}>{showing.status}</Badge>
             </div>
 
@@ -627,10 +648,10 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
                   <Clock className="h-4 w-4" />
                   {formatShowingDateTime(showing)}
                 </div>
-                {showing.property && (
+                {(showing.property?.address || showing.property?.city) && (
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
-                    {showing.property.address}, {showing.property.city}
+                    {[showing.property?.address, showing.property?.city].filter(Boolean).join(', ')}
                   </div>
                 )}
               </div>
@@ -664,7 +685,7 @@ function ShowingCard({ showing, onStatusUpdate, isUpdating }: ShowingCardProps) 
             )}
           </div>
 
-          <div className="flex flex-col gap-2 ml-4">
+          <div className="flex flex-wrap gap-2 sm:flex-col sm:shrink-0">
             {showing.status === 'scheduled' && (
               <Button
                 size="sm"

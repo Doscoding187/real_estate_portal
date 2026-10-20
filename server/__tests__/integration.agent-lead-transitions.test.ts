@@ -122,6 +122,77 @@ describeWithDb('agent lead transitions follow canonical rules', () => {
     expect(after.lastContactedAt).not.toBeNull();
   });
 
+  it('does not record a first response when an outreach attempt gets no answer', async () => {
+    const userId = await insertAgentUser('NoAnswerAgent');
+    const agentSuffix = suffix();
+    const [agentInsert] = await db
+      .insert(agents)
+      .values({
+        userId,
+        firstName: 'No Answer',
+        lastName: 'Agent',
+        displayName: 'No Answer Agent',
+        email: `no-answer-${agentSuffix}@example.test`,
+        slug: `no-answer-${agentSuffix}`,
+        status: 'approved',
+        isFeatured: 0,
+        isVerified: 1,
+      } as any);
+    const agentId = await insertId(agentInsert);
+    created.agentIds.push(agentId);
+
+    const leadId = await insertLead({ agentId });
+    const caller = agentCaller(userId);
+    const result = await caller.agent.recordLeadContactAttempt({
+      leadId,
+      channel: 'call',
+      outcome: 'no_answer',
+      summary: 'Called the buyer; no answer.',
+      nextAction: 'Try WhatsApp tomorrow.',
+    });
+
+    expect(result.status).toBe('new');
+    const [after] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(after).toMatchObject({
+      status: 'new',
+      firstRespondedAt: null,
+      lastContactedAt: null,
+      nextAction: 'Try WhatsApp tomorrow.',
+    });
+
+    const afterAttemptSummary = await caller.agent.getLeadResponseSummary();
+    expect(afterAttemptSummary).toMatchObject({
+      totalLeads: 1,
+      outreachAttemptedLeads: 1,
+      awaitingFirstOutreach: 0,
+      connectedLeads: 0,
+      awaitingTwoWayConnection: 1,
+    });
+
+    await caller.agent.recordLeadContactAttempt({
+      leadId,
+      channel: 'whatsapp',
+      outcome: 'replied',
+      summary: 'Buyer replied and asked for more details.',
+      nextAction: 'Send property information.',
+    });
+
+    const afterReplySummary = await caller.agent.getLeadResponseSummary();
+    expect(afterReplySummary).toMatchObject({
+      totalLeads: 1,
+      outreachAttemptedLeads: 1,
+      awaitingFirstOutreach: 0,
+      connectedLeads: 1,
+      awaitingTwoWayConnection: 0,
+    });
+    const [afterReply] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(afterReply).toMatchObject({
+      status: 'new',
+      nextAction: 'Send property information.',
+    });
+    expect(afterReply.firstRespondedAt).not.toBeNull();
+  });
+
   it('requires a lost reason on the agent surface too', async () => {
     const userId = await insertAgentUser('LostAgent');
     const [agentInsert] = await db
@@ -145,6 +216,69 @@ describeWithDb('agent lead transitions follow canonical rules', () => {
     await expect(
       agentCaller(userId).agent.updateLeadStatus({ leadId, status: 'lost' }),
     ).rejects.toThrow(/lost reason is required/i);
+  });
+
+  it('requires the recorded offer checklist even when a lead has a passing qualification score', async () => {
+    const userId = await insertAgentUser('OfferReadinessAgent');
+    const agentSuffix = suffix();
+    const [agentInsert] = await db
+      .insert(agents)
+      .values({
+        userId,
+        firstName: 'Offer Readiness',
+        lastName: 'Agent',
+        displayName: 'Offer Readiness Agent',
+        email: `offer-readiness-${agentSuffix}@example.test`,
+        slug: `offer-readiness-${agentSuffix}`,
+        status: 'approved',
+        isFeatured: 0,
+        isVerified: 1,
+      } as any);
+    const agentId = await insertId(agentInsert);
+    created.agentIds.push(agentId);
+
+    const leadId = await insertLead({ agentId, status: 'qualified' });
+    await db
+      .update(leads)
+      .set({
+        qualificationScore: 80,
+        qualificationStatus: 'qualified',
+        lastContactedAt: '2026-10-15 09:00:00',
+      } as any)
+      .where(eq(leads.id, leadId));
+
+    const caller = agentCaller(userId);
+    await expect(caller.agent.moveLeadToStage({ leadId, targetStage: 'offer' })).rejects.toThrow(
+      /Record that the viewing is complete before sending an offer/i,
+    );
+    await expect(caller.agent.updateLeadStatus({ leadId, status: 'offer_sent' })).rejects.toThrow(
+      /Record that the viewing is complete before sending an offer/i,
+    );
+    const [stillQualified] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(stillQualified.status).toBe('qualified');
+
+    await caller.agent.setLeadOfferReadiness({
+      leadId,
+      readiness: {
+        viewingCompleted: true,
+        feedbackLogged: true,
+        affordabilityConfirmed: true,
+      },
+    });
+    await caller.agent.moveLeadToStage({ leadId, targetStage: 'offer' });
+    await caller.agent.setLeadOfferReadiness({
+      leadId,
+      readiness: {
+        viewingCompleted: false,
+        feedbackLogged: false,
+        affordabilityConfirmed: false,
+      },
+    });
+    await caller.agent.moveLeadToStage({ leadId, targetStage: 'won' });
+
+    const [won] = await db.select().from(leads).where(eq(leads.id, leadId)).limit(1);
+    expect(won.status).toBe('converted');
+    expect(won.convertedAt).not.toBeNull();
   });
 
   it('keeps another independent Agent from reading or mutating a custodied lead', async () => {

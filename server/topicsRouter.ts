@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { TopicsService } from './services/topicsService';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 const topicsService = new TopicsService();
@@ -14,7 +15,7 @@ router.get('/', async (req, res) => {
     const topics = await topicsService.getAllTopics();
     res.json(topics);
   } catch (error: any) {
-    console.error('Error fetching topics:', error);
+    console.error('Error fetching topics:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -49,7 +50,7 @@ router.get('/:slug', async (req, res) => {
       relatedTopics: hasSufficientContent ? [] : relatedTopics,
     });
   } catch (error: any) {
-    console.error('Error fetching topic:', error);
+    console.error('Error fetching topic:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -148,7 +149,7 @@ router.get('/:slug/feed', async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching topic feed:', error);
+    console.error('Error fetching topic feed:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -178,7 +179,7 @@ router.get('/:slug/content-count', async (req, res) => {
       minimumRequired: 20,
     });
   } catch (error: any) {
-    console.error('Error fetching topic content count:', error);
+    console.error('Error fetching topic content count:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -203,7 +204,7 @@ router.get('/:slug/related', async (req, res) => {
 
     res.json(relatedTopics);
   } catch (error: any) {
-    console.error('Error fetching related topics:', error);
+    console.error('Error fetching related topics:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });

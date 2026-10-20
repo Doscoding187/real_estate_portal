@@ -15,6 +15,7 @@
 
 import { getDb } from '../db';
 import { nanoid } from 'nanoid';
+import { safeErrorSummary } from '../_core/safeError';
 
 // =====================================================
 // TYPES
@@ -339,7 +340,7 @@ export async function processExpiredSubscriptions(): Promise<void> {
     try {
       await handleExpiredSubscription(sub.id);
     } catch (error) {
-      console.error(`Failed to process expired subscription ${sub.id}:`, error);
+      console.error(`Failed to process expired subscription ${sub.id}:`, safeErrorSummary(error));
     }
   }
 }

@@ -4,6 +4,7 @@ import { priceInsightsService } from './services/priceInsightsService';
 import { getDb } from './db';
 import { sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from './_core/safeError';
 
 const LevelSchema = z.enum(['national', 'province', 'city']);
 
@@ -28,7 +29,7 @@ export const priceInsightsRouter = router({
       const insights = await priceInsightsService.getAllCityInsights();
       return insights;
     } catch (error) {
-      console.error('Error fetching price insights:', error);
+      console.error('Error fetching price insights:', safeErrorSummary(error));
       throw new Error('Failed to fetch price insights');
     }
   }),
@@ -94,7 +95,7 @@ export const priceInsightsRouter = router({
           tabs = extractRows(result);
         }
       } catch (error) {
-        console.error('Error fetching tabs:', error);
+        console.error('Error fetching tabs:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Price insights location schema is unavailable',
@@ -112,7 +113,7 @@ export const priceInsightsRouter = router({
           topChildrenByTabId,
         };
       } catch (error) {
-        console.error('Error fetching aggregation insights:', error);
+        console.error('Error fetching aggregation insights:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Price insights aggregation is unavailable',
@@ -145,7 +146,7 @@ export const priceInsightsRouter = router({
           growthInsight: 'Live metrics aggregation mode active'
         }));
       } catch (error) {
-        console.error('Error fetching heatmap data:', error);
+        console.error('Error fetching heatmap data:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Price insights heatmap is unavailable',

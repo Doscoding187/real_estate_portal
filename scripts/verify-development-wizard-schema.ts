@@ -2,6 +2,7 @@ import { getDb } from '../server/db';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -139,7 +140,7 @@ async function verifySchema() {
     console.log('\n🎯 Development Wizard schema is ready for implementation');
 
   } catch (error) {
-    console.error('\n❌ Verification failed:', error);
+    console.error('\n❌ Verification failed:', safeErrorSummary(error));
     throw error;
   } finally {
     process.exit(0);

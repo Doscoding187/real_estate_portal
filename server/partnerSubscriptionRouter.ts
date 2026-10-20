@@ -29,6 +29,7 @@ import {
   getPartnerFeatureAccess,
   validateTierTransition,
 } from './middleware/partnerFeatureAccess';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = express.Router();
 
@@ -45,7 +46,7 @@ router.get('/pricing', async (req, res) => {
     const pricing = getSubscriptionTierPricing();
     res.json(pricing);
   } catch (error) {
-    console.error('Failed to get pricing:', error);
+    console.error('Failed to get pricing:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to retrieve pricing information' });
   }
 });
@@ -65,7 +66,7 @@ router.get('/pricing/:tier', async (req, res) => {
 
     res.json(pricing);
   } catch (error) {
-    console.error('Failed to get tier pricing:', error);
+    console.error('Failed to get tier pricing:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to retrieve tier pricing' });
   }
 });
@@ -88,7 +89,7 @@ router.get('/partner/:partnerId', attachPartnerSubscription, async (req, res) =>
 
     res.json(subscription);
   } catch (error) {
-    console.error('Failed to get subscription:', error);
+    console.error('Failed to get subscription:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to retrieve subscription' });
   }
 });
@@ -103,7 +104,7 @@ router.get('/partner/:partnerId/history', async (req, res) => {
     const history = await getPartnerSubscriptionHistory(partnerId);
     res.json(history);
   } catch (error) {
-    console.error('Failed to get subscription history:', error);
+    console.error('Failed to get subscription history:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to retrieve subscription history' });
   }
 });
@@ -118,7 +119,7 @@ router.get('/partner/:partnerId/features', async (req, res) => {
     const features = await getPartnerFeatureAccess(partnerId);
     res.json(features);
   } catch (error) {
-    console.error('Failed to get feature access:', error);
+    console.error('Failed to get feature access:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to retrieve feature access' });
   }
 });
@@ -177,7 +178,7 @@ router.post('/', async (req, res) => {
       subscription,
     });
   } catch (error) {
-    console.error('Failed to create subscription:', error);
+    console.error('Failed to create subscription:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to create subscription' });
   }
 });
@@ -246,7 +247,7 @@ router.put('/:id/upgrade', async (req, res) => {
       benefits_applied: 'immediately',
     });
   } catch (error) {
-    console.error('Failed to upgrade subscription:', error);
+    console.error('Failed to upgrade subscription:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to upgrade subscription' });
   }
 });
@@ -293,7 +294,7 @@ router.delete('/:id', async (req, res) => {
       downgrade_applied: 'immediately',
     });
   } catch (error) {
-    console.error('Failed to cancel subscription:', error);
+    console.error('Failed to cancel subscription:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to cancel subscription' });
   }
 });
@@ -336,7 +337,7 @@ router.post('/check-feature', async (req, res) => {
       current_tier: subscription?.tier || 'free',
     });
   } catch (error) {
-    console.error('Failed to check feature access:', error);
+    console.error('Failed to check feature access:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to check feature access' });
   }
 });
@@ -372,7 +373,7 @@ router.post('/check-action', async (req, res) => {
       current_tier: subscription?.tier || 'free',
     });
   } catch (error) {
-    console.error('Failed to check action permission:', error);
+    console.error('Failed to check action permission:', safeErrorSummary(error));
     res.status(500).json({ error: 'Failed to check action permission' });
   }
 });

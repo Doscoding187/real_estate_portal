@@ -1,5 +1,6 @@
 import { db } from '../src/db';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 async function auditSchema() {
   console.log('--- AUDIT START ---');
@@ -20,7 +21,7 @@ async function auditSchema() {
       }
     }
   } catch (error) {
-    console.error('Audit failed:', error);
+    console.error('Audit failed:', safeErrorSummary(error));
   } finally {
     console.log('\n--- AUDIT END ---');
     process.exit(0);

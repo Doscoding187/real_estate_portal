@@ -1,6 +1,7 @@
 import type { Request } from 'express';
 import { getDb } from '../db';
 import { auditLogs, type InsertAuditLog } from '../../drizzle/schema';
+import { safeErrorSummary } from './safeError';
 
 /**
  * Log super_admin and sensitive actions for audit trail
@@ -33,7 +34,7 @@ export async function logAudit(params: {
     await db.insert(auditLogs).values(logEntry);
     console.log(`[AuditLog] ${params.action} by user ${params.userId}`);
   } catch (error) {
-    console.error('[AuditLog] Failed to log action:', error);
+    console.error('[AuditLog] Failed to log action:', safeErrorSummary(error));
   }
 }
 
@@ -69,6 +70,9 @@ export const AuditActions = {
   DELETE_AGENCY: 'delete_agency',
   APPROVE_PROPERTY: 'approve_property',
   REJECT_PROPERTY: 'reject_property',
+
+  // Developer operations
+  DEVELOPER_UNIT_AVAILABILITY_UPDATED: 'developer_unit_availability_updated',
 
   // Agency admin actions
   INVITE_AGENT: 'invite_agent',

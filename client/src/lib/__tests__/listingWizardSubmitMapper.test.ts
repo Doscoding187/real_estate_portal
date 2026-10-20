@@ -190,6 +190,17 @@ const buildPreviousInlinePayload = (state: ListingWizardSubmitState) => {
 };
 
 describe('buildListingWizardSubmitPayload', () => {
+  it('submits the first completed photo even when old primary metadata disagrees', () => {
+    const payload = buildListingWizardSubmitPayload(baseState);
+    expect(payload.mainMediaId).toBe(baseState.media[0].id);
+    const reordered = buildListingWizardSubmitPayload({
+      ...baseState,
+      media: [baseState.media[1], baseState.media[0]],
+      mainMediaId: baseState.media[0].id,
+    });
+    expect(reordered.mainMediaId).toBe(baseState.media[1].id);
+    expect(reordered.mediaIds).toEqual([baseState.media[1].id, baseState.media[0].id]);
+  });
   it('preserves required top-level submission fields and media references', () => {
     const payload: ListingWizardSubmitPayload = buildListingWizardSubmitPayload(baseState);
 
@@ -214,7 +225,7 @@ describe('buildListingWizardSubmitPayload', () => {
         providerObservation: null,
       },
       mediaIds: ['uploads/listing/front.jpg', 'uploads/listing/kitchen.jpg'],
-      mainMediaId: 'uploads/listing/kitchen.jpg',
+      mainMediaId: 'uploads/listing/front.jpg',
       media: [
         { id: 'uploads/listing/front.jpg', mediaType: 'image' },
         { id: 'uploads/listing/kitchen.jpg', mediaType: 'image' },

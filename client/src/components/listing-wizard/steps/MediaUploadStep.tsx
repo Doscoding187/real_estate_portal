@@ -402,23 +402,6 @@ const MediaUploadStep: React.FC<{ listingId?: number; draftContextKey?: string }
     [getMediaKey, store],
   );
 
-  // Handle set as primary
-  const handleSetPrimary = useCallback(
-    (id: string) => {
-      const selected = store.media.find((m, idx) => getMediaKey(m, idx) === id);
-      if (selected?.id) {
-        store.setMainMedia(String(selected.id));
-        return;
-      }
-      const updated = store.media.map((m, idx) => ({
-        ...m,
-        isPrimary: getMediaKey(m, idx) === id,
-      }));
-      store.setMedia(updated);
-    },
-    [getMediaKey, store],
-  );
-
   // Handle upload cancel
   const handleCancelUpload = useCallback((id: string) => {
     setUploads(prev => prev.filter(u => u.id !== id));
@@ -653,15 +636,21 @@ const MediaUploadStep: React.FC<{ listingId?: number; draftContextKey?: string }
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Uploaded Media ({store.media.length})</h4>
-              <p className="text-sm text-gray-500">Drag to reorder • Click star to set primary</p>
+              <p className="text-sm text-gray-500">
+                Drag a photo to reorder. The first photo is your cover.
+              </p>
             </div>
 
             <SortableMediaGrid
               media={mediaItems}
               onReorder={handleReorder}
               onRemove={handleRemove}
-              onSetPrimary={handleSetPrimary}
+              dragFromPreview
             />
+            <p className="text-xs text-slate-500">
+              On touch screens, hold a photo briefly, then drag. With a keyboard, focus a photo,
+              press Space, use the arrow keys, then press Space to drop.
+            </p>
           </div>
         )}
 
@@ -691,7 +680,7 @@ const MediaUploadStep: React.FC<{ listingId?: number; draftContextKey?: string }
                 <li>• Include wide shots and detailed close-ups</li>
                 <li>• Show all rooms and key features</li>
                 <li>• Keep videos under 60 seconds</li>
-                <li>• First uploaded image becomes the primary image</li>
+                <li>• Move your preferred cover photo to the first position</li>
               </ul>
             </div>
           </div>

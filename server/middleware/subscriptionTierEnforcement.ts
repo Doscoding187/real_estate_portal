@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { developerSubscriptionService } from '../services/developerSubscriptionService';
 import { getDeveloperByUserId } from '../services/developerService';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * Helper to get developer ID ONLY from authenticated user context.
@@ -49,7 +50,7 @@ export async function checkDevelopmentLimit(req: Request, res: Response, next: N
 
     next();
   } catch (error) {
-    console.error('Error checking development limit:', error);
+    console.error('Error checking development limit:', safeErrorSummary(error));
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',
@@ -94,7 +95,7 @@ export async function checkLeadLimit(req: Request, res: Response, next: NextFunc
 
     next();
   } catch (error) {
-    console.error('Error checking lead limit:', error);
+    console.error('Error checking lead limit:', safeErrorSummary(error));
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',
@@ -139,7 +140,7 @@ export async function checkTeamMemberLimit(req: Request, res: Response, next: Ne
 
     next();
   } catch (error) {
-    console.error('Error checking team member limit:', error);
+    console.error('Error checking team member limit:', safeErrorSummary(error));
     res.status(500).json({
       error: {
         code: 'INTERNAL_ERROR',
@@ -206,7 +207,7 @@ export function checkFeatureAccess(feature: 'crm' | 'advanced_analytics' | 'bond
 
       next();
     } catch (error) {
-      console.error('Error checking feature access:', error);
+      console.error('Error checking feature access:', safeErrorSummary(error));
       res.status(500).json({
         error: {
           code: 'INTERNAL_ERROR',

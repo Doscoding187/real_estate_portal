@@ -1,27 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRoute } from 'wouter';
+import { Link, useRoute } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {
+  SimpleHomeListingCard,
+  type SimpleHomeListingCardProps,
+} from '@/components/SimpleHomeListingCard';
+import { normalizePublicPropertyCard } from '@/lib/property';
+import type { PublicPropertyDetailPresentation } from '@shared/public-property-detail-presentation';
 import { AgentProfileEnquiryDialog } from '@/components/agent/AgentProfileEnquiryDialog';
+import { AgentInsightsSection } from '@/components/agent/AgentInsightsSection';
+import { AgentVideoSection } from '@/components/agent/AgentVideoSection';
+import { PresenceImage } from '@/components/PresenceImage';
+import { selectPresenceImages } from '@/lib/presenceImages';
+import { PROPERTY_IMAGE_FALLBACK } from '@/lib/mediaUtils';
 import {
   ArrowLeft,
   ArrowRight,
-  Award,
-  Bath,
-  BedDouble,
   Building2,
   CheckCircle2,
-  Facebook,
-  Instagram,
-  Linkedin,
+  ChevronLeft,
+  ChevronRight,
+  House,
   Mail,
   MapPin,
+  Menu,
+  X,
   MessageCircle,
   Phone,
   Send,
   Share2,
-  Twitter,
 } from 'lucide-react';
 import { applySeo } from '@/lib/seo';
 import {
@@ -31,68 +38,50 @@ import {
   parseSocialLinksRecord,
   useAgentProfileTracker,
 } from '@/lib/agentPresence';
+import './AgentMicrosite.css';
 
 const ROLE_LABELS: Record<string, string> = {
   agent: 'Property Practitioner',
   principal_agent: 'Principal Property Practitioner',
   broker: 'Property Broker',
 };
-
 interface CanonicalAreaLink {
+  canonicalLocationId: string;
   name: string;
   type: 'suburb' | 'city' | 'province' | null;
   url: string | null;
 }
-
-interface InventoryCard {
+interface InventoryCard extends Record<string, unknown> {
   id: number;
   title: string;
-  listingType?: string | null;
-  displayPrice?: unknown;
-  price?: unknown;
-  suburb?: unknown;
-  city?: unknown;
-  bedrooms?: unknown;
-  bathrooms?: unknown;
-  mainImage?: unknown;
-  images?: Array<{ url?: string }> | null;
+  detailPresentation?: PublicPropertyDetailPresentation;
+  images?: Array<{ url: string; isPrimary?: number; displayOrder?: number }>;
 }
-
-const zarFormat = new Intl.NumberFormat('en-ZA', {
-  style: 'currency',
-  currency: 'ZAR',
-  maximumFractionDigits: 0,
-});
-
-function formatPropertyPrice(card: InventoryCard): string | null {
-  const display = typeof card.displayPrice === 'string' ? card.displayPrice.trim() : '';
-  if (display) return display;
-  const numeric = Number(card.price);
-  return Number.isFinite(numeric) && numeric > 0 ? zarFormat.format(numeric) : null;
-}
-
-function propertyLocationLine(card: InventoryCard): string {
-  return [card.suburb, card.city]
-    .filter(part => typeof part === 'string' && part.trim())
-    .map(part => String(part).trim())
-    .join(', ');
-}
-
-function primaryImageUrl(card: InventoryCard): string | null {
-  if (typeof card.mainImage === 'string' && card.mainImage.trim()) return card.mainImage;
-  return card.images?.find(image => typeof image?.url === 'string' && image.url)?.url || null;
-}
-
-function listingTypeLabel(card: InventoryCard): string | null {
-  const value = String(card.listingType || '').toLowerCase();
-  if (value === 'sale') return 'For Sale';
-  if (value === 'rent') return 'To Rent';
-  return null;
-}
-
-function countLabel(value: unknown): number | null {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+function publicInventoryCardData(card: InventoryCard): SimpleHomeListingCardProps {
+  // The public inventory DTO exposes one price; the shared normalizer accepts
+  // intent-specific price fields. Embedded pricing contracts retain precedence.
+  const normalized = normalizePublicPropertyCard({
+    ...card,
+    ...(card.listingType === 'rent' ? { monthlyRent: card.price } : { askingPrice: card.price }),
+  });
+  const detail = card.detailPresentation;
+  return {
+    id: normalized.id,
+    href: normalized.href,
+    title: normalized.title,
+    city: normalized.city,
+    suburb: normalized.suburb,
+    locationLabel: detail?.location?.label || normalized.location,
+    price: normalized.price,
+    image: normalized.image,
+    area: normalized.area,
+    yardSize: normalized.yardSize,
+    bedrooms: normalized.bedrooms,
+    bathrooms: normalized.bathrooms,
+    propertyType: normalized.propertyType,
+    listingType: normalized.listingType === 'rent' ? 'rent' : 'sale',
+    badgeLabel: normalized.listingType === 'rent' ? 'To rent' : 'For sale',
+  };
 }
 
 function toAbsoluteUrl(value?: string | null): string | undefined {
@@ -105,163 +94,175 @@ function toAbsoluteUrl(value?: string | null): string | undefined {
 export default function AgentMicrosite() {
   const [, slugParams] = useRoute('/agents/:slug');
   const [, aliasParams] = useRoute('/a/:slug');
-  const slug = slugParams?.slug || aliasParams?.slug || '';
-
+  const [isInventoryPage, inventoryParams] = useRoute('/agents/:slug/properties');
+  const [isAliasInventoryPage, aliasInventoryParams] = useRoute('/a/:slug/properties');
+  const allProperties = isInventoryPage || isAliasInventoryPage;
+  const slug =
+    slugParams?.slug ||
+    aliasParams?.slug ||
+    inventoryParams?.slug ||
+    aliasInventoryParams?.slug ||
+    '';
   const track = useAgentProfileTracker();
-
   const profileQuery = trpc.agent.getPublicProfileBySlug.useQuery(
     { slug },
-    {
-      enabled: !!slug,
-      retry: false,
-    },
+    { enabled: !!slug, retry: false },
   );
-
-  const inventoryQuery = trpc.agent.getPublicInventoryForAgent.useQuery(
-    { slug },
-    {
-      enabled: !!slug && !!profileQuery.data,
-      retry: false,
-    },
-  );
-
   const profile = profileQuery.data;
-
-  const displayName = useMemo(() => {
-    if (!profile) return '';
-    return (
-      profile.displayName?.trim() || `${profile.firstName} ${profile.lastName}`.trim() || 'Agent'
-    );
-  }, [profile]);
-
-  const specializations = useMemo(
-    () => parseDelimitedList(profile?.specialization),
-    [profile?.specialization],
-  );
-  const languages = useMemo(() => parseDelimitedList(profile?.languages), [profile?.languages]);
-  const socialLinks = useMemo(
-    () => parseSocialLinksRecord(profile?.socialLinks),
-    [profile?.socialLinks],
-  );
+  const displayName =
+    profile?.displayName?.trim() ||
+    `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() ||
+    'Agent';
   const areas = useMemo<CanonicalAreaLink[]>(
-    () => (Array.isArray(profile?.canonicalAreas) ? profile.canonicalAreas : []),
+    () => profile?.canonicalAreas || [],
     [profile?.canonicalAreas],
   );
-
   const primaryArea =
     areas.find(area => area.type === 'suburb' && area.url) ||
-    areas.find(area => area.type === 'city' && area.url) ||
-    null;
-
-  const whatsappHref = useMemo(
-    () =>
-      buildWhatsAppHref(
-        profile?.whatsapp || profile?.phone,
-        `Hello ${displayName}, I found your profile on Property Listify.`,
-      ),
-    [profile?.whatsapp, profile?.phone, displayName],
-  );
-
-  const inventory = useMemo<InventoryCard[]>(
-    () => (Array.isArray(inventoryQuery.data) ? (inventoryQuery.data as InventoryCard[]) : []),
-    [inventoryQuery.data],
-  );
-
-  const trackedAgentIdRef = useRef<number | null>(null);
-  const [showAllInventory, setShowAllInventory] = useState(false);
+    areas.find(area => area.url) ||
+    areas[0];
+  const [showAllAreas, setShowAllAreas] = useState(false);
+  const [intent, setIntent] = useState<'all' | 'sale' | 'rent'>('all');
+  const [inventoryArea, setInventoryArea] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [cursor, setCursor] = useState<number | undefined>();
+  const [previousCursors, setPreviousCursors] = useState<Array<number | undefined>>([]);
   const [isEnquiryDialogOpen, setIsEnquiryDialogOpen] = useState(false);
-  const INVENTORY_PREVIEW_COUNT = 6;
-  const visibleInventory = showAllInventory
-    ? inventory
-    : inventory.slice(0, INVENTORY_PREVIEW_COUNT);
+  const [shareFeedback, setShareFeedback] = useState('');
+  const [coverImages, setCoverImages] = useState<
+    ({ slug: string } & ReturnType<typeof selectPresenceImages>) | null
+  >(null);
+  const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const inventoryQuery = trpc.agent.getPublicInventoryPageForAgent.useQuery(
+    {
+      slug,
+      limit: allProperties ? 12 : 6,
+      cursor,
+      listingType: intent === 'all' ? undefined : intent,
+      canonicalPlaceId: inventoryArea || undefined,
+      sort,
+    },
+    { enabled: !!slug && !!profile, retry: false },
+  );
+  const inventoryLocationsQuery = trpc.agent.getPublicInventoryLocationsForAgent.useQuery(
+    { slug },
+    { enabled: !!slug && !!profile, retry: false, staleTime: 60_000 },
+  );
+  const inventoryLocations = inventoryLocationsQuery.data || [];
+  const inventory = useMemo<InventoryCard[]>(
+    () => (inventoryQuery.data?.items || []) as InventoryCard[],
+    [inventoryQuery.data?.items],
+  );
+  const displayedInventory =
+    !allProperties && inventoryQuery.data?.nextCursor != null && inventory.length >= 6
+      ? inventory.slice(0, 5)
+      : inventory;
+  const portfolioImages = useMemo(
+    () =>
+      selectPresenceImages(
+        inventory.map(card => ({
+          primary: publicInventoryCardData(card).image,
+          images: card.images || [],
+        })),
+      ),
+    [inventory],
+  );
+  useEffect(() => {
+    if (!profile || !inventoryQuery.data || intent !== 'all' || inventoryArea || cursor) return;
+    setCoverImages(current =>
+      current?.slug === slug &&
+      current.hero === portfolioImages.hero &&
+      current.contact === portfolioImages.contact &&
+      current.hasListingPhoto === portfolioImages.hasListingPhoto
+        ? current
+        : { slug, ...portfolioImages },
+    );
+  }, [profile, inventoryQuery.data, portfolioImages, intent, inventoryArea, cursor, slug]);
+  const specializations = parseDelimitedList(profile?.specialization);
+  const languages = parseDelimitedList(profile?.languages);
+  const socialLinks = parseSocialLinksRecord(profile?.socialLinks);
+  const whatsappHref = buildWhatsAppHref(
+    profile?.whatsapp || profile?.phone,
+    `Hello ${displayName}, I found your profile on Property Listify.`,
+  );
+  const trackedAgentIdRef = useRef<number | null>(null);
+  const profileHref = `/agents/${slug}`;
+  const propertiesHref = `/agents/${slug}/properties`;
 
   useEffect(() => {
-    if (!profile || !slug) return;
-    if (trackedAgentIdRef.current === profile.id) return;
+    setIntent('all');
+    setInventoryArea('');
+    setSort('newest');
+    setCursor(undefined);
+    setPreviousCursors([]);
+    setShowAllAreas(false);
+    setMobileNavigationOpen(false);
+    setIsEnquiryDialogOpen(false);
+  }, [slug, allProperties]);
+
+  useEffect(() => {
+    if (!profile || trackedAgentIdRef.current === profile.id) return;
     trackedAgentIdRef.current = profile.id;
-    track(AGENT_PROFILE_EVENTS.profileView, {
-      slug: profile.slug,
-      agentId: profile.id,
-    });
-  }, [profile, slug]);
+    track(AGENT_PROFILE_EVENTS.profileView, { slug: profile.slug, agentId: profile.id });
+  }, [profile, track]);
 
   useEffect(() => {
     if (!profile) return;
-    const positioning =
+    const description =
       profile.bio?.trim() ||
-      [
-        ROLE_LABELS[profile.role || ''] || 'Property practitioner',
-        primaryArea ? `specialising in ${primaryArea.name}` : '',
-        profile.agency ? `with ${profile.agency.name}` : '',
-      ]
-        .filter(Boolean)
-        .join(' ') + '.';
-
+      `${displayName}, ${ROLE_LABELS[profile.role || ''] || 'Property practitioner'}${primaryArea ? ` serving ${primaryArea.name}` : ''}.`;
     applySeo({
-      title: `${displayName} | Property Listify`,
-      description: positioning.length > 180 ? `${positioning.slice(0, 177)}...` : positioning,
-      canonicalPath: `/agents/${profile.slug}`,
+      title: `${allProperties ? 'Properties with ' : ''}${displayName} | Property Listify`,
+      description: description.slice(0, 180),
+      canonicalPath: allProperties ? propertiesHref : profileHref,
       image: toAbsoluteUrl(profile.profileImage),
       twitterCard: profile.profileImage ? 'summary_large_image' : 'summary',
     });
-  }, [profile, displayName, primaryArea]);
+  }, [profile, displayName, primaryArea, allProperties, profileHref, propertiesHref]);
 
+  const resetPage = () => {
+    setCursor(undefined);
+    setPreviousCursors([]);
+  };
   const handleShare = async () => {
     track(AGENT_PROFILE_EVENTS.share, { slug });
-    const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: displayName || 'Agent Profile',
-          text: 'Check out this real estate agent profile.',
-          url: shareUrl,
-        });
+    const url = `${window.location.origin}${profileHref}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: displayName, url });
         return;
-      } catch {
-        // Fall through to clipboard sharing.
       }
+      await navigator.clipboard.writeText(url);
+      setShareFeedback('Profile link copied');
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError'))
+        setShareFeedback('Copy the profile URL from your address bar to share it.');
     }
-    await navigator.clipboard.writeText(shareUrl);
   };
 
-  if (profileQuery.isLoading) {
+  if (profileQuery.isLoading)
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0F4C75] mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading professional profile...</p>
-        </div>
-      </div>
+      <main className="agent-site agent-site-state">
+        <p>Loading professional profile...</p>
+      </main>
     );
-  }
-
-  if (!profile) {
+  if (!profile)
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <main className="flex-1 flex items-center justify-center py-24 text-center px-6">
-          <div>
-            <Building2 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h1 className="text-3xl font-bold mb-2">Profile not available</h1>
-            <p className="text-muted-foreground mb-8">
-              This agent profile is not publicly available.
-            </p>
-            <Button asChild variant="outline">
-              <a href="/agents">Browse Property Listify agents</a>
-            </Button>
-          </div>
-        </main>
-      </div>
+      <main className="agent-site agent-site-state">
+        <Building2 size={44} />
+        <h1>Profile not available</h1>
+        <p>This agent profile is not publicly available.</p>
+        <Link className="as-button as-outline" href="/agents">
+          Browse Property Listify agents
+        </Link>
+      </main>
     );
-  }
 
   const initials = `${profile.firstName?.charAt(0) || ''}${profile.lastName?.charAt(0) || ''}`;
-  const roleLabel = profile.role
-    ? ROLE_LABELS[profile.role] || profile.role.replace(/_/g, ' ')
-    : '';
-  // An approved public profile can always offer the consent-aware CRM route,
-  // even when the agent has chosen not to publish every direct contact method.
-  const hasContact = Number.isSafeInteger(Number(profile.id)) && Number(profile.id) > 0;
-
+  const firstName = profile.firstName || displayName;
+  const shortArea = primaryArea?.name.split(',')[0];
+  const roleLabel = ROLE_LABELS[profile.role || ''] || 'Property Practitioner';
+  const pageImages = coverImages?.slug === slug ? coverImages : portfolioImages;
   const openEnquiryDialog = (surface: 'header' | 'hero' | 'contact' | 'mobile') => {
     track(AGENT_PROFILE_EVENTS.contactCta, {
       slug: profile.slug,
@@ -271,614 +272,595 @@ export default function AgentMicrosite() {
     });
     setIsEnquiryDialogOpen(true);
   };
-
-  const trackAreaGuideClick = (areaName: string, url: string) => {
-    track(AGENT_PROFILE_EVENTS.areaGuideClick, {
-      slug: profile.slug,
-      agentId: profile.id,
-      area: areaName,
-      target: url,
-    });
-  };
+  const areaGuide = (area: CanonicalAreaLink) =>
+    area.url ? (
+      <a
+        className="as-area-guide-action"
+        aria-label={`Explore guide for ${area.name}`}
+        data-testid="area-guide-link"
+        href={area.url}
+        onClick={() =>
+          track(AGENT_PROFILE_EVENTS.areaGuideClick, {
+            slug: profile.slug,
+            agentId: profile.id,
+            area: area.name,
+            target: area.url,
+          })
+        }
+      >
+        Explore this area <ArrowRight size={14} />
+      </a>
+    ) : null;
+  const whatsapp = (className = 'as-button as-whatsapp') =>
+    whatsappHref ? (
+      <a
+        className={className}
+        href={whatsappHref}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => track(AGENT_PROFILE_EVENTS.whatsappClick, { slug })}
+      >
+        <MessageCircle size={18} />
+        <span>WhatsApp</span>
+      </a>
+    ) : null;
+  const call = (className = 'as-contact-link') =>
+    profile.phone ? (
+      <a
+        className={className}
+        href={`tel:${profile.phone}`}
+        onClick={() => track(AGENT_PROFILE_EVENTS.callClick, { slug })}
+      >
+        <Phone size={17} />
+        <span>Call</span>
+      </a>
+    ) : null;
+  const hasAbout =
+    !!profile.bio?.trim() ||
+    !!specializations.length ||
+    !!languages.length ||
+    !!profile.licenseNumber ||
+    !!Object.keys(socialLinks).length;
+  const hasInventory =
+    inventory.length > 0 ||
+    allProperties ||
+    intent !== 'all' ||
+    !!inventoryArea ||
+    inventoryQuery.isLoading ||
+    inventoryQuery.isError ||
+    inventoryQuery.data?.nextCursor != null;
 
   return (
-    <div className="min-h-screen bg-white text-slate-900 flex flex-col">
-      {/* A. Minimal agent-owned header */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between gap-3">
-          <a
-            href="/"
-            className="flex items-center gap-2 min-w-0 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">Back to Property Listify</span>
-          </a>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
+    <div className="agent-site">
+      <header className="as-header">
+        <div className="as-shell as-header-inner">
+          <Link className="as-brand" href={profileHref}>
+            <House size={25} aria-hidden="true" />
+            <span>Property Listify</span>
+          </Link>
+          <nav className="as-nav" aria-label="Agent page">
+            <a href={allProperties ? propertiesHref : '#current-properties'}>Properties</a>
+            {areas.length > 0 && (
+              <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
+            )}
+            <a href={allProperties ? `${profileHref}#insights` : '#insights'}>Advice</a>
+            {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
+          </nav>
+          <div className="as-header-actions">
+            <button
+              className="as-share"
               onClick={() => void handleShare()}
               aria-label="Share this profile"
               data-testid="share-profile"
             >
-              <Share2 className="h-4 w-4 mr-1.5" />
-              Share
-            </Button>
+              <Share2 size={17} />
+              <span>Share</span>
+            </button>
             <button
-              type="button"
+              className="as-button as-primary as-header-enquiry"
               onClick={() => openEnquiryDialog('header')}
-              className="hidden sm:inline-flex items-center rounded-md bg-[#0F4C75] px-4 py-2 text-sm font-medium text-white hover:bg-[#0A2540] transition-colors"
             >
-              Send enquiry
+              Contact agent
+            </button>
+            <button
+              className="as-menu-toggle"
+              aria-label="Agent page menu"
+              aria-expanded={mobileNavigationOpen}
+              aria-controls="agent-mobile-navigation"
+              onClick={() => setMobileNavigationOpen(!mobileNavigationOpen)}
+            >
+              {mobileNavigationOpen ? <X size={21} /> : <Menu size={21} />}
             </button>
           </div>
         </div>
+        {mobileNavigationOpen && (
+          <nav
+            id="agent-mobile-navigation"
+            className="as-mobile-nav"
+            aria-label="Mobile agent page"
+            onClick={() => setMobileNavigationOpen(false)}
+          >
+            <a href={allProperties ? propertiesHref : '#current-properties'}>Agent's listings</a>
+            {areas.length > 0 && (
+              <a href={allProperties ? `${profileHref}#areas` : '#areas'}>Areas</a>
+            )}
+            <a href={allProperties ? `${profileHref}#insights` : '#insights'}>Advice</a>
+            {hasAbout && <a href={allProperties ? `${profileHref}#about` : '#about'}>About</a>}
+            <a href="#contact">Contact agent</a>
+          </nav>
+        )}
+        {shareFeedback && (
+          <p className="as-share-feedback" role="status">
+            {shareFeedback}
+          </p>
+        )}
       </header>
 
-      {/* B. Hero */}
-      <section className="bg-gradient-to-br from-[#0A2540] via-[#0F4C75] to-[#3282B8] text-white">
-        <div className="max-w-6xl mx-auto px-5 md:px-8 py-14 md:py-20">
-          <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start">
-            <div className="w-32 h-32 md:w-44 md:h-44 rounded-full overflow-hidden border-4 border-white/25 shadow-xl flex-shrink-0 bg-white/10 flex items-center justify-center text-5xl md:text-6xl font-bold">
-              {profile.profileImage ? (
-                <img
-                  src={profile.profileImage}
-                  alt={displayName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                initials || 'A'
-              )}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h1
-                className="text-4xl md:text-6xl font-bold tracking-tight leading-tight"
-                data-testid="agent-name"
-              >
-                {displayName}
-              </h1>
-
-              <div className="mt-3 space-y-1.5">
-                {roleLabel && <p className="text-lg md:text-xl text-blue-100">{roleLabel}</p>}
-                {profile.agency && (
-                  <p
-                    className="text-base md:text-lg text-blue-200/90 flex items-center gap-2"
-                    data-testid="agency-affiliation"
-                  >
-                    Currently with{' '}
-                    <span className="font-semibold text-white">{profile.agency.name}</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-                {primaryArea && (
-                  <span className="inline-flex items-center gap-1.5 text-blue-100">
-                    <MapPin className="h-4 w-4" />
-                    {primaryArea.name}
-                    {areas.length > 1 ? ` & surrounding areas` : ''}
-                  </span>
-                )}
-                {profile.isVerified === 1 && (
-                  <span
-                    className="inline-flex items-center gap-1.5 text-emerald-300 font-medium"
-                    data-testid="verified-badge"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Verified
-                  </span>
-                )}
-                {typeof profile.yearsExperience === 'number' && profile.yearsExperience > 0 && (
-                  <span className="text-blue-100">{profile.yearsExperience}+ years experience</span>
-                )}
-              </div>
-
-              {profile.bio && (
-                <p className="mt-5 max-w-2xl text-blue-50/95 leading-relaxed line-clamp-3 md:line-clamp-none">
-                  {profile.bio}
-                </p>
-              )}
-
-              <div className="mt-7 flex flex-wrap gap-3" data-testid="hero-contact-actions">
-                <button
-                  type="button"
-                  onClick={() => openEnquiryDialog('hero')}
-                  className="inline-flex items-center gap-2 rounded-md bg-white px-5 py-2.5 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
-                  data-testid="send-profile-enquiry"
-                >
-                  <Send className="h-4 w-4" />
-                  Send enquiry
-                </button>
-                {whatsappHref && (
-                  <a
-                    href={whatsappHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => track(AGENT_PROFILE_EVENTS.whatsappClick, { slug })}
-                    className="inline-flex items-center gap-2 rounded-md bg-emerald-500 px-5 py-2.5 font-medium text-white hover:bg-emerald-400 transition-colors"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    WhatsApp
-                  </a>
-                )}
-                {profile.phone && (
-                  <a
-                    href={`tel:${profile.phone}`}
-                    onClick={() => track(AGENT_PROFILE_EVENTS.callClick, { slug })}
-                    className="inline-flex items-center gap-2 rounded-md border border-white/60 px-5 py-2.5 font-medium text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Call
-                  </a>
-                )}
-                {profile.email && (
-                  <a
-                    href={`mailto:${profile.email}`}
-                    onClick={() => track(AGENT_PROFILE_EVENTS.emailClick, { slug })}
-                    className="inline-flex items-center gap-2 rounded-md border border-white/60 px-5 py-2.5 font-medium text-white hover:bg-white/10 transition-colors"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </a>
-                )}
-                {inventory.length > 0 && (
-                  <a
-                    href="#current-properties"
-                    onClick={() =>
-                      track(AGENT_PROFILE_EVENTS.contactCta, { slug, action: 'view_properties' })
-                    }
-                    className="inline-flex items-center gap-2 rounded-md border border-white/60 px-5 py-2.5 font-medium text-white hover:bg-white/10 transition-colors"
-                  >
-                    View current properties
-                    <ArrowRight className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <main className="flex-1 max-w-6xl w-full mx-auto px-5 md:px-8 py-14 md:py-20 space-y-16 md:space-y-24 pb-28 md:pb-16">
-        {/* C. Primary area / local authority */}
-        {primaryArea && (
-          <section
-            className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end border-b border-slate-200 pb-10"
-            data-testid="primary-area-section"
-          >
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3282B8] mb-3">
-                Local market focus
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Property expertise in {primaryArea.name}
-              </h2>
-              <p className="mt-3 max-w-2xl text-slate-600 leading-relaxed">
-                {displayName} serves the {primaryArea.name} area
-                {areas.length > 1 ? ' and surrounding communities' : ''}. Explore the{' '}
-                {primaryArea.name} area guide on Property Listify for local property insights and
-                current market activity.
-              </p>
-            </div>
-            {primaryArea.url && (
-              <a
-                href={primaryArea.url}
-                onClick={() => trackAreaGuideClick(primaryArea.name, primaryArea.url!)}
-                className="inline-flex items-center gap-2 rounded-md border border-[#0F4C75] px-5 py-2.5 font-medium text-[#0F4C75] hover:bg-[#0F4C75] hover:text-white transition-colors whitespace-nowrap"
-                data-testid="area-guide-link"
-              >
-                {primaryArea.name} area guide
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            )}
-          </section>
-        )}
-
-        {/* D. Current inventory / mandates */}
-        {inventory.length > 0 && (
-          <section id="current-properties" data-testid="inventory-section">
-            <div className="mb-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3282B8] mb-3">
-                Current properties
-              </p>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Current properties represented by {profile.firstName}
-              </h2>
-              <p className="mt-3 text-slate-600 max-w-2xl">
-                Live mandates from the Property Listify network. Each listing is maintained on the
-                canonical Property Listify marketplace.
-              </p>
-            </div>
-
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleInventory.map(card => {
-                const price = formatPropertyPrice(card);
-                const location = propertyLocationLine(card);
-                const image = primaryImageUrl(card);
-                const beds = countLabel(card.bedrooms);
-                const baths = countLabel(card.bathrooms);
-                const badge = listingTypeLabel(card);
-                return (
-                  <a
-                    key={card.id}
-                    href={`/property/${card.id}`}
-                    onClick={() =>
-                      track(AGENT_PROFILE_EVENTS.listingClick, {
-                        slug: profile.slug,
-                        agentId: profile.id,
-                        propertyId: card.id,
-                      })
-                    }
-                    className="group block"
-                    data-testid="inventory-card"
-                  >
-                    <div className="aspect-[4/3] overflow-hidden rounded-xl bg-slate-100 border border-slate-200 relative">
-                      {image ? (
-                        <img
-                          src={image}
-                          alt={card.title}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-400">
-                          <Building2 className="h-10 w-10" />
-                        </div>
-                      )}
-                      {badge && (
-                        <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-[#0F4C75] shadow-sm">
-                          {badge}
-                        </span>
-                      )}
-                    </div>
-                    <div className="pt-4">
-                      <h3 className="font-semibold leading-snug group-hover:text-[#0F4C75] transition-colors line-clamp-2">
-                        {card.title}
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500 flex items-center gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{location || 'South Africa'}</span>
-                      </p>
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        {price && <p className="font-bold text-[#0F4C75]">{price}</p>}
-                        <p className="text-xs text-slate-500 ml-auto flex items-center gap-3">
-                          {beds !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <BedDouble className="h-3.5 w-3.5" />
-                              {beds}
-                            </span>
-                          )}
-                          {baths !== null && (
-                            <span className="inline-flex items-center gap-1">
-                              <Bath className="h-3.5 w-3.5" />
-                              {baths}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </a>
-                );
-              })}
-            </div>
-
-            {inventory.length > INVENTORY_PREVIEW_COUNT && !showAllInventory && (
-              <div className="mt-10 text-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    track(AGENT_PROFILE_EVENTS.contactCta, {
-                      slug,
-                      action: 'view_all_properties',
-                    });
-                    setShowAllInventory(true);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-md border border-[#0F4C75] px-6 py-3 font-medium text-[#0F4C75] hover:bg-[#0F4C75] hover:text-white transition-colors"
-                  data-testid="view-all-properties"
-                >
-                  View all current properties represented by {profile.firstName}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* E. About / expertise */}
-        <section className="grid gap-10 lg:grid-cols-[1.6fr_1fr]" data-testid="about-section">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3282B8] mb-3">
-              About
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-6">
-              About {displayName}
-            </h2>
-            <p className="text-slate-700 leading-relaxed whitespace-pre-line">
-              {profile.bio || `${displayName} has not added a public biography yet.`}
-            </p>
-
-            {specializations.length > 0 && (
-              <>
-                <h3 className="mt-8 text-sm font-semibold uppercase tracking-wider text-slate-500">
-                  Specialisations
-                </h3>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {specializations.map(spec => (
-                    <Badge key={spec} variant="secondary" className="text-sm px-3 py-1">
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
-                      {spec}
-                    </Badge>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          <aside className="space-y-6 lg:border-l lg:border-slate-200 lg:pl-10">
-            {(profile.licenseNumber || languages.length > 0 || profile.agency) && (
-              <div className="rounded-xl border border-slate-200 p-6 space-y-4 bg-slate-50/60">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-                  Professional details
-                </h3>
-                {profile.agency && (
-                  <p
-                    className="text-sm text-slate-700 flex items-start gap-2.5"
-                    data-testid="agency-detail"
-                  >
-                    <Building2 className="h-4 w-4 mt-0.5 text-[#3282B8] flex-shrink-0" />
-                    <span>
-                      Currently with <span className="font-semibold">{profile.agency.name}</span>
-                    </span>
-                  </p>
-                )}
-                {profile.licenseNumber && (
-                  <p className="text-sm text-slate-700 flex items-start gap-2.5">
-                    <Award className="h-4 w-4 mt-0.5 text-[#3282B8] flex-shrink-0" />
-                    <span>License: {profile.licenseNumber}</span>
-                  </p>
-                )}
-                {languages.length > 0 && (
-                  <p className="text-sm text-slate-700">
-                    Languages: <span className="font-medium">{languages.join(', ')}</span>
-                  </p>
-                )}
-                {Object.keys(socialLinks).length > 0 && (
-                  <div className="flex gap-3 pt-2 border-t border-slate-200">
-                    {socialLinks.facebook && (
-                      <a
-                        href={socialLinks.facebook}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Facebook"
-                        className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-[#0F4C75] hover:bg-[#1877F2] hover:text-white transition-colors"
-                      >
-                        <Facebook className="h-4 w-4" />
-                      </a>
-                    )}
-                    {socialLinks.instagram && (
-                      <a
-                        href={socialLinks.instagram}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Instagram"
-                        className="h-9 w-9 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 hover:bg-[#E1306C] hover:text-white transition-colors"
-                      >
-                        <Instagram className="h-4 w-4" />
-                      </a>
-                    )}
-                    {socialLinks.linkedin && (
-                      <a
-                        href={socialLinks.linkedin}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="LinkedIn"
-                        className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center text-[#0A66C2] hover:bg-[#0A66C2] hover:text-white transition-colors"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                      </a>
-                    )}
-                    {socialLinks.twitter && (
-                      <a
-                        href={socialLinks.twitter}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Twitter"
-                        className="h-9 w-9 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 hover:bg-[#1DA1F2] hover:text-white transition-colors"
-                      >
-                        <Twitter className="h-4 w-4" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </aside>
+      {allProperties ? (
+        <section className="as-collection-header as-shell">
+          <Link href={profileHref} className="as-text-link">
+            <ArrowLeft size={16} />
+            Back to {firstName}'s profile
+          </Link>
+          <p className="as-eyebrow">Current properties</p>
+          <h1>Properties with {firstName}</h1>
+          <p>Explore available listings and open a property for its details and enquiry options.</p>
         </section>
+      ) : (
+        <>
+          <section className="as-hero as-hero-with-image">
+            <PresenceImage
+              className="as-hero-image"
+              src={pageImages.hero}
+              fallbackSrc={PROPERTY_IMAGE_FALLBACK}
+              alt=""
+              aria-hidden="true"
+            />
+            <div className="as-hero-shade" />
+            <div className="as-shell as-hero-inner">
+              <div className="as-hero-copy">
+                <p className="as-eyebrow">{roleLabel}</p>
+                <h1 data-testid="agent-name">{displayName}</h1>
+                <p className="as-hero-position">
+                  Helping you find your place{shortArea ? ` in ${shortArea}` : ''}.
+                </p>
+                {primaryArea && (
+                  <p className="as-hero-location">
+                    <MapPin size={16} />
+                    {primaryArea.name}
+                    {areas.length > 1
+                      ? ` · ${areas.length - 1} more service ${areas.length === 2 ? 'area' : 'areas'}`
+                      : ''}
+                  </p>
+                )}
+                {profile.agency && (
+                  <p className="as-affiliation" data-testid="agency-affiliation">
+                    Currently with <strong>{profile.agency.name}</strong>
+                  </p>
+                )}
+                <div className="as-hero-actions" data-testid="hero-contact-actions">
+                  {hasInventory && (
+                    <a className="as-button as-light" href="#current-properties">
+                      Explore my properties <ArrowRight size={17} />
+                    </a>
+                  )}
+                  {whatsapp('as-button as-blueprint-whatsapp')}
+                  {(!hasInventory || !whatsappHref) && (
+                    <button
+                      className="as-button as-light-outline"
+                      data-testid="send-profile-enquiry"
+                      onClick={() => openEnquiryDialog('hero')}
+                    >
+                      <Send size={17} />
+                      Send enquiry
+                    </button>
+                  )}
+                </div>
+                <div className="as-trust-strip">
+                  {hasInventory && (
+                    <a href="#current-properties">
+                      <House size={23} />
+                      <span>
+                        Current
+                        <br />
+                        listings
+                      </span>
+                    </a>
+                  )}
 
-        {/* F. Areas served */}
-        {areas.length > 0 && (
-          <section data-testid="areas-section">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#3282B8] mb-3">
-              Areas served
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-8">
-              Where {profile.firstName} works
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {areas.map(area =>
-                area.url ? (
-                  <a
-                    key={`${area.name}-${area.url}`}
-                    href={area.url}
-                    onClick={() => trackAreaGuideClick(area.name, area.url!)}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:border-[#0F4C75] hover:text-[#0F4C75] transition-colors"
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    {area.name}
-                  </a>
+                  {areas.length > 0 && (
+                    <span>
+                      <MapPin size={17} />
+                      <strong>{areas.length}</strong> service{' '}
+                      {areas.length === 1 ? 'area' : 'areas'}
+                    </span>
+                  )}
+                  {profile.yearsExperience != null && profile.yearsExperience > 0 && (
+                    <span>{profile.yearsExperience}+ years experience</span>
+                  )}
+                  {profile.isVerified === 1 && (
+                    <span data-testid="verified-badge">
+                      <CheckCircle2 size={17} />
+                      Profile verified
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className={`as-portrait ${profile.profileImage ? '' : 'as-portrait-fallback'}`}>
+                {profile.profileImage ? (
+                  <img src={profile.profileImage} alt={displayName} />
                 ) : (
-                  <span
-                    key={area.name}
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-500"
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    {area.name}
-                  </span>
-                ),
+                  <>
+                    <span className="as-initials">{initials}</span>
+                    <span className="as-portrait-name">{displayName}</span>
+                    <span className="as-portrait-role">{roleLabel}</span>
+                  </>
+                )}
+              </div>
+              {pageImages.hasListingPhoto && (
+                <span className="as-hero-caption">
+                  A property currently represented by {firstName}
+                </span>
               )}
             </div>
           </section>
-        )}
-
-        {/* J. Conversion CTA */}
-        {hasContact && (
-          <section
-            id="contact"
-            className="rounded-2xl bg-gradient-to-br from-[#0A2540] to-[#0F4C75] text-white p-8 md:p-14 text-center"
-            data-testid="contact-section"
-          >
-            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Work with {profile.firstName}
-            </h2>
-            <p className="mt-3 text-blue-100 max-w-xl mx-auto">
-              Get in touch directly about buying, selling or renting property
-              {primaryArea ? ` in ${primaryArea.name}` : ''}.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3" data-testid="contact-actions">
-              <button
-                type="button"
-                onClick={() => openEnquiryDialog('contact')}
-                className="inline-flex items-center gap-2 rounded-md bg-white px-6 py-3 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
-                data-testid="send-profile-enquiry-contact"
-              >
-                <Send className="h-4 w-4" />
-                Send enquiry
-              </button>
-              {whatsappHref && (
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() =>
-                    track(AGENT_PROFILE_EVENTS.contactCta, {
-                      slug,
-                      action: 'whatsapp',
-                    })
-                  }
-                  className="inline-flex items-center gap-2 rounded-md bg-emerald-500 px-6 py-3 font-medium hover:bg-emerald-400 transition-colors"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp {profile.firstName}
-                </a>
-              )}
-              {profile.phone && (
-                <a
-                  href={`tel:${profile.phone}`}
-                  onClick={() =>
-                    track(AGENT_PROFILE_EVENTS.contactCta, {
-                      slug,
-                      action: 'call',
-                    })
-                  }
-                  className="inline-flex items-center gap-2 rounded-md bg-white px-6 py-3 font-medium text-[#0F4C75] hover:bg-blue-50 transition-colors"
-                >
-                  <Phone className="h-4 w-4" />
-                  Call {profile.firstName}
-                </a>
-              )}
-              {profile.email && (
-                <a
-                  href={`mailto:${profile.email}`}
-                  onClick={() =>
-                    track(AGENT_PROFILE_EVENTS.contactCta, {
-                      slug,
-                      action: 'email',
-                    })
-                  }
-                  className="inline-flex items-center gap-2 rounded-md border border-white/60 px-6 py-3 font-medium hover:bg-white/10 transition-colors"
-                >
-                  <Mail className="h-4 w-4" />
-                  Email {profile.firstName}
-                </a>
-              )}
-            </div>
-          </section>
-        )}
-      </main>
-
-      {/* Subtle Property Listify presence */}
-      <footer className="border-t border-slate-200 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-5 md:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
-          <p>
-            Powered by{' '}
-            <a href="/" className="font-semibold text-[#0F4C75] hover:underline">
-              Property Listify
-            </a>
-          </p>
-          <div className="flex items-center gap-6">
-            <a href="/property-for-sale" className="hover:text-slate-800 transition-colors">
-              Browse properties
-            </a>
-            <a href="/agents" className="hover:text-slate-800 transition-colors">
-              Agent directory
-            </a>
-            <a
-              href="/advertise/sell/agents"
-              className="font-semibold text-[#0F4C75] hover:underline"
-            >
-              Get your own presence
-            </a>
-          </div>
-        </div>
-      </footer>
-
-      {/* Restrained sticky mobile contact */}
-      {hasContact && (
-        <div
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 flex gap-3"
-          data-testid="mobile-contact-bar"
-        >
-          <button
-            type="button"
-            onClick={() => openEnquiryDialog('mobile')}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-[#0F4C75] px-4 py-2.5 text-sm font-medium text-white"
-            data-testid="mobile-send-profile-enquiry"
-          >
-            <Send className="h-4 w-4" />
-            Enquire
-          </button>
-          {whatsappHref ? (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() =>
-                track(AGENT_PROFILE_EVENTS.whatsappClick, { slug, surface: 'mobile_bar' })
-              }
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </a>
-          ) : profile.phone ? (
-            <a
-              href={`tel:${profile.phone}`}
-              onClick={() => track(AGENT_PROFILE_EVENTS.callClick, { slug, surface: 'mobile_bar' })}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-md bg-[#0F4C75] px-4 py-2.5 text-sm font-medium text-white"
-            >
-              <Phone className="h-4 w-4" />
-              Call
-            </a>
-          ) : null}
-        </div>
+        </>
       )}
 
+      <main className="as-shell as-main">
+        {hasInventory && (
+          <section
+            id="current-properties"
+            data-testid="inventory-section"
+            className="as-inventory-section"
+          >
+            {!allProperties && (
+              <div className="as-section-heading">
+                <div>
+                  <p className="as-eyebrow">Current portfolio</p>
+                  <h2>Agent's listings</h2>
+                  <p className="as-section-description">
+                    A selection of current properties represented by {firstName}.<br />
+                    Open a listing for photos, details and enquiry options.
+                  </p>
+                </div>
+                {inventoryQuery.data?.nextCursor != null && (
+                  <Link
+                    data-testid="view-all-properties"
+                    className="as-text-link"
+                    href={propertiesHref}
+                    onClick={() =>
+                      track(AGENT_PROFILE_EVENTS.contactCta, {
+                        slug,
+                        action: 'view_all_properties',
+                      })
+                    }
+                  >
+                    View all properties <ArrowRight size={17} />
+                  </Link>
+                )}
+              </div>
+            )}
+            <div className="as-inventory-controls">
+              <div className="as-intent-tabs" role="group" aria-label="Property intent">
+                {(['all', 'sale', 'rent'] as const).map(value => (
+                  <button
+                    key={value}
+                    aria-pressed={intent === value}
+                    className={intent === value ? 'is-selected' : ''}
+                    onClick={() => {
+                      setIntent(value);
+                      resetPage();
+                    }}
+                  >
+                    {value === 'all' ? 'All properties' : value === 'sale' ? 'For sale' : 'To rent'}
+                  </button>
+                ))}
+              </div>
+              <div className="as-selects">
+                {inventoryLocations.length > 0 && (
+                  <label>
+                    <span className="sr-only">Filter properties by area</span>
+                    <select
+                      aria-label="Filter properties by area"
+                      value={inventoryArea}
+                      onChange={event => {
+                        setInventoryArea(event.target.value);
+                        resetPage();
+                      }}
+                    >
+                      <option value="">All areas</option>
+                      {inventoryLocations.map(location => (
+                        <option key={location.canonicalPlaceId} value={location.canonicalPlaceId}>
+                          {location.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {allProperties && (
+                  <label>
+                    <span className="sr-only">Property order</span>
+                    <select
+                      aria-label="Property order"
+                      value={sort}
+                      onChange={event => {
+                        setSort(event.target.value as 'newest' | 'oldest');
+                        resetPage();
+                      }}
+                    >
+                      <option value="newest">Newest added</option>
+                      <option value="oldest">Oldest added</option>
+                    </select>
+                  </label>
+                )}
+              </div>
+            </div>
+            {inventoryQuery.isLoading ? (
+              <p className="as-inventory-status" role="status">
+                Loading properties...
+              </p>
+            ) : inventoryQuery.isError ? (
+              <div className="as-inventory-status" role="alert">
+                <p>Properties couldn't be loaded. Please try again.</p>
+                <button
+                  className="as-button as-outline"
+                  onClick={() => void inventoryQuery.refetch()}
+                >
+                  Try again
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="as-property-grid">
+                  {displayedInventory.map(card => (
+                    <div key={card.id} data-testid="inventory-card">
+                      <SimpleHomeListingCard
+                        {...publicInventoryCardData(card)}
+                        onOpen={() =>
+                          track(AGENT_PROFILE_EVENTS.listingClick, {
+                            slug: profile.slug,
+                            agentId: profile.id,
+                            propertyId: card.id,
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
+                  {!allProperties && inventoryQuery.data?.nextCursor != null && (
+                    <Link className="as-portfolio-card" href={propertiesHref}>
+                      <House size={32} />
+                      <p className="as-eyebrow">Keep exploring</p>
+                      <h3>
+                        More properties,
+                        <br />
+                        more possibilities.
+                      </h3>
+                      <p>Browse {firstName}'s available listings by area and sale or rental.</p>
+                      <span className="as-button as-primary">
+                        View all properties <ArrowRight size={17} />
+                      </span>
+                    </Link>
+                  )}
+                </div>
+                {!inventory.length && (
+                  <p className="as-inventory-status">
+                    {inventoryQuery.data?.nextCursor != null
+                      ? 'No public properties in this batch. Continue to check the next page.'
+                      : 'No current properties match these filters.'}
+                  </p>
+                )}
+                {allProperties && (
+                  <nav className="as-pagination" aria-label="Property pages">
+                    <button
+                      className="as-button as-outline"
+                      disabled={!previousCursors.length || inventoryQuery.isFetching}
+                      onClick={() => {
+                        setCursor(previousCursors[previousCursors.length - 1]);
+                        setPreviousCursors(previousCursors.slice(0, -1));
+                      }}
+                    >
+                      <ChevronLeft size={17} />
+                      Previous
+                    </button>
+                    <span>Page {previousCursors.length + 1}</span>
+                    <button
+                      className="as-button as-outline"
+                      disabled={
+                        inventoryQuery.data?.nextCursor == null || inventoryQuery.isFetching
+                      }
+                      onClick={() => {
+                        setPreviousCursors([...previousCursors, cursor]);
+                        setCursor(inventoryQuery.data?.nextCursor ?? undefined);
+                      }}
+                    >
+                      Next
+                      <ChevronRight size={17} />
+                    </button>
+                  </nav>
+                )}
+              </>
+            )}
+          </section>
+        )}
+
+        {!allProperties && areas.length > 0 && (
+          <section id="areas" className="as-area-section" data-testid="areas-section">
+            <div className="as-area-layout">
+              <div className="as-area-intro" data-testid="area-guides-intro">
+                <p className="as-eyebrow">Local expertise</p>
+                <h2>Areas I work in</h2>
+                <p>
+                  Explore {firstName}'s service areas and their local guides before your next move.
+                </p>
+                <a className="as-button as-primary as-all-area-guides" href="/tools/area-guides">
+                  Explore all area guides <ArrowRight size={16} />
+                </a>
+              </div>
+              <div className="as-area-picker" role="group" aria-label="Service area guides">
+                {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
+                  <article
+                    key={area.canonicalLocationId}
+                    className="as-area-option"
+                    data-testid="area-guide-card"
+                    aria-label={area.name}
+                  >
+                    <PresenceImage
+                      className="as-area-image"
+                      alt=""
+                      loading="lazy"
+                      width={320}
+                      height={180}
+                      aria-hidden="true"
+                    />
+                    <div className="as-area-card-body">
+                      <h3>{area.name.split(',')[0]}</h3>
+                      <p>{area.name.split(',').slice(1).join(',').trim() || 'Service area'}</p>
+                      {area.url ? (
+                        areaGuide(area)
+                      ) : (
+                        <p className="as-area-guide-unavailable">Guide not available yet</p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+                {areas.length > 4 && (
+                  <button
+                    className="as-text-link as-more-areas"
+                    onClick={() => setShowAllAreas(!showAllAreas)}
+                  >
+                    {showAllAreas ? 'Show fewer areas' : `See all ${areas.length} areas`}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {!allProperties && <AgentInsightsSection area={primaryArea} />}
+        {!allProperties && <AgentVideoSection key={slug} slug={slug} agentName={displayName} />}
+
+        {!allProperties && hasAbout && (
+          <section id="about" className="as-about" data-testid="about-section">
+            <div>
+              <p className="as-eyebrow">Meet your property professional</p>
+              <h2>About {displayName}</h2>
+              {profile.bio?.trim() && <p className="as-bio">{profile.bio}</p>}
+              {specializations.length > 0 && (
+                <div className="as-specializations">
+                  {specializations.map(value => (
+                    <span key={value}>{value}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            {(profile.agency ||
+              languages.length > 0 ||
+              profile.licenseNumber ||
+              Object.keys(socialLinks).length > 0) && (
+              <aside className="as-professional-details">
+                <h3>Professional details</h3>
+                {profile.agency && (
+                  <p data-testid="agency-detail">
+                    <Building2 size={17} />
+                    {profile.agency.name}
+                  </p>
+                )}
+                {languages.length > 0 && <p>Languages: {languages.join(', ')}</p>}
+                {profile.licenseNumber && <p>Registration supplied: {profile.licenseNumber}</p>}
+                {Object.keys(socialLinks).length > 0 && (
+                  <div className="as-socials">
+                    {Object.entries(socialLinks).map(([name, href]) => (
+                      <a key={name} href={href} target="_blank" rel="noreferrer">
+                        {name}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </aside>
+            )}
+          </section>
+        )}
+
+        <section id="contact" className="as-contact" data-testid="contact-section">
+          <PresenceImage
+            className="as-contact-image"
+            src={pageImages.contact}
+            alt=""
+            loading="lazy"
+            aria-hidden="true"
+          />
+          <div className="as-contact-copy">
+            <p className="as-eyebrow">Let's talk</p>
+            <h2>Let's talk.</h2>
+            <p>
+              Whether you're buying, selling or renting, tell {firstName} what you have in mind.
+            </p>
+            <div className="as-contact-actions" data-testid="contact-actions">
+              {whatsapp()}
+              {call('as-button as-light')}
+              {profile.email && (
+                <a
+                  className="as-button as-light"
+                  href={`mailto:${profile.email}`}
+                  onClick={() => track(AGENT_PROFILE_EVENTS.emailClick, { slug })}
+                >
+                  <Mail size={17} />
+                  Email
+                </a>
+              )}
+            </div>
+          </div>
+          <AgentProfileEnquiryDialog
+            key={profile.id}
+            onSubmitted={() =>
+              track(AGENT_PROFILE_EVENTS.contactCta, {
+                slug: profile.slug,
+                agentId: profile.id,
+                action: 'send_enquiry',
+                surface: 'contact',
+              })
+            }
+            presentation="inline"
+            open={true}
+            onOpenChange={() => {}}
+            agentId={profile.id}
+            agentName={displayName}
+          />
+        </section>
+      </main>
+
+      <footer className="as-footer">
+        <div className="as-shell as-footer-inner">
+          <div>
+            <strong>{displayName}</strong>
+            <p>{roleLabel}</p>
+          </div>
+          <nav aria-label="Profile footer">
+            <Link href={propertiesHref}>Properties</Link>
+            <a href="/agents">Agent directory</a>
+            <a href="/advertise">Get your own presence</a>
+          </nav>
+          <p>
+            Powered by <a href="/">Property Listify</a>
+          </p>
+        </div>
+      </footer>
+      <div className="as-mobile-contact" data-testid="mobile-contact-actions">
+        {whatsapp()}
+        {profile.phone ? (
+          call('as-button as-outline')
+        ) : (
+          <button className="as-button as-outline" onClick={() => openEnquiryDialog('mobile')}>
+            Send enquiry
+          </button>
+        )}
+      </div>
       <AgentProfileEnquiryDialog
-        agentId={Number(profile.id)}
-        agentName={displayName}
         open={isEnquiryDialogOpen}
         onOpenChange={setIsEnquiryDialogOpen}
+        agentId={profile.id}
+        agentName={displayName}
       />
     </div>
   );

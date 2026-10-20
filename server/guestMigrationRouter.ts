@@ -7,6 +7,7 @@ import { TRPCError } from '@trpc/server';
 import { requireUser } from './_core/requireUser';
 import { isCommercialMarketingPropertyType } from '../shared/commercial-domain';
 import { resolvePublicPropertyEligibilities } from './services/publicPropertyEligibilityService';
+import { safeErrorSummary } from './_core/safeError';
 
 export type GuestActivityMigrationCommand = {
   userId: number;
@@ -145,7 +146,7 @@ export async function migrateGuestActivity(
     });
   } catch (error) {
     if (error instanceof TRPCError) throw error;
-    console.error('Guest migration error:', error);
+    console.error('Guest migration error:', safeErrorSummary(error));
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Failed to migrate guest data',

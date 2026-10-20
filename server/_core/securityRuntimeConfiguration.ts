@@ -4,6 +4,7 @@ import { resolveCommercialActivationConfiguration } from '../services/commercial
 const TEST_ONLY_ENVIRONMENT_KEYS = [
   'VITEST',
   'S2_DB_TESTS',
+  'BILLING_PROOF_S3_ENDPOINT',
   'LISTIFY_E2E_DATABASE_URL',
   'LISTIFY_TEST_DB_REBUILD_CONFIRM',
   'DATABASE_AUTHORITY_PARENT_FINGERPRINT',

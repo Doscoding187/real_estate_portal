@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { users, developers } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
@@ -109,8 +110,7 @@ async function investigateUserDeveloperMapping() {
 
     console.log('=== EVIDENCE COLLECTION COMPLETE ===');
   } catch (error: any) {
-    console.error('❌ Investigation failed:', error.message);
-    console.error(error);
+    console.error('❌ Investigation failed:', safeErrorSummary(error));
     process.exit(1);
   }
 

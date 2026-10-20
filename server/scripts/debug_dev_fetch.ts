@@ -1,4 +1,5 @@
 import { db } from '../src/db';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, developerBrandProfiles, developers } from '../src/drizzle/schema';
 import { eq, sql, desc } from 'drizzle-orm';
 import { getPublicDevelopmentBySlug } from '../src/services/developmentService';
@@ -76,11 +77,11 @@ async function run() {
         );
       }
     } catch (err) {
-      console.error('❌ EXCEPTION calling service:', err);
+      console.error('❌ EXCEPTION calling service:', safeErrorSummary(err));
     }
   }
 
   process.exit(0);
 }
 
-run().catch(console.error);
+run().catch(err => console.error('debug-dev-fetch failed:', safeErrorSummary(err)));

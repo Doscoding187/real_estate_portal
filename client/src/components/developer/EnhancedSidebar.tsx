@@ -16,6 +16,7 @@ import {
   ChevronRight,
   BarChart3,
   FileEdit,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -60,6 +61,12 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'My Drafts',
         icon: FileEdit,
         path: '/developer/drafts',
+      },
+      {
+        id: 'documents',
+        label: 'Project Library',
+        icon: FolderOpen,
+        path: '/developer/documents',
       },
       {
         id: 'leads',

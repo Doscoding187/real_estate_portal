@@ -1,10 +1,10 @@
 # Homepage area-first search: local review
 
-Date: 14 October 2026  
-Branch: `feat/homepage-ux-review-20261013`  
-Worktree: `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-ux-review-20261013`  
-Before: `590271b09`  
-Preview: http://localhost:3010  
+Date: 14 October 2026<br>
+Branch: `feat/homepage-ux-review-20261013`<br>
+Worktree: `/home/edwardspc/Desktop/Dev/worktrees/property-listify-homepage-ux-review-20261013`<br>
+Before: `590271b09`<br>
+Preview: http://localhost:3010<br>
 Artifacts: `/home/edwardspc/Desktop/Dev/review-artifacts/home-area-first-20261014/index.html`
 
 Follow-up: `home-metro-scope-audit-2026-10-14.md` supersedes this first version’s direct-town exemption and records national coverage gaps. This document preserves the initial implementation evidence.

@@ -1,4 +1,5 @@
 import { getDb } from '../server/db';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function checkColumns() {
   try {
@@ -38,7 +39,7 @@ async function checkColumns() {
     
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', safeErrorSummary(error));
     process.exit(1);
   }
 }

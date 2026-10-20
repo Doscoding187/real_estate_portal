@@ -1,3 +1,4 @@
+import { safeErrorSummary } from '../server/_core/safeError';
 console.log("Script starting...");
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
@@ -34,7 +35,7 @@ async function checkLocations() {
     allCities.forEach(c => console.log(` - ${c.name} (Slug: ${c.slug}, ProvId: ${c.provinceId})`));
 
   } catch (error) {
-    console.error("Available tables check failed:", error);
+    console.error("Available tables check failed:", safeErrorSummary(error));
   } finally {
     await connection.end();
   }

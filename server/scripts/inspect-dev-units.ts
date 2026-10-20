@@ -4,6 +4,7 @@
  */
 import 'dotenv/config';
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, unitTypes } from '../../drizzle/schema';
 import { eq, desc } from 'drizzle-orm';
 
@@ -71,4 +72,4 @@ async function main() {
   console.table(mappedUnits);
 }
 
-main().catch(console.error);
+main().catch(err => console.error('inspect-dev-units failed:', safeErrorSummary(err)));

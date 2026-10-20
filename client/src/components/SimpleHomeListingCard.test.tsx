@@ -18,6 +18,21 @@ const cardProps = {
 };
 
 describe('SimpleHomeListingCard', () => {
+  it('uses an approved public location label and tracks opening without changing its target', () => {
+    const onOpen = vi.fn();
+    render(
+      <SimpleHomeListingCard
+        {...cardProps}
+        locationLabel="Sandton, Gauteng (approximate)"
+        onOpen={onOpen}
+      />,
+    );
+    expect(screen.getByText('Sandton, Gauteng (approximate)')).toBeInTheDocument();
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/property/994001');
+    fireEvent.click(link);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
   it('prioritises the four useful house facts in a single compact row', () => {
     render(<SimpleHomeListingCard {...cardProps} />);
 

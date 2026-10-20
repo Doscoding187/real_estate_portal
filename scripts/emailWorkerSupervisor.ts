@@ -15,6 +15,29 @@ export type EmailSupervisorDependencies = {
   pollMs?: number;
 };
 
+export type EmailWorkerBacklogSummary = Record<string, number> & {
+  stale: number;
+  attention: boolean;
+};
+
+/**
+ * Machine-readable attention contract for the long-running supervisor. The
+ * durable states below require human reconciliation, so the supervisor keeps
+ * polling and every batch log carries this marker for platform alerting.
+ */
+export function summarizeEmailWorkerBacklog(
+  backlog: Array<{ state: string; stale: boolean }>,
+): EmailWorkerBacklogSummary {
+  const counts = backlog.reduce<Record<string, number>>((acc, row) => {
+    acc[row.state] = (acc[row.state] || 0) + 1;
+    return acc;
+  }, {});
+  const stale = backlog.filter(row => row.stale).length;
+  const attention =
+    stale > 0 || (counts.unknown || 0) > 0 || (counts.permanent_failed || 0) > 0;
+  return { ...counts, stale, attention };
+}
+
 /** One batch at a time. The durable B10 authority owns claims, leases and retries. */
 export async function runEmailSupervisor(
   signal: AbortSignal,
@@ -59,11 +82,7 @@ export async function runHostedEmailSupervisor(signal: AbortSignal): Promise<voi
       const consumed = await consumeLaunchEmailEvents({ database });
       const delivery = await runTransactionalEmailWorker({ database });
       const backlog = await transactionalEmailBacklog(database);
-      const counts = backlog.reduce<Record<string, number>>((acc, row) => {
-        acc[row.state] = (acc[row.state] || 0) + 1;
-        return acc;
-      }, {});
-      return { consumed, delivery, backlog: { ...counts, stale: backlog.filter(row => row.stale).length } };
+      return { consumed, delivery, backlog: summarizeEmailWorkerBacklog(backlog) };
     },
     close: shutdownDb,
     log: value => console.log(JSON.stringify(value)),

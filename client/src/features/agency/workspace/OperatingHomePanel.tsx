@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, Sparkles, Users } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -48,13 +48,86 @@ export function AgencyOperatingHomePanel() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <BriefStat label="Leads past response promise" value={home.brief.leads.firstResponseOverdueCount} />
+        <BriefStat
+          label="First outreach overdue"
+          value={home.brief.leads.firstOutreachOverdueCount}
+        />
         <BriefStat label="Fresh enquiries" value={home.brief.leads.newToday} />
-        <BriefStat label="Listings awaiting review" value={home.brief.listings.pendingReviewCount} />
+        <BriefStat
+          label="Listings awaiting review"
+          value={home.brief.listings.pendingReviewCount}
+        />
         <BriefStat
           label="Launch Access days left"
           value={home.brief.publication.daysRemaining ?? '—'}
         />
+      </div>
+
+      <div
+        data-testid="agency-follow-up-watch"
+        className="rounded-xl border border-slate-200 bg-white p-4"
+      >
+        <div className="flex items-start gap-3">
+          <div className="rounded-lg bg-slate-100 p-2 text-slate-600">
+            <Users className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-slate-950">Team workload &amp; follow-ups</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Active lead volume and scheduled follow-ups past their due time, grouped by current owner.
+            </p>
+            {home.brief.team.workloadByAgent.length === 0 ? (
+              <p className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-800">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                No active leads in the team queue yet.
+              </p>
+            ) : (
+              <div className="mt-3 space-y-2">
+                {home.brief.team.workloadByAgent.slice(0, 5).map(item => (
+                  <button
+                    key={item.agentId ?? 'unassigned'}
+                    type="button"
+                    aria-label={`Open lead queue for ${item.agentName}: ${item.activeLeadCount} active leads, ${item.overdueFollowUpCount} overdue follow-ups`}
+                    onClick={() =>
+                      setLocation(`/agency/leads?owner=${item.agentId ?? 'unassigned'}`)
+                    }
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left transition hover:border-amber-300 hover:bg-amber-50"
+                  >
+                    <span className="min-w-0 truncate text-sm font-medium text-slate-800">
+                      {item.agentName}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2 text-xs">
+                      <span className="font-medium text-slate-600">
+                        {item.activeLeadCount} active
+                      </span>
+                      <span className={item.overdueFollowUpCount ? 'font-semibold text-amber-800' : 'text-slate-500'}>
+                        <Clock3 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+                        {item.overdueFollowUpCount} overdue
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                    </span>
+                  </button>
+                ))}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/agency/team/workload')}
+                    className="text-xs font-semibold text-blue-700 hover:underline"
+                  >
+                    Review full team workload
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/agency/leads?status=overdue')}
+                    className="text-xs font-semibold text-blue-700 hover:underline"
+                  >
+                    View all overdue follow-ups
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {home.brief.performance ? (
@@ -66,8 +139,14 @@ export function AgencyOperatingHomePanel() {
             What Property Listify delivered
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ScoreStat label="Portfolio views" value={home.brief.performance.engagement.portfolioViews} />
-            <ScoreStat label="Enquiries delivered" value={home.brief.performance.engagement.portfolioEnquiries} />
+            <ScoreStat
+              label="Portfolio views"
+              value={home.brief.performance.engagement.portfolioViews}
+            />
+            <ScoreStat
+              label="Enquiries delivered"
+              value={home.brief.performance.engagement.portfolioEnquiries}
+            />
             <ScoreStat
               label="Viewing rate"
               value={
@@ -77,7 +156,7 @@ export function AgencyOperatingHomePanel() {
               }
             />
             <ScoreStat
-              label="Avg first response"
+              label="Avg time to first connection"
               value={
                 home.brief.performance.response.avgFirstResponseMinutes !== null
                   ? `${home.brief.performance.response.avgFirstResponseMinutes} min`
@@ -85,7 +164,7 @@ export function AgencyOperatingHomePanel() {
               }
               detail={
                 home.brief.performance.response.platformAvgFirstResponseMinutes !== null
-                  ? `platform avg ${home.brief.performance.response.platformAvgFirstResponseMinutes} min`
+                  ? `platform avg ${home.brief.performance.response.platformAvgFirstResponseMinutes} min to connect`
                   : undefined
               }
             />
@@ -118,9 +197,7 @@ export function AgencyOperatingHomePanel() {
                 }`}
               >
                 <span className="flex items-center gap-2 font-semibold">
-                  {!critical ? null : (
-                    <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                  )}
+                  {!critical ? null : <AlertTriangle className="h-4 w-4" aria-hidden="true" />}
                   {action.title}
                 </span>
                 <span className="flex items-center gap-3">

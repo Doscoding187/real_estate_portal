@@ -371,6 +371,19 @@ describeWithDb('billing foundation persisted acceptance', () => {
       const rowsAfterDuplicate = await loadBillingRows(seed.agencyId);
       expect(rowsAfterDuplicate.subscription.currentPeriodEnd).toBe(periodEndBeforeDuplicate);
 
+      // The operator summary must read the same canonical account/term facts
+      // as payment activation, rather than retired subscription tables.
+      const adminSubscriptions = await adminCaller.billing.admin.subscriptions({ status: 'active', limit: 100, offset: 0 });
+      const currentSummary = adminSubscriptions.find(row => row.id === rowsAfterDuplicate.subscription.id);
+      expect(currentSummary).toMatchObject({
+        billableAccountId: rowsAfterDuplicate.subscription.billableAccountId,
+        currentPeriodEnd: periodEndBeforeDuplicate,
+        owner: { kind: 'agency', name: expect.stringContaining('Acceptance Agency primary') },
+        plan: { id: seed.planId, price: 99000 },
+      });
+      await expect(agencyCaller.billing.admin.subscriptions({ limit: 10, offset: 0 })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(adminCaller.subscription.getAllSubscriptions({ limit: 10, offset: 0 })).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
+
       const renewal = await agencyCaller.billing.startManualEftCheckout({
         planId: seed.planId,
         billingCycle: 'monthly',

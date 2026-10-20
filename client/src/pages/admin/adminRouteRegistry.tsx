@@ -78,7 +78,10 @@ export type AdminDashboardRoute = {
 
 const ROUTES = {
   adminRoot: { path: '/admin', render: () => <OverviewPage /> },
-  adminDashboardAlias: { path: '/admin/dashboard', render: () => <Redirect to="/admin/overview" /> },
+  adminDashboardAlias: {
+    path: '/admin/dashboard',
+    render: () => <Redirect to="/admin/overview" />,
+  },
 
   overview: { path: '/admin/overview', render: () => <OverviewPage /> },
   ecosystem: { path: '/admin/ecosystem', render: () => <EcosystemOverviewPage /> },
@@ -104,7 +107,10 @@ const ROUTES = {
     render: () => <Redirect to="/admin/subscriptions" />,
   },
   planEditor: { path: '/admin/plan-editor', render: () => <PlanEditor /> },
-  revenueCenterAlias: { path: '/admin/revenue-center', render: () => <Redirect to="/admin/revenue" /> },
+  revenueCenterAlias: {
+    path: '/admin/revenue-center',
+    render: () => <Redirect to="/admin/revenue" />,
+  },
 
   marketing: { path: '/admin/marketing', render: () => <MarketingCampaignsPage /> },
   marketingCreate: { path: '/admin/marketing/create', render: () => <CreateCampaignWizard /> },
@@ -276,3 +282,16 @@ export const getAdminNavGroupForPath = (location: string): AdminNavGroupId => {
   if (location === '/admin') return 'core';
   return 'core';
 };
+
+/** Review and dedicated approval routes belong to the Approvals navigation item. */
+export function getAdminNavItemForPath(location: string): string | undefined {
+  const pathname = location.split('?')[0];
+  if (
+    ['/admin/listing-approvals', '/admin/agent-approvals'].includes(pathname) ||
+    pathname.startsWith('/admin/review/')
+  )
+    return ROUTES.approvals.path;
+  return sidebarPathGroupPairs.find(
+    pair => pathname === pair.path || pathname.startsWith(`${pair.path}/`),
+  )?.path;
+}

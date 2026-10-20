@@ -8,7 +8,7 @@
     "territory_id": "za-li",
     "display_name": "Limpopo",
     "admission_registry_path": "data/place-admission-territories.v0.1/territory-registry.v0.1.json",
-    "admission_registry_sha256": "c822d778985ad13c43b5d4d1b2d4c0664b08daca766f82f302b6b3dfe24ea433"
+    "admission_registry_sha256": "739229dd26bcfd7d74c8f29d83421e1207354a74ecacaa6d8f2964c62c658be5"
   },
   "generated_from": {
     "source_authority_version": "za-li-source-authority-v0.2",
@@ -63,7 +63,8 @@
     "preferred_public_name_selection": "official role, then source preferred_common; within a class the most independently sourced assertion wins, ties broken by text",
     "one_containment_parent_per_place": true,
     "search_scope_authorization_in_slice_2": 0,
-    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity"
+    "place_id_allocation": "assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity",
+    "source_geography_eligibility": "source-geography-eligibility-2026-10-14-v1"
   },
   "counts": {
     "source_identities": 1747,
@@ -87,11 +88,11 @@
       "permissive_supported": 1669
     },
     "scope_establishment": {
-      "established": 1639,
-      "not_established": 30,
+      "established": 1493,
+      "not_established": 176,
       "by_scope": {
         "locality": {
-          "established": 1599,
+          "established": 1453,
           "not_established": 0
         },
         "metro_city": {
@@ -104,13 +105,13 @@
         }
       }
     },
-    "executable_places": 1639,
+    "executable_places": 1493,
     "executable_by_scope": {
-      "locality": 1599,
+      "locality": 1453,
       "metro_city": 39,
       "province": 1
     },
-    "admitted_without_executable_scope": 30,
+    "admitted_without_executable_scope": 176,
     "names": 2359,
     "name_roles": {
       "preferred_public": 1669,

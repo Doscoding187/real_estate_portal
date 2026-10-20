@@ -2486,6 +2486,35 @@ export async function submitDeveloperPaymentProof(input: LaunchPaymentProofInput
   return submitPaidLaunchAccessPaymentProof(input);
 }
 
+/** Read-only operator view; ownership comes exclusively from billable_accounts. */
+export async function getAdminSubscriptions(input: {
+  status?: CanonicalSubscriptionStatus;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
+  const rows = await db.select({ subscription: subscriptions, plan: plans,
+    account: billableAccounts, agency: agencies, developer: developerOrganisations,
+    agent: { name: users.name, email: users.email },
+  }).from(subscriptions)
+    .innerJoin(billableAccounts, eq(subscriptions.billableAccountId, billableAccounts.id))
+    .innerJoin(plans, eq(subscriptions.planId, plans.id))
+    .leftJoin(users, and(eq(billableAccounts.accountKind, 'agent'), eq(users.id, billableAccounts.userId)))
+    .leftJoin(agencies, and(eq(billableAccounts.accountKind, 'agency'), eq(agencies.id, billableAccounts.agencyId)))
+    .leftJoin(developerOrganisations, and(eq(billableAccounts.accountKind, 'developer'), eq(developerOrganisations.id, billableAccounts.developerOrganisationId)))
+    .where(input.status ? eq(subscriptions.status, input.status) : undefined)
+    .orderBy(desc(subscriptions.createdAt), desc(subscriptions.id))
+    .limit(Math.min(Math.max(input.limit ?? 50, 1), 100))
+    .offset(Math.max(input.offset ?? 0, 0));
+  return rows.map(row => ({ ...row.subscription, plan: row.plan,
+    owner: { kind: row.account.accountKind,
+      name: row.account.accountKind === 'agent' ? row.agent?.name : row.account.accountKind === 'agency' ? row.agency?.name : row.developer?.name,
+      email: row.account.accountKind === 'agent' ? row.agent?.email : row.account.accountKind === 'agency' ? row.agency?.email : row.developer?.email,
+    },
+  }));
+}
+
 export async function getAdminFinanceQueue(input: {
   status?: PaymentState | 'all';
   limit?: number;

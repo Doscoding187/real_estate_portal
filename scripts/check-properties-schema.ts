@@ -1,6 +1,7 @@
 
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 dotenv.config();
 
 async function checkPropertiesSchema() {
@@ -17,7 +18,7 @@ async function checkPropertiesSchema() {
       console.log(`- ${col.Field} (${col.Type})`);
     });
   } catch (error) {
-    console.error('Error checking schema:', error);
+    console.error('Error checking schema:', safeErrorSummary(error));
   } finally {
     await connection.end();
   }

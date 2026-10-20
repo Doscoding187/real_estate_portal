@@ -1,5 +1,6 @@
 
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 dotenv.config();
 
 import { getDb } from '../server/db.ts';
@@ -42,7 +43,7 @@ async function testRelations() {
     console.log('\n✅ Relations test complete!');
     process.exit(0);
   } catch (error) {
-    console.error('❌ Failed:', error);
+    console.error('❌ Failed:', safeErrorSummary(error));
     process.exit(1);
   }
 }

@@ -3,6 +3,7 @@ import { platformSettings } from '../../drizzle/schema';
 import { getDb } from '../db-connection';
 import type { SavedSearchNotificationEngineResult } from './savedSearchNotificationEngine';
 import { savedSearchNotificationEngine } from './savedSearchNotificationEngine';
+import { safeErrorSummary } from '../_core/safeError';
 
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000;
 const HISTORY_SETTING_KEY = 'saved_search_scheduler_history';
@@ -315,7 +316,7 @@ export class SavedSearchDeliveryScheduler {
       this.status.lastError = latest.error;
       this.status.lastResult = latest.result;
     } catch (error) {
-      console.warn('[SavedSearchScheduler] Failed to hydrate persisted history.', error);
+      console.warn('[SavedSearchScheduler] Failed to hydrate persisted history.', safeErrorSummary(error));
     }
   }
 
@@ -355,7 +356,7 @@ export class SavedSearchDeliveryScheduler {
         isPublic: 0,
       });
     } catch (error) {
-      console.warn('[SavedSearchScheduler] Failed to persist run history.', error);
+      console.warn('[SavedSearchScheduler] Failed to persist run history.', safeErrorSummary(error));
     }
   }
 }

@@ -1,10 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { guides, retry } = vi.hoisted(() => ({ guides: vi.fn(), retry: vi.fn() }));
+const { guides, retry, schemaStats } = vi.hoisted(() => ({
+  guides: vi.fn(),
+  retry: vi.fn(),
+  schemaStats: vi.fn(),
+}));
 vi.mock('@/components/ListingNavbar', () => ({ ListingNavbar: () => null }));
 vi.mock('@/components/Footer', () => ({ Footer: () => null }));
-vi.mock('@/components/location/LocationSchema', () => ({ LocationSchema: () => null }));
+vi.mock('@/components/location/LocationSchema', () => ({
+  LocationSchema: ({ stats }: { stats?: { totalListings?: number; avgPrice?: number } }) => {
+    schemaStats(stats);
+    return null;
+  },
+}));
 vi.mock('@/components/location/RecommendedAgents', () => ({
   RecommendedAgents: ({ locationId }: { locationId: number }) => (
     <div data-testid="agent-province" data-location-id={locationId} />
@@ -66,6 +75,7 @@ import ProvincePage from '../ProvinceDiscoveryPage';
 
 beforeEach(() => {
   retry.mockClear();
+  schemaStats.mockClear();
   guides.mockReturnValue({
     data: [
       {
@@ -83,6 +93,12 @@ beforeEach(() => {
   });
 });
 describe('Province guide identity and inventory boundaries', () => {
+  it('does not publish an invented average price when province price data is unavailable', () => {
+    render(<ProvincePage params={{ province: 'gauteng' }} />);
+
+    expect(schemaStats).toHaveBeenCalledWith({ totalListings: 0 });
+  });
+
   it('opens a verified city guide without inventing unavailable inventory counts', () => {
     render(<ProvincePage params={{ province: 'gauteng' }} />);
     expect(screen.getByRole('link', { name: 'Explore Pretoria' })).toHaveAttribute(

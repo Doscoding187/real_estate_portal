@@ -3,6 +3,7 @@ import { developers } from '../../drizzle/schema';
 import { desc } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Explicitly load .env.production as user suggested
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -31,7 +32,7 @@ async function listDevelopers() {
       })),
     );
   } catch (err) {
-    console.error('Failed to fetch developers:', err);
+    console.error('Failed to fetch developers:', safeErrorSummary(err));
   } finally {
     process.exit(0);
   }

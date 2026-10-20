@@ -11,6 +11,7 @@
 
 import { db, getDb } from '../db';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Types and Interfaces
@@ -140,7 +141,7 @@ export class GooglePlacesApiMonitoringService {
       // Check for threshold alerts
       await this.checkThresholds();
     } catch (error) {
-      console.error('Failed to log API request:', error);
+      console.error('Failed to log API request:', safeErrorSummary(error));
       // Don't throw - logging failures shouldn't break the application
     }
   }
@@ -226,7 +227,7 @@ export class GooglePlacesApiMonitoringService {
         `);
       }
     } catch (error) {
-      console.error('Failed to update daily summary:', error);
+      console.error('Failed to update daily summary:', safeErrorSummary(error));
     }
   }
 
@@ -319,7 +320,7 @@ export class GooglePlacesApiMonitoringService {
         });
       }
     } catch (error) {
-      console.error('Failed to check thresholds:', error);
+      console.error('Failed to check thresholds:', safeErrorSummary(error));
     }
   }
 
@@ -370,7 +371,7 @@ export class GooglePlacesApiMonitoringService {
         console.log(`${emoji} Google Places API Alert [${alert.severity}]: ${alert.message}`);
       }
     } catch (error) {
-      console.error('Failed to create alert:', error);
+      console.error('Failed to create alert:', safeErrorSummary(error));
     }
   }
 
@@ -490,7 +491,7 @@ export class GooglePlacesApiMonitoringService {
         },
       };
     } catch (error) {
-      console.error('Failed to get usage statistics:', error);
+      console.error('Failed to get usage statistics:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -560,7 +561,7 @@ export class GooglePlacesApiMonitoringService {
         notified: Boolean(row.notified),
       }));
     } catch (error) {
-      console.error('Failed to get active alerts:', error);
+      console.error('Failed to get active alerts:', safeErrorSummary(error));
       return [];
     }
   }
@@ -579,7 +580,7 @@ export class GooglePlacesApiMonitoringService {
         WHERE id = ${alertId}
       `);
     } catch (error) {
-      console.error('Failed to resolve alert:', error);
+      console.error('Failed to resolve alert:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -625,7 +626,7 @@ export class GooglePlacesApiMonitoringService {
       this.configLoadedAt = new Date();
       return this.config;
     } catch (error) {
-      console.error('Failed to load monitoring config:', error);
+      console.error('Failed to load monitoring config:', safeErrorSummary(error));
 
       // Return default config
       return {
@@ -675,7 +676,7 @@ export class GooglePlacesApiMonitoringService {
       this.config = null;
       this.configLoadedAt = null;
     } catch (error) {
-      console.error('Failed to update monitoring config:', error);
+      console.error('Failed to update monitoring config:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -699,7 +700,7 @@ export class GooglePlacesApiMonitoringService {
 
       return (result.rows as any[]).map(row => this.formatDailySummary(row));
     } catch (error) {
-      console.error('Failed to get historical data:', error);
+      console.error('Failed to get historical data:', safeErrorSummary(error));
       return [];
     }
   }

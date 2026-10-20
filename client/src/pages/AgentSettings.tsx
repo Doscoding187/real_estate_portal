@@ -76,7 +76,7 @@ function formatSubscriptionStatus(status: string | null | undefined) {
     case 'pending_payment':
       return 'Payment outstanding';
     case 'payment_under_review':
-      return 'Payment proof under review';
+      return 'Payment notice under review';
     case 'past_due':
       return 'Payment overdue';
     case 'grace_period':

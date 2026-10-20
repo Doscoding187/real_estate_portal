@@ -4,6 +4,7 @@
  */
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -134,7 +135,7 @@ async function verifyMissionControlMigrations() {
     console.log('='.repeat(60) + '\n');
 
   } catch (error) {
-    console.error('\n❌ Verification failed:', error);
+    console.error('\n❌ Verification failed:', safeErrorSummary(error));
     process.exit(1);
   } finally {
     if (connection) await connection.end();

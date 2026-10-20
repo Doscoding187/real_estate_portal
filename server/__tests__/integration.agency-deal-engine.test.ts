@@ -7,6 +7,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 import { agencyRouter } from '../agencyRouter';
 import { getDb } from '../db-connection';
 import { maintainAgencyAgentMembership } from '../services/agencyMembershipService';
+import { serializeAgentLeadOfferReadiness } from '../../shared/agentLeadOfferReadiness';
 import {
   agencies,
   agencyDealOfferVersions,
@@ -403,6 +404,32 @@ async function queryDealOfferRows(agencyId: number, dealId: number) {
     .orderBy(agencyDealOfferVersions.versionNumber);
 }
 
+async function recordCompleteOfferReadiness(leadId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  await db
+    .update(leads)
+    .set({
+      lastContactedAt: toDbTimestamp(new Date()),
+      qualificationScore: 80,
+      qualificationStatus: 'qualified',
+    } as any)
+    .where(eq(leads.id, leadId));
+  await db.insert(leadActivities).values({
+    leadId,
+    userId,
+    type: 'note',
+    description: 'Offer readiness recorded for agency deal engine test.',
+    metadata: JSON.stringify(
+      serializeAgentLeadOfferReadiness({
+        viewingCompleted: true,
+        feedbackLogged: true,
+        affordabilityConfirmed: true,
+      }),
+    ),
+  });
+}
+
 describeWithDb('agency deal engine persisted workflow', () => {
   afterEach(async () => {
     const db = await getDb();
@@ -495,6 +522,33 @@ describeWithDb('agency deal engine persisted workflow', () => {
     });
     createdState.dealIds.push(createdDeal.dealId);
     if (createdDeal.offerVersionId) createdState.offerVersionIds.push(createdDeal.offerVersionId);
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [leadAfterDraft] = await db
+      .select()
+      .from(leads)
+      .where(eq(leads.id, seed.leadId))
+      .limit(1);
+    expect(leadAfterDraft.status).toBe('qualified');
+    expect(leadAfterDraft.lastContactedAt).toBeNull();
+    await expect(
+      caller.acceptOfferVersion({ offerVersionId: Number(createdDeal.offerVersionId) }),
+    ).rejects.toThrow(/Only submitted or under-review offer versions can be accepted/i);
+    await expect(
+      caller.createOfferVersion({
+        dealId: createdDeal.dealId,
+        actor: 'seller',
+        eventType: 'seller_counter',
+        status: 'submitted',
+        terms: { amount: 1_860_000 },
+      }),
+    ).rejects.toThrow(/Record that the viewing is complete before sending an offer/i);
+    await expect(
+      caller.submitOfferVersion({ offerVersionId: Number(createdDeal.offerVersionId) }),
+    ).rejects.toThrow(/Record that the viewing is complete before sending an offer/i);
+
+    await recordCompleteOfferReadiness(seed.leadId, seed.adminUserId);
 
     await caller.submitOfferVersion({
       offerVersionId: Number(createdDeal.offerVersionId),
@@ -596,8 +650,6 @@ describeWithDb('agency deal engine persisted workflow', () => {
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
 
-    const db = await getDb();
-    if (!db) throw new Error('Database not available');
     const [transaction] = await db
       .select()
       .from(agencyTransactions)
@@ -977,6 +1029,27 @@ describeWithDb('agency deal engine persisted workflow', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   }, 30_000);
 
+  it('requires the recorded offer checklist before an agency status action enters offer', async () => {
+    const seed = await seedAgencyFixture('agency-status-readiness');
+    const caller = createCaller({
+      id: seed.adminUserId,
+      role: 'agency_admin',
+      agencyId: seed.agencyId,
+    });
+
+    await expect(
+      caller.updateLeadStatus({ leadId: seed.leadId, status: 'offer_sent' }),
+    ).rejects.toThrow(/Record that the viewing is complete before sending an offer/i);
+
+    await recordCompleteOfferReadiness(seed.leadId, seed.adminUserId);
+    await caller.updateLeadStatus({ leadId: seed.leadId, status: 'offer_sent' });
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [updatedLead] = await db.select().from(leads).where(eq(leads.id, seed.leadId)).limit(1);
+    expect(updatedLead.status).toBe('offer_sent');
+  }, 30_000);
+
   it('rolls back offer acceptance atomically when generated transaction work fails', async () => {
     const seed = await seedAgencyFixture('rollback');
     const caller = createCaller({
@@ -1001,6 +1074,7 @@ describeWithDb('agency deal engine persisted workflow', () => {
     });
     createdState.dealIds.push(createdDeal.dealId);
     if (createdDeal.offerVersionId) createdState.offerVersionIds.push(createdDeal.offerVersionId);
+    await recordCompleteOfferReadiness(seed.leadId, seed.adminUserId);
     await caller.submitOfferVersion({ offerVersionId: Number(createdDeal.offerVersionId) });
 
     const db = await getDb();
@@ -1080,6 +1154,7 @@ describeWithDb('agency deal engine persisted workflow', () => {
     });
     createdState.dealIds.push(createdDeal.dealId);
     createdState.offerVersionIds.push(Number(createdDeal.offerVersionId));
+    await recordCompleteOfferReadiness(seed.leadId, seed.adminUserId);
     await callerA.submitOfferVersion({ offerVersionId: Number(createdDeal.offerVersionId) });
 
     const input = {

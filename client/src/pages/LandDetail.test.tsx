@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -74,10 +74,7 @@ describe('LandDetail', () => {
 
     render(<LandDetail />);
 
-    expect(landDetail).toHaveBeenCalledWith(
-      { slug: 'serviced-stand-pretoria' },
-      { enabled: true },
-    );
+    expect(landDetail).toHaveBeenCalledWith({ slug: 'serviced-stand-pretoria' }, { enabled: true });
     expect(screen.getByRole('img', { name: 'Serviced stand in Pretoria' })).toHaveAttribute(
       'src',
       'https://cdn.example.com/stand.jpg',
@@ -107,5 +104,26 @@ describe('LandDetail', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Your enquiry has been recorded and sent to the approved Land marketing representative.',
     );
+  });
+
+  it('requires a valid phone number for land enquiries', () => {
+    const mutate = vi.fn();
+    leadMutation.mockReturnValue({ mutate, isPending: false, isSuccess: false });
+    render(<LandDetail />);
+
+    expect(screen.getByLabelText(/Phone number/)).toBeRequired();
+    const submit = screen.getByRole('button', { name: 'Request information' });
+    expect(submit).toBeDisabled();
+
+    fireEvent.change(screen.getByPlaceholderText('Your name'), { target: { value: 'Land Buyer' } });
+    fireEvent.change(screen.getByPlaceholderText('Email'), {
+      target: { value: 'buyer@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/Phone number/), { target: { value: '082 123 4567' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
+
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ phone: '082 123 4567' }));
   });
 });

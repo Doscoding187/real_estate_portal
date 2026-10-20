@@ -166,6 +166,8 @@ plugins.push(hostedFrontendBuild());
 
 export default defineConfig({
   plugins,
+  // Worktrees may share node_modules; generated dependency bundles must not.
+  cacheDir: path.resolve(import.meta.dirname, '.cache/vite'),
   define: {
     __BUILD_GIT_SHA__: JSON.stringify(buildGitSha),
     __BUILD_TIME__: JSON.stringify(buildTime),

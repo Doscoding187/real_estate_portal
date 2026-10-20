@@ -3,6 +3,7 @@ import { getDb } from './db';
 import { platformSettings } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from './_core/safeError';
 
 /**
  * Settings Router
@@ -33,7 +34,7 @@ export const settingsRouter = router({
 
       return settingsObj;
     } catch (error) {
-      console.error('[Settings] Error fetching public settings:', error);
+      console.error('[Settings] Error fetching public settings:', safeErrorSummary(error));
       throw error;
     }
   }),
@@ -67,7 +68,7 @@ export const settingsRouter = router({
         message: 'SARB prime rate is not configured in canonical platform settings',
       });
     } catch (error) {
-      console.error('[Settings] Error fetching SARB prime rate:', error);
+      console.error('[Settings] Error fetching SARB prime rate:', safeErrorSummary(error));
       throw error;
     }
   }),

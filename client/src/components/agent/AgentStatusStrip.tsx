@@ -78,7 +78,7 @@ export function AgentStatusStrip({
   const paidStates: Record<string, string> = {
     active: 'Launch Access active',
     pending_payment: 'Invoice issued — payment outstanding',
-    payment_under_review: 'Payment proof under review',
+    payment_under_review: 'Payment notice under review',
     expired: 'Launch Access expired',
     past_due: 'Launch Access payment overdue',
     cancelled: 'Launch Access cancelled',

@@ -80,7 +80,7 @@ export function getAgencyJourneyAction(
       return {
         href: '/agency/billing',
         label: 'View payment review',
-        title: 'Your payment proof is under review',
+        title: 'Your payment notice is under review',
         description:
           'Finance is verifying the Agency Launch Access payment. We will notify the owner when the operating workspace is active.',
         waiting: true,

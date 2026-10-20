@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -103,6 +104,6 @@ async function testLocationService() {
 testLocationService()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error('Fatal error:', error);
+    console.error('Fatal error:', safeErrorSummary(error));
     process.exit(1);
   });

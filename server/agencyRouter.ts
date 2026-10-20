@@ -47,6 +47,8 @@ import {
   SELLER_PROSPECT_TERMINAL_STAGE_VALUES,
 } from '../drizzle/schema';
 import { excludeLandFromGenericListingWorkflow } from './services/landLaunchContainmentService';
+import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
+import { safeErrorSummary } from './_core/safeError';
 
 async function withDeadlockRetry(operation: () => Promise<any>): Promise<any> {
   for (let attempt = 0; ; attempt += 1) {
@@ -77,6 +79,7 @@ import {
   sql,
   isNull,
   isNotNull,
+  lt,
   ne,
   aliasedTable,
 } from 'drizzle-orm';
@@ -115,12 +118,14 @@ import {
 } from './services/agencyMembershipService';
 import {
   deriveLeadReadiness,
+  firstOutreachOverdueSql,
   firstResponseOverdueSql,
   FIRST_RESPONSE_SLA_MINUTES,
+  isTwoWayContactOutcome,
   leadStatusTimestamps,
-  mapStatusToFunnelStage,
   validateLeadTransition,
 } from './services/leadTransitionService';
+import { requireAgentLeadOfferReadiness } from './services/agentLeadOfferReadinessService';
 import {
   getCommercialProductKey,
   getConfiguredLaunchFeeMinor,
@@ -383,7 +388,7 @@ const createOfferVersionInputSchema = z.object({
   dealId: z.number().int().positive(),
   actor: offerActorSchema.default('buyer'),
   eventType: offerEventTypeSchema.default('buyer_counter'),
-  status: offerStatusSchema.default('draft'),
+  status: z.enum(['draft', 'submitted']).default('draft'),
   parentOfferVersionId: z.number().int().positive().optional().nullable(),
   terms: offerTermsInputSchema,
   note: z.string().trim().max(2000).optional(),
@@ -524,7 +529,6 @@ const performanceReviewInputSchema = z.object({
   nextReviewAt: dateInputSchema,
 });
 
-type LeadStatus = z.infer<typeof leadStatusSchema>;
 type ViewingStatus = z.infer<typeof viewingStatusSchema>;
 type DealTransactionType = z.infer<typeof dealTransactionTypeSchema>;
 type OfferStatus = z.infer<typeof offerStatusSchema>;
@@ -712,7 +716,12 @@ function getLeadFirstResponseState(lead: typeof leads.$inferSelect) {
       ageMinutes != null &&
       ageMinutes >= FIRST_RESPONSE_SLA_MINUTES,
     ),
+    firstOutreachOverdue: false,
     firstResponseDueAt:
+      createdTime == null
+        ? null
+        : new Date(createdTime + FIRST_RESPONSE_SLA_MINUTES * 60_000).toISOString(),
+    firstOutreachDueAt:
       createdTime == null
         ? null
         : new Date(createdTime + FIRST_RESPONSE_SLA_MINUTES * 60_000).toISOString(),
@@ -1083,7 +1092,9 @@ function parseAgencyViewingDate(value: string) {
 
   const [, dateKey, hour, minute, suppliedSecond] = localMatch;
   const second = suppliedSecond || '00';
-  const parsedDate = new Date(`${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`);
+  const parsedDate = new Date(
+    `${dateKey}T${hour}:${minute}:${second}${AGENCY_WORKSPACE_UTC_OFFSET}`,
+  );
   if (
     Number.isNaN(parsedDate.getTime()) ||
     formatAgencyDateKey(parsedDate) !== dateKey ||
@@ -1493,7 +1504,7 @@ async function createViewingNotification(input: {
       isRead: 0,
     });
   } catch (error) {
-    console.warn('[agency.viewings] Notification insert skipped', error);
+    console.warn('[agency.viewings] Notification insert skipped', safeErrorSummary(error));
   }
 }
 
@@ -2078,6 +2089,7 @@ function mapAgencyListingRow(row: any, agencyId: number) {
     media: {
       total: Number(row.mediaCount || 0),
       images: Number(row.imageCount || 0),
+      thumbnailUrl: resolveMediaDeliveryUrl(row.thumbnailUrl),
     },
     performance: {
       views: publicViews,
@@ -2175,6 +2187,17 @@ function agencyListingSelectFields() {
       FROM listing_media lm
       WHERE lm.listingId = ${listings.id}
         AND lm.mediaType = 'image'
+    )`,
+    thumbnailUrl: sql<string | null>`(
+      SELECT COALESCE(NULLIF(TRIM(lm.thumbnailUrl), ''),
+                      NULLIF(TRIM(lm.processedUrl), ''),
+                      NULLIF(TRIM(lm.originalUrl), ''))
+      FROM listing_media lm
+      WHERE lm.listingId = ${listings.id}
+        AND lm.mediaType = 'image'
+        AND lm.processingStatus = 'completed'
+      ORDER BY lm.isPrimary DESC, lm.displayOrder ASC, lm.id ASC
+      LIMIT 1
     )`,
     publicPropertyId: sql<number | null>`(
       SELECT p.id
@@ -4861,6 +4884,8 @@ export const agencyRouter = router({
         .object({
           status: z.union([leadStatusSchema, z.literal('all')]).default('all'),
           agentId: z.number().int().positive().optional(),
+          unassignedOnly: z.boolean().optional(),
+          overdueOnly: z.boolean().optional(),
           limit: z.number().int().min(1).max(200).default(50),
         })
         .optional(),
@@ -4903,7 +4928,10 @@ export const agencyRouter = router({
         if (!agent) {
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Approved agent profile required.' });
         }
-        const currentMembership = await resolveCurrentAgencyMembershipForAgent(db, Number(agent.id));
+        const currentMembership = await resolveCurrentAgencyMembershipForAgent(
+          db,
+          Number(agent.id),
+        );
         if (!currentMembership || Number(currentMembership.agencyId) !== Number(user.agencyId)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
@@ -4921,16 +4949,35 @@ export const agencyRouter = router({
         conditions.push(eq(leads.agentId, filters.agentId));
       }
 
+      if (filters.unassignedOnly) {
+        conditions.push(isNull(leads.agentId));
+      }
+
+      if (filters.overdueOnly) {
+        const overdueBefore = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        conditions.push(
+          and(
+            isNotNull(leads.nextFollowUp),
+            lt(leads.nextFollowUp, overdueBefore),
+            inArray(leads.status, ['new', 'contacted', 'qualified', 'viewing_scheduled', 'offer_sent'] as any),
+          )!,
+        );
+      }
+
       const rows = await db
         .select({
           lead: leads,
           property: properties,
           agent: agents,
           firstResponseOverdue: firstResponseOverdueSql(),
+          firstOutreachOverdue: firstOutreachOverdueSql(),
         })
         .from(leads)
         .leftJoin(properties, eq(leads.propertyId, properties.id))
-        .leftJoin(agents, eq(leads.agentId, agents.id))
+        .leftJoin(
+          agents,
+          and(eq(leads.agentId, agents.id), eq(agents.agencyId, user.agencyId)),
+        )
         .where(and(...conditions))
         .orderBy(desc(leads.createdAt))
         .limit(filters.limit);
@@ -4940,8 +4987,11 @@ export const agencyRouter = router({
         commercialLeadContextCandidateIds(rows.map(({ lead }) => lead)),
       );
 
-      return rows.map(({ lead, property, agent, firstResponseOverdue }) => ({
-        ...decorateLeadForWorkspace(lead, { firstResponseOverdue: Boolean(firstResponseOverdue) }),
+      return rows.map(({ lead, property, agent, firstResponseOverdue, firstOutreachOverdue }) => ({
+        ...decorateLeadForWorkspace(lead, {
+          firstResponseOverdue: Boolean(firstResponseOverdue),
+          firstOutreachOverdue: Boolean(firstOutreachOverdue),
+        }),
         agent: agent
           ? {
               id: agent.id,
@@ -4995,7 +5045,17 @@ export const agencyRouter = router({
       }
       const agencyId = requireAgencyId(user);
       const lead = await requireAgencyLead(db, user, input.leadId);
-      validateLeadTransition(lead, input.status, { lostReason: input.lostReason });
+      const needsOfferReadiness =
+        input.status !== lead.status &&
+        (input.status === 'offer_sent' ||
+          (input.status === 'converted' && lead.status !== 'offer_sent'));
+      const offerReadiness = needsOfferReadiness
+        ? await requireAgentLeadOfferReadiness(db, lead)
+        : null;
+      validateLeadTransition(lead, input.status, {
+        lostReason: input.lostReason,
+        qualificationConfirmed: Boolean(offerReadiness?.readiness.affordabilityConfirmed),
+      });
       const now = nowAsDbTimestamp();
 
       await db
@@ -5067,7 +5127,10 @@ export const agencyRouter = router({
         : [];
 
       const [firstResponseState] = await db
-        .select({ firstResponseOverdue: firstResponseOverdueSql() })
+        .select({
+          firstResponseOverdue: firstResponseOverdueSql(),
+          firstOutreachOverdue: firstOutreachOverdueSql(),
+        })
         .from(leads)
         .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)))
         .limit(1);
@@ -5093,6 +5156,7 @@ export const agencyRouter = router({
       return {
         ...decorateLeadForWorkspace(lead, {
           firstResponseOverdue: Boolean(firstResponseState?.firstResponseOverdue),
+          firstOutreachOverdue: Boolean(firstResponseState?.firstOutreachOverdue),
         }),
         property: property
           ? {
@@ -5261,18 +5325,10 @@ export const agencyRouter = router({
           channel: leadContactChannelSchema,
           outcome: leadContactOutcomeSchema,
           summary: z.string().trim().min(1).max(2000),
-          nextAction: z.string().trim().max(255).optional(),
+          nextAction: z.string().trim().min(1).max(255),
           nextFollowUp: z.string().trim().min(1).optional().nullable(),
         })
         .superRefine((input, context) => {
-          const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
-          if (!terminalOutcome && !input.nextAction) {
-            context.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ['nextAction'],
-              message: 'Record the next action for every active buyer lead.',
-            });
-          }
           if (input.outcome === 'follow_up_required' && !input.nextFollowUp) {
             context.addIssue({
               code: z.ZodIssueCode.custom,
@@ -5294,38 +5350,28 @@ export const agencyRouter = router({
       if (parsedFollowUp && Number.isNaN(parsedFollowUp.getTime())) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Follow-up date is invalid.' });
       }
-      const nextFollowUp = parsedFollowUp ? toDbTimestampRequired(parsedFollowUp) : null;
-      const terminalOutcome = ['not_interested', 'invalid_contact'].includes(input.outcome);
-      const reached = ['reached', 'replied', 'viewing_booked'].includes(input.outcome);
+      const nextFollowUp = parsedFollowUp
+        ? toDbTimestampRequired(parsedFollowUp)
+        : input.nextFollowUp === null
+          ? null
+          : lead.nextFollowUp;
+      const connected = isTwoWayContactOutcome(input.outcome);
       const recordedAt = sql`NOW()`;
-      const nextStatus: LeadStatus = terminalOutcome
-        ? 'lost'
-        : input.outcome === 'viewing_booked'
-          ? 'viewing_scheduled'
-          : reached ||
-              input.outcome === 'follow_up_required' ||
-              input.outcome === 'no_answer' ||
-              input.outcome === 'voicemail'
-            ? 'contacted'
-            : (lead.status as LeadStatus);
-      const nextAction = terminalOutcome ? null : input.nextAction || null;
+      const nextAction = input.nextAction;
 
       await db.transaction(async (tx: any) => {
         await tx
           .update(leads)
           .set({
-            status: nextStatus,
-            nextFollowUp: terminalOutcome ? null : nextFollowUp,
+            nextFollowUp,
             nextAction,
-            firstRespondedAt: lead.firstRespondedAt || recordedAt,
-            lastContactedAt: recordedAt,
-            lostReason: terminalOutcome
-              ? input.outcome === 'not_interested'
-                ? 'Buyer not interested'
-                : 'Invalid buyer contact details'
-              : lead.lostReason,
+            ...(connected
+              ? {
+                  firstRespondedAt: lead.firstRespondedAt || recordedAt,
+                  lastContactedAt: recordedAt,
+                }
+              : {}),
             updatedAt: recordedAt,
-            funnelStage: mapStatusToFunnelStage(nextStatus, lead.funnelStage) as any,
           })
           .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
         await tx.insert(leadActivities).values({
@@ -5337,9 +5383,9 @@ export const agencyRouter = router({
             channel: input.channel,
             outcome: input.outcome,
             previousStatus: lead.status,
-            nextStatus,
+            status: lead.status,
             nextAction,
-            nextFollowUp: terminalOutcome ? null : nextFollowUp,
+            nextFollowUp,
           }),
         });
       });
@@ -5354,12 +5400,12 @@ export const agencyRouter = router({
           channel: input.channel,
           outcome: input.outcome,
           previousStatus: lead.status,
-          nextStatus,
+          status: lead.status,
         },
         req: ctx.req,
       });
 
-      return { success: true, status: nextStatus, nextAction };
+      return { success: true, status: lead.status, nextAction };
     }),
 
   setLeadFollowUp: agentProcedure
@@ -5427,7 +5473,7 @@ export const agencyRouter = router({
     .input(
       z.object({
         leadId: z.number().int().positive(),
-        note: z.string().trim().max(1000).optional(),
+        note: z.string().trim().min(1).max(1000),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -5445,9 +5491,7 @@ export const agencyRouter = router({
         .update(leads)
         .set({
           nextFollowUp: null,
-          nextAction: 'Record buyer outcome and schedule the next action',
-          firstRespondedAt: lead.firstRespondedAt || now,
-          lastContactedAt: now,
+          nextAction: input.note,
           updatedAt: now,
         })
         .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
@@ -5456,7 +5500,8 @@ export const agencyRouter = router({
         leadId: input.leadId,
         userId: user.id,
         type: 'note',
-        description: input.note || 'Follow-up completed.',
+        description: `Follow-up completed. ${input.note}`,
+        metadata: JSON.stringify({ kind: 'follow_up_completion', outcome: input.note }),
       });
 
       return { success: true };
@@ -5558,8 +5603,8 @@ export const agencyRouter = router({
             assignedTo: showingAgent.userId || lockedLead.assignedTo,
             assignedAt: lockedLead.assignedAt || now,
             status: 'viewing_scheduled',
-            funnelStage: 'viewing',
             updatedAt: now,
+            ...leadStatusTimestamps(lockedLead, 'viewing_scheduled', now),
           })
           .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
 
@@ -5762,8 +5807,8 @@ export const agencyRouter = router({
             assignedTo: showingAgent.userId || lead.assignedTo,
             assignedAt: lead.assignedAt || now,
             status: 'viewing_scheduled',
-            funnelStage: 'viewing',
             updatedAt: now,
+            ...leadStatusTimestamps(lead, 'viewing_scheduled', now),
           })
           .where(and(eq(leads.id, input.leadId), eq(leads.agencyId, agencyId)));
 
@@ -6205,7 +6250,6 @@ export const agencyRouter = router({
       });
     }
 
-    const now = nowAsDbTimestamp();
     let dealId = 0;
     let offerVersionId: number | null = null;
     const stage = input.terms ? 'draft_offer' : 'interest';
@@ -6249,20 +6293,10 @@ export const agencyRouter = router({
         offerVersionId = insertResultId(offerInsert);
       }
 
-      await tx
-        .update(leads)
-        .set({
-          status: 'offer_sent',
-          funnelStage: 'offer',
-          updatedAt: now,
-          lastContactedAt: context.lead.lastContactedAt || now,
-        } as any)
-        .where(and(eq(leads.id, context.lead.id), eq(leads.agencyId, agencyId)));
-
       await tx.insert(leadActivities).values({
         leadId: context.lead.id,
         userId: user.id,
-        type: 'status_change',
+        type: 'note',
         description:
           input.notes ||
           `Deal opened from ${context.sourceViewing ? 'completed viewing' : 'agency lead'} with ${input.interestStatus.replace(/_/g, ' ')} interest.`,
@@ -6306,13 +6340,54 @@ export const agencyRouter = router({
         });
       }
 
-      const versionNumber = await getNextOfferVersionNumber(db, agencyId, deal.id);
       const nextDeadline = input.terms.offerExpiry
         ? parseOptionalDbTimestamp(input.terms.offerExpiry)
         : deal.nextDeadline;
+      let versionNumber = 0;
       let offerVersionId = 0;
 
       await db.transaction(async tx => {
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
+        versionNumber = await getNextOfferVersionNumber(tx, agencyId, deal.id);
+
+        let leadStatusChangedFrom: string | null = null;
+        if (input.status === 'submitted' && deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+
+          if (lead.status !== 'offer_sent') {
+            const offerReadiness = await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'offer_sent', {
+              qualificationConfirmed: offerReadiness.readiness.affordabilityConfirmed,
+            });
+            const now = nowAsDbTimestamp();
+            await tx
+              .update(leads)
+              .set({
+                status: 'offer_sent',
+                updatedAt: now,
+                ...leadStatusTimestamps(lead, 'offer_sent', now),
+              })
+              .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
+            leadStatusChangedFrom = String(lead.status);
+          }
+        }
+
         if (versionNumber > 1 && input.eventType.includes('counter')) {
           await tx
             .update(agencyDealOfferVersions)
@@ -6357,10 +6432,11 @@ export const agencyRouter = router({
           await tx.insert(leadActivities).values({
             leadId: deal.leadId,
             userId: user.id,
-            type: 'note',
-            description:
-              input.note ||
-              `Offer V${versionNumber} recorded: ${input.eventType.replace(/_/g, ' ')}.`,
+            type: leadStatusChangedFrom ? 'status_change' : 'note',
+            description: leadStatusChangedFrom
+              ? `Lead moved from ${leadStatusChangedFrom} to offer_sent when Offer V${versionNumber} was submitted.`
+              : input.note ||
+                `Offer V${versionNumber} recorded: ${input.eventType.replace(/_/g, ' ')}.`,
           });
         }
       });
@@ -6396,13 +6472,73 @@ export const agencyRouter = router({
       }
 
       const now = nowAsDbTimestamp();
+      let leadStatusChangedFrom: string | null = null;
       await db.transaction(async tx => {
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
+        const [submittedOffer] = await tx
+          .select()
+          .from(agencyDealOfferVersions)
+          .where(
+            and(
+              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.agencyId, agencyId),
+              eq(agencyDealOfferVersions.dealId, deal.id),
+            ),
+          )
+          .for('update')
+          .limit(1);
+        if (!submittedOffer) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Offer version not found' });
+        }
+        if (!['draft', 'countered'].includes(String(submittedOffer.status || ''))) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only draft or countered offer versions can be submitted.',
+          });
+        }
+
+        if (deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+
+          if (lead.status !== 'offer_sent') {
+            const offerReadiness = await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'offer_sent', {
+              qualificationConfirmed: offerReadiness.readiness.affordabilityConfirmed,
+            });
+            await tx
+              .update(leads)
+              .set({
+                status: 'offer_sent',
+                updatedAt: now,
+                ...leadStatusTimestamps(lead, 'offer_sent', now),
+              })
+              .where(and(eq(leads.id, lead.id), eq(leads.agencyId, agencyId)));
+            leadStatusChangedFrom = String(lead.status);
+          }
+        }
+
         await tx
           .update(agencyDealOfferVersions)
           .set({ status: 'submitted', submittedAt: now, updatedAt: now } as any)
           .where(
             and(
-              eq(agencyDealOfferVersions.id, offer.id),
+              eq(agencyDealOfferVersions.id, submittedOffer.id),
               eq(agencyDealOfferVersions.agencyId, agencyId),
             ),
           );
@@ -6411,7 +6547,7 @@ export const agencyRouter = router({
           .set({
             stage: 'submitted',
             nextAction: 'Record seller decision or counter-offer',
-            nextDeadline: offer.offerExpiry,
+            nextDeadline: submittedOffer.offerExpiry,
             updatedByUserId: user.id,
             updatedAt: now,
           } as any)
@@ -6420,8 +6556,10 @@ export const agencyRouter = router({
           await tx.insert(leadActivities).values({
             leadId: deal.leadId,
             userId: user.id,
-            type: 'status_change',
-            description: input.note || `Offer V${offer.versionNumber} submitted for decision.`,
+            type: leadStatusChangedFrom ? 'status_change' : 'note',
+            description: leadStatusChangedFrom
+              ? `Lead moved from ${leadStatusChangedFrom} to offer_sent when Offer V${submittedOffer.versionNumber} was submitted.`
+              : input.note || `Offer V${submittedOffer.versionNumber} submitted for decision.`,
           });
         }
       });
@@ -6459,10 +6597,10 @@ export const agencyRouter = router({
         };
       }
 
-      if (['rejected', 'withdrawn', 'expired'].includes(String(offer.status || ''))) {
+      if (!['submitted', 'under_review'].includes(String(offer.status || ''))) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Rejected, withdrawn, or expired offer versions cannot be accepted.',
+          message: 'Only submitted or under-review offer versions can be accepted.',
         });
       }
 
@@ -6480,12 +6618,21 @@ export const agencyRouter = router({
       const now = nowAsDbTimestamp();
       let transactionId = 0;
       let idempotentAcceptance = false;
+      let lockedLead: typeof leads.$inferSelect | null = null;
 
       await db.transaction(async tx => {
         // Serialize acceptance on the deal row. The preflight read above is
         // advisory; concurrent acceptors must re-check the unique transaction
         // authority while holding the same lock before mutating offer state.
-        await tx.execute(sql`SELECT id FROM agency_deals WHERE id = ${deal.id} FOR UPDATE`);
+        const [lockedDeal] = await tx
+          .select({ id: agencyDeals.id })
+          .from(agencyDeals)
+          .where(and(eq(agencyDeals.id, deal.id), eq(agencyDeals.agencyId, agencyId)))
+          .for('update')
+          .limit(1);
+        if (!lockedDeal) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Deal not found' });
+        }
         const [existingTransactionInLock] = await tx
           .select({ id: agencyTransactions.id })
           .from(agencyTransactions)
@@ -6497,6 +6644,23 @@ export const agencyRouter = router({
           transactionId = Number(existingTransactionInLock.id);
           idempotentAcceptance = true;
           return;
+        }
+
+        if (deal.leadId) {
+          const [lead] = await tx
+            .select()
+            .from(leads)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)))
+            .for('update')
+            .limit(1);
+          if (!lead) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: 'Lead not found' });
+          }
+          lockedLead = lead;
+          if (lead.status !== 'offer_sent' && lead.status !== 'converted') {
+            await requireAgentLeadOfferReadiness(tx, lead);
+            validateLeadTransition(lead, 'converted');
+          }
         }
 
         await tx
@@ -6603,10 +6767,9 @@ export const agencyRouter = router({
           })) as any,
         );
 
-        if (deal.leadId) {
-          const [lead] = await tx.select().from(leads).where(eq(leads.id, deal.leadId)).limit(1);
-          if (lead) {
-            await tx.insert(agencyTransactionParties).values({
+        if (deal.leadId && lockedLead) {
+          const lead = lockedLead;
+          await tx.insert(agencyTransactionParties).values({
               agencyId,
               transactionId,
               role: deal.transactionType === 'rental' ? 'tenant' : 'buyer',
@@ -6615,25 +6778,25 @@ export const agencyRouter = router({
               phone: lead.phone,
             } as any);
 
-            await tx
-              .update(leads)
-              .set({
-                status: 'converted',
-                funnelStage: 'sale',
-                convertedAt: now,
-                updatedAt: now,
-              } as any)
-              .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)));
+          await tx
+            .update(leads)
+            .set({
+              status: 'converted',
+              funnelStage: 'sale',
+              convertedAt: now,
+              updatedAt: now,
+            } as any)
+            .where(and(eq(leads.id, deal.leadId), eq(leads.agencyId, agencyId)));
 
-            await tx.insert(leadActivities).values({
-              leadId: deal.leadId,
-              userId: user.id,
-              type: 'status_change',
-              description:
-                input.note ||
-                `Offer V${offer.versionNumber} accepted and transaction #${transactionId} opened.`,
-            });
-          }
+          await tx.insert(leadActivities).values({
+            leadId: deal.leadId,
+            userId: user.id,
+            type: 'status_change',
+            metadata: JSON.stringify({ previousStatus: lead.status, nextStatus: 'converted' }),
+            description:
+              input.note ||
+              `Offer V${offer.versionNumber} accepted and transaction #${transactionId} opened.`,
+          });
         }
 
         if (deal.responsibleAgentId) {
@@ -7885,7 +8048,7 @@ export const agencyRouter = router({
         unconfirmedViewings,
         feedbackRequiredViewings,
         urgentLeads,
-        firstResponseOverdueLeads,
+        firstOutreachOverdueLeads,
         upcomingViewings,
         listingRows,
         offerDeadlineRows,
@@ -7967,9 +8130,7 @@ export const agencyRouter = router({
             and(
               eq(leads.agencyId, agencyId),
               user.role === 'agent' ? eq(agents.userId, user.id) : undefined,
-              inArray(leads.status, ACTIVE_WORK_LEAD_STATUSES as any),
-              isNull(leads.firstRespondedAt),
-              sql`${leads.createdAt} <= DATE_SUB(NOW(), INTERVAL ${FIRST_RESPONSE_SLA_MINUTES} MINUTE)`,
+              sql`${firstOutreachOverdueSql()} = 1`,
             ),
           )
           .orderBy(leads.createdAt)
@@ -8350,8 +8511,8 @@ export const agencyRouter = router({
         unconfirmedViewings,
         feedbackRequiredViewings,
         urgentLeads: urgentLeads.map(mapLead),
-        firstResponseOverdueLeads: firstResponseOverdueLeads.map(row =>
-          mapLead(row, { firstResponseOverdue: true }),
+        firstOutreachOverdueLeads: firstOutreachOverdueLeads.map(row =>
+          mapLead(row, { firstOutreachOverdue: true }),
         ),
         listingTasks: listingRows.map(row => mapAgencyListingRow(row, agencyId)),
         transactionDeadlines,
@@ -8367,7 +8528,7 @@ export const agencyRouter = router({
           unconfirmedViewings: unconfirmedViewings.length,
           feedbackRequiredViewings: feedbackRequiredViewings.length,
           urgentLeads: urgentLeads.length,
-          firstResponseOverdueLeads: firstResponseOverdueLeads.length,
+          firstOutreachOverdueLeads: firstOutreachOverdueLeads.length,
           listingTasks: listingRows.length,
           transactionDeadlines: transactionDeadlines.length,
           overdueSellerFollowUps: overdueSellerFollowUps.length,
@@ -9220,7 +9381,7 @@ export const agencyRouter = router({
           isEnabled: Boolean(branding.isEnabled),
         };
       } catch (error) {
-        console.error('[agency.getBranding] Error:', error);
+        console.error('[agency.getBranding] Error:', safeErrorSummary(error));
         // Return default on error
         return {
           companyName: 'Real Estate Portal',
