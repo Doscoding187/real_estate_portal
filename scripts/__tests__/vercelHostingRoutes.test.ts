@@ -66,12 +66,12 @@ describe('hosting route contract', () => {
     );
   });
 
-  it('keeps the production Git trigger closed until the recorded release step', async () => {
+  it('keeps the production Git trigger enabled for the recorded release step', async () => {
     const config = await loadVercelConfig({
       VERCEL_ENV: 'production',
       VITE_DEPLOY_ENV: 'production',
     });
 
-    expect(config.git.deploymentEnabled.main).toBe(false);
+    expect(config.git.deploymentEnabled.main).toBe(true);
   });
 });

@@ -6,9 +6,9 @@ const production =
   process.env.VERCEL_ENV === 'production' && process.env.VITE_DEPLOY_ENV === 'production';
 
 export const config = {
-  // The production Git trigger is restored in the separately recorded frontend release
-  // step, so the deploy happens from the integration base at merge time.
-  git: { deploymentEnabled: { main: false } },
+  // The production Git trigger is restored for the recorded frontend release step, so the
+  // production deploy happens from the integration base at merge time.
+  git: { deploymentEnabled: { main: true } },
   buildCommand: 'pnpm build:frontend',
   outputDirectory: 'dist/public',
   framework: null,
