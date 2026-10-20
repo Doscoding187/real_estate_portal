@@ -42,7 +42,7 @@ export function suburbGuideTitle(suburbName: string): string {
 }
 
 export function suburbGuideDescription(suburbName: string, cityName: string): string {
-  return `Explore homes for sale, rentals and new developments in ${suburbName}, ${cityName}.`;
+  return `Get to know ${suburbName}: where it sits in ${cityName}, how to read the numbers, and the homes, rentals and new developments published there right now.`;
 }
 
 /** Published suburb guide routes for the guide sitemap. The pilot is the only suburb with an

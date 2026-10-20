@@ -22,7 +22,7 @@ describe('suburb guide initial metadata', () => {
       'Sandton property guide: homes, rentals & developments | Property Listify',
     );
     expect(metadata.description).toBe(
-      'Explore homes for sale, rentals and new developments in Sandton, Johannesburg.',
+      'Get to know Sandton: where it sits in Johannesburg, how to read the numbers, and the homes, rentals and new developments published there right now.',
     );
     expect(metadata.canonicalUrl).toBe(
       'https://www.propertylistifysa.co.za/gauteng/johannesburg/sandton',

@@ -108,7 +108,7 @@ const johannesburg: CityGuideContent = {
       description:
         'Use a station as a starting point for a more practical neighbourhood shortlist.',
       context:
-        'Park, Rosebank, Sandton and Midrand are Gautrain commuter-network reference points. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.',
+        'Park Station, Rosebank, Sandton and Midrand are reference points on the north–south Gautrain corridor, which also serves Marlboro, Centurion, Pretoria and Hatfield; the airport service branches east through Rhodesfield to O.R. Tambo International Airport. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.',
       sourceIds: ['rail', 'rosebank'],
       places: [
         suburb('Rosebank', 'Compare the area around Rosebank station'),
@@ -147,10 +147,10 @@ const johannesburg: CityGuideContent = {
       id: 'b',
       label: 'Randburg & parks',
       title: 'Region B · Randburg and the park neighbourhoods',
-      text: 'Northcliff and parts of Randburg, Sandton and Rosebank form this part of the metro. Familiar place names can cross the city’s administrative divisions.',
+      text: 'Northcliff and parts of Randburg form this part of the metro, and Rosebank sits here as well. Familiar place names can cross the city’s administrative divisions.',
       consider:
         'Look at a specific neighbourhood around your regular destinations. A park or business-node name is a useful reference point, but it does not describe every street around it.',
-      places: ['Randburg', 'Northcliff', 'Emmarentia'],
+      places: ['Randburg', 'Rosebank', 'Northcliff', 'Emmarentia'],
     },
     {
       id: 'c',
@@ -174,10 +174,10 @@ const johannesburg: CityGuideContent = {
       id: 'e',
       label: 'Sandton & Alexandra',
       title: 'Region E · Sandton and Alexandra',
-      text: 'Alexandra and parts of Sandton and Rosebank sit within Region E. An administrative grouping is not a single housing market or one lifestyle.',
+      text: 'Alexandra and parts of Sandton sit within Region E. An administrative grouping is not a single housing market or one lifestyle.',
       consider:
         'Compare the exact neighbourhood and property setting. If a rail connection matters, check the route to the station as well as the onward trip.',
-      places: ['Sandton', 'Alexandra', 'Rosebank'],
+      places: ['Sandton', 'Alexandra'],
     },
     {
       id: 'f',

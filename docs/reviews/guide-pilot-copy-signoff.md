@@ -1,6 +1,6 @@
 # Guide pilot copy sign-off record
 
-**Status:** awaiting founder sign-off
+**Status:** editorially approved with amendments applied; final SEO line check outstanding
 **Review sheet:** [guide-pilot-copy-review-2026-10-20.md](guide-pilot-copy-review-2026-10-20.md)
 **Regenerate the sheet with:** `pnpm guide:copy:review`
 **Content under review:** the Gauteng province guide, the Johannesburg city guide, and the Region E
@@ -10,27 +10,55 @@ chapter the Sandton suburb pilot reuses.
 shows a "Local-review draft" marker. This sign-off governs the first; reverting one status
 field restores the second.
 
-## What the sign-off covers
+## Decision on the editorial questions
 
-| Item                            | Where in the sheet                                                                                                                              | What to check                                                                                                                             |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Page title and meta description | Under each guide heading                                                                                                                        | Reads well in a Google result. Says what the page is, not what the platform is.                                                           |
-| Introduction                    | "Introduction" under each guide                                                                                                                 | Does it orient a visitor in the place, or does it describe the software?                                                                  |
-| Region chapters                 | "Johannesburg / Tshwane & Pretoria / Ekurhuleni / West Rand / Sedibeng" under Gauteng, and "Region A–G" under Johannesburg                      | Are the places grouped correctly? Does the text match what you know of these areas?                                                       |
-| Discovery collections           | "City living / Green spaces / Connected living / East Rand towns / Town & country / Around the Vaal" under Gauteng; the four under Johannesburg | Do the place cards feel right? Is any place missing that should be there?                                                                 |
-| Everyday life                   | "Everyday life"                                                                                                                                 | Advice, not claims. No promised commute times, school ratings or price predictions.                                                       |
-| Questions                       | "Questions"                                                                                                                                     | Would you be comfortable being quoted? Are the answers honest where we do not know?                                                       |
-| Source register                 | "Source register"                                                                                                                               | Are the sources the right ones, and are the notes accurate?                                                                               |
-| Sandton                         | "Sandton" section                                                                                                                               | The suburb pilot adds no new claims of its own. It reuses the reviewed Johannesburg "Region E" chapter and lists live content separately. |
+| Question                     | Finding                                                                                                          | Outcome                                                                                                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The five Gauteng groupings   | Correct overall structure. They are Property Listify's main discovery areas, not five equivalent municipalities. | **Approved.** The introduction now says so explicitly and names the three metros and the two district-level areas.                                                                                                                                                                                                                                                          |
+| Sedibeng and the wider Vaal  | Correct, with a provincial-boundary distinction.                                                                 | **Approved with wording.** Sedibeng is described as covering southern Gauteng, and the wider Vaal area as connecting communities across the provincial boundary, including Sasolburg in the Free State, which is a separate province.                                                                                                                                       |
+| Ekurhuleni's nine towns      | Valid list, but not exhaustive.                                                                                  | **Approved with wording.** Now "Ekurhuleni's historic towns and centres include …", with an explicit statement that substantial communities and urban areas such as Tembisa, Daveyton, Vosloorus, Katlehong, Thokoza and KwaThema sit within the municipality too, and are not property-search areas in their own right here.                                               |
+| Gautrain stations            | The seven named stations are correct for the north–south corridor and are not the complete network.              | **Approved with scope clarification.** The province guide now names the north–south corridor (Park Station, Rosebank, Sandton, Marlboro, Midrand, Centurion, Pretoria, Hatfield) and the airport service through the eastern branch to O.R. Tambo International Airport. The city guide says the same. "Park" is written "Park Station" so it cannot be read as the suburb. |
+| Region E and Rosebank        | Region E is Sandton and Alexandra; Rosebank is Region B.                                                         | **Approved.** Rosebank is removed from Region E's text and place list and added to Region B's.                                                                                                                                                                                                                                                                              |
+| Titles and meta descriptions | To be checked against the exact lines.                                                                           | **Outstanding.** The final lines are below.                                                                                                                                                                                                                                                                                                                                 |
 
-## Decision
+## Outstanding: the final SEO lines
 
-| Field                | Value   |
-| -------------------- | ------- |
-| Decision             | pending |
-| Approved by          |         |
-| Date                 |         |
-| Amendments requested |         |
+Checked against the four tests — search intent, distinctiveness, accuracy, and whether each page
+adds enough to deserve its own result.
+
+**Gauteng** — `/gauteng`
+
+```
+Title:       Explore Gauteng: regions, cities & neighbourhoods | Property Listify
+Description: Understand Gauteng's three metros and two districts. Compare Johannesburg,
+             Tshwane, Ekurhuleni, West Rand and Sedibeng, then explore their city guides.
+```
+
+Search intent matches a provincial exploration. The description states the three-metros and
+two-districts structure that was just approved, so it agrees with the page.
+
+**Johannesburg** — `/gauteng/johannesburg`
+
+```
+Title:       Johannesburg area guide: neighbourhoods, parks & city life | Property Listify
+Description: Find your side of Johannesburg. Understand its different regions, discover
+             neighbourhoods and green spaces, and choose a suburb to explore in more detail.
+```
+
+Names the city, promises regions, neighbourhoods, green spaces and a suburb next step, and the
+page delivers all four.
+
+**Sandton** — `/gauteng/johannesburg/sandton`
+
+```
+Title:       Sandton property guide: homes, rentals & developments | Property Listify
+Description: Get to know Sandton: where it sits in Johannesburg, how to read the numbers, and
+             the homes, rentals and new developments published there right now.
+```
+
+The title is unchanged. The description was the weak line: it repeated the transaction offering
+instead of explaining the guide. It now states what the page adds — where Sandton sits, how to
+read the figures, and what is published there now.
 
 ## How a decision is applied
 
@@ -43,9 +71,23 @@ field restores the second.
   `noindex`, removes it from the guide sitemap and restores the draft marker. Nothing else
   changes.
 
+## Approval record
+
+| Field       | Value                                                            |
+| ----------- | ---------------------------------------------------------------- |
+| Editor      | Edward                                                           |
+| Date        | 2026-10-20                                                       |
+| Decision    | Approved with amendments. The five amendments above are applied. |
+| Outstanding | Final verdict on the three SEO lines.                            |
+
 ## Notes
 
 The guide copy is authored content. It is written from published municipal and official sources
 listed in each guide's source register, and the source-check date is recorded on the page
 ("Sources checked 15 October 2026"). A source is not proof that the wording is right; that is
 what this review is for.
+
+One item is recorded as a known transitional state: Rosebank currently resolves to its own
+place route rather than to `/gauteng/johannesburg/rosebank`, because the legacy location
+projection still holds it as a province-level city. That projection correction is separate
+work (launch packet 63, consumer switchover) and does not block this approval.

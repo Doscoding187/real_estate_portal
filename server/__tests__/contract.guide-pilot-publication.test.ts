@@ -99,7 +99,7 @@ describe('published guide pilot', () => {
     const html = suburbGuideInitialHtml('/gauteng/johannesburg/sandton')!;
     expect(html).toContain('Explore Sandton');
     expect(html).toContain('Where Sandton fits in the city');
-    expect(html).toContain('Alexandra and parts of Sandton and Rosebank sit within Region E');
+    expect(html).toContain('Alexandra and parts of Sandton sit within Region E');
     expect(html).toContain(
       'https://joburg.org.za/about_/regions/Pages/Region%20E%20-%20Sandton%2C%20Alexandra/region-e.aspx',
     );

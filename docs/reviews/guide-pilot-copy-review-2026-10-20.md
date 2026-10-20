@@ -17,7 +17,7 @@ Sources checked: 2026-10-15
 
 ### Introduction
 
-One province, many ways to live. Get your bearings in Johannesburg, the greater Pretoria area and the East Rand, then look west to the towns of the West Rand or south towards the Vaal. Start with the region that fits your everyday life, and explore its places in more detail.
+One province, many ways to live. These five areas are Property Listify’s main ways into Gauteng: three metropolitan municipalities — Johannesburg, Tshwane and Ekurhuleni — and two district-level areas, West Rand and Sedibeng. Get your bearings in Johannesburg, the greater Pretoria area and the East Rand, then look west to the towns of the West Rand or south towards the Vaal. Start with the region that fits your everyday life, and explore its places in more detail.
 
 ### Johannesburg (Metropolitan municipality)
 
@@ -57,7 +57,7 @@ _Get to know the East Rand town by town_
 
 An interconnected network of towns, with airport, industrial and residential settings that vary considerably by location.
 
-Ekurhuleni brings together nine established towns: Alberton, Benoni, Boksburg, Brakpan, Edenvale, Germiston, Kempton Park, Nigel and Springs. The familiar name “East Rand” helps with orientation, but a town and a metropolitan municipality are different levels of geography.
+Ekurhuleni’s historic towns and centres include Alberton, Benoni, Boksburg, Brakpan, Edenvale, Germiston, Kempton Park, Nigel and Springs. That is not the whole municipality: substantial communities and urban areas such as Tembisa, Daveyton, Vosloorus, Katlehong, Thokoza and KwaThema sit within Ekurhuleni as well, and they are not property-search areas in their own right here. The familiar name “East Rand” helps with orientation, but a town and a metropolitan municipality are different levels of geography.
 
 OR Tambo International Airport is an important reference point for the northern part of the metro. The mining-belt towns stretch eastwards, while Alberton provides a southern starting point. Rather than treating the whole metro as one shortlist, compare the town, the neighbourhood and its connection to your daily destinations. Airport access, proximity to employment and a residential street’s surroundings are separate considerations.
 
@@ -91,7 +91,7 @@ Vereeniging, Vanderbijlpark, Meyerton and Heidelberg provide different ways into
 
 Sedibeng is the southern Gauteng district made up of Emfuleni, Midvaal and Lesedi. The river communities around Vereeniging and Vanderbijlpark, the Meyerton area and Heidelberg are distinct places to explore. The R59, N1 and N3 provide different regional connections; choose the relevant corridor rather than assuming that every address has the same access to Johannesburg.
 
-“The Vaal” is a familiar regional description, not a synonym for one municipal boundary. The wider river region also connects to places outside Gauteng, including Sasolburg in the Free State. This province guide keeps its place links within Gauteng. For a river or dam-side property, check the exact address and municipality as well as access, services and any property-specific restrictions.
+“The Vaal” is a familiar regional description, not a synonym for one municipal boundary. Sedibeng covers southern Gauteng, including Emfuleni, Midvaal and Lesedi. The wider Vaal area also connects communities across the provincial boundary, including Sasolburg in the Free State, which is a separate province. This province guide keeps its place links within Gauteng. For a river or dam-side property, check the exact address and municipality as well as access, services and any property-specific restrictions.
 
 **What to weigh up:** Decide whether you want a town neighbourhood, a smaller settlement or a waterside setting. Then investigate that location on its own terms.
 
@@ -123,7 +123,7 @@ Sources: joburg-gardens, pretoria-garden, walter-sisulu
 
 Use the Gautrain corridor as a starting point for your daily journey.
 
-Park, Midrand, Centurion, Pretoria and Hatfield are stations on the commuter network. Compare the complete trip, including the distance between a home and a station; a city guide is not a promise of walkable rail access. Confirm current routes with Gautrain.
+Park Station, Midrand, Centurion, Pretoria and Hatfield are stations on the north–south commuter corridor. Compare the complete trip, including the distance between a home and a station; a city guide is not a promise of walkable rail access. Confirm current routes with Gautrain.
 
 Places: Johannesburg (Start with the Park Station corridor); Midrand (Explore around the Midrand connection); Centurion (Compare your door-to-door journey); Pretoria (Pretoria & Hatfield connections)
 
@@ -163,7 +163,7 @@ Sources: sedibeng, metsimaholo
 
 **Start with the journey you make most**
 
-Gautrain links Johannesburg, Sandton, Midrand, Centurion, Pretoria and Hatfield, with an airport connection. It is one part of a wider transport picture. Check current routes and service information with the operator, and test your full door-to-door trip at the times you expect to travel. Distance on a map is not a travel-time promise.
+The north–south Gautrain corridor connects Park Station, Rosebank, Sandton, Marlboro, Midrand, Centurion, Pretoria and Hatfield. The airport service connects through the eastern branch to O.R. Tambo International Airport. It is one part of a wider transport picture. Check current routes and service information with the operator, and test your full door-to-door trip at the times you expect to travel. Distance on a map is not a travel-time promise.
 
 Sources: gautrain
 
@@ -254,7 +254,7 @@ Sources: parks
 
 Use a station as a starting point for a more practical neighbourhood shortlist.
 
-Park, Rosebank, Sandton and Midrand are Gautrain commuter-network reference points. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.
+Park Station, Rosebank, Sandton and Midrand are reference points on the north–south Gautrain corridor, which also serves Marlboro, Centurion, Pretoria and Hatfield; the airport service branches east through Rhodesfield to O.R. Tambo International Airport. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.
 
 Places: Rosebank (Compare the area around Rosebank station); Sandton (Explore around the Sandton node); Midrand (Investigate your full station connection); Braamfontein (Investigate connections around Park station)
 
@@ -280,11 +280,11 @@ Places named: Midrand, Diepsloot, Ivory Park
 
 ### Region B · Randburg and the park neighbourhoods
 
-Northcliff and parts of Randburg, Sandton and Rosebank form this part of the metro. Familiar place names can cross the city’s administrative divisions.
+Northcliff and parts of Randburg form this part of the metro, and Rosebank sits here as well. Familiar place names can cross the city’s administrative divisions.
 
 **What to weigh up:** Look at a specific neighbourhood around your regular destinations. A park or business-node name is a useful reference point, but it does not describe every street around it.
 
-Places named: Randburg, Northcliff, Emmarentia
+Places named: Randburg, Rosebank, Northcliff, Emmarentia
 
 ### Region C · Roodepoort and the west
 
@@ -304,11 +304,11 @@ Places named: Soweto, Diepkloof, Meadowlands
 
 ### Region E · Sandton and Alexandra
 
-Alexandra and parts of Sandton and Rosebank sit within Region E. An administrative grouping is not a single housing market or one lifestyle.
+Alexandra and parts of Sandton sit within Region E. An administrative grouping is not a single housing market or one lifestyle.
 
 **What to weigh up:** Compare the exact neighbourhood and property setting. If a rail connection matters, check the route to the station as well as the onward trip.
 
-Places named: Sandton, Alexandra, Rosebank
+Places named: Sandton, Alexandra
 
 ### Region F · Inner city and Johannesburg South
 
@@ -387,7 +387,7 @@ the city" section. It adds no new claims of its own.
 
 **Region E · Sandton and Alexandra**
 
-Alexandra and parts of Sandton and Rosebank sit within Region E. An administrative grouping is not a single housing market or one lifestyle.
+Alexandra and parts of Sandton sit within Region E. An administrative grouping is not a single housing market or one lifestyle.
 
 **What to weigh up:** Compare the exact neighbourhood and property setting. If a rail connection matters, check the route to the station as well as the onward trip.
 
