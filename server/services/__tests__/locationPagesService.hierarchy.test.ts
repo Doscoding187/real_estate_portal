@@ -183,6 +183,7 @@ describe('locationPagesService canonical hierarchy', () => {
         },
       ],
       [],
+      [],
     ]);
     getDb.mockResolvedValue(db);
 
@@ -196,12 +197,20 @@ describe('locationPagesService canonical hierarchy', () => {
         sale: expect.objectContaining({ listingCount: 0 }),
         rent: expect.objectContaining({ listingCount: 0 }),
       }),
+      developments: {
+        total: 0,
+        byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+        byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+        priceFromMinimum: null,
+        priceToMaximum: null,
+        publishers: [],
+      },
     });
     expect(result).not.toHaveProperty('listings');
     expect(result).not.toHaveProperty('analytics');
     expect(result).not.toHaveProperty('insights');
     expect(result).not.toHaveProperty('reviews');
-    expect(db.select).toHaveBeenCalledTimes(2);
+    expect(db.select).toHaveBeenCalledTimes(3);
     expect(resolvePublicPropertyEligibilities).not.toHaveBeenCalled();
   });
 
