@@ -136,8 +136,8 @@ const johannesburg: CityGuideContent = {
   regions: [
     {
       id: 'a',
-      label: 'Midrand & north',
-      title: 'Region A · Midrand and the north',
+      label: 'Diepsloot & Midrand',
+      title: 'Region A · Diepsloot and Midrand',
       text: 'Midrand, Diepsloot and Ivory Park are northern reference points. The same municipal region includes quite different neighbourhoods and housing settings.',
       consider:
         'Start with the destination you need to reach. Compare the specific neighbourhood and the complete route rather than assuming that a northern address means a short commute.',

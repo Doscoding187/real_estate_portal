@@ -104,7 +104,7 @@ const gauteng: ProvinceGuideContent = {
       summary:
         'An interconnected network of towns, with airport, industrial and residential settings that vary considerably by location.',
       paragraphs: [
-        'Ekurhuleni’s historic towns and centres include Alberton, Benoni, Boksburg, Brakpan, Edenvale, Germiston, Kempton Park, Nigel and Springs. That is not the whole municipality: substantial communities and urban areas such as Tembisa, Daveyton, Vosloorus, Katlehong, Thokoza and KwaThema sit within Ekurhuleni as well, and they are not property-search areas in their own right here. The familiar name “East Rand” helps with orientation, but a town and a metropolitan municipality are different levels of geography.',
+        'Ekurhuleni’s historic towns and centres include Alberton, Benoni, Boksburg, Brakpan, Edenvale, Germiston, Kempton Park, Nigel and Springs. The metro also covers large townships such as Tembisa, Daveyton, Vosloorus, Katlehong, Thokoza and KwaThema. Those are reached through the suburb search and their own place pages rather than as separate areas in this chapter. The familiar name “East Rand” helps with orientation, but a town and a metropolitan municipality are different levels of geography.',
         'OR Tambo International Airport is an important reference point for the northern part of the metro. The mining-belt towns stretch eastwards, while Alberton provides a southern starting point. Rather than treating the whole metro as one shortlist, compare the town, the neighbourhood and its connection to your daily destinations. Airport access, proximity to employment and a residential street’s surroundings are separate considerations.',
       ],
       consider:
