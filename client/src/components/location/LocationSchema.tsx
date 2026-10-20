@@ -127,7 +127,7 @@ export function LocationSchema({
   if (stats) {
     placeSchema.additionalProperty = [];
 
-    if (stats.totalListings !== undefined) {
+    if (Number.isSafeInteger(stats.totalListings) && stats.totalListings! >= 0) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
         name: 'Total Listings',
@@ -135,16 +135,16 @@ export function LocationSchema({
       });
     }
 
-    if (stats.avgPrice !== undefined) {
+    if (Number.isFinite(stats.avgPrice) && stats.avgPrice! > 0) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
-        name: 'Average Sale Price',
+        name: 'Average Asking Price',
         value: stats.avgPrice,
         unitCode: 'ZAR',
       });
     }
 
-    if (stats.avgRentalPrice !== undefined) {
+    if (Number.isFinite(stats.avgRentalPrice) && stats.avgRentalPrice! > 0) {
       placeSchema.additionalProperty.push({
         '@type': 'PropertyValue',
         name: 'Average Rental Price',

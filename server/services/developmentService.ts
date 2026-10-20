@@ -43,6 +43,7 @@ import {
   locations,
   distributionPrograms,
 } from '../../drizzle/schema';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ===========================================================================
 // TYPES
@@ -3875,7 +3876,7 @@ export async function saveDraft(
     const [result] = await db.insert(developmentDrafts).values(draftPayload);
     return { draftId: result.insertId };
   } catch (error: any) {
-    console.error('[saveDraft] Error:', error);
+    console.error('[saveDraft] Error:', safeErrorSummary(error));
     throw new Error(`Failed to save draft: ${error.message}`);
   }
 }

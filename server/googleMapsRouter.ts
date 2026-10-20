@@ -2,6 +2,7 @@ import { router, publicProcedure, protectedProcedure } from './_core/trpc';
 import { z } from 'zod';
 import { ENV } from './_core/env';
 import axios from 'axios';
+import { safeErrorSummary } from './_core/safeError';
 
 /**
  * Google Maps Integration Router
@@ -59,7 +60,7 @@ export const googleMapsRouter = router({
             })) || [],
         };
       } catch (error) {
-        console.error('Google Places API error:', error);
+        console.error('Google Places API error:', safeErrorSummary(error));
         throw new Error('Failed to search places');
       }
     }),
@@ -132,7 +133,7 @@ export const googleMapsRouter = router({
           types: place.types,
         };
       } catch (error) {
-        console.error('Google Place Details API error:', error);
+        console.error('Google Place Details API error:', safeErrorSummary(error));
         throw new Error('Failed to get place details');
       }
     }),
@@ -201,7 +202,7 @@ export const googleMapsRouter = router({
           })),
         };
       } catch (error) {
-        console.error('Google Geocoding API error:', error);
+        console.error('Google Geocoding API error:', safeErrorSummary(error));
         throw new Error('Failed to geocode address');
       }
     }),
@@ -286,7 +287,7 @@ export const googleMapsRouter = router({
 
         return { results };
       } catch (error) {
-        console.error('Google Nearby Search API error:', error);
+        console.error('Google Nearby Search API error:', safeErrorSummary(error));
         throw new Error('Failed to search nearby places');
       }
     }),
@@ -346,7 +347,7 @@ export const googleMapsRouter = router({
           reader.readAsDataURL(response.data);
         });
       } catch (error) {
-        console.error('Google Street View API error:', error);
+        console.error('Google Street View API error:', safeErrorSummary(error));
         throw new Error('Failed to get Street View imagery');
       }
     }),
@@ -446,7 +447,7 @@ export const googleMapsRouter = router({
           warnings: route.warnings,
         };
       } catch (error) {
-        console.error('Google Directions API error:', error);
+        console.error('Google Directions API error:', safeErrorSummary(error));
         throw new Error('Failed to get directions');
       }
     }),
@@ -528,7 +529,7 @@ export const googleMapsRouter = router({
           })),
         };
       } catch (error) {
-        console.error('Google Distance Matrix API error:', error);
+        console.error('Google Distance Matrix API error:', safeErrorSummary(error));
         throw new Error('Failed to calculate distances');
       }
     }),
@@ -604,7 +605,7 @@ export const googleMapsRouter = router({
           next_page_token: response.data.next_page_token,
         };
       } catch (error) {
-        console.error('Google Text Search API error:', error);
+        console.error('Google Text Search API error:', safeErrorSummary(error));
         throw new Error('Failed to search places by text');
       }
     }),

@@ -13,27 +13,27 @@ interface NearbyLandmarksProps {
 }
 
 const TABS = [
-  { id: 'Education', icon: School, label: 'Education', types: ['school', 'university'] },
-  { id: 'Health', icon: Heart, label: 'Health', types: ['hospital', 'doctor', 'pharmacy'] },
+  { id: 'Education', icon: School, label: 'Education', category: 'education' },
+  { id: 'Health', icon: Heart, label: 'Health', category: 'healthcare' },
   {
     id: 'Transportation',
     icon: Bus,
     label: 'Transportation',
-    types: ['bus_station', 'train_station', 'transit_station', 'subway_station'],
+    category: 'transport',
   },
   {
     id: 'Shopping',
     icon: ShoppingBag,
     label: 'Shopping',
-    types: ['shopping_mall', 'supermarket', 'department_store'],
+    category: 'shopping',
   },
   {
     id: 'Entertainment',
     icon: Ticket,
     label: 'Entertainment',
-    types: ['movie_theater', 'park', 'attraction', 'stadium'],
+    category: 'lifestyle',
   },
-];
+] as const;
 
 const googleMapsBrowserKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY?.trim() || '';
 
@@ -72,7 +72,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
       latitude: latitude || 0,
       longitude: longitude || 0,
       radius: 5000,
-      types: activeTabConfig?.types || [],
+      categories: activeTabConfig ? [activeTabConfig.category] : [],
       limit: 5,
     },
     {
@@ -165,7 +165,7 @@ export function NearbyLandmarks({ property }: NearbyLandmarksProps) {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-800">{poi.name}</p>
                     <p className="mt-0.5 text-xs capitalize text-slate-500">
-                      {(poi.type ? poi.type.replace(/_/g, ' ') : activeTabLabel).trim()}
+                      {(poi.category ? poi.category.replace(/_/g, ' ') : activeTabLabel).trim()}
                     </p>
                   </div>
                   <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-slate-500">

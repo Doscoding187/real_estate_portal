@@ -52,6 +52,10 @@ describe('NearbyLandmarks map resilience', () => {
     if (preview) fireEvent.error(preview);
 
     expect(screen.getByRole('status')).toHaveTextContent('Map preview unavailable');
+    expect(getNearbyAmenitiesUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ radius: 5000, categories: ['education'] }),
+      expect.anything(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Open in Google Maps' }));
     expect(openMap).toHaveBeenCalledWith(
       'https://www.google.com/maps/search/?api=1&query=-26.1076,28.0567',

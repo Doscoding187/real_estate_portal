@@ -1,3 +1,6 @@
+import { CITY_GUIDE_CONTENT, getCityGuideContent } from './shared/cityGuideContent';
+import { PROVINCE_GUIDE_CONTENT, getProvinceGuideContent } from './shared/provinceGuideContent';
+import { injectSeoHead } from './server/_core/seoHead';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -39,7 +42,48 @@ function developmentSupersessionDevMiddleware(): Plugin {
   };
 }
 
-const plugins = [developmentSupersessionDevMiddleware(), react(), tailwindcss()];
+function provinceGuideEditorialHtml(): Plugin {
+  return {
+    name: 'province-guide-editorial-html',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, context) {
+        const requestUrl = context.originalUrl || context.path;
+        const slug = new URL(requestUrl, 'http://localhost').pathname.replace(/^\/|\/$/g, '');
+        const parts = slug.split('/');
+        return getProvinceGuideContent(slug) ||
+          (parts.length === 2 && getCityGuideContent(parts[0], parts[1]))
+          ? injectSeoHead(html, requestUrl)
+          : html;
+      },
+    },
+    generateBundle: {
+      order: 'post',
+      handler(_options, bundle) {
+        const template = bundle['index.html'];
+        if (!template || template.type !== 'asset')
+          throw new Error('Guide HTML requires the built application shell');
+        for (const guide of [
+          ...PROVINCE_GUIDE_CONTENT.map(guide => ({ path: guide.slug })),
+          ...CITY_GUIDE_CONTENT.map(guide => ({ path: `${guide.provinceSlug}/${guide.slug}` })),
+        ]) {
+          this.emitFile({
+            type: 'asset',
+            fileName: `${guide.path}/index.html`,
+            source: injectSeoHead(String(template.source), `/${guide.path}`),
+          });
+        }
+      },
+    },
+  };
+}
+
+const plugins = [
+  provinceGuideEditorialHtml(),
+  developmentSupersessionDevMiddleware(),
+  react(),
+  tailwindcss(),
+];
 const buildGitSha =
   process.env.BUILD_SHA ||
   process.env.VERCEL_GIT_COMMIT_SHA ||

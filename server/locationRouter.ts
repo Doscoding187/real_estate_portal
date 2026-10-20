@@ -33,6 +33,18 @@ import {
 } from '../shared/commercial-domain';
 import { excludeLandFromGenericPublicProjection } from './services/landLaunchContainmentService';
 import { resolvePublicPropertyEligibilityIds } from './services/publicPropertyEligibilityService';
+import {
+  NEARBY_AMENITY_CATEGORIES,
+  NEARBY_AMENITY_DEFAULT_LIMIT,
+  NEARBY_AMENITY_MAX_LIMIT,
+  NEARBY_AMENITY_MAX_RADIUS_METRES,
+  NEARBY_AMENITY_MIN_RADIUS_METRES,
+  getNearbyAmenityCategoryConfig,
+  passesNearbyAmenityQualityGate,
+  rankNearbyAmenities,
+  type NearbyAmenity,
+} from '../shared/nearbyAmenities';
+import { safeErrorSummary } from './_core/safeError';
 
 function rejectCommercialPropertyTypes(values: readonly unknown[] | undefined): void {
   if (!values?.some(value => isCommercialMarketingPropertyType(value))) return;
@@ -414,56 +426,88 @@ export const locationRouter = router({
   getNearbyAmenities: publicProcedure
     .input(
       z.object({
-        latitude: z.number(),
-        longitude: z.number(),
-        radius: z.number(),
-        types: z.array(z.string()),
-        limit: z.number().optional(),
+        latitude: z.number().min(-90).max(90),
+        longitude: z.number().min(-180).max(180),
+        radius: z
+          .number()
+          .min(NEARBY_AMENITY_MIN_RADIUS_METRES)
+          .max(NEARBY_AMENITY_MAX_RADIUS_METRES),
+        categories: z.array(z.enum(NEARBY_AMENITY_CATEGORIES)).min(1).max(5),
+        limit: z.number().int().min(1).max(NEARBY_AMENITY_MAX_LIMIT).optional(),
       }),
     )
     .query(async ({ input }) => {
       const { googlePlacesService } = await import('./services/googlePlacesService');
-      const { latitude, longitude, radius, types, limit } = input;
+      const { latitude, longitude, radius, categories, limit } = input;
 
       try {
-        // Fetch specific place types in parallel (Google Places API 'type' parameter takes one type mostly for strict filtering or keyword)
-        // We will fetch for each type requested to ensure good coverage
-        const promises = types.map(type =>
-          googlePlacesService.getNearbyPlaces(latitude, longitude, radius, type),
+        const configs = categories.map(category => getNearbyAmenityCategoryConfig(category));
+        const requests = configs.flatMap(config =>
+          config.googleTypes.map(googleType =>
+            googlePlacesService
+              .getNearbyPlaces(latitude, longitude, radius, googleType, {
+                throwOnUnavailable: true,
+              })
+              .then(places => ({ config, googleType, places })),
+          ),
         );
 
-        const results = await Promise.all(promises);
-        const flattened = results.flat();
+        const groupedResults = await Promise.all(requests);
+        const candidates = groupedResults.flatMap(({ config, googleType, places }) =>
+          places.map(place => ({ config, googleType, place })),
+        );
 
-        // Calculate distance and process
-        const processed = flattened.map(place => {
-          // Haversine formula for distance
-          const R = 6371; // Earth's radius in km
-          const dLat = ((place.latitude - latitude) * Math.PI) / 180;
-          const dLon = ((place.longitude - longitude) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos((latitude * Math.PI) / 180) *
-              Math.cos((place.latitude * Math.PI) / 180) *
-              Math.sin(dLon / 2) *
-              Math.sin(dLon / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distance = Math.round(R * c * 10) / 10; // Round to 1 decimal place
+        const processed = candidates
+          .map(({ config, googleType, place }): NearbyAmenity | null => {
+            const placeId = String(place.place_id || place.id || '');
+            if (!placeId) return null;
+            if (
+              !passesNearbyAmenityQualityGate(
+                {
+                  name: place.name || '',
+                  rating: place.rating,
+                  userRatingsTotal: place.user_ratings_total,
+                  types: place.types,
+                },
+                config,
+              )
+            ) {
+              return null;
+            }
 
-          return {
-            ...place,
-            distance: `${distance} km`,
-            distanceValue: distance,
-          };
-        });
+            const R = 6371;
+            const dLat = ((place.latitude - latitude) * Math.PI) / 180;
+            const dLon = ((place.longitude - longitude) * Math.PI) / 180;
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos((latitude * Math.PI) / 180) *
+                Math.cos((place.latitude * Math.PI) / 180) *
+                Math.sin(dLon / 2) *
+                Math.sin(dLon / 2);
+            const distanceValue =
+              Math.round(2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
 
-        // Deduplicate by place ID
-        const unique = Array.from(new Map(processed.map(item => [item.id, item])).values());
+            return {
+              id: placeId,
+              placeId,
+              name: place.name || 'Unnamed place',
+              category: config.id,
+              googleType,
+              address: place.address || '',
+              latitude: place.latitude,
+              longitude: place.longitude,
+              distance: `${distanceValue.toFixed(1)} km`,
+              distanceValue,
+              rating: typeof place.rating === 'number' ? place.rating : null,
+              userRatingsTotal:
+                typeof place.user_ratings_total === 'number' ? place.user_ratings_total : null,
+            };
+          })
+          .filter((amenity): amenity is NearbyAmenity => amenity !== null);
 
-        // Sort by distance
-        return unique.sort((a, b) => a.distanceValue - b.distanceValue).slice(0, limit || 20);
+        return rankNearbyAmenities(processed, limit ?? NEARBY_AMENITY_DEFAULT_LIMIT);
       } catch (error) {
-        console.error('Error fetching nearby amenities:', error);
+        console.error('Error fetching nearby amenities:', safeErrorSummary(error));
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Nearby amenities are temporarily unavailable',
@@ -897,7 +941,7 @@ export const locationRouter = router({
           },
         };
       } catch (error) {
-        console.error('Geocoding error:', error);
+        console.error('Geocoding error:', safeErrorSummary(error));
         return {
           success: false,
           error: 'Geocoding failed',

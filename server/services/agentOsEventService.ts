@@ -36,20 +36,6 @@ function getHeader(req: RequestLike | undefined, name: string): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
-function getIpAddress(req: RequestLike | undefined): string | null {
-  const forwardedFor = getHeader(req, 'x-forwarded-for');
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0]?.trim() || null;
-  }
-
-  const realIp = getHeader(req, 'x-real-ip');
-  if (realIp) return realIp;
-
-  if (req?.ip) return req.ip;
-  if (req?.socket?.remoteAddress) return req.socket.remoteAddress;
-  return null;
-}
-
 function buildSessionId({
   sessionId,
   userId,
@@ -91,8 +77,6 @@ export async function recordAgentOsEvent({
       eventData: eventData ?? null,
       url: req?.originalUrl || req?.url || null,
       referrer: getHeader(req, 'referer'),
-      userAgent: getHeader(req, 'user-agent'),
-      ipAddress: getIpAddress(req),
     });
   } catch (error) {
     console.warn('[agentOsEventService] Failed to record event', {

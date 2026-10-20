@@ -20,7 +20,7 @@ scope is reopened and preparation does not add a ninth acceptance.
 | B15 supplier/certificate, exact copy approval, consent implementation, local verification and proportionate internal review | **CLOSED within completed local/decision scope**; existing receipts retained in packets 34–40 | No repeat review/approval of unchanged facts or text.                                                                                                                                                                                     |
 | B15 full gate                                                                                                               | **EVIDENCE INCOMPLETE — controlled installation and hosted acceptance outstanding**           | Complete exact-source integration, canonical schema/copy/grant execution and customer acceptance in the existing packet 40.                                                                                                               |
 | B14                                                                                                                         | **ACTIVE — operating readiness**                                                              | All four founder desk cases are CLOSED in packet 37; remaining B14 work is hosted contacts/queues, delivery and pause/resumption in the existing shared exercise.                                                                      |
-| SA finance/proof storage (B11/B15)                                                                                          | **IMPLEMENTATION PREPARED; new object storage, migration and recovery NOT VERIFIED**          | Domestic primary/backup provision and readback, runtime denial/positive probes, synthetic recovery, then bounded migration and current bindings. Existing Azure financial DB location/backups were re-read without a database connection. |
+| SA finance/proof storage (B11/B15)                                                                                          | **RUNTIME PROBES AND SYNTHETIC RECOVERY EXERCISED — migration and bindings NOT EXERCISED**    | Control plane provisioned and read back in [packet 50](50-za-finance-storage-control-plane-verified-2026-10-17.md); dedicated runtime credential issued encrypted and bounded positive/denial probes plus synthetic restore-from-backup recovered in [packet 51](51-za-finance-runtime-credential-and-recovery-preparation-2026-10-18.md). Bounded migration, hosted owner isolation and current bindings remain. |
 | B08/B09/B10/B11/B13/B16/B17/B18                                                                                             | **Required remaining execution unchanged**                                                    | Admission, custody/delivery/storage/enquiry checks, release integration, recovery/capacity and final founder paid GO. B17 retains its 24-hour workload.                                                                                   |
 
 This is a progression decision, not a legal-compliance certification or paid
@@ -53,6 +53,41 @@ paid-opening NO-GO.
 | Exact source | `main` `da6c21bae`; CI Pipeline and Frontend Build Guard success at that SHA |
 | Updated | Every complete LRC record whose correction is integrated (including the PAY enabled-release containment supplement); compact index updated in the same change |
 | Unchanged | B01 CLOSED decision, B08–B18 execution dispositions, LRC-SUPPORT-001 (owner-blocked), paid-opening NO-GO |
+
+## Founder decisions recorded — 2026-10-17
+
+Edward's answers to the [packet 47 briefs](47-founder-decision-briefs-2026-10-17.md)
+are recorded in [packet 49](49-founder-decisions-recorded-2026-10-17.md) with
+the provider-document evidence. Effective changes:
+
+| Brief | Recorded decision | Effect |
+| --- | --- | --- |
+| D1 support channels | `support@`/`info@` designation confirmed; mailboxes not available yet and deferred with the hosted runtime resume | LRC-SUPPORT-001 stays in progress; remaining proof is mailbox availability and one inbound/reply demonstration |
+| D2 email accounts | Consented test recipient `enetechsa@gmail.com`; sender default `mail@propertylistifysa.co.za`; supervised window when hosting resumes | B10 real-delivery proof still outstanding |
+| D3 provider contracts | Railway DPA executed 2026-10-17; Azure Microsoft Customer Agreement read back; Resend DPA retrieved; Vercel stays Hobby until after launch | Provider personal-data chain recorded; Vercel plan revisited before paid/commercial opening |
+| D4 B17 F7 package | Provisional forecast floor accepted; recovery objectives accepted; restore budget minimal after verified quote; backup destination = separate same-region bucket | B17 planning inputs recorded; window still held on hosted resume |
+| D5 hosted admission | September static-egress gate **withdrawn** (no static outbound IP required); Edward is the only operator; window supervised when hosting resumes | The [B08 dependency](#b08-protected-database-disposition--2026-09-24) is released without Railway Pro spend; single-operator coverage accepted |
+| D6 af-south-1 | Provisioning of the domestic proof bucket plus same-region backup bucket authorized; eu-north-1 retained | Attended CloudShell run completed 2026-10-17; control plane provisioned and verified in [packet 50](50-za-finance-storage-control-plane-verified-2026-10-17.md); runtime probes, recovery and migration remain |
+| D7 finance facts | Year-end = last day of February (28/29); no residual foreign tax-record flow; EFR001 not needed | B15 finance-storage condition satisfied; selector derives per-record return state |
+
+No acceptance scope changes, no hosted or paid execution, and the paid-opening
+NO-GO remains. Each affected gate still needs its own execution and evidence.
+
+## B17 window admission prepared — 2026-10-18
+
+[Packet 53](53-b17-window-and-driver-admission-2026-10-18.md) records the
+remaining packet-48 admission decisions and admits the hosted load driver under
+the [packet-45](45-b17-hosted-window-runbook-2026-10-17.md) review requirement:
+
+| Item | Recorded | Effect |
+| --- | --- | --- |
+| W1 write mix | Read-only 24-hour run plus a separate bounded smoke-write step (`--duration-seconds` floor; the rate-plan run never enables the write) | No hosted write-volume claim; writes remain local calibration |
+| W2 rate plan | Provisional plan accepted as the accepted plan (5/s sustained, 2×20/s peaks, 30-min 40/s double peak) | Driver's encoded plan stands; replacements require a reviewed amendment before the test |
+| W3 operational card | Incident log, abort channel (abort-file + signal), escalation and coverage defaults accepted | Packet-45 entry criterion 6 prepared; log opened at T-2 |
+| Driver admission | Packet-48 candidate admitted at base `7706e93bc`, module hashes pinned (30/30 tests) | Entry criterion 5 tooling complete; window admission record drafted but ineffective until hosting resume and B08/B09/B11–B14/B16 |
+
+B17 stays **OPEN — RECOVERY / CAPACITY**; no window opens, no spend is
+authorized and the paid-opening NO-GO is unchanged.
 
 ## Paid MVP working disposition — 2026-09-30
 
@@ -813,7 +848,7 @@ as stated. See [packet 41](41-launch-register-integration-reconciliation-2026-10
 | Launch decision                         | Fix before controlled real-world onboarding                                                                                                                                                                                                                        |
 | Approved implementation branch/worktree | `verify/mvp-closure-post-577` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-mvp-closure-post-577`                                                                                                                                                         |
 | Pull request or commit                  | `144e90d1531d2e85a407e5dabecfb4124c8394bf`                                                                                                                                                                                                                          |
-| Integrated verification | Pending; exact task-branch local source and execution evidence only. Reconciled 2026-10-17: no correction integration to verify; finding remains blocked on the owner-supplied support channel and final legal authority; status unchanged. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). |
+| Integrated verification | Pending; exact task-branch local source and execution evidence only. Reconciled 2026-10-17: no correction integration to verify; finding remains blocked on the owner-supplied support channel and final legal authority; status unchanged. See [packet 41](41-launch-register-integration-reconciliation-2026-10-17.md). 2026-10-17 founder update: the `support@`/`info@` channel designation is confirmed (packets 37, 49) and mailbox availability is deferred with the hosted runtime resume, so the remaining proof is mailbox availability plus one inbound/reply demonstration. |
 | Production verification                 | Pending; no hosted contact-channel or staffing confirmation.                                                                                                                                                                                                        |
 | Status                                  | in progress                                                                                                                                                                                                                                                         |
 | Notes                                   | **BLOCKED pending owner-supplied operating and legal authority.** The bounded correction makes intake durable and makes the admin queue distinguish review-only Agent/Agency/Developer/Other requests from manager identity provisioning. It does not claim monitoring or legal readiness. The 2026-09-15 audit confirmed no approved public operator/contact, cadence, escalation path, or final Terms/Privacy authority in the repository. `BILLING_SUPPORT_EMAIL` belongs to disabled manual-EFT preflight and repository values are examples/tests, so it cannot be repurposed as a public support or legal contact without owner approval. Before external onboarding, the owner must supply the operating channel and approved disclosure/data-handling commitments. No membership, role, lead custody, payment, entitlement, or publishing state is changed by this queue. |

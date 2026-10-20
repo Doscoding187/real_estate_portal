@@ -9,6 +9,7 @@ import path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments } from '../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 
@@ -54,4 +55,4 @@ async function debugImages() {
   process.exit(0);
 }
 
-debugImages().catch(console.error);
+debugImages().catch(err => console.error('debug-images failed:', safeErrorSummary(err)));

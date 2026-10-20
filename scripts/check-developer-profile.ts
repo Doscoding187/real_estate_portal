@@ -5,6 +5,7 @@
 
 import { createConnection } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 dotenv.config();
 
@@ -86,7 +87,7 @@ async function checkDeveloperProfile() {
     }
 
   } catch (error) {
-    console.error('❌ Failed to check developer profile:', error);
+    console.error('❌ Failed to check developer profile:', safeErrorSummary(error));
   } finally {
     if (connection) await connection.end();
   }

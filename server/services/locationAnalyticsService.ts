@@ -29,6 +29,7 @@ import {
 import { eq, and, sql, gte, desc, asc } from 'drizzle-orm';
 import { redisCache, CacheTTL } from '../lib/redis';
 import { excludeLandFromGenericListingWorkflow } from './landLaunchContainmentService';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Types and Interfaces
@@ -570,7 +571,7 @@ export const locationAnalyticsService = {
 
       console.log(`[LocationAnalytics] Tracked search: location=${locationId}, user=${userId}`);
     } catch (error) {
-      console.error('[LocationAnalytics] Error tracking search:', error);
+      console.error('[LocationAnalytics] Error tracking search:', safeErrorSummary(error));
       // Don't throw - tracking failures shouldn't break the user experience
     }
   },
@@ -627,7 +628,10 @@ export const locationAnalyticsService = {
 
       return Math.round(normalizedScore);
     } catch (error) {
-      console.error('[LocationAnalytics] Error calculating trending score:', error);
+      console.error(
+        '[LocationAnalytics] Error calculating trending score:',
+        safeErrorSummary(error),
+      );
       throw error;
     }
   },
@@ -716,7 +720,7 @@ export const locationAnalyticsService = {
         avgPrice: row.avg_price ? Number(row.avg_price) : null,
       }));
     } catch (error) {
-      console.error('[LocationAnalytics] Error getting trending suburbs:', error);
+      console.error('[LocationAnalytics] Error getting trending suburbs:', safeErrorSummary(error));
       throw error;
     }
   },
@@ -907,7 +911,7 @@ export const locationAnalyticsService = {
         } catch (error) {
           console.error(
             `[LocationAnalytics] Error calculating similarity for location ${candidate.id}:`,
-            error,
+            safeErrorSummary(error),
           );
           // Continue with next candidate
         }
@@ -976,7 +980,10 @@ export const locationAnalyticsService = {
 
       return resultsWithParents;
     } catch (error) {
-      console.error('[LocationAnalytics] Error getting similar locations:', error);
+      console.error(
+        '[LocationAnalytics] Error getting similar locations:',
+        safeErrorSummary(error),
+      );
       throw error;
     }
   },

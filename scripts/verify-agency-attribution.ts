@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { getDb } from '../server/db';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function verify() {
   console.log('🔍 Verifying Agency Attribution Migration...\n');
@@ -60,6 +61,6 @@ async function verify() {
 verify()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error('❌ Verification failed:', error);
+    console.error('❌ Verification failed:', safeErrorSummary(error));
     process.exit(1);
   });

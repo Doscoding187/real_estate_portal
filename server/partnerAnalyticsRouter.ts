@@ -9,6 +9,7 @@
  */
 
 import { Router } from 'express';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 
@@ -84,7 +85,7 @@ router.get('/:partnerId/summary', async (req, res) => {
 
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error('Error fetching partner analytics summary:', error);
+    console.error('Error fetching partner analytics summary:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',
@@ -132,7 +133,7 @@ router.get('/:partnerId/trends', async (req, res) => {
 
     res.json({ success: true, data: trends });
   } catch (error) {
-    console.error('Error fetching performance trends:', error);
+    console.error('Error fetching performance trends:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',
@@ -158,7 +159,7 @@ router.get('/:partnerId/top-content', async (req, res) => {
 
     res.json({ success: true, data: topContent });
   } catch (error) {
-    console.error('Error fetching top content:', error);
+    console.error('Error fetching top content:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',
@@ -182,7 +183,7 @@ router.get('/:partnerId/funnel', async (req, res) => {
 
     res.json({ success: true, data: funnel });
   } catch (error) {
-    console.error('Error fetching conversion funnel:', error);
+    console.error('Error fetching conversion funnel:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',
@@ -203,7 +204,7 @@ router.get('/:partnerId/boost-roi', async (req, res) => {
 
     res.json({ success: true, data: roiData });
   } catch (error) {
-    console.error('Error fetching boost ROI:', error);
+    console.error('Error fetching boost ROI:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',
@@ -248,7 +249,7 @@ router.get('/:partnerId/dashboard', async (req, res) => {
       data: { summary, trends, topContent, funnel, benchmarks, boostROI },
     });
   } catch (error) {
-    console.error('Error fetching analytics dashboard:', error);
+    console.error('Error fetching analytics dashboard:', safeErrorSummary(error));
     res.status(501).json({
       success: false,
       error: 'Partner analytics service not available yet',

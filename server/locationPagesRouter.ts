@@ -7,6 +7,8 @@ import { heroCampaigns } from '../drizzle/schema';
 import { and, eq, lte, gte, or, isNull, inArray } from 'drizzle-orm';
 import { buildCampaignSlugHierarchy } from '@shared/locationCampaigns';
 import { listCityGuides } from './services/cityGuideDiscoveryService';
+import { getProvinceGuidePlaces, getProvinceGuideInventory } from './services/provinceGuideService';
+import { getProvinceGuideContent } from '../shared/provinceGuideContent';
 import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 /**
@@ -18,16 +20,30 @@ import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
  * - ISR caching (24 hours for static, 5 minutes for dynamic)
  * - Merge static SEO content with dynamic market statistics
  */
+const guideInput = z.object({
+  provinceSlug: z
+    .string()
+    .refine(slug => Boolean(getProvinceGuideContent(slug)), 'Choose an available province guide'),
+});
 export const locationPagesRouter = router({
+  getProvinceGuidePlaces: publicProcedure
+    .input(guideInput)
+    .query(({ input }) => getProvinceGuidePlaces(input.provinceSlug)),
+  getProvinceGuideInventory: publicProcedure
+    .input(guideInput)
+    .query(({ input }) => getProvinceGuideInventory(input.provinceSlug)),
   getCityGuides: publicProcedure
     .input(
       z.object({
         limit: z.number().int().min(1).max(24).default(12),
         query: z.string().trim().min(2).max(100).optional(),
-        provinceSlug: z.string().refine(
-          slug => Object.values(PROVINCIAL_CONFIGS).some(province => province.slug === slug),
-          'Choose a supported province',
-        ).optional(),
+        provinceSlug: z
+          .string()
+          .refine(
+            slug => Object.values(PROVINCIAL_CONFIGS).some(province => province.slug === slug),
+            'Choose a supported province',
+          )
+          .optional(),
       }),
     )
     .query(({ input }) => listCityGuides(input.limit, input.provinceSlug, input.query)),
@@ -64,11 +80,13 @@ export const locationPagesRouter = router({
         provinceSlug: z.string(),
         citySlug: z.string(),
         includeInventoryPreview: z.boolean().optional(),
+        suburbLimit: z.number().int().min(1).max(200).optional(),
       }),
     )
     .query(async ({ input }) => {
       return await locationPagesService.getCityData(input.provinceSlug, input.citySlug, {
         includeInventoryPreview: input.includeInventoryPreview,
+        suburbLimit: input.suburbLimit,
       });
     }),
 
@@ -81,7 +99,6 @@ export const locationPagesRouter = router({
         provinceSlug: z.string(),
         citySlug: z.string(),
         suburbSlug: z.string(),
-        includeInventoryPreview: z.boolean().optional(),
       }),
     )
     .query(async ({ input }) => {
@@ -89,7 +106,6 @@ export const locationPagesRouter = router({
         input.provinceSlug,
         input.citySlug,
         input.suburbSlug,
-        { includeInventoryPreview: input.includeInventoryPreview },
       );
     }),
 

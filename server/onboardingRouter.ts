@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { onboardingService } from './services/onboardingService';
 import { requireAuth } from './middleware/auth';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.get('/state', requireAuth, async (req, res) => {
     const state = await onboardingService.getOnboardingState(userId);
     res.json(state);
   } catch (error: any) {
-    console.error('Error fetching onboarding state:', error);
+    console.error('Error fetching onboarding state:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -38,7 +39,7 @@ router.post('/welcome/show', requireAuth, async (req, res) => {
     await onboardingService.showWelcomeOverlay(userId);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error showing welcome overlay:', error);
+    console.error('Error showing welcome overlay:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -54,7 +55,7 @@ router.post('/welcome/dismiss', requireAuth, async (req, res) => {
     await onboardingService.dismissWelcomeOverlay(userId);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error dismissing welcome overlay:', error);
+    console.error('Error dismissing welcome overlay:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -70,7 +71,7 @@ router.get('/suggested-topics', requireAuth, async (req, res) => {
     const topics = await onboardingService.getSuggestedTopicsForUser(userId);
     res.json(topics);
   } catch (error: any) {
-    console.error('Error fetching suggested topics:', error);
+    console.error('Error fetching suggested topics:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -92,7 +93,7 @@ router.post('/tooltip/show', requireAuth, async (req, res) => {
     await onboardingService.showTooltip(userId, tooltipId);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error showing tooltip:', error);
+    console.error('Error showing tooltip:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -114,7 +115,7 @@ router.post('/tooltip/dismiss', requireAuth, async (req, res) => {
     await onboardingService.dismissTooltip(userId, tooltipId);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error dismissing tooltip:', error);
+    console.error('Error dismissing tooltip:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -130,7 +131,7 @@ router.get('/feature-unlocks', requireAuth, async (req, res) => {
     const unlocks = await onboardingService.checkFeatureUnlock(userId);
     res.json(unlocks);
   } catch (error: any) {
-    console.error('Error checking feature unlocks:', error);
+    console.error('Error checking feature unlocks:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -152,7 +153,7 @@ router.post('/unlock-feature', requireAuth, async (req, res) => {
     await onboardingService.unlockFeature(userId, feature);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error unlocking feature:', error);
+    console.error('Error unlocking feature:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -174,7 +175,7 @@ router.post('/track', requireAuth, async (req, res) => {
     await onboardingService.trackOnboardingEvent(userId, { type, metadata });
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error tracking onboarding event:', error);
+    console.error('Error tracking onboarding event:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -190,7 +191,7 @@ router.get('/should-show-welcome', requireAuth, async (req, res) => {
     const shouldShow = await onboardingService.shouldShowWelcomeOverlay(userId);
     res.json({ shouldShow });
   } catch (error: any) {
-    console.error('Error checking welcome overlay:', error);
+    console.error('Error checking welcome overlay:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -208,7 +209,7 @@ router.get('/should-show-tooltip/:tooltipId', requireAuth, async (req, res) => {
     const shouldShow = await onboardingService.shouldShowTooltip(userId, tooltipId);
     res.json({ shouldShow });
   } catch (error: any) {
-    console.error('Error checking tooltip:', error);
+    console.error('Error checking tooltip:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -229,7 +230,7 @@ router.get('/tooltip-config/:tooltipId', async (req, res) => {
 
     res.json(config);
   } catch (error: any) {
-    console.error('Error fetching tooltip config:', error);
+    console.error('Error fetching tooltip config:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });
@@ -244,7 +245,7 @@ router.delete('/reset', requireAuth, async (req, res) => {
     await onboardingService.resetOnboardingState(userId);
     res.json({ success: true });
   } catch (error: any) {
-    console.error('Error resetting onboarding state:', error);
+    console.error('Error resetting onboarding state:', safeErrorSummary(error));
     res.status(500).json({ error: error.message });
   }
 });

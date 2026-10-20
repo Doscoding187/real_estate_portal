@@ -7,6 +7,7 @@ const envPath = path.resolve(process.cwd(), '.env.local');
 dotenv.config({ path: envPath, override: true });
 
 import { getDb } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, developerBrandProfiles } from '../../drizzle/schema';
 
 async function main() {
@@ -49,4 +50,4 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch(err => console.error('debug-dev-link failed:', safeErrorSummary(err)));

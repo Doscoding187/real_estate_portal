@@ -125,6 +125,24 @@ export default [
           message:
             'db.execute() with template literals is prohibited. Use Drizzle query builder instead.',
         },
+        {
+          selector:
+            "CallExpression[callee.object.name='console'][callee.property.name=/^(error|warn|log)$/][arguments.length=1] > Identifier[name=/^(error|err)$/]:last-child",
+          message:
+            'Do not log a raw Error object. Use safeErrorSummary(error) from server/_core/safeError.',
+        },
+        {
+          selector:
+            "CallExpression[callee.property.name='catch'] > MemberExpression[object.name='console'][property.name='error']",
+          message:
+            'Do not pass console.error directly to .catch(). Use .catch(err => console.error(<context>, safeErrorSummary(err))).',
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='console'][callee.property.name=/^(error|warn|log|info)$/][arguments.length>=2] > Identifier[name=/^(error|err)$/]:last-child",
+          message:
+            'Do not pass a raw Error object to console. Use safeErrorSummary(error|err) from server/_core/safeError.',
+        },
       ],
     },
   },

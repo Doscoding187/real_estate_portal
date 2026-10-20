@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { googlePlacesApiMonitoring } from './services/googlePlacesApiMonitoring';
+import { safeErrorSummary } from './_core/safeError';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get('/statistics', async (req, res) => {
     const statistics = await googlePlacesApiMonitoring.getUsageStatistics();
     res.json(statistics);
   } catch (error) {
-    console.error('Failed to get usage statistics:', error);
+    console.error('Failed to get usage statistics:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to retrieve usage statistics',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -36,7 +37,7 @@ router.get('/alerts', async (req, res) => {
     const alerts = await googlePlacesApiMonitoring.getActiveAlerts();
     res.json(alerts);
   } catch (error) {
-    console.error('Failed to get alerts:', error);
+    console.error('Failed to get alerts:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to retrieve alerts',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -59,7 +60,7 @@ router.post('/alerts/:id/resolve', async (req, res) => {
     await googlePlacesApiMonitoring.resolveAlert(alertId);
     res.json({ success: true, message: 'Alert resolved' });
   } catch (error) {
-    console.error('Failed to resolve alert:', error);
+    console.error('Failed to resolve alert:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to resolve alert',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -76,7 +77,7 @@ router.get('/config', async (req, res) => {
     const config = await googlePlacesApiMonitoring.getConfig();
     res.json(config);
   } catch (error) {
-    console.error('Failed to get config:', error);
+    console.error('Failed to get config:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to retrieve configuration',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -115,7 +116,7 @@ router.put('/config', async (req, res) => {
     await googlePlacesApiMonitoring.updateConfig(updates);
     res.json({ success: true, message: 'Configuration updated' });
   } catch (error) {
-    console.error('Failed to update config:', error);
+    console.error('Failed to update config:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to update configuration',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -141,7 +142,7 @@ router.get('/historical', async (req, res) => {
     const historicalData = await googlePlacesApiMonitoring.getHistoricalData(days);
     res.json(historicalData);
   } catch (error) {
-    console.error('Failed to get historical data:', error);
+    console.error('Failed to get historical data:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to retrieve historical data',
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -182,7 +183,7 @@ router.get('/health', async (req, res) => {
 
     res.json(health);
   } catch (error) {
-    console.error('Health check failed:', error);
+    console.error('Health check failed:', safeErrorSummary(error));
     res.status(500).json({
       status: 'unhealthy',
       error: error instanceof Error ? error.message : 'Unknown error',

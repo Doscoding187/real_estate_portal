@@ -9,6 +9,7 @@ import {
 import { getDb } from '../../db';
 import { locations, locationSearches, properties, users } from '../../../drizzle/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { safeErrorSummary } from '../../_core/safeError';
 
 /**
  * Property-Based Tests for Search Integration
@@ -53,7 +54,7 @@ describe('Search Integration Property Tests', { timeout: 30000 }, () => {
         return;
       }
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error('Failed to initialize database:', safeErrorSummary(error));
       skipTests = true;
       return;
     }

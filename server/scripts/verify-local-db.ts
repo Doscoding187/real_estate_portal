@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Replicate start.ts loading logic
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
@@ -29,7 +30,7 @@ async function verifyLocalDb() {
       console.error('⚠️ WARNING: Application is NOT using the expected local database.');
     }
   } catch (error) {
-    console.error('Error querying database:', error);
+    console.error('Error querying database:', safeErrorSummary(error));
   }
   process.exit(0);
 }

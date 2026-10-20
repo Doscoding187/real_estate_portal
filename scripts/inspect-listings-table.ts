@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { getDb } from '../server/db';
 import { sql } from 'drizzle-orm';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function inspectTable() {
   const db = await getDb();
@@ -31,7 +32,7 @@ async function inspectTable() {
     console.table(mediaColumns[0]);
 
   } catch (error) {
-    console.error('Error inspecting table:', error);
+    console.error('Error inspecting table:', safeErrorSummary(error));
   }
   process.exit(0);
 }

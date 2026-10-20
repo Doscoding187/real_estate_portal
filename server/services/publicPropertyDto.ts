@@ -293,6 +293,13 @@ export interface PublicPropertyDetailDto {
   media: PublicPropertyMediaDto[];
 }
 
+export interface PublicPropertyMarketFact {
+  transactionType: 'sale' | 'rent' | 'other';
+  propertyType: string | null;
+  bedrooms: number | null;
+  price: number | null;
+}
+
 /**
  * The sole serialization boundary for an eligible manual public property.
  * Eligibility resolutions deliberately retain source and custody evidence for
@@ -360,5 +367,40 @@ export function toPublicPropertyDetailDto(
     },
     images,
     media,
+  };
+}
+
+/**
+ * Extracts only the public, buyer-facing facts needed by location market
+ * summaries. Pricing uses the same normalized contract as the detail DTO;
+ * custody, owner, source-listing and media fields never leave this boundary.
+ */
+export function getPublicPropertyMarketFact(
+  resolution: PublicPropertyEligibilityResolution,
+): PublicPropertyMarketFact {
+  const source = resolution.property;
+  const publicDetails = publicPropertyDetails(source);
+  const pricing = publicDetails.pricingContract as ActivePricingContract | undefined;
+  const listingIntent = publicListingAction(source);
+  const rawPrice = Number(source.price);
+  const priceFromContract =
+    pricing?.intent === 'sale'
+      ? pricing.askingPrice
+      : pricing?.intent === 'rent'
+        ? pricing.monthlyRent
+        : undefined;
+  const selectedPrice = Number(priceFromContract ?? rawPrice);
+  const rawBedrooms = source.bedrooms;
+  const bedroomCount =
+    rawBedrooms !== null && rawBedrooms !== undefined && rawBedrooms !== ''
+      ? Number(rawBedrooms)
+      : Number.NaN;
+
+  return {
+    transactionType:
+      listingIntent === 'sell' ? 'sale' : listingIntent === 'rent' ? 'rent' : 'other',
+    propertyType: String(source.propertyType || '').trim() || null,
+    bedrooms: Number.isSafeInteger(bedroomCount) && bedroomCount >= 0 ? bedroomCount : null,
+    price: Number.isFinite(selectedPrice) && selectedPrice > 0 ? selectedPrice : null,
   };
 }

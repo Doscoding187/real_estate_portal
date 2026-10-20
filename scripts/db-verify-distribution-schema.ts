@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { safeErrorSummary } from '../server/_core/safeError';
 import {
   authorizeDatabaseOperation,
   protectedDatabaseApprovalFromEnvironment,
@@ -85,6 +86,6 @@ async function main() {
 }
 
 main().catch(error => {
-  console.error('[db:verify:distribution] Failed to verify distribution schema.', error);
+  console.error('[db:verify:distribution] Failed to verify distribution schema.', safeErrorSummary(error));
   process.exit(1);
 });

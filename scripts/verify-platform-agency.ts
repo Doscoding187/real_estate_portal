@@ -6,6 +6,7 @@
 
 import 'dotenv/config';
 import mysql from 'mysql2/promise';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function verifyAgency() {
   console.log('🔍 Checking Platform Agency...\n');
@@ -47,7 +48,7 @@ async function verifyAgency() {
     console.log('Agent table columns:', columns.map((c: any) => c.Field).join(', '));
 
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error:', safeErrorSummary(error));
   } finally {
     await connection.end();
   }

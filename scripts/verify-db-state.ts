@@ -6,6 +6,7 @@
 import { getDb } from '../server/db';
 import { developments } from '../drizzle/schema';
 import { eq, isNull, isNotNull } from 'drizzle-orm';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function verifyDatabaseState() {
   console.log('🔍 Database State Verification\n');
@@ -80,7 +81,7 @@ async function verifyDatabaseState() {
     process.exit(0);
 
   } catch (error) {
-    console.error('❌ Verification Failed:', error);
+    console.error('❌ Verification Failed:', safeErrorSummary(error));
     process.exit(1);
   }
 }

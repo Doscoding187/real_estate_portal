@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { locationPagesService } from '../services/locationPagesService.improved';
+import { safeErrorSummary } from '../_core/safeError';
 
 async function main() {
   console.log('Verifying Hybrid Authority Model...');
@@ -69,7 +70,7 @@ async function main() {
 
     process.exit(0);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', safeErrorSummary(error));
     process.exit(1);
   }
 }

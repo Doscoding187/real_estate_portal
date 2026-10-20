@@ -6,6 +6,7 @@
 import Redis from 'ioredis';
 import { isValidAuthRateLimitRedisUrl } from '../authRateLimitStore';
 import { resolveAppRuntimeEnv } from '../runtimeBootstrap';
+import { safeErrorSummary } from '../safeError';
 
 // Cache prefixes for key naming
 export enum CachePrefixes {
@@ -109,7 +110,7 @@ export class RedisCacheManager {
     try {
       this.initializeRedis();
     } catch (error) {
-      console.warn('Redis initialization failed, running in fallback mode:', error);
+      console.warn('Redis initialization failed, running in fallback mode:', safeErrorSummary(error));
       this.fallbackMode = true;
     }
   }
@@ -160,7 +161,7 @@ export class RedisCacheManager {
     });
 
     this.redis.on('error', error => {
-      console.error('Redis: Connection error:', error);
+      console.error('Redis: Connection error:', safeErrorSummary(error));
       this.handleRedisFailure(error);
     });
 
@@ -323,7 +324,7 @@ export class RedisCacheManager {
         await this.redis.set(key, serialized);
       }
     } catch (error) {
-      console.error('Redis: Set operation failed:', error);
+      console.error('Redis: Set operation failed:', safeErrorSummary(error));
       this.metrics.connectionErrors++;
     }
   }
@@ -343,7 +344,7 @@ export class RedisCacheManager {
         await this.redis.del(key);
       }
     } catch (error) {
-      console.error('Redis: Delete operation failed:', error);
+      console.error('Redis: Delete operation failed:', safeErrorSummary(error));
       this.metrics.connectionErrors++;
     }
   }
@@ -362,7 +363,7 @@ export class RedisCacheManager {
         await this.redis.del(...keys);
       }
     } catch (error) {
-      console.error('Redis: Pattern delete operation failed:', error);
+      console.error('Redis: Pattern delete operation failed:', safeErrorSummary(error));
       this.metrics.connectionErrors++;
     }
   }
@@ -379,7 +380,7 @@ export class RedisCacheManager {
       const result = await this.redis.exists(key);
       return result === 1;
     } catch (error) {
-      console.error('Redis: Exists operation failed:', error);
+      console.error('Redis: Exists operation failed:', safeErrorSummary(error));
       this.metrics.connectionErrors++;
       return false;
     }
@@ -400,7 +401,7 @@ export class RedisCacheManager {
 
       return { ...this.metrics };
     } catch (error) {
-      console.error('Redis: Stats collection failed:', error);
+      console.error('Redis: Stats collection failed:', safeErrorSummary(error));
       return { ...this.metrics };
     }
   }
@@ -416,7 +417,7 @@ export class RedisCacheManager {
     try {
       await this.redis.flushall();
     } catch (error) {
-      console.error('Redis: Clear operation failed:', error);
+      console.error('Redis: Clear operation failed:', safeErrorSummary(error));
       this.metrics.connectionErrors++;
     }
   }
@@ -435,7 +436,7 @@ export class RedisCacheManager {
         if (this.redis.status === 'ready') await this.redis.quit();
         else this.redis.disconnect();
       } catch (error) {
-        console.error('Redis: Close operation failed:', error);
+        console.error('Redis: Close operation failed:', safeErrorSummary(error));
         this.redis.disconnect();
         throw error;
       } finally {

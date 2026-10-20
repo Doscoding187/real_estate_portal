@@ -11,6 +11,7 @@ import { suburbs } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 import { TRPCError } from '@trpc/server';
+import { safeErrorSummary } from '../_core/safeError';
 
 // Initialize OpenAI client - assumes OPENAI_API_KEY is in env
 const openai = new OpenAI({
@@ -87,7 +88,7 @@ export const locationInsightsService = {
         source: 'ai',
       };
     } catch (error) {
-      console.error('Failed to generate AI insights:', error);
+      console.error('Failed to generate AI insights:', safeErrorSummary(error));
       throw error;
     }
   },

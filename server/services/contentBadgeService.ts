@@ -1,6 +1,7 @@
 import { db } from '../db';
 import { exploreContent, exploreShorts } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * Content Badge Types
@@ -381,7 +382,7 @@ export class ContentBadgeService {
       try {
         await this.updateContentBadge(contentId, isShort);
       } catch (error) {
-        console.error(`Failed to update badge for content ${contentId}:`, error);
+        console.error(`Failed to update badge for content ${contentId}:`, safeErrorSummary(error));
         // Continue with other items even if one fails
       }
     }

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { uploadRouter } from '../uploadRouter';
+import { safeErrorSummary } from '../_core/safeError';
 
 async function main() {
   console.log('--- UPLOAD DEBUG SCRIPT START ---');
@@ -38,7 +39,7 @@ async function main() {
     console.log(JSON.stringify(result, null, 2));
   } catch (err: any) {
     console.error('❌ ERROR CAUGHT:');
-    console.error(err);
+    console.error(safeErrorSummary(err));
     if (err.cause) {
       console.error('Cause:', err.cause);
     }
@@ -50,4 +51,4 @@ async function main() {
   console.log('--- UPLOAD DEBUG SCRIPT END ---');
 }
 
-main().catch(console.error);
+main().catch(err => console.error('debug-upload failed:', safeErrorSummary(err)));

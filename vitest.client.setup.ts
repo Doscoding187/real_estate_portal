@@ -46,5 +46,15 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
   (window as any).IntersectionObserver = MockIntersectionObserver;
 }
 
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class MockResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  (globalThis as any).ResizeObserver = MockResizeObserver;
+  (window as any).ResizeObserver = MockResizeObserver;
+}
+
 // Some legacy tests still reference Jest globals (jest.fn, etc.)
 (globalThis as any).jest = vi;

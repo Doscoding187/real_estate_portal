@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { developments, developers } from '../../drizzle/schema';
 import { desc, eq } from 'drizzle-orm';
 
@@ -143,8 +144,7 @@ async function verifyFix() {
 
     console.log('=== VERIFICATION COMPLETE ===');
   } catch (error: any) {
-    console.error('❌ Verification failed:', error.message);
-    console.error(error);
+    console.error('❌ Verification failed:', safeErrorSummary(error));
     process.exit(1);
   }
 

@@ -1,0 +1,9 @@
+{
+  "encryptedCredentialsSha256": "62ed3d9755a9b1ecfd8ec1303c47fa580f23aa3f07ae075492e64c6285ac385a",
+  "transferKeySha256": "8ee54526e70bb549d12a6878b75accfee73f7069817a1f9b236933d34dbf8555",
+  "checksumVerified": true,
+  "transferKeyVerified": true,
+  "decryptionVerified": true,
+  "runtimeUser": "listify-finance-af-south-1-ProofRuntimeUser-AZx3gkrzcgMx",
+  "verifiedAt": "2026-10-18T00:15:51.817Z"
+}

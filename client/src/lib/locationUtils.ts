@@ -2,6 +2,8 @@
 // This helps frontend components construct hierarchical URLs without needing a full DB lookup for known entities
 // In a production app, this would ideally be dynamic or fetched from a global config
 
+import { PROVINCE_SLUGS } from '@shared/location-contract';
+
 export const CITY_PROVINCE_MAP: Record<string, string> = {
   johannesburg: 'gauteng',
   'cape-town': 'western-cape',
@@ -49,17 +51,7 @@ export const CITY_PROVINCE_MAP: Record<string, string> = {
   potchefstroom: 'north-west',
 };
 
-export const PROVINCE_SLUGS = [
-  'gauteng',
-  'western-cape',
-  'kwazulu-natal',
-  'eastern-cape',
-  'free-state',
-  'limpopo',
-  'mpumalanga',
-  'north-west',
-  'northern-cape',
-];
+export { PROVINCE_SLUGS };
 
 // Province name variants for fuzzy matching (handles user input variations)
 export const PROVINCE_NAME_VARIANTS: Record<string, string> = {

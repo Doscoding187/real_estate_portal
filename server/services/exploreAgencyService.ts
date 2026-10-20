@@ -11,6 +11,7 @@ import { db } from '../db';
 import { exploreShorts, agents } from '../../drizzle/schema';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import { cache, CacheKeys, CacheTTL } from '../lib/cache';
+import { safeErrorSummary } from '../_core/safeError';
 
 /**
  * Agency metrics interface
@@ -93,7 +94,7 @@ export class ExploreAgencyService {
 
       return result;
     } catch (error) {
-      console.error('Error getting agency metrics:', error);
+      console.error('Error getting agency metrics:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -183,7 +184,7 @@ export class ExploreAgencyService {
         averagePerformanceScore: Number(row.averagePerformanceScore) || 0,
       }));
     } catch (error) {
-      console.error('Error getting agent breakdown:', error);
+      console.error('Error getting agent breakdown:', safeErrorSummary(error));
       throw error;
     }
   }
@@ -229,7 +230,7 @@ export class ExploreAgencyService {
         shareCount: Number(row.shareCount) || 0,
       }));
     } catch (error) {
-      console.error('Error getting top performing content:', error);
+      console.error('Error getting top performing content:', safeErrorSummary(error));
       throw error;
     }
   }

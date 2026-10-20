@@ -20,6 +20,7 @@ import { exploreShorts, agents, agencies, users } from '../../../drizzle/schema'
 import { sql } from 'drizzle-orm';
 import { exploreFeedService } from '../exploreFeedService';
 import { exploreAgencyService } from '../exploreAgencyService';
+import { safeErrorSummary } from '../../_core/safeError';
 
 describe.skip('Explore Agency Content Attribution - Unit Tests [LEGACY - uses exploreShorts]', () => {
   let db: any;
@@ -50,7 +51,7 @@ describe.skip('Explore Agency Content Attribution - Unit Tests [LEGACY - uses ex
       await db.execute(sql`SELECT 1 FROM agencies LIMIT 1`);
       await db.execute(sql`SELECT 1 FROM agents LIMIT 1`);
     } catch (error) {
-      console.error('Tables not found. Run migration first:', error);
+      console.error('Tables not found. Run migration first:', safeErrorSummary(error));
       db = null; // Set to null so tests will skip
     }
   });

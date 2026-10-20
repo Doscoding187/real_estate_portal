@@ -4,6 +4,7 @@ import { type Server } from 'http';
 import { nanoid } from 'nanoid';
 import path from 'path';
 import { injectSeoHead } from './seoHead';
+import { safeErrorSummary } from './safeError';
 
 function isReservedNonHtmlPath(pathname: string): boolean {
   return (
@@ -110,7 +111,7 @@ export function serveStatic(app: Express) {
         res.status(200).type('text/html; charset=utf-8').send(page);
       })
       .catch(error => {
-        console.error('Failed to render SPA fallback HTML', error);
+        console.error('Failed to render SPA fallback HTML', safeErrorSummary(error));
         res.sendFile(indexPath);
       });
   });

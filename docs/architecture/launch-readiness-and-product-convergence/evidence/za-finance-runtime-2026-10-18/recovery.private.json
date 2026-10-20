@@ -1,0 +1,33 @@
+{
+  "anonymousStatus": 403,
+  "budgetUsd": 1.0,
+  "deleteMarker": {
+    "DeleteMarker": true,
+    "VersionId": "PQ_pZJUVyPxiGnC5OQOz.Umtf90Q4b5E"
+  },
+  "existingObjectModified": false,
+  "historicalAndCurrentReadback": "PASS",
+  "key": "billing-proofs/recovery-verification-c9db381b5129445999fbb0ac562fe7db.txt",
+  "migrationCompleted": false,
+  "productionBindingsChanged": false,
+  "quoteAmountUsd": 0.01,
+  "quoteReadbackSha256": "ffbfb7f7ac1c0f447ea55732ce1dfeea2c8a1a04c517a2c0a31425b90eae0765",
+  "recoveryExercised": true,
+  "replicaVersionCount": 1,
+  "replicaVersionId": "3GHgItcjCYiRZLROpslWMyyd7pW6pl45",
+  "restoreCopy": {
+    "CopyObjectResult": {
+      "ChecksumCRC64NVME": "D0XBadIK0IY=",
+      "ChecksumType": "FULL_OBJECT",
+      "ETag": "\"84c358132337dc5fa7cecd51e4ea408e\"",
+      "LastModified": "2026-10-18T00:10:48+00:00"
+    },
+    "CopySourceVersionId": "3GHgItcjCYiRZLROpslWMyyd7pW6pl45",
+    "ServerSideEncryption": "AES256",
+    "VersionId": "ySXiL_8NMPC3VTBlZ.w3O65x5RqStyF5"
+  },
+  "runtimePermissionsExercised": false,
+  "sha256": "ce3c867e928a2979c8e59dda783a010f1b98473deac2a445b5253b6543213bd8",
+  "sourceVersionId": "3GHgItcjCYiRZLROpslWMyyd7pW6pl45",
+  "temporaryPaidResourceCreated": false
+}

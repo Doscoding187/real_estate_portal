@@ -3,6 +3,7 @@ import path from 'path';
 config({ path: path.resolve(process.cwd(), '.env.local') });
 
 import { getDb } from '../db-connection';
+import { safeErrorSummary } from '../_core/safeError';
 import { unitTypes } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
@@ -33,4 +34,4 @@ async function main() {
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch(err => console.error('inspect-unit-row failed:', safeErrorSummary(err)));

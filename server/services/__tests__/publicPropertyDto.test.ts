@@ -1,8 +1,53 @@
 import { describe, expect, it } from 'vitest';
 
-import { toPublicPropertyDetailDto } from '../publicPropertyDto';
+import { getPublicPropertyMarketFact, toPublicPropertyDetailDto } from '../publicPropertyDto';
 
 describe('publicPropertyDto', () => {
+  it('projects market facts from the same normalized public pricing contract', () => {
+    const resolution = (property: Record<string, unknown>) =>
+      ({ property, images: [], media: [], authority: 'approved_listing' }) as any;
+
+    expect(
+      getPublicPropertyMarketFact(
+        resolution({
+          id: 501,
+          listingType: 'sale',
+          propertyType: 'apartment',
+          price: 1_000_000,
+          bedrooms: 2,
+          propertyDetails: {
+            pricingContract: { version: 1, intent: 'sale', askingPrice: 1_250_000 },
+          },
+        }),
+      ),
+    ).toEqual({
+      transactionType: 'sale',
+      propertyType: 'apartment',
+      bedrooms: 2,
+      price: 1_250_000,
+    });
+
+    expect(
+      getPublicPropertyMarketFact(
+        resolution({
+          id: 502,
+          listingType: 'rent',
+          propertyType: 'house',
+          price: 18_000,
+          bedrooms: null,
+          propertyDetails: {
+            pricingContract: { version: 1, intent: 'rent', monthlyRent: 21_000 },
+          },
+        }),
+      ),
+    ).toEqual({
+      transactionType: 'rent',
+      propertyType: 'house',
+      bedrooms: null,
+      price: 21_000,
+    });
+  });
+
   it('publishes buyer facts and explicit identity without source, owner or custody evidence', () => {
     const result = toPublicPropertyDetailDto({
       authority: 'approved_listing',

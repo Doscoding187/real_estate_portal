@@ -54,6 +54,7 @@ import {
   resolveTrustProxySetting,
   resolveHttpListenHost,
 } from './runtimeBootstrap';
+import { safeErrorSummary } from './safeError';
 
 // -------------------- BOOT-SAFE OPTIONAL ROUTER LOADER --------------------
 async function mountOptionalRouter(app: express.Express, mountPath: string, importPath: string) {
@@ -130,7 +131,7 @@ async function startServer() {
   } catch (error) {
     console.error(
       '[DistributionSchema] Startup readiness probe failed. Continuing so core API routes can serve traffic; guarded distribution routes will report schema readiness errors on access.',
-      error,
+      safeErrorSummary(error),
     );
   }
 
@@ -348,7 +349,7 @@ async function shutdown(signal: string): Promise<void> {
     } catch (error) {
       failures.push({ resource, error });
       process.exitCode = 1;
-      console.error(`[Shutdown] Failed to close ${resource}.`, error);
+      console.error(`[Shutdown] Failed to close ${resource}.`, safeErrorSummary(error));
       return false;
     }
   };
@@ -412,7 +413,7 @@ async function shutdown(signal: string): Promise<void> {
     }
   } catch (error) {
     failures.push({ resource: 'shutdown', error });
-    console.error('[Shutdown] Failed to close cleanly.', error);
+    console.error('[Shutdown] Failed to close cleanly.', safeErrorSummary(error));
     process.exitCode = 1;
   } finally {
     // A failed consumer drain must not close its database or disable the bound.

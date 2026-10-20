@@ -20,6 +20,7 @@ import {
   getExplorePublishingAccessMessage,
   getExplorePublishingEligibility,
 } from '../services/explorePublishingEligibilityService';
+import { safeErrorSummary } from '../_core/safeError';
 
 const router = Router();
 
@@ -101,7 +102,7 @@ router.post('/generate-upload-url', async (req, res) => {
       data: result,
     });
   } catch (error: any) {
-    console.error('[ExploreVideoUpload] Generate URL error:', error);
+    console.error('[ExploreVideoUpload] Generate URL error:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to generate upload URLs',
       message: error.message,
@@ -171,7 +172,7 @@ router.post('/create', async (req, res) => {
       message: 'Video saved as inactive editorial content.',
     });
   } catch (error: any) {
-    console.error('[ExploreVideoUpload] Create video error:', error);
+    console.error('[ExploreVideoUpload] Create video error:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to create video',
       message: error.message,
@@ -194,7 +195,7 @@ router.post('/validate-metadata', async (req, res) => {
       errors: validation.errors,
     });
   } catch (error: any) {
-    console.error('[ExploreVideoUpload] Validate metadata error:', error);
+    console.error('[ExploreVideoUpload] Validate metadata error:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to validate metadata',
       message: error.message,
@@ -225,7 +226,7 @@ router.post('/validate-duration', async (req, res) => {
       error: validation.error,
     });
   } catch (error: any) {
-    console.error('[ExploreVideoUpload] Validate duration error:', error);
+    console.error('[ExploreVideoUpload] Validate duration error:', safeErrorSummary(error));
     res.status(500).json({
       error: 'Failed to validate duration',
       message: error.message,

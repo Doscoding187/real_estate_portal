@@ -142,6 +142,7 @@ import {
   getBrandOnboardingPreset,
   setBrandOnboardingPreset,
 } from './services/distributionBrandOnboardingPresetService';
+import { safeErrorSummary } from './_core/safeError';
 
 const DISTRIBUTION_SUBMODULES = [
   {
@@ -3598,7 +3599,7 @@ const adminDistributionRouter = router({
       } catch (error) {
         console.warn(
           '[distribution.resendReferrerActivationEmail] Failed to send activation onboarding email:',
-          error,
+          safeErrorSummary(error),
         );
       }
 

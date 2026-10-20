@@ -4,6 +4,7 @@ import { exploreContent } from '../../../drizzle/schema';
 import { sql } from 'drizzle-orm';
 import fc from 'fast-check';
 import { exploreFeedService } from '../exploreFeedService';
+import { safeErrorSummary } from '../../_core/safeError';
 
 describe('Explore Feed Service', () => {
   let skipTests = false;
@@ -18,7 +19,7 @@ describe('Explore Feed Service', () => {
     try {
       await db.execute(sql`SELECT 1 FROM explore_content LIMIT 1`);
     } catch (error) {
-      console.error('Tables not found. Run migration first:', error);
+      console.error('Tables not found. Run migration first:', safeErrorSummary(error));
       throw error;
     }
   });

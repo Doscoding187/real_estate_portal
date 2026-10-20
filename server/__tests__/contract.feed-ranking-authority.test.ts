@@ -9,13 +9,17 @@ describe('feed ranking authority boundary', () => {
       'utf8',
     );
 
-    expect(source).toContain("console.error('Error fetching quality scores:', error);");
-    expect(source).toContain("console.error('Error fetching partner trust scores:', error);");
-    expect(source).not.toContain(
-      "console.error('Error fetching quality scores:', error);\n      return {};",
+    expect(source).toContain(
+      "console.error('Error fetching quality scores:', safeErrorSummary(error));",
+    );
+    expect(source).toContain(
+      "console.error('Error fetching partner trust scores:', safeErrorSummary(error));",
     );
     expect(source).not.toContain(
-      "console.error('Error fetching partner trust scores:', error);\n      return {};",
+      "console.error('Error fetching quality scores:', safeErrorSummary(error));\n      return {};",
+    );
+    expect(source).not.toContain(
+      "console.error('Error fetching partner trust scores:', safeErrorSummary(error));\n      return {};",
     );
   });
 

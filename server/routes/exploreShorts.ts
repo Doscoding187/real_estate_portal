@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { exploreFeedService } from '../services/exploreFeedService';
+import { safeErrorSummary } from '../_core/safeError';
 
 const router = Router();
 
@@ -71,7 +72,7 @@ router.get('/', optionalAuth, rateLimit(100, 60000), async (req: Request, res: R
 
     res.json(result);
   } catch (err) {
-    console.error('[Explore API] Failed to fetch recommended feed:', err);
+    console.error('[Explore API] Failed to fetch recommended feed:', safeErrorSummary(err));
 
     res.status(500).json({
       error: 'Failed to fetch feed',
@@ -102,7 +103,7 @@ router.get(
 
       res.json(result);
     } catch (err) {
-      console.error('[Explore API] Failed to fetch recommended feed:', err);
+      console.error('[Explore API] Failed to fetch recommended feed:', safeErrorSummary(err));
 
       res.status(500).json({
         error: 'Failed to fetch feed',
@@ -137,7 +138,7 @@ router.get('/by-area', optionalAuth, rateLimit(100, 60000), async (req: Request,
 
     res.json(result);
   } catch (err) {
-    console.error('[Explore API] Failed to fetch area feed:', err);
+    console.error('[Explore API] Failed to fetch area feed:', safeErrorSummary(err));
 
     res.status(500).json({
       error: 'Failed to fetch feed',
@@ -187,7 +188,7 @@ router.get(
 
       res.json(result);
     } catch (err) {
-      console.error('[Explore API] Failed to fetch agent feed:', err);
+      console.error('[Explore API] Failed to fetch agent feed:', safeErrorSummary(err));
 
       res.status(500).json({
         error: 'Failed to fetch feed',
@@ -222,7 +223,7 @@ router.get(
 
       res.json(result);
     } catch (err) {
-      console.error('[Explore API] Failed to fetch developer feed:', err);
+      console.error('[Explore API] Failed to fetch developer feed:', safeErrorSummary(err));
 
       res.status(500).json({
         error: 'Failed to fetch feed',

@@ -18,6 +18,7 @@ import axios, { AxiosError } from 'axios';
 import { nanoid } from 'nanoid';
 import { redisCache, CacheTTL } from '../lib/redis';
 import { registerGooglePlacesServiceForShutdown } from './googlePlacesServiceLifecycle';
+import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
 // Types and Interfaces
@@ -303,7 +304,7 @@ export class GooglePlacesService {
         sessionToken,
         success: true,
         responseTime: Date.now() - startTime,
-      }).catch(err => console.error('Failed to log API usage:', err));
+      }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
 
       return predictions;
     } catch (error) {
@@ -395,7 +396,7 @@ export class GooglePlacesService {
         sessionToken,
         success: true,
         responseTime: Date.now() - startTime,
-      }).catch(err => console.error('Failed to log API usage:', err));
+      }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
 
       return placeDetails;
     } catch (error) {
@@ -463,7 +464,7 @@ export class GooglePlacesService {
         requestType: 'geocode',
         success: true,
         responseTime: Date.now() - startTime,
-      }).catch(err => console.error('Failed to log API usage:', err));
+      }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
 
       return geocodeResult;
     } catch (error) {
@@ -532,7 +533,7 @@ export class GooglePlacesService {
         requestType: 'reverse_geocode',
         success: true,
         responseTime: Date.now() - startTime,
-      }).catch(err => console.error('Failed to log API usage:', err));
+      }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
 
       return placeDetails;
     } catch (error) {
@@ -665,7 +666,7 @@ export class GooglePlacesService {
       await googlePlacesApiMonitoring.logAPIRequest(log);
     } catch (error) {
       // Don't throw - logging failures shouldn't break the application
-      console.error('Failed to log API usage to database:', error);
+      console.error('Failed to log API usage to database:', safeErrorSummary(error));
     }
 
     // Also log to console in development
@@ -728,6 +729,7 @@ export class GooglePlacesService {
     lng: number,
     radius: number, // in meters
     type: string,
+    options: { throwOnUnavailable?: boolean } = {},
   ): Promise<any[]> {
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:nearby:${lat.toFixed(4)},${lng.toFixed(4)}:${radius}:${type}`;
@@ -775,8 +777,10 @@ export class GooglePlacesService {
         address: place.vicinity,
         latitude: place.geometry.location.lat,
         longitude: place.geometry.location.lng,
-        rating: place.rating,
-        user_ratings_total: place.user_ratings_total,
+        rating: typeof place.rating === 'number' ? place.rating : null,
+        user_ratings_total:
+          typeof place.user_ratings_total === 'number' ? place.user_ratings_total : null,
+        types: Array.isArray(place.types) ? place.types : [],
         place_id: place.place_id,
       }));
 
@@ -793,11 +797,12 @@ export class GooglePlacesService {
         // I will overload 'place_details' or better, since I can't change type easily in this edit without bigger changes, I'll use 'place_details'.
         success: true,
         responseTime: Date.now() - startTime,
-      }).catch(err => console.error('Failed to log API usage:', err));
+      }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
 
       return results;
     } catch (error) {
       this.handleAPIError(error, 'place_details', undefined, startTime);
+      if (options.throwOnUnavailable) throw error;
       return [];
     }
   }

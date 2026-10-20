@@ -19,6 +19,7 @@ import { developmentService } from './services/developmentService';
 import { requireUser } from './_core/requireUser';
 import { agentProfilePhoneError } from '../shared/agentProfilePhone';
 import { DEVELOPER_DISCOVERY_PROVINCES } from '../shared/developerDiscovery';
+import { safeErrorSummary } from './_core/safeError';
 
 // ============================================================================
 // Input Schemas
@@ -232,7 +233,7 @@ export const cataloguePublisherRouter = router({
       });
     } catch (error) {
       if (error instanceof TRPCError) throw error;
-      console.error('Lead capture failed:', error);
+      console.error('Lead capture failed:', safeErrorSummary(error));
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to submit enquiry. Please try again.',

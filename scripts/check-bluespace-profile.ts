@@ -1,4 +1,5 @@
 import { getDb } from '../server/db';
+import { safeErrorSummary } from '../server/_core/safeError';
 
 async function checkBlueSpaceProfile() {
   try {
@@ -62,7 +63,7 @@ async function checkBlueSpaceProfile() {
     }
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', safeErrorSummary(error));
   } finally {
     process.exit(0);
   }

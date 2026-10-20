@@ -6,6 +6,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true 
 
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db';
+import { safeErrorSummary } from '../_core/safeError';
 
 function extractFirstRow(result: any) {
   const rows = result?.rows ?? (Array.isArray(result) ? result[0] : result);
@@ -82,6 +83,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch(err => {
-    console.error(err);
+    console.error('check-db-counts failed:', safeErrorSummary(err));
     process.exit(1);
   });
