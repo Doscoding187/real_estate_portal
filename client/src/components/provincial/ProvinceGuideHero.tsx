@@ -4,9 +4,14 @@ import { getProvinceGuideCover } from '@/lib/provinceGuideImages';
 interface ProvinceGuideHeroProps {
   provinceName: string;
   provinceSlug: string;
+  description?: string;
 }
 
-export function ProvinceGuideHero({ provinceName, provinceSlug }: ProvinceGuideHeroProps) {
+export function ProvinceGuideHero({
+  provinceName,
+  provinceSlug,
+  description,
+}: ProvinceGuideHeroProps) {
   const cover = getProvinceGuideCover(provinceSlug);
   const [failedSource, setFailedSource] = useState<string>();
   const desktop = cover?.desktop;
@@ -33,8 +38,8 @@ export function ProvinceGuideHero({ provinceName, provinceSlug }: ProvinceGuideH
         <div className="provincial-hero__copy">
           <h1 id="province-page-title">Explore {provinceName}</h1>
           <p className="provincial-hero__proposition">
-            Get to know the cities and neighbourhoods, explore available property, and connect with
-            local professionals.
+            {description ||
+              'Get to know the cities and neighbourhoods, explore available property, and connect with local professionals.'}
           </p>
         </div>
       </div>

@@ -166,6 +166,54 @@ describe('locationPagesService canonical hierarchy', () => {
     expect(suburbLookup.where).toHaveBeenCalledTimes(1);
   });
 
+  it('returns the suburb guide projection without inventory, analytics, or insight work', async () => {
+    const db = makeDb([
+      [
+        {
+          id: 81,
+          name: 'Sandton',
+          slug: 'sandton',
+          cityId: 12,
+          cityName: 'Johannesburg',
+          citySlug: 'johannesburg',
+          provinceName: 'Gauteng',
+          provinceSlug: 'gauteng',
+          latitude: '-26.1076',
+          longitude: '28.0567',
+        },
+      ],
+      [],
+      [],
+    ]);
+    getDb.mockResolvedValue(db);
+
+    const result = await locationPagesService.getSuburbData('gauteng', 'johannesburg', 'sandton');
+
+    expect(result).toEqual({
+      suburb: expect.objectContaining({ id: 81, slug: 'sandton' }),
+      stats: { totalListings: 0, avgPrice: 0, rentalCount: 0, saleCount: 0 },
+      marketInsights: expect.objectContaining({
+        minimumPriceSample: 10,
+        sale: expect.objectContaining({ listingCount: 0 }),
+        rent: expect.objectContaining({ listingCount: 0 }),
+      }),
+      developments: {
+        total: 0,
+        byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+        byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+        priceFromMinimum: null,
+        priceToMaximum: null,
+        publishers: [],
+      },
+    });
+    expect(result).not.toHaveProperty('listings');
+    expect(result).not.toHaveProperty('analytics');
+    expect(result).not.toHaveProperty('insights');
+    expect(result).not.toHaveProperty('reviews');
+    expect(db.select).toHaveBeenCalledTimes(3);
+    expect(resolvePublicPropertyEligibilities).not.toHaveBeenCalled();
+  });
+
   it('does not fetch a city listing preview in neutral mode', async () => {
     const db = makeDb([
       [
@@ -196,7 +244,7 @@ describe('locationPagesService canonical hierarchy', () => {
     expect(db.select).toHaveBeenCalledTimes(4);
   });
 
-  it('preserves unavailable locality aggregates instead of converting them to zero', async () => {
+  it('gates locality medians by the canonical priced-listing sample', async () => {
     const db = makeDb([
       [
         {
@@ -217,12 +265,6 @@ describe('locationPagesService canonical hierarchy', () => {
           id: 1,
           name: 'Sandton',
           slug: 'sandton',
-          listingCount: 0,
-          avgPrice: null,
-          avgSalePrice: null,
-          avgRentalPrice: null,
-          propertiesForSale: 0,
-          propertiesForRent: 0,
         },
       ],
       [],
@@ -235,10 +277,14 @@ describe('locationPagesService canonical hierarchy', () => {
 
     expect(result?.topLocalities[0]).toMatchObject({
       name: 'Sandton',
-      avgSalePrice: null,
-      avgRentalPrice: null,
+      listingCount: 0,
       propertiesForSale: 0,
       propertiesForRent: 0,
+      minimumPriceSample: 10,
+      medianSalePrice: null,
+      pricedListingsForSale: 0,
+      medianRentalPrice: null,
+      pricedListingsForRent: 0,
     });
   });
 

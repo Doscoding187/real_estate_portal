@@ -1,4 +1,6 @@
 import React from 'react';
+import { getCityGuideContent } from '@shared/cityGuideContent';
+import CityGuidePage from './CityGuidePage';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { LocationPageLayout } from '@/components/location/LocationPageLayout';
@@ -38,7 +40,7 @@ import { encodeCanonicalLocationId } from '@shared/locationAuthority';
 import { getCityGuideImage } from '@/lib/cityGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 
-export default function CityPage({
+function ExistingCityPage({
   params,
 }: {
   params: { province: string; city: string; action?: string; locationId?: string };
@@ -376,3 +378,17 @@ function CityPageSkeleton() {
 }
 // Import MapPin for ExploreCities - though existing file didn't seem to import it?
 import { MapPin } from 'lucide-react';
+
+export default function CityPage({
+  params,
+}: {
+  params: { province: string; city: string; action?: string; locationId?: string };
+}) {
+  const [path] = useLocation();
+  const guide = getCityGuideContent(params.province, params.city);
+  return guide && path.replace(/\/+$/, '') === `/${guide.provinceSlug}/${guide.slug}` ? (
+    <CityGuidePage key={`${guide.provinceSlug}/${guide.slug}`} guide={guide} />
+  ) : (
+    <ExistingCityPage params={params} />
+  );
+}

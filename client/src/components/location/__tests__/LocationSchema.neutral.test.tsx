@@ -38,3 +38,28 @@ describe('LocationSchema neutral mode', () => {
     });
   });
 });
+
+it('omits unknown zero prices from structured data while preserving a genuine zero listing count', async () => {
+  render(
+    <LocationSchema
+      type="Province"
+      name="Gauteng"
+      description="Guide to Gauteng."
+      url="/gauteng"
+      breadcrumbs={[]}
+      stats={{ totalListings: 0, avgPrice: 0, avgRentalPrice: NaN }}
+      neutralMode
+    />,
+    { wrapper: HelmetProvider },
+  );
+  await waitFor(() => {
+    const schemas = [...document.querySelectorAll('script[type="application/ld+json"]')].map(
+      script => JSON.parse(script.textContent || '{}'),
+    );
+    const area = schemas.flat().find(schema => schema['@type'] === 'AdministrativeArea');
+    expect(area).toBeDefined();
+    expect(area.additionalProperty).toEqual([
+      { '@type': 'PropertyValue', name: 'Total Listings', value: 0 },
+    ]);
+  });
+});

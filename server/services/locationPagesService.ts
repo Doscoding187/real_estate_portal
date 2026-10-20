@@ -7,7 +7,6 @@ import {
   developments,
   cataloguePublishers,
   developerOrganisations,
-  suburbPriceAnalytics,
 } from '../../drizzle/schema';
 import { eq, and, desc, sql, inArray, getTableColumns, type SQL } from 'drizzle-orm';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
@@ -15,7 +14,8 @@ import {
   resolvePublicPropertyEligibilities,
   type PublicPropertyEligibilityResolution,
 } from './publicPropertyEligibilityService';
-import { toPublicPropertyDetailDto } from './publicPropertyDto';
+import { getPublicPropertyMarketFact, toPublicPropertyDetailDto } from './publicPropertyDto';
+import { buildSuburbMarketInsights } from './suburbMarketInsights';
 import { safeErrorSummary } from '../_core/safeError';
 
 /**
@@ -115,6 +115,131 @@ function groupPropertiesByLocation(
     grouped.set(locationId, existing);
   });
   return grouped;
+}
+
+export type SuburbDevelopmentTypeMix = {
+  residential: number;
+  mixed_use: number;
+  commercial: number;
+  land: number;
+};
+
+export type SuburbDevelopmentStatusMix = {
+  'launching-soon': number;
+  selling: number;
+  'sold-out': number;
+};
+
+export type SuburbDevelopmentPublisher = {
+  id: number;
+  name: string;
+  slug: string | null;
+  logoUrl: string | null;
+  authorityKind: string | null;
+  developmentCount: number;
+};
+
+export type SuburbDevelopmentSummary = {
+  total: number;
+  byType: SuburbDevelopmentTypeMix;
+  byStatus: SuburbDevelopmentStatusMix;
+  priceFromMinimum: number | null;
+  priceToMaximum: number | null;
+  publishers: SuburbDevelopmentPublisher[];
+};
+
+export const EMPTY_SUBURB_DEVELOPMENT_SUMMARY: SuburbDevelopmentSummary = {
+  total: 0,
+  byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+  byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+  priceFromMinimum: null,
+  priceToMaximum: null,
+  publishers: [],
+};
+
+async function loadSuburbDevelopmentSummary(
+  db: any,
+  scope: { suburbName: string; suburbId: number; cityName: string },
+): Promise<SuburbDevelopmentSummary> {
+  const rows = await db
+    .select({
+      id: developments.id,
+      developmentType: developments.developmentType,
+      status: developments.status,
+      priceFrom: developments.priceFrom,
+      priceTo: developments.priceTo,
+      publisherId: cataloguePublishers.id,
+      publisherName: cataloguePublishers.name,
+      publisherSlug: cataloguePublishers.slug,
+      publisherLogoUrl: cataloguePublishers.logoUrl,
+      publisherAuthorityKind: cataloguePublishers.authorityKind,
+    })
+    .from(developments)
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .where(
+      and(
+        sql`TRIM(LOWER(${developments.suburb})) = LOWER(${scope.suburbName})`,
+        sql`(TRIM(LOWER(${developments.city})) = LOWER(${scope.cityName}) OR ${developments.locationId} = ${scope.suburbId})`,
+        publicDevelopmentEligibilityConditions(),
+      ),
+    )
+    .limit(200);
+
+  const summary: SuburbDevelopmentSummary = {
+    total: rows.length,
+    byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+    byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+    priceFromMinimum: null,
+    priceToMaximum: null,
+    publishers: [],
+  };
+  const publishersById = new Map<number, SuburbDevelopmentPublisher>();
+
+  rows.forEach((row: any) => {
+    const type = String(row.developmentType || '') as keyof SuburbDevelopmentTypeMix;
+    if (type in summary.byType) summary.byType[type] += 1;
+    const status = String(row.status || '') as keyof SuburbDevelopmentStatusMix;
+    if (status in summary.byStatus) summary.byStatus[status] += 1;
+
+    const priceFrom = Number(row.priceFrom || 0);
+    if (priceFrom > 0) {
+      summary.priceFromMinimum =
+        summary.priceFromMinimum === null
+          ? priceFrom
+          : Math.min(summary.priceFromMinimum, priceFrom);
+    }
+    const priceTo = Number(row.priceTo || 0);
+    if (priceTo > 0) {
+      summary.priceToMaximum =
+        summary.priceToMaximum === null ? priceTo : Math.max(summary.priceToMaximum, priceTo);
+    }
+
+    const publisherId = Number(row.publisherId || 0);
+    const publisherName = String(row.publisherName || '').trim();
+    if (!publisherId || !publisherName) return;
+    const existing = publishersById.get(publisherId);
+    if (existing) {
+      existing.developmentCount += 1;
+      return;
+    }
+    publishersById.set(publisherId, {
+      id: publisherId,
+      name: publisherName,
+      slug: row.publisherSlug ? String(row.publisherSlug) : null,
+      logoUrl: row.publisherLogoUrl ? String(row.publisherLogoUrl) : null,
+      authorityKind: row.publisherAuthorityKind ? String(row.publisherAuthorityKind) : null,
+      developmentCount: 1,
+    });
+  });
+
+  summary.publishers = [...publishersById.values()]
+    .sort(
+      (left, right) =>
+        right.developmentCount - left.developmentCount || left.name.localeCompare(right.name),
+    )
+    .slice(0, 8);
+
+  return summary;
 }
 
 export const locationPagesService = {
@@ -318,7 +443,7 @@ export const locationPagesService = {
   async getCityData(
     provinceSlug: string,
     citySlug: string,
-    options?: { includeInventoryPreview?: boolean },
+    options?: { includeInventoryPreview?: boolean; suburbLimit?: number },
   ) {
     console.log(
       `[LocationPages] getCityData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}"`,
@@ -369,6 +494,8 @@ export const locationPagesService = {
           id: suburbs.id,
           name: suburbs.name,
           slug: suburbs.slug,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude,
         })
         .from(suburbs)
         .where(eq(suburbs.cityId, city.id))
@@ -384,21 +511,26 @@ export const locationPagesService = {
           const rentalProperties = suburbProperties.filter(
             property => property.listingType === 'rent',
           );
+          const marketInsights = buildSuburbMarketInsights(
+            suburbProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
+          );
           return {
             ...suburb,
             listingCount: suburbProperties.length,
-            avgPrice: averagePropertyPrice(suburbProperties),
-            avgSalePrice: averagePropertyPrice(saleProperties),
-            avgRentalPrice: averagePropertyPrice(rentalProperties),
             propertiesForSale: saleProperties.length,
             propertiesForRent: rentalProperties.length,
+            minimumPriceSample: marketInsights.minimumPriceSample,
+            medianSalePrice: marketInsights.sale.medianPrice,
+            pricedListingsForSale: marketInsights.sale.pricedListingCount,
+            medianRentalPrice: marketInsights.rent.medianPrice,
+            pricedListingsForRent: marketInsights.rent.pricedListingCount,
           };
         })
         .sort(
           (left, right) =>
             right.listingCount - left.listingCount || left.name.localeCompare(right.name),
         )
-        .slice(0, 12);
+        .slice(0, Math.min(Math.max(options?.suburbLimit ?? 12, 1), 200));
 
       console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
@@ -489,12 +621,7 @@ export const locationPagesService = {
   /**
    * Get data for Suburb Page (Level 3)
    */
-  async getSuburbData(
-    provinceSlug: string,
-    citySlug: string,
-    suburbSlug: string,
-    options?: { includeInventoryPreview?: boolean },
-  ) {
+  async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
     console.log(
       `[LocationPages] getSuburbData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}", suburbSlug="${suburbSlug}"`,
     );
@@ -555,41 +682,20 @@ export const locationPagesService = {
     ).length;
     const saleCount = eligibleProperties.filter(property => property.listingType === 'sale').length;
     const averagePrice = averagePropertyPrice(eligibleProperties);
+    const marketInsights = buildSuburbMarketInsights(
+      eligibleProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
+    );
 
-    // 3. Featured Properties in Suburb — wrap so media parsing or schema mismatch doesn't crash
-    let localProperties: any[] = [];
-    if (options?.includeInventoryPreview ?? true) {
-      try {
-        localProperties = loadPropertyPreviews(eligibleProperties.slice(0, 12));
-      } catch (error) {
-        console.warn('[LocationPages] Properties preview projection failed for suburb', safeErrorSummary(error));
-        throw error;
-      }
-    }
-
-    // 4. Market Insights (Price Analytics)
-    let analytics: any = null;
+    let suburbDevelopments = EMPTY_SUBURB_DEVELOPMENT_SUMMARY;
     try {
-      [analytics] = await db
-        .select()
-        .from(suburbPriceAnalytics)
-        .where(eq(suburbPriceAnalytics.suburbId, suburb.id))
-        .limit(1);
-    } catch (error) {
-      console.warn('[LocationPages] suburbPriceAnalytics query failed', safeErrorSummary(error));
-      throw error;
-    }
-
-    // 5. AI Insights & Reviews — wrap import + calls so module failures don't crash
-    let insights: any = null;
-    let reviews: any[] = [];
-    try {
-      const { locationInsightsService } = await import('./locationInsightsService');
-      insights = await locationInsightsService.getInsights(suburb.id, suburb.name, suburb.cityName);
-      reviews = await locationInsightsService.getReviews(suburb.id);
+      suburbDevelopments = await loadSuburbDevelopmentSummary(db, {
+        suburbName: suburb.name,
+        suburbId: Number(suburb.id),
+        cityName: suburb.cityName,
+      });
     } catch (error) {
       console.warn(
-        '[LocationPages] locationInsightsService failed, returning null insights',
+        '[LocationPages] Suburb development summary failed',
         safeErrorSummary(error),
       );
     }
@@ -602,10 +708,8 @@ export const locationPagesService = {
         rentalCount,
         saleCount,
       },
-      listings: localProperties,
-      analytics: analytics || null,
-      insights,
-      reviews,
+      marketInsights,
+      developments: suburbDevelopments,
     };
   },
 };

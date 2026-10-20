@@ -18,23 +18,13 @@ export const locationPagesService = {
   async getCityData(
     provinceSlug: string,
     citySlug: string,
-    options?: { includeInventoryPreview?: boolean },
+    options?: { includeInventoryPreview?: boolean; suburbLimit?: number },
   ) {
     return await baseLocationPagesService.getCityData(provinceSlug, citySlug, options);
   },
 
-  async getSuburbData(
-    provinceSlug: string,
-    citySlug: string,
-    suburbSlug: string,
-    options?: { includeInventoryPreview?: boolean },
-  ) {
-    return await baseLocationPagesService.getSuburbData(
-      provinceSlug,
-      citySlug,
-      suburbSlug,
-      options,
-    );
+  async getSuburbData(provinceSlug: string, citySlug: string, suburbSlug: string) {
+    return await baseLocationPagesService.getSuburbData(provinceSlug, citySlug, suburbSlug);
   },
 
   async getEnhancedProvinceData(provinceSlug: string) {

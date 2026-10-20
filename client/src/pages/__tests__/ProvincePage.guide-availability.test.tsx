@@ -71,7 +71,7 @@ vi.mock('@/lib/trpc', () => ({
     },
   },
 }));
-import ProvincePage from '../ProvincePage';
+import ProvincePage from '../ProvinceDiscoveryPage';
 
 beforeEach(() => {
   retry.mockClear();

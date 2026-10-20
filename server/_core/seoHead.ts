@@ -1,3 +1,10 @@
+import { cityGuideInitialHtml } from '../../shared/cityGuideHtml';
+import { getCityGuideContent } from '../../shared/cityGuideContent';
+import { PROVINCE_SLUGS } from '../../shared/location-contract';
+import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
+import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
+import { isSuburbGuidePilot } from '../../shared/suburbGuidePolicy';
+
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const DEFAULT_SITE_NAME = 'Property Listify';
 const DEFAULT_TITLE = 'Property Listify | South African Property Search and New Developments';
@@ -21,12 +28,7 @@ function titleCase(value: string): string {
 }
 
 function humanizeSegment(value: string): string {
-  return titleCase(
-    decodeURIComponent(value)
-      .replace(/[-_]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim(),
-  );
+  return titleCase(decodeURIComponent(value).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim());
 }
 
 function normalizePathname(pathname: string): string {
@@ -47,7 +49,10 @@ function absoluteUrl(pathname: string): string {
   return new URL(pathname, CANONICAL_PUBLIC_ORIGIN).toString();
 }
 
-function buildAreaSeoData(transactionLabel: 'Sale' | 'Rent', segments: string[]): SeoPageData | null {
+function buildAreaSeoData(
+  transactionLabel: 'Sale' | 'Rent',
+  segments: string[],
+): SeoPageData | null {
   const [province, city, suburb] = segments.map(humanizeSegment);
   const canonicalPath = `/${
     transactionLabel === 'Sale' ? 'property-for-sale' : 'property-to-rent'
@@ -91,6 +96,57 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   const pathname = normalizePathname(parsedUrl.pathname);
   const pathSegments = pathname.split('/').filter(Boolean);
 
+  const guide = pathSegments.length === 1 ? getProvinceGuideContent(pathSegments[0]) : undefined;
+  if (guide)
+    return {
+      title: guide.title,
+      description: guide.description,
+      canonicalUrl: absoluteUrl(`/${guide.slug}`),
+      robots:
+        guide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+
+  const cityGuide =
+    pathSegments.length === 2 ? getCityGuideContent(pathSegments[0], pathSegments[1]) : undefined;
+  if (cityGuide)
+    return {
+      title: cityGuide.title,
+      description: cityGuide.description,
+      canonicalUrl: absoluteUrl(`/${cityGuide.provinceSlug}/${cityGuide.slug}`),
+      robots:
+        cityGuide.status === 'published' && !parsedUrl.search ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+
+  const suburbGuide =
+    pathSegments.length === 3 && PROVINCE_SLUGS.includes(pathSegments[0].toLowerCase())
+      ? {
+          provinceSlug: pathSegments[0].toLowerCase(),
+          citySlug: pathSegments[1].toLowerCase(),
+          suburbSlug: pathSegments[2].toLowerCase(),
+        }
+      : undefined;
+  if (suburbGuide) {
+    const suburbCityGuide = getCityGuideContent(suburbGuide.provinceSlug, suburbGuide.citySlug);
+    const suburbName = humanizeSegment(suburbGuide.suburbSlug);
+    const cityName = humanizeSegment(suburbGuide.citySlug);
+    const indexable =
+      isSuburbGuidePilot(suburbGuide.provinceSlug, suburbGuide.citySlug, suburbGuide.suburbSlug) &&
+      suburbCityGuide?.status === 'published' &&
+      !parsedUrl.search;
+
+    return {
+      title: `${suburbName} property guide: homes, rentals & developments | ${DEFAULT_SITE_NAME}`,
+      description: `Explore homes for sale, rentals and new developments in ${suburbName}, ${cityName}.`,
+      canonicalUrl: absoluteUrl(
+        `/${suburbGuide.provinceSlug}/${suburbGuide.citySlug}/${suburbGuide.suburbSlug}`,
+      ),
+      robots: indexable ? 'index, follow' : 'noindex, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+  }
+
   if (pathname === '/') {
     return {
       title: DEFAULT_TITLE,
@@ -105,7 +161,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     return {
       title: 'Advertise With Us | Property Listify',
       description:
-        "Explore advertising and acquisition opportunities for agents, developers, agencies, and property brands on Property Listify South Africa.",
+        'Explore advertising and acquisition opportunities for agents, developers, agencies, and property brands on Property Listify South Africa.',
       canonicalUrl: absoluteUrl(pathname),
       robots: 'index, follow',
       siteName: DEFAULT_SITE_NAME,
@@ -238,8 +294,7 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
     pathSegments.length === 2 &&
     Boolean(pathSegments[1])
   ) {
-    const canonicalPath =
-      pathSegments[0] === 'a' ? `/agents/${pathSegments[1]}` : pathname;
+    const canonicalPath = pathSegments[0] === 'a' ? `/agents/${pathSegments[1]}` : pathname;
     return {
       title: `Property Practitioner Profile | ${DEFAULT_SITE_NAME}`,
       description:
@@ -261,8 +316,15 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
 
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
+  const initialHtml = provinceGuideInitialHtml(requestUrl) || cityGuideInitialHtml(requestUrl);
+  const document = initialHtml
+    ? template.replace(
+        /<div id="root">[\s\S]*?<\/div>/,
+        () => `<div id="root">${initialHtml}</div>`,
+      )
+    : template;
 
-  return template
+  return document
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,

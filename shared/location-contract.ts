@@ -6,6 +6,18 @@ export const LOCATION_CONTRACT_VERSION = 1 as const;
 export const LOCATION_LEVELS = ['province', 'city', 'suburb'] as const;
 export type LocationLevel = (typeof LOCATION_LEVELS)[number];
 
+export const PROVINCE_SLUGS: readonly string[] = [
+  'gauteng',
+  'western-cape',
+  'kwazulu-natal',
+  'eastern-cape',
+  'free-state',
+  'limpopo',
+  'mpumalanga',
+  'north-west',
+  'northern-cape',
+];
+
 export const LOCATION_STATUSES = ['verified', 'provisional', 'retired'] as const;
 export type LocationStatus = (typeof LOCATION_STATUSES)[number];
 

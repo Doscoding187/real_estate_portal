@@ -729,6 +729,7 @@ export class GooglePlacesService {
     lng: number,
     radius: number, // in meters
     type: string,
+    options: { throwOnUnavailable?: boolean } = {},
   ): Promise<any[]> {
     // Check Redis cache first, then in-memory cache
     const cacheKey = `places:nearby:${lat.toFixed(4)},${lng.toFixed(4)}:${radius}:${type}`;
@@ -776,8 +777,10 @@ export class GooglePlacesService {
         address: place.vicinity,
         latitude: place.geometry.location.lat,
         longitude: place.geometry.location.lng,
-        rating: place.rating,
-        user_ratings_total: place.user_ratings_total,
+        rating: typeof place.rating === 'number' ? place.rating : null,
+        user_ratings_total:
+          typeof place.user_ratings_total === 'number' ? place.user_ratings_total : null,
+        types: Array.isArray(place.types) ? place.types : [],
         place_id: place.place_id,
       }));
 
@@ -799,6 +802,7 @@ export class GooglePlacesService {
       return results;
     } catch (error) {
       this.handleAPIError(error, 'place_details', undefined, startTime);
+      if (options.throwOnUnavailable) throw error;
       return [];
     }
   }
