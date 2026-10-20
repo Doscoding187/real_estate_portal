@@ -288,6 +288,7 @@
     "geography:coverage:check": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json --check",
     "guide:pilot:verify": "tsx scripts/verify-guide-pilot-data.ts",
     "guide:copy:review": "tsx scripts/print-guide-copy.ts",
+    "guide:launch:verify": "tsx scripts/verify-guide-launch.ts",
     "geography:coverage:collision-audit": "node tools/geography-coverage/audit-residual-collisions.mjs",
     "geography:coverage:generate": "node tools/geography-coverage/generate.mjs --manifest data/geography-coverage-v0.1/gauteng-territory-manifest.v0.1.json",
     "geography:coverage:probes": "node tools/geography-coverage/probes.mjs",
