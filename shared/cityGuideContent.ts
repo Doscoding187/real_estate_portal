@@ -39,11 +39,16 @@ export interface CityGuideContent {
   faqs: readonly { question: string; answer: string }[];
   sources: readonly { id: string; title: string; url: string }[];
 }
-const suburb = (name: string, caption: string): CityGuidePlace => ({
+/**
+ * A suburb reference is typed as a suburb so the guide resolves it against the canonical
+ * hierarchy and links to its real place route. Typing a place as a city makes the lookup
+ * refuse it, which silently turns a named neighbourhood into plain text.
+ */
+const suburb = (name: string, caption: string, imageCity = 'johannesburg'): CityGuidePlace => ({
   name,
   caption,
   kind: 'suburb',
-  imageCity: 'johannesburg',
+  imageCity,
 });
 const city = (name: string, caption: string, imageCity: string): CityGuidePlace => ({
   name,
@@ -75,7 +80,7 @@ const johannesburg: CityGuideContent = {
       sourceIds: ['regions'],
       places: [
         city('Johannesburg', 'Start with the city and its neighbourhoods', 'johannesburg'),
-        city('Sandton', 'Explore a northern starting point', 'sandton'),
+        suburb('Sandton', 'Explore a northern starting point', 'sandton'),
         city('Randburg', 'Get to know the north-western side', 'randburg'),
         city('Midrand', 'Look further north in the metro', 'midrand'),
         city('Soweto', 'Explore the south-western side', 'soweto'),
@@ -107,7 +112,7 @@ const johannesburg: CityGuideContent = {
       sourceIds: ['rail', 'rosebank'],
       places: [
         suburb('Rosebank', 'Compare the area around Rosebank station'),
-        city('Sandton', 'Explore around the Sandton node', 'sandton'),
+        suburb('Sandton', 'Explore around the Sandton node', 'sandton'),
         city('Midrand', 'Investigate your full station connection', 'midrand'),
         suburb('Braamfontein', 'Investigate connections around Park station'),
       ],
