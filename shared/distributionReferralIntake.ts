@@ -56,13 +56,73 @@ const identityEvidenceSchema = z.object({
   authorizedRoles: z.array(z.string().trim().min(2).max(120)).min(1).max(20),
 });
 
-const workflowStepSchema = z.object({
+export const distributionReferralIntakeWorkflowStepSchema = z.object({
   key: z.string().trim().min(2).max(80),
   title: z.string().trim().min(2).max(180),
   partnerInstructions: z.string().trim().min(3).max(4_000),
   ownerRole: z.string().trim().min(2).max(120),
   isBlocking: z.boolean(),
 });
+
+export type DistributionReferralIntakeWorkflowStep = z.infer<
+  typeof distributionReferralIntakeWorkflowStepSchema
+>;
+
+export const DISTRIBUTION_DEFAULT_REFERRAL_WORKFLOW_STEPS: readonly DistributionReferralIntakeWorkflowStep[] =
+  Object.freeze([
+    {
+      key: 'referral_received',
+      title: 'Referral received',
+      partnerInstructions:
+        "Your referral has reached the developer's sales team. Keep the prospect informed while they review it.",
+      ownerRole: 'Developer team',
+      isBlocking: true,
+    },
+    {
+      key: 'qualification',
+      title: 'Qualification',
+      partnerInstructions:
+        "The developer confirms the prospect's budget, timing, and fit, then records the next step.",
+      ownerRole: 'Developer team',
+      isBlocking: true,
+    },
+    {
+      key: 'viewing_arranged',
+      title: 'Viewing arranged',
+      partnerInstructions:
+        'Coordinate the viewing with the developer and tell the prospect once the date and time are confirmed.',
+      ownerRole: 'Developer team',
+      isBlocking: false,
+    },
+    {
+      key: 'application_submitted',
+      title: 'Application submitted',
+      partnerInstructions:
+        'The developer collects the required documents and submits the application or rental offer.',
+      ownerRole: 'Developer team',
+      isBlocking: true,
+    },
+    {
+      key: 'outcome_recorded',
+      title: 'Outcome recorded',
+      partnerInstructions:
+        'The developer records the decision and any contract, bond, or lease outcome.',
+      ownerRole: 'Developer team',
+      isBlocking: true,
+    },
+    {
+      key: 'payout_recorded',
+      title: 'Payout recorded',
+      partnerInstructions:
+        'Property Listify records the payout after the deal closes and the required milestones are met.',
+      ownerRole: 'Property Listify team',
+      isBlocking: false,
+    },
+  ]);
+
+export function createDefaultReferralWorkflowSteps(): DistributionReferralIntakeWorkflowStep[] {
+  return DISTRIBUTION_DEFAULT_REFERRAL_WORKFLOW_STEPS.map(step => ({ ...step }));
+}
 
 const creditReportConfigurationSchema = z
   .object({
@@ -115,7 +175,7 @@ export const distributionReferralIntakePolicyDraftSchema = z.object({
     })
     .partial()
     .optional(),
-  workflowSteps: z.array(workflowStepSchema.partial()).max(30).optional(),
+  workflowSteps: z.array(distributionReferralIntakeWorkflowStepSchema.partial()).max(30).optional(),
   creditReport: z
     .object({
       enabled: z.boolean().optional(),
@@ -144,7 +204,7 @@ export const distributionReferralIntakePolicyConfigurationSchema = z
       closedReferral: retentionRuleSchema,
       creditAuthorization: retentionRuleSchema.optional(),
     }),
-    workflowSteps: z.array(workflowStepSchema).min(1).max(30),
+    workflowSteps: z.array(distributionReferralIntakeWorkflowStepSchema).min(1).max(30),
     creditReport: creditReportConfigurationSchema,
   })
   .superRefine((value, context) => {

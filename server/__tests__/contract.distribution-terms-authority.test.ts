@@ -9,7 +9,9 @@ describe('distribution terms authority boundary', () => {
       'utf8',
     );
 
-    expect(source).toContain('selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson');
+    expect(source).toContain(
+      'promotion: distributionDevelopmentAccess.brochureConfigJson',
+    );
     expect(source).not.toContain('canReadBrochureConfigColumn');
     expect(source).not.toContain('isMissingBrochureConfigColumnError');
     expect(source).not.toContain('selectPartnerRows(false)');

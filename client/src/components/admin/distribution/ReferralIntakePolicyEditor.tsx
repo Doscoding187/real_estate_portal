@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import type { DistributionReferralIntakePolicyDraft } from '@shared/distributionReferralIntake';
+import { ListChecks, Plus, Trash2 } from 'lucide-react';
+import {
+  createDefaultReferralWorkflowSteps,
+  type DistributionReferralIntakePolicyDraft,
+} from '@shared/distributionReferralIntake';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { Badge } from '@/components/ui/badge';
@@ -129,9 +132,16 @@ function documentDraft(version: string, title: string, content: string) {
   return Object.keys(fields).length ? fields : undefined;
 }
 
+function defaultWorkflowStepForm(): PolicyForm['workflowSteps'] {
+  return createDefaultReferralWorkflowSteps();
+}
+
 function formFromConfiguration(value?: unknown): PolicyForm {
   const form = emptyPolicyForm();
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return form;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    form.workflowSteps = defaultWorkflowStepForm();
+    return form;
+  }
   const config = value as Record<string, any>;
   const sharing = config.sharingPermissionDocument || {};
   const privacy = config.privacyNoticeDocument || {};
@@ -180,7 +190,7 @@ function formFromConfiguration(value?: unknown): PolicyForm {
         ownerRole: step.ownerRole || '',
         isBlocking: typeof step.isBlocking === 'boolean' ? step.isBlocking : null,
       }))
-    : [];
+    : defaultWorkflowStepForm();
   form.creditReportEnabled = Boolean(credit.enabled);
   form.creditProviderName = credit.providerName || '';
   form.creditProviderApprovalReference = credit.providerApprovalReference || '';
@@ -668,26 +678,51 @@ export function ReferralIntakePolicyEditor({
           <div>
             <h4 className="font-medium">Guided process</h4>
             <p className="text-xs text-slate-600">
-              Describe what the referrer does and who owns each next step.
+              Describe what the referrer does and who owns each next step. New drafts start with
+              default steps; edit or remove them to match this opportunity.
             </p>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              updateForm(current => ({
-                ...current,
-                workflowSteps: [
-                  ...current.workflowSteps,
-                  { key: '', title: '', partnerInstructions: '', ownerRole: '', isBlocking: null },
-                ],
-              }))
-            }
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add step
-          </Button>
+          <div className="flex items-center gap-2">
+            {form.workflowSteps.length === 0 ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() =>
+                  updateForm(current => ({
+                    ...current,
+                    workflowSteps: defaultWorkflowStepForm(),
+                  }))
+                }
+              >
+                <ListChecks className="mr-1 h-4 w-4" />
+                Use default steps
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                updateForm(current => ({
+                  ...current,
+                  workflowSteps: [
+                    ...current.workflowSteps,
+                    {
+                      key: '',
+                      title: '',
+                      partnerInstructions: '',
+                      ownerRole: '',
+                      isBlocking: null,
+                    },
+                  ],
+                }))
+              }
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add step
+            </Button>
+          </div>
         </div>
         {form.workflowSteps.map((step, index) => (
           <div key={`${index}-${step.key}`} className="space-y-2 rounded border bg-slate-50 p-3">
