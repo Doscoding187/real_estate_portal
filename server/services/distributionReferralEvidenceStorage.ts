@@ -30,8 +30,61 @@ type StorageConfig =
     };
 
 const MAX_EVIDENCE_BYTES = 25 * 1024 * 1024;
-const PRIVATE_EVIDENCE_KEY_PATTERN =
+const REFERRAL_EVIDENCE_KEY_PATTERN =
   /^private\/distribution-referrals\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/i;
+const DEAL_DOCUMENT_KEY_PATTERN =
+  /^private\/distribution-deal-documents\/[1-9][0-9]*\/[0-9a-f-]{36}$/i;
+const DEAL_DOCUMENT_REFERENCE_PREFIX = 'private-deal-document:v1:';
+
+type PrivateStorageScope = {
+  keyPattern: RegExp;
+  invalidKeyMessage: string;
+  outsideRootMessage: string;
+  sizeMessage: string;
+  mimeMessage: string;
+  signatureMessage: string;
+  purpose: string;
+  hostedReadMessage: string;
+  hostedDeleteMessage: string;
+  missingMessage: string;
+  emptyMessage: string;
+  exceedsMessage: string;
+  adapterMismatchMessage: string;
+};
+
+const REFERRAL_EVIDENCE_SCOPE: PrivateStorageScope = {
+  keyPattern: REFERRAL_EVIDENCE_KEY_PATTERN,
+  invalidKeyMessage: 'Invalid private referral evidence key.',
+  outsideRootMessage: 'Private evidence path is outside its storage root.',
+  sizeMessage: `Private referral evidence must be between 1 byte and ${MAX_EVIDENCE_BYTES} bytes.`,
+  mimeMessage: 'Private referral evidence must be a PDF, JPEG, PNG, or WebP document.',
+  signatureMessage: 'The private evidence file contents do not match its selected file type.',
+  purpose: 'distribution-referral-evidence',
+  hostedReadMessage: 'Hosted Distribution referral evidence retrieval cannot use local storage.',
+  hostedDeleteMessage: 'Hosted Distribution referral evidence deletion cannot use local storage.',
+  missingMessage: 'Private evidence file is missing or exceeds the storage limit.',
+  emptyMessage: 'Private evidence file is empty.',
+  exceedsMessage: 'Private evidence file exceeds the storage limit.',
+  adapterMismatchMessage:
+    'Distribution referral evidence is stored in S3 but S3 storage is not selected.',
+};
+
+const DEAL_DOCUMENT_SCOPE: PrivateStorageScope = {
+  keyPattern: DEAL_DOCUMENT_KEY_PATTERN,
+  invalidKeyMessage: 'Invalid private deal-document key.',
+  outsideRootMessage: 'Private deal-document path is outside its storage root.',
+  sizeMessage: `Private deal document must be between 1 byte and ${MAX_EVIDENCE_BYTES} bytes.`,
+  mimeMessage: 'Private deal document must be a PDF, JPEG, PNG, or WebP document.',
+  signatureMessage: 'The private deal-document contents do not match its selected file type.',
+  purpose: 'distribution-deal-document',
+  hostedReadMessage: 'Hosted Distribution deal-document retrieval cannot use local storage.',
+  hostedDeleteMessage: 'Hosted Distribution deal-document deletion cannot use local storage.',
+  missingMessage: 'Private deal document is missing or exceeds the storage limit.',
+  emptyMessage: 'Private deal document is empty.',
+  exceedsMessage: 'Private deal document exceeds the storage limit.',
+  adapterMismatchMessage:
+    'Distribution deal document is stored in S3 but S3 storage is not selected.',
+};
 
 export class DistributionReferralEvidenceStorageError extends Error {
   constructor(message: string) {
@@ -91,21 +144,19 @@ function normalizePrefix(value: string) {
   return normalized;
 }
 
-function validateStorageKey(key: string) {
-  if (!PRIVATE_EVIDENCE_KEY_PATTERN.test(key)) {
-    throw new DistributionReferralEvidenceStorageError('Invalid private referral evidence key.');
+function validateStorageKey(key: string, scope: PrivateStorageScope) {
+  if (!scope.keyPattern.test(key)) {
+    throw new DistributionReferralEvidenceStorageError(scope.invalidKeyMessage);
   }
   return key;
 }
 
-function localPath(root: string, key: string) {
-  const validatedKey = validateStorageKey(key);
+function localPath(root: string, key: string, scope: PrivateStorageScope) {
+  const validatedKey = validateStorageKey(key, scope);
   const resolvedRoot = path.resolve(root);
   const resolvedPath = path.resolve(resolvedRoot, validatedKey);
   if (!resolvedPath.startsWith(`${resolvedRoot}${path.sep}`)) {
-    throw new DistributionReferralEvidenceStorageError(
-      'Private evidence path is outside its storage root.',
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.outsideRootMessage);
   }
   return resolvedPath;
 }
@@ -267,30 +318,30 @@ function createS3Client(config: Extract<StorageConfig, { adapter: 's3' }>) {
   });
 }
 
-function objectKey(config: Extract<StorageConfig, { adapter: 's3' }>, key: string) {
-  const validatedKey = validateStorageKey(key);
+function objectKey(
+  config: Extract<StorageConfig, { adapter: 's3' }>,
+  key: string,
+  scope: PrivateStorageScope,
+) {
+  const validatedKey = validateStorageKey(key, scope);
   return [config.prefix, validatedKey].filter(Boolean).join('/');
 }
 
-function assertDocumentSize(buffer: Buffer) {
+function assertDocumentSize(buffer: Buffer, scope: PrivateStorageScope) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 1 || buffer.length > MAX_EVIDENCE_BYTES) {
-    throw new DistributionReferralEvidenceStorageError(
-      `Private referral evidence must be between 1 byte and ${MAX_EVIDENCE_BYTES} bytes.`,
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.sizeMessage);
   }
 }
 
-function normalizedMimeType(mimeType: string) {
+function normalizedMimeType(mimeType: string, scope: PrivateStorageScope) {
   const normalized = mimeType.trim().toLowerCase();
   if (!(DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES as readonly string[]).includes(normalized)) {
-    throw new DistributionReferralEvidenceStorageError(
-      'Private referral evidence must be a PDF, JPEG, PNG, or WebP document.',
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.mimeMessage);
   }
   return normalized;
 }
 
-function assertFileSignature(buffer: Buffer, mimeType: string) {
+function assertFileSignature(buffer: Buffer, mimeType: string, scope: PrivateStorageScope) {
   const valid =
     (mimeType === 'application/pdf' && buffer.subarray(0, 1024).includes(Buffer.from('%PDF-'))) ||
     (mimeType === 'image/jpeg' && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) ||
@@ -300,9 +351,7 @@ function assertFileSignature(buffer: Buffer, mimeType: string) {
       buffer.toString('ascii', 0, 4) === 'RIFF' &&
       buffer.toString('ascii', 8, 12) === 'WEBP');
   if (!valid) {
-    throw new DistributionReferralEvidenceStorageError(
-      'The private evidence file contents do not match its selected file type.',
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.signatureMessage);
   }
 }
 
@@ -319,19 +368,22 @@ export function createDistributionReferralEvidenceStorageKey(
   return `private/distribution-referrals/${sessionId}/${evidenceId}`;
 }
 
-export async function storeDistributionReferralEvidence(input: {
-  storageKey: string;
-  buffer: Buffer;
-  mimeType: string;
-}) {
-  assertDocumentSize(input.buffer);
-  const mimeType = normalizedMimeType(input.mimeType);
-  assertFileSignature(input.buffer, mimeType);
+async function storePrivateDocument(
+  input: {
+    storageKey: string;
+    buffer: Buffer;
+    mimeType: string;
+  },
+  scope: PrivateStorageScope,
+) {
+  assertDocumentSize(input.buffer, scope);
+  const mimeType = normalizedMimeType(input.mimeType, scope);
+  assertFileSignature(input.buffer, mimeType, scope);
   const config = resolveConfig();
-  const storageKey = validateStorageKey(input.storageKey);
+  const storageKey = validateStorageKey(input.storageKey, scope);
 
   if (config.adapter === 'local') {
-    const absolutePath = localPath(config.root, storageKey);
+    const absolutePath = localPath(config.root, storageKey, scope);
     await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o700 });
     const file = await open(absolutePath, 'wx', 0o600);
     let complete = false;
@@ -348,62 +400,58 @@ export async function storeDistributionReferralEvidence(input: {
   await createS3Client(config).send(
     new PutObjectCommand({
       Bucket: config.bucket,
-      Key: objectKey(config, storageKey),
+      Key: objectKey(config, storageKey, scope),
       Body: input.buffer,
       ContentLength: input.buffer.length,
       ContentType: mimeType,
       ServerSideEncryption: 'AES256',
-      Metadata: { purpose: 'distribution-referral-evidence' },
+      Metadata: { purpose: scope.purpose },
     }),
   );
   return { adapter: 's3' as const, storageKey, byteSize: input.buffer.length };
 }
 
-export async function readDistributionReferralEvidence(input: {
-  storageAdapter: DistributionReferralEvidenceStorageAdapter;
-  storageKey: string;
-}) {
-  const storageKey = validateStorageKey(input.storageKey);
+async function readPrivateDocument(
+  input: {
+    storageAdapter: DistributionReferralEvidenceStorageAdapter;
+    storageKey: string;
+  },
+  scope: PrivateStorageScope,
+) {
+  const storageKey = validateStorageKey(input.storageKey, scope);
   if (input.storageAdapter === 'local') {
     if (isHostedRuntime()) {
-      throw new DistributionReferralEvidenceStorageError(
-        'Hosted Distribution referral evidence retrieval cannot use local storage.',
-      );
+      throw new DistributionReferralEvidenceStorageError(scope.hostedReadMessage);
     }
-    const absolutePath = localPath(localRoot(), storageKey);
+    const absolutePath = localPath(localRoot(), storageKey, scope);
     const file = await stat(absolutePath);
     if (!file.isFile() || file.size < 1 || file.size > MAX_EVIDENCE_BYTES) {
-      throw new DistributionReferralEvidenceStorageError(
-        'Private evidence file is missing or exceeds the storage limit.',
-      );
+      throw new DistributionReferralEvidenceStorageError(scope.missingMessage);
     }
     return readFile(absolutePath);
   }
 
   const config = resolveConfig();
   if (config.adapter !== 's3') {
-    throw new DistributionReferralEvidenceStorageError(
-      'Distribution referral evidence is stored in S3 but S3 storage is not selected.',
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.adapterMismatchMessage);
   }
   const response = await createS3Client(config).send(
-    new GetObjectCommand({ Bucket: config.bucket, Key: objectKey(config, storageKey) }),
+    new GetObjectCommand({ Bucket: config.bucket, Key: objectKey(config, storageKey, scope) }),
   );
-  if (!response.Body)
-    throw new DistributionReferralEvidenceStorageError('Private evidence file is empty.');
+  if (!response.Body) {
+    throw new DistributionReferralEvidenceStorageError(scope.emptyMessage);
+  }
   const contentLength = Number(response.ContentLength);
   if (
     !Number.isSafeInteger(contentLength) ||
     contentLength < 1 ||
     contentLength > MAX_EVIDENCE_BYTES
   ) {
-    throw new DistributionReferralEvidenceStorageError(
-      'Private evidence file exceeds the storage limit.',
-    );
+    throw new DistributionReferralEvidenceStorageError(scope.exceedsMessage);
   }
   if (typeof response.Body.transformToByteArray === 'function') {
     const buffer = Buffer.from(await response.Body.transformToByteArray());
-    assertDocumentSize(buffer);
+    assertDocumentSize(buffer, scope);
     return buffer;
   }
   const chunks: Buffer[] = [];
@@ -411,8 +459,49 @@ export async function readDistributionReferralEvidence(input: {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   const buffer = Buffer.concat(chunks);
-  assertDocumentSize(buffer);
+  assertDocumentSize(buffer, scope);
   return buffer;
+}
+
+async function deletePrivateDocument(
+  input: {
+    storageAdapter: DistributionReferralEvidenceStorageAdapter;
+    storageKey: string;
+  },
+  scope: PrivateStorageScope,
+) {
+  const storageKey = validateStorageKey(input.storageKey, scope);
+  if (input.storageAdapter === 'local') {
+    if (isHostedRuntime()) {
+      throw new DistributionReferralEvidenceStorageError(scope.hostedDeleteMessage);
+    }
+    await rm(localPath(localRoot(), storageKey, scope), { force: true });
+    return { deleted: true as const, adapter: 'local' as const };
+  }
+
+  const config = resolveConfig();
+  if (config.adapter !== 's3') {
+    throw new DistributionReferralEvidenceStorageError(scope.adapterMismatchMessage);
+  }
+  await createS3Client(config).send(
+    new DeleteObjectCommand({ Bucket: config.bucket, Key: objectKey(config, storageKey, scope) }),
+  );
+  return { deleted: true as const, adapter: 's3' as const };
+}
+
+export async function storeDistributionReferralEvidence(input: {
+  storageKey: string;
+  buffer: Buffer;
+  mimeType: string;
+}) {
+  return storePrivateDocument(input, REFERRAL_EVIDENCE_SCOPE);
+}
+
+export async function readDistributionReferralEvidence(input: {
+  storageAdapter: DistributionReferralEvidenceStorageAdapter;
+  storageKey: string;
+}) {
+  return readPrivateDocument(input, REFERRAL_EVIDENCE_SCOPE);
 }
 
 /** Delete is idempotent so retention retries cannot restore or duplicate evidence. */
@@ -420,25 +509,61 @@ export async function deleteDistributionReferralEvidence(input: {
   storageAdapter: DistributionReferralEvidenceStorageAdapter;
   storageKey: string;
 }) {
-  const storageKey = validateStorageKey(input.storageKey);
-  if (input.storageAdapter === 'local') {
-    if (isHostedRuntime()) {
-      throw new DistributionReferralEvidenceStorageError(
-        'Hosted Distribution referral evidence deletion cannot use local storage.',
-      );
-    }
-    await rm(localPath(localRoot(), storageKey), { force: true });
-    return { deleted: true as const, adapter: 'local' as const };
-  }
+  return deletePrivateDocument(input, REFERRAL_EVIDENCE_SCOPE);
+}
 
-  const config = resolveConfig();
-  if (config.adapter !== 's3') {
+export function createDistributionDealDocumentStorageKey(dealId: number, documentUuid: string) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!Number.isSafeInteger(dealId) || dealId < 1 || !uuidPattern.test(documentUuid)) {
     throw new DistributionReferralEvidenceStorageError(
-      'Distribution referral evidence is stored in S3 but S3 storage is not selected.',
+      'Invalid private deal-document identifier.',
     );
   }
-  await createS3Client(config).send(
-    new DeleteObjectCommand({ Bucket: config.bucket, Key: objectKey(config, storageKey) }),
-  );
-  return { deleted: true as const, adapter: 's3' as const };
+  return `private/distribution-deal-documents/${dealId}/${documentUuid}`;
+}
+
+export function createDistributionDealDocumentReference(input: {
+  storageAdapter: DistributionReferralEvidenceStorageAdapter;
+  storageKey: string;
+}) {
+  const storageKey = validateStorageKey(input.storageKey, DEAL_DOCUMENT_SCOPE);
+  return `${DEAL_DOCUMENT_REFERENCE_PREFIX}${input.storageAdapter}:${storageKey}`;
+}
+
+export function parseDistributionDealDocumentReference(reference: string | null | undefined): {
+  storageAdapter: DistributionReferralEvidenceStorageAdapter;
+  storageKey: string;
+} | null {
+  const value = String(reference || '').trim();
+  if (!value.startsWith(DEAL_DOCUMENT_REFERENCE_PREFIX)) return null;
+  const remainder = value.slice(DEAL_DOCUMENT_REFERENCE_PREFIX.length);
+  const separator = remainder.indexOf(':');
+  if (separator < 1) return null;
+  const storageAdapter = remainder.slice(0, separator);
+  const storageKey = remainder.slice(separator + 1);
+  if (storageAdapter !== 'local' && storageAdapter !== 's3') return null;
+  if (!DEAL_DOCUMENT_KEY_PATTERN.test(storageKey)) return null;
+  return { storageAdapter, storageKey };
+}
+
+export async function storeDistributionDealDocument(input: {
+  storageKey: string;
+  buffer: Buffer;
+  mimeType: string;
+}) {
+  return storePrivateDocument(input, DEAL_DOCUMENT_SCOPE);
+}
+
+export async function readDistributionDealDocument(input: {
+  storageAdapter: DistributionReferralEvidenceStorageAdapter;
+  storageKey: string;
+}) {
+  return readPrivateDocument(input, DEAL_DOCUMENT_SCOPE);
+}
+
+export async function deleteDistributionDealDocument(input: {
+  storageAdapter: DistributionReferralEvidenceStorageAdapter;
+  storageKey: string;
+}) {
+  return deletePrivateDocument(input, DEAL_DOCUMENT_SCOPE);
 }

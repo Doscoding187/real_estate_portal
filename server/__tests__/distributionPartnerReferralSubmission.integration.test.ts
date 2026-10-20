@@ -33,6 +33,10 @@ import {
   upsertBrandPartnership,
   upsertDevelopmentAccess,
 } from '../services/distributionAccessRepository';
+import {
+  deleteDistributionDealDocument,
+  parseDistributionDealDocumentReference,
+} from '../services/distributionReferralEvidenceStorage';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const INTEGRATION_TIMEOUT_MS = 30_000;
@@ -439,6 +443,16 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     const dealIds = uniqueIds(createdState.dealIds);
     if (dealIds.length) {
+      const storedRows = await db
+        .select({ submittedFileUrl: distributionDealDocuments.submittedFileUrl })
+        .from(distributionDealDocuments)
+        .where(inArray(distributionDealDocuments.dealId, dealIds));
+      for (const row of storedRows) {
+        const reference = parseDistributionDealDocumentReference(row.submittedFileUrl);
+        if (reference) {
+          await deleteDistributionDealDocument(reference).catch(() => undefined);
+        }
+      }
       await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.dealId, dealIds));
       await db.delete(distributionDealEvents).where(inArray(distributionDealEvents.dealId, dealIds));
       await db.delete(distributionDeals).where(inArray(distributionDeals.id, dealIds));
@@ -644,7 +658,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(error.message).toContain('Upload the signed sharing permission');
   }, INTEGRATION_TIMEOUT_MS);
 
-  it('keeps secure application-document upload paused', async () => {
+  it('uploads and downloads application documents through private storage', async () => {
     const scenario = await seedScenario();
     const submitted = await scenario.caller.distribution.partner.submitReferral({
       developmentId: scenario.developmentId,
@@ -654,15 +668,85 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       buyerEmail: `document-buyer-${Date.now()}@example.com`,
     });
     createdState.dealIds.push(Number(submitted.dealId));
+    const fileBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
+
+    await scenario.caller.distribution.partner.submitReferralDocument({
+      dealId: Number(submitted.dealId),
+      templateId: scenario.templateId,
+      file: {
+        fileName: 'sharing-permission.pdf',
+        mimeType: 'application/pdf',
+        byteSize: fileBuffer.length,
+        base64Content: fileBuffer.toString('base64'),
+      },
+    });
+
+    const referral = await scenario.caller.distribution.partner.getReferral({
+      dealId: Number(submitted.dealId),
+    });
+    const uploadedDocument = referral.applicationDocuments.find(
+      document => Number(document.templateId) === Number(scenario.templateId),
+    );
+    expect(uploadedDocument?.status).toBe('received');
+    expect(uploadedDocument?.hasFile).toBe(true);
+    expect(uploadedDocument?.submittedFileName).toBe('sharing-permission.pdf');
+    expect(JSON.stringify(referral)).not.toContain('private-deal-document');
+
+    const downloaded = await scenario.caller.distribution.partner.downloadReferralDocument({
+      dealId: Number(submitted.dealId),
+      templateId: scenario.templateId,
+    });
+    expect(downloaded.fileName).toBe('sharing-permission.pdf');
+    expect(Buffer.from(downloaded.base64Content, 'base64').equals(fileBuffer)).toBe(true);
+
+    const otherUserId = await insertUser('agent');
+    await insertReferrerIdentity(otherUserId);
+    const otherCaller = createCaller(otherUserId, 'agent');
+    await expect(
+      otherCaller.distribution.partner.downloadReferralDocument({
+        dealId: Number(submitted.dealId),
+        templateId: scenario.templateId,
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(
+      otherCaller.distribution.partner.submitReferralDocument({
+        dealId: Number(submitted.dealId),
+        templateId: scenario.templateId,
+        file: {
+          fileName: 'other-referrer.pdf',
+          mimeType: 'application/pdf',
+          byteSize: fileBuffer.length,
+          base64Content: fileBuffer.toString('base64'),
+        },
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('rejects application documents whose extension does not match the selected type', async () => {
+    const scenario = await seedScenario();
+    const submitted = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
+      buyerName: 'Mismatched Document Buyer',
+      buyerEmail: `mismatched-document-buyer-${Date.now()}@example.com`,
+    });
+    createdState.dealIds.push(Number(submitted.dealId));
 
     await expect(
       scenario.caller.distribution.partner.submitReferralDocument({
         dealId: Number(submitted.dealId),
         templateId: scenario.templateId,
+        file: {
+          fileName: 'sharing-permission.txt',
+          mimeType: 'application/pdf',
+          byteSize: 8,
+          base64Content: Buffer.from('%PDF-1.4').toString('base64'),
+        },
       }),
     ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-      message: expect.stringContaining('Secure deal-document storage'),
+      code: 'BAD_REQUEST',
+      message: 'Upload a PDF, JPEG, PNG, or WebP document.',
     });
   }, INTEGRATION_TIMEOUT_MS);
 

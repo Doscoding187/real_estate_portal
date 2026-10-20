@@ -77,6 +77,11 @@ import { getProgramReadinessByDevelopmentId } from './services/distributionProgr
 import {
   assertDealPayoutReady,
   getDealChecklist,
+  MAX_DEAL_DOCUMENT_BASE64_CHARS,
+  MAX_DEAL_DOCUMENT_BYTES,
+  readManagerDealDocument,
+  readPartnerDealDocument,
+  submitPartnerDealDocument,
   upsertDealDocumentStatus,
 } from './services/distributionDealDocumentsService';
 import { resolveDealRequirementSnapshots } from './services/distributionDealRequirementsSnapshotService';
@@ -110,6 +115,7 @@ import {
   uploadPartnerReferralIntakeEvidence,
 } from './services/distributionReferralIntakeWorkflowService';
 import {
+  DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES,
   DISTRIBUTION_REFERRAL_INTAKE_PAUSED_MESSAGE,
   distributionReferralIntakePolicyDraftSchema,
 } from '../shared/distributionReferralIntake';
@@ -206,6 +212,12 @@ const TEAM_REGISTRATION_AREA_VALUES = [
 const VIEWING_RESCHEDULE_LIMIT = 3;
 const VIEWING_RESCHEDULE_LOCK_HOURS = 4;
 const DISTRIBUTION_IDENTITY_VALUES = [...DISTRIBUTION_IDENTITY_TYPE_VALUES] as const;
+const DEAL_DOCUMENT_FILE_SCHEMA = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  mimeType: z.enum(DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES),
+  byteSize: z.number().int().positive().max(MAX_DEAL_DOCUMENT_BYTES),
+  base64Content: z.string().min(1).max(MAX_DEAL_DOCUMENT_BASE64_CHARS),
+});
 const AFFORDABILITY_LOCATION_FILTER_SCHEMA = z
   .object({
     province: z.string().trim().max(100).optional(),
@@ -5472,19 +5484,10 @@ const managerDistributionRouter = router({
         templateId: z.number().int().positive(),
         status: z.enum(['pending', 'received', 'verified', 'rejected']),
         notes: z.string().max(2000).nullable().optional(),
-        submittedFileUrl: z.string().trim().url().max(2048).nullable().optional(),
-        submittedFileName: z.string().trim().max(255).nullable().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
-      if (input.submittedFileUrl || input.submittedFileName) {
-        throw new TRPCError({
-          code: 'PRECONDITION_FAILED',
-          message:
-            'Secure deal-document storage and authorized developer delivery are not available yet.',
-        });
-      }
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       await assertDistributionIdentity(db, ctx.user!, 'manager');
@@ -5495,12 +5498,59 @@ const managerDistributionRouter = router({
           templateId: input.templateId,
           status: input.status,
           notes: input.notes,
-          submittedFileUrl: input.submittedFileUrl,
-          submittedFileName: input.submittedFileName,
         },
         ctx.user!.id,
         { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
       );
+    }),
+
+  uploadDealDocument: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+        notes: z.string().max(2000).nullable().optional(),
+        file: DEAL_DOCUMENT_FILE_SCHEMA,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await upsertDealDocumentStatus(
+        {
+          dealId: input.dealId,
+          templateId: input.templateId,
+          status: 'received',
+          notes: input.notes,
+          file: input.file,
+        },
+        ctx.user!.id,
+        { skipAssignmentCheck: ctx.user!.role === 'super_admin' },
+      );
+    }),
+
+  downloadDealDocument: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await readManagerDealDocument({
+        dealId: input.dealId,
+        templateId: input.templateId,
+        actorUserId: ctx.user!.id,
+        skipAssignmentCheck: ctx.user!.role === 'super_admin',
+      });
     }),
 
   listViewings: protectedProcedure
@@ -6831,14 +6881,43 @@ const partnerDistributionRouter = router({
         dealId: z.number().int().positive(),
         templateId: z.number().int().positive(),
         notes: z.string().trim().max(1000).nullable().optional(),
+        file: DEAL_DOCUMENT_FILE_SCHEMA,
       }),
     )
-    .mutation(() => {
+    .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message:
-          'Secure deal-document storage and authorized developer delivery are not available yet.',
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await submitPartnerDealDocument({
+        dealId: input.dealId,
+        templateId: input.templateId,
+        actorUserId: ctx.user!.id,
+        actorRole: String(ctx.user!.role || ''),
+        notes: input.notes,
+        file: input.file,
+      });
+    }),
+
+  downloadReferralDocument: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await readPartnerDealDocument({
+        dealId: input.dealId,
+        templateId: input.templateId,
+        actorUserId: ctx.user!.id,
+        actorRole: String(ctx.user!.role || ''),
       });
     }),
 

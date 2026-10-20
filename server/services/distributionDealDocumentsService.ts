@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
@@ -7,14 +9,49 @@ import {
   distributionManagerAssignments,
   users,
 } from '../../drizzle/schema';
+import { DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES } from '../../shared/distributionReferralIntake';
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
 import { readFrozenPayoutTerms } from './distributionCommissionService';
 import { resolveDealRequirementSnapshots } from './distributionDealRequirementsSnapshotService';
+import {
+  createDistributionDealDocumentReference,
+  createDistributionDealDocumentStorageKey,
+  deleteDistributionDealDocument,
+  DistributionReferralEvidenceStorageError,
+  parseDistributionDealDocumentReference,
+  readDistributionDealDocument,
+  storeDistributionDealDocument,
+} from './distributionReferralEvidenceStorage';
 
 export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
 type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
+
+export const MAX_DEAL_DOCUMENT_BYTES = 10 * 1024 * 1024;
+export const MAX_DEAL_DOCUMENT_BASE64_CHARS = Math.ceil(MAX_DEAL_DOCUMENT_BYTES / 3) * 4;
+
+export type DealDocumentFileInput = {
+  fileName: string;
+  mimeType: string;
+  base64Content: string;
+  byteSize: number;
+};
+
+type DecodedDealDocumentFile = {
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+  byteSize: number;
+};
+
+const DEAL_DOCUMENT_MIME_BY_EXTENSION: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
 
 type ChecklistOptions = {
   skipAssignmentCheck?: boolean;
@@ -52,6 +89,8 @@ export type DealChecklistPayload = {
     receivedAt: string | null;
     verifiedAt: string | null;
     submittedAt: string | null;
+    submittedFileName: string | null;
+    hasFile: boolean;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
     submittedBy: { userId: number; name?: string } | null;
@@ -72,8 +111,16 @@ type UpsertDealDocumentStatusInput = {
   templateId: number;
   status: EditableDealDocumentStatus;
   notes?: string | null;
-  submittedFileUrl?: string | null;
-  submittedFileName?: string | null;
+  file?: DealDocumentFileInput;
+};
+
+type PartnerDealDocumentUploadInput = {
+  dealId: number;
+  templateId: number;
+  actorUserId: number;
+  actorRole: string;
+  notes?: string | null;
+  file: DealDocumentFileInput;
 };
 
 function toNumberOrNull(value: unknown) {
@@ -94,6 +141,147 @@ function formatUserDisplayName(row: {
 
 function sqlDateNow() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function dealDocumentBadRequest(message: string) {
+  return new TRPCError({
+    code: 'BAD_REQUEST',
+    message,
+  });
+}
+
+function normalizeDealDocumentFileName(fileName: string) {
+  const base = path.posix
+    .basename(String(fileName || '').replace(/\\/g, '/'))
+    .split('')
+    .filter(character => {
+      const code = character.charCodeAt(0);
+      return code >= 32 && code !== 127;
+    })
+    .join('')
+    .trim();
+  if (!base || base === '.' || base === '..' || base.length > 255) {
+    throw dealDocumentBadRequest('Choose a valid file name for the document.');
+  }
+  const extension = path.extname(base).toLowerCase();
+  const expectedMimeType = DEAL_DOCUMENT_MIME_BY_EXTENSION[extension];
+  if (!expectedMimeType) {
+    throw dealDocumentBadRequest('Upload a PDF, JPEG, PNG, or WebP document.');
+  }
+  return { fileName: base, expectedMimeType };
+}
+
+function decodeDealDocumentFile(input: DealDocumentFileInput): DecodedDealDocumentFile {
+  const { fileName, expectedMimeType } = normalizeDealDocumentFileName(input.fileName);
+  const mimeType = String(input.mimeType || '').trim().toLowerCase();
+  if (!(DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES as readonly string[]).includes(mimeType)) {
+    throw dealDocumentBadRequest('Upload a PDF, JPEG, PNG, or WebP document.');
+  }
+  if (mimeType !== expectedMimeType) {
+    throw dealDocumentBadRequest('The file extension does not match the selected file type.');
+  }
+  if (
+    !Number.isSafeInteger(input.byteSize) ||
+    input.byteSize < 1 ||
+    input.byteSize > MAX_DEAL_DOCUMENT_BYTES
+  ) {
+    throw dealDocumentBadRequest('Documents must be between 1 byte and 10 MB.');
+  }
+  const base64Content = String(input.base64Content || '').trim();
+  if (
+    !base64Content ||
+    base64Content.length > MAX_DEAL_DOCUMENT_BASE64_CHARS ||
+    base64Content.length % 4 !== 0 ||
+    !/^[A-Za-z0-9+/]*={0,2}$/.test(base64Content)
+  ) {
+    throw dealDocumentBadRequest('The uploaded document could not be read.');
+  }
+  const buffer = Buffer.from(base64Content, 'base64');
+  if (buffer.length !== input.byteSize || buffer.length > MAX_DEAL_DOCUMENT_BYTES) {
+    throw dealDocumentBadRequest('The uploaded document could not be read.');
+  }
+  return { fileName, mimeType, buffer, byteSize: buffer.length };
+}
+
+function toDealDocumentStorageError(error: unknown): never {
+  if (error instanceof DistributionReferralEvidenceStorageError) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: error.message,
+    });
+  }
+  throw error;
+}
+
+function assertPartnerOwnsDeal(
+  dealScope: { agentId: number | null },
+  actorUserId: number,
+  actorRole: string,
+  action: 'update' | 'view' = 'update',
+) {
+  if (actorRole === 'super_admin') return;
+  if (dealScope.agentId !== Number(actorUserId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: `You can only ${action} referrals you submitted.`,
+    });
+  }
+}
+
+async function readStoredDealDocument(
+  db: any,
+  input: {
+    dealId: number;
+    templateId: number;
+  },
+) {
+  const [row] = await db
+    .select({
+      submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+      submittedFileName: distributionDealDocuments.submittedFileName,
+    })
+    .from(distributionDealDocuments)
+    .where(
+      and(
+        eq(distributionDealDocuments.dealId, input.dealId),
+        eq(distributionDealDocuments.developmentRequiredDocumentId, input.templateId),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Document requirement record not found.',
+    });
+  }
+  const reference = parseDistributionDealDocumentReference(row.submittedFileUrl);
+  if (!reference) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'No secure file is attached to this document.',
+    });
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await readDistributionDealDocument(reference);
+  } catch (error) {
+    toDealDocumentStorageError(error);
+  }
+
+  const fileName = String(row.submittedFileName || '').trim() || `deal-document-${input.templateId}`;
+  const mimeType =
+    DEAL_DOCUMENT_MIME_BY_EXTENSION[path.extname(fileName).toLowerCase()] ||
+    'application/octet-stream';
+  return {
+    dealId: input.dealId,
+    templateId: input.templateId,
+    fileName,
+    mimeType,
+    byteSize: buffer.length,
+    base64Content: buffer.toString('base64'),
+  };
 }
 
 async function assertAssignedManagerForDevelopment(
@@ -142,6 +330,7 @@ async function getDealScope(db: any, dealId: number) {
       dealId: distributionDeals.id,
       externalRef: distributionDeals.externalRef,
       buyerName: distributionDeals.buyerName,
+      agentId: distributionDeals.agentId,
       developmentId: distributionDeals.developmentId,
       programId: distributionDeals.programId,
       currentStage: distributionDeals.currentStage,
@@ -168,6 +357,7 @@ async function getDealScope(db: any, dealId: number) {
     dealId: Number(deal.dealId),
     dealRef: String(deal.externalRef || `DEAL-${deal.dealId}`),
     buyerName: deal.buyerName || null,
+    agentId: deal.agentId ? Number(deal.agentId) : null,
     developmentId: Number(deal.developmentId),
     programId: Number(deal.programId),
     developmentName: `Development #${deal.developmentId}`,
@@ -240,6 +430,8 @@ export async function getDealChecklist(
           receivedBy: distributionDealDocuments.receivedBy,
           verifiedBy: distributionDealDocuments.verifiedBy,
           submittedBy: distributionDealDocuments.submittedBy,
+          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+          submittedFileName: distributionDealDocuments.submittedFileName,
           notes: distributionDealDocuments.notes,
         })
         .from(distributionDealDocuments)
@@ -296,6 +488,8 @@ export async function getDealChecklist(
         receivedAt: persisted?.receivedAt || null,
         verifiedAt: persisted?.verifiedAt || null,
         submittedAt: persisted?.submittedAt || null,
+        submittedFileName: persisted?.submittedFileName || null,
+        hasFile: Boolean(parseDistributionDealDocumentReference(persisted?.submittedFileUrl)),
         receivedBy: receivedById
           ? {
               userId: receivedById,
@@ -432,30 +626,16 @@ export async function getDealChecklist(
   };
 }
 
-export async function upsertDealDocumentStatus(
+async function writeDealDocumentRecord(
   input: UpsertDealDocumentStatusInput,
   actorUserId: number,
-  options?: ChecklistOptions,
 ) {
-  if (input.submittedFileUrl?.trim() || input.submittedFileName?.trim()) {
-    throw new TRPCError({
-      code: 'PRECONDITION_FAILED',
-      message:
-        'Secure deal-document storage and authorized developer delivery are not available yet.',
-    });
-  }
-
+  const decodedFile = input.file ? decodeDealDocumentFile(input.file) : null;
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
   const dealScope = await getDealScope(db, input.dealId);
   assertDealIsMutable(dealScope.currentStage, 'update checklist documents');
-  await assertAssignedManagerForDevelopment(db, {
-    developmentId: dealScope.developmentId,
-    actorUserId,
-    dealManagerUserId: dealScope.managerUserId,
-    skipAssignmentCheck: options?.skipAssignmentCheck,
-  });
 
   const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
     {
@@ -477,74 +657,94 @@ export async function upsertDealDocumentStatus(
     });
   }
 
-  await db.transaction(async tx => {
-    const [existing] = await tx
-      .select({
-        id: distributionDealDocuments.id,
-        status: distributionDealDocuments.status,
-        receivedAt: distributionDealDocuments.receivedAt,
-        verifiedAt: distributionDealDocuments.verifiedAt,
-        submittedFileUrl: distributionDealDocuments.submittedFileUrl,
-        submittedFileName: distributionDealDocuments.submittedFileName,
-        submittedAt: distributionDealDocuments.submittedAt,
-        receivedBy: distributionDealDocuments.receivedBy,
-        verifiedBy: distributionDealDocuments.verifiedBy,
-        submittedBy: distributionDealDocuments.submittedBy,
-        notes: distributionDealDocuments.notes,
-      })
-      .from(distributionDealDocuments)
-      .where(
-        and(
-          eq(distributionDealDocuments.dealId, input.dealId),
-          eq(distributionDealDocuments.developmentRequiredDocumentId, input.templateId),
-        ),
-      )
-      .limit(1);
+  let storedReference: string | null = null;
+  try {
+    await db.transaction(async tx => {
+      const [existing] = await tx
+        .select({
+          id: distributionDealDocuments.id,
+          status: distributionDealDocuments.status,
+          receivedAt: distributionDealDocuments.receivedAt,
+          verifiedAt: distributionDealDocuments.verifiedAt,
+          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+          submittedFileName: distributionDealDocuments.submittedFileName,
+          submittedAt: distributionDealDocuments.submittedAt,
+          receivedBy: distributionDealDocuments.receivedBy,
+          verifiedBy: distributionDealDocuments.verifiedBy,
+          submittedBy: distributionDealDocuments.submittedBy,
+          notes: distributionDealDocuments.notes,
+        })
+        .from(distributionDealDocuments)
+        .where(
+          and(
+            eq(distributionDealDocuments.dealId, input.dealId),
+            eq(distributionDealDocuments.developmentRequiredDocumentId, input.templateId),
+          ),
+        )
+        .limit(1);
 
-    if (!existing) {
-      throw new TRPCError({
-        code: 'PRECONDITION_FAILED',
-        message: 'The saved document status record is unavailable for this referral.',
-      });
-    }
+      if (!existing) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'The saved document status record is unavailable for this referral.',
+        });
+      }
 
-    const now = sqlDateNow();
-    let receivedAt = existing?.receivedAt || null;
-    let verifiedAt = existing?.verifiedAt || null;
-    let submittedAt = existing?.submittedAt || null;
-    let receivedBy = existing?.receivedBy ? Number(existing.receivedBy) : null;
-    let verifiedBy = existing?.verifiedBy ? Number(existing.verifiedBy) : null;
-    let submittedBy = existing?.submittedBy ? Number(existing.submittedBy) : null;
-    const submittedFileUrl =
-      typeof input.submittedFileUrl === 'undefined'
-        ? (existing?.submittedFileUrl ?? null)
-        : input.submittedFileUrl;
-    const submittedFileName =
-      typeof input.submittedFileName === 'undefined'
-        ? (existing?.submittedFileName ?? null)
-        : input.submittedFileName;
+      if (decodedFile && existing.status === 'verified') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Verified documents cannot be replaced.',
+        });
+      }
 
-    if (input.status === 'received') {
-      receivedAt = receivedAt || now;
-      receivedBy = actorUserId;
-      if (submittedFileUrl) {
-        submittedAt = submittedAt || now;
+      const now = sqlDateNow();
+      let receivedAt = existing.receivedAt || null;
+      let verifiedAt = existing.verifiedAt || null;
+      let submittedAt = existing.submittedAt || null;
+      let receivedBy = existing.receivedBy ? Number(existing.receivedBy) : null;
+      let verifiedBy = existing.verifiedBy ? Number(existing.verifiedBy) : null;
+      let submittedBy = existing.submittedBy ? Number(existing.submittedBy) : null;
+      let submittedFileUrl = existing.submittedFileUrl ?? null;
+      let submittedFileName = existing.submittedFileName ?? null;
+
+      if (decodedFile) {
+        const storageKey = createDistributionDealDocumentStorageKey(
+          input.dealId,
+          randomUUID(),
+        );
+        const stored = await storeDistributionDealDocument({
+          storageKey,
+          buffer: decodedFile.buffer,
+          mimeType: decodedFile.mimeType,
+        });
+        storedReference = createDistributionDealDocumentReference({
+          storageAdapter: stored.adapter,
+          storageKey: stored.storageKey,
+        });
+        submittedFileUrl = storedReference;
+        submittedFileName = decodedFile.fileName;
+        submittedAt = now;
         submittedBy = actorUserId;
       }
-    } else if (input.status === 'verified') {
-      receivedAt = receivedAt || now;
-      receivedBy = receivedBy || actorUserId;
-      verifiedAt = verifiedAt || now;
-      verifiedBy = actorUserId;
-      if (submittedFileUrl) {
-        submittedAt = submittedAt || now;
-        submittedBy = submittedBy || actorUserId;
+
+      if (input.status === 'received') {
+        receivedAt = receivedAt || now;
+        receivedBy = actorUserId;
+        if (submittedFileUrl) {
+          submittedBy = actorUserId;
+        }
+      } else if (input.status === 'verified') {
+        receivedAt = receivedAt || now;
+        receivedBy = receivedBy || actorUserId;
+        verifiedAt = verifiedAt || now;
+        verifiedBy = actorUserId;
+        if (submittedFileUrl) {
+          submittedBy = submittedBy || actorUserId;
+        }
       }
-    }
 
-    const notes = typeof input.notes === 'undefined' ? (existing?.notes ?? null) : input.notes;
+      const notes = typeof input.notes === 'undefined' ? (existing.notes ?? null) : input.notes;
 
-    if (existing) {
       await tx
         .update(distributionDealDocuments)
         .set({
@@ -560,26 +760,109 @@ export async function upsertDealDocumentStatus(
           notes,
         })
         .where(eq(distributionDealDocuments.id, Number(existing.id)));
-      return;
-    }
-
-    await tx.insert(distributionDealDocuments).values({
-      dealId: input.dealId,
-      developmentRequiredDocumentId: input.templateId,
-      status: input.status,
-      receivedAt,
-      verifiedAt,
-      submittedFileUrl,
-      submittedFileName,
-      submittedAt,
-      submittedBy,
-      receivedBy,
-      verifiedBy,
-      notes: notes ?? null,
     });
+  } catch (error) {
+    if (storedReference) {
+      const reference = parseDistributionDealDocumentReference(storedReference);
+      if (reference) {
+        await deleteDistributionDealDocument(reference).catch(() => undefined);
+      }
+    }
+    if (error instanceof DistributionReferralEvidenceStorageError) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: error.message,
+      });
+    }
+    throw error;
+  }
+
+  return {
+    dealId: dealScope.dealId,
+    templateId: input.templateId,
+    status: input.status,
+    fileName: decodedFile?.fileName ?? null,
+    submittedAt: input.file ? sqlDateNow() : null,
+  };
+}
+
+export async function upsertDealDocumentStatus(
+  input: UpsertDealDocumentStatusInput,
+  actorUserId: number,
+  options?: ChecklistOptions,
+) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  await assertAssignedManagerForDevelopment(db, {
+    developmentId: dealScope.developmentId,
+    actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
+    skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
+  await writeDealDocumentRecord(input, actorUserId);
   return await getDealChecklist(input.dealId, actorUserId, options);
+}
+
+export async function submitPartnerDealDocument(input: PartnerDealDocumentUploadInput) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  assertPartnerOwnsDeal(dealScope, input.actorUserId, input.actorRole);
+  assertDealIsMutable(dealScope.currentStage, 'upload checklist documents');
+
+  return await writeDealDocumentRecord(
+    {
+      dealId: input.dealId,
+      templateId: input.templateId,
+      status: 'received',
+      notes: input.notes,
+      file: input.file,
+    },
+    input.actorUserId,
+  );
+}
+
+export async function readManagerDealDocument(input: {
+  dealId: number;
+  templateId: number;
+  actorUserId: number;
+  skipAssignmentCheck?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  await assertAssignedManagerForDevelopment(db, {
+    developmentId: dealScope.developmentId,
+    actorUserId: input.actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
+    skipAssignmentCheck: input.skipAssignmentCheck,
+  });
+  return await readStoredDealDocument(db, {
+    dealId: input.dealId,
+    templateId: input.templateId,
+  });
+}
+
+export async function readPartnerDealDocument(input: {
+  dealId: number;
+  templateId: number;
+  actorUserId: number;
+  actorRole: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  assertPartnerOwnsDeal(dealScope, input.actorUserId, input.actorRole, 'view');
+  return await readStoredDealDocument(db, {
+    dealId: input.dealId,
+    templateId: input.templateId,
+  });
 }
 
 export async function assertDealPayoutReady(

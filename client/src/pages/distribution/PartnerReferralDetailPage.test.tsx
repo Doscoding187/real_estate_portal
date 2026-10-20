@@ -39,6 +39,12 @@ vi.mock('@/lib/trpc', () => ({
         getReferral: {
           useQuery: (...args: unknown[]) => mockGetReferral(...args),
         },
+        submitReferralDocument: {
+          useMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
+        },
+        downloadReferralDocument: {
+          useMutation: () => ({ isPending: false, mutateAsync: vi.fn() }),
+        },
       },
       referrer: {
         myViewings: {
@@ -101,6 +107,8 @@ const referralFixture = {
       isRequired: true,
       sortOrder: 1,
       status: 'pending',
+      submittedFileName: null,
+      hasFile: false,
     },
     {
       templateId: 12,
@@ -110,6 +118,8 @@ const referralFixture = {
       isRequired: true,
       sortOrder: 2,
       status: 'verified',
+      submittedFileName: 'buyer-id.pdf',
+      hasFile: true,
     },
   ],
   programTermsSnapshot: { requiredDocuments: [] },

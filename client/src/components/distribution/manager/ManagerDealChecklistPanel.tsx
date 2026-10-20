@@ -39,6 +39,8 @@ type DealChecklist = {
     receivedAt: string | null;
     verifiedAt: string | null;
     submittedAt?: string | null;
+    submittedFileName?: string | null;
+    hasFile?: boolean;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
     submittedBy?: { userId: number; name?: string } | null;
@@ -75,15 +77,21 @@ function formatActor(actor: { userId: number; name?: string } | null) {
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
+  uploadingTemplateId,
+  downloadingTemplateId,
   isBatchSaving,
   isSavingPayoutBasis,
   onRecordPayoutBasis,
   onUpdateDocumentStatus,
+  onUploadDocument,
+  onDownloadDocument,
   onMarkAllRequiredReceived,
   onMarkAllRequiredVerified,
 }: {
   checklist: DealChecklist;
   savingTemplateId: number | null;
+  uploadingTemplateId?: number | null;
+  downloadingTemplateId?: number | null;
   isBatchSaving?: boolean;
   isSavingPayoutBasis?: boolean;
   onRecordPayoutBasis?: (amount: number) => Promise<void>;
@@ -92,6 +100,8 @@ export function ManagerDealChecklistPanel({
     status: EditableDealDocumentStatus;
     notes?: string | null;
   }) => Promise<void>;
+  onUploadDocument?: (input: { templateId: number; file: File }) => Promise<void>;
+  onDownloadDocument?: (templateId: number) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
@@ -159,8 +169,9 @@ export function ManagerDealChecklistPanel({
         </CardContent>
       </Card>
 
-      <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-        This workspace records document status, but secure file storage and developer delivery are not connected yet.
+      <p className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+        Files are stored in private Distribution storage and are available only to authorized partners
+        and assigned managers. Developer delivery is not connected yet.
       </p>
 
       {checklist.commissionSummary.referrerCommissionType === 'percentage' ? (
@@ -359,7 +370,55 @@ export function ManagerDealChecklistPanel({
                 <p className="mt-2 text-xs text-amber-700">
                   This saved requirement cannot be matched to its document record. It remains a blocker until an administrator reviews it.
                 </p>
-              ) : null}
+              ) : (
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border bg-slate-50 p-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-600">Secure document</p>
+                    <p className="text-sm text-slate-900">
+                      {document.hasFile
+                        ? document.submittedFileName || 'Attached file'
+                        : 'No file attached'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {document.hasFile && document.templateId !== null && onDownloadDocument ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={downloadingTemplateId === document.templateId}
+                        onClick={() => void onDownloadDocument?.(document.templateId as number)}
+                      >
+                        {downloadingTemplateId === document.templateId ? 'Opening…' : 'Download'}
+                      </Button>
+                    ) : null}
+                    {onUploadDocument &&
+                    document.templateId !== null &&
+                    document.isActive &&
+                    document.status !== 'verified' ? (
+                      <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50">
+                        {uploadingTemplateId === document.templateId
+                          ? 'Uploading…'
+                          : document.hasFile
+                            ? 'Replace file'
+                            : 'Attach file'}
+                        <input
+                          type="file"
+                          className="sr-only"
+                          accept=".pdf,.jpg,.jpeg,.png,.webp"
+                          disabled={uploadingTemplateId === document.templateId}
+                          onChange={event => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (file && document.templateId !== null) {
+                              void onUploadDocument({ templateId: document.templateId, file });
+                            }
+                          }}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </div>
+              )}
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>
                   Received: {document.receivedAt || 'Pending'} | {formatActor(document.receivedBy)}
