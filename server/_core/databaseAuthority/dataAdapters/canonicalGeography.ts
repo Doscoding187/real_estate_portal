@@ -15,6 +15,7 @@ import {
   GOVERNED_RUNTIME_REFERENCE_ROWS,
   GOVERNED_RUNTIME_REFERENCE_VERSION,
 } from './governedRuntimeGeography';
+import { runtimePlaceStatus } from '../../../../shared/placeReadiness';
 
 export const CANONICAL_GEOGRAPHY_VERSION = 'canonical-geography-v2' as const;
 
@@ -249,6 +250,7 @@ type CityReference = {
   latitude?: string | number;
   longitude?: string | number;
   publicationStatus?: 'verified' | 'provisional';
+  licensingClassification?: string;
 };
 
 type SuburbReference = {
@@ -259,6 +261,7 @@ type SuburbReference = {
   latitude?: string | number;
   longitude?: string | number;
   publicationStatus?: 'verified' | 'provisional';
+  licensingClassification?: string;
 };
 
 const GOVERNED_CITY_REFERENCES: readonly CityReference[] = GOVERNED_RUNTIME_REFERENCE_ROWS.filter(
@@ -274,6 +277,7 @@ const GOVERNED_CITY_REFERENCES: readonly CityReference[] = GOVERNED_RUNTIME_REFE
   ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
   ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
   ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
+  ...(row.licensingClassification ? { licensingClassification: row.licensingClassification } : {}),
 }));
 
 const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] =
@@ -291,6 +295,9 @@ const GOVERNED_SUBURB_REFERENCES: readonly SuburbReference[] =
     ...(row.latitude !== undefined ? { latitude: row.latitude } : {}),
     ...(row.longitude !== undefined ? { longitude: row.longitude } : {}),
     ...(row.publicationStatus ? { publicationStatus: row.publicationStatus } : {}),
+    ...(row.licensingClassification
+      ? { licensingClassification: row.licensingClassification }
+      : {}),
   }));
 
 const GOVERNED_PROVINCE_REFERENCES: readonly ProvinceReference[] =
@@ -444,7 +451,10 @@ async function ensureCity(
       item.longitude ?? null,
       1,
       item.slug,
-      item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
+      runtimePlaceStatus({
+        publicationStatus: item.publicationStatus,
+        licensingClassification: item.licensingClassification,
+      }),
     ],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
@@ -488,7 +498,10 @@ async function ensureSuburb(
       item.longitude ?? null,
       item.postalCode ?? null,
       item.slug,
-      item.publicationStatus === 'provisional' ? 'provisional' : 'verified',
+      runtimePlaceStatus({
+        publicationStatus: item.publicationStatus,
+        licensingClassification: item.licensingClassification,
+      }),
     ],
   );
   const id = Number(result?.[0]?.insertId ?? result?.insertId);
