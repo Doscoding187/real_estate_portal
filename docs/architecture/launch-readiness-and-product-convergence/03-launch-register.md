@@ -135,6 +135,22 @@ This packet authorises no protected database release, no hosted execution and no
 activation, and it does not reopen an accepted scope or change B08–B18, LRC-SUPPORT-001 or the
 paid-opening NO-GO.
 
+## Free route decided: corroboration instead of licensing — 2026-10-20
+
+[Packet 65](65-free-route-corroboration-and-first-party-locations-2026-10-20.md) records the
+source ladder, the corroboration rule and the first-party location mechanism.
+
+| Item                  | Recorded                                                                                                                                                                                                                                                                                                                         | Effect                                                                                                                                                                                                                                 |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Free sources          | GeoNames (CC BY 4.0), geoBoundaries gbOpen (CC BY 4.0), NGA GNS (unrestricted), Wikidata (CC0) are all commercially reusable with attribution. OpenStreetMap is usable only insubstantially or non-systematically. Wikipedia prose is CC BY-SA and must never enter a database; Wikidata is the CC0 route.                       | No licence purchase is required to build the location database. The free route is exactly what the repository already uses.                                                                                                            |
+| Real constraint       | The admitted package shows Rosebank, Krugersdorp, Vereeniging, Magaliesburg, Meyerton, Roodepoort and Heidelberg are provisional because `adjudication.basis` is `single_source_identity` — one source only — not because of licensing or doubt. 1,377 Gauteng places are one corroboration away from verified.                  | The cure is a second independent source, which is a download and a script. Money was never the constraint.                                                                                                                             |
+| First-party locations | The unresolved-location path already exists and is unused: `buildUnresolvedDraftLocation` preserves the typed place with `needs_confirmation`, and publication is held rather than resolved over an unknown place. The observation never reaches the admission pipeline, so nobody sees the places our agents are trying to use. | The collector is connected: capture the agent observation, queue it for governed admission, tell the agent it was recorded, and corroborate it against one licensed source — the same two-source rule that promotes every other place. |
+| Professional input    | One scoped South African lawyer opinion, when there is revenue, on how a SA court characterises our schema and whether the MDB and Stats SA non-resale clauses bind a paid product. Edward's sister is a lawyer; the question is narrow and answerable in writing.                                                               | Deferrable. Not a licence decision and not a launch blocker.                                                                                                                                                                           |
+
+This packet authorises no protected database release, no hosted execution and no paid
+activation, and it does not reopen an accepted scope or change B08–B18, LRC-SUPPORT-001 or the
+paid-opening NO-GO.
+
 ## B17 window admission prepared — 2026-10-18
 
 [Packet 53](53-b17-window-and-driver-admission-2026-10-18.md) records the
