@@ -9,10 +9,6 @@ import { getProvinceGuideContent } from '../shared/provinceGuideContent';
 import { getCityGuideContent } from '../shared/cityGuideContent';
 import { SUBURB_GUIDE_PILOT } from '../shared/suburbGuidePolicy';
 
-function section(title: string, body: string[]): string {
-  return [`## ${title}`, '', ...body, ''].join('\n');
-}
-
 function renderProvince(): string {
   const guide = getProvinceGuideContent('gauteng');
   if (!guide) throw new Error('The Gauteng guide content is missing.');
