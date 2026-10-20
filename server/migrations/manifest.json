@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0140_distribution_deal_referral_received_backfill.sql",
+  "expectedHead": "0141_distribution_deal_required_document_fk_restrict.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1471,6 +1471,17 @@
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 141,
+      "filename": "0141_distribution_deal_required_document_fk_restrict.sql",
+      "checksum": "3b6bab45dd01d8a74a45757443efde34fdd53a73a5bba82f69acac8b6ee0138c",
+      "parent": "0140_distribution_deal_referral_received_backfill.sql",
+      "parentChecksum": "61a3e5676b6b0f1c52eaa9eebca4167399aaedfc94dcde80a2dbc6aa8f25504e",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the Distribution required-template FK reconciliation, 2026-10-21; migration authoring and disposable worktree verification"
     }
   ]
 }

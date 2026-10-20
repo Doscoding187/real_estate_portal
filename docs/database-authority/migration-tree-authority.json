@@ -1610,6 +1610,14 @@
       "approvedFiles": [
         "server/migrations/0140_distribution_deal_referral_received_backfill.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0141_distribution_deal_required_document_fk_restrict.sql",
+      "classification": "canonical active",
+      "purpose": "Prevents deleting a required document template from cascading away Distribution deal-document status rows.",
+      "approvedFiles": [
+        "server/migrations/0141_distribution_deal_required_document_fk_restrict.sql"
+      ]
     }
   ],
   "prohibitedPaths": [
