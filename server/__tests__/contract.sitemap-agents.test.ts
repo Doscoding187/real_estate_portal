@@ -145,7 +145,10 @@ describe('province editorial sitemap readiness', () => {
   it('excludes local review drafts instead of publishing every verified place', async () => {
     const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
     expect(capture.body).toContain('<urlset');
-    expect(capture.body).not.toContain('<loc>');
+    // The national entry is always published; no place guide is listed while none is published.
+    expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/south-africa</loc>');
+    expect(capture.body).not.toContain('/gauteng<');
+    expect(capture.body).not.toContain('/johannesburg');
     expect(getDbMock).not.toHaveBeenCalled();
   });
   it('lists a published province guide without requiring inventory', async () => {

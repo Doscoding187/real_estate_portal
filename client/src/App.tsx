@@ -35,6 +35,7 @@ const Favorites = lazy(() => import('./pages/Favorites'));
 const Agents = lazy(() => import('./pages/Agents'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
 const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
+const CountryDiscoveryPage = lazy(() => import('./pages/CountryDiscoveryPage'));
 const ProvincePage = lazy(() => import('./pages/ProvincePage'));
 const CityPage = lazy(() => import('./pages/CityPage'));
 const SmartDashboardRedirect = lazy(() => import('./components/SmartDashboardRedirect'));
@@ -82,9 +83,7 @@ const ServiceProviderReviewsPage = lazy(
   () => import('./pages/services/ServiceProviderReviewsPage'),
 );
 const NavLandingPage = lazy(() => import('./pages/NavLandingPage'));
-const AssistedOnboardingRequestPage = lazy(
-  () => import('./pages/AssistedOnboardingRequestPage'),
-);
+const AssistedOnboardingRequestPage = lazy(() => import('./pages/AssistedOnboardingRequestPage'));
 const ProDashboardPage = lazy(() => import('./pages/pro/ProDashboardPage'));
 const ProProfilePage = lazy(() => import('./pages/pro/ProProfilePage'));
 const ProviderOnboardingWizard = lazy(() =>
@@ -748,6 +747,11 @@ function Router() {
           <Route path="/farms-and-smallholdings" component={FarmsAndSmallholdings} />
 
           <Route path={'/404'} component={NotFound} />
+
+          {/* The national entry point sits above the province guides. It must
+              be declared before the /:province route so it is not captured
+              by it. */}
+          <Route path="/south-africa" component={CountryDiscoveryPage} />
 
           {/* ============================================================== */}
           {/* 3. VALIDATED NEUTRAL GEOGRAPHY AUTHORITY                       */}

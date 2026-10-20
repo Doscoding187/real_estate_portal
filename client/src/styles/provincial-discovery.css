@@ -1282,3 +1282,52 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* National discovery entry. One card per province, in the same visual language as the
+   province guide's city entries. */
+.country-province-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.country-province-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 1rem 1.25rem;
+}
+
+.country-province-card > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #11243f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.country-province-card > a:hover {
+  color: #005ca8;
+}
+
+.country-province-card p {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.country-province-card__areas {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.provincial-section__link-note {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: #475569;
+}

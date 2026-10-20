@@ -9,6 +9,7 @@ import { publicDevelopmentEligibilityConditions } from '../services/publicDevelo
 import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyEligibilityService';
 
 import { getPublishedCityGuides } from '../../shared/cityGuideContent';
+import { COUNTRY_DISCOVERY_PATH } from '../../shared/countryDiscovery';
 import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
 import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
 import { getPublishedSuburbGuidePaths } from '../../shared/suburbGuidePolicy';
@@ -174,6 +175,7 @@ router.get('/sitemap-guides.xml', (req, res) => {
   sendXml(
     res,
     buildUrlSet([
+      { loc: toAbsoluteUrl(COUNTRY_DISCOVERY_PATH, baseUrl) },
       ...getPublishedProvinceGuides().map(guide => ({
         loc: toAbsoluteUrl(`/${guide.slug}`, baseUrl),
       })),

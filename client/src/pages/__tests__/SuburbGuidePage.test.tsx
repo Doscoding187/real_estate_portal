@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   }>,
   setLocationCalls: [] as string[],
   authState: { isAuthenticated: false, loading: false },
+  suburbError: false,
 }));
 
 vi.mock('@/lib/trpc', () => ({
@@ -25,7 +26,7 @@ vi.mock('@/lib/trpc', () => ({
           return {
             data: mocks.suburbData,
             isLoading: false,
-            isError: false,
+            isError: mocks.suburbError,
             refetch: vi.fn(),
           };
         },
@@ -271,6 +272,7 @@ function withFeedItems(tabs: string[]) {
 
 describe('SuburbGuidePage transaction lanes', () => {
   beforeEach(() => {
+    mocks.suburbError = false;
     mocks.feedInputs.length = 0;
     mocks.suburbInputs.length = 0;
     mocks.cityInputs.length = 0;
@@ -588,5 +590,29 @@ describe('SuburbGuidePage transaction lanes', () => {
       'href',
       '/dashboard#alerts',
     );
+  });
+});
+
+describe('Suburb guide without live data', () => {
+  it('keeps the editorial guide readable when the live service is unavailable', () => {
+    mocks.suburbError = true;
+    render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    // The guide is still a guide: the editorial content survives the data failure.
+    expect(screen.getByRole('heading', { level: 1, name: /Explore Sandton/i })).toBeInTheDocument();
+    expect(screen.getByText(/Where Sandton fits in the city/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Alexandra and parts of Sandton sit within Region E/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Reading the Sandton numbers/i)).toBeInTheDocument();
+
+    // And the reader is told plainly which part is unavailable, without a false claim.
+    expect(
+      screen.getByText(/Live availability for Sandton is unavailable right now/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't load Sandton/i)).not.toBeInTheDocument();
   });
 });

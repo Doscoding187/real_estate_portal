@@ -123,6 +123,7 @@ describe('published guide pilot', () => {
 
   it('builds a delivered document for every pilot guide route', () => {
     expect(GUIDE_HTML_ROUTES).toEqual([
+      'south-africa',
       'gauteng',
       'gauteng/johannesburg',
       'gauteng/johannesburg/sandton',
@@ -133,6 +134,7 @@ describe('published guide pilot', () => {
 describe('published guide sitemap', () => {
   it('lists every published guide route and no unpublished one', async () => {
     const body = await requestSitemap('/sitemap-guides.xml');
+    expect(body).toContain('<loc>https://www.propertylistifysa.co.za/south-africa</loc>');
     expect(body).toContain('<loc>https://www.propertylistifysa.co.za/gauteng</loc>');
     expect(body).toContain('<loc>https://www.propertylistifysa.co.za/gauteng/johannesburg</loc>');
     expect(body).toContain(

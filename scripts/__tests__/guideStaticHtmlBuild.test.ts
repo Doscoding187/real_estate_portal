@@ -52,6 +52,7 @@ describe('guide static document build contract', () => {
     await buildGuides();
 
     for (const guidePath of [
+      'south-africa/index.html',
       'gauteng/index.html',
       'gauteng/johannesburg/index.html',
       'gauteng/johannesburg/sandton/index.html',
@@ -64,6 +65,15 @@ describe('guide static document build contract', () => {
 
   it('delivers the guide body, canonical and robots metadata for each pilot route', async () => {
     await buildGuides();
+
+    const country = await readFile(path.join(outDir, 'south-africa/index.html'), 'utf8');
+    expect(country).toContain('country-discovery-initial');
+    expect(country).toContain('Property for sale in South Africa');
+    expect(country).toContain(
+      '<link rel="canonical" href="https://www.propertylistifysa.co.za/south-africa" />',
+    );
+    expect(country).toContain('<meta name="robots" content="index, follow" />');
+    expect(country).toContain('"@type":"ItemList"');
 
     const province = await readFile(path.join(outDir, 'gauteng/index.html'), 'utf8');
     expect(province).toContain('province-guide-initial');
@@ -119,6 +129,7 @@ describe('guide static document build contract', () => {
     await buildGuides();
 
     for (const guidePath of [
+      'south-africa/index.html',
       'gauteng/index.html',
       'gauteng/johannesburg/index.html',
       'gauteng/johannesburg/sandton/index.html',
@@ -133,6 +144,7 @@ describe('guide static document build contract', () => {
     await buildGuides();
 
     for (const guidePath of [
+      'south-africa/index.html',
       'gauteng/index.html',
       'gauteng/johannesburg/index.html',
       'gauteng/johannesburg/sandton/index.html',
