@@ -29,7 +29,14 @@ beforeEach(() => {
   places.mockReturnValue({
     data: {
       province: { id: 3, name: 'Gauteng', slug: 'gauteng', canonicalLocationId: 'province:3' },
-      cities: [{ name: 'Pretoria', slug: 'pretoria', canonicalLocationId: 'city:18' }],
+      places: [
+        {
+          name: 'Pretoria',
+          slug: 'pretoria',
+          canonicalLocationId: 'city:18',
+          level: 'city',
+        },
+      ],
     },
     refetch: retry,
   });
@@ -68,7 +75,7 @@ describe('Guide-first province experience', () => {
   });
   it('links only resolved cities and describes unresolved places without invented links', () => {
     render(<ProvinceEditorialPage guide={guide} />);
-    expect(screen.getAllByRole('link', { name: 'Explore Pretoria city guide' })[0]).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: 'Explore Pretoria guide' })[0]).toHaveAttribute(
       'href',
       '/gauteng/pretoria',
     );
