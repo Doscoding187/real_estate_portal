@@ -447,25 +447,108 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   }
 
   if (suburbQuery.isError || !verifiedSuburb) {
+    // A live-data failure must not take the guide away. The editorial content below is
+    // durable and needs no database, so a reader still gets the guide and is told plainly
+    // which parts are unavailable. A suburb that genuinely is not in the catalogue is a
+    // different thing and keeps the not-found state.
     return (
       <SuburbGuideShell>
-        <main className="suburb-guide-state">
-          <MapPin size={30} aria-hidden="true" />
-          <h1>{suburbQuery.isError ? `Couldn't load ${titleName}` : 'Suburb guide unavailable'}</h1>
-          <p>
-            {suburbQuery.isError
-              ? 'The suburb details could not be loaded. Try again in a moment.'
-              : 'We could not verify this suburb under the selected city and province.'}
-          </p>
-          {suburbQuery.isError ? (
-            <button type="button" onClick={() => void suburbQuery.refetch()}>
-              Try again
-            </button>
-          ) : (
-            <Link href={guideUrl}>
-              Browse the city guide <ArrowRight size={15} aria-hidden="true" />
-            </Link>
-          )}
+        <MetaControl
+          key="seo"
+          title={suburbGuideTitle(titleName)}
+          description={description}
+          canonicalUrl={toAbsoluteUrl(path)}
+          image={cityImage ? toAbsoluteUrl(cityImage.hero) : undefined}
+          forceNoIndex={Boolean(search)}
+        />
+        <main className="suburb-guide-page__main">
+          <section
+            id="suburb-guide-context"
+            className="suburb-guide-context"
+            aria-labelledby="suburb-guide-context-title"
+          >
+            <div className="suburb-guide-context__copy">
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                {displaySlug(citySlug)} · {displaySlug(provinceSlug)}
+              </p>
+              <h1 id="suburb-guide-context-title">Explore {titleName}</h1>
+              {context ? (
+                <>
+                  <h2>Where {titleName} fits in the city</h2>
+                  <p>{context.text}</p>
+                  <p>{context.consider}</p>
+                </>
+              ) : (
+                <p>
+                  {titleName} is a suburb of {displaySlug(citySlug)} in {displaySlug(provinceSlug)}.
+                  The city guide explains how this area fits into the wider metro.
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section
+            id="suburb-guide-methodology"
+            className="suburb-guide-methodology"
+            aria-labelledby="suburb-guide-methodology-title"
+          >
+            <div className="suburb-guide-section-heading">
+              <div>
+                <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                  HOW THIS GUIDE IS PUT TOGETHER
+                </p>
+                <h2 id="suburb-guide-methodology-title">Reading the {titleName} numbers</h2>
+              </div>
+            </div>
+            <ul className="suburb-guide-methodology__list">
+              <li>
+                <strong>Scope.</strong> Counts and medians cover eligible listings published for
+                this exact suburb on Property Listify. Project units and other suburbs are kept
+                separate.
+              </li>
+              <li>
+                <strong>Prices.</strong> Figures use published asking prices, never completed sale
+                prices. A median appears only once enough listings in that group carry a price.
+              </li>
+              <li>
+                <strong>Supply.</strong> Listing counts are a snapshot of current published
+                inventory, not a census of all homes in {titleName}.
+              </li>
+            </ul>
+          </section>
+
+          <section className="suburb-guide-state" role="status">
+            <MapPin size={30} aria-hidden="true" />
+            <h2>Live availability for {titleName} is unavailable right now</h2>
+            <p>
+              Current listings, asking prices, nearby amenities and local professionals for{' '}
+              {titleName} could not be loaded. The guide above is unaffected and still reads
+              normally.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <button type="button" onClick={() => void suburbQuery.refetch()}>
+                Try again
+              </button>
+              <Link href={guideUrl}>
+                Browse the city guide <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
+          </section>
+
+          {localSources.length ? (
+            <section className="suburb-guide-sources" aria-labelledby="suburb-guide-sources-title">
+              <h2 id="suburb-guide-sources-title">Sources</h2>
+              <ul>
+                {localSources.map(source => (
+                  <li key={source.id}>
+                    <a href={source.url} target="_blank" rel="noreferrer noopener">
+                      {source.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </main>
       </SuburbGuideShell>
     );
