@@ -108,6 +108,39 @@ does not change B08–B18, LRC-SUPPORT-001 or the paid-opening NO-GO.
 | Effect      | The 525 released places become usable at the next reference-data release, with no licensing spend.                                                                                                                                                                                         | Rosebank, Soweto, Krugersdorp, Vereeniging, Magaliesburg, Meyerton, Roodepoort, Heidelberg, Carletonville, Randfontein and Vanderbijlpark become searchable and citable.                |
 | Remaining   | The canonical factual geography input is not in the repository, so the projection itself cannot be regenerated here. The projection, the mapping and the admitted Place packages use three different identity namespaces.                                                                  | The runtime no longer depends on the projection's tier. Regenerating the projection to remove the disagreement still needs the canonical input.                                         |
 
+## The held set is one province, not a national one — 2026-10-20
+
+| Territory     | Admitted   | Held (OSM-only) |
+| ------------- | ---------- | --------------- |
+| Gauteng       | 1,466      | **720**         |
+| Eastern Cape  | 5,084      | 0               |
+| Free State    | 1,544      | 0               |
+| KwaZulu-Natal | 2,090      | 0               |
+| Limpopo       | 1,669      | 0               |
+| Mpumalanga    | 1,045      | 0               |
+| Northern Cape | 1,552      | 0               |
+| North West    | 1,352      | 0               |
+| Western Cape  | 1,862      | 0               |
+| **National**  | **17,664** | **720**         |
+
+| Licensing classification    | Places |
+| --------------------------- | ------ |
+| `permissive_supported`      | 16,472 |
+| `mixed_odbl_supported`      | 472    |
+| `osm_only_odbl_provisional` | 720    |
+
+Every OSM-only place is in Gauteng. The other eight provinces are entirely permissively
+licensed, because Gauteng is the one territory whose locality coverage was built from
+OpenStreetMap rather than from the attribution-licensed sources.
+
+The protected release subset is 16,944 places, which is exactly 17,664 minus these 720. The
+numbers reconcile with the released subset recorded in the canonical release evidence, so the
+held set is fully accounted for.
+
+**Consequence:** the remaining work is a single-province source acquisition and admission pass
+over 720 Gauteng rows, not a national programme. The other 16,198 places are already released,
+and the 472 mixed rows were released by the tier rule change.
+
 ## Reference release proven on a disposable target — 2026-10-20
 
 | Item              | Recorded                                                                                                                                                                                                                                                                                             | Effect                                                                                                           |
