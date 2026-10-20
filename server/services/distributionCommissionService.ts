@@ -2,6 +2,7 @@ import { isValidDistributionReferralTermsSnapshot } from './distributionReferral
 
 type CommissionTriggerStage = 'contract_signed' | 'bond_approved';
 type DealStage =
+  | 'referral_received'
   | 'viewing_scheduled'
   | 'viewing_completed'
   | 'application_submitted'
@@ -57,13 +58,14 @@ type EnsureCommissionInput = {
 };
 
 const stageRank: Record<DealStage, number> = {
-  viewing_scheduled: 1,
-  viewing_completed: 2,
-  application_submitted: 3,
-  contract_signed: 4,
-  bond_approved: 5,
-  commission_pending: 6,
-  commission_paid: 7,
+  referral_received: 1,
+  viewing_scheduled: 2,
+  viewing_completed: 3,
+  application_submitted: 4,
+  contract_signed: 5,
+  bond_approved: 6,
+  commission_pending: 7,
+  commission_paid: 8,
   cancelled: 99,
 };
 

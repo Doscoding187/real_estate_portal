@@ -22,7 +22,13 @@ export function formatPartnerDealStatus(
 ) {
   const status = String(statusValue || '').trim().toLowerCase();
 
-  if (!status || status === 'submitted' || status === 'lead' || status === 'viewing_scheduled') {
+  if (
+    !status ||
+    status === 'submitted' ||
+    status === 'lead' ||
+    status === 'referral_received' ||
+    status === 'viewing_scheduled'
+  ) {
     const viewing = findScheduledPartnerViewing(dealId, viewings);
     if (!viewing) return 'Referral received';
 
@@ -58,7 +64,12 @@ export function formatPartnerDealGuidance(
     return 'The referral has reached its payout stage. Approval and payment updates will appear when they are recorded.';
   }
 
-  if (status === 'viewing_scheduled') {
+  if (
+    status === 'submitted' ||
+    status === 'lead' ||
+    status === 'referral_received' ||
+    status === 'viewing_scheduled'
+  ) {
     const viewing = findScheduledPartnerViewing(dealId, viewings);
     if (viewing) {
       const date = new Date(String(viewing.scheduledStartAt || ''));
@@ -197,6 +208,7 @@ export type PartnerPayoutRecordState =
   | 'unknown';
 
 const PARTNER_PAYOUT_PRE_ELIGIBILITY_STAGES = new Set([
+  'referral_received',
   'viewing_scheduled',
   'viewing_completed',
   'application_submitted',

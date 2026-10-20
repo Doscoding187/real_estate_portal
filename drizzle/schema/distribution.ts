@@ -18,6 +18,7 @@ import { cataloguePublishers } from './developerIdentity';
 import { leads } from './leads';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
+  'referral_received',
   'viewing_scheduled',
   'viewing_completed',
   'application_submitted',
@@ -865,7 +866,7 @@ export const distributionDeals = mysqlTable(
       'current_stage',
       DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]],
     )
-      .default('viewing_scheduled')
+      .default('referral_received')
       .notNull(),
     commissionTriggerStage: mysqlEnum(
       'commission_trigger_stage',

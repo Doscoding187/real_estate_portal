@@ -1578,6 +1578,38 @@
       "approvedFiles": [
         "server/migrations/0136_distribution_deal_requirement_document_link_drop.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0137_distribution_deal_referral_received_stage.sql",
+      "classification": "canonical active",
+      "purpose": "Adds referral_received as the truthful initial Distribution deal stage and keeps it ahead of any viewing state.",
+      "approvedFiles": [
+        "server/migrations/0137_distribution_deal_referral_received_stage.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0138_distribution_deal_event_from_referral_received_stage.sql",
+      "classification": "canonical active",
+      "purpose": "Allows Distribution event history to record referral_received as a from-stage.",
+      "approvedFiles": [
+        "server/migrations/0138_distribution_deal_event_from_referral_received_stage.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0139_distribution_deal_event_to_referral_received_stage.sql",
+      "classification": "canonical active",
+      "purpose": "Allows Distribution event history to record referral_received as a to-stage.",
+      "approvedFiles": [
+        "server/migrations/0139_distribution_deal_event_to_referral_received_stage.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0140_distribution_deal_referral_received_backfill.sql",
+      "classification": "canonical active",
+      "purpose": "Backfills legacy viewing_scheduled deals that have no real viewing booking to referral_received with an audit event.",
+      "approvedFiles": [
+        "server/migrations/0140_distribution_deal_referral_received_backfill.sql"
+      ]
     }
   ],
   "prohibitedPaths": [
