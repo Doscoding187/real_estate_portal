@@ -154,6 +154,16 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(kpiService).not.toContain('developmentUnits');
   });
 
+  it('routes Distribution developer reads through Developer-owned providers', () => {
+    const readPort = source('server/services/distributionDeveloperReadPort.ts');
+
+    expect(readPort).toContain("from './developmentSalesProjectionService'");
+    expect(readPort).toContain("from './developmentSalesWorkspaceService'");
+    expect(readPort).not.toContain('return null');
+    expect(readPort).not.toContain('return []');
+    expect(readPort).not.toContain("from '../../drizzle/schema'");
+  });
+
   it('blocks auction publication while retaining private authoring support', () => {
     const developmentService = source('server/services/developmentService.ts');
     const derivedListingService = source('server/services/developmentDerivedListingService.ts');
@@ -174,7 +184,9 @@ describe('Developer Engine S0 containment contracts', () => {
     expect(derivedListingService).not.toContain("neq(developments.transactionType, 'auction')");
     expect(locationPagesService).toContain('publicDevelopmentEligibilityConditions()');
     expect(publicLeadCaptureService).toContain('evaluatePublicDevelopmentEligibility');
-    expect(distributionPolicy).toContain('evaluatePublicDevelopmentEligibility');
+    expect(distributionPolicy).toContain('getDevelopmentSalesProjection');
+    expect(distributionPolicy).toContain('projection.campaign.visible === true');
+    expect(distributionPolicy).not.toContain('evaluatePublicDevelopmentEligibility');
     expect(sitemap).toContain('publicDevelopmentEligibilityConditions()');
     expect(guard).toContain(
       'Auction developments are not part of the supported public MVP contract',

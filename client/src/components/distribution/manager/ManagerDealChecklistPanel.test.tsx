@@ -133,7 +133,7 @@ describe('ManagerDealChecklistPanel', () => {
     );
 
     expect(screen.getByText('Payout Ready')).toBeInTheDocument();
-    expect(screen.getByText('Verified required documents: 2/2')).toBeInTheDocument();
+    expect(screen.getByText('Required documents verified by our team: 2/2')).toBeInTheDocument();
   });
 
   it('triggers batch callbacks from quick actions', async () => {
@@ -150,8 +150,8 @@ describe('ManagerDealChecklistPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('Mark All Required as Received'));
-    fireEvent.click(screen.getByText('Mark All Required as Verified'));
+    fireEvent.click(screen.getByText('Mark All Required as Received by Our Team'));
+    fireEvent.click(screen.getByText('Mark All Required as Verified by Our Team'));
 
     await waitFor(() => expect(onMarkAllRequiredReceived).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onMarkAllRequiredVerified).toHaveBeenCalledTimes(1));

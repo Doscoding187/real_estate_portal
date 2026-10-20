@@ -300,7 +300,6 @@ Search `db.` returned 118 non-test server files after excluding test directories
 - `server/canvassingRouter.ts`
 - `server/db.ts`
 - `server/developerRouter.ts`
-- `server/distributionQualificationRouter.ts`
 - `server/distributionRouter.ts`
 - `server/domains/discovery/services/exploreOptionAEligibilityService.ts`
 - `server/enhancedLocationRouter.ts`

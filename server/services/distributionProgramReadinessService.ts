@@ -2,9 +2,11 @@ import { and, eq } from 'drizzle-orm';
 import {
   distributionManagerAssignments,
   distributionPrograms,
+  distributionReferralIntakePolicyReleases,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { getDevelopmentRequiredDocumentSummary } from './distributionRequiredDocumentsService';
+import { getDistributionReferralEvidenceStorageStatus } from './distributionReferralEvidenceStorage';
 
 export type ProgramReadinessBlockerCode =
   | 'PROGRAM_MISSING'
@@ -14,6 +16,8 @@ export type ProgramReadinessBlockerCode =
   | 'CURRENCY_MISSING'
   | 'MANAGER_MISSING'
   | 'REQUIRED_DOCS_MISSING'
+  | 'REFERRAL_INTAKE_POLICY_NOT_PUBLISHED'
+  | 'PRIVATE_EVIDENCE_STORAGE_UNAVAILABLE'
   | 'PROGRAM_VALIDATION_ERROR';
 
 export type ProgramReadiness = {
@@ -31,12 +35,19 @@ export type ProgramReadiness = {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType: 'flat' | 'percentage' | null;
+    referrerCommissionValue: number | null;
+    referrerCommissionBasis: 'sale_price' | 'base_price' | null;
     payoutMilestone: string | null;
     currencyCode: string | null;
     tierAccessPolicy: string | null;
     hasActivePrimaryManager: boolean;
     requiredDocsCount: number;
     requiredRequiredDocsCount: number;
+    activeIntakePolicyVersion: number | null;
+    hasActiveIntakePolicy: boolean;
+    privateEvidenceStorageConfigured: boolean;
+    privateEvidenceStorageAdapter: 'local' | 's3';
   };
 };
 
@@ -64,6 +75,9 @@ export async function getProgramReadinessByDevelopmentId(
       commissionModel: distributionPrograms.commissionModel,
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+      referrerCommissionType: distributionPrograms.referrerCommissionType,
+      referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+      referrerCommissionBasis: distributionPrograms.referrerCommissionBasis,
       payoutMilestone: distributionPrograms.payoutMilestone,
       currencyCode: distributionPrograms.currencyCode,
       tierAccessPolicy: distributionPrograms.tierAccessPolicy,
@@ -84,7 +98,21 @@ export async function getProgramReadinessByDevelopmentId(
     )
     .limit(1);
 
+  const [activeIntakePolicy] = program
+    ? await db
+        .select({ policyVersion: distributionReferralIntakePolicyReleases.policyVersion })
+        .from(distributionReferralIntakePolicyReleases)
+        .where(
+          and(
+            eq(distributionReferralIntakePolicyReleases.programId, program.id),
+            eq(distributionReferralIntakePolicyReleases.status, 'active'),
+          ),
+        )
+        .limit(1)
+    : [];
+
   const docsSummary = await getDevelopmentRequiredDocumentSummary(db, developmentId);
+  const evidenceStorage = getDistributionReferralEvidenceStorageStatus();
 
   const state: ProgramReadiness['state'] = {
     programExists: Boolean(program),
@@ -97,12 +125,26 @@ export async function getProgramReadinessByDevelopmentId(
       : null,
     defaultCommissionPercent: program ? toNumberOrNull(program.defaultCommissionPercent) : null,
     defaultCommissionAmount: program ? toNumberOrNull(program.defaultCommissionAmount) : null,
+    referrerCommissionType:
+      program?.referrerCommissionType === 'flat' || program?.referrerCommissionType === 'percentage'
+        ? program.referrerCommissionType
+        : null,
+    referrerCommissionValue: program ? toNumberOrNull(program.referrerCommissionValue) : null,
+    referrerCommissionBasis:
+      program?.referrerCommissionBasis === 'sale_price' ||
+      program?.referrerCommissionBasis === 'base_price'
+        ? program.referrerCommissionBasis
+        : null,
     payoutMilestone: program?.payoutMilestone ? String(program.payoutMilestone) : null,
     currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
     tierAccessPolicy: program?.tierAccessPolicy ? String(program.tierAccessPolicy) : null,
     hasActivePrimaryManager: Boolean(managerRow?.id),
     requiredDocsCount: docsSummary.requiredDocsCount,
     requiredRequiredDocsCount: docsSummary.requiredRequiredDocsCount,
+    activeIntakePolicyVersion: activeIntakePolicy ? Number(activeIntakePolicy.policyVersion) : null,
+    hasActiveIntakePolicy: Boolean(activeIntakePolicy),
+    privateEvidenceStorageConfigured: evidenceStorage.configured,
+    privateEvidenceStorageAdapter: evidenceStorage.adapter,
   };
 
   const blockers: ProgramReadiness['blockers'] = [];
@@ -123,27 +165,44 @@ export async function getProgramReadinessByDevelopmentId(
     if (!state.commissionModel) {
       blockers.push({
         code: 'COMMISSION_MISSING',
-        message: 'Select a commission model and default payout value.',
+        message: 'Select a referral payout model and default value.',
       });
     } else if (state.commissionModel === 'flat_percentage') {
       if (!state.defaultCommissionPercent || state.defaultCommissionPercent <= 0) {
         blockers.push({
           code: 'COMMISSION_MISSING',
-          message: 'Set a default commission percentage greater than 0.',
+          message: 'Set a referral payout percentage greater than 0.',
         });
       }
     } else if (state.commissionModel === 'flat_amount') {
       if (!state.defaultCommissionAmount || state.defaultCommissionAmount <= 0) {
         blockers.push({
           code: 'COMMISSION_MISSING',
-          message: 'Set a default commission amount greater than 0.',
+          message: 'Set a referral payout amount greater than 0.',
         });
       }
     } else {
       blockers.push({
         code: 'PROGRAM_VALIDATION_ERROR',
         message:
-          'Commission model is not supported for referral enablement yet. Use flat_percentage or flat_amount.',
+          'This referral payout model is not supported for referral enablement yet. Use a percentage or fixed amount.',
+      });
+    }
+
+    if (!state.referrerCommissionType) {
+      blockers.push({
+        code: 'COMMISSION_MISSING',
+        message: 'Choose a flat or percentage referral payout and set its value.',
+      });
+    } else if (!state.referrerCommissionValue || state.referrerCommissionValue <= 0) {
+      blockers.push({
+        code: 'COMMISSION_MISSING',
+        message: 'Set the explicit referrer payout value greater than 0.',
+      });
+    } else if (state.referrerCommissionType === 'percentage' && !state.referrerCommissionBasis) {
+      blockers.push({
+        code: 'COMMISSION_MISSING',
+        message: 'Choose whether the referral payout percentage uses sale price or base price.',
       });
     }
 
@@ -173,6 +232,21 @@ export async function getProgramReadinessByDevelopmentId(
     blockers.push({
       code: 'REQUIRED_DOCS_MISSING',
       message: 'Add at least one active required document template for this development.',
+    });
+  }
+
+  if (state.programExists && !state.hasActiveIntakePolicy) {
+    blockers.push({
+      code: 'REFERRAL_INTAKE_POLICY_NOT_PUBLISHED',
+      message: 'Complete and publish this development’s referral intake policy.',
+    });
+  }
+
+  if (state.programExists && !state.privateEvidenceStorageConfigured) {
+    blockers.push({
+      code: 'PRIVATE_EVIDENCE_STORAGE_UNAVAILABLE',
+      message:
+        evidenceStorage.message || 'Configure private evidence storage before accepting referrals.',
     });
   }
 

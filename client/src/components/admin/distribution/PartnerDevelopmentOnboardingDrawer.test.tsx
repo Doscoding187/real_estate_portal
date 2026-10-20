@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PartnerDevelopmentOnboardingDrawer,
   ReadinessStatusChips,
@@ -116,6 +116,10 @@ const readinessFixture = {
 };
 
 describe('PartnerDevelopmentOnboardingDrawer UI', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseUtils.mockReturnValue({
@@ -200,13 +204,14 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Setup: Created')).toBeInTheDocument();
     expect(screen.getByText('Setup: Active')).toBeInTheDocument();
     expect(screen.getByText('Accepting referrals: Off')).toBeInTheDocument();
-    expect(screen.getByText('Referral reward: Set')).toBeInTheDocument();
+    expect(screen.getByText('Referral payout value: Missing')).toBeInTheDocument();
+    expect(screen.getByText('Payout trigger: Set')).toBeInTheDocument();
     expect(screen.getByText('Payout currency: Set')).toBeInTheDocument();
     expect(screen.getByText('Manager: Missing')).toBeInTheDocument();
     expect(screen.getByText('Application docs: Ready')).toBeInTheDocument();
   });
 
-  it('separates developer and client document configuration sections', () => {
+  it('separates buyer application documents from developer resources', () => {
     mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
       data: [
         {
@@ -215,6 +220,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           category: 'client_required_document',
           documentCode: 'bank_statement',
           documentLabel: 'Bank Statements',
+          templateFileUrl: null,
+          templateFileName: null,
           isRequired: true,
           sortOrder: 0,
           isActive: true,
@@ -225,7 +232,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           category: 'developer_document',
           documentCode: 'custom',
           documentLabel: 'House Plan',
-          isRequired: true,
+          templateFileUrl: '/properties/house-plan.jpg',
+          templateFileName: 'house-plan.jpg',
+          isRequired: false,
           sortOrder: 1,
           isActive: true,
         },
@@ -257,11 +266,11 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    expect(screen.getByText('Development Application Documents')).toBeInTheDocument();
-    expect(screen.getByText('Supporting Documents')).toBeInTheDocument();
-    expect(screen.getByText('Buyer Application Documents')).toBeInTheDocument();
+    expect(screen.getByText('Referral Process Documents')).toBeInTheDocument();
+    expect(screen.getByText('Developer Resources')).toBeInTheDocument();
     expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
+    expect(screen.getByText('house-plan.jpg')).toBeInTheDocument();
   });
 
   it('applies buyer starter packs to the required document checklist', async () => {
@@ -331,7 +340,13 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
   });
 
-  it('adds custom supporting files for development-specific uploads', async () => {
+  it('adds and saves an informational developer resource', async () => {
+    const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: docsMutateAsync,
+      isPending: false,
+    });
+
     render(
       <PartnerDevelopmentOnboardingDrawer
         open
@@ -355,16 +370,52 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /unit \/ house plans/i }));
+    fireEvent.click(screen.getByText('Add Resource File'));
 
-    expect(screen.getByDisplayValue('Unit / house plans')).toBeInTheDocument();
-    expect(screen.getByText('Upload supporting file')).toBeInTheDocument();
-    expect(
-      screen.getByText(/No supporting file uploaded yet\. The label can still be saved as a placeholder\./i),
-    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Site map, price list, house plans')).toBeInTheDocument();
+    expect(screen.getByText('No file uploaded yet.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByPlaceholderText('Site map, price list, house plans'), {
+      target: { value: 'Site map' },
+    });
+    fireEvent.click(screen.getByText('Save setup'));
+
+    await waitFor(() =>
+      expect(docsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          developmentId: 1001,
+          documents: [
+            expect.objectContaining({
+              category: 'developer_document',
+              documentCode: 'custom',
+              documentLabel: 'Site map',
+              isRequired: false,
+              isActive: true,
+              templateFileUrl: null,
+            }),
+          ],
+        }),
+      ),
+    );
   });
 
-  it('adds required developer application documents for signing and re-upload', async () => {
+  it('uploads a developer resource through the presigned URL', async () => {
+    const uploadMutateAsync = vi.fn().mockResolvedValue({
+      url: 'https://upload.example.test/put',
+      publicUrl: 'https://cdn.example.com/site-plan.pdf',
+    });
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    const docsMutateAsync = vi.fn().mockResolvedValue({ success: true });
+    mockUploadPresignUseMutation.mockReturnValue({
+      mutateAsync: uploadMutateAsync,
+      isPending: false,
+    });
+    mockSetDevelopmentRequiredDocumentsUseMutation.mockReturnValue({
+      mutateAsync: docsMutateAsync,
+      isPending: false,
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
     render(
       <PartnerDevelopmentOnboardingDrawer
         open
@@ -388,13 +439,41 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /building contract/i }));
+    fireEvent.click(screen.getByText('Add Resource File'));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(['plan'], 'site-plan.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-    expect(screen.getByDisplayValue('Building contract')).toBeInTheDocument();
-    expect(screen.getByText('Upload application template')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Upload the developer-specific form before expecting referrers to download it\./i),
-    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(uploadMutateAsync).toHaveBeenCalledWith({
+        filename: 'site-plan.pdf',
+        contentType: 'application/pdf',
+        propertyId: 'distribution-development-1001',
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://upload.example.test/put',
+      expect.objectContaining({ method: 'PUT', body: file }),
+    );
+    await waitFor(() => expect(screen.getByText('site-plan.pdf')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('Save setup'));
+
+    await waitFor(() =>
+      expect(docsMutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          documents: [
+            expect.objectContaining({
+              category: 'developer_document',
+              documentLabel: 'site plan',
+              isRequired: false,
+              templateFileUrl: 'https://cdn.example.com/site-plan.pdf',
+              templateFileName: 'site-plan.pdf',
+            }),
+          ],
+        }),
+      ),
+    );
   });
 
   it('shows blockers inline when enabling referral is rejected by server', async () => {
@@ -530,7 +609,10 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         canEnableReferral: false,
         blockers: [
           { code: 'PROGRAM_INACTIVE', message: 'Activate the program before enabling referrals.' },
-          { code: 'MANAGER_MISSING', message: 'Assign an active primary manager to this development.' },
+          {
+            code: 'MANAGER_MISSING',
+            message: 'Assign an active primary manager to this development.',
+          },
         ],
         state: {
           ...readinessFixture.state,
@@ -570,7 +652,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
 
     expect(screen.getAllByText('Enabled but blocked').length).toBeGreaterThan(0);
     expect(
-      screen.getAllByText('Referrals are enabled, but buyer submissions are blocked until setup is complete.').length,
+      screen.getAllByText(
+        'Referrals are enabled, but buyer submissions are blocked until setup is complete.',
+      ).length,
     ).toBeGreaterThan(0);
     expect(screen.queryByText('Referrals are live for this development.')).not.toBeInTheDocument();
     expect(screen.getByText('0 ready to enable, 1 enabled but blocked')).toBeInTheDocument();
@@ -636,7 +720,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
     await waitFor(() => expect(upsertMutateAsync).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
-    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() =>
+      expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }),
+    );
     await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1001 }));
     await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
@@ -788,7 +874,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         }),
       ),
     );
-    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1002 }));
+    await waitFor(() =>
+      expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1002 }),
+    );
     await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1002 }));
     await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
@@ -848,7 +936,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       }),
     );
     await waitFor(() => expect(readinessRefetch).toHaveBeenCalled());
-    await waitFor(() => expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }));
+    await waitFor(() =>
+      expect(mockInvalidateReadiness).toHaveBeenCalledWith({ developmentId: 1001 }),
+    );
     await waitFor(() => expect(mockInvalidateDocs).toHaveBeenCalledWith({ developmentId: 1001 }));
     await waitFor(() => expect(onRefreshCatalog).toHaveBeenCalled());
   });
@@ -891,9 +981,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     );
 
     expect(screen.getAllByText('Loading readiness')).not.toHaveLength(0);
-    expect(
-      screen.getByText('2 developments still loading readiness'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('2 developments still loading readiness')).toBeInTheDocument();
     expect(
       screen.getAllByText('Checking program, manager, payout, currency, and document readiness...'),
     ).not.toHaveLength(0);
@@ -958,9 +1046,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       primaryManagerUserId: 22,
       documents: [
         {
-          category: 'developer_document',
-          documentCode: 'custom',
-          documentLabel: 'Price Structure',
+          category: 'client_required_document',
+          documentCode: 'id_document',
+          documentLabel: 'ID Document',
           isRequired: true,
           isActive: true,
           sortOrder: 0,
@@ -1040,9 +1128,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         expect.objectContaining({
           documents: [
             expect.objectContaining({
-              category: 'developer_document',
-              documentLabel: 'Price Structure',
-              documentCode: 'custom',
+              category: 'client_required_document',
+              documentLabel: 'ID Document',
+              documentCode: 'id_document',
             }),
           ],
         }),

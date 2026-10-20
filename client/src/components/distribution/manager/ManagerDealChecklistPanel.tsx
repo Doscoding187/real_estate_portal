@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 
-type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
+type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
 
 type DealChecklist = {
   dealId: number;
@@ -15,26 +16,28 @@ type DealChecklist = {
   developmentName: string;
   programId: number | null;
   payoutMilestone: string | null;
+  payoutMilestoneNotes?: string | null;
   currencyCode: string | null;
   commissionSummary: {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType?: 'flat' | 'percentage' | null;
+    referrerCommissionValue?: number | null;
+    referrerCommissionBasis?: 'sale_price' | 'base_price' | null;
+    payoutBasisAmount?: number | null;
+    canRecordPayoutBasis?: boolean;
   };
   requiredDocuments: Array<{
-    templateId: number;
+    templateId: number | null;
     documentCode: string;
     documentLabel: string;
-    templateFileUrl?: string | null;
-    templateFileName?: string | null;
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
-    submittedFileUrl?: string | null;
-    submittedFileName?: string | null;
     submittedAt?: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
@@ -45,19 +48,21 @@ type DealChecklist = {
     requiredCount: number;
     verifiedRequiredCount: number;
     allRequiredVerified: boolean;
+    payoutMilestoneSupported?: boolean;
     payoutReady: boolean;
     blockers: string[];
   };
 };
 
-function formatCommission(checklist: DealChecklist) {
+function formatReferralPayout(checklist: DealChecklist) {
   const summary = checklist.commissionSummary;
-  if (summary.commissionModel === 'flat_percentage' && summary.defaultCommissionPercent) {
-    return `${summary.defaultCommissionPercent}%`;
+  if (summary.referrerCommissionType === 'percentage' && summary.referrerCommissionValue) {
+    const basis = summary.referrerCommissionBasis?.replace(/_/g, ' ');
+    return `${summary.referrerCommissionValue}% of ${basis || 'basis not configured'}`;
   }
-  if (summary.commissionModel === 'flat_amount' && summary.defaultCommissionAmount) {
+  if (summary.referrerCommissionType === 'flat' && summary.referrerCommissionValue) {
     const currency = checklist.currencyCode || 'ZAR';
-    return `${currency} ${summary.defaultCommissionAmount}`;
+    return `${currency} ${Math.round(summary.referrerCommissionValue).toLocaleString('en-ZA')}`;
   }
   return 'Not configured';
 }
@@ -71,6 +76,8 @@ export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
   isBatchSaving,
+  isSavingPayoutBasis,
+  onRecordPayoutBasis,
   onUpdateDocumentStatus,
   onMarkAllRequiredReceived,
   onMarkAllRequiredVerified,
@@ -78,35 +85,34 @@ export function ManagerDealChecklistPanel({
   checklist: DealChecklist;
   savingTemplateId: number | null;
   isBatchSaving?: boolean;
+  isSavingPayoutBasis?: boolean;
+  onRecordPayoutBasis?: (amount: number) => Promise<void>;
   onUpdateDocumentStatus: (input: {
     templateId: number;
-    status: DealDocumentStatus;
+    status: EditableDealDocumentStatus;
     notes?: string | null;
-    submittedFileUrl?: string | null;
-    submittedFileName?: string | null;
   }) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
-  const [notesByTemplateId, setNotesByTemplateId] = useState<Record<number, string>>({});
-  const [fileUrlByTemplateId, setFileUrlByTemplateId] = useState<Record<number, string>>({});
-  const [fileNameByTemplateId, setFileNameByTemplateId] = useState<Record<number, string>>({});
+  const [notesByTemplateId, setNotesByTemplateId] = useState<Record<string, string>>({});
+  const [payoutBasisAmount, setPayoutBasisAmount] = useState('');
 
   useEffect(() => {
-    const next: Record<number, string> = {};
+    const next: Record<string, string> = {};
     for (const row of checklist.requiredDocuments) {
-      next[row.templateId] = row.notes || '';
+      next[String(row.templateId ?? `unavailable:${row.documentCode}:${row.sortOrder}`)] = row.notes || '';
     }
     setNotesByTemplateId(next);
-    const nextUrls: Record<number, string> = {};
-    const nextNames: Record<number, string> = {};
-    for (const row of checklist.requiredDocuments) {
-      nextUrls[row.templateId] = row.submittedFileUrl || '';
-      nextNames[row.templateId] = row.submittedFileName || '';
-    }
-    setFileUrlByTemplateId(nextUrls);
-    setFileNameByTemplateId(nextNames);
   }, [checklist.requiredDocuments]);
+
+  useEffect(() => {
+    setPayoutBasisAmount(
+      checklist.commissionSummary.payoutBasisAmount == null
+        ? ''
+        : String(checklist.commissionSummary.payoutBasisAmount),
+    );
+  }, [checklist.commissionSummary.payoutBasisAmount]);
 
   const orderedDocuments = useMemo(
     () =>
@@ -129,12 +135,22 @@ export function ManagerDealChecklistPanel({
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-3">
           <div>
-            <p className="text-xs text-slate-500">Commission</p>
-            <p className="font-medium">{formatCommission(checklist)}</p>
+            <p className="text-xs text-slate-500">Referral payout</p>
+            <p className="font-medium">{formatReferralPayout(checklist)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Payout Milestone</p>
-            <p className="font-medium">{checklist.payoutMilestone || 'Not configured'}</p>
+            <p className="font-medium">
+              {checklist.payoutMilestone?.replace(/_/g, ' ') || 'Not configured'}
+            </p>
+            {checklist.payoutMilestoneNotes ? (
+              <p className="mt-1 text-xs text-slate-600">{checklist.payoutMilestoneNotes}</p>
+            ) : null}
+            {checklist.computed.payoutMilestoneSupported === false ? (
+              <p className="mt-1 text-xs font-medium text-amber-700">
+                Manual administrator confirmation required
+              </p>
+            ) : null}
           </div>
           <div>
             <p className="text-xs text-slate-500">Currency</p>
@@ -143,13 +159,74 @@ export function ManagerDealChecklistPanel({
         </CardContent>
       </Card>
 
+      <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        This workspace records document status, but secure file storage and developer delivery are not connected yet.
+      </p>
+
+      {checklist.commissionSummary.referrerCommissionType === 'percentage' ? (
+        <Card className="border-sky-200">
+          <CardHeader>
+            <CardTitle>Percentage payout calculation basis</CardTitle>
+            <CardDescription>
+              Record the{' '}
+              {checklist.commissionSummary.referrerCommissionBasis?.replace(/_/g, ' ') ||
+                'configured price basis'}{' '}
+              amount from the applicable transaction documents. The assigned Distribution team uses
+              it to calculate the referral payout terms frozen for this referral.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-end gap-3">
+            <div className="min-w-56 space-y-1">
+              <Label htmlFor="payout-basis-amount">
+                Recorded amount ({checklist.currencyCode || 'ZAR'})
+              </Label>
+              <Input
+                id="payout-basis-amount"
+                type="number"
+                min="1"
+                step="1"
+                value={payoutBasisAmount}
+                disabled={
+                  !checklist.commissionSummary.canRecordPayoutBasis || Boolean(isSavingPayoutBasis)
+                }
+                onChange={event => setPayoutBasisAmount(event.target.value)}
+              />
+            </div>
+            {checklist.commissionSummary.canRecordPayoutBasis ? (
+              <Button
+                disabled={
+                  Boolean(isSavingPayoutBasis) ||
+                  !Number.isInteger(Number(payoutBasisAmount)) ||
+                  Number(payoutBasisAmount) <= 0
+                }
+                onClick={() => void onRecordPayoutBasis?.(Number(payoutBasisAmount))}
+              >
+                {isSavingPayoutBasis
+                  ? 'Saving…'
+                  : checklist.commissionSummary.payoutBasisAmount
+                    ? 'Update payout basis'
+                    : 'Record payout basis'}
+              </Button>
+            ) : (
+              <p className="text-xs text-slate-600">
+                {checklist.commissionSummary.payoutBasisAmount
+                  ? 'The payout basis is recorded and locked.'
+                  : 'The payout basis cannot be recorded at this stage. Ask the Distribution manager to review this referral.'}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className={checklist.computed.payoutReady ? 'border-emerald-300' : 'border-amber-300'}>
         <CardHeader>
-          <CardTitle className={checklist.computed.payoutReady ? 'text-emerald-700' : 'text-amber-700'}>
+          <CardTitle
+            className={checklist.computed.payoutReady ? 'text-emerald-700' : 'text-amber-700'}
+          >
             {checklist.computed.payoutReady ? 'Payout Ready' : 'Payout Not Ready'}
           </CardTitle>
           <CardDescription>
-            Verified required documents: {checklist.computed.verifiedRequiredCount}/
+            Required documents verified by our team: {checklist.computed.verifiedRequiredCount}/
             {checklist.computed.requiredCount}
           </CardDescription>
         </CardHeader>
@@ -161,8 +238,8 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Payout readiness uses verified documents and any milestone checks the system can prove
-            today. Unsupported milestones still require manual confirmation.
+            Payout readiness uses the Distribution team’s document checks and a recorded transaction milestone.
+            It does not confirm that the developer received the files. Unsupported milestones need a documented administrator confirmation.
           </p>
         </CardContent>
       </Card>
@@ -170,7 +247,9 @@ export function ManagerDealChecklistPanel({
       <Card>
         <CardHeader>
           <CardTitle>Document Checklist</CardTitle>
-          <CardDescription>Update received and verification status per required document.</CardDescription>
+          <CardDescription>
+            Update received and verification status per required document.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2 rounded border bg-slate-50 p-2">
@@ -180,7 +259,7 @@ export function ManagerDealChecklistPanel({
               disabled={Boolean(isBatchSaving)}
               onClick={() => void onMarkAllRequiredReceived?.()}
             >
-              Mark All Required as Received
+              Mark All Required as Received by Our Team
             </Button>
             <Button
               variant="outline"
@@ -188,27 +267,21 @@ export function ManagerDealChecklistPanel({
               disabled={Boolean(isBatchSaving)}
               onClick={() => void onMarkAllRequiredVerified?.()}
             >
-              Mark All Required as Verified
+              Mark All Required as Verified by Our Team
             </Button>
-            {isBatchSaving ? <p className="self-center text-xs text-blue-600">Applying batch update...</p> : null}
+            {isBatchSaving ? (
+              <p className="self-center text-xs text-blue-600">Applying batch update...</p>
+            ) : null}
           </div>
           {orderedDocuments.map(document => (
-            <div key={document.templateId} className="rounded border p-3">
+            <div
+              key={`${document.documentCode}-${document.sortOrder}-${document.templateId ?? 'unavailable'}`}
+              className="rounded border p-3"
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">{document.documentLabel}</p>
                   <p className="text-xs text-slate-500">{document.documentCode}</p>
-                  {document.templateFileUrl ? (
-                    <a
-                      href={document.templateFileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      Download document
-                      {document.templateFileName ? ` (${document.templateFileName})` : ''}
-                    </a>
-                  ) : null}
                 </div>
                 <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                   {document.isRequired ? 'Required' : 'Optional'}
@@ -217,100 +290,76 @@ export function ManagerDealChecklistPanel({
 
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <Label htmlFor={`status-${document.templateId}`}>Status</Label>
+                  <Label htmlFor={`status-${document.templateId ?? document.documentCode}`}>Status</Label>
                   <select
-                    id={`status-${document.templateId}`}
+                    id={`status-${document.templateId ?? document.documentCode}`}
                     className="h-9 w-full rounded border border-input bg-background px-2 text-sm"
                     value={document.status}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
+                    disabled={
+                      document.templateId === null ||
+                      !document.isActive ||
+                      document.status === 'unavailable' ||
+                      savingTemplateId === document.templateId ||
+                      Boolean(isBatchSaving)
+                    }
+                    onChange={event => {
+                      if (document.templateId === null) return;
                       void onUpdateDocumentStatus({
                         templateId: document.templateId,
-                        status: event.target.value as DealDocumentStatus,
-                        notes: notesByTemplateId[document.templateId] || null,
-                      })
-                    }
+                        status: event.target.value as EditableDealDocumentStatus,
+                        notes:
+                          notesByTemplateId[String(document.templateId)] || null,
+                      });
+                    }}
                   >
                     <option value="pending">pending</option>
-                    <option value="received">received</option>
-                    <option value="verified">verified</option>
-                    <option value="rejected">rejected</option>
+                    <option value="received">Received by our team</option>
+                    <option value="verified">Verified by our team</option>
+                    <option value="rejected">Update needed</option>
+                    {document.status === 'unavailable' ? (
+                      <option value="unavailable">Saved requirement unavailable</option>
+                    ) : null}
                   </select>
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor={`notes-${document.templateId}`}>Notes</Label>
+                  <Label htmlFor={`notes-${document.templateId ?? document.documentCode}`}>Notes</Label>
                   <Input
-                    id={`notes-${document.templateId}`}
-                    value={notesByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setNotesByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
+                    id={`notes-${document.templateId ?? document.documentCode}`}
+                    value={
+                      notesByTemplateId[
+                        String(document.templateId ?? `unavailable:${document.documentCode}:${document.sortOrder}`)
+                      ] || ''
                     }
-                    onBlur={() =>
+                    disabled={
+                      document.templateId === null ||
+                      !document.isActive ||
+                      document.status === 'unavailable' ||
+                      savingTemplateId === document.templateId ||
+                      Boolean(isBatchSaving)
+                    }
+                    onChange={event => {
+                      const key = String(
+                        document.templateId ?? `unavailable:${document.documentCode}:${document.sortOrder}`,
+                      );
+                      setNotesByTemplateId(current => ({ ...current, [key]: event.target.value }));
+                    }}
+                    onBlur={() => {
+                      if (document.templateId === null || document.status === 'unavailable') return;
                       void onUpdateDocumentStatus({
                         templateId: document.templateId,
                         status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                      })
-                    }
+                        notes: notesByTemplateId[String(document.templateId)] || null,
+                      });
+                    }}
                   />
                 </div>
               </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor={`file-url-${document.templateId}`}>Submitted file URL</Label>
-                  <Input
-                    id={`file-url-${document.templateId}`}
-                    placeholder="https://..."
-                    value={fileUrlByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setFileUrlByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
-                    }
-                    onBlur={() =>
-                      void onUpdateDocumentStatus({
-                        templateId: document.templateId,
-                        status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
-                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`file-name-${document.templateId}`}>Submitted file name</Label>
-                  <Input
-                    id={`file-name-${document.templateId}`}
-                    placeholder="Document name"
-                    value={fileNameByTemplateId[document.templateId] || ''}
-                    disabled={savingTemplateId === document.templateId || Boolean(isBatchSaving)}
-                    onChange={event =>
-                      setFileNameByTemplateId(current => ({
-                        ...current,
-                        [document.templateId]: event.target.value,
-                      }))
-                    }
-                    onBlur={() =>
-                      void onUpdateDocumentStatus({
-                        templateId: document.templateId,
-                        status: document.status,
-                        notes: notesByTemplateId[document.templateId] || null,
-                        submittedFileUrl: fileUrlByTemplateId[document.templateId] || null,
-                        submittedFileName: fileNameByTemplateId[document.templateId] || null,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
+              {document.status === 'unavailable' ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  This saved requirement cannot be matched to its document record. It remains a blocker until an administrator reviews it.
+                </p>
+              ) : null}
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>
                   Received: {document.receivedAt || 'Pending'} | {formatActor(document.receivedBy)}
@@ -319,7 +368,7 @@ export function ManagerDealChecklistPanel({
                   Verified: {document.verifiedAt || 'Pending'} | {formatActor(document.verifiedBy)}
                 </p>
                 <p className="md:col-span-2">
-                  Submitted file: {document.submittedAt || 'Pending'} |{' '}
+                  Document submission: {document.submittedAt || 'No secure file recorded'} |{' '}
                   {formatActor(document.submittedBy || null)}
                 </p>
               </div>

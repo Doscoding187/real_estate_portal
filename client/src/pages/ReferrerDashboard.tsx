@@ -4,12 +4,10 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { ListingNavbar } from '@/components/ListingNavbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Building2, Search, MapPin, Home, Banknote, Loader2 } from 'lucide-react';
 import { calculateAffordablePrice, calculateMonthlyRepayment } from '@/lib/bond-calculator';
-import { toast } from 'sonner';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 
 const PRIME_RATE = 11.75;
@@ -64,9 +62,6 @@ export default function ReferrerDashboard() {
   const [monthlyExpenses, setMonthlyExpenses] = useState<number>(0);
   const [monthlyDebt, setMonthlyDebt] = useState<number>(0);
   const [depositPercent, setDepositPercent] = useState<number>(10);
-  const [prospectName, setProspectName] = useState('');
-  const [prospectEmail, setProspectEmail] = useState('');
-  const [prospectPhone, setProspectPhone] = useState('');
 
   const accessQuery = trpc.distribution.referrer.myAccess.useQuery({
     includePaused: true,
@@ -77,17 +72,6 @@ export default function ReferrerDashboard() {
     { dealId: Number(selectedDealId) },
     { enabled: Boolean(selectedDealId) },
   );
-  const submitDealMutation = trpc.distribution.referrer.submitDeal.useMutation({
-    onSuccess: () => {
-      toast.success('Prospect submitted to deal pipeline');
-      setProspectName('');
-      setProspectEmail('');
-      setProspectPhone('');
-      pipelineQuery.refetch();
-    },
-    onError: err => toast.error(err.message),
-  });
-
   const groupedDevelopments = useMemo(() => {
     const rows = accessQuery.data || [];
     const map = new Map<number, any>();
@@ -162,11 +146,6 @@ export default function ReferrerDashboard() {
     dev => Number(dev.developmentId) === Number(selectedDevelopmentId),
   );
 
-  const totalUnitTypes = groupedDevelopments.reduce(
-    (total, dev) => total + (dev.unitTypes?.length || 0),
-    0,
-  );
-
   const disposableIncome = Math.max(0, grossIncome - monthlyExpenses - monthlyDebt);
   const maxMonthlyRepaymentBudget = Math.max(
     0,
@@ -198,7 +177,8 @@ export default function ReferrerDashboard() {
           <p className="text-xs uppercase tracking-[0.2em] text-slate-200">Referrer Workspace</p>
           <h1 className="mt-2 text-3xl font-bold">Developments Dashboard</h1>
           <p className="mt-2 text-slate-200">
-            Track accessible developments, unit pricing, and estimated qualifying income.
+            Review the Distribution programs you can access. Development details, marketable
+            inventory, prices, and partner resources are supplied by the Developer Engine.
           </p>
         </div>
 
@@ -219,8 +199,8 @@ export default function ReferrerDashboard() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Unit Types</CardDescription>
-              <CardTitle>{totalUnitTypes}</CardTitle>
+              <CardDescription>Developer Availability</CardDescription>
+              <CardTitle className="text-base">Not connected</CardTitle>
             </CardHeader>
           </Card>
         </div>
@@ -246,7 +226,7 @@ export default function ReferrerDashboard() {
                   <Input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by name, city, province"
+                    placeholder="Search by development name or ID"
                     className="pl-9"
                   />
                 </div>
@@ -298,8 +278,11 @@ export default function ReferrerDashboard() {
                           </CardTitle>
                           <CardDescription className="mt-2 flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
-                            {selectedDevelopment.suburb ? `${selectedDevelopment.suburb}, ` : ''}
-                            {selectedDevelopment.city}, {selectedDevelopment.province}
+                            {selectedDevelopment.developmentFactsAvailable
+                              ? [selectedDevelopment.suburb, selectedDevelopment.city, selectedDevelopment.province]
+                                  .filter(Boolean)
+                                  .join(', ')
+                              : 'Location details will appear when this opportunity is ready.'}
                           </CardDescription>
                         </div>
                         <Badge
@@ -314,14 +297,15 @@ export default function ReferrerDashboard() {
                     <CardContent className="space-y-4">
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         <div className="rounded-md border p-2.5">
-                          <p className="text-[11px] text-slate-500">Development Price Range</p>
+                          <p className="text-[11px] text-slate-500">Current availability</p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
-                            {formatMoney(selectedDevelopment.priceFrom)} -{' '}
-                            {formatMoney(selectedDevelopment.priceTo)}
+                            {selectedDevelopment.developmentFactsAvailable
+                              ? `${formatMoney(selectedDevelopment.priceFrom)} - ${formatMoney(selectedDevelopment.priceTo)}`
+                              : 'Not available yet'}
                           </p>
                         </div>
                         <div className="rounded-md border p-2.5">
-                          <p className="text-[11px] text-slate-500">Commission Model</p>
+                          <p className="text-[11px] text-slate-500">Referral payout type</p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
                             {String(selectedDevelopment.commissionModel || 'N/A').replace('_', ' ')}
                           </p>
@@ -329,7 +313,7 @@ export default function ReferrerDashboard() {
                         <div className="rounded-md border p-2.5">
                           <p className="text-[11px] text-slate-500">Referral Status</p>
                           <p className="mt-1 text-sm font-semibold leading-tight">
-                            {selectedDevelopment.isReferralEnabled ? 'Enabled' : 'Disabled'}
+                            {selectedDevelopment.isReferralEnabled ? 'Open' : 'Paused'}
                           </p>
                         </div>
                         <div className="rounded-md border p-2.5">
@@ -362,7 +346,7 @@ export default function ReferrerDashboard() {
                     <CardHeader>
                       <CardTitle>Unit Types</CardTitle>
                       <CardDescription>
-                        Pricing, monthly estimate, and qualifying income per unit type.
+                        Current sale and rental inventory comes from the Developer Engine.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -418,7 +402,7 @@ export default function ReferrerDashboard() {
                         </div>
                       ) : (
                         <p className="text-sm text-slate-500">
-                          No unit types are currently available for this development.
+                          Unit types and current prices are not connected yet.
                         </p>
                       )}
                     </CardContent>
@@ -484,7 +468,7 @@ export default function ReferrerDashboard() {
                             ))
                           ) : (
                             <p className="text-sm text-slate-500">
-                              No units match this affordability range yet.
+                              Development availability is not connected, so unit matching is unavailable.
                             </p>
                           )}
                         </div>
@@ -493,60 +477,17 @@ export default function ReferrerDashboard() {
 
                     <Card>
                       <CardHeader>
-                        <CardTitle>Add Prospect to Deal Pipeline</CardTitle>
+                        <CardTitle>Referral intake</CardTitle>
                         <CardDescription>
-                          Create a referral deal and track progression with your manager.
+                          The guided Distribution Network intake confirms current availability and collects permission documents before buyer details.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-3">
                         <PayoutRulesDisclosure developmentId={Number(selectedDevelopment?.developmentId || 0)} />
-                        <Input
-                          placeholder="Prospect full name"
-                          value={prospectName}
-                          onChange={e => setProspectName(e.target.value)}
-                        />
-                        <Input
-                          placeholder="Prospect email"
-                          value={prospectEmail}
-                          onChange={e => setProspectEmail(e.target.value)}
-                        />
-                        <Input
-                          placeholder="Prospect phone"
-                          value={prospectPhone}
-                          onChange={e => setProspectPhone(e.target.value)}
-                        />
-                        <Button
-                          className="w-full"
-                          disabled={
-                            submitDealMutation.isPending ||
-                            !selectedDevelopment?.programId ||
-                            !prospectName.trim()
-                          }
-                          onClick={() => {
-                            if (!selectedDevelopment?.programId) {
-                              toast.error(
-                                'Selected development is missing a distribution program.',
-                              );
-                              return;
-                            }
-                            submitDealMutation.mutate({
-                              programId: Number(selectedDevelopment.programId),
-                              buyerName: prospectName.trim(),
-                              buyerEmail: prospectEmail.trim() || null,
-                              buyerPhone: prospectPhone.trim() || null,
-                              notes: `Affordability estimate: ${formatMoney(maxAffordablePrice)}`,
-                              referralContext: {
-                                prospect: {
-                                  grossMonthlyIncome: grossIncome || null,
-                                  grossMonthlyIncomeRange: null,
-                                  notes: `Expenses: ${formatMoney(monthlyExpenses)}, Debt: ${formatMoney(monthlyDebt)}`,
-                                },
-                              },
-                            });
-                          }}
-                        >
-                          {submitDealMutation.isPending ? 'Submitting...' : 'Submit Prospect'}
-                        </Button>
+                        <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                          Do not enter buyer details here. The referral intake flow will request the
+                          required permission and identity documents before collecting prospect information.
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
@@ -590,7 +531,7 @@ export default function ReferrerDashboard() {
                                     : 'text-slate-500'
                                 }`}
                               >
-                                Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
+                                Stage: {deal.currentStage} | Referral payout: {deal.commissionStatus}
                               </p>
                             </button>
                           ))}

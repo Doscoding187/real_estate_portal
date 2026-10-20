@@ -28,7 +28,7 @@ describe('distribution schema probe failures', () => {
     mocks.getDb.mockResolvedValue({ execute: vi.fn().mockResolvedValue([[{ count_value: '0' }]]) });
     const result = await getDistributionSchemaReadinessSnapshot({ forceRefresh: true });
     expect(result.ready).toBe(false);
-    expect(result.missingItems).toContain('developments');
+    expect(result.missingItems).toContain('development_manager_assignments');
   });
   it('propagates connection failure instead of reporting absent tables', async () => {
     const failure = new Error('Database target invalid');

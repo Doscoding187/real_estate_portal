@@ -75,6 +75,10 @@ import {
   DATA_ROLE_MANIFEST,
 } from '../server/_core/databaseAuthority/dataAdapters/dataRoleManifest';
 import {
+  prepareCanonicalPlatformSettings,
+  verifyCanonicalPlatformSettings,
+} from '../server/_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
+import {
   prepareCanonicalFoundation,
   verifyCanonicalFoundation,
 } from '../server/_core/databaseAuthority/dataAdapters/canonicalFoundation';
@@ -91,6 +95,14 @@ import {
   prepareListingPreviewFixture,
   verifyListingPreviewFixture,
 } from '../server/_core/databaseAuthority/dataAdapters/listingPreviewFixture';
+import {
+  prepareDistributionReferrerPreviewFixture,
+  verifyDistributionReferrerPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/distributionReferrerPreviewFixture';
+import {
+  prepareDistributionReferrerActivityPreviewFixture,
+  verifyDistributionReferrerActivityPreviewFixture,
+} from '../server/_core/databaseAuthority/dataAdapters/distributionReferrerActivityPreviewFixture';
 import {
   prepareLocalJourneyPreview,
   verifyLocalJourneyPreview,
@@ -188,12 +200,18 @@ type Command =
   | 'schema:tidb-audit'
   | 'reference:prepare'
   | 'reference:verify'
+  | 'platform-settings:prepare'
+  | 'platform-settings:verify'
   | 'foundation:prepare'
   | 'foundation:verify'
   | 'scenario:prepare'
   | 'scenario:verify'
   | 'listing-preview:prepare'
   | 'listing-preview:verify'
+  | 'distribution-referrer-preview:prepare'
+  | 'distribution-referrer-preview:verify'
+  | 'distribution-referrer-activity:prepare'
+  | 'distribution-referrer-activity:verify'
   | 'local-journey:prepare'
   | 'local-journey:verify'
   | 'homepage-preview:prepare'
@@ -915,6 +933,24 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'platform-settings:prepare' || command === 'platform-settings:verify') {
+    const isPrepare = command === 'platform-settings:prepare';
+    const operation: DatabaseOperation = isPrepare ? 'reference-seed' : 'verification';
+    const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+    const decision = authorizationFor(authority);
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      print(
+        isPrepare
+          ? await prepareCanonicalPlatformSettings({ authority, decision, connection })
+          : await verifyCanonicalPlatformSettings({ authority, decision, connection }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (
     command === 'reference:prepare' ||
     command === 'reference:verify' ||
@@ -924,6 +960,10 @@ async function run(command: Command): Promise<void> {
     command === 'scenario:verify' ||
     command === 'listing-preview:prepare' ||
     command === 'listing-preview:verify' ||
+    command === 'distribution-referrer-preview:prepare' ||
+    command === 'distribution-referrer-preview:verify' ||
+    command === 'distribution-referrer-activity:prepare' ||
+    command === 'distribution-referrer-activity:verify' ||
     command === 'homepage-preview:prepare' ||
     command === 'homepage-preview:verify' ||
     command === 'local-journey:prepare' ||
@@ -961,6 +1001,48 @@ async function run(command: Command): Promise<void> {
         const evidence = isPrepare
           ? await prepareListingPreviewFixture({ authority, decision, connection })
           : await verifyListingPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
+    if (command.startsWith('distribution-referrer-preview:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareDistributionReferrerPreviewFixture({ authority, decision, connection })
+          : await verifyDistributionReferrerPreviewFixture({ authority, decision, connection });
+        print(evidence);
+      } finally {
+        await connection.end();
+      }
+      return;
+    }
+
+    if (command.startsWith('distribution-referrer-activity:')) {
+      const isPrepare = command.endsWith(':prepare');
+      const operation = isPrepare ? 'demo-seed' : 'verification';
+      const authority = authorityFor(operation, isPrepare ? 'local-owner' : undefined);
+      const decision = authorizationFor(authority);
+      const connection = await createAuthoritySqlConnection(authority, decision);
+      try {
+        const evidence = isPrepare
+          ? await prepareDistributionReferrerActivityPreviewFixture({
+              authority,
+              decision,
+              connection,
+            })
+          : await verifyDistributionReferrerActivityPreviewFixture({
+              authority,
+              decision,
+              connection,
+            });
         print(evidence);
       } finally {
         await connection.end();
@@ -1176,6 +1258,8 @@ const commands = new Set<Command>([
   'schema:tidb-audit',
   'reference:prepare',
   'reference:verify',
+  'platform-settings:prepare',
+  'platform-settings:verify',
   'places:prepare',
   'places:verify',
   'places:prepare-national',
@@ -1186,6 +1270,10 @@ const commands = new Set<Command>([
   'scenario:verify',
   'listing-preview:prepare',
   'listing-preview:verify',
+  'distribution-referrer-preview:prepare',
+  'distribution-referrer-preview:verify',
+  'distribution-referrer-activity:prepare',
+  'distribution-referrer-activity:verify',
   'local-journey:prepare',
   'local-journey:verify',
   'homepage-preview:prepare',

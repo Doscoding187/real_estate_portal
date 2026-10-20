@@ -41,6 +41,7 @@ export type RuntimeSchemaCapabilities = {
 export type DistributionSchemaOperation =
   | 'distribution.admin.listDevelopmentCatalog'
   | 'distribution.admin.listPrograms'
+  | 'distribution.admin.manageReferralIntakePolicy'
   | 'distribution.admin.listTeamRegistrations'
   | 'distribution.admin.createManagerInvite'
   | 'distribution.admin.upsertBrandPartnership'
@@ -48,7 +49,11 @@ export type DistributionSchemaOperation =
   | 'distribution.admin.setDevelopmentBrochureConfig'
   | 'distribution.admin.getBrandPartnership'
   | 'distribution.admin.getDevelopmentAccess'
-  | 'distribution.admin.listDevelopmentAccess';
+  | 'distribution.admin.listDevelopmentAccess'
+  | 'distribution.selectedPractitioners'
+  | 'distribution.listingLeadQueue'
+  | 'distribution.referralIntakeWorkflow'
+  | 'distribution.referralEvidenceRetention';
 
 export type DistributionSchemaRequirement = {
   tableName: string;
@@ -81,31 +86,6 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
   DistributionSchemaRequirement[]
 > = {
   'distribution.admin.listDevelopmentCatalog': [
-    { tableName: 'developments' },
-    { tableName: 'developments', columnName: 'id' },
-    { tableName: 'developments', columnName: 'name' },
-    { tableName: 'developments', columnName: 'catalogue_publisher_id' },
-    { tableName: 'developments', columnName: 'city' },
-    { tableName: 'developments', columnName: 'province' },
-    { tableName: 'developments', columnName: 'status' },
-    { tableName: 'developments', columnName: 'approval_status' },
-    { tableName: 'developments', columnName: 'isPublished' },
-    { tableName: 'developments', columnName: 'images' },
-    { tableName: 'developments', columnName: 'priceFrom' },
-    { tableName: 'developments', columnName: 'priceTo' },
-    { tableName: 'developments', columnName: 'updatedAt' },
-    { tableName: 'catalogue_publishers' },
-    { tableName: 'catalogue_publishers', columnName: 'id' },
-    { tableName: 'catalogue_publishers', columnName: 'name' },
-    { tableName: 'unit_types' },
-    { tableName: 'unit_types', columnName: 'development_id' },
-    { tableName: 'unit_types', columnName: 'name' },
-    { tableName: 'unit_types', columnName: 'price_from' },
-    { tableName: 'unit_types', columnName: 'price_to' },
-    { tableName: 'unit_types', columnName: 'base_price_from' },
-    { tableName: 'unit_types', columnName: 'base_price_to' },
-    { tableName: 'unit_types', columnName: 'is_active' },
-    { tableName: 'unit_types', columnName: 'display_order' },
     { tableName: 'development_manager_assignments' },
     { tableName: 'development_manager_assignments', columnName: 'id' },
     { tableName: 'development_manager_assignments', columnName: 'development_id' },
@@ -158,11 +138,28 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_programs', columnName: 'currency_code' },
     { tableName: 'distribution_programs', columnName: 'created_at' },
     { tableName: 'distribution_programs', columnName: 'updated_at' },
-    { tableName: 'developments' },
-    { tableName: 'developments', columnName: 'id' },
-    { tableName: 'developments', columnName: 'name' },
-    { tableName: 'developments', columnName: 'city' },
-    { tableName: 'developments', columnName: 'province' },
+  ],
+  'distribution.admin.manageReferralIntakePolicy': [
+    { tableName: 'distribution_programs' },
+    { tableName: 'distribution_programs', columnName: 'id' },
+    { tableName: 'distribution_programs', columnName: 'development_id' },
+    { tableName: 'distribution_referral_intake_policy_releases' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'program_id' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'policy_version' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'status' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'configuration' },
+    {
+      tableName: 'distribution_referral_intake_policy_releases',
+      columnName: 'configuration_digest',
+    },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'approval_reference' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'published_by' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'published_at' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'created_by' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'updated_by' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'created_at' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'updated_at' },
   ],
   'distribution.admin.listTeamRegistrations': [
     { tableName: 'platform_team_registrations' },
@@ -234,26 +231,18 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'brochure_config_json' },
   ],
   'distribution.admin.getBrandPartnership': [
-    { tableName: 'catalogue_publishers' },
-    { tableName: 'catalogue_publishers', columnName: 'id' },
-    { tableName: 'catalogue_publishers', columnName: 'name' },
     { tableName: 'distribution_brand_partnerships' },
     { tableName: 'distribution_brand_partnerships', columnName: 'catalogue_publisher_id' },
     { tableName: 'distribution_development_access' },
     { tableName: 'distribution_development_access', columnName: 'brand_partnership_id' },
   ],
   'distribution.admin.getDevelopmentAccess': [
-    { tableName: 'developments' },
-    { tableName: 'developments', columnName: 'id' },
-    { tableName: 'developments', columnName: 'catalogue_publisher_id' },
     { tableName: 'distribution_development_access' },
     { tableName: 'distribution_development_access', columnName: 'development_id' },
     { tableName: 'distribution_brand_partnerships' },
     { tableName: 'distribution_brand_partnerships', columnName: 'catalogue_publisher_id' },
   ],
   'distribution.admin.listDevelopmentAccess': [
-    { tableName: 'developments' },
-    { tableName: 'developments', columnName: 'id' },
     { tableName: 'distribution_brand_partnerships' },
     { tableName: 'distribution_brand_partnerships', columnName: 'catalogue_publisher_id' },
     { tableName: 'distribution_brand_partnerships', columnName: 'status' },
@@ -261,6 +250,141 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_development_access', columnName: 'development_id' },
     { tableName: 'distribution_development_access', columnName: 'status' },
     { tableName: 'distribution_development_access', columnName: 'submission_allowed' },
+  ],
+  'distribution.selectedPractitioners': [
+    { tableName: 'distribution_selected_practitioners' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'agent_id' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'status' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'added_by_user_id' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'status_changed_by_user_id' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'status_changed_at' },
+    { tableName: 'agents' },
+    { tableName: 'agents', columnName: 'userId' },
+    { tableName: 'agents', columnName: 'status' },
+    { tableName: 'users' },
+    { tableName: 'users', columnName: 'id' },
+    { tableName: 'users', columnName: 'role' },
+  ],
+  'distribution.listingLeadQueue': [
+    { tableName: 'distribution_selected_practitioners' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'agent_id' },
+    { tableName: 'distribution_selected_practitioners', columnName: 'status' },
+    { tableName: 'distribution_listing_lead_queue' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'lead_id' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'source' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'status' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'assigned_agent_id' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'assigned_by_user_id' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'assigned_at' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'close_reason' },
+    { tableName: 'distribution_listing_lead_queue', columnName: 'created_at' },
+    { tableName: 'distribution_listing_lead_queue_events' },
+    { tableName: 'distribution_listing_lead_queue_events', columnName: 'queue_item_id' },
+    { tableName: 'distribution_listing_lead_queue_events', columnName: 'event_type' },
+    { tableName: 'distribution_listing_lead_queue_events', columnName: 'actor_user_id' },
+    { tableName: 'distribution_listing_lead_queue_events', columnName: 'from_agent_id' },
+    { tableName: 'distribution_listing_lead_queue_events', columnName: 'to_agent_id' },
+    { tableName: 'leads' },
+    { tableName: 'leads', columnName: 'id' },
+    { tableName: 'leads', columnName: 'propertyId' },
+    { tableName: 'leads', columnName: 'developmentId' },
+    { tableName: 'leads', columnName: 'name' },
+    { tableName: 'leads', columnName: 'email' },
+    { tableName: 'leads', columnName: 'phone' },
+    { tableName: 'leads', columnName: 'unit_name' },
+    { tableName: 'leads', columnName: 'createdAt' },
+    { tableName: 'leads', columnName: 'status' },
+    { tableName: 'properties' },
+    { tableName: 'properties', columnName: 'title' },
+    { tableName: 'agents' },
+    { tableName: 'agents', columnName: 'id' },
+    { tableName: 'agents', columnName: 'userId' },
+    { tableName: 'agents', columnName: 'status' },
+    { tableName: 'agents', columnName: 'displayName' },
+    { tableName: 'agents', columnName: 'firstName' },
+    { tableName: 'agents', columnName: 'lastName' },
+    { tableName: 'users' },
+    { tableName: 'users', columnName: 'id' },
+    { tableName: 'users', columnName: 'role' },
+    { tableName: 'users', columnName: 'email' },
+  ],
+  'distribution.referralEvidenceRetention': [
+    { tableName: 'distribution_referral_intake_sessions' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'policy_version' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'status' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'draft_expires_at' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'expired_at' },
+    { tableName: 'distribution_referral_intake_evidence' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'session_id' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'evidence_type' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_adapter' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_key' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'retention_due_at' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_status' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deletion_attempt_count' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deletion_claimed_at' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deletion_lease_token' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deletion_next_attempt_at' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deletion_last_error_code' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'deleted_at' },
+    { tableName: 'distribution_referral_intake_events' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'session_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'evidence_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'event_type' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'actor_user_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'details' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'occurred_at' },
+  ],
+  'distribution.referralIntakeWorkflow': [
+    { tableName: 'distribution_programs' },
+    { tableName: 'distribution_programs', columnName: 'id' },
+    { tableName: 'distribution_programs', columnName: 'development_id' },
+    { tableName: 'distribution_programs', columnName: 'is_active' },
+    { tableName: 'distribution_programs', columnName: 'is_referral_enabled' },
+    { tableName: 'distribution_referral_intake_policy_releases' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'program_id' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'policy_version' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'status' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'configuration' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'configuration_digest' },
+    { tableName: 'distribution_referral_intake_policy_releases', columnName: 'published_at' },
+    { tableName: 'distribution_referral_intake_sessions' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'session_uuid' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'policy_release_id' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'policy_version' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'policy_configuration_digest' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'partner_user_id' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'status' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'draft_expires_at' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'submitted_at' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'withdrawn_at' },
+    { tableName: 'distribution_referral_intake_sessions', columnName: 'closed_at' },
+    { tableName: 'distribution_referral_intake_evidence' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'id' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'evidence_uuid' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'session_id' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'evidence_type' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_adapter' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_key' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'mime_type' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'byte_size' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'sha256' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'uploaded_by_user_id' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'review_status' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'storage_status' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'retention_due_at' },
+    { tableName: 'distribution_referral_intake_evidence', columnName: 'created_at' },
+    { tableName: 'distribution_referral_intake_events' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'session_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'evidence_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'event_type' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'actor_user_id' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'details' },
+    { tableName: 'distribution_referral_intake_events', columnName: 'occurred_at' },
   ],
 };
 
@@ -325,9 +449,9 @@ async function columnExists(tableName: string, columnName: string): Promise<bool
   return readCount(normalizeRows(result)) > 0;
 }
 
-export async function getRuntimeSchemaCapabilities(
-  options?: { forceRefresh?: boolean },
-): Promise<RuntimeSchemaCapabilities> {
+export async function getRuntimeSchemaCapabilities(options?: {
+  forceRefresh?: boolean;
+}): Promise<RuntimeSchemaCapabilities> {
   const now = Date.now();
   if (!options?.forceRefresh && cachedCapabilities && cachedCapabilities.expiresAt > now) {
     return cachedCapabilities.value;
@@ -338,10 +462,18 @@ export async function getRuntimeSchemaCapabilities(
   const assignmentsTable = await tableExists('demand_lead_assignments');
   const matchesTable = await tableExists('demand_lead_matches');
   const unmatchedTable = await tableExists('demand_unmatched_leads');
-  const campaignOwnerTypeColumn = campaignsTable ? await columnExists('demand_campaigns', 'owner_type') : false;
-  const campaignOwnerIdColumn = campaignsTable ? await columnExists('demand_campaigns', 'owner_id') : false;
-  const campaignNameColumn = campaignsTable ? await columnExists('demand_campaigns', 'name') : false;
-  const campaignStatusColumn = campaignsTable ? await columnExists('demand_campaigns', 'status') : false;
+  const campaignOwnerTypeColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'owner_type')
+    : false;
+  const campaignOwnerIdColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'owner_id')
+    : false;
+  const campaignNameColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'name')
+    : false;
+  const campaignStatusColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'status')
+    : false;
   const campaignSourceChannelColumn = campaignsTable
     ? await columnExists('demand_campaigns', 'source_channel')
     : false;
@@ -351,12 +483,20 @@ export async function getRuntimeSchemaCapabilities(
   const campaignSharedRecipientCountColumn = campaignsTable
     ? await columnExists('demand_campaigns', 'shared_recipient_count')
     : false;
-  const campaignCreatedAtColumn = campaignsTable ? await columnExists('demand_campaigns', 'created_at') : false;
-  const leadCampaignIdColumn = leadsTable ? await columnExists('demand_leads', 'campaign_id') : false;
-  const leadSourceChannelColumn = leadsTable ? await columnExists('demand_leads', 'source_channel') : false;
+  const campaignCreatedAtColumn = campaignsTable
+    ? await columnExists('demand_campaigns', 'created_at')
+    : false;
+  const leadCampaignIdColumn = leadsTable
+    ? await columnExists('demand_leads', 'campaign_id')
+    : false;
+  const leadSourceChannelColumn = leadsTable
+    ? await columnExists('demand_leads', 'source_channel')
+    : false;
   const leadStatusColumn = leadsTable ? await columnExists('demand_leads', 'status') : false;
   const leadBuyerNameColumn = leadsTable ? await columnExists('demand_leads', 'buyer_name') : false;
-  const leadBuyerEmailColumn = leadsTable ? await columnExists('demand_leads', 'buyer_email') : false;
+  const leadBuyerEmailColumn = leadsTable
+    ? await columnExists('demand_leads', 'buyer_email')
+    : false;
   const leadCriteriaColumn = leadsTable ? await columnExists('demand_leads', 'criteria') : false;
   const leadMetadataColumn = leadsTable ? await columnExists('demand_leads', 'metadata') : false;
   const leadCreatedAtColumn = leadsTable ? await columnExists('demand_leads', 'created_at') : false;
@@ -372,14 +512,18 @@ export async function getRuntimeSchemaCapabilities(
   const assignmentAssignedAgentIdColumn = assignmentsTable
     ? await columnExists('demand_lead_assignments', 'assigned_agent_id')
     : false;
-  const matchLeadIdColumn = matchesTable ? await columnExists('demand_lead_matches', 'lead_id') : false;
+  const matchLeadIdColumn = matchesTable
+    ? await columnExists('demand_lead_matches', 'lead_id')
+    : false;
   const matchDemandLeadIdColumn = matchesTable
     ? await columnExists('demand_lead_matches', 'demand_lead_id')
     : false;
   const matchCampaignIdColumn = matchesTable
     ? await columnExists('demand_lead_matches', 'campaign_id')
     : false;
-  const matchConfidenceColumn = matchesTable ? await columnExists('demand_lead_matches', 'confidence') : false;
+  const matchConfidenceColumn = matchesTable
+    ? await columnExists('demand_lead_matches', 'confidence')
+    : false;
   const assignmentAssignedAtColumn = assignmentsTable
     ? await columnExists('demand_lead_assignments', 'assigned_at')
     : false;
@@ -482,6 +626,22 @@ export function evaluateDistributionSchemaOperationStatus(
   };
 }
 
+export async function getDistributionSchemaOperationStatus(
+  operation: DistributionSchemaOperation,
+): Promise<DistributionSchemaOperationStatus> {
+  const availability: Record<string, boolean> = {};
+  for (const requirement of DISTRIBUTION_SCHEMA_REQUIREMENTS[operation]) {
+    const label = formatSchemaRequirementLabel(requirement);
+    availability[label] = requirement.columnName
+      ? await columnExists(requirement.tableName, requirement.columnName)
+      : await tableExists(requirement.tableName);
+  }
+  return evaluateDistributionSchemaOperationStatus(
+    DISTRIBUTION_SCHEMA_REQUIREMENTS[operation],
+    availability,
+  );
+}
+
 export async function getDistributionSchemaReadinessSnapshot(options?: {
   forceRefresh?: boolean;
 }): Promise<DistributionSchemaReadinessSnapshot> {
@@ -531,7 +691,9 @@ export async function getDistributionSchemaReadinessSnapshot(options?: {
     DistributionSchemaOperationStatus
   >;
   const missingItems = Array.from(
-    new Set(DISTRIBUTION_SCHEMA_OPERATIONS.flatMap(operation => operations[operation].missingItems)),
+    new Set(
+      DISTRIBUTION_SCHEMA_OPERATIONS.flatMap(operation => operations[operation].missingItems),
+    ),
   );
 
   const value: DistributionSchemaReadinessSnapshot = {

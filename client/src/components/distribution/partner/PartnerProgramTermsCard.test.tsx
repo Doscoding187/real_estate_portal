@@ -1,6 +1,18 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PartnerProgramTermsCard, type ProgramTermsItem } from './PartnerProgramTermsCard';
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    distribution: {
+      partner: {
+        getReferralIntakeRequirements: {
+          useQuery: () => ({ isLoading: false, error: null, data: null }),
+        },
+      },
+    },
+  },
+}));
 
 const itemFixture: ProgramTermsItem = {
   developmentId: 41,
@@ -56,15 +68,15 @@ const itemFixture: ProgramTermsItem = {
       documentLabel: 'Unit / house plans',
       fileUrl: 'https://cdn.example.test/unit-plans.pdf',
       fileName: 'unit-plans.pdf',
-      sortOrder: 0,
+      sortOrder: 1,
     },
     {
       templateId: 202,
       documentCode: 'custom',
       documentLabel: 'Site map',
-      fileUrl: null,
-      fileName: null,
-      sortOrder: 1,
+      fileUrl: 'https://cdn.example.test/site-map.pdf',
+      fileName: 'site-map.pdf',
+      sortOrder: 2,
     },
   ],
   computed: {
@@ -82,26 +94,35 @@ describe('PartnerProgramTermsCard', () => {
     expect(screen.getByText('2.5% referral fee')).toBeInTheDocument();
     expect(screen.getByText('Paid after transfer registration')).toBeInTheDocument();
     expect(screen.getByText('2 required documents')).toBeInTheDocument();
-    expect(screen.getByText('2 buyer-ready files')).toBeInTheDocument();
+    expect(screen.getByText('2 developer-shared resources')).toBeInTheDocument();
     expect(screen.getByText('Referrals Enabled')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
-  it('opens requirements modal and shows required documents first in sorted order', () => {
+  it('opens the before-you-refer dialog with required documents first and property information', () => {
     render(<PartnerProgramTermsCard item={itemFixture} />);
 
     fireEvent.click(screen.getByRole('button', { name: /view requirements/i }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Sky City Requirements')).toBeInTheDocument();
+    expect(within(dialog).getByText('Sky City: Before you refer')).toBeInTheDocument();
+    expect(within(dialog).getByText('2 required')).toBeInTheDocument();
 
     const orderedLabels = within(dialog)
       .getAllByText(/Proof of Address|ID Document|Optional Utility Bill/)
       .map(element => element.textContent);
 
     expect(orderedLabels).toEqual(['ID Document', 'Proof of Address', 'Optional Utility Bill']);
-    expect(within(dialog).getByText('Supporting pack')).toBeInTheDocument();
+
+    expect(within(dialog).getByText('Property information')).toBeInTheDocument();
     expect(within(dialog).getByText('Unit / house plans')).toBeInTheDocument();
     expect(within(dialog).getByText('Site map')).toBeInTheDocument();
-    expect(within(dialog).getByText('Pending')).toBeInTheDocument();
+    expect(within(dialog).getByText('unit-plans.pdf')).toBeInTheDocument();
+    expect(within(dialog).getByText('site-map.pdf')).toBeInTheDocument();
+    const openLinks = within(dialog).getAllByRole('link', { name: /open/i });
+    expect(openLinks.map(link => link.getAttribute('href'))).toEqual([
+      'https://cdn.example.test/unit-plans.pdf',
+      'https://cdn.example.test/site-map.pdf',
+    ]);
   });
 });

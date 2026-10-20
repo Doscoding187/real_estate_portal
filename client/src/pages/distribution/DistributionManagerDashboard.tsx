@@ -16,6 +16,31 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+function formatStageLabel(stage: string | null | undefined) {
+  if (stage === 'commission_pending') return 'Referral payout pending';
+  if (stage === 'commission_paid') return 'Referral payout paid';
+  const labels: Record<string, string> = {
+    viewing_completed: 'Viewing outcome recorded',
+    application_submitted: 'Application submitted',
+    contract_signed: 'Agreement signed',
+    bond_approved: 'Home finance approved',
+    cancelled: 'Closed',
+  };
+  if (stage && labels[stage]) return labels[stage];
+  return String(stage || 'unknown')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
+function formatDealStageLabel(deal: any) {
+  if (deal.currentStage !== 'viewing_scheduled') return formatStageLabel(deal.currentStage);
+  if (deal.viewingStatus === 'scheduled') return 'Viewing booked';
+  if (deal.viewingStatus === 'completed') return 'Viewing completed; deal status needs review';
+  if (deal.viewingStatus === 'no_show') return 'Viewing no-show; deal status needs review';
+  if (deal.viewingStatus === 'cancelled') return 'Viewing cancelled; deal status needs review';
+  return 'Referral received';
+}
+
 export default function DistributionManagerDashboard() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -193,7 +218,7 @@ export default function DistributionManagerDashboard() {
                   <p className="font-medium">
                     {row.developmentName} - {row.buyerName}
                   </p>
-                  <p className="text-xs text-slate-500">Current stage: {row.currentStage}</p>
+                  <p className="text-xs text-slate-500">Booked viewing time passed · record its outcome</p>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
@@ -249,7 +274,7 @@ export default function DistributionManagerDashboard() {
                       {deal.developmentName} - {deal.buyerName}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
+                      Stage: {formatDealStageLabel(deal)} | Referral payout: {formatStageLabel(deal.commissionStatus)}
                     </p>
                   </button>
                   <div className="flex flex-wrap gap-2">
@@ -273,7 +298,9 @@ export default function DistributionManagerDashboard() {
                           })
                         }
                       >
-                        {stage}
+                        {stage === 'commission_pending'
+                          ? 'Referral payout pending'
+                          : formatStageLabel(stage)}
                       </Button>
                     ))}
                   </div>

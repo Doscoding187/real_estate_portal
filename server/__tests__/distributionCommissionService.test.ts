@@ -1,10 +1,51 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { ensureCommissionEntryForDeal } from '../services/distributionCommissionService';
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+function createTermsSnapshot(program: {
+  referrerCommissionType: 'flat' | 'percentage';
+  referrerCommissionValue: number;
+  referrerCommissionBasis: 'sale_price' | 'base_price' | null;
+  currencyCode: string;
+}) {
+  const terms = {
+    version: 2,
+    marketMode: 'sale',
+    program,
+  };
+  const snapshotDigest = createHash('sha256')
+    .update(canonicalJson(terms), 'utf8')
+    .digest('hex');
+  return {
+    snapshot: { ...terms, digest: snapshotDigest },
+    digest: snapshotDigest,
+  };
+}
+
 describe('distributionCommissionService', () => {
   it('uses stored deal pricing for percentage commissions when available', async () => {
     const insertEntry = vi.fn().mockResolvedValue(undefined);
     const setDealCommissionPending = vi.fn().mockResolvedValue(undefined);
     const insertCommissionCreatedEvent = vi.fn().mockResolvedValue(undefined);
+
+    const terms = createTermsSnapshot({
+      referrerCommissionType: 'percentage',
+      referrerCommissionValue: 2.5,
+      referrerCommissionBasis: 'sale_price',
+      currencyCode: 'USD',
+    });
 
     const result = await ensureCommissionEntryForDeal({
       deal: {
@@ -13,7 +54,10 @@ describe('distributionCommissionService', () => {
         developmentId: 30,
         agentId: 40,
         commissionBaseAmount: 1_500_000,
+        dealAmount: 1_500_000,
         commissionTriggerStage: 'contract_signed',
+        referralTermsSnapshotJson: terms.snapshot,
+        referralTermsSnapshotDigest: terms.digest,
       },
       transitionToStage: 'contract_signed',
       actorUserId: 99,
@@ -45,8 +89,14 @@ describe('distributionCommissionService', () => {
     expect(insertCommissionCreatedEvent).toHaveBeenCalled();
   });
 
-  it('falls back to affordability purchase price when explicit commission base is missing', async () => {
+  it('uses the frozen base price when explicit commission base is present', async () => {
     const insertEntry = vi.fn().mockResolvedValue(undefined);
+    const terms = createTermsSnapshot({
+      referrerCommissionType: 'percentage',
+      referrerCommissionValue: 1.25,
+      referrerCommissionBasis: 'base_price',
+      currencyCode: 'ZAR',
+    });
 
     await ensureCommissionEntryForDeal({
       deal: {
@@ -54,8 +104,10 @@ describe('distributionCommissionService', () => {
         programId: 20,
         developmentId: 30,
         agentId: 40,
-        affordabilityPurchasePrice: 980_000,
+        commissionBaseAmount: 980_000,
         commissionTriggerStage: 'bond_approved',
+        referralTermsSnapshotJson: terms.snapshot,
+        referralTermsSnapshotDigest: terms.digest,
       },
       transitionToStage: 'bond_approved',
       actorUserId: 99,
@@ -114,6 +166,8 @@ describe('distributionCommissionService', () => {
         setDealCommissionPending: async () => undefined,
         insertCommissionCreatedEvent: async () => undefined,
       },
-    })).rejects.toThrow('Commission entry could not be persisted; deal transition rolled back.');
+    })).rejects.toThrow(
+      'Referral payout record could not be persisted; deal transition rolled back.',
+    );
   });
 });

@@ -37,7 +37,6 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
   { table: 'distribution_deal_events', column: 'metadata' },
   { table: 'development_documents', column: 'visibility' },
   { table: 'application_requirements', column: 'provider' },
-  { table: 'application_requirements', column: 'linked_development_document_id' },
   { table: 'deal_requirement_statuses', column: 'status' },
   { table: 'deal_requirement_statuses', column: 'requirement_id' },
 ];

@@ -1,8 +1,10 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like, or, type SQL } from 'drizzle-orm';
-
-import { cataloguePublishers, developments } from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  getDevelopmentSalesWorkspaceReference,
+  listDevelopmentSalesWorkspaceReferences,
+  type DevelopmentSalesWorkspaceReference,
+} from './distributionDeveloperReadPort';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,
@@ -10,6 +12,7 @@ import {
 import {
   getBrandPartnershipByPublisherId,
   getDevelopmentAccessByDevelopmentId,
+  listDevelopmentAccess,
 } from './distributionAccessRepository';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -29,39 +32,34 @@ function buildInventoryStateCounts(): InventoryStateCounts {
   };
 }
 
-async function listLinkedDevelopmentIdsForBrand(db: DbHandle, cataloguePublisherId: number) {
-  const rows = await db
-    .select({ developmentId: developments.id })
-    .from(developments)
-    .where(eq(developments.cataloguePublisherId, cataloguePublisherId));
-
-  return rows.map(row => Number(row.developmentId)).filter(Boolean);
+async function listPublisherReferences(publisherId: number) {
+  const references: DevelopmentSalesWorkspaceReference[] = [];
+  for (let offset = 0; offset < 10_000; offset += 100) {
+    const page = await listDevelopmentSalesWorkspaceReferences({
+      publisherId,
+      limit: 100,
+      offset,
+    });
+    references.push(...page);
+    if (page.length < 100) return references;
+  }
+  throw new Error('Publisher development enumeration exceeded the administrative page limit.');
 }
 
 export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublisherId: number) {
-  const [brand] = await db
-    .select({
-      id: cataloguePublishers.id,
-      brandName: cataloguePublishers.name,
-      slug: cataloguePublishers.slug,
-      isVisible: cataloguePublishers.isVisible,
-      ownerType: cataloguePublishers.authorityKind,
-    })
-    .from(cataloguePublishers)
-    .where(eq(cataloguePublishers.id, cataloguePublisherId))
-    .limit(1);
-
-  if (!brand) {
+  const [entity, references] = await Promise.all([
+    getBrandPartnershipByPublisherId(db, cataloguePublisherId),
+    listPublisherReferences(cataloguePublisherId),
+  ]);
+  if (!references.length && !entity) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Catalogue Publisher not found.' });
   }
 
-  const entity = await getBrandPartnershipByPublisherId(db, cataloguePublisherId);
-  const developmentIds = await listLinkedDevelopmentIdsForBrand(db, cataloguePublisherId);
   const evaluations = await Promise.all(
-    developmentIds.map(developmentId =>
+    references.map(reference =>
       evaluateDevelopmentDistributionAccess({
         db,
-        developmentId,
+        developmentId: reference.developmentId,
         actor: { role: 'admin' },
         channel: 'admin_catalog',
       }),
@@ -84,13 +82,12 @@ export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublishe
     childInventoryStateCounts[evaluation.inventoryState] += 1;
   }
 
+  const reference = references[0];
   return {
     brand: {
-      id: Number(brand.id),
-      brandName: String(brand.brandName || ''),
-      slug: brand.slug || null,
-      isVisible: Number(brand.isVisible || 0) === 1,
-      ownerType: brand.ownerType || null,
+      id: cataloguePublisherId,
+      brandName: reference?.publisherName || `Publisher ${cataloguePublisherId}`,
+      ownerType: reference?.publisherAuthorityKind || null,
     },
     entity,
     derivedState: {
@@ -101,41 +98,27 @@ export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublishe
           ? []
           : [`brand_partnership_${entity.status}`]
         : ['missing_brand_partnership_row'],
-      legacyFallbackUsed: evaluations.some(evaluation => evaluation.legacyFallbackUsed),
+      legacyFallbackUsed: false,
     },
   };
 }
 
 export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: number) {
-  const [development] = await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      isPublished: developments.isPublished,
-      approvalStatus: developments.approvalStatus,
-    })
-    .from(developments)
-    .where(eq(developments.id, developmentId))
-    .limit(1);
-
-  if (!development) {
+  const reference = await getDevelopmentSalesWorkspaceReference(developmentId);
+  if (!reference) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
 
   return {
     development: {
-      id: Number(development.id),
-      name: String(development.name || ''),
-      city: development.city || null,
-      province: development.province || null,
-      cataloguePublisherId: development.cataloguePublisherId
-        ? Number(development.cataloguePublisherId)
-        : null,
-      isPublished: Number(development.isPublished || 0) === 1,
-      approvalStatus: development.approvalStatus || null,
+      id: reference.developmentId,
+      name: reference.displayName,
+      city: reference.city,
+      province: reference.province,
+      cataloguePublisherId: reference.publisherId,
+      isPublished: reference.isPublished,
+      approvalStatus: reference.approvalStatus,
+      lifecycle: reference.lifecycle,
     },
     entity: await getDevelopmentAccessByDevelopmentId(db, developmentId),
     evaluation: await evaluateDevelopmentDistributionAccess({
@@ -158,68 +141,33 @@ export async function listDevelopmentAccessDetails(
     limit?: number;
   },
 ) {
-  const conditions: SQL[] = [];
-
-  if (typeof filters.cataloguePublisherId === 'number') {
-    conditions.push(
-      eq(developments.cataloguePublisherId, filters.cataloguePublisherId),
-    );
-  }
-
-  const search = filters.search?.trim();
-  if (search) {
-    conditions.push(
-      or(
-        like(developments.name, `%${search}%`),
-        like(developments.city, `%${search}%`),
-        like(developments.province, `%${search}%`),
-      )!,
-    );
-  }
-
-  const rows = await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      isPublished: developments.isPublished,
-      approvalStatus: developments.approvalStatus,
-      status: developments.status,
-      updatedAt: developments.updatedAt,
-    })
-    .from(developments)
-    .where(conditions.length ? and(...conditions) : undefined)
-    .limit(filters.limit ?? 200);
-
+  const rows = await listDevelopmentAccess(db, filters);
   const evaluated = await Promise.all(
     rows.map(async row => {
+      const developmentId = Number(row.developmentId);
       const evaluation = await evaluateDevelopmentDistributionAccess({
         db,
-        developmentId: Number(row.id),
+        developmentId,
         actor: { role: 'admin' },
         channel: 'admin_catalog',
       });
 
       return {
         development: {
-          id: Number(row.id),
-          name: String(row.name || ''),
+          id: developmentId,
+          name: row.developmentName,
           city: row.city || null,
           province: row.province || null,
-          cataloguePublisherId: row.cataloguePublisherId
-            ? Number(row.cataloguePublisherId)
-            : null,
-          isPublished: Number(row.isPublished || 0) === 1,
-          approvalStatus: row.approvalStatus || null,
-          status: row.status || null,
-          updatedAt: row.updatedAt || null,
+          cataloguePublisherId: row.cataloguePublisherId,
+          publisherName: row.publisherName,
+          isPublished: row.isPublished,
+          approvalStatus: row.approvalStatus,
+          lifecycle: row.lifecycle,
         },
         partnership: evaluation.cataloguePublisherId
           ? await getBrandPartnershipByPublisherId(db, evaluation.cataloguePublisherId)
           : null,
-        access: await getDevelopmentAccessByDevelopmentId(db, Number(row.id)),
+        access: await getDevelopmentAccessByDevelopmentId(db, developmentId),
         evaluation,
       };
     }),

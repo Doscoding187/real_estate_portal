@@ -1,13 +1,8 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import {
   developmentRequiredDocuments,
-  cataloguePublishers,
-  developerOrganisations,
-  developerOrganisationMemberships,
-  developmentSupersessions,
-  developments,
   distributionManagerAssignments,
   distributionPrograms,
   DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES,
@@ -16,13 +11,18 @@ import {
 import { getDb } from '../db';
 import { getProgramActivationReadiness } from './distributionProgramService';
 import {
+  getDevelopmentSalesProjection,
+  getDevelopmentSalesWorkspaceReference,
+  type DevelopmentSalesProjection,
+  type DevelopmentSalesWorkspaceReference,
+} from './distributionDeveloperReadPort';
+import { DISTRIBUTION_PROCESS_DOCUMENT_CODES } from './distributionRequiredDocumentsService';
+import {
   getBrandPartnershipByPublisherId,
   getDevelopmentAccessByDevelopmentId,
   type DistributionBrandPartnershipRow,
   type DistributionDevelopmentAccessRow,
 } from './distributionAccessRepository';
-import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
-import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -48,6 +48,7 @@ export type DevelopmentDistributionAccessEvaluation = {
   developmentAccessId: number | null;
   developmentAccessStatus: DevelopmentAccessStatus | null;
   developmentVisible: boolean;
+  hasMarketableInventory: boolean;
   brandPartnered: boolean;
   developmentIncluded: boolean;
   submissionAllowed: boolean;
@@ -148,9 +149,11 @@ function buildReasons(input: {
   readiness: { configured: boolean; ready: boolean; reasons: string[] };
   legacyFallbackUsed: boolean;
   fallbackReason: string | null;
+  hasMarketableInventory?: boolean;
 }) {
   const reasons: string[] = [];
 
+  if (input.hasMarketableInventory === false) reasons.push('no_marketable_inventory');
   if (!input.cataloguePublisherId) reasons.push('missing_catalogue_publisher_link');
   if (!input.developmentVisible) reasons.push('development_not_visible');
 
@@ -199,6 +202,10 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     development_not_visible: {
       code: 'DEVELOPMENT_NOT_AVAILABLE',
       message: 'This opportunity is not available for referrals yet.',
+    },
+    no_marketable_inventory: {
+      code: 'NO_MARKETABLE_INVENTORY',
+      message: 'There is no released inventory available for referrals right now.',
     },
     missing_brand_partnership_row: {
       code: 'NETWORK_SETUP_PENDING',
@@ -262,19 +269,35 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     },
     readiness_commissionModel: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_commissionModelUnsupported: {
+      code: 'PAYOUT_MODEL_UNSUPPORTED',
+      message: 'This referral payout type is not available yet.',
     },
     readiness_defaultCommissionPercent: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_defaultCommissionAmount: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_defaultCommissionPercent_or_defaultCommissionAmount: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_referrerCommissionType: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_referrerCommissionValue: {
+      code: 'COMMISSION_MISSING',
+      message: 'Referral payout terms are still being prepared.',
+    },
+    readiness_referrerCommissionBasis: {
+      code: 'COMMISSION_BASIS_MISSING',
+      message: 'The referral payout calculation basis is still being prepared.',
     },
     readiness_tierAccessPolicy: {
       code: 'ACCESS_RULES_MISSING',
@@ -286,7 +309,7 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     },
     readiness_currencyCode: {
       code: 'CURRENCY_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_primaryManagerAssignment: {
       code: 'NO_MANAGER_ASSIGNED',
@@ -355,89 +378,36 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   developmentId: number;
   actor?: { role: ActorRole; userId?: number };
   channel?: DistributionAccessChannel;
+  developerProjection?: DevelopmentSalesProjection;
+  developerWorkspaceReference?: DevelopmentSalesWorkspaceReference;
 }): Promise<DevelopmentDistributionAccessEvaluation> {
-  const [development] = await input.db
-    .select({
-      id: developments.id,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      developmentType: developments.developmentType,
-      isPublished: developments.isPublished,
-      approvalStatus: developments.approvalStatus,
-      transactionType: developments.transactionType,
-      brand: {
-        id: cataloguePublishers.id,
-        authorityKind: cataloguePublishers.authorityKind,
-        developerOrganisationId: cataloguePublishers.developerOrganisationId,
-        isVisible: cataloguePublishers.isVisible,
-        sourceAttribution: cataloguePublishers.sourceAttribution,
-      },
-      organisation: {
-        id: developerOrganisations.id,
-        status: developerOrganisations.status,
-      },
-      activeUnitTypeCount: sql<number>`(
-        SELECT COUNT(*)
-        FROM unit_types
-        WHERE development_id = ${developments.id}
-          AND is_active = 1
-      )`,
-      activeOperatorCount: sql<number>`(
-        SELECT COUNT(*)
-        FROM ${developerOrganisationMemberships}
-        WHERE ${developerOrganisationMemberships.organisationId} = ${cataloguePublishers.developerOrganisationId}
-          AND ${developerOrganisationMemberships.status} = 'active'
-      )`,
-      activeSupersessionSource: sql<number>`EXISTS (
-        SELECT 1
-        FROM ${developmentSupersessions}
-        WHERE ${developmentSupersessions.sourceDevelopmentId} = ${developments.id}
-          AND ${developmentSupersessions.status} = 'active'
-      )`,
-    })
-    .from(developments)
-    .leftJoin(
-      cataloguePublishers,
-      eq(developments.cataloguePublisherId, cataloguePublishers.id),
-    )
-    .leftJoin(
-      developerOrganisations,
-      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
-    )
-    .where(eq(developments.id, input.developmentId))
-    .limit(1);
-
-  if (!development) {
+  const [reference, projection] = await Promise.all([
+    input.developerWorkspaceReference
+      ? Promise.resolve(input.developerWorkspaceReference)
+      : getDevelopmentSalesWorkspaceReference(input.developmentId),
+    input.developerProjection
+      ? Promise.resolve(input.developerProjection)
+      : getDevelopmentSalesProjection(input.developmentId),
+  ]);
+  if (!reference || !projection) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
+  if (reference.publisherId !== projection.publisherId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Developer workspace and sales projection publisher scope do not match.',
+    });
+  }
 
-  const cataloguePublisherId =
-    Number(development.cataloguePublisherId || 0) ||
-    null;
-  const commercialAccess =
-    development.brand?.authorityKind === 'developer_first_party' &&
-    development.organisation?.id
-      ? (await getDeveloperPublicationAccess(Number(development.organisation.id), {
-          db: input.db,
-        })).eligible
-      : true;
-  const publicEligibility = evaluatePublicDevelopmentEligibility({
-    development: {
-      id: Number(development.id),
-      cataloguePublisherId: development.cataloguePublisherId,
-      developmentType: development.developmentType,
-      transactionType: development.transactionType,
-      isPublished: development.isPublished,
-      approvalStatus: development.approvalStatus,
-    },
-    publisher: development.brand?.id ? development.brand : null,
-    organisation: development.organisation?.id ? development.organisation : null,
-    unitTypes: [],
-    activeUnitTypeCount: Number(development.activeUnitTypeCount || 0),
-    activeOperatorCount: Number(development.activeOperatorCount || 0),
-    activeSupersessionSource: Number(development.activeSupersessionSource || 0) === 1,
-    commercialAccess,
-  } as any);
-  const developmentVisible = publicEligibility.eligible;
+  const cataloguePublisherId = reference.publisherId;
+  const developmentVisible = projection.campaign.visible === true;
+  const hasMarketableInventory =
+    projection.inventory.phaseScope !== 'unscoped-hidden' &&
+    Object.values(projection.inventory.modes).some(mode =>
+      Boolean(
+        mode && mode.availableCount > 0 && mode.priceFrom > 0 && mode.priceTo >= mode.priceFrom,
+      ),
+    );
 
   const [program] = await input.db
     .select({
@@ -447,6 +417,9 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       commissionModel: distributionPrograms.commissionModel,
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+      referrerCommissionType: distributionPrograms.referrerCommissionType,
+      referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+      referrerCommissionBasis: distributionPrograms.referrerCommissionBasis,
       tierAccessPolicy: distributionPrograms.tierAccessPolicy,
       payoutMilestone: distributionPrograms.payoutMilestone,
       currencyCode: distributionPrograms.currencyCode,
@@ -472,7 +445,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     fallbackReason: null,
   } as const;
 
-  const developmentId = Number(development.id);
+  const developmentId = input.developmentId;
   const [managerSummary] = programExists
     ? await input.db
         .select({ count: sql<number>`COUNT(*)` })
@@ -493,6 +466,10 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     .where(
       and(
         eq(developmentRequiredDocuments.developmentId, developmentId),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(developmentRequiredDocuments.documentCode, [
+          ...DISTRIBUTION_PROCESS_DOCUMENT_CODES,
+        ]),
         eq(developmentRequiredDocuments.isActive, 1),
         eq(developmentRequiredDocuments.isRequired, 1),
       ),
@@ -511,6 +488,20 @@ export async function evaluateDevelopmentDistributionAccess(input: {
             program.defaultCommissionAmount === null
               ? null
               : Number(program.defaultCommissionAmount),
+          referrerCommissionType:
+            program.referrerCommissionType === 'flat' ||
+            program.referrerCommissionType === 'percentage'
+              ? program.referrerCommissionType
+              : null,
+          referrerCommissionValue:
+            program.referrerCommissionValue === null
+              ? null
+              : Number(program.referrerCommissionValue),
+          referrerCommissionBasis:
+            program.referrerCommissionBasis === 'sale_price' ||
+            program.referrerCommissionBasis === 'base_price'
+              ? program.referrerCommissionBasis
+              : null,
           tierAccessPolicy: program.tierAccessPolicy,
           payoutMilestone: program.payoutMilestone,
           currencyCode: program.currencyCode,
@@ -572,6 +563,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     },
     legacyFallbackUsed,
     fallbackReason,
+    hasMarketableInventory,
   });
   const opportunity = buildOpportunityReadiness({ inventoryState, reasons });
 
@@ -582,6 +574,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     developmentAccessId: access ? Number(access.id) : null,
     developmentAccessStatus,
     developmentVisible,
+    hasMarketableInventory,
     brandPartnered: brandPartnershipStatus === 'active',
     developmentIncluded: developmentAccessStatus === 'included',
     submissionAllowed,

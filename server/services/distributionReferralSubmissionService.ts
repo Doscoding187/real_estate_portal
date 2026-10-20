@@ -1,20 +1,34 @@
 import { TRPCError } from '@trpc/server';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import {
-  affordabilityAssessments,
-  developmentManagerAssignments,
-  developmentRequiredDocuments,
-  developments,
   distributionDealDocuments,
   distributionDealEvents,
   distributionDeals,
+  distributionManagerAssignments,
   distributionPrograms,
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { getAffordabilityMatches } from './affordabilityAssessmentService';
-import { assertDevelopmentSubmissionEligible } from './distributionAccessPolicy';
-import { getPartnerProgramTermsByDevelopmentId } from './distributionPartnerTermsService';
+import { requireApprovedAffordabilityModel } from './affordabilityAssessmentService';
+import { getDevelopmentSalesProjection } from './distributionDeveloperReadPort';
+import {
+  assertPartnerDevelopmentProgramAccess,
+  assertPartnerDevelopmentReferralOpen,
+} from './distributionPartnerProgramAccessService';
+import {
+  buildDistributionReferralTermsSnapshot,
+  isValidDistributionReferralTermsSnapshot,
+} from './distributionReferralTermsSnapshotService';
+import { resolveDealRequirementSnapshots } from './distributionDealRequirementsSnapshotService';
+import {
+  getReferralWorkflowProgress,
+  getReferralWorkflowProgressForDeals,
+} from './distributionDealWorkflowProgressService';
+import {
+  buildReferralIntakeEvidenceSnapshot,
+  getCompletePartnerReferralIntakeSession,
+  markReferralIntakeSubmitted,
+} from './distributionReferralIntakeWorkflowService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -54,6 +68,53 @@ function parseJsonObject(value: unknown): Record<string, unknown> | null {
   return null;
 }
 
+function toPartnerVisibleReferralTermsSnapshot(
+  snapshot: Record<string, unknown> | null,
+  expectedDigest: string | null | undefined,
+): Record<string, unknown> | null {
+  if (!snapshot || !isValidDistributionReferralTermsSnapshot(snapshot, expectedDigest)) return null;
+  const program = parseJsonObject(snapshot.program);
+  const developerSalesSnapshot = parseJsonObject(snapshot.developerSalesSnapshot);
+
+  // Keep this as an allow-list: private intake evidence and policy internals
+  // remain inside Distribution's referral workflow.
+  return {
+    version: snapshot.version,
+    capturedAt: snapshot.capturedAt,
+    developmentId: snapshot.developmentId,
+    marketMode: snapshot.marketMode,
+    developerProjectionRevision: snapshot.developerProjectionRevision,
+    ...(developerSalesSnapshot ? { developerSalesSnapshot } : {}),
+    ...(program
+      ? {
+          program: {
+            referrerCommissionType: program.referrerCommissionType,
+            referrerCommissionValue: program.referrerCommissionValue,
+            referrerCommissionBasis: program.referrerCommissionBasis,
+            currencyCode: program.currencyCode,
+            payoutMilestone: program.payoutMilestone,
+            payoutMilestoneNotes: program.payoutMilestoneNotes,
+          },
+        }
+      : {}),
+    requiredDocuments: Array.isArray(snapshot.requiredDocuments)
+      ? snapshot.requiredDocuments.flatMap(value => {
+          if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+          const document = value as Record<string, unknown>;
+          return [
+            {
+              documentCode: document.documentCode,
+              documentLabel: document.documentLabel,
+              category: document.category,
+              isRequired: document.isRequired,
+              sortOrder: document.sortOrder,
+            },
+          ];
+        })
+      : [],
+  };
+}
+
 function normalizePhone(value: string | null | undefined) {
   const trimmed = String(value || '').trim();
   if (!trimmed) return null;
@@ -64,113 +125,6 @@ function withConditions(conditions: SQL[]) {
   if (!conditions.length) return sql`1 = 1`;
   if (conditions.length === 1) return conditions[0];
   return and(...conditions) as SQL;
-}
-
-type JourneyOwnerRole = 'referrer' | 'manager' | 'system' | 'none';
-
-const STAGE_SLA_DAYS: Record<string, number> = {
-  viewing_scheduled: 2,
-  viewing_completed: 2,
-  application_submitted: 3,
-  contract_signed: 5,
-  bond_approved: 7,
-  commission_pending: 10,
-  commission_paid: 0,
-  cancelled: 0,
-};
-
-function parseSqlDate(value: unknown) {
-  if (!value) return null;
-  const parsed = new Date(String(value));
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value.getTime());
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function normalizeStage(stage: unknown) {
-  const value = String(stage || '').trim().toLowerCase();
-  if (!value) return 'viewing_scheduled';
-  if (value === 'submitted' || value === 'lead') return 'viewing_scheduled';
-  return value;
-}
-
-function buildJourneyGuidance(input: {
-  stage: unknown;
-  docProgress?: { requiredCount: number; verifiedRequiredCount: number };
-  updatedAt?: unknown;
-  createdAt?: unknown;
-}) {
-  const stage = normalizeStage(input.stage);
-  const requiredCount = Number(input.docProgress?.requiredCount || 0);
-  const verifiedRequiredCount = Number(input.docProgress?.verifiedRequiredCount || 0);
-  const hasMissingDocs = requiredCount > verifiedRequiredCount;
-
-  let nextAction = 'Continue moving this referral to the next milestone.';
-  let ownerRole: JourneyOwnerRole = 'referrer';
-  let actionCode:
-    | 'follow_up_viewing'
-    | 'follow_up_docs'
-    | 'follow_up_manager'
-    | 'track_payout'
-    | 'submit_next_referral'
-    | 'review_outcome' = 'follow_up_viewing';
-
-  if (stage === 'commission_paid') {
-    nextAction = 'Commission paid. Archive this deal and submit the next referral.';
-    ownerRole = 'system';
-    actionCode = 'submit_next_referral';
-  } else if (stage === 'commission_pending') {
-    nextAction = 'Follow up on payout processing and payment confirmation.';
-    ownerRole = 'manager';
-    actionCode = 'track_payout';
-  } else if (stage === 'bond_approved' || stage === 'contract_signed') {
-    nextAction = 'Confirm final transfer milestones and payout readiness.';
-    ownerRole = 'manager';
-    actionCode = 'follow_up_manager';
-  } else if (stage === 'application_submitted') {
-    if (hasMissingDocs) {
-      nextAction = 'Upload and verify missing required documents to prevent delays.';
-      ownerRole = 'referrer';
-      actionCode = 'follow_up_docs';
-    } else {
-      nextAction = 'Application is in review. Stay available for manager requests.';
-      ownerRole = 'manager';
-      actionCode = 'follow_up_manager';
-    }
-  } else if (stage === 'viewing_completed') {
-    nextAction = 'Convert this buyer to application submission.';
-    ownerRole = 'referrer';
-    actionCode = 'follow_up_viewing';
-  } else if (stage === 'viewing_scheduled') {
-    nextAction = 'Confirm viewing attendance and prepare buyer application details.';
-    ownerRole = 'referrer';
-    actionCode = 'follow_up_viewing';
-  } else if (stage === 'cancelled') {
-    nextAction = 'Deal closed as cancelled. Review reason and focus on active deals.';
-    ownerRole = 'none';
-    actionCode = 'review_outcome';
-  }
-
-  const baseline = parseSqlDate(input.updatedAt) || parseSqlDate(input.createdAt) || new Date();
-  const slaDays = STAGE_SLA_DAYS[stage] ?? 3;
-  const slaDueAt = slaDays > 0 ? addDays(baseline, slaDays) : null;
-  const atRisk =
-    Boolean(slaDueAt) &&
-    stage !== 'commission_paid' &&
-    stage !== 'cancelled' &&
-    Date.now() > Number(slaDueAt);
-
-  return {
-    nextAction,
-    ownerRole,
-    actionCode,
-    slaDueAt: slaDueAt ? toSqlDateTime(slaDueAt) : null,
-    atRisk,
-  };
 }
 
 async function resolveDb(db?: DbExecutor) {
@@ -206,17 +160,17 @@ export async function pickManagerForDevelopment(
   const db = await resolveDb(options?.db);
   const [primaryAssignment] = await db
     .select({
-      managerUserId: developmentManagerAssignments.managerUserId,
+      managerUserId: distributionManagerAssignments.managerUserId,
     })
-    .from(developmentManagerAssignments)
+    .from(distributionManagerAssignments)
     .where(
       and(
-        eq(developmentManagerAssignments.developmentId, developmentId),
-        eq(developmentManagerAssignments.isActive, 1),
-        eq(developmentManagerAssignments.isPrimary, 1),
+        eq(distributionManagerAssignments.developmentId, developmentId),
+        eq(distributionManagerAssignments.isActive, 1),
+        eq(distributionManagerAssignments.isPrimary, 1),
       ),
     )
-    .orderBy(desc(developmentManagerAssignments.assignedAt))
+    .orderBy(desc(distributionManagerAssignments.assignedAt))
     .limit(1);
 
   return primaryAssignment?.managerUserId ? Number(primaryAssignment.managerUserId) : null;
@@ -235,8 +189,6 @@ async function findExistingByClientReference(
       developmentId: distributionDeals.developmentId,
       programId: distributionDeals.programId,
       managerUserId: distributionDeals.managerUserId,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
       currentStage: distributionDeals.currentStage,
       createdAt: distributionDeals.createdAt,
     })
@@ -292,25 +244,11 @@ async function findDuplicateByBuyerIdentity(
   return existing || null;
 }
 
-async function getRequiredTemplateIdsForDevelopment(db: DbExecutor, developmentId: number) {
-  const rows = await db
-    .select({
-      id: developmentRequiredDocuments.id,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.developmentId, developmentId),
-        eq(developmentRequiredDocuments.isActive, 1),
-        eq(developmentRequiredDocuments.isRequired, 1),
-      ),
-    );
-  return rows.map(row => Number(row.id));
-}
-
 export async function createReferralDeal(
   input: SubmissionActor & {
     developmentId: number;
+    marketMode: 'sale' | 'rent';
+    intakeSessionUuid: string;
     buyerName?: string | null;
     buyerPhone?: string | null;
     buyerEmail?: string | null;
@@ -319,16 +257,62 @@ export async function createReferralDeal(
     assessmentId?: string | null;
   },
 ) {
+  if (String(input.assessmentId || '').trim()) requireApprovedAffordabilityModel();
+
   const db = await resolveDb();
-  const eligibility = await assertDevelopmentSubmissionEligible({
+  await assertPartnerDevelopmentProgramAccess({
     db,
-    developmentId: input.developmentId,
     actor: {
-      role: input.actorRole === 'super_admin' ? 'admin' : 'referrer',
       userId: input.actorUserId,
+      role: input.actorRole,
     },
-    channel: 'submission',
+    developmentId: input.developmentId,
   });
+  await assertPartnerDevelopmentReferralOpen({ db, developmentId: input.developmentId });
+  const [distributionProgram] = await db
+    .select({ programId: distributionPrograms.id })
+    .from(distributionPrograms)
+    .where(eq(distributionPrograms.developmentId, input.developmentId))
+    .limit(1);
+  const programId = Number(distributionProgram?.programId || 0);
+  if (!programId) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'This Distribution opportunity is no longer active.',
+    });
+  }
+  const eligibility = { programId };
+
+  // Confirm current Developer marketability through the Developer-owned
+  // projection before reading referral evidence.
+  const developerProjection = await getDevelopmentSalesProjection(input.developmentId);
+  if (!developerProjection) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Current availability for this opportunity could not be confirmed, so referral submission is temporarily unavailable.',
+    });
+  }
+
+  const projectionMode = input.marketMode === 'sale' ? 'for_sale' : 'for_rent';
+  const requestedMode = developerProjection.inventory.modes[projectionMode];
+  if (
+    developerProjection.campaign.visible !== true ||
+    developerProjection.inventory.phaseScope === 'unscoped-hidden' ||
+    !requestedMode ||
+    !Number.isFinite(Number(requestedMode.availableCount)) ||
+    Number(requestedMode.availableCount) <= 0 ||
+    !Number.isFinite(Number(requestedMode.priceFrom)) ||
+    Number(requestedMode.priceFrom) <= 0 ||
+    !Number.isFinite(Number(requestedMode.priceTo)) ||
+    Number(requestedMode.priceTo) < Number(requestedMode.priceFrom) ||
+    requestedMode.priceBasis !== (input.marketMode === 'sale' ? 'purchase_price' : 'monthly_rent')
+  ) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: `The Developer Engine has no current marketable ${input.marketMode} inventory for this opportunity.`,
+    });
+  }
 
   const normalizedClientReference = String(input.clientReference || '').trim() || null;
   if (normalizedClientReference) {
@@ -344,8 +328,6 @@ export async function createReferralDeal(
         developmentId: Number(existing.developmentId),
         programId: Number(existing.programId),
         managerUserId: toNumberOrNull(existing.managerUserId),
-        assessmentId: existing.assessmentId ? String(existing.assessmentId) : null,
-        matchSnapshotId: existing.matchSnapshotId ? String(existing.matchSnapshotId) : null,
         status: 'submitted',
         createdAt: String(existing.createdAt || ''),
         checklistSeededCount: 0,
@@ -353,6 +335,14 @@ export async function createReferralDeal(
       };
     }
   }
+
+  const intakeSession = await getCompletePartnerReferralIntakeSession({
+    sessionUuid: input.intakeSessionUuid,
+    partnerUserId: input.actorUserId,
+    developmentId: input.developmentId,
+    db,
+  });
+  const intakeEvidenceSnapshot = buildReferralIntakeEvidenceSnapshot(intakeSession);
 
   const duplicateByBuyer = await findDuplicateByBuyerIdentity(db, {
     actorUserId: input.actorUserId,
@@ -365,91 +355,39 @@ export async function createReferralDeal(
     buildDuplicateReferralError(Number(duplicateByBuyer.dealId));
   }
 
+  const referralTermsSnapshot = await buildDistributionReferralTermsSnapshot({
+    db,
+    developmentId: input.developmentId,
+    developerProjection,
+    marketMode: input.marketMode,
+    intakeEvidenceSnapshot,
+  });
+  if (!referralTermsSnapshot) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Current Distribution referral terms could not be captured.',
+    });
+  }
+
   const managerUserId = await pickManagerForDevelopment(input.developmentId, { db });
   const buyerName = String(input.buyerName || '').trim() || 'Buyer Pending';
   const buyerPhone = String(input.buyerPhone || '').trim() || null;
   const buyerEmail = String(input.buyerEmail || '').trim() || null;
-  const normalizedAssessmentId = String(input.assessmentId || '').trim() || null;
-  let assessmentAttachment:
-    | {
-        assessmentId: string;
-        matchSnapshotId: string;
-        purchasePrice: number;
-        assumptionsSummary: {
-          interestRateAnnual: number | null;
-          termMonths: number | null;
-          maxRepaymentRatio: number | null;
-          calcVersion: string | null;
-        };
-      }
-    | null = null;
-
-  if (normalizedAssessmentId) {
-    const assessmentConditions: SQL[] = [eq(affordabilityAssessments.id, normalizedAssessmentId)];
-    if (input.actorRole !== 'super_admin') {
-      assessmentConditions.push(eq(affordabilityAssessments.actorUserId, input.actorUserId));
-    }
-
-    const [assessment] = await db
-      .select({
-        id: affordabilityAssessments.id,
-        assumptionsJson: affordabilityAssessments.assumptionsJson,
-        lockedAt: affordabilityAssessments.lockedAt,
-        lockedByDealId: affordabilityAssessments.lockedByDealId,
-      })
-      .from(affordabilityAssessments)
-      .where(withConditions(assessmentConditions))
-      .limit(1);
-
-    if (!assessment?.id) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'assessmentId is invalid or not accessible for this actor.',
-      });
-    }
-
-    if (assessment.lockedAt && Number(assessment.lockedByDealId || 0) > 0) {
-      throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'This affordability assessment is already attached to another referral.',
-      });
-    }
-
-    const snapshot = await getAffordabilityMatches({
-      assessmentId: normalizedAssessmentId,
-      actorUserId: input.actorUserId,
-      actorRole: input.actorRole,
-      db,
-    });
-    const assumptionsJson = parseJsonObject(assessment.assumptionsJson) || {};
-    assessmentAttachment = {
-      assessmentId: normalizedAssessmentId,
-      matchSnapshotId: String(snapshot.matchSnapshotId),
-      purchasePrice: Math.max(0, Math.round(Number(snapshot.purchasePrice || 0))),
-      assumptionsSummary: {
-        interestRateAnnual: toNumberOrNull(assumptionsJson.interestRateAnnual),
-        termMonths: toNumberOrNull(assumptionsJson.termMonths),
-        maxRepaymentRatio: toNumberOrNull(assumptionsJson.maxRepaymentRatio),
-        calcVersion: assumptionsJson.calcVersion ? String(assumptionsJson.calcVersion) : null,
-      },
-    };
-  }
-
   const result = await db.transaction(async tx => {
     const [insertDealResult] = await tx.insert(distributionDeals).values({
       programId: eligibility.programId,
       developmentId: input.developmentId,
       agentId: input.actorUserId,
       managerUserId,
-      affordabilityAssessmentId: assessmentAttachment?.assessmentId || null,
-      affordabilityMatchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
-      affordabilityPurchasePrice: assessmentAttachment?.purchasePrice ?? null,
-      commissionBaseAmount: assessmentAttachment?.purchasePrice ?? null,
-      affordabilityAssumptionsJson: assessmentAttachment?.assumptionsSummary as any,
       externalRef: normalizedClientReference,
       buyerName,
       buyerPhone,
       buyerEmail,
+      marketMode: input.marketMode,
+      developerProjectionRevision: developerProjection.revision,
+      developerProjectionObservedAt: toSqlDateTime(new Date(developerProjection.observedAt)),
+      referralTermsSnapshotJson: referralTermsSnapshot as any,
+      referralTermsSnapshotDigest: referralTermsSnapshot.digest,
       currentStage: 'viewing_scheduled',
       commissionStatus: 'not_ready',
       attributionLockedAt: sql`CURRENT_TIMESTAMP`,
@@ -475,40 +413,33 @@ export async function createReferralDeal(
         programId: eligibility.programId,
         developmentId: input.developmentId,
         managerAssigned: managerUserId,
-        assessmentId: assessmentAttachment?.assessmentId || null,
-        matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
+        marketMode: input.marketMode,
+        developerProjectionRevision: developerProjection.revision,
+        referralTermsSnapshotDigest: referralTermsSnapshot.digest,
       } as any,
       notes: input.notes ?? null,
     });
 
-    if (assessmentAttachment) {
-      await tx
-        .update(affordabilityAssessments)
-        .set({
-          lockedAt: toSqlDateTime(new Date()),
-          lockedByDealId: dealId,
-          lockedByUserId: input.actorUserId,
-        })
-        .where(eq(affordabilityAssessments.id, assessmentAttachment.assessmentId));
+    await markReferralIntakeSubmitted({
+      tx,
+      sessionId: intakeSession.id,
+      sessionUuid: input.intakeSessionUuid,
+      developmentId: input.developmentId,
+      partnerUserId: input.actorUserId,
+      dealId,
+      developerProjectionRevision: developerProjection.revision,
+      referralTermsSnapshotDigest: referralTermsSnapshot.digest,
+    });
 
-      await tx.insert(distributionDealEvents).values({
-        dealId,
-        fromStage: null,
-        toStage: 'viewing_scheduled',
-        eventType: 'note',
-        actorUserId: input.actorUserId,
-        metadata: {
-          source: 'partner.attachAssessment',
-          assessmentId: assessmentAttachment.assessmentId,
-          matchSnapshotId: assessmentAttachment.matchSnapshotId,
-          purchasePrice: assessmentAttachment.purchasePrice,
-          assumptions: assessmentAttachment.assumptionsSummary,
-        } as any,
-        notes: 'Affordability Snapshot Attached',
+    const templateIds = Array.isArray(referralTermsSnapshot.requiredDocuments)
+      ? referralTermsSnapshot.requiredDocuments.map(document => Number(document.templateId))
+      : [];
+    if (templateIds.some(templateId => !Number.isInteger(templateId) || templateId <= 0)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The saved referral document requirements could not be confirmed.',
       });
     }
-
-    const templateIds = await getRequiredTemplateIdsForDevelopment(tx, input.developmentId);
     if (templateIds.length) {
       await tx.insert(distributionDealDocuments).values(
         templateIds.map(templateId => ({
@@ -525,6 +456,8 @@ export async function createReferralDeal(
         developmentId: distributionDeals.developmentId,
         programId: distributionDeals.programId,
         managerUserId: distributionDeals.managerUserId,
+        marketMode: distributionDeals.marketMode,
+        developerProjectionRevision: distributionDeals.developerProjectionRevision,
         createdAt: distributionDeals.createdAt,
       })
       .from(distributionDeals)
@@ -536,8 +469,8 @@ export async function createReferralDeal(
       developmentId: Number(createdDeal?.developmentId || input.developmentId),
       programId: Number(createdDeal?.programId || eligibility.programId),
       managerUserId: toNumberOrNull(createdDeal?.managerUserId),
-      assessmentId: assessmentAttachment?.assessmentId || null,
-      matchSnapshotId: assessmentAttachment?.matchSnapshotId || null,
+      marketMode: createdDeal?.marketMode || input.marketMode,
+      developerProjectionRevision: createdDeal?.developerProjectionRevision || developerProjection.revision,
       status: 'submitted',
       createdAt: String(createdDeal?.createdAt || ''),
       checklistSeededCount: templateIds.length,
@@ -553,7 +486,7 @@ type ReferralProgress = {
   verifiedRequiredCount: number;
 };
 
-type PartnerDealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+type PartnerDealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
 
 async function computeDealDocumentProgressMap(
   db: DbExecutor,
@@ -564,71 +497,71 @@ async function computeDealDocumentProgressMap(
   const progressMap = new Map<number, ReferralProgress>();
   if (!input.dealRows.length) return progressMap;
 
-  const developmentIds = Array.from(new Set(input.dealRows.map(row => Number(row.developmentId))));
   const dealIds = input.dealRows.map(row => Number(row.dealId));
 
-  const templateRows = await db
+  const dealSnapshots = await db
     .select({
-      templateId: developmentRequiredDocuments.id,
-      developmentId: developmentRequiredDocuments.developmentId,
+      dealId: distributionDeals.id,
+      developmentId: distributionDeals.developmentId,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
     })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        inArray(developmentRequiredDocuments.developmentId, developmentIds),
-        eq(developmentRequiredDocuments.isActive, 1),
-        eq(developmentRequiredDocuments.isRequired, 1),
-      ),
-    );
+    .from(distributionDeals)
+    .where(inArray(distributionDeals.id, dealIds));
 
-  const requiredTemplateIdsByDevelopment = new Map<number, Set<number>>();
-  for (const row of templateRows) {
-    const developmentId = Number(row.developmentId);
-    const current = requiredTemplateIdsByDevelopment.get(developmentId) || new Set<number>();
-    current.add(Number(row.templateId));
-    requiredTemplateIdsByDevelopment.set(developmentId, current);
-  }
-
-  const allRequiredTemplateIds = Array.from(
+  const resolvedRequirements = await resolveDealRequirementSnapshots(
+    db,
+    dealSnapshots.map(row => ({
+      dealId: Number(row.dealId),
+      developmentId: Number(row.developmentId),
+      snapshotJson: row.referralTermsSnapshotJson,
+      snapshotDigest: row.referralTermsSnapshotDigest,
+    })),
+  );
+  const templateIds = Array.from(
     new Set(
-      Array.from(requiredTemplateIdsByDevelopment.values()).flatMap(templateIds =>
-        Array.from(templateIds),
+      Array.from(resolvedRequirements.values()).flatMap(snapshot =>
+        snapshot.requirements.flatMap(document =>
+          document.templateId === null ? [] : [document.templateId],
+        ),
       ),
     ),
   );
+  const persistedRows = templateIds.length
+    ? await db
+        .select({
+          dealId: distributionDealDocuments.dealId,
+          templateId: distributionDealDocuments.developmentRequiredDocumentId,
+          status: distributionDealDocuments.status,
+        })
+        .from(distributionDealDocuments)
+        .where(
+          and(
+            inArray(distributionDealDocuments.dealId, dealIds),
+            inArray(distributionDealDocuments.developmentRequiredDocumentId, templateIds),
+          ),
+        )
+    : [];
 
-  const verifiedRows =
-    dealIds.length && allRequiredTemplateIds.length
-      ? await db
-          .select({
-            dealId: distributionDealDocuments.dealId,
-            developmentRequiredDocumentId: distributionDealDocuments.developmentRequiredDocumentId,
-            status: distributionDealDocuments.status,
-          })
-          .from(distributionDealDocuments)
-          .where(
-            and(
-              inArray(distributionDealDocuments.dealId, dealIds),
-              inArray(distributionDealDocuments.developmentRequiredDocumentId, allRequiredTemplateIds),
-            ),
-          )
-      : [];
-
-  const verifiedSetByDeal = new Map<number, Set<number>>();
-  for (const row of verifiedRows) {
+  const verifiedTemplateIdsByDeal = new Map<number, Set<number>>();
+  for (const row of persistedRows) {
     if (row.status !== 'verified') continue;
     const dealId = Number(row.dealId);
-    const current = verifiedSetByDeal.get(dealId) || new Set<number>();
-    current.add(Number(row.developmentRequiredDocumentId));
-    verifiedSetByDeal.set(dealId, current);
+    const current = verifiedTemplateIdsByDeal.get(dealId) || new Set<number>();
+    current.add(Number(row.templateId));
+    verifiedTemplateIdsByDeal.set(dealId, current);
   }
 
   for (const row of input.dealRows) {
-    const requiredTemplates = requiredTemplateIdsByDevelopment.get(Number(row.developmentId)) || new Set<number>();
-    const verifiedTemplates = verifiedSetByDeal.get(Number(row.dealId)) || new Set<number>();
+    const snapshot = resolvedRequirements.get(Number(row.dealId));
+    const requirements = snapshot?.snapshotValid ? snapshot.requirements : [];
+    const verifiedTemplateIds =
+      verifiedTemplateIdsByDeal.get(Number(row.dealId)) || new Set<number>();
     progressMap.set(Number(row.dealId), {
-      requiredCount: requiredTemplates.size,
-      verifiedRequiredCount: verifiedTemplates.size,
+      requiredCount: requirements.length,
+      verifiedRequiredCount: requirements.filter(
+        document => document.templateId !== null && verifiedTemplateIds.has(document.templateId),
+      ).length,
     });
   }
 
@@ -639,74 +572,74 @@ async function listDealApplicationDocuments(
   db: DbExecutor,
   input: {
     dealId: number;
-    developmentId: number;
+    requiredDocuments: Array<{
+      templateId: number | null;
+      documentCode: string;
+      documentLabel: string;
+      sortOrder: number;
+      isAvailable: boolean;
+    }>;
   },
 ) {
-  const templates = (await db
-    .select({
-      templateId: developmentRequiredDocuments.id,
-      documentCode: developmentRequiredDocuments.documentCode,
-      documentLabel: developmentRequiredDocuments.documentLabel,
-      category: developmentRequiredDocuments.category,
-      templateFileUrl: developmentRequiredDocuments.templateFileUrl,
-      templateFileName: developmentRequiredDocuments.templateFileName,
-      isRequired: developmentRequiredDocuments.isRequired,
-      sortOrder: developmentRequiredDocuments.sortOrder,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.developmentId, input.developmentId),
-        eq(developmentRequiredDocuments.isActive, 1),
-        eq(developmentRequiredDocuments.isRequired, 1),
-      ),
-    )
-    .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id)) as Array<any>;
+  const requiredDocuments = input.requiredDocuments;
+  if (!requiredDocuments.length) return [];
 
-  if (!templates.length) return [];
-
-  const persistedRows = await db
-    .select({
-      templateId: distributionDealDocuments.developmentRequiredDocumentId,
-      status: distributionDealDocuments.status,
-      submittedFileUrl: distributionDealDocuments.submittedFileUrl,
-      submittedFileName: distributionDealDocuments.submittedFileName,
-      submittedAt: distributionDealDocuments.submittedAt,
-      receivedAt: distributionDealDocuments.receivedAt,
-      verifiedAt: distributionDealDocuments.verifiedAt,
-      notes: distributionDealDocuments.notes,
-    })
-    .from(distributionDealDocuments)
-    .where(
-      and(
-        eq(distributionDealDocuments.dealId, input.dealId),
-        inArray(
-          distributionDealDocuments.developmentRequiredDocumentId,
-          templates.map(template => Number(template.templateId)),
-        ),
+  const templateIds = Array.from(
+    new Set(
+      requiredDocuments.flatMap(document =>
+        document.templateId === null ? [] : [document.templateId],
       ),
-    );
+    ),
+  );
+  const persistedRows = templateIds.length
+    ? await db
+        .select({
+          templateId: distributionDealDocuments.developmentRequiredDocumentId,
+          status: distributionDealDocuments.status,
+          submittedAt: distributionDealDocuments.submittedAt,
+          receivedAt: distributionDealDocuments.receivedAt,
+          verifiedAt: distributionDealDocuments.verifiedAt,
+          notes: distributionDealDocuments.notes,
+        })
+        .from(distributionDealDocuments)
+        .where(
+          and(
+            eq(distributionDealDocuments.dealId, input.dealId),
+            inArray(distributionDealDocuments.developmentRequiredDocumentId, templateIds),
+          ),
+        )
+    : [];
 
   const persistedByTemplateId = new Map<number, any>();
   for (const row of persistedRows) {
     persistedByTemplateId.set(Number(row.templateId), row);
   }
 
-  return templates.map(template => {
-    const templateId = Number(template.templateId);
-    const persisted = persistedByTemplateId.get(templateId);
+  return requiredDocuments.map(document => {
+    const persisted = document.templateId === null
+      ? null
+      : persistedByTemplateId.get(document.templateId);
+    if (!document.isAvailable || !persisted) {
+      return {
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel,
+        category: 'client_required_document' as const,
+        isRequired: true,
+        sortOrder: document.sortOrder,
+        status: 'unavailable' as const,
+        submittedAt: null,
+        receivedAt: null,
+        verifiedAt: null,
+        notes: null,
+      };
+    }
     return {
-      templateId,
-      documentCode: String(template.documentCode),
-      documentLabel: String(template.documentLabel || ''),
-      category: template.category as 'developer_document' | 'client_required_document',
-      templateFileUrl: template.templateFileUrl || null,
-      templateFileName: template.templateFileName || null,
-      isRequired: Boolean(template.isRequired),
-      sortOrder: Number(template.sortOrder || 0),
+      documentCode: document.documentCode,
+      documentLabel: document.documentLabel,
+      category: 'client_required_document' as const,
+      isRequired: true,
+      sortOrder: document.sortOrder,
       status: (persisted?.status || 'pending') as PartnerDealDocumentStatus,
-      submittedFileUrl: persisted?.submittedFileUrl || null,
-      submittedFileName: persisted?.submittedFileName || null,
       submittedAt: persisted?.submittedAt || null,
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
@@ -742,17 +675,23 @@ export async function listMyReferralDeals(
     .select({
       dealId: distributionDeals.id,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
       programId: distributionDeals.programId,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
-      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      marketMode: distributionDeals.marketMode,
+      developerProjectionRevision: distributionDeals.developerProjectionRevision,
+      developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       status: distributionDeals.currentStage,
+      managerUserId: distributionDeals.managerUserId,
+      managerName: users.name,
+      managerFirstName: users.firstName,
+      managerLastName: users.lastName,
+      managerEmail: users.email,
       createdAt: distributionDeals.createdAt,
       updatedAt: distributionDeals.updatedAt,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
+    .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
     .where(withConditions(conditions))
     .orderBy(desc(distributionDeals.id))
     .limit(normalizedLimit + 1);
@@ -760,40 +699,59 @@ export async function listMyReferralDeals(
   const hasMore = rows.length > normalizedLimit;
   const pageRows = hasMore ? rows.slice(0, normalizedLimit) : rows;
 
-  const progressMap = await computeDealDocumentProgressMap(db, {
-    dealRows: pageRows.map(row => ({
-      dealId: Number(row.dealId),
-      developmentId: Number(row.developmentId),
-    })),
-  });
+  const [progressMap, workflowProgressMap] = await Promise.all([
+    computeDealDocumentProgressMap(db, {
+      dealRows: pageRows.map(row => ({
+        dealId: Number(row.dealId),
+        developmentId: Number(row.developmentId),
+      })),
+    }),
+    getReferralWorkflowProgressForDeals(
+      db,
+      pageRows.map(row => ({
+        dealId: Number(row.dealId),
+        referralTermsSnapshotJson: row.referralTermsSnapshotJson,
+        referralTermsSnapshotDigest: row.referralTermsSnapshotDigest,
+      })),
+    ),
+  ]);
 
   return {
-    items: pageRows.map(row => ({
-      journey: buildJourneyGuidance({
-        stage: row.status,
-        docProgress: progressMap.get(Number(row.dealId)) || {
-          requiredCount: 0,
-          verifiedRequiredCount: 0,
-        },
-        updatedAt: row.updatedAt,
-        createdAt: row.createdAt,
-      }),
-      dealId: Number(row.dealId),
-      development: {
-        developmentId: Number(row.developmentId),
-        name: String(row.developmentName || `Development #${row.developmentId}`),
-      },
-      status: String(row.status || 'viewing_scheduled'),
-      assessmentId: row.assessmentId ? String(row.assessmentId) : null,
-      matchSnapshotId: row.matchSnapshotId ? String(row.matchSnapshotId) : null,
-      affordabilityPurchasePrice: toNumberOrNull(row.affordabilityPurchasePrice),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      docProgress: progressMap.get(Number(row.dealId)) || {
+    items: pageRows.map(row => {
+      const snapshot = parseJsonObject(row.referralTermsSnapshotJson);
+      const salesSnapshot = parseJsonObject(snapshot?.developerSalesSnapshot);
+      const campaign = parseJsonObject(salesSnapshot?.campaign);
+      const docProgress = progressMap.get(Number(row.dealId)) || {
         requiredCount: 0,
         verifiedRequiredCount: 0,
-      },
-    })),
+      };
+      return {
+        dealId: Number(row.dealId),
+        development: {
+          developmentId: Number(row.developmentId),
+          name: String(campaign?.name || `Development #${row.developmentId}`),
+        },
+        status: String(row.status || 'submitted'),
+        marketMode: row.marketMode || null,
+        developerProjectionRevision: row.developerProjectionRevision || null,
+        developerProjectionObservedAt: row.developerProjectionObservedAt || null,
+        referralTermsSnapshotDigest: row.referralTermsSnapshotDigest || null,
+        manager: row.managerUserId
+          ? {
+              userId: Number(row.managerUserId),
+              displayName:
+                String(row.managerName || '').trim() ||
+                [row.managerFirstName, row.managerLastName].filter(Boolean).join(' ').trim() ||
+                null,
+              email: row.managerEmail || null,
+            }
+          : null,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        docProgress,
+        workflowProgress: workflowProgressMap.get(Number(row.dealId)) || null,
+      };
+    }),
     nextCursor: hasMore ? String(pageRows[pageRows.length - 1]?.dealId || '') : undefined,
   };
 }
@@ -810,17 +768,15 @@ export async function getMyReferralDeal(
       agentId: distributionDeals.agentId,
       programId: distributionDeals.programId,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
-      city: developments.city,
-      province: developments.province,
       buyerName: distributionDeals.buyerName,
       buyerEmail: distributionDeals.buyerEmail,
       buyerPhone: distributionDeals.buyerPhone,
       status: distributionDeals.currentStage,
-      assessmentId: distributionDeals.affordabilityAssessmentId,
-      matchSnapshotId: distributionDeals.affordabilityMatchSnapshotId,
-      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
-      affordabilityAssumptionsJson: distributionDeals.affordabilityAssumptionsJson,
+      marketMode: distributionDeals.marketMode,
+      developerProjectionRevision: distributionDeals.developerProjectionRevision,
+      developerProjectionObservedAt: distributionDeals.developerProjectionObservedAt,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
       managerUserId: distributionDeals.managerUserId,
       managerName: users.name,
       managerFirstName: users.firstName,
@@ -830,7 +786,6 @@ export async function getMyReferralDeal(
       updatedAt: distributionDeals.updatedAt,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
     .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
     .where(eq(distributionDeals.id, input.dealId))
     .limit(1);
@@ -877,30 +832,45 @@ export async function getMyReferralDeal(
     .orderBy(desc(distributionDealEvents.eventAt), desc(distributionDealEvents.id))
     .limit(200);
 
-  // TODO(snapshotting): store immutable terms at submission time when program-term versioning is introduced.
-  const programTerms = await getPartnerProgramTermsByDevelopmentId(Number(deal.developmentId));
+  const programTermsSnapshot = parseJsonObject(deal.referralTermsSnapshotJson);
+  const partnerVisibleTermsSnapshot = toPartnerVisibleReferralTermsSnapshot(
+    programTermsSnapshot,
+    deal.referralTermsSnapshotDigest,
+  );
+  const salesSnapshot = partnerVisibleTermsSnapshot
+    ? parseJsonObject(programTermsSnapshot?.developerSalesSnapshot)
+    : null;
+  const snapshotCampaign = parseJsonObject(salesSnapshot?.campaign);
+  const savedWorkflowProgress = await getReferralWorkflowProgress(db, Number(deal.dealId));
+  const workflowProgress = savedWorkflowProgress.verified ? savedWorkflowProgress : null;
+  const resolvedRequirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: Number(deal.dealId),
+      developmentId: Number(deal.developmentId),
+      snapshotJson: deal.referralTermsSnapshotJson,
+      snapshotDigest: deal.referralTermsSnapshotDigest,
+    },
+  ]);
+  const resolvedRequirementSnapshot = resolvedRequirementSnapshots.get(Number(deal.dealId));
   const applicationDocuments = await listDealApplicationDocuments(db, {
     dealId: Number(deal.dealId),
-    developmentId: Number(deal.developmentId),
+    requiredDocuments:
+      resolvedRequirementSnapshot?.snapshotValid ? resolvedRequirementSnapshot.requirements : [],
   });
 
   return {
-    journey: buildJourneyGuidance({
-      stage: deal.status,
-      docProgress,
-      updatedAt: deal.updatedAt,
-      createdAt: deal.createdAt,
-    }),
     dealId: Number(deal.dealId),
     development: {
       developmentId: Number(deal.developmentId),
-      name: String(deal.developmentName || `Development #${deal.developmentId}`),
-      city: deal.city || null,
-      province: deal.province || null,
+      name: String(snapshotCampaign?.name || `Development #${deal.developmentId}`),
+      city: snapshotCampaign?.city ? String(snapshotCampaign.city) : null,
+      province: snapshotCampaign?.province ? String(snapshotCampaign.province) : null,
     },
-    status: String(deal.status || 'viewing_scheduled'),
-    assessmentId: deal.assessmentId ? String(deal.assessmentId) : null,
-    matchSnapshotId: deal.matchSnapshotId ? String(deal.matchSnapshotId) : null,
+    status: String(deal.status || 'submitted'),
+    marketMode: deal.marketMode || null,
+    developerProjectionRevision: deal.developerProjectionRevision || null,
+    developerProjectionObservedAt: deal.developerProjectionObservedAt || null,
+    referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
     createdAt: deal.createdAt,
     updatedAt: deal.updatedAt,
     buyer: {
@@ -919,134 +889,20 @@ export async function getMyReferralDeal(
             email: deal.managerEmail || null,
           }
         : null,
-    affordability:
-      deal.assessmentId && deal.matchSnapshotId
-        ? {
-            purchasePriceEstimate: toNumberOrNull(deal.affordabilityPurchasePrice),
-            assumptions: parseJsonObject(deal.affordabilityAssumptionsJson),
-          }
-        : null,
     docProgress,
     applicationDocuments,
-    programTerms,
-    timeline: events.map(event => {
+    programTermsSnapshot: partnerVisibleTermsSnapshot,
+    workflowProgress,
+    timeline: events.flatMap(event => {
       const metadata = parseJsonObject(event.metadata);
+      if (metadata?.source === 'manager.updateReferralWorkflowStep') return [];
       const isAssessmentAttachment = metadata?.source === 'partner.attachAssessment';
-      return {
+      return [{
         at: event.at,
         event: isAssessmentAttachment ? 'Affordability Snapshot Attached' : String(event.event || 'system'),
         byRole: event.actorRole ? String(event.actorRole) : 'system',
         note: event.note || null,
-        metadata,
-      };
+      }];
     }),
-  };
-}
-
-export async function submitReferralDealDocument(
-  input: SubmissionActor & {
-    dealId: number;
-    templateId: number;
-    submittedFileUrl: string;
-    submittedFileName?: string | null;
-    notes?: string | null;
-  },
-) {
-  const db = await resolveDb();
-  const [deal] = await db
-    .select({
-      dealId: distributionDeals.id,
-      agentId: distributionDeals.agentId,
-      developmentId: distributionDeals.developmentId,
-    })
-    .from(distributionDeals)
-    .where(eq(distributionDeals.id, input.dealId))
-    .limit(1);
-
-  if (!deal) {
-    throw new TRPCError({
-      code: 'NOT_FOUND',
-      message: 'Referral deal not found.',
-    });
-  }
-
-  if (input.actorRole !== 'super_admin' && Number(deal.agentId) !== Number(input.actorUserId)) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'You can only upload documents for referrals you submitted.',
-    });
-  }
-
-  const [template] = await db
-    .select({
-      id: developmentRequiredDocuments.id,
-    })
-    .from(developmentRequiredDocuments)
-    .where(
-      and(
-        eq(developmentRequiredDocuments.id, input.templateId),
-        eq(developmentRequiredDocuments.developmentId, Number(deal.developmentId)),
-        eq(developmentRequiredDocuments.isActive, 1),
-        eq(developmentRequiredDocuments.isRequired, 1),
-      ),
-    )
-    .limit(1);
-
-  if (!template) {
-    throw new TRPCError({
-      code: 'BAD_REQUEST',
-      message: 'This application document is not available for this referral.',
-    });
-  }
-
-  await db
-    .insert(distributionDealDocuments)
-    .values({
-      dealId: input.dealId,
-      developmentRequiredDocumentId: input.templateId,
-      status: 'received',
-      receivedAt: sql`CURRENT_TIMESTAMP`,
-      receivedBy: input.actorUserId,
-      submittedFileUrl: input.submittedFileUrl,
-      submittedFileName: input.submittedFileName || null,
-      submittedAt: sql`CURRENT_TIMESTAMP`,
-      submittedBy: input.actorUserId,
-      notes: input.notes || null,
-    })
-    .onDuplicateKeyUpdate({
-      set: {
-        status: 'received',
-        receivedAt: sql`CURRENT_TIMESTAMP`,
-        receivedBy: input.actorUserId,
-        verifiedAt: null,
-        verifiedBy: null,
-        submittedFileUrl: input.submittedFileUrl,
-        submittedFileName: input.submittedFileName || null,
-        submittedAt: sql`CURRENT_TIMESTAMP`,
-        submittedBy: input.actorUserId,
-        notes: input.notes || null,
-      },
-    });
-
-  return {
-    success: true,
-    applicationDocuments: await listDealApplicationDocuments(db, {
-      dealId: Number(deal.dealId),
-      developmentId: Number(deal.developmentId),
-    }),
-    docProgress:
-      (
-        await computeDealDocumentProgressMap(db, {
-          dealRows: [
-            {
-              dealId: Number(deal.dealId),
-              developmentId: Number(deal.developmentId),
-            },
-          ],
-        })
-      ).get(Number(deal.dealId)) || {
-        requiredCount: 0,
-        verifiedRequiredCount: 0,
-      },
   };
 }

@@ -4,14 +4,14 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import {
-  Building2,
+  ChevronDown,
   CircleHelp,
-  Compass,
-  DollarSign,
-  FilePlus2,
+  CreditCard,
+  FileText,
+  Headphones,
   Home,
   LogOut,
-  Send,
+  Search,
 } from 'lucide-react';
 
 type ReferralSidebarProps = {
@@ -27,11 +27,11 @@ type NavItem = {
 
 const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Overview', href: '/distribution/partner/overview', icon: Home },
-  { label: 'Developments', href: '/distribution/partner/developments', icon: Building2 },
-  { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
-  { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
-  { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
-  { label: 'Commissions', href: '/distribution/partner/commissions', icon: DollarSign },
+  { label: 'Find opportunities', href: '/distribution/partner/developments', icon: Search },
+  { label: 'My deals', href: '/distribution/partner/referrals', icon: FileText },
+  { label: 'Referral payouts', href: '/distribution/partner/payouts', icon: CreditCard },
+  { label: 'How it works', href: '/distribution/partner/how-it-works', icon: CircleHelp },
+  { label: 'Help', href: '/help', icon: Headphones },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard', '/distribution/partner']);
@@ -45,23 +45,25 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
-  const { data: pipelineData } = trpc.distribution.referrer.myPipeline.useQuery(
-    { limit: 200 },
-    {
-      enabled: Boolean(user),
-      retry: false,
-    },
-  );
-
-  const { data: statusData } = trpc.distribution.referrer.status.useQuery(undefined, {
+  const statusQuery = trpc.distribution.referrer.status.useQuery(undefined, {
     enabled: Boolean(user),
     retry: false,
     refetchOnWindowFocus: false,
   });
+  const statusData = statusQuery.data;
+
+  const { data: pipelineData } = trpc.distribution.referrer.myPipeline.useQuery(
+    { limit: 200 },
+    {
+      enabled: Boolean(user && statusData?.hasIdentity),
+      retry: false,
+    },
+  );
+
   const { data: commissionRows } = trpc.distribution.referrer.myCommissionEntries.useQuery(
     { limit: 200 },
     {
-      enabled: Boolean(user),
+      enabled: Boolean(user && statusData?.hasIdentity),
       retry: false,
       refetchOnWindowFocus: false,
     },
@@ -77,7 +79,6 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   }, [pipelineData?.stageCounts]);
 
   const currentPath = normalizeCurrentPath(location.split('?')[0]);
-  const networkCount = Number(statusData?.accessCount || 0);
   const pendingCommissionCount = (commissionRows || []).filter((row: any) => {
     const status = String(row?.entryStatus || '').toLowerCase();
     return status === 'pending' || status === 'approved';
@@ -87,10 +88,7 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
     if (item.href === '/distribution/partner/referrals') {
       return { ...item, badge: liveReferralCount || undefined };
     }
-    if (item.href === '/distribution/partner/developments') {
-      return { ...item, badge: networkCount || undefined };
-    }
-    if (item.href === '/distribution/partner/commissions') {
+    if (item.href === '/distribution/partner/payouts') {
       return { ...item, badge: pendingCommissionCount || undefined };
     }
     return item;
@@ -113,24 +111,27 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
   return (
     <aside
       className={cn(
-        'border-r border-border bg-white',
+        'bg-[#0b1c3f] text-white',
         mode === 'desktop'
-          ? 'hidden lg:fixed lg:inset-y-0 lg:z-20 lg:flex lg:w-[210px] lg:flex-col'
-          : 'flex h-full w-[210px] flex-col',
+          ? 'hidden lg:fixed lg:inset-y-0 lg:z-20 lg:flex lg:w-[260px] lg:flex-col'
+          : 'flex h-full w-[260px] flex-col',
       )}
     >
-      <div className="border-b border-border px-[18px] pb-[18px] pt-5">
-        <p className="text-[14px] font-semibold tracking-[-0.02em] text-foreground">Property Listify</p>
-        <p className="mt-0.5 font-mono text-[10px] tracking-[0.06em] text-muted-foreground">
-          PARTNER WORKSPACE
-        </p>
+      <div className="flex items-center gap-3 px-4 pb-5 pt-6">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1d6fe3]">
+          <Home className="h-5 w-5 text-white" />
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-semibold tracking-[-0.01em] text-white">
+            Property Listify
+          </p>
+          <p className="mt-0.5 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[#8ba2cd]">
+            Distribution network
+          </p>
+        </div>
       </div>
 
-      <p className="px-[18px] pb-[5px] pt-4 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-        Workspace
-      </p>
-
-      <nav className="space-y-0.5 px-0">
+      <nav className="space-y-1 px-3">
         {workspaceLinks.map(item => {
           const isActive = currentPath === item.href;
           return (
@@ -139,21 +140,21 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
               type="button"
               onClick={() => setLocation(item.href)}
               className={cn(
-                'group flex w-full items-center gap-[10px] border-l-2 px-[18px] py-[9px] text-left text-[13px] font-medium transition',
+                'group flex w-full items-center gap-3 rounded-lg px-3 py-[9px] text-left text-[13.5px] font-medium transition',
                 isActive
-                  ? 'border-l-primary bg-primary/10 text-primary'
-                  : 'border-l-transparent text-muted-foreground hover:bg-surface hover:text-foreground',
+                  ? 'bg-white text-[#0b1c3f] shadow-sm'
+                  : 'text-[#c3d0e8] hover:bg-white/10 hover:text-white',
               )}
             >
               <item.icon
                 className={cn(
-                  'h-[15px] w-[15px] shrink-0',
-                  isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+                  'h-[16px] w-[16px] shrink-0',
+                  isActive ? 'text-[#1d6fe3]' : 'text-[#8ba2cd] group-hover:text-white',
                 )}
               />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.badge ? (
-                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                <span className="rounded-full bg-[#ff7a00] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
                   {item.badge}
                 </span>
               ) : null}
@@ -162,33 +163,34 @@ export function ReferralSidebar({ mode = 'desktop' }: ReferralSidebarProps) {
         })}
       </nav>
 
-      <div className="mt-auto border-t border-border px-[18px] py-[14px]">
-        <div className="flex items-center gap-[10px]">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+      <div className="mt-auto px-3 pb-4 pt-6">
+        <div className="flex items-center gap-3 rounded-lg px-2 py-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1d6fe3]/25 text-[11px] font-semibold text-white">
             {initials}
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-[12px] font-semibold text-foreground">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[13px] font-semibold text-white">
               {user?.name || 'Referral Partner'}
             </p>
-            <p className="truncate text-[10px] text-muted-foreground">Partner Workspace</p>
+            <p className="truncate text-[11px] text-[#8ba2cd]">Distribution referrer</p>
           </div>
+          <ChevronDown className="h-4 w-4 shrink-0 text-[#8ba2cd]" />
         </div>
-        <div className="mt-2 flex gap-1.5">
+        <div className="mt-3 flex gap-2">
           <button
             type="button"
-            onClick={() => setLocation('/distribution-network/apply')}
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-surface"
+            onClick={() => setLocation('/help')}
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[11px] font-medium text-[#c3d0e8] transition hover:bg-white/10 hover:text-white"
           >
-            <CircleHelp className="h-3 w-3" />
+            <CircleHelp className="h-3.5 w-3.5" />
             Help
           </button>
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:bg-surface"
+            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/15 px-2 py-1.5 text-[11px] font-medium text-[#c3d0e8] transition hover:bg-white/10 hover:text-white"
           >
-            <LogOut className="h-3 w-3" />
+            <LogOut className="h-3.5 w-3.5" />
             Logout
           </button>
         </div>

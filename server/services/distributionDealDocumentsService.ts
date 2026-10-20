@@ -1,19 +1,20 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
-  developments,
   distributionDealDocuments,
+  distributionCommissionEntries,
   distributionDeals,
   distributionManagerAssignments,
-  distributionPrograms,
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
-import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import { readFrozenPayoutTerms } from './distributionCommissionService';
+import { resolveDealRequirementSnapshots } from './distributionDealRequirementsSnapshotService';
 
-export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected';
+export type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
+type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
 
 type ChecklistOptions = {
   skipAssignmentCheck?: boolean;
@@ -27,28 +28,29 @@ export type DealChecklistPayload = {
   developmentName: string;
   programId: number | null;
   payoutMilestone: string | null;
+  payoutMilestoneNotes: string | null;
   currencyCode: string | null;
   commissionSummary: {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType: 'flat' | 'percentage' | null;
+    referrerCommissionValue: number | null;
+    referrerCommissionBasis: 'sale_price' | 'base_price' | null;
+    payoutBasisAmount: number | null;
+    canRecordPayoutBasis: boolean;
   };
   requiredDocuments: Array<{
-    templateId: number;
+    templateId: number | null;
     documentCode: string;
     documentLabel: string;
-    category: 'developer_document' | 'client_required_document';
-    templateFileUrl: string | null;
-    templateFileName: string | null;
-    templateUploadedAt: string | null;
+    category: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
     status: DealDocumentStatus;
     receivedAt: string | null;
     verifiedAt: string | null;
-    submittedFileUrl: string | null;
-    submittedFileName: string | null;
     submittedAt: string | null;
     receivedBy: { userId: number; name?: string } | null;
     verifiedBy: { userId: number; name?: string } | null;
@@ -59,6 +61,7 @@ export type DealChecklistPayload = {
     requiredCount: number;
     verifiedRequiredCount: number;
     allRequiredVerified: boolean;
+    payoutMilestoneSupported: boolean;
     payoutReady: boolean;
     blockers: string[];
   };
@@ -67,15 +70,11 @@ export type DealChecklistPayload = {
 type UpsertDealDocumentStatusInput = {
   dealId: number;
   templateId: number;
-  status: DealDocumentStatus;
+  status: EditableDealDocumentStatus;
   notes?: string | null;
   submittedFileUrl?: string | null;
   submittedFileName?: string | null;
 };
-
-function boolFromTinyInt(value: unknown) {
-  return Number(value || 0) === 1;
-}
 
 function toNumberOrNull(value: unknown) {
   if (value === null || typeof value === 'undefined') return null;
@@ -83,14 +82,11 @@ function toNumberOrNull(value: unknown) {
   return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function normalizeCommissionModel(value: unknown) {
-  const model = value ? String(value) : null;
-  if (!model) return null;
-  if (model === 'fixed_amount') return 'flat_amount';
-  return model;
-}
-
-function formatUserDisplayName(row: { name?: string | null; firstName?: string | null; lastName?: string | null }) {
+function formatUserDisplayName(row: {
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+}) {
   if (row.name) return row.name;
   const fullName = [row.firstName, row.lastName].filter(Boolean).join(' ').trim();
   return fullName || undefined;
@@ -129,7 +125,10 @@ async function assertAssignedManagerForDevelopment(
     });
   }
 
-  if (typeof input.dealManagerUserId !== 'number' || input.dealManagerUserId !== input.actorUserId) {
+  if (
+    typeof input.dealManagerUserId !== 'number' ||
+    input.dealManagerUserId !== input.actorUserId
+  ) {
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'This deal is assigned to a different manager.',
@@ -144,12 +143,17 @@ async function getDealScope(db: any, dealId: number) {
       externalRef: distributionDeals.externalRef,
       buyerName: distributionDeals.buyerName,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
+      programId: distributionDeals.programId,
       currentStage: distributionDeals.currentStage,
       managerUserId: distributionDeals.managerUserId,
+      dealAmount: distributionDeals.dealAmount,
+      commissionBaseAmount: distributionDeals.commissionBaseAmount,
+      commissionTriggerStage: distributionDeals.commissionTriggerStage,
+      commissionStatus: distributionDeals.commissionStatus,
+      referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
+      referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
     .where(eq(distributionDeals.id, dealId))
     .limit(1);
 
@@ -165,9 +169,18 @@ async function getDealScope(db: any, dealId: number) {
     dealRef: String(deal.externalRef || `DEAL-${deal.dealId}`),
     buyerName: deal.buyerName || null,
     developmentId: Number(deal.developmentId),
-    developmentName: String(deal.developmentName || `Development #${deal.developmentId}`),
+    programId: Number(deal.programId),
+    developmentName: `Development #${deal.developmentId}`,
     currentStage: deal.currentStage ? String(deal.currentStage) : null,
     managerUserId: deal.managerUserId ? Number(deal.managerUserId) : null,
+    dealAmount: Number(deal.dealAmount ?? 0),
+    commissionBaseAmount: toNumberOrNull(deal.commissionBaseAmount),
+    commissionTriggerStage: deal.commissionTriggerStage
+      ? String(deal.commissionTriggerStage)
+      : null,
+    commissionStatus: String(deal.commissionStatus || ''),
+    referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
+    referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
   };
 }
 
@@ -187,24 +200,34 @@ export async function getDealChecklist(
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
-  const [program] = await db
-    .select({
-      id: distributionPrograms.id,
-      commissionModel: distributionPrograms.commissionModel,
-      defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-      payoutMilestone: distributionPrograms.payoutMilestone,
-      currencyCode: distributionPrograms.currencyCode,
-    })
-    .from(distributionPrograms)
-    .where(eq(distributionPrograms.developmentId, dealScope.developmentId))
+  const frozenPayoutTerms = readFrozenPayoutTerms(
+    dealScope.referralTermsSnapshotJson,
+    dealScope.referralTermsSnapshotDigest,
+  );
+  const [existingPayoutEntry] = await db
+    .select({ id: distributionCommissionEntries.id })
+    .from(distributionCommissionEntries)
+    .where(eq(distributionCommissionEntries.dealId, dealScope.dealId))
     .limit(1);
 
-  const templates = (await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)).filter(
-    template => template.isActive && template.isRequired,
+  const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: dealScope.dealId,
+      developmentId: dealScope.developmentId,
+      snapshotJson: dealScope.referralTermsSnapshotJson,
+      snapshotDigest: dealScope.referralTermsSnapshotDigest,
+    },
+  ]);
+  const requirementSnapshot = requirementSnapshots.get(dealScope.dealId);
+  const savedRequirements =
+    requirementSnapshot?.snapshotValid ? requirementSnapshot.requirements : [];
+  const templateIds = Array.from(
+    new Set(
+      savedRequirements.flatMap(document =>
+        document.templateId === null ? [] : [document.templateId],
+      ),
+    ),
   );
-
-  const templateIds = templates.map(template => Number(template.id));
   const persistedDealDocs = templateIds.length
     ? await db
         .select({
@@ -213,8 +236,6 @@ export async function getDealChecklist(
           status: distributionDealDocuments.status,
           receivedAt: distributionDealDocuments.receivedAt,
           verifiedAt: distributionDealDocuments.verifiedAt,
-          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
-          submittedFileName: distributionDealDocuments.submittedFileName,
           submittedAt: distributionDealDocuments.submittedAt,
           receivedBy: distributionDealDocuments.receivedBy,
           verifiedBy: distributionDealDocuments.verifiedBy,
@@ -255,57 +276,56 @@ export async function getDealChecklist(
     }
   }
 
-  const requiredDocuments: DealChecklistPayload['requiredDocuments'] = templates.map(template => {
-    const templateId = Number(template.id);
-    const persisted = persistedByTemplateId.get(templateId);
-    const receivedById = persisted?.receivedBy ? Number(persisted.receivedBy) : null;
-    const verifiedById = persisted?.verifiedBy ? Number(persisted.verifiedBy) : null;
-    const status = (persisted?.status || 'pending') as DealDocumentStatus;
+  const requiredDocuments: DealChecklistPayload['requiredDocuments'] = savedRequirements.map(
+    document => {
+      const templateId = document.templateId;
+      const persisted = templateId === null ? undefined : persistedByTemplateId.get(templateId);
+      const receivedById = persisted?.receivedBy ? Number(persisted.receivedBy) : null;
+      const verifiedById = persisted?.verifiedBy ? Number(persisted.verifiedBy) : null;
+      const status = (persisted?.status || 'unavailable') as DealDocumentStatus;
 
-    return {
-      templateId,
-      documentCode: String(template.documentCode),
-      documentLabel: String(template.documentLabel || ''),
-      category: template.category,
-      templateFileUrl: template.templateFileUrl || null,
-      templateFileName: template.templateFileName || null,
-      templateUploadedAt: template.templateUploadedAt || null,
-      isRequired: Boolean(template.isRequired),
-      sortOrder: Number(template.sortOrder || 0),
-      isActive: Boolean(template.isActive),
-      status,
-      receivedAt: persisted?.receivedAt || null,
-      verifiedAt: persisted?.verifiedAt || null,
-      submittedFileUrl: persisted?.submittedFileUrl || null,
-      submittedFileName: persisted?.submittedFileName || null,
-      submittedAt: persisted?.submittedAt || null,
-      receivedBy: receivedById
-        ? {
-            userId: receivedById,
-            name: actorDirectory.get(receivedById)?.name,
-          }
-        : null,
-      verifiedBy: verifiedById
-        ? {
-            userId: verifiedById,
-            name: actorDirectory.get(verifiedById)?.name,
-          }
-        : null,
-      submittedBy: persisted?.submittedBy
-        ? {
-            userId: Number(persisted.submittedBy),
-            name: actorDirectory.get(Number(persisted.submittedBy))?.name,
-          }
-        : null,
-      notes: persisted?.notes || null,
-    };
-  });
+      return {
+        templateId,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel,
+        category: document.category,
+        isRequired: true,
+        sortOrder: document.sortOrder,
+        isActive: document.isAvailable && Boolean(persisted),
+        status,
+        receivedAt: persisted?.receivedAt || null,
+        verifiedAt: persisted?.verifiedAt || null,
+        submittedAt: persisted?.submittedAt || null,
+        receivedBy: receivedById
+          ? {
+              userId: receivedById,
+              name: actorDirectory.get(receivedById)?.name,
+            }
+          : null,
+        verifiedBy: verifiedById
+          ? {
+              userId: verifiedById,
+              name: actorDirectory.get(verifiedById)?.name,
+            }
+          : null,
+        submittedBy: persisted?.submittedBy
+          ? {
+              userId: Number(persisted.submittedBy),
+              name: actorDirectory.get(Number(persisted.submittedBy))?.name,
+            }
+          : null,
+        notes: persisted?.notes || null,
+      };
+    },
+  );
 
   const requiredOnly = requiredDocuments.filter(document => document.isRequired);
   const requiredCount = requiredOnly.length;
-  const verifiedRequiredCount = requiredOnly.filter(document => document.status === 'verified').length;
+  const verifiedRequiredCount = requiredOnly.filter(
+    document => document.status === 'verified',
+  ).length;
   const allRequiredVerified = requiredCount > 0 && verifiedRequiredCount >= requiredCount;
-  const payoutMilestone = program?.payoutMilestone ? String(program.payoutMilestone) : null;
+  const payoutMilestone = frozenPayoutTerms?.payoutMilestone || null;
   const payoutMilestoneEvaluation = evaluatePayoutMilestone({
     payoutMilestone,
     currentStage: dealScope.currentStage,
@@ -315,16 +335,24 @@ export async function getDealChecklist(
     })),
   });
   const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
-  const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
+  const payoutReady =
+    allRequiredVerified && payoutMilestoneEvaluation.supported && payoutMilestoneSatisfied;
   const blockers: string[] = [];
 
   if (requiredCount === 0) {
-    blockers.push('No required document templates are configured for this development.');
+    blockers.push(
+      requirementSnapshot?.snapshotValid
+        ? 'No required document templates were saved for this referral.'
+        : 'The saved referral document requirements could not be validated.',
+    );
   } else if (!allRequiredVerified) {
     const remaining = requiredCount - verifiedRequiredCount;
     blockers.push(
       `${remaining} required document${remaining === 1 ? '' : 's'} still need verification.`,
     );
+  }
+  if (requiredDocuments.some(document => document.status === 'unavailable')) {
+    blockers.push('One or more saved document requirements cannot be resolved to a document record.');
   }
 
   blockers.push(...payoutMilestoneEvaluation.blockers);
@@ -335,19 +363,69 @@ export async function getDealChecklist(
     buyerName: dealScope.buyerName,
     developmentId: dealScope.developmentId,
     developmentName: dealScope.developmentName,
-    programId: program ? Number(program.id) : null,
+    programId: dealScope.programId,
     payoutMilestone,
-    currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
+    payoutMilestoneNotes: frozenPayoutTerms?.payoutMilestoneNotes || null,
+    currencyCode: frozenPayoutTerms?.currencyCode || null,
     commissionSummary: {
-      commissionModel: normalizeCommissionModel(program?.commissionModel),
-      defaultCommissionPercent: toNumberOrNull(program?.defaultCommissionPercent),
-      defaultCommissionAmount: toNumberOrNull(program?.defaultCommissionAmount),
+      commissionModel: frozenPayoutTerms?.commissionModel || null,
+      defaultCommissionPercent:
+        frozenPayoutTerms?.referrerCommissionType === 'percentage'
+          ? frozenPayoutTerms.referrerCommissionValue
+          : null,
+      defaultCommissionAmount:
+        frozenPayoutTerms?.referrerCommissionType === 'flat'
+          ? frozenPayoutTerms.referrerCommissionValue
+          : null,
+      referrerCommissionType:
+        frozenPayoutTerms?.referrerCommissionType === 'flat' ||
+        frozenPayoutTerms?.referrerCommissionType === 'percentage'
+          ? frozenPayoutTerms.referrerCommissionType
+          : null,
+      referrerCommissionValue: frozenPayoutTerms?.referrerCommissionValue || null,
+      referrerCommissionBasis:
+        frozenPayoutTerms?.referrerCommissionBasis === 'sale_price' ||
+        frozenPayoutTerms?.referrerCommissionBasis === 'base_price'
+          ? frozenPayoutTerms.referrerCommissionBasis
+          : null,
+      payoutBasisAmount:
+        frozenPayoutTerms?.referrerCommissionBasis === 'sale_price'
+          ? dealScope.dealAmount > 0
+            ? dealScope.dealAmount
+            : null
+          : frozenPayoutTerms?.referrerCommissionBasis === 'base_price'
+            ? dealScope.commissionBaseAmount
+            : null,
+      canRecordPayoutBasis: (() => {
+        const rank: Record<string, number> = {
+          viewing_scheduled: 1,
+          viewing_completed: 2,
+          application_submitted: 3,
+          contract_signed: 4,
+          bond_approved: 5,
+          commission_pending: 6,
+          commission_paid: 7,
+          cancelled: 99,
+        };
+        const triggerRank = dealScope.commissionTriggerStage
+          ? rank[dealScope.commissionTriggerStage]
+          : undefined;
+        return Boolean(
+          frozenPayoutTerms?.referrerCommissionType === 'percentage' &&
+          triggerRank &&
+          (rank[dealScope.currentStage || ''] || 0) < triggerRank &&
+          !existingPayoutEntry &&
+          dealScope.commissionStatus !== 'pending' &&
+          dealScope.commissionStatus !== 'paid',
+        );
+      })(),
     },
     requiredDocuments,
     computed: {
       requiredCount,
       verifiedRequiredCount,
       allRequiredVerified,
+      payoutMilestoneSupported: payoutMilestoneEvaluation.supported,
       payoutReady,
       blockers,
     },
@@ -359,6 +437,14 @@ export async function upsertDealDocumentStatus(
   actorUserId: number,
   options?: ChecklistOptions,
 ) {
+  if (input.submittedFileUrl?.trim() || input.submittedFileName?.trim()) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Secure deal-document storage and authorized developer delivery are not available yet.',
+    });
+  }
+
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
@@ -371,19 +457,23 @@ export async function upsertDealDocumentStatus(
     skipAssignmentCheck: options?.skipAssignmentCheck,
   });
 
-  const template = (
-    await listDevelopmentRequiredDocumentsOrEmpty(db, dealScope.developmentId)
-  ).find(
-    candidate =>
-      candidate.id === input.templateId &&
-      candidate.isActive &&
-      candidate.isRequired,
+  const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: dealScope.dealId,
+      developmentId: dealScope.developmentId,
+      snapshotJson: dealScope.referralTermsSnapshotJson,
+      snapshotDigest: dealScope.referralTermsSnapshotDigest,
+    },
+  ]);
+  const requirementSnapshot = requirementSnapshots.get(dealScope.dealId);
+  const savedRequirement = requirementSnapshot?.requirements.find(
+    requirement => requirement.templateId === input.templateId && requirement.isAvailable,
   );
 
-  if (!template) {
+  if (!requirementSnapshot?.snapshotValid || !savedRequirement) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Document template is not available for this deal development.',
+      message: 'Document is not part of this referral’s saved requirements.',
     });
   }
 
@@ -410,6 +500,13 @@ export async function upsertDealDocumentStatus(
         ),
       )
       .limit(1);
+
+    if (!existing) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The saved document status record is unavailable for this referral.',
+      });
+    }
 
     const now = sqlDateNow();
     let receivedAt = existing?.receivedAt || null;

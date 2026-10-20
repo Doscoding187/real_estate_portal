@@ -66,10 +66,10 @@ async function main() {
 
   for (const { file, source } of schemaSources) {
     const missingAutoPk =
-      source.match(/id:\s*int\([^\)]*\)\.autoincrement\(\)\.notNull\(\)/g) ?? [];
+      source.match(/\bid:\s*int\([^\)]*\)\.autoincrement\(\)\.notNull\(\)/g) ?? [];
 
     const missingVarcharPk =
-      source.match(/id:\s*varchar\([^\)]*\)\.notNull\(\)(?!\.primaryKey\()/g) ?? [];
+      source.match(/\bid:\s*varchar\([^\)]*\)\.notNull\(\)(?!\.primaryKey\()/g) ?? [];
 
     const count = missingAutoPk.length + missingVarcharPk.length;
 

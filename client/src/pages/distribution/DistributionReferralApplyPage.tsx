@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ArrowLeft, ArrowRight, Check, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,20 +7,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
+import { useAuth } from '@/_core/hooks/useAuth';
+import {
+  publicShortlistStorageKey,
+  readSavedSelections,
+} from '@/components/distribution/distributionShortlistStorage';
+import { readCheckfitSnapshot } from '@/components/distribution/distributionCheckfitStorage';
 import '@/styles/advertise-responsive.css';
 
-type PartnerType = 'independent_agent' | 'small_brokerage' | 'referral_partner' | 'individual' | '';
+type PartnerType = 'agent' | 'individual' | '';
 
-const REFERRAL_LOGIN_PATH = '/distribution-network/login';
+const ACCOUNT_LOGIN_PATH = '/login?next=/distribution/partner/overview';
 const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
-  independent_agent: 'Independent Property Agent',
-  small_brokerage: 'Small Brokerage',
-  referral_partner: 'Referral Partner',
-  individual: 'Individual With Qualified Buyer',
+  agent: 'Property Agent',
+  individual: 'Individual Referrer',
 };
 
 export default function DistributionReferralApplyPage() {
   const [, setLocation] = useLocation();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     fullName: '',
@@ -29,12 +34,33 @@ export default function DistributionReferralApplyPage() {
     partnerType: '' as PartnerType,
   });
 
+  useEffect(() => {
+    if (!isAuthenticated || !user) return;
+    setForm(current => ({
+      ...current,
+      fullName: current.fullName || user.name || '',
+      email: user.email || current.email,
+    }));
+  }, [isAuthenticated, user?.email, user?.name]);
+
   const interestedIn = useMemo(() => {
     if (typeof window !== 'undefined') {
       return new URLSearchParams(window.location.search).get('interestedIn');
     }
     return null;
   }, []);
+
+  const carried = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+    const shortlistCount =
+      Object.keys(readSavedSelections(publicShortlistStorageKey('sale'))).length +
+      Object.keys(readSavedSelections(publicShortlistStorageKey('rent'))).length;
+    const checkfit = readCheckfitSnapshot();
+    if (shortlistCount === 0 && !checkfit) return null;
+    return { shortlistCount, checkfit };
+  }, []);
+
+  const formatRand = (value: number) => `R${Math.round(value).toLocaleString('en-ZA')}`;
 
   const notes = useMemo(() => {
     let baseNote = !form.partnerType
@@ -57,6 +83,7 @@ export default function DistributionReferralApplyPage() {
   });
 
   const canSubmit =
+    !authLoading &&
     form.fullName.trim().length >= 2 &&
     form.email.trim().length > 0 &&
     form.phone.trim().length > 0 &&
@@ -79,8 +106,8 @@ export default function DistributionReferralApplyPage() {
   return (
     <>
       <SEOHead
-        title="Join | Distribution Referral Network"
-        description="Join the Distribution Referral Network and get access to approved developments with referral payout tracking."
+        title="Join | Property Listify Distribution Network"
+        description="Apply to participate in Property Listify's Distribution Network. Access and any referral payout depend on approval and active program terms."
         canonicalUrl="/distribution-network/apply"
         ogType="website"
       />
@@ -96,10 +123,10 @@ export default function DistributionReferralApplyPage() {
               Back to Distribution Network
             </button>
             <Link
-              href={REFERRAL_LOGIN_PATH}
+              href={ACCOUNT_LOGIN_PATH}
               className="text-sm font-medium text-primary hover:text-[var(--brand-blue-hover)]"
             >
-              Already have access? Referrer login
+              Already have a Property Listify account? Sign in
             </Link>
           </div>
         </header>
@@ -124,10 +151,42 @@ export default function DistributionReferralApplyPage() {
                   </span>
                 </h1>
                 <p className="mx-auto mt-3 max-w-sm text-sm text-slate-600">
-                  Takes 2 minutes. No buyer required to apply. We'll review and send your access
-                  details by email.
+                  No buyer is required to apply. Use the email on your Property Listify account; if
+                  you are new, create an account with that same email after applying. Approved
+                  Distribution access will be attached to that account.
                 </p>
               </div>
+
+              {carried ? (
+                <div className="mb-5 rounded-xl border border-primary/15 bg-primary/5 p-4 text-sm text-slate-700">
+                  <p className="mb-2 font-semibold text-slate-900">Carried from this browser</p>
+                  <ul className="space-y-1">
+                    {carried.shortlistCount > 0 ? (
+                      <li>
+                        Your shortlist has{' '}
+                        <strong>
+                          {carried.shortlistCount} selected option
+                          {carried.shortlistCount === 1 ? '' : 's'}
+                        </strong>
+                        . After you join and sign in on this browser, you can import them into your
+                        partner catalogue.
+                      </li>
+                    ) : null}
+                    {carried.checkfit ? (
+                      <li>
+                        Your check-fit shows an indicative purchase price up to{' '}
+                        <strong>{formatRand(carried.checkfit.result.estimatedPurchasePrice)}</strong>{' '}
+                        at {carried.checkfit.assumptions.annualInterestRate.toFixed(2)}% interest.
+                        Indicative only — not an approval. It stays on this device.
+                      </li>
+                    ) : null}
+                  </ul>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Same-browser convenience only. This is not a saved assessment or a submitted
+                    referral.
+                  </p>
+                </div>
+              ) : null}
 
               <Card className="border-slate-200 bg-white shadow-[0_16px_34px_-18px_rgba(15,23,42,0.18)]">
                 <CardContent className="p-6 sm:p-8">
@@ -140,15 +199,28 @@ export default function DistributionReferralApplyPage() {
                         Application Received
                       </h2>
                       <p className="mx-auto max-w-xs text-sm text-slate-600">
-                        We review every application manually. You'll receive access details by
-                        email once approved.
+                        We review every application. After approval, your Distribution membership
+                        and Distribution ID will be connected to the Property Listify account using
+                        this email. If you are new, create your account with this same email. You
+                        will use one login for both workspaces.
                       </p>
                       <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
                         <Button variant="outline" onClick={() => setLocation('/distribution-network')}>
                           Explore Opportunities
                         </Button>
-                        <Button variant="outline" onClick={() => setLocation(REFERRAL_LOGIN_PATH)}>
-                          Sign in
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            setLocation(
+                              isAuthenticated
+                                ? user?.role === 'agent'
+                                  ? '/agent/dashboard'
+                                  : '/distribution/partner/overview'
+                                : ACCOUNT_LOGIN_PATH,
+                            )
+                          }
+                        >
+                          {isAuthenticated ? 'Return to my dashboard' : 'Sign in or create account'}
                         </Button>
                       </div>
                     </div>
@@ -170,6 +242,7 @@ export default function DistributionReferralApplyPage() {
                             value={form.email}
                             onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
                             placeholder="name@domain.com"
+                            readOnly={Boolean(isAuthenticated && user?.email)}
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -195,10 +268,8 @@ export default function DistributionReferralApplyPage() {
                             className="h-10 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-slate-500"
                           >
                             <option value="">Select role</option>
-                            <option value="independent_agent">Independent Property Agent</option>
-                            <option value="small_brokerage">Small Brokerage</option>
-                            <option value="referral_partner">Referral Partner</option>
-                            <option value="individual">Individual With Qualified Buyer</option>
+                            <option value="agent">Property Agent</option>
+                            <option value="individual">Individual Referrer</option>
                           </select>
                         </div>
                       </div>
@@ -210,14 +281,14 @@ export default function DistributionReferralApplyPage() {
                           disabled={!canSubmit || submitMutation.isPending}
                           onClick={handleSubmit}
                         >
-                          {submitMutation.isPending ? 'Submitting...' : 'Get Access'}
+                          {submitMutation.isPending ? 'Submitting...' : 'Submit application'}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                         <Link
-                          href={REFERRAL_LOGIN_PATH}
+                          href={ACCOUNT_LOGIN_PATH}
                           className="block text-center text-sm font-medium text-primary hover:text-[var(--brand-blue-hover)]"
                         >
-                          Already have access? Sign in
+                          Already have a Property Listify account? Sign in
                         </Link>
                       </div>
                     </div>

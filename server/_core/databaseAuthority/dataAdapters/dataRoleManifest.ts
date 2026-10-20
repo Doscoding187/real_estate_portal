@@ -14,6 +14,10 @@ import {
   CANONICAL_GEOGRAPHY_VERSION,
 } from './canonicalGeography';
 import {
+  CANONICAL_PLATFORM_SETTINGS_DIGEST,
+  CANONICAL_PLATFORM_SETTINGS_VERSION,
+} from './canonicalPlatformSettings';
+import {
   LISTING_PREVIEW_FIXTURE_DIGEST,
   LISTING_PREVIEW_FIXTURE_VERSION,
 } from './listingPreviewFixture';
@@ -21,6 +25,14 @@ import {
   HOMEPAGE_JOURNEY_PREVIEW_DIGEST,
   HOMEPAGE_JOURNEY_PREVIEW_VERSION,
 } from './homepageJourneyPreviewFixture';
+import {
+  DISTRIBUTION_REFERRER_PREVIEW_DIGEST,
+  DISTRIBUTION_REFERRER_PREVIEW_VERSION,
+} from './distributionReferrerPreviewFixture';
+import {
+  DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST,
+  DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
+} from './distributionReferrerActivityPreviewFixture';
 import {
   PLE_PUBLICATION_ENTITLEMENT_DIGEST,
   PLE_PUBLICATION_ENTITLEMENT_VERSION,
@@ -112,6 +124,22 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       requiredFor: ['place-release-preview'],
     },
     {
+      key: 'reference.platform-settings',
+      role: 'reference',
+      adapter: 'canonical-platform-settings',
+      adapterPath: 'server/_core/databaseAuthority/dataAdapters/canonicalPlatformSettings.ts',
+      version: CANONICAL_PLATFORM_SETTINGS_VERSION,
+      digest: CANONICAL_PLATFORM_SETTINGS_DIGEST,
+      prepareCommand: 'db:platform-settings:prepare',
+      verifyCommand: 'db:platform-settings:verify',
+      prepareOperation: 'reference-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-checkfit'],
+    },
+    {
       key: 'foundation.launch-access',
       role: 'foundation',
       adapter: 'canonical-foundation',
@@ -142,6 +170,40 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['listing-preview'],
+    },
+    {
+      key: 'demo.distribution-individual-referrer-preview',
+      role: 'demo',
+      adapter: 'distribution-individual-referrer-preview',
+      adapterPath:
+        'server/_core/databaseAuthority/dataAdapters/distributionReferrerPreviewFixture.ts',
+      version: DISTRIBUTION_REFERRER_PREVIEW_VERSION,
+      digest: DISTRIBUTION_REFERRER_PREVIEW_DIGEST,
+      prepareCommand: 'db:distribution-referrer-preview:prepare',
+      verifyCommand: 'db:distribution-referrer-preview:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-partner-preview'],
+    },
+    {
+      key: 'demo.distribution-referrer-activity-preview',
+      role: 'demo',
+      adapter: 'distribution-referrer-activity-preview',
+      adapterPath:
+        'server/_core/databaseAuthority/dataAdapters/distributionReferrerActivityPreviewFixture.ts',
+      version: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
+      digest: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST,
+      prepareCommand: 'db:distribution-referrer-activity:prepare',
+      verifyCommand: 'db:distribution-referrer-activity:verify',
+      prepareOperation: 'demo-seed',
+      verifyOperation: 'verification',
+      targetClasses: DISPOSABLE_TARGETS,
+      transaction: 'bounded',
+      schemaMutation: false,
+      requiredFor: ['distribution-partner-preview'],
     },
     {
       key: 'demo.homepage-journey-preview',

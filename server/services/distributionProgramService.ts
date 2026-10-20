@@ -2,6 +2,9 @@ type ProgramActivationInput = {
   commissionModel: 'flat_percentage' | 'tiered_percentage' | 'fixed_amount' | 'hybrid' | null;
   defaultCommissionPercent: number | null;
   defaultCommissionAmount: number | null;
+  referrerCommissionType: 'flat' | 'percentage' | null;
+  referrerCommissionValue: number | null;
+  referrerCommissionBasis: 'sale_price' | 'base_price' | null;
   tierAccessPolicy: 'open' | 'restricted' | 'invite_only' | null;
   payoutMilestone:
     | 'attorney_instruction'
@@ -49,12 +52,14 @@ export function getProgramActivationReadiness(input: ProgramActivationInput) {
 
   if (!input.commissionModel) {
     missingRequirements.push('commissionModel');
+  } else if (
+    input.commissionModel !== 'flat_percentage' &&
+    input.commissionModel !== 'fixed_amount'
+  ) {
+    missingRequirements.push('commissionModelUnsupported');
   }
 
-  if (
-    input.commissionModel === 'flat_percentage' ||
-    input.commissionModel === 'tiered_percentage'
-  ) {
+  if (input.commissionModel === 'flat_percentage') {
     if (typeof input.defaultCommissionPercent !== 'number' || input.defaultCommissionPercent <= 0) {
       missingRequirements.push('defaultCommissionPercent');
     }
@@ -66,14 +71,24 @@ export function getProgramActivationReadiness(input: ProgramActivationInput) {
     }
   }
 
-  if (input.commissionModel === 'hybrid') {
-    const hasPercent =
-      typeof input.defaultCommissionPercent === 'number' && input.defaultCommissionPercent > 0;
-    const hasAmount =
-      typeof input.defaultCommissionAmount === 'number' && input.defaultCommissionAmount > 0;
-    if (!hasPercent && !hasAmount) {
-      missingRequirements.push('defaultCommissionPercent_or_defaultCommissionAmount');
-    }
+  if (input.referrerCommissionType !== 'flat' && input.referrerCommissionType !== 'percentage') {
+    missingRequirements.push('referrerCommissionType');
+  }
+
+  if (
+    typeof input.referrerCommissionValue !== 'number' ||
+    !Number.isFinite(input.referrerCommissionValue) ||
+    input.referrerCommissionValue <= 0
+  ) {
+    missingRequirements.push('referrerCommissionValue');
+  }
+
+  if (
+    input.referrerCommissionType === 'percentage' &&
+    input.referrerCommissionBasis !== 'sale_price' &&
+    input.referrerCommissionBasis !== 'base_price'
+  ) {
+    missingRequirements.push('referrerCommissionBasis');
   }
 
   if (!input.tierAccessPolicy) {
@@ -115,7 +130,7 @@ export async function ensureDistributionProgramForDevelopment(
     commissionModel: 'flat_percentage',
     defaultCommissionPercent: null,
     defaultCommissionAmount: null,
-    tierAccessPolicy: 'restricted',
+    tierAccessPolicy: 'open',
     payoutMilestone: 'attorney_signing',
     payoutMilestoneNotes: null,
     currencyCode: 'ZAR',

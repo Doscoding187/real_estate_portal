@@ -114,21 +114,14 @@ describe('distributionRouter transactional boundaries', () => {
     expect(adminUpdate).toContain("eventType: 'override'");
   });
 
-  it('keeps referrer submitDeal writes inside a single transaction', () => {
-    const referrerSection = section(
-      'const referrerDistributionRouter = router({',
-      'const developerDistributionRouter = router({',
+  it('keeps the legacy referrer submitDeal paused', () => {
+    const submitDealSection = section(
+      'submitDeal: protectedProcedure',
+      'advanceDealStage: protectedProcedure',
     );
-    const submitDealSection = section('submitDeal: protectedProcedure', 'advanceDealStage: protectedProcedure');
-    expect(submitDealSection).toContain('await db.transaction(async tx => {');
-    expect(submitDealSection).toContain('.insert(distributionDeals)');
-    expect(submitDealSection).toContain('.update(distributionDeals)');
-    expect(submitDealSection).toContain('.insert(distributionDealEvents)');
-    expect(submitDealSection).toContain('await assertDevelopmentSubmissionEligible({');
-    expect(submitDealSection.indexOf('await assertDevelopmentSubmissionEligible({')).toBeLessThan(
-      submitDealSection.indexOf('const managerUserId = await getPrimaryManagerUserIdForProgram'),
-    );
-    expect(referrerSection).toContain("submittedVia: 'referrer.submitDeal'");
+    expect(submitDealSection).toContain('DISTRIBUTION_REFERRAL_INTAKE_PAUSED_MESSAGE');
+    expect(submitDealSection).not.toContain('.insert(distributionDeals)');
+    expect(submitDealSection).not.toContain('await db.transaction');
     expect(source).not.toContain('if (insertedDealId > 0)');
   });
 
@@ -188,6 +181,11 @@ describe('distribution.admin.setProgramReferralEnabled readiness gating', () => 
           requiredItems: [],
         },
         'distribution.admin.listPrograms': {
+          ready: true,
+          missingItems: [],
+          requiredItems: [],
+        },
+        'distribution.admin.manageReferralIntakePolicy': {
           ready: true,
           missingItems: [],
           requiredItems: [],

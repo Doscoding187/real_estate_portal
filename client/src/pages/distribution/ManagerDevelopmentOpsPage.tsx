@@ -19,6 +19,10 @@ export default function ManagerDevelopmentOpsPage() {
       retry: false,
     },
   );
+  const selectedTeamQueueFeatureQuery = trpc.distribution.getSelectedTeamQueueFeatureStatus.useQuery(
+    undefined,
+    { enabled: isAuthenticated, retry: false },
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -27,7 +31,7 @@ export default function ManagerDevelopmentOpsPage() {
     }
   }, [isAuthenticated, loading, setLocation]);
 
-  if (loading || assignedDevelopmentsQuery.isLoading) {
+  if (loading || assignedDevelopmentsQuery.isLoading || selectedTeamQueueFeatureQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
@@ -47,9 +51,21 @@ export default function ManagerDevelopmentOpsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Badge variant="secondary">
-              Assigned developments: {(assignedDevelopmentsQuery.data || []).length}
-            </Badge>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Badge variant="secondary">
+                Assigned developments: {(assignedDevelopmentsQuery.data || []).length}
+              </Badge>
+              {selectedTeamQueueFeatureQuery.data?.enabled ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation('/distribution/manager/lead-queue')}
+                >
+                  Open selected team lead queue
+                </Button>
+              ) : (
+                <Badge variant="outline">Selected team queue is not enabled</Badge>
+              )}
+            </div>
           </CardContent>
         </Card>
 

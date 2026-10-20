@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
@@ -62,6 +63,18 @@ const createdState = {
 
 function uniqueIds(ids: number[]) {
   return Array.from(new Set(ids.filter(Boolean)));
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record)
+      .sort()
+      .map(key => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
 }
 
 async function insertUser(emailPrefix: string, role: 'visitor' | 'super_admin' = 'visitor') {
@@ -135,7 +148,7 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
 
   const requiredDocsCount = Math.max(0, options.requiredDocsCount ?? 2);
   const includePrimaryAssignment = options.includePrimaryAssignment ?? true;
-  const payoutMilestone = options.payoutMilestone ?? 'attorney_signing';
+  const payoutMilestone = options.payoutMilestone ?? 'bond_approval';
   const templateDocumentCodes = options.templateDocumentCodes ?? [
     'id_document',
     'proof_of_address',
@@ -200,15 +213,50 @@ async function seedChecklistScenario(options: SeedOptions = {}) {
     createdState.templateIds.push(templateId);
   }
 
+  const terms = {
+    version: 2,
+    marketMode: 'sale',
+    developmentId,
+    program: {
+      referrerCommissionType: 'flat',
+      referrerCommissionValue: 1000,
+      currencyCode: 'ZAR',
+      payoutMilestone,
+    },
+    requiredDocuments: templateIds.map((templateId, index) => ({
+      templateId,
+      documentCode: templateDocumentCodes[index] || 'custom',
+      documentLabel: `Required document ${index + 1}`,
+      category: 'client_required_document',
+      isRequired: true,
+      sortOrder: index,
+    })),
+  };
+  const termsDigest = createHash('sha256').update(canonicalJson(terms), 'utf8').digest('hex');
+  const referralTermsSnapshot = { ...terms, digest: termsDigest };
+
   const [dealInsert] = await db.insert(distributionDeals).values({
     programId,
     developmentId,
     agentId: agentUserId,
     managerUserId,
     buyerName: 'Buyer Seed',
+    marketMode: 'sale',
+    referralTermsSnapshotJson: referralTermsSnapshot,
+    referralTermsSnapshotDigest: termsDigest,
   });
   const dealId = Number((dealInsert as any).insertId || 0);
   createdState.dealIds.push(dealId);
+
+  if (templateIds.length) {
+    await db.insert(distributionDealDocuments).values(
+      templateIds.map(templateId => ({
+        dealId,
+        developmentRequiredDocumentId: templateId,
+        status: 'pending' as const,
+      })),
+    );
+  }
 
   return {
     managerUserId,
@@ -480,6 +528,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   it('computes payout readiness true when all required docs are verified', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
     const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
 
     for (const templateId of seed.templateIds) {
       await caller.distribution.manager.updateDealDocumentStatus({
@@ -602,7 +651,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
   });
 
-  it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {
+  it('directs admin commission_paid transitions to the payout record flow', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
     const adminCaller = buildCaller(seed.managerUserId, 'super_admin');
     await setDealStage(seed.dealId, 'commission_pending');
@@ -613,18 +662,8 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         toStage: 'commission_paid',
       }),
     ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
-    });
-
-    await expect(
-      adminCaller.distribution.admin.transitionDealStage({
-        dealId: seed.dealId,
-        toStage: 'commission_paid',
-        force: true,
-      }),
-    ).rejects.toMatchObject({
       code: 'BAD_REQUEST',
-      message: 'Forced admin deal-stage transitions require justification notes.',
+      message: expect.stringContaining('Mark the referral payout record paid'),
     });
 
     await expect(
@@ -634,9 +673,9 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         force: true,
         notes: 'Manual payout override approved by ops lead.',
       }),
-    ).resolves.toMatchObject({
-      success: true,
-      stage: 'commission_paid',
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('Mark the referral payout record paid'),
     });
   });
 

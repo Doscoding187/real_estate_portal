@@ -16,12 +16,12 @@ export function ReferralAppShell({ children }: { children: ReactNode }) {
             <Menu className="h-6 w-6" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[244px] p-0">
+        <SheetContent side="left" className="w-[260px] p-0">
           <ReferralSidebar mode="sheet" />
         </SheetContent>
       </Sheet>
 
-      <div className="flex-1 lg:pl-[210px]">
+      <div className="flex-1 lg:pl-[260px]">
         <ReferralTopNav />
         {children}
       </div>

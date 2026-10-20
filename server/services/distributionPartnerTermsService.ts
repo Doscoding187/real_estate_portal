@@ -1,79 +1,211 @@
-import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
-  cataloguePublishers,
-  developments,
+  distributionBrandPartnerships,
   distributionDevelopmentAccess,
   distributionPrograms,
-  unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  getDevelopmentSalesProjection,
+  type DevelopmentSalesModeProjection,
+  type DevelopmentSalesProjection,
+  getDevelopmentSalesWorkspaceReference,
+  listDevelopmentSalesWorkspaceReferences,
+  type DevelopmentSalesWorkspaceReference,
+} from './distributionDeveloperReadPort';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
+import {
+  listPartnerAccessibleDevelopmentIds,
+  type DistributionPartnerActor,
+} from './distributionPartnerProgramAccessService';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import {
+  CHECKFIT_V1_DISCLAIMERS,
+  CHECKFIT_V1_POLICY,
+  resolveCheckfitV1Rate,
+} from './checkfitV1Service';
+import type { DistributionUnitMedia } from '../../shared/distributionUnitMedia';
 
-type ListPartnerProgramTermsInput = {
-  cataloguePublisherId?: number;
-  developmentIds?: number[];
-  includeDisabled?: boolean;
-};
-
-type BrochureConfig = {
+type ProgramPromotion = {
   headline?: string | null;
   description?: string | null;
   highlightBullets?: string[];
-  amenityLabels?: string[];
-  heroImageUrl?: string | null;
-  contactName?: string | null;
-  contactPhone?: string | null;
-  contactEmail?: string | null;
 };
+
+export type PartnerAffordabilityAssumptions = {
+  policyVersion: typeof CHECKFIT_V1_POLICY.version;
+  available: boolean;
+  annualInterestRate: number | null;
+  rateSource: typeof CHECKFIT_V1_POLICY.rateSourceKey;
+  rateSourceLabel: string;
+  rateUpdatedAt: string | null;
+  termMonths: number;
+  repaymentAllowanceRatio: number;
+  disclaimers: string[];
+};
+
+function partnerAffordabilityAssumptions(
+  rate: Awaited<ReturnType<typeof resolveCheckfitV1Rate>>,
+): PartnerAffordabilityAssumptions {
+  return {
+    policyVersion: CHECKFIT_V1_POLICY.version,
+    available: rate !== null,
+    annualInterestRate: rate?.annualInterestRate ?? null,
+    rateSource: CHECKFIT_V1_POLICY.rateSourceKey,
+    rateSourceLabel: CHECKFIT_V1_POLICY.rateSourceLabel,
+    rateUpdatedAt: rate?.rateUpdatedAt ?? null,
+    termMonths: CHECKFIT_V1_POLICY.termMonths,
+    repaymentAllowanceRatio: CHECKFIT_V1_POLICY.repaymentAllowanceRatio,
+    disclaimers: [...CHECKFIT_V1_DISCLAIMERS],
+  };
+}
+
+const PAYOUT_TRIGGER_LABELS: Record<string, string> = {
+  attorney_instruction: 'Attorney instruction',
+  attorney_signing: 'Attorney signing',
+  bond_approval: 'Home finance approval',
+  transfer_registration: 'Transfer registration',
+  occupation: 'Occupation',
+  custom: 'Custom program trigger',
+};
+
+type PartnerProgramTermsInput = {
+  actor: DistributionPartnerActor;
+  cataloguePublisherId?: number;
+  developmentIds?: number[];
+  /** Retained for older callers; inactive opportunities are never exposed. */
+  includeDisabled?: boolean;
+};
+
+type PartnerMode = 'sale' | 'rent';
+type PartnerModeProjection = {
+  availableCount: number;
+  priceFrom: number;
+  priceTo: number;
+  priceBasis: 'purchase_price' | 'monthly_rent';
+};
+
+function partnerModes(
+  modes: Partial<Record<'for_sale' | 'for_rent', DevelopmentSalesModeProjection>>,
+): Partial<Record<PartnerMode, PartnerModeProjection>> {
+  const mapped: Partial<Record<PartnerMode, PartnerModeProjection>> = {};
+  if (modes.for_sale) mapped.sale = modes.for_sale;
+  if (modes.for_rent) mapped.rent = modes.for_rent;
+  return mapped;
+}
+
+function hasMarketableMode(
+  modes: Partial<Record<'for_sale' | 'for_rent', DevelopmentSalesModeProjection>>,
+) {
+  return Object.values(modes).some(
+    mode => Boolean(mode && mode.availableCount > 0 && mode.priceFrom > 0 && mode.priceTo >= mode.priceFrom),
+  );
+}
+
+function parsePromotion(value: unknown): ProgramPromotion {
+  const parsed =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const bullets = Array.isArray(parsed.highlightBullets)
+    ? parsed.highlightBullets.filter(
+        (bullet): bullet is string => typeof bullet === 'string' && Boolean(bullet.trim()),
+      )
+    : [];
+  return {
+    headline: typeof parsed.headline === 'string' ? parsed.headline : null,
+    description: typeof parsed.description === 'string' ? parsed.description : null,
+    highlightBullets: bullets,
+  };
+}
+
+function formatPayout(program: typeof distributionPrograms.$inferSelect) {
+  const currency = program.currencyCode || 'ZAR';
+  const amount = Number(program.referrerCommissionValue ?? program.defaultCommissionAmount ?? 0);
+  const percent = Number(program.referrerCommissionValue ?? program.defaultCommissionPercent ?? 0);
+  const payoutType = program.referrerCommissionType;
+  if (payoutType === 'flat' && Number.isFinite(amount) && amount > 0) {
+    return `${currency === 'ZAR' ? 'R' : `${currency} `}${Math.round(amount).toLocaleString('en-ZA')} referral payout`;
+  }
+  if (payoutType === 'percentage' && Number.isFinite(percent) && percent > 0) {
+    const basis = program.referrerCommissionBasis?.replace(/_/g, ' ');
+    return basis
+      ? `${percent}% referral payout of ${basis}`
+      : 'Percentage referral payout basis not configured';
+  }
+  return 'Referral payout terms not configured';
+}
+
+async function getPublisherScopedDevelopmentIds(
+  developmentIds: number[],
+  cataloguePublisherId: number,
+) {
+  const allowed = new Set<number>();
+  for (let offset = 0; offset < developmentIds.length; offset += 200) {
+    const pageIds = developmentIds.slice(offset, offset + 200);
+    const references = await listDevelopmentSalesWorkspaceReferences({
+      developmentIds: pageIds,
+      limit: 200,
+    });
+    for (const reference of references) {
+      if (reference.publisherId === cataloguePublisherId) allowed.add(reference.developmentId);
+    }
+  }
+  return allowed;
+}
 
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
-  city?: string | null;
-  province?: string | null;
-  suburb?: string | null;
-  address?: string | null;
-  description?: string | null;
-  amenities?: string | null;
-  features?: unknown;
-  priceFrom: number | null;
-  priceTo: number | null;
+  developmentFactsAvailable: true;
+  city: string;
+  province: string;
+  suburb: null;
+  address: null;
+  description: string | null;
+  amenities: null;
+  features: null;
   imageUrl: string | null;
-  brochure: BrochureConfig;
-  brand: {
-    cataloguePublisherId: number;
-    brandName: string;
-    logoUrl: string | null;
-    publicContactEmail: string | null;
-  } | null;
+  campaign: DevelopmentSalesProjection['campaign'];
+  inventory: {
+    phaseScope: DevelopmentSalesProjection['inventory']['phaseScope'];
+    modes: Partial<Record<PartnerMode, PartnerModeProjection>>;
+  };
+  contacts: DevelopmentSalesProjection['contacts'];
+  programPromotion: ProgramPromotion;
+  brand: null;
   program: {
     programId: number;
     isActive: boolean;
     isReferralEnabled: boolean;
+    submissionAllowed: boolean;
     tierAccessPolicy: string | null;
-    commissionModel: 'flat_percentage' | 'flat_amount' | string;
+    commissionModel: string;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType: string | null;
+    referrerCommissionValue: number | null;
+    referrerCommissionBasis: string | null;
     currencyCode: string | null;
     payoutMilestone: string | null;
     payoutMilestoneNotes: string | null;
   };
   unitTypes: Array<{
+    id: string;
     name: string;
+    description: string | null;
     bedrooms: number | null;
     bathrooms: number | null;
-    unitSize: number | null;
-    priceFrom: number | null;
-    priceTo: number | null;
+    size: number | null;
+    imageUrl: string | null;
+    media: DistributionUnitMedia;
+    modes: Partial<Record<PartnerMode, PartnerModeProjection>>;
   }>;
   requiredDocuments: Array<{
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    category: 'developer_document' | 'client_required_document';
-    templateFileUrl: string | null;
-    templateFileName: string | null;
+    category: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
   }>;
@@ -81,570 +213,260 @@ export type PartnerProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    fileUrl: string | null;
+    fileUrl: string;
     fileName: string | null;
     sortOrder: number;
   }>;
+  affordability: PartnerAffordabilityAssumptions;
+  developerProjectionRevision: string;
+  developerProjectionObservedAt: string;
   computed: {
     commissionDisplay: string;
-    payoutDisplay: string;
+    payoutTriggerDisplay: string;
+    payoutTriggerNotes: string | null;
     requiredDocsSummary: string;
   };
   opportunity: {
     status: 'ready' | 'pending_setup' | 'blocked';
+    distributionActive: true;
+    partnerEntitled: true;
+    campaignVisibility: 'visible';
+    openForReferral: boolean;
+    marketability: 'marketable' | 'not_marketable';
     reasonCodes: string[];
     nextAction: 'submit_referral' | 'upload_docs' | 'contact_manager' | 'not_available';
     friendlyMessage: string;
   };
 };
 
-function boolFromTinyInt(value: unknown) {
-  return Number(value || 0) === 1;
+async function projectionAndReference(developmentId: number) {
+  const [projection, reference] = await Promise.all([
+    getDevelopmentSalesProjection(developmentId),
+    getDevelopmentSalesWorkspaceReference(developmentId),
+  ]);
+  if (!projection || !reference || projection.campaign.visible !== true) return null;
+  if (!reference.publisherId || !projection.publisherId) return null;
+  if (projection.publisherId !== reference.publisherId) return null;
+  return { projection, reference };
 }
 
-function toNumberOrNull(value: unknown) {
-  if (value === null || typeof value === 'undefined') return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function toPositiveNumberOrNull(value: unknown) {
-  const numeric = toNumberOrNull(value);
-  if (numeric === null || numeric <= 0) return null;
-  return numeric;
-}
-
-function extractHeroImageUrl(rawImages: unknown): string | null {
-  if (!rawImages) return null;
-
-  const normalize = (value: unknown): string | null => {
-    if (!value || typeof value !== 'object') return null;
-    const candidate =
-      (value as any).url || (value as any).src || (value as any).imageUrl || (value as any).key;
-    return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
-  };
-
-  const fromList = (list: unknown[]): string | null => {
-    const hero = list.find(entry => {
-      if (!entry || typeof entry !== 'object') return false;
-      const category = String((entry as any).category || '').toLowerCase();
-      return category === 'hero' || category === 'featured';
-    });
-    return (
-      normalize(hero) ||
-      normalize(list[0]) ||
-      (typeof list[0] === 'string' ? String(list[0]) : null)
-    );
-  };
-
-  if (Array.isArray(rawImages)) {
-    return fromList(rawImages);
-  }
-
-  if (typeof rawImages === 'string') {
-    const trimmed = rawImages.trim();
-    if (!trimmed) return null;
-    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
-      if (trimmed.includes(',')) {
-        return (
-          trimmed
-            .split(',')
-            .map(item => item.trim())
-            .find(Boolean) || null
-        );
-      }
-      return trimmed;
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return fromList(parsed);
-      return normalize(parsed);
-    } catch {
-      return null;
-    }
-  }
-
-  return normalize(rawImages);
-}
-
-function normalizeCommissionModel(
-  value: unknown,
-): PartnerProgramTermsItem['program']['commissionModel'] {
-  const model = value ? String(value) : '';
-  if (model === 'fixed_amount') return 'flat_amount';
-  if (!model) return 'flat_amount';
-  return model as PartnerProgramTermsItem['program']['commissionModel'];
-}
-
-function mapPayoutMilestoneLabel(value: string | null) {
-  if (!value) return null;
-  switch (value) {
-    case 'attorney_instruction':
-      return 'Paid after attorney instruction';
-    case 'attorney_signing':
-      return 'Paid after attorney signing';
-    case 'bond_approval':
-      return 'Paid after bond approval';
-    case 'transfer_registration':
-      return 'Paid after transfer registration';
-    case 'occupation':
-      return 'Paid after occupation';
-    case 'custom':
-      return 'Paid according to custom milestone';
-    default:
-      return 'Payout rules not configured';
-  }
-}
-
-function formatCurrencyAmount(amount: number, currencyCode: string) {
-  const rounded = Math.round(amount);
-  if (currencyCode === 'ZAR') {
-    return `R${rounded.toLocaleString('en-ZA')}`;
-  }
-  return `${currencyCode} ${rounded.toLocaleString('en-US')}`;
-}
-
-function buildCommissionDisplay(input: {
-  commissionModel: string;
-  defaultCommissionPercent: number | null;
-  defaultCommissionAmount: number | null;
-  currencyCode: string | null;
-}) {
-  if (!input.currencyCode) {
-    return 'Commission not configured';
-  }
-
-  if (input.commissionModel === 'flat_percentage') {
-    if (!input.defaultCommissionPercent || input.defaultCommissionPercent <= 0) {
-      return 'Commission not configured';
-    }
-    return `${input.defaultCommissionPercent}% referral fee`;
-  }
-
-  if (input.commissionModel === 'flat_amount') {
-    if (!input.defaultCommissionAmount || input.defaultCommissionAmount <= 0) {
-      return 'Commission not configured';
-    }
-    return `${formatCurrencyAmount(input.defaultCommissionAmount, input.currencyCode)} referral fee`;
-  }
-
-  return 'Commission not configured';
-}
-
-function buildPayoutDisplay(payoutMilestone: string | null, payoutMilestoneNotes: string | null) {
-  const label = mapPayoutMilestoneLabel(payoutMilestone);
-  if (!label) {
-    return 'Payout rules not configured';
-  }
-
-  const notes = (payoutMilestoneNotes || '').trim();
-  return notes ? `${label} (${notes})` : label;
-}
-
-function buildRequiredDocsSummary(requiredDocuments: PartnerProgramTermsItem['requiredDocuments']) {
-  const requiredCount = requiredDocuments.filter(document => document.isRequired).length;
-  if (!requiredCount) {
-    return 'No required documents configured';
-  }
-  return `${requiredCount} required document${requiredCount === 1 ? '' : 's'}`;
-}
-
-function withConditions(conditions: SQL[]) {
-  if (conditions.length === 0) {
-    return sql`1 = 1`;
-  }
-  if (conditions.length === 1) {
-    return conditions[0];
-  }
-  return and(...conditions) as SQL;
-}
-
+/**
+ * Builds partner catalogue details only after Distribution has confirmed the
+ * actor holds an active referrer identity and the programme and development
+ * are part of the published referral network (active referral-enabled
+ * programme on an included development). Inventory facts always come from the
+ * current projection.
+ */
 export async function listPartnerProgramTerms(
-  input: ListPartnerProgramTermsInput,
+  input: PartnerProgramTermsInput,
 ): Promise<{ items: PartnerProgramTermsItem[] }> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  if (input.developmentIds?.length === 0) return { items: [] };
 
-  const includeDisabled = Boolean(input.includeDisabled);
-  const conditions: SQL[] = [];
+  const rate = await resolveCheckfitV1Rate(db);
+  const affordability = partnerAffordabilityAssumptions(rate);
 
-  if (typeof input.cataloguePublisherId === 'number') {
-    conditions.push(eq(developments.cataloguePublisherId, input.cataloguePublisherId));
-  }
-
-  if (input.developmentIds?.length) {
-    conditions.push(inArray(developments.id, input.developmentIds));
-  }
-
-  if (!includeDisabled) {
-    conditions.push(eq(distributionPrograms.isActive, 1));
-    conditions.push(eq(distributionPrograms.isReferralEnabled, 1));
-  } else {
-    conditions.push(
-      or(
-        sql`${distributionPrograms.id} IS NOT NULL`,
-        inArray(distributionDevelopmentAccess.status, ['included', 'listed']),
-      ) as SQL,
-    );
-  }
-
-  const selectPartnerRows = async () => {
-    const selectFields: Record<string, any> = {
-      developmentId: developments.id,
-      developmentName: developments.name,
-      suburb: developments.suburb,
-      city: developments.city,
-      province: developments.province,
-      address: developments.address,
-      description: developments.description,
-      amenities: developments.amenities,
-      features: developments.features,
-      developmentPriceFrom: developments.priceFrom,
-      developmentPriceTo: developments.priceTo,
-      developmentImages: developments.images,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      programId: distributionPrograms.id,
-      isActive: distributionPrograms.isActive,
-      isReferralEnabled: distributionPrograms.isReferralEnabled,
-      tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-      commissionModel: distributionPrograms.commissionModel,
-      defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-      defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-      currencyCode: distributionPrograms.currencyCode,
-      payoutMilestone: distributionPrograms.payoutMilestone,
-      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-      accessStatus: distributionDevelopmentAccess.status,
-      submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
-    };
-
-    selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson;
-
-    return (await db
-      .select(selectFields)
-      .from(developments)
-      .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
-      .leftJoin(
-        distributionDevelopmentAccess,
-        eq(distributionDevelopmentAccess.developmentId, developments.id),
-      )
-      .where(withConditions(conditions))
-      .orderBy(developments.province, developments.city, developments.name)) as Array<
-      Record<string, any>
-    >;
-  };
-
-  const rows = await selectPartnerRows();
-
-  if (!rows.length) {
-    return { items: [] };
-  }
-
-  const developmentIds: number[] = Array.from(
-    new Set(rows.map(row => Number(row.developmentId)).filter(value => Number.isFinite(value))),
-  );
-  const cataloguePublisherIds: number[] = Array.from(
-    new Set(
-      rows
-        .map(row => Number(row.cataloguePublisherId || 0))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
-    ),
-  );
-
-  const brandRows = cataloguePublisherIds.length
-    ? await db
-        .select({
-          id: cataloguePublishers.id,
-          brandName: cataloguePublishers.name,
-          logoUrl: cataloguePublishers.logoUrl,
-          publicContactEmail: cataloguePublishers.publicContactEmail,
-        })
-        .from(cataloguePublishers)
-        .where(inArray(cataloguePublishers.id, cataloguePublisherIds))
-    : [];
-
-  const brandById = new Map<
-    number,
-    { id: number; brandName: string; logoUrl: string | null; publicContactEmail: string | null }
-  >();
-  for (const row of brandRows) {
-    brandById.set(Number(row.id), {
-      id: Number(row.id),
-      brandName: String(row.brandName || ''),
-      logoUrl: row.logoUrl || null,
-      publicContactEmail: row.publicContactEmail || null,
-    });
-  }
-
-  const docsByDevelopmentId = new Map<number, PartnerProgramTermsItem['requiredDocuments']>();
-  const sourceDocsByDevelopmentId = new Map<number, PartnerProgramTermsItem['sourceDocuments']>();
-  for (const developmentId of developmentIds) {
-    const templates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
-    docsByDevelopmentId.set(
-      developmentId,
-      templates
-        .filter(template => template.isActive && template.isRequired)
-        .map(template => ({
-          templateId: Number(template.id),
-          documentCode: String(template.documentCode),
-          documentLabel: String(template.documentLabel || ''),
-          category: template.category,
-          templateFileUrl: template.templateFileUrl || null,
-          templateFileName: template.templateFileName || null,
-          isRequired: Boolean(template.isRequired),
-          sortOrder: Number(template.sortOrder || 0),
-        })),
-    );
-    sourceDocsByDevelopmentId.set(
-      developmentId,
-      templates
-        .filter(
-          template =>
-            template.isActive && template.category === 'developer_document' && !template.isRequired,
-        )
-        .map(template => ({
-          templateId: Number(template.id),
-          documentCode: String(template.documentCode),
-          documentLabel: String(template.documentLabel || ''),
-          fileUrl: template.templateFileUrl || null,
-          fileName: template.templateFileName || null,
-          sortOrder: Number(template.sortOrder || 0),
-        })),
-    );
-  }
-
-  const unitRows = developmentIds.length
-    ? await db
-        .select({
-          developmentId: unitTypes.developmentId,
-          name: unitTypes.name,
-          displayOrder: unitTypes.displayOrder,
-          bedrooms: unitTypes.bedrooms,
-          bathrooms: unitTypes.bathrooms,
-          unitSize: unitTypes.unitSize,
-          priceFrom: unitTypes.priceFrom,
-          priceTo: unitTypes.priceTo,
-          basePriceFrom: unitTypes.basePriceFrom,
-          basePriceTo: unitTypes.basePriceTo,
-        })
-        .from(unitTypes)
-        .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
-        .orderBy(unitTypes.displayOrder, unitTypes.name)
-    : [];
-
-  const unitPriceRangeByDevelopment = new Map<
-    number,
-    {
-      priceFrom: number | null;
-      priceTo: number | null;
-    }
-  >();
-  const unitTypesByDevelopment = new Map<
-    number,
-    Array<{
-      name: string;
-      bedrooms: number | null;
-      bathrooms: number | null;
-      unitSize: number | null;
-      priceFrom: number | null;
-      priceTo: number | null;
-    }>
-  >();
-
-  for (const row of unitRows) {
-    const developmentId = Number(row.developmentId || 0);
-    if (!developmentId) continue;
-    const unitName = String(row.name || '').trim();
-    const unitPriceFrom =
-      toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
-    const fallbackTo =
-      toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
-    const unitPriceTo = fallbackTo ?? unitPriceFrom;
-    if (unitPriceFrom === null && unitPriceTo === null) continue;
-
-    const current = unitPriceRangeByDevelopment.get(developmentId) || {
-      priceFrom: null,
-      priceTo: null,
-    };
-
-    const nextMin =
-      unitPriceFrom === null
-        ? current.priceFrom
-        : current.priceFrom === null
-          ? unitPriceFrom
-          : Math.min(current.priceFrom, unitPriceFrom);
-    const nextMax =
-      unitPriceTo === null
-        ? current.priceTo
-        : current.priceTo === null
-          ? unitPriceTo
-          : Math.max(current.priceTo, unitPriceTo);
-
-    unitPriceRangeByDevelopment.set(developmentId, {
-      priceFrom: nextMin,
-      priceTo: nextMax,
-    });
-
-    if (unitName) {
-      const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
-      const existingIndex = currentUnitTypes.findIndex(item => item.name === unitName);
-      if (existingIndex >= 0) {
-        const existing = currentUnitTypes[existingIndex];
-        currentUnitTypes[existingIndex] = {
-          name: unitName,
-          bedrooms: existing.bedrooms ?? toNumberOrNull(row.bedrooms),
-          bathrooms: existing.bathrooms ?? toNumberOrNull(row.bathrooms),
-          unitSize: existing.unitSize ?? toNumberOrNull(row.unitSize),
-          priceFrom:
-            existing.priceFrom === null
-              ? unitPriceFrom
-              : unitPriceFrom === null
-                ? existing.priceFrom
-                : Math.min(existing.priceFrom, unitPriceFrom),
-          priceTo:
-            existing.priceTo === null
-              ? unitPriceTo
-              : unitPriceTo === null
-                ? existing.priceTo
-                : Math.max(existing.priceTo, unitPriceTo),
-        };
-      } else {
-        currentUnitTypes.push({
-          name: unitName,
-          bedrooms: toNumberOrNull(row.bedrooms),
-          bathrooms: toNumberOrNull(row.bathrooms),
-          unitSize: toNumberOrNull(row.unitSize),
-          priceFrom: unitPriceFrom,
-          priceTo: unitPriceTo,
-        });
-      }
-      unitTypesByDevelopment.set(developmentId, currentUnitTypes);
-    }
-  }
-
-  const items: PartnerProgramTermsItem[] = rows.map(row => {
-    const developmentId = Number(row.developmentId);
-    const commissionModel = normalizeCommissionModel(row.commissionModel);
-    const defaultCommissionPercent = toNumberOrNull(row.defaultCommissionPercent);
-    const defaultCommissionAmount = toNumberOrNull(row.defaultCommissionAmount);
-    const currencyCode = row.currencyCode ? String(row.currencyCode) : null;
-    const payoutMilestone = row.payoutMilestone ? String(row.payoutMilestone) : null;
-    const payoutMilestoneNotes = row.payoutMilestoneNotes ? String(row.payoutMilestoneNotes) : null;
-
-    const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
-    const primaryBrandId = Number(row.cataloguePublisherId || 0);
-    const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
-    const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
-    const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
-    const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
-    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
-    const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
-    const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
-    const priceTo =
-      priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
-    const brochureConfig =
-      row.brochureConfigJson && typeof row.brochureConfigJson === 'object'
-        ? (row.brochureConfigJson as BrochureConfig)
-        : {};
-
-    return {
-      developmentId,
-      developmentName:
-        String(brochureConfig.headline || '').trim() ||
-        String(row.developmentName || `Development #${developmentId}`),
-      suburb: row.suburb || null,
-      city: row.city || null,
-      province: row.province || null,
-      address: row.address || null,
-      description: brochureConfig.description?.trim() || row.description || null,
-      amenities: brochureConfig.amenityLabels?.length
-        ? brochureConfig.amenityLabels
-        : row.amenities || null,
-      features: brochureConfig.highlightBullets?.length
-        ? brochureConfig.highlightBullets
-        : row.features || null,
-      priceFrom: priceFrom ?? null,
-      priceTo: priceTo ?? null,
-      imageUrl: brochureConfig.heroImageUrl?.trim() || extractHeroImageUrl(row.developmentImages),
-      brochure: brochureConfig,
-      brand: brandRecord
-        ? {
-            cataloguePublisherId: brandRecord.id,
-            brandName: brandRecord.brandName,
-            logoUrl: brandRecord.logoUrl,
-            publicContactEmail: brandRecord.publicContactEmail,
-          }
-        : null,
-      program: {
-        programId: Number(row.programId || 0),
-        isActive:
-          boolFromTinyInt(row.isActive) ||
-          (row.accessStatus ? String(row.accessStatus) !== 'excluded' : false),
-        isReferralEnabled:
-          boolFromTinyInt(row.isReferralEnabled) || boolFromTinyInt(row.submissionAllowed),
-        tierAccessPolicy: row.tierAccessPolicy ? String(row.tierAccessPolicy) : null,
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
-        currencyCode,
-        payoutMilestone,
-        payoutMilestoneNotes,
-      },
-      unitTypes: unitTypesByDevelopment.get(developmentId) || [],
-      requiredDocuments,
-      sourceDocuments: sourceDocsByDevelopmentId.get(developmentId) || [],
-      computed: {
-        commissionDisplay: buildCommissionDisplay({
-          commissionModel,
-          defaultCommissionPercent,
-          defaultCommissionAmount,
-          currencyCode,
-        }),
-        payoutDisplay: buildPayoutDisplay(payoutMilestone, payoutMilestoneNotes),
-        requiredDocsSummary: buildRequiredDocsSummary(requiredDocuments),
-      },
-      opportunity: {
-        status: 'blocked',
-        reasonCodes: ['NOT_AVAILABLE'],
-        nextAction: 'not_available',
-        friendlyMessage: 'This opportunity is not accepting referrals right now.',
-      },
-    };
+  const accessibleIds: number[] = await listPartnerAccessibleDevelopmentIds({
+    db,
+    actor: input.actor,
+    requestedDevelopmentIds: input.developmentIds,
   });
+  const uniqueIds = [...new Set<number>(accessibleIds)].slice(0, 200);
+  if (!uniqueIds.length) return { items: [] };
 
-  const evaluatedItems = await Promise.all(
-    items.map(async item => {
-      try {
-        const evaluation = await evaluateDevelopmentDistributionAccess({
-          db,
-          developmentId: item.developmentId,
-          actor: { role: 'referrer' },
-          channel: 'submission',
-        });
-        return {
-          ...item,
-          opportunity: evaluation.opportunity,
-          program: {
-            ...item.program,
-            isActive: evaluation.programActive,
-            isReferralEnabled: evaluation.referralEnabled,
-          },
-        };
-      } catch {
-        return item;
+  const publisherScopedIds: Set<number> = input.cataloguePublisherId
+    ? await getPublisherScopedDevelopmentIds(uniqueIds, input.cataloguePublisherId)
+    : new Set(uniqueIds);
+  if (!publisherScopedIds.size) return { items: [] };
+
+  const programRows = await db
+    .select()
+    .from(distributionPrograms)
+    .where(
+      and(
+        inArray(distributionPrograms.developmentId, [...publisherScopedIds]),
+        eq(distributionPrograms.isActive, 1),
+      ),
+    );
+  if (!programRows.length) return { items: [] };
+
+  const programByDevelopmentId = new Map<number, (typeof programRows)[number]>(
+    programRows.map(program => [Number(program.developmentId), program]),
+  );
+  const accessRows = await db
+    .select({
+      developmentId: distributionDevelopmentAccess.developmentId,
+      status: distributionDevelopmentAccess.status,
+      submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
+      excludedByMandate: distributionDevelopmentAccess.excludedByMandate,
+      excludedByExclusivity: distributionDevelopmentAccess.excludedByExclusivity,
+      promotion: distributionDevelopmentAccess.brochureConfigJson,
+      partnershipStatus: distributionBrandPartnerships.status,
+    })
+    .from(distributionDevelopmentAccess)
+    .innerJoin(
+      distributionBrandPartnerships,
+      eq(distributionDevelopmentAccess.brandPartnershipId, distributionBrandPartnerships.id),
+    )
+    .where(inArray(distributionDevelopmentAccess.developmentId, [...programByDevelopmentId.keys()]));
+  const accessByDevelopmentId = new Map<number, (typeof accessRows)[number]>(
+    accessRows.map(row => [Number(row.developmentId), row]),
+  );
+
+  const items = await Promise.all(
+    [...programByDevelopmentId.entries()].map(async ([developmentId, program]) => {
+      const access = accessByDevelopmentId.get(developmentId);
+      if (
+        !access ||
+        access.status !== 'included' ||
+        access.partnershipStatus !== 'active' ||
+        Number(access.excludedByMandate) === 1 ||
+        Number(access.excludedByExclusivity) === 1
+      ) {
+        return null;
       }
+
+      const source = await projectionAndReference(developmentId);
+      if (!source) return null;
+      const { projection } = source;
+      const evaluation = await evaluateDevelopmentDistributionAccess({
+        db,
+        developmentId,
+        actor: { role: 'admin' },
+        channel: 'admin_catalog',
+        developerProjection: projection,
+        developerWorkspaceReference: source.reference,
+      });
+      const inventoryIsScoped = projection.inventory.phaseScope !== 'unscoped-hidden';
+      const modes = inventoryIsScoped ? partnerModes(projection.inventory.modes) : {};
+      const marketable = inventoryIsScoped && hasMarketableMode(projection.inventory.modes);
+      const documentTemplates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
+      const requiredDocuments = documentTemplates.filter(
+        document => document.isActive && document.category === 'client_required_document',
+      );
+      const sourceDocuments = documentTemplates.flatMap(document => {
+        if (
+          !document.isActive ||
+          document.isRequired ||
+          document.category !== 'developer_document' ||
+          !document.templateFileUrl
+        ) {
+          return [];
+        }
+        return [
+          {
+            templateId: document.id,
+            documentCode: document.documentCode,
+            documentLabel: document.documentLabel,
+            fileUrl: document.templateFileUrl,
+            fileName: document.templateFileName,
+            sortOrder: document.sortOrder,
+          },
+        ];
+      });
+      const openForReferral = evaluation.submitReady;
+      const friendlyMessage = !marketable
+        ? 'This campaign is visible, but no priced sale or rental inventory is currently available.'
+        : evaluation.opportunity.friendlyMessage;
+      const promotion = parsePromotion(access.promotion);
+
+      return {
+        developmentId,
+        developmentName: projection.campaign.name,
+        developmentFactsAvailable: true as const,
+        city: projection.campaign.city,
+        province: projection.campaign.province,
+        suburb: null,
+        address: null,
+        description: projection.campaign.description || projection.campaign.tagline,
+        amenities: null,
+        features: null,
+        imageUrl: projection.campaign.images[0] || null,
+        campaign: projection.campaign,
+        inventory: {
+          phaseScope: projection.inventory.phaseScope,
+          modes,
+        },
+        contacts: projection.contacts,
+        programPromotion: promotion,
+        brand: null,
+        program: {
+          programId: Number(program.id),
+          isActive: Number(program.isActive) === 1,
+          isReferralEnabled: Number(program.isReferralEnabled) === 1,
+          submissionAllowed: Number(access.submissionAllowed) === 1,
+          tierAccessPolicy: program.tierAccessPolicy || null,
+          commissionModel: String(program.commissionModel),
+          defaultCommissionPercent:
+            program.defaultCommissionPercent === null ? null : Number(program.defaultCommissionPercent),
+          defaultCommissionAmount:
+            program.defaultCommissionAmount === null ? null : Number(program.defaultCommissionAmount),
+          referrerCommissionType: program.referrerCommissionType || null,
+          referrerCommissionValue:
+            program.referrerCommissionValue === null ? null : Number(program.referrerCommissionValue),
+          referrerCommissionBasis: program.referrerCommissionBasis || null,
+          currencyCode: program.currencyCode || null,
+          payoutMilestone: program.payoutMilestone || null,
+          payoutMilestoneNotes: program.payoutMilestoneNotes || null,
+        },
+        unitTypes: inventoryIsScoped ? projection.inventory.unitTypes.map(unitType => ({
+          id: unitType.id,
+          name: unitType.name,
+          description: unitType.description,
+          bedrooms: unitType.bedrooms,
+          bathrooms: unitType.bathrooms,
+          size: unitType.size,
+          imageUrl: unitType.imageUrl,
+          media: unitType.media,
+          modes: partnerModes(unitType.modes),
+        })) : [],
+        requiredDocuments: requiredDocuments.map(document => ({
+          templateId: document.id,
+          documentCode: document.documentCode,
+          documentLabel: document.documentLabel,
+          category: 'client_required_document' as const,
+          isRequired: document.isRequired,
+          sortOrder: document.sortOrder,
+        })),
+        sourceDocuments,
+        affordability,
+        developerProjectionRevision: projection.revision,
+        developerProjectionObservedAt: projection.observedAt,
+        computed: {
+          commissionDisplay: formatPayout(program),
+          payoutTriggerDisplay: program.payoutMilestone
+            ? PAYOUT_TRIGGER_LABELS[String(program.payoutMilestone)] || 'Custom program trigger'
+            : 'Not configured',
+          payoutTriggerNotes: String(program.payoutMilestoneNotes || '').trim() || null,
+          requiredDocsSummary: requiredDocuments.length
+            ? `${requiredDocuments.filter(document => document.isRequired).length} required referral documents`
+            : 'No referral documents required',
+        },
+        opportunity: {
+          status: evaluation.opportunity.status,
+          distributionActive: true as const,
+          partnerEntitled: true as const,
+          campaignVisibility: 'visible' as const,
+          openForReferral,
+          marketability: marketable ? ('marketable' as const) : ('not_marketable' as const),
+          reasonCodes: evaluation.opportunity.reasonCodes,
+          nextAction: evaluation.opportunity.nextAction,
+          friendlyMessage,
+        },
+      } satisfies PartnerProgramTermsItem;
     }),
   );
 
   return {
-    items: evaluatedItems,
+    items: items.filter((item): item is PartnerProgramTermsItem => item !== null),
   };
 }
 
-export async function getPartnerProgramTermsByDevelopmentId(developmentId: number) {
-  const result = await listPartnerProgramTerms({
-    developmentIds: [developmentId],
-    includeDisabled: false,
-  });
+export async function getPartnerProgramTermsByDevelopmentId(
+  developmentId: number,
+  actor: DistributionPartnerActor,
+) {
+  const result = await listPartnerProgramTerms({ actor, developmentIds: [developmentId] });
   return result.items.find(item => item.developmentId === developmentId) || null;
 }

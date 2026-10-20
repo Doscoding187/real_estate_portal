@@ -1,25 +1,38 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerSubmitReferralPage from './PartnerSubmitReferralPage';
 
 const {
   mockUseAuth,
   mockUseLocation,
-  mockListEligibleUseQuery,
-  mockSubmitReferralUseMutation,
   mockSetLocation,
-  mockMyPipelineUseQuery,
-  mockStatusUseQuery,
-  mockMyCommissionEntriesUseQuery,
+  mockListEligible,
+  mockRequirements,
+  mockSession,
+  mockCreateSession,
+  mockUploadEvidence,
+  mockSubmitReferral,
+  mockUseUtils,
+  state,
 } = vi.hoisted(() => ({
   mockUseAuth: vi.fn(),
   mockUseLocation: vi.fn(),
-  mockListEligibleUseQuery: vi.fn(),
-  mockSubmitReferralUseMutation: vi.fn(),
   mockSetLocation: vi.fn(),
-  mockMyPipelineUseQuery: vi.fn(),
-  mockStatusUseQuery: vi.fn(),
-  mockMyCommissionEntriesUseQuery: vi.fn(),
+  mockListEligible: vi.fn(),
+  mockRequirements: vi.fn(),
+  mockSession: vi.fn(),
+  mockCreateSession: vi.fn(),
+  mockUploadEvidence: vi.fn(),
+  mockSubmitReferral: vi.fn(),
+  mockUseUtils: vi.fn(),
+  state: {
+    sessionStarted: false,
+    sessionComplete: false,
+    lastStartPayload: null as unknown,
+    lastSubmitPayload: null as unknown,
+    submitError: null as string | null,
+    submitDealId: null as number | null,
+  },
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -34,226 +47,231 @@ vi.mock('wouter', async () => {
   };
 });
 
-vi.mock('@/components/ListingNavbar', () => ({
-  ListingNavbar: () => <div data-testid="listing-navbar" />,
+vi.mock('@/components/referral/ReferralAppShell', () => ({
+  ReferralAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/distribution/partner/PayoutRulesDisclosure', () => ({
-  PayoutRulesDisclosure: ({ developmentId }: { developmentId: number | null | undefined }) => (
-    <div data-testid="payout-disclosure">{developmentId}</div>
-  ),
+vi.mock('sonner', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => mockUseUtils(),
     distribution: {
       partner: {
         listEligibleDevelopmentsForSubmission: {
-          useQuery: (input: unknown, opts: unknown) => mockListEligibleUseQuery(input, opts),
+          useQuery: (...args: unknown[]) => mockListEligible(...args),
+        },
+        getReferralIntakeRequirements: {
+          useQuery: (...args: unknown[]) => mockRequirements(...args),
+        },
+        getReferralIntakeSession: {
+          useQuery: (...args: unknown[]) => mockSession(...args),
+        },
+        createReferralIntakeSession: {
+          useMutation: (opts: unknown) => mockCreateSession(opts),
+        },
+        uploadReferralIntakeEvidence: {
+          useMutation: (opts: unknown) => mockUploadEvidence(opts),
         },
         submitReferral: {
-          useMutation: (opts: unknown) => mockSubmitReferralUseMutation(opts),
-        },
-      },
-      referrer: {
-        myPipeline: {
-          useQuery: (...args: unknown[]) => mockMyPipelineUseQuery(...args),
-        },
-        status: {
-          useQuery: (...args: unknown[]) => mockStatusUseQuery(...args),
-        },
-        myCommissionEntries: {
-          useQuery: (...args: unknown[]) => mockMyCommissionEntriesUseQuery(...args),
+          useMutation: (opts: unknown) => mockSubmitReferral(opts),
         },
       },
     },
   },
 }));
 
+function eligibleItem(overrides: Record<string, unknown> = {}) {
+  return {
+    developmentId: 101,
+    developmentName: 'Sky City',
+    campaign: { visible: true },
+    inventory: {
+      modes: {
+        for_sale: { availableCount: 3, priceFrom: 1000000, priceTo: 1500000 },
+        for_rent: null,
+      },
+    },
+    opportunity: { openForReferral: true },
+    ...overrides,
+  };
+}
+
+const requirementsFixture = {
+  sharingPermissionDocument: {
+    title: 'Permission to share details',
+    version: 'v2',
+    content: 'Permission content.',
+  },
+  privacyNoticeDocument: {
+    title: 'Privacy notice',
+    version: 'v1',
+    content: 'Privacy content.',
+  },
+  sharingPurpose: 'To introduce the person to the developer team.',
+  namedRecipients: [
+    { name: 'A. Manager', organization: 'Property Listify', role: 'Referral manager' },
+  ],
+  signatureMethod: 'Wet signature on the printed form.',
+  maxUploadBytes: 5 * 1024 * 1024,
+  identityEvidence: { allowedMimeTypes: ['application/pdf'] },
+  creditReport: { enabled: false, providerName: null, authorizationDocument: null },
+};
+
 describe('PartnerSubmitReferralPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.localStorage.clear();
+    state.sessionStarted = false;
+    state.sessionComplete = false;
+    state.lastStartPayload = null;
+    state.lastSubmitPayload = null;
+    state.submitError = null;
+    state.submitDealId = null;
 
-    mockUseAuth.mockReturnValue({
-      isAuthenticated: true,
-      loading: false,
-    });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, loading: false });
     mockUseLocation.mockReturnValue(['/distribution/partner/submit', mockSetLocation]);
-    mockMyPipelineUseQuery.mockReturnValue({ data: { stageCounts: {} } });
-    mockStatusUseQuery.mockReturnValue({ data: { accessCount: 0 } });
-    mockMyCommissionEntriesUseQuery.mockReturnValue({ data: [], isLoading: false, error: null });
-    mockListEligibleUseQuery.mockReturnValue({
-      data: {
-        items: [
-          {
-            developmentId: 101,
-            developmentName: 'Sky City',
-            city: 'Johannesburg',
-            province: 'Gauteng',
-            program: {
-              isActive: true,
-              isReferralEnabled: true,
-            },
-            requiredDocuments: [
-              {
-                templateId: 1,
-                documentLabel: 'Buyer ID document',
-                category: 'client_required_document',
-              },
-              {
-                templateId: 2,
-                documentLabel: 'Developer sale agreement',
-                category: 'developer_document',
-                templateFileUrl: 'https://example.com/sale-agreement.pdf',
-                templateFileName: 'sale-agreement.pdf',
-              },
-            ],
-            sourceDocuments: [
-              {
-                templateId: 3,
-                documentLabel: 'Unit / house plans',
-                fileUrl: 'https://example.com/plans.pdf',
-                fileName: 'plans.pdf',
-              },
-            ],
-            opportunity: {
-              status: 'ready',
-              reasonCodes: [],
-              nextAction: 'submit_referral',
-              friendlyMessage: 'Ready for buyer referrals.',
-            },
-          },
-        ],
-      },
+    mockListEligible.mockReturnValue({
       isLoading: false,
       error: null,
+      data: { items: [eligibleItem()] },
     });
-  });
-
-  it('calls submit API and shows eligibility blockers when PROGRAM_NOT_ELIGIBLE is returned', async () => {
-    const mutateSpy = vi.fn();
-    mockSubmitReferralUseMutation.mockImplementation((opts: any) => ({
+    mockRequirements.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: requirementsFixture,
+    });
+    mockSession.mockImplementation(() => ({
+      isLoading: false,
+      error: null,
+      data: state.sessionStarted
+        ? {
+            requiredEvidenceComplete: state.sessionComplete,
+            evidence: state.sessionComplete
+              ? [
+                  { evidenceType: 'sharing_permission' },
+                  { evidenceType: 'privacy_notice' },
+                  { evidenceType: 'identity_document' },
+                ]
+              : [],
+          }
+        : null,
+    }));
+    mockCreateSession.mockImplementation((opts: any) => ({
       isPending: false,
       mutate: (payload: unknown) => {
-        mutateSpy(payload);
-        opts?.onError?.({
-          message: 'Program is not eligible for referral submission.',
-          data: {
-            errorCode: 'PROGRAM_NOT_ELIGIBLE',
-            reasons: [
-              {
-                code: 'REFERRALS_DISABLED',
-                message: 'Referrals are currently disabled for this development.',
-              },
-            ],
-          },
-        });
+        state.lastStartPayload = payload;
+        state.sessionStarted = true;
+        opts?.onSuccess?.({ sessionUuid: 'session-1' });
       },
     }));
-
-    render(<PartnerSubmitReferralPage />);
-
-    fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
-      target: { value: 'Jane Buyer' },
-    });
-    
-    const mainArea = screen.getByRole('main');
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Buyer' }));
-
-    await waitFor(() =>
-      expect(mutateSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          developmentId: 101,
-          buyerName: 'Jane Buyer',
-        }),
-      ),
-    );
-    expect(screen.getByText('Referrals are currently closed for this opportunity.')).toBeInTheDocument();
-  });
-
-  it('shows duplicate referral action and links to existing deal', async () => {
-    mockSubmitReferralUseMutation.mockImplementation((opts: any) => ({
+    mockUploadEvidence.mockReturnValue({ isPending: false, mutate: vi.fn() });
+    mockSubmitReferral.mockImplementation((opts: any) => ({
       isPending: false,
-      mutate: () => {
-        opts?.onError?.({
-          message: 'A similar referral already exists.',
-          data: {
-            errorCode: 'DUPLICATE_REFERRAL',
-            existingDealId: 77,
-          },
-        });
+      mutate: (payload: unknown) => {
+        state.lastSubmitPayload = payload;
+        if (state.submitError) {
+          opts?.onError?.({ message: state.submitError });
+        } else if (state.submitDealId) {
+          opts?.onSuccess?.({ dealId: state.submitDealId });
+        }
       },
     }));
-
-    render(<PartnerSubmitReferralPage />);
-
-    fireEvent.change(screen.getByPlaceholderText('Buyer full name'), {
-      target: { value: 'John Buyer' },
+    mockUseUtils.mockReturnValue({
+      distribution: {
+        partner: {
+          getReferralIntakeSession: { invalidate: vi.fn(async () => undefined) },
+        },
+      },
     });
-    
-    const mainArea = screen.getByRole('main');
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(within(mainArea).getByRole('button', { name: 'Submit Buyer' }));
-
-    const viewExistingButton = await screen.findByRole('button', {
-      name: 'View existing referral',
-    });
-    fireEvent.click(viewExistingButton);
-
-    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/referrals/77');
   });
 
-  it('only shows submit-ready opportunities in the buyer wizard', () => {
-    mockListEligibleUseQuery.mockReturnValue({
-      data: {
-        items: [
-          {
-            developmentId: 101,
-            developmentName: 'Ready Estate',
-            city: 'Johannesburg',
-            province: 'Gauteng',
-            program: { isActive: true, isReferralEnabled: true },
-            requiredDocuments: [],
-            opportunity: {
-              status: 'ready',
-              reasonCodes: [],
-              nextAction: 'submit_referral',
-              friendlyMessage: 'Ready for buyer referrals.',
-            },
-          },
-        ],
-      },
+  it('shows the paused state when no opportunity is open for referral', () => {
+    mockListEligible.mockReturnValue({
       isLoading: false,
       error: null,
+      data: {
+        items: [
+          eligibleItem({
+            campaign: { visible: false },
+            opportunity: { openForReferral: false },
+          }),
+        ],
+      },
     });
-    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
 
     render(<PartnerSubmitReferralPage />);
 
-    expect(screen.getByText('Ready Estate')).toBeInTheDocument();
-    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument();
+    expect(screen.getByText('This opportunity is not ready for a referral')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Buy/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Continue to add documents')).not.toBeInTheDocument();
   });
 
-  it('separates buyer, developer application, and supporting documents in the wizard', () => {
-    mockSubmitReferralUseMutation.mockReturnValue({ isPending: false, mutate: vi.fn() });
+  it('guides permission, documents, and contact details in order', () => {
+    const rendered = render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getByText('Choose an opportunity and market')).toBeInTheDocument();
+    expect(screen.getByText('Confirm the prospect has seen the documents')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to add documents' }));
+
+    expect(state.lastStartPayload).toEqual({
+      developmentId: 101,
+      confirmedPermission: true,
+      confirmedPrivacyNotice: true,
+    });
+
+    rendered.rerender(<PartnerSubmitReferralPage />);
+    expect(screen.getByText('Add the signed documents')).toBeInTheDocument();
+    expect(screen.getByText('Permission to share their details')).toBeInTheDocument();
+    expect(screen.getByText('Privacy notice acknowledgement')).toBeInTheDocument();
+    expect(screen.getByText('Identity document')).toBeInTheDocument();
+    expect(screen.getByText('Add all three required documents to continue.')).toBeInTheDocument();
+
+    state.sessionComplete = true;
+    rendered.rerender(<PartnerSubmitReferralPage />);
+
+    expect(screen.getByText('Add their contact details')).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Jane Buyer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send introduction' }));
+
+    expect(state.lastSubmitPayload).toMatchObject({
+      developmentId: 101,
+      marketMode: 'sale',
+      intakeSessionUuid: 'session-1',
+      buyerName: 'Jane Buyer',
+    });
+  });
+
+  it('shows the server message when submission is blocked, then follows the deal on success', () => {
+    state.sessionStarted = true;
+    state.sessionComplete = true;
+    state.submitError = 'Referrals are currently closed for this opportunity.';
 
     render(<PartnerSubmitReferralPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to add documents' }));
+    fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'John Buyer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send introduction' }));
 
-    expect(screen.getByText('Buyer application documents')).toBeInTheDocument();
-    expect(screen.getByText('Developer application documents')).toBeInTheDocument();
-    expect(screen.getByText('Supporting documents')).toBeInTheDocument();
-    expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
-    expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
-    expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
-    expect(screen.getByText(/Bond buyers usually need income proof/i)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Referrals are currently closed for this opportunity.',
+    );
+
+    state.submitError = null;
+    state.submitDealId = 99;
+    fireEvent.click(screen.getByRole('button', { name: 'Send introduction' }));
+
+    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/referrals/99');
   });
 });
