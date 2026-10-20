@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
@@ -613,6 +613,29 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(Number(result.dealId)).toBeGreaterThan(0);
     expect(result.status).toBe('submitted');
     expect(Number(result.managerUserId)).toBe(Number(scenario.managerUserId));
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [deal] = await db
+      .select({ currentStage: distributionDeals.currentStage })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, Number(result.dealId)))
+      .limit(1);
+    expect(deal?.currentStage).toBe('referral_received');
+
+    const [initialEvent] = await db
+      .select({
+        fromStage: distributionDealEvents.fromStage,
+        toStage: distributionDealEvents.toStage,
+      })
+      .from(distributionDealEvents)
+      .where(eq(distributionDealEvents.dealId, Number(result.dealId)))
+      .orderBy(asc(distributionDealEvents.id))
+      .limit(1);
+    expect(initialEvent).toMatchObject({
+      fromStage: null,
+      toStage: 'referral_received',
+    });
   }, INTEGRATION_TIMEOUT_MS);
 
   it('requires the complete intake evidence before submission', async () => {

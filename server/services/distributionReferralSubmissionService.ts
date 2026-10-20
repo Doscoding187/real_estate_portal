@@ -389,7 +389,7 @@ export async function createReferralDeal(
       developerProjectionObservedAt: toSqlDateTime(new Date(developerProjection.observedAt)),
       referralTermsSnapshotJson: referralTermsSnapshot as any,
       referralTermsSnapshotDigest: referralTermsSnapshot.digest,
-      currentStage: 'viewing_scheduled',
+      currentStage: 'referral_received',
       commissionStatus: 'not_ready',
       attributionLockedAt: sql`CURRENT_TIMESTAMP`,
       attributionLockedBy: input.actorUserId,
@@ -406,7 +406,7 @@ export async function createReferralDeal(
     await tx.insert(distributionDealEvents).values({
       dealId,
       fromStage: null,
-      toStage: 'viewing_scheduled',
+      toStage: 'referral_received',
       eventType: 'system',
       actorUserId: input.actorUserId,
       metadata: {

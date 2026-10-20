@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0136_distribution_deal_requirement_document_link_drop.sql",
+  "expectedHead": "0140_distribution_deal_referral_received_backfill.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1428,6 +1428,49 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "Edward approval of the Distribution/Developer resource boundary, 2026-10-18; migration authoring only, no database apply"
+    },
+    {
+      "sequence": 137,
+      "filename": "0137_distribution_deal_referral_received_stage.sql",
+      "checksum": "3f7e98550990add8ba3b9bf3895913b82fff1d90ffb7bdedebaf89a2c5bc0348",
+      "parent": "0136_distribution_deal_requirement_document_link_drop.sql",
+      "parentChecksum": "f17fe19ddee9a70ddc95f6dc46aecc604cdf7d25967f19616691183729f3f397",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the Distribution referral lifecycle truthfulness change, 2026-10-20; migration authoring and disposable worktree verification"
+    },
+    {
+      "sequence": 138,
+      "filename": "0138_distribution_deal_event_from_referral_received_stage.sql",
+      "checksum": "6b0343f7bdc358633a959351ff0741fbb367f13b83556e9532d4ba61abd3e813",
+      "parent": "0137_distribution_deal_referral_received_stage.sql",
+      "parentChecksum": "3f7e98550990add8ba3b9bf3895913b82fff1d90ffb7bdedebaf89a2c5bc0348",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the Distribution referral lifecycle truthfulness change, 2026-10-20; migration authoring and disposable worktree verification"
+    },
+    {
+      "sequence": 139,
+      "filename": "0139_distribution_deal_event_to_referral_received_stage.sql",
+      "checksum": "b3f88317340e65e36b0fc2762bd7b50df078d7d8aa4ad7f2c311d68c87a6228e",
+      "parent": "0138_distribution_deal_event_from_referral_received_stage.sql",
+      "parentChecksum": "6b0343f7bdc358633a959351ff0741fbb367f13b83556e9532d4ba61abd3e813",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the Distribution referral lifecycle truthfulness change, 2026-10-20; migration authoring and disposable worktree verification"
+    },
+    {
+      "sequence": 140,
+      "filename": "0140_distribution_deal_referral_received_backfill.sql",
+      "checksum": "61a3e5676b6b0f1c52eaa9eebca4167399aaedfc94dcde80a2dbc6aa8f25504e",
+      "parent": "0139_distribution_deal_event_to_referral_received_stage.sql",
+      "parentChecksum": "b3f88317340e65e36b0fc2762bd7b50df078d7d8aa4ad7f2c311d68c87a6228e",
+      "kind": "transactional-data",
+      "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

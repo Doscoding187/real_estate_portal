@@ -1,7 +1,7 @@
 # Distribution Network: Referrer Journey Contract
 
 **Status:** Approved product direction; implementation contract for the Distribution workstream  
-**Updated:** 18 October 2026
+**Updated:** 20 October 2026
 
 ## Product purpose
 
@@ -84,14 +84,13 @@ The initial state must mean “referral received.” A viewing status may appear
 - Partner-visible property information lists admin-uploaded Distribution copies from active developer-resource records with a safe file URL. Entries without an uploaded file, inactive entries, and required application templates are excluded; the flow never reads the Developer Engine's `development_documents` bank.
 - New intake-policy drafts start from the canonical default guided-process steps. An administrator edits, reorders, or removes them to match the developer's actual process; a published policy must contain at least one step, and the published version snapshots the steps partners see.
 - Opportunity-specific process steps and partner-visible updates are shown on Overview, My Deals, and deal detail. Referral payout states are shown separately and no processing date is promised.
-- New deals still use the legacy `viewing_scheduled` database stage as their initial state. The partner UI presents “Referral received” unless a real viewing exists, but the persisted state is not yet correct.
+- New deals start in the truthful `referral_received` stage. The deal transitions to `viewing_scheduled` only when a real viewing booking is recorded, and legacy deals without a viewing booking are corrected through the shared migration chain with an audit event.
 
 ## Integration dependencies
 
 1. **Affordability model:** obtain approval for the purchase loan term and repayment allowance. No live income match until then; browse-only matching remains usable. Prime-rate and lender assumptions should be checked against authoritative current sources before activation.
-2. **Referral initial state:** add a truthful `referral_received` state and transition rules through the centrally reconciled Distribution migration chain. The current enum has no such state; do not patch around that with schema guessing or an incompatible runtime value.
-3. **Durable assessments and shortlists:** design the canonical record after the shared migration chain is reconciled. It must represent search-only assessment separately from a financial assessment, support public-to-account ownership transfer without losing the work, and snapshot market mode, filters, Developer projection revisions, selected opportunity facts, and calculation-policy version where relevant. Browser session continuity is not a durable saved record. Existing assessment tables must not be populated with invented financial assumptions.
-4. **Document delivery:** define and implement an authorized Developer recipient/delivery and acknowledgement path. Keep partner resource URLs and claims about delivery or revocation disabled until it exists.
-5. **Payout timing:** add explicit program processing terms and verified-milestone date calculation only after the commercial rules are agreed and represented in the canonical schema.
+2. **Durable assessments and shortlists:** design the canonical record after the shared migration chain is reconciled. It must represent search-only assessment separately from a financial assessment, support public-to-account ownership transfer without losing the work, and snapshot market mode, filters, Developer projection revisions, selected opportunity facts, and calculation-policy version where relevant. Browser session continuity is not a durable saved record. Existing assessment tables must not be populated with invented financial assumptions.
+3. **Document delivery:** define and implement an authorized Developer recipient/delivery and acknowledgement path. Keep partner resource URLs and claims about delivery or revocation disabled until it exists.
+4. **Payout timing:** add explicit program processing terms and verified-milestone date calculation only after the commercial rules are agreed and represented in the canonical schema.
 
-Distribution work must not edit the Developer worktree, add or apply migrations, or change the shared migration manifest while the chains are being reconciled. Integrate Developer schema prerequisites first, then Distribution migrations, after dependency review.
+The shared Distribution and Developer migration chains are reconciled. Future Distribution migrations follow the serialized manifest review and Database Authority protocol; do not bypass it with schema guessing or runtime fallbacks.

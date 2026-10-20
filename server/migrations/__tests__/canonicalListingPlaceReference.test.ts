@@ -42,6 +42,8 @@ describe('Canonical Listing Place persistence expansion', () => {
       expect(entry.statementPolicy).toBe('single-ddl');
       expect(entry.statementCount).toBe(1);
     }
-    expect(manifest.expectedHead.filename).toBe('0136_distribution_deal_requirement_document_link_drop.sql');
+    expect(manifest.expectedHead.filename).toBe(
+      '0140_distribution_deal_referral_received_backfill.sql',
+    );
   });
 });

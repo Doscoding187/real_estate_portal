@@ -33,12 +33,13 @@ function formatStageLabel(stage: string | null | undefined) {
 }
 
 function formatDealStageLabel(deal: any) {
+  if (deal.currentStage === 'referral_received') return 'Referral received';
   if (deal.currentStage !== 'viewing_scheduled') return formatStageLabel(deal.currentStage);
-  if (deal.viewingStatus === 'scheduled') return 'Viewing booked';
+  if (deal.viewingStatus === 'scheduled' || !deal.viewingStatus) return 'Viewing booked';
   if (deal.viewingStatus === 'completed') return 'Viewing completed; deal status needs review';
   if (deal.viewingStatus === 'no_show') return 'Viewing no-show; deal status needs review';
   if (deal.viewingStatus === 'cancelled') return 'Viewing cancelled; deal status needs review';
-  return 'Referral received';
+  return 'Viewing status needs review';
 }
 
 export default function DistributionManagerDashboard() {

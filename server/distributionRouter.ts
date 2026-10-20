@@ -247,6 +247,7 @@ const AGENT_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, Distributio
 
 // Manager-controlled stage transitions (source of truth for operator lifecycle)
 const MANAGER_STAGE_TRANSITIONS: Partial<Record<DistributionDealStage, DistributionDealStage[]>> = {
+  referral_received: ['cancelled'],
   viewing_completed: ['application_submitted', 'cancelled'],
   application_submitted: ['contract_signed', 'cancelled'],
   contract_signed: ['bond_approved', 'cancelled'],
@@ -5751,6 +5752,9 @@ const managerDistributionRouter = router({
         });
       }
 
+      const stageChanged = deal.currentStage === 'referral_received';
+      const nextStage = stageChanged ? 'viewing_scheduled' : deal.currentStage;
+
       await db.transaction(async tx => {
         await tx
           .insert(distributionViewings)
@@ -5784,18 +5788,25 @@ const managerDistributionRouter = router({
             },
           });
 
+        const dealUpdate: Record<string, unknown> = {};
         if (deal.managerUserId !== managerUserId) {
+          dealUpdate.managerUserId = managerUserId;
+        }
+        if (stageChanged) {
+          dealUpdate.currentStage = nextStage;
+        }
+        if (Object.keys(dealUpdate).length) {
           await tx
             .update(distributionDeals)
-            .set({ managerUserId })
+            .set(dealUpdate)
             .where(eq(distributionDeals.id, deal.id));
         }
 
         await tx.insert(distributionDealEvents).values({
           dealId: deal.id,
           fromStage: deal.currentStage,
-          toStage: deal.currentStage,
-          eventType: 'note',
+          toStage: nextStage,
+          eventType: stageChanged ? 'stage_transition' : 'note',
           actorUserId: ctx.user!.id,
           metadata: {
             source: 'manager.scheduleViewing',
@@ -6386,7 +6397,11 @@ const managerDistributionRouter = router({
 
       // Attribution null-check
       // Protect legacy anomalies: if lock missing on non-initial stage, reject progression.
-      if (!deal.attributionLockedAt && fromStage !== 'viewing_scheduled') {
+      if (
+        !deal.attributionLockedAt &&
+        fromStage !== 'referral_received' &&
+        fromStage !== 'viewing_scheduled'
+      ) {
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',
           message: 'Attribution lock missing. Cannot progress deal without valid attribution lock.',
@@ -7231,8 +7246,8 @@ const referrerDistributionRouter = router({
 
         await tx.insert(distributionDealEvents).values({
           dealId: viewing.dealId,
-          fromStage: null,
-          toStage: 'viewing_scheduled',
+          fromStage: deal.currentStage,
+          toStage: deal.currentStage,
           eventType: 'note',
           actorUserId: ctx.user!.id,
           metadata: {

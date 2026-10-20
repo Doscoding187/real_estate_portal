@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
 import {
   developmentRequiredDocuments,
   developments,
   distributionDealDocuments,
+  distributionDealEvents,
   distributionDeals,
   distributionIdentities,
   distributionManagerAssignments,
@@ -307,7 +308,16 @@ async function insertViewing(input: {
 
 async function setDealStage(
   dealId: number,
-  stage: 'viewing_scheduled' | 'viewing_completed' | 'application_submitted' | 'contract_signed' | 'bond_approved' | 'commission_pending' | 'commission_paid' | 'cancelled',
+  stage:
+    | 'referral_received'
+    | 'viewing_scheduled'
+    | 'viewing_completed'
+    | 'application_submitted'
+    | 'contract_signed'
+    | 'bond_approved'
+    | 'commission_pending'
+    | 'commission_paid'
+    | 'cancelled',
   commissionTriggerStage: 'contract_signed' | 'bond_approved' = 'bond_approved',
 ) {
   const db = await getDb();
@@ -432,6 +442,52 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       }),
     ).rejects.toMatchObject({
       code: 'FORBIDDEN',
+    });
+  });
+
+  it('starts at referral_received and transitions when a viewing is booked', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 1,
+    });
+    const caller = buildCaller(seed.managerUserId);
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const [before] = await db
+      .select({ currentStage: distributionDeals.currentStage })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, seed.dealId))
+      .limit(1);
+    expect(before?.currentStage).toBe('referral_received');
+
+    const scheduledStartAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    await caller.distribution.manager.scheduleViewing({
+      dealId: seed.dealId,
+      scheduledStartAt,
+    });
+
+    const [after] = await db
+      .select({ currentStage: distributionDeals.currentStage })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, seed.dealId))
+      .limit(1);
+    expect(after?.currentStage).toBe('viewing_scheduled');
+
+    const [event] = await db
+      .select({
+        eventType: distributionDealEvents.eventType,
+        fromStage: distributionDealEvents.fromStage,
+        toStage: distributionDealEvents.toStage,
+      })
+      .from(distributionDealEvents)
+      .where(eq(distributionDealEvents.dealId, seed.dealId))
+      .orderBy(desc(distributionDealEvents.id))
+      .limit(1);
+    expect(event).toMatchObject({
+      eventType: 'stage_transition',
+      fromStage: 'referral_received',
+      toStage: 'viewing_scheduled',
     });
   });
 
