@@ -1,8 +1,38 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('distribution access authority boundary', () => {
+  it('retires the legacy qualification and grant surfaces', () => {
+    const router = readFileSync(
+      path.resolve(process.cwd(), 'server/distributionRouter.ts'),
+      'utf8',
+    );
+    const adminPage = readFileSync(
+      path.resolve(
+        process.cwd(),
+        'client/src/pages/admin/DistributionNetworkPage.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(
+      existsSync(path.resolve(process.cwd(), 'server/distributionQualificationRouter.ts')),
+    ).toBe(false);
+    expect(
+      existsSync(
+        path.resolve(process.cwd(), 'server/services/referralQualificationService.ts'),
+      ),
+    ).toBe(false);
+    expect(router).not.toContain('distributionAgentAccess');
+    expect(router).not.toContain('grantAgentAccess');
+    expect(router).not.toContain('revokeAgentAccess');
+    expect(router).not.toContain('listAgentAccess');
+    expect(router).not.toContain('listAgentsForDevelopment');
+    expect(adminPage).not.toContain('listAgentAccess');
+    expect(adminPage).not.toContain('Access Grants');
+  });
+
   it('does not interpret a missing canonical table as an absent row', () => {
     const source = readFileSync(
       path.resolve(process.cwd(), 'server/services/distributionAccessRepository.ts'),

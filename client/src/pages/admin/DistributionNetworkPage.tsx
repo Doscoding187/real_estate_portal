@@ -201,10 +201,6 @@ export default function DistributionNetworkPage() {
     { limit: 200 },
     { enabled: submoduleSlug === 'agent-network' },
   );
-  const accessQuery = trpc.distribution.admin.listAgentAccess.useQuery(
-    { limit: 200, includeRevoked: false },
-    { enabled: submoduleSlug === 'agent-network' },
-  );
   const applicationsQuery = trpc.distribution.admin.listReferrerApplications.useQuery(
     { limit: 200 },
     { enabled: submoduleSlug === 'agent-network' },
@@ -280,7 +276,6 @@ export default function DistributionNetworkPage() {
           toast.success('Referrer application rejected.');
         }
         applicationsQuery.refetch();
-        accessQuery.refetch();
       },
       onError: err => toast.error(err.message),
     });
@@ -1053,21 +1048,13 @@ export default function DistributionNetworkPage() {
 
       {submoduleSlug === 'agent-network' && (
         <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Agent Tiers</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{(tiersQuery.data || []).length}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Access Grants</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">{(accessQuery.data || []).length}</p>
               </CardContent>
             </Card>
             <Card>
