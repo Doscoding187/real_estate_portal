@@ -158,7 +158,6 @@ export function buildCorroboration() {
     const nameRow = preferredNames.get(placeId);
     const place = admitted.find(row => row.place_id === placeId);
     const adjudication = place?.adjudication || {};
-    const name = normaliseName(nameRow?.name);
     const context = adjudication.administrative_context || null;
     const latitude = Number(adjudication.representative_latitude);
     const longitude = Number(adjudication.representative_longitude);
