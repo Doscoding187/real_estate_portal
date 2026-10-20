@@ -3,7 +3,13 @@ import { getCityGuideContent } from '../../shared/cityGuideContent';
 import { PROVINCE_SLUGS } from '../../shared/location-contract';
 import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
 import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
-import { isSuburbGuidePilot } from '../../shared/suburbGuidePolicy';
+import { suburbGuideInitialHtml } from '../../shared/suburbGuideHtml';
+import {
+  isPublishedSuburbGuide,
+  isSuburbGuidePilot,
+  suburbGuideDescription,
+  suburbGuideTitle,
+} from '../../shared/suburbGuidePolicy';
 
 const CANONICAL_PUBLIC_ORIGIN = 'https://www.propertylistifysa.co.za';
 const DEFAULT_SITE_NAME = 'Property Listify';
@@ -128,17 +134,18 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
         }
       : undefined;
   if (suburbGuide) {
-    const suburbCityGuide = getCityGuideContent(suburbGuide.provinceSlug, suburbGuide.citySlug);
     const suburbName = humanizeSegment(suburbGuide.suburbSlug);
     const cityName = humanizeSegment(suburbGuide.citySlug);
     const indexable =
-      isSuburbGuidePilot(suburbGuide.provinceSlug, suburbGuide.citySlug, suburbGuide.suburbSlug) &&
-      suburbCityGuide?.status === 'published' &&
-      !parsedUrl.search;
+      isPublishedSuburbGuide(
+        suburbGuide.provinceSlug,
+        suburbGuide.citySlug,
+        suburbGuide.suburbSlug,
+      ) && !parsedUrl.search;
 
     return {
-      title: `${suburbName} property guide: homes, rentals & developments | ${DEFAULT_SITE_NAME}`,
-      description: `Explore homes for sale, rentals and new developments in ${suburbName}, ${cityName}.`,
+      title: suburbGuideTitle(suburbName),
+      description: suburbGuideDescription(suburbName, cityName),
       canonicalUrl: absoluteUrl(
         `/${suburbGuide.provinceSlug}/${suburbGuide.citySlug}/${suburbGuide.suburbSlug}`,
       ),
@@ -314,9 +321,108 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   };
 }
 
+/**
+ * Structured data for the delivered guide document. It mirrors the shape the rendered page
+ * emits, using only facts that are already authored or canonical, so a crawler that does not
+ * execute JavaScript still receives the guide's place and breadcrumb data. The rendered page
+ * replaces these nodes after boot.
+ */
+function guideStructuredData(pathname: string): Record<string, unknown>[] | undefined {
+  const segments = pathname.split('/').filter(Boolean);
+  const breadcrumb = (items: { name: string; url: string }[]) => ({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.url),
+    })),
+  });
+
+  if (segments.length === 1) {
+    const guide = getProvinceGuideContent(segments[0]);
+    if (!guide) return undefined;
+    return [
+      breadcrumb([
+        { name: 'Home', url: '/' },
+        { name: 'Explore', url: '/' },
+        { name: guide.name, url: `/${guide.slug}` },
+      ]),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'AdministrativeArea',
+        name: guide.name,
+        description: guide.description,
+        url: absoluteUrl(`/${guide.slug}`),
+      },
+    ];
+  }
+
+  if (segments.length === 2) {
+    const guide = getCityGuideContent(segments[0], segments[1]);
+    if (!guide) return undefined;
+    return [
+      breadcrumb([
+        { name: 'Home', url: '/' },
+        { name: guide.provinceName, url: `/${guide.provinceSlug}` },
+        { name: guide.name, url: `/${guide.provinceSlug}/${guide.slug}` },
+      ]),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'City',
+        name: guide.name,
+        description: guide.description,
+        url: absoluteUrl(`/${guide.provinceSlug}/${guide.slug}`),
+      },
+    ];
+  }
+
+  if (segments.length === 3 && PROVINCE_SLUGS.includes(segments[0].toLowerCase())) {
+    const provinceSlug = segments[0].toLowerCase();
+    const citySlug = segments[1].toLowerCase();
+    const suburbSlug = segments[2].toLowerCase();
+    if (!isSuburbGuidePilot(provinceSlug, citySlug, suburbSlug)) return undefined;
+    const cityGuide = getCityGuideContent(provinceSlug, citySlug);
+    if (!cityGuide) return undefined;
+    const suburbName = humanizeSegment(suburbSlug);
+    const cityName = humanizeSegment(citySlug);
+    return [
+      breadcrumb([
+        { name: 'Home', url: '/' },
+        { name: cityGuide.provinceName, url: `/${provinceSlug}` },
+        { name: cityGuide.name, url: `/${provinceSlug}/${citySlug}` },
+        { name: suburbName, url: `/${provinceSlug}/${citySlug}/${suburbSlug}` },
+      ]),
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Place',
+        name: suburbName,
+        url: absoluteUrl(`/${provinceSlug}/${citySlug}/${suburbSlug}`),
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: cityName,
+          addressRegion: cityGuide.provinceName,
+          addressCountry: 'ZA',
+        },
+        containedInPlace: {
+          '@type': 'City',
+          name: cityName,
+          url: absoluteUrl(`/${provinceSlug}/${citySlug}`),
+        },
+      },
+    ];
+  }
+
+  return undefined;
+}
+
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
-  const initialHtml = provinceGuideInitialHtml(requestUrl) || cityGuideInitialHtml(requestUrl);
+  const initialHtml =
+    provinceGuideInitialHtml(requestUrl) ||
+    cityGuideInitialHtml(requestUrl) ||
+    suburbGuideInitialHtml(requestUrl);
   const document = initialHtml
     ? template.replace(
         /<div id="root">[\s\S]*?<\/div>/,
@@ -324,7 +430,7 @@ export function injectSeoHead(template: string, requestUrl: string): string {
       )
     : template;
 
-  return document
+  const withHead = document
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(seo.title)}</title>`)
     .replace(
       /<meta\s+name="description"\s+content="[^"]*"\s*\/?>/i,
@@ -366,4 +472,18 @@ export function injectSeoHead(template: string, requestUrl: string): string {
       /<link\s+rel="canonical"\s+href="[^"]*"\s*\/?>/i,
       `<link rel="canonical" href="${escapeHtml(seo.canonicalUrl)}" />`,
     );
+
+  const structuredData: Record<string, unknown>[] =
+    guideStructuredData(new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN).pathname) ?? [];
+  if (!structuredData.length) return withHead;
+
+  // The rendered page replaces these nodes on boot, so the delivered document and the page
+  // never present two different sets of structured data.
+  const scripts = structuredData
+    .map(
+      item =>
+        `<script type="application/ld+json" data-seo-managed="true">${JSON.stringify(item)}</script>`,
+    )
+    .join('');
+  return withHead.replace(/<\/head>/i, `${scripts}</head>`);
 }

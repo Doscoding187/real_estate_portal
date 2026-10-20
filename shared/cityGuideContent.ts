@@ -1,3 +1,5 @@
+import { selectPublishedGuides, type GuidePublicationStatus } from './guidePublication';
+
 /** Editorial orientation only. These groupings never create search boundaries. */
 export interface CityGuidePlace {
   name: string;
@@ -19,7 +21,7 @@ export interface CityGuideContent {
   provinceName: string;
   slug: string;
   name: string;
-  status: 'local-review' | 'published';
+  status: GuidePublicationStatus;
   sourceCheckedOn: string;
   title: string;
   description: string;
@@ -54,7 +56,7 @@ const johannesburg: CityGuideContent = {
   provinceName: 'Gauteng',
   slug: 'johannesburg',
   name: 'Johannesburg',
-  status: 'local-review',
+  status: 'published',
   sourceCheckedOn: '2026-10-15',
   title: 'Johannesburg area guide: neighbourhoods, parks & city life | Property Listify',
   description:
@@ -237,6 +239,11 @@ const johannesburg: CityGuideContent = {
       url: 'https://joburg.org.za/departments_/Documents/Joburg-City-Safety-Strategy/Joburg-City-Safety-Strategy-JCSS-2025.pdf',
     },
     {
+      id: 'region-e',
+      title: 'City of Johannesburg · Region E: Sandton and Alexandra',
+      url: 'https://joburg.org.za/about_/regions/Pages/Region%20E%20-%20Sandton%2C%20Alexandra/region-e.aspx',
+    },
+    {
       id: 'parks',
       title: 'Johannesburg City Parks & Zoo · parks and walking destinations',
       url: 'https://www.jhbcityparksandzoo.com/services-facilities/nature-reserves-bird-sanctuary/walking-trails',
@@ -258,5 +265,5 @@ export function getCityGuideContent(province: string, city: string) {
   return CITY_GUIDE_CONTENT.find(guide => guide.provinceSlug === province && guide.slug === city);
 }
 export function getPublishedCityGuides() {
-  return CITY_GUIDE_CONTENT.filter(guide => guide.status === 'published');
+  return selectPublishedGuides(CITY_GUIDE_CONTENT);
 }

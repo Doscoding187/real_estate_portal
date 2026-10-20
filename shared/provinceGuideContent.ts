@@ -1,5 +1,7 @@
+import { selectPublishedGuides, type GuidePublicationStatus } from './guidePublication';
+
 /** Source-backed editorial content. Place references are resolved against canonical geography,
- * never used as search boundaries. Adding a place record does not publish an article. */
+ *  never used as search boundaries. Adding a place record does not publish an article. */
 export interface ProvinceGuideRegion {
   id: string;
   name: string;
@@ -29,7 +31,7 @@ export interface ProvinceDiscoveryCollection {
 export interface ProvinceGuideContent {
   slug: string;
   name: string;
-  status: 'local-review' | 'published';
+  status: GuidePublicationStatus;
   sourceCheckedOn: string;
   title: string;
   description: string;
@@ -44,7 +46,7 @@ export interface ProvinceGuideContent {
 const gauteng: ProvinceGuideContent = {
   slug: 'gauteng',
   name: 'Gauteng',
-  status: 'local-review',
+  status: 'published',
   sourceCheckedOn: '2026-10-15',
   title: 'Explore Gauteng: regions, cities & neighbourhoods | Property Listify',
   description:
@@ -493,5 +495,5 @@ export function getProvinceGuideContent(slug: string) {
 }
 /** Only editorial approval can add a guide to the public sitemap. Local review is not publication. */
 export function getPublishedProvinceGuides() {
-  return PROVINCE_GUIDE_CONTENT.filter(guide => guide.status === 'published');
+  return selectPublishedGuides(PROVINCE_GUIDE_CONTENT);
 }

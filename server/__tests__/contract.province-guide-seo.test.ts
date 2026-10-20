@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { injectSeoHead, resolveSeoPageData } from '../_core/seoHead';
+import { selectPublishedGuides } from '../../shared/guidePublication';
 import {
   getProvinceGuideContent,
   getPublishedProvinceGuides,
 } from '../../shared/provinceGuideContent';
 import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
+
 describe('Province editorial SEO contract', () => {
   it('uses one canonical route and matching guide metadata in initial HTML', () => {
     const guide = getProvinceGuideContent('gauteng')!;
@@ -24,11 +26,37 @@ describe('Province editorial SEO contract', () => {
     expect(html).not.toContain('avgPrice');
     expect(html).not.toContain('display:none');
   });
+
+  it('publishes the reviewed Gauteng guide on its clean route', () => {
+    const guide = getProvinceGuideContent('gauteng')!;
+    expect(guide.status).toBe('published');
+    expect(getPublishedProvinceGuides().map(candidate => candidate.slug)).toContain('gauteng');
+
+    const data = resolveSeoPageData('/gauteng');
+    expect(data.robots).toBe('index, follow');
+    expect(data.title).toBe(guide.title);
+    expect(data.canonicalUrl).toBe('https://www.propertylistifysa.co.za/gauteng');
+  });
+
+  it('never presents a published guide with a local-review marker', () => {
+    const html = provinceGuideInitialHtml('/gauteng')!;
+    expect(html).toContain('Sources checked 2026-10-15.');
+    expect(html).not.toContain('Local-review draft.');
+    expect(html).not.toContain('Local preview draft.');
+  });
+
   it('keeps local editorial review separate from publication and sitemap readiness', () => {
-    expect(getProvinceGuideContent('gauteng')?.status).toBe('local-review');
-    expect(getPublishedProvinceGuides()).toEqual([]);
+    // The rule, not the pilot's current state: a guide in local review is never published.
+    expect(
+      selectPublishedGuides([
+        { slug: 'draft', status: 'local-review' as const },
+        { slug: 'approved', status: 'published' as const },
+      ]).map(guide => guide.slug),
+    ).toEqual(['approved']);
+    // A place record without reviewed content is still not a guide.
     expect(provinceGuideInitialHtml('/western-cape')).toBeUndefined();
   });
+
   it('renders stable sourced content without asking the database or inventory service', () => {
     const html = provinceGuideInitialHtml('/gauteng');
     expect(html).toContain('everyday');

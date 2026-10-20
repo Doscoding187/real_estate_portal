@@ -73,6 +73,29 @@ the provider-document evidence. Effective changes:
 No acceptance scope changes, no hosted or paid execution, and the paid-opening
 NO-GO remains. Each affected gate still needs its own execution and evidence.
 
+## Guide pilot publication and frontend release step — 2026-10-20
+
+[Packet 62](62-guide-pilot-publication-and-frontend-release-2026-10-20.md) records the guide
+pilot publication, the pilot SEO delivery and the recorded frontend release step.
+
+| Item | Recorded | Effect |
+| --- | --- | --- |
+| Guide publication | Gauteng and Johannesburg move from `local-review` to `published`; the Sandton pilot inherits its city guide's publication readiness | The three pilot routes serve `index, follow` on their clean path and appear in `sitemap-guides.xml`. Reverting one status field restores `noindex`, the empty sitemap and the draft marker. |
+| Delivered guide documents | One document per guide route, including the suburb pilot, carrying the guide content, title, description, canonical, robots and place/breadcrumb structured data | A crawler receives the guide without executing JavaScript. The rendered page replaces the document and the structured data on boot. |
+| Hosting routes | An explicit route per guide route ahead of the generic application shell | A city or suburb guide request is no longer answered with the generic shell. |
+| Sitemap index | One authority for the index children; the retired `scripts/generate-sitemap.ts` is removed | The static fallback index matches the API index and cannot be overwritten with the retired origin. |
+| Google Places diagnosis | `REQUEST_DENIED` is classified into billing, Places API enablement, key restriction, quota and availability causes | The operator receives the action that resolves the failure. The provider configuration itself is unchanged and remains a provider-console action. |
+| Frontend release step | `vercel.ts` sets `git.deploymentEnabled.main: true` | The production Git trigger is restored. The deploy happens from the integration base at merge time. **No deployment is claimed**: no Vercel CLI, token or hosted environment was available to this work. |
+| Pilot data sufficiency | Not measured. `pnpm guide:pilot:verify` is the read-only check and must run in the release window | No protected or production target was accessed. |
+
+Founder copy sign-off on the Gauteng and Johannesburg guides remains required and is
+recorded as an open item in the packet. The pilot suburb's live inventory, developments and
+agency affiliations were not measured from this repository.
+
+This packet is a frontend and guide-publication delivery. It does not reopen an accepted
+scope, authorise hosted execution, a protected database release or paid activation, and it
+does not change B08–B18, LRC-SUPPORT-001 or the paid-opening NO-GO.
+
 ## B17 window admission prepared — 2026-10-18
 
 [Packet 53](53-b17-window-and-driver-admission-2026-10-18.md) records the

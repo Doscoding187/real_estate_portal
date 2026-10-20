@@ -27,7 +27,13 @@ import { getCityGuideImage } from '@/lib/cityGuideImages';
 import { toAbsoluteUrl } from '@/lib/seo/structuredData';
 import { encodeCanonicalLocationId } from '@shared/locationAuthority';
 import { getCityGuideContent } from '@shared/cityGuideContent';
-import { isSuburbGuidePilot } from '@shared/suburbGuidePolicy';
+import {
+  SUBURB_GUIDE_PILOT,
+  isPublishedSuburbGuide,
+  isSuburbGuidePilot,
+  suburbGuideDescription,
+  suburbGuideTitle,
+} from '@shared/suburbGuidePolicy';
 import type { LocationNode } from '@/types/location';
 import '@/styles/suburb-guide.css';
 
@@ -192,7 +198,9 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     verifiedSuburb,
   ]);
   const cityGuide = getCityGuideContent(provinceSlug, citySlug);
-  const context = isSandton ? cityGuide?.regions.find(region => region.id === 'e') : undefined;
+  const context = isSandton
+    ? cityGuide?.regions.find(region => region.id === SUBURB_GUIDE_PILOT.cityContextRegionId)
+    : undefined;
   const cityImage = getCityGuideImage(provinceSlug, citySlug);
   const suburbCenter = useMemo(() => {
     if (!verifiedSuburb?.latitude || !verifiedSuburb.longitude) return null;
@@ -335,14 +343,19 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     ? `/${cityGuide.provinceSlug}/${cityGuide.slug}`
     : `/${provinceSlug}/${citySlug}`;
   const titleName = verifiedSuburb?.name || displaySlug(suburbSlug);
-  const description = `Explore homes for sale, rentals and new developments in ${titleName}, ${verifiedSuburb?.cityName || displaySlug(citySlug)}.`;
+  const description = suburbGuideDescription(
+    titleName,
+    verifiedSuburb?.cityName || displaySlug(citySlug),
+  );
   const localSources: Array<{ id: string; title: string; url: string }> =
     isSandton && cityGuide
       ? [
           {
             id: 'region-e',
             title: 'City of Johannesburg · Region E: Sandton and Alexandra',
-            url: 'https://joburg.org.za/about_/regions/Pages/Region%20E%20-%20Sandton%2C%20Alexandra/region-e.aspx',
+            url:
+              cityGuide.sources.find(source => source.id === 'region-e')?.url ||
+              'https://joburg.org.za/about_/regions/Pages/Region%20E%20-%20Sandton%2C%20Alexandra/region-e.aspx',
           },
         ]
       : [];
@@ -462,11 +475,13 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     <SuburbGuideShell>
       <MetaControl
         key="seo"
-        title={`${titleName} property guide: homes, rentals & developments | Property Listify`}
+        title={suburbGuideTitle(titleName)}
         description={description}
         canonicalUrl={toAbsoluteUrl(path)}
         image={cityImage ? toAbsoluteUrl(cityImage.hero) : undefined}
-        forceNoIndex={!isSandton || cityGuide?.status !== 'published' || Boolean(search)}
+        forceNoIndex={
+          !isPublishedSuburbGuide(provinceSlug, citySlug, suburbSlug) || Boolean(search)
+        }
         structuredData={[
           {
             '@context': 'https://schema.org',
@@ -1004,10 +1019,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           viewAllDevelopmentsHref={viewAllHref.developments}
         />
 
-        <SuburbAgencies
-          suburbId={Number(verifiedSuburb.id)}
-          suburbName={verifiedSuburb.name}
-        />
+        <SuburbAgencies suburbId={Number(verifiedSuburb.id)} suburbName={verifiedSuburb.name} />
 
         <div id="local-experts">
           <SuburbLocalProfessionals
