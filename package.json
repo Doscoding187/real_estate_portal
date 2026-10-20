@@ -316,6 +316,7 @@
     "place:admission:territory-neutrality": "tsx tools/place-admission/prove-territory-neutrality.mjs",
     "place:boundary-currency": "tsx tools/geography-source-evidence/boundary-currency.mjs",
     "place:boundary-currency:check": "tsx tools/geography-source-evidence/boundary-currency.mjs --check",
+    "place:osm:corroboration": "node tools/geography-source-evidence/osm-corroboration.mjs",
     "place:readiness": "tsx tools/geography-coverage/place-readiness.mjs",
     "place:readiness:check": "tsx tools/geography-coverage/place-readiness.mjs --check",
     "place:gauteng-provenance": "tools/gauteng-catalogue/.venv/bin/python tools/geography-source-evidence/gauteng_provenance_investigation.py",
