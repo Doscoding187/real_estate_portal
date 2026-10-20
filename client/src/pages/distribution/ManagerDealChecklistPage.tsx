@@ -8,6 +8,10 @@ import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ManagerDealChecklistPanel } from '@/components/distribution/manager/ManagerDealChecklistPanel';
+import {
+  downloadPrivateDocument,
+  preparePrivateDocumentUpload,
+} from '@/lib/privateDocumentUpload';
 
 type DealDocumentStatus = 'pending' | 'received' | 'verified' | 'rejected' | 'unavailable';
 type EditableDealDocumentStatus = Exclude<DealDocumentStatus, 'unavailable'>;
@@ -46,6 +50,8 @@ export default function ManagerDealChecklistPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [savingTemplateId, setSavingTemplateId] = useState<number | null>(null);
+  const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
+  const [downloadingTemplateId, setDownloadingTemplateId] = useState<number | null>(null);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [localChecklist, setLocalChecklist] = useState<any | null>(null);
   const [workflowDrafts, setWorkflowDrafts] = useState<Record<string, WorkflowStepDraft>>({});
@@ -68,6 +74,8 @@ export default function ManagerDealChecklistPage() {
   );
 
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
+  const uploadDealDocumentMutation = trpc.distribution.manager.uploadDealDocument.useMutation();
+  const downloadDealDocumentMutation = trpc.distribution.manager.downloadDealDocument.useMutation();
   const downloadIntakeEvidenceMutation = trpc.distribution.manager.downloadDealReferralIntakeEvidence.useMutation();
   const recordPayoutBasisMutation = trpc.distribution.manager.recordDealPayoutBasis.useMutation();
   const updateWorkflowStepMutation = trpc.distribution.manager.updateReferralWorkflowStep.useMutation();
@@ -133,6 +141,36 @@ export default function ManagerDealChecklistPage() {
       throw error;
     } finally {
       setSavingTemplateId(null);
+    }
+  }
+
+  async function handleUploadDealDocument(input: { templateId: number; file: File }) {
+    setUploadingTemplateId(input.templateId);
+    try {
+      const file = await preparePrivateDocumentUpload(input.file);
+      const updatedChecklist = await uploadDealDocumentMutation.mutateAsync({
+        dealId,
+        templateId: input.templateId,
+        file,
+      });
+      setLocalChecklist(updatedChecklist);
+      toast.success('Secure document attached.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to attach the document');
+    } finally {
+      setUploadingTemplateId(null);
+    }
+  }
+
+  async function handleDownloadDealDocument(templateId: number) {
+    setDownloadingTemplateId(templateId);
+    try {
+      const result = await downloadDealDocumentMutation.mutateAsync({ dealId, templateId });
+      downloadPrivateDocument(result);
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not retrieve the secure document.');
+    } finally {
+      setDownloadingTemplateId(null);
     }
   }
 
@@ -281,10 +319,14 @@ export default function ManagerDealChecklistPage() {
         <ManagerDealChecklistPanel
           checklist={localChecklist}
           savingTemplateId={savingTemplateId}
+          uploadingTemplateId={uploadingTemplateId}
+          downloadingTemplateId={downloadingTemplateId}
           isBatchSaving={isBatchSaving}
           isSavingPayoutBasis={recordPayoutBasisMutation.isPending}
           onRecordPayoutBasis={handleRecordPayoutBasis}
           onUpdateDocumentStatus={handleUpdateDocumentStatus}
+          onUploadDocument={handleUploadDealDocument}
+          onDownloadDocument={handleDownloadDealDocument}
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />

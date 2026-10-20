@@ -29,6 +29,7 @@ import {
   getCompletePartnerReferralIntakeSession,
   markReferralIntakeSubmitted,
 } from './distributionReferralIntakeWorkflowService';
+import { parseDistributionDealDocumentReference } from './distributionReferralEvidenceStorage';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -597,6 +598,8 @@ async function listDealApplicationDocuments(
           templateId: distributionDealDocuments.developmentRequiredDocumentId,
           status: distributionDealDocuments.status,
           submittedAt: distributionDealDocuments.submittedAt,
+          submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+          submittedFileName: distributionDealDocuments.submittedFileName,
           receivedAt: distributionDealDocuments.receivedAt,
           verifiedAt: distributionDealDocuments.verifiedAt,
           notes: distributionDealDocuments.notes,
@@ -621,6 +624,7 @@ async function listDealApplicationDocuments(
       : persistedByTemplateId.get(document.templateId);
     if (!document.isAvailable || !persisted) {
       return {
+        templateId: document.templateId,
         documentCode: document.documentCode,
         documentLabel: document.documentLabel,
         category: 'client_required_document' as const,
@@ -628,12 +632,15 @@ async function listDealApplicationDocuments(
         sortOrder: document.sortOrder,
         status: 'unavailable' as const,
         submittedAt: null,
+        submittedFileName: null,
+        hasFile: false,
         receivedAt: null,
         verifiedAt: null,
         notes: null,
       };
     }
     return {
+      templateId: document.templateId,
       documentCode: document.documentCode,
       documentLabel: document.documentLabel,
       category: 'client_required_document' as const,
@@ -641,6 +648,8 @@ async function listDealApplicationDocuments(
       sortOrder: document.sortOrder,
       status: (persisted?.status || 'pending') as PartnerDealDocumentStatus,
       submittedAt: persisted?.submittedAt || null,
+      submittedFileName: persisted?.submittedFileName || null,
+      hasFile: Boolean(parseDistributionDealDocumentReference(persisted?.submittedFileUrl)),
       receivedAt: persisted?.receivedAt || null,
       verifiedAt: persisted?.verifiedAt || null,
       notes: persisted?.notes || null,

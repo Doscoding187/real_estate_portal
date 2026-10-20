@@ -1,11 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { FileText, Loader2, Mail, UserRound, WalletCards } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  downloadPrivateDocument,
+  preparePrivateDocumentUpload,
+} from '@/lib/privateDocumentUpload';
 import { PayoutRulesDisclosure } from '@/components/distribution/partner/PayoutRulesDisclosure';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import {
@@ -43,6 +48,8 @@ export default function PartnerReferralDetailPage() {
   const [match, params] = useRoute('/distribution/partner/referrals/:dealId');
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
+  const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
+  const [downloadingTemplateId, setDownloadingTemplateId] = useState<number | null>(null);
   const dealId = Number(params?.dealId || 0);
 
   useEffect(() => {
@@ -67,6 +74,8 @@ export default function PartnerReferralDetailPage() {
     { includePast: true, limit: 500 },
     { enabled: isAuthenticated && match && dealId > 0, retry: false },
   );
+  const submitDocumentMutation = trpc.distribution.partner.submitReferralDocument.useMutation();
+  const downloadDocumentMutation = trpc.distribution.partner.downloadReferralDocument.useMutation();
 
   if (loading || referralQuery.isLoading || viewingsQuery.isLoading) {
     return (
@@ -127,6 +136,36 @@ export default function PartnerReferralDetailPage() {
   const documentRequirementsSnapshotAvailable = Array.isArray(
     (referral as any).programTermsSnapshot?.requiredDocuments,
   );
+
+  async function handleUploadDocument(templateId: number, file: File) {
+    setUploadingTemplateId(templateId);
+    try {
+      const payload = await preparePrivateDocumentUpload(file);
+      await submitDocumentMutation.mutateAsync({
+        dealId,
+        templateId,
+        file: payload,
+      });
+      await referralQuery.refetch();
+      toast.success('Document uploaded securely.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not upload the document.');
+    } finally {
+      setUploadingTemplateId(null);
+    }
+  }
+
+  async function handleDownloadDocument(templateId: number) {
+    setDownloadingTemplateId(templateId);
+    try {
+      const result = await downloadDocumentMutation.mutateAsync({ dealId, templateId });
+      downloadPrivateDocument(result);
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not retrieve the document.');
+    } finally {
+      setDownloadingTemplateId(null);
+    }
+  }
 
   return (
     <ReferralAppShell>
@@ -330,40 +369,94 @@ export default function PartnerReferralDetailPage() {
           </p>
           <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Secure file storage and delivery to the developer are not connected yet. The responsible team will coordinate the document handover for this referral.
+              <p className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-sm text-[#33507e]">
+                Files are stored in private Distribution storage. Developer delivery is not connected yet.
               </p>
-              {applicationDocuments.map((document: any) => (
-                <div key={document.documentCode} className="rounded-lg border border-border bg-white p-3.5 text-sm">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold text-[#0b1c3f]">{document.documentLabel}</p>
-                      <p className="text-xs text-muted-foreground">{document.documentCode}</p>
+              {applicationDocuments.map((document: any) => {
+                const templateId = Number(document.templateId);
+                const hasTemplateId =
+                  document.templateId !== null &&
+                  document.templateId !== undefined &&
+                  Number.isInteger(templateId) &&
+                  templateId > 0;
+                const canUpload =
+                  hasTemplateId &&
+                  document.status !== 'verified' &&
+                  document.status !== 'unavailable';
+                return (
+                  <div key={document.documentCode} className="rounded-lg border border-border bg-white p-3.5 text-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-[#0b1c3f]">{document.documentLabel}</p>
+                        <p className="text-xs text-muted-foreground">{document.documentCode}</p>
+                      </div>
+                      <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
+                        {document.status === 'verified'
+                          ? 'Verified by our team'
+                          : document.status === 'received'
+                            ? 'Received by our team'
+                            : document.status === 'unavailable'
+                              ? 'Needs team update'
+                              : document.status === 'rejected'
+                                ? 'Update needed'
+                                : 'Needed'}
+                      </Badge>
                     </div>
-                    <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
-                      {document.status === 'verified'
-                        ? 'Verified by our team'
-                        : document.status === 'received'
-                          ? 'Received by our team'
-                          : document.status === 'unavailable'
-                            ? 'Needs team update'
-                            : document.status === 'rejected'
-                              ? 'Update needed'
-                              : 'Needed'}
-                    </Badge>
+                    {document.status === 'unavailable' ? (
+                      <p className="mt-2 text-xs text-[#b07a1e]">
+                        This saved requirement is no longer available in the document library. Contact the responsible team.
+                      </p>
+                    ) : null}
+                    {document.hasFile ? (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border bg-surface p-2.5">
+                        <p className="text-xs text-muted-foreground">
+                          {document.submittedFileName || 'Secure file attached'}
+                        </p>
+                        {hasTemplateId ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={downloadingTemplateId === templateId}
+                            onClick={() => void handleDownloadDocument(templateId)}
+                          >
+                            {downloadingTemplateId === templateId ? 'Opening…' : 'Download'}
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {canUpload ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent">
+                          {uploadingTemplateId === templateId
+                            ? 'Uploading…'
+                            : document.hasFile
+                              ? 'Replace file'
+                              : 'Upload file'}
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept=".pdf,.jpg,.jpeg,.png,.webp"
+                            disabled={uploadingTemplateId === templateId}
+                            onChange={event => {
+                              const file = event.target.files?.[0];
+                              event.target.value = '';
+                              if (file) {
+                                void handleUploadDocument(templateId, file);
+                              }
+                            }}
+                          />
+                        </label>
+                        <span className="text-xs text-muted-foreground">PDF, JPEG, PNG or WebP · max 10 MB</span>
+                      </div>
+                    ) : null}
+                    {document.status === 'received' || document.status === 'verified' ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        This file is held privately for the Distribution team. Developer receipt will be shown here when it is confirmed.
+                      </p>
+                    ) : null}
                   </div>
-                  {document.status === 'unavailable' ? (
-                    <p className="mt-2 text-xs text-[#b07a1e]">
-                      This saved requirement is no longer available in the document library. Contact the responsible team.
-                    </p>
-                  ) : null}
-                  {document.status === 'received' || document.status === 'verified' ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      This records a Distribution team update. Developer receipt will be shown here when it is confirmed.
-                    </p>
-                  ) : null}
-                </div>
-              ))}
+                );
+              })}
               {!applicationDocuments.length && documentRequirementsSnapshotAvailable ? (
                 <p className="rounded-lg border border-dashed border-border p-3.5 text-sm text-muted-foreground">
                   No referral documents were required when this referral was submitted.

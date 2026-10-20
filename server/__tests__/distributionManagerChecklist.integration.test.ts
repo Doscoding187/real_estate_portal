@@ -15,6 +15,10 @@ import {
   distributionViewingValidations,
   users,
 } from '../../drizzle/schema';
+import {
+  deleteDistributionDealDocument,
+  parseDistributionDealDocumentReference,
+} from '../services/distributionReferralEvidenceStorage';
 
 // Requires DATABASE_URL test DB; skipped in local env when not set.
 const hasDb = Boolean(process.env.DATABASE_URL);
@@ -336,6 +340,20 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     const db = await getDb();
     if (!db) return;
 
+    const storageDealIds = uniqueIds(createdState.dealIds);
+    if (storageDealIds.length) {
+      const storedRows = await db
+        .select({ submittedFileUrl: distributionDealDocuments.submittedFileUrl })
+        .from(distributionDealDocuments)
+        .where(inArray(distributionDealDocuments.dealId, storageDealIds));
+      for (const row of storedRows) {
+        const reference = parseDistributionDealDocumentReference(row.submittedFileUrl);
+        if (reference) {
+          await deleteDistributionDealDocument(reference).catch(() => undefined);
+        }
+      }
+    }
+
     const dealDocumentIds = uniqueIds(createdState.dealDocumentIds);
     if (dealDocumentIds.length) {
       await db.delete(distributionDealDocuments).where(inArray(distributionDealDocuments.id, dealDocumentIds));
@@ -523,6 +541,47 @@ describeWithDb('distribution.manager deal checklist integration', () => {
       .limit(1);
 
     expect(persistedRow?.id).toBeTruthy();
+  });
+
+  it('stores manager-attached files privately and returns them through authorized download', async () => {
+    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
+    const caller = buildCaller(seed.managerUserId);
+    const fileBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n');
+
+    const payload = await caller.distribution.manager.uploadDealDocument({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+      file: {
+        fileName: 'buyer-id.pdf',
+        mimeType: 'application/pdf',
+        byteSize: fileBuffer.length,
+        base64Content: fileBuffer.toString('base64'),
+      },
+    });
+
+    const uploadedDocument = payload.requiredDocuments.find(
+      (document: any) => Number(document.templateId) === Number(seed.templateIds[0]),
+    );
+    expect(uploadedDocument.status).toBe('received');
+    expect(uploadedDocument.hasFile).toBe(true);
+    expect(uploadedDocument.submittedFileName).toBe('buyer-id.pdf');
+    expect(JSON.stringify(payload)).not.toContain('private-deal-document');
+
+    const downloaded = await caller.distribution.manager.downloadDealDocument({
+      dealId: seed.dealId,
+      templateId: seed.templateIds[0],
+    });
+    expect(downloaded.fileName).toBe('buyer-id.pdf');
+    expect(downloaded.mimeType).toBe('application/pdf');
+    expect(Buffer.from(downloaded.base64Content, 'base64').equals(fileBuffer)).toBe(true);
+
+    const outsiderCaller = buildCaller(seed.outsiderManagerUserId);
+    await expect(
+      outsiderCaller.distribution.manager.downloadDealDocument({
+        dealId: seed.dealId,
+        templateId: seed.templateIds[0],
+      }),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
   it('computes payout readiness true when all required docs are verified', async () => {
