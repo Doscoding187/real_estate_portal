@@ -10,6 +10,8 @@ import {
   type FeedTab,
 } from '@/components/location/LocationTrendingFeedSection';
 import { SuburbLocalProfessionals } from '@/components/location/SuburbLocalProfessionals';
+import { SuburbDevelopers } from '@/components/location/SuburbDevelopers';
+import { SuburbAgencies } from '@/components/location/SuburbAgencies';
 import { NearbyAmenitiesMap } from '@/components/location/NearbyAmenitiesMap';
 import { SuburbMarketInsights } from '@/components/location/SuburbMarketInsights';
 import { SuburbListingAlert } from '@/components/location/SuburbListingAlert';
@@ -56,6 +58,38 @@ function compareMedian(median: unknown, priced: unknown, minimumSample: unknown)
   return `${pricedCount.toLocaleString('en-ZA')} of ${sample.toLocaleString('en-ZA')} priced`;
 }
 
+function readCoordinate(value: unknown, limit: number): number | null {
+  const coordinate = Number(value);
+  if (!Number.isFinite(coordinate) || coordinate === 0) return null;
+  if (coordinate < -limit || coordinate > limit) return null;
+  return coordinate;
+}
+
+function distanceBetweenKm(
+  origin: [number, number] | null,
+  area: { latitude?: unknown; longitude?: unknown },
+): number | null {
+  if (!origin) return null;
+  const latitude = readCoordinate(area?.latitude, 90);
+  const longitude = readCoordinate(area?.longitude, 180);
+  if (latitude === null || longitude === null) return null;
+  const [originLatitude, originLongitude] = origin;
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const deltaLatitude = toRadians(latitude - originLatitude);
+  const deltaLongitude = toRadians(longitude - originLongitude);
+  const a =
+    Math.sin(deltaLatitude / 2) ** 2 +
+    Math.cos(toRadians(originLatitude)) *
+      Math.cos(toRadians(latitude)) *
+      Math.sin(deltaLongitude / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function compareDistance(distanceKm: number | null): string {
+  if (distanceKm === null) return '—';
+  return `${distanceKm < 10 ? distanceKm.toFixed(1) : Math.round(distanceKm).toLocaleString('en-ZA')} km`;
+}
+
 export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const provinceSlug = params.province.toLowerCase();
   const citySlug = params.city.toLowerCase();
@@ -64,6 +98,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const search = useSearch();
   const path = `/${provinceSlug}/${citySlug}/${suburbSlug}`;
   const [areaSearch, setAreaSearch] = useState('');
+  const [areaSort, setAreaSort] = useState<'nearest' | 'supply'>('nearest');
   const [imageFailed, setImageFailed] = useState(false);
   const [feedResolutions, setFeedResolutions] = useState<Partial<Record<FeedTab, FeedResolution>>>(
     {},
@@ -79,7 +114,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     { retry: false, staleTime: 300000 },
   );
   const cityQuery = trpc.locationPages.getCityData.useQuery(
-    { provinceSlug, citySlug, includeInventoryPreview: false },
+    { provinceSlug, citySlug, includeInventoryPreview: false, suburbLimit: 100 },
     { retry: false, staleTime: 300000 },
   );
 
@@ -91,6 +126,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
   const verifiedSuburb = isCanonicalSuburb ? suburb : undefined;
   const stats = suburbQuery.data?.stats;
   const marketInsights = suburbQuery.data?.marketInsights;
+  const suburbDevelopments = suburbQuery.data?.developments;
   const otherAreas = useMemo(() => {
     const rows = (cityQuery.data as any)?.suburbs;
     if (!Array.isArray(rows)) return [];
@@ -144,7 +180,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
         .filter((area: any) => area.name.toLocaleLowerCase().includes(query))
         .slice(0, 12);
     }
-    return otherAreas.slice(0, 12);
+    return otherAreas;
   }, [
     areaSearchQuery.data,
     areaSearchTerm,
@@ -174,6 +210,40 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     }
     return [latitude, longitude] as [number, number];
   }, [verifiedSuburb]);
+
+  const areasWithDistance = useMemo(
+    () =>
+      visibleAreas.map((area: any) => ({
+        area,
+        distanceKm: distanceBetweenKm(suburbCenter, area),
+      })),
+    [suburbCenter, visibleAreas],
+  );
+  const canSortAreasByDistance = useMemo(
+    () => Boolean(suburbCenter) || areasWithDistance.some(row => row.distanceKm !== null),
+    [areasWithDistance, suburbCenter],
+  );
+  const sortedAreas = useMemo(() => {
+    const rows = [...areasWithDistance];
+    const effectiveSort = canSortAreasByDistance ? areaSort : 'supply';
+    rows.sort((left, right) => {
+      if (effectiveSort === 'nearest') {
+        const leftDistance = left.distanceKm ?? Number.POSITIVE_INFINITY;
+        const rightDistance = right.distanceKm ?? Number.POSITIVE_INFINITY;
+        if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+      }
+      return (
+        Number(right.area.listingCount || 0) - Number(left.area.listingCount || 0) ||
+        String(left.area.name || '').localeCompare(String(right.area.name || ''))
+      );
+    });
+    return rows;
+  }, [areaSort, areasWithDistance, canSortAreasByDistance]);
+  const orderedByNearest =
+    canSortAreasByDistance &&
+    areaSort === 'nearest' &&
+    areasWithDistance.some(row => row.distanceKm !== null);
+  const visibleAreaCount = sortedAreas.length;
 
   const location = useMemo<LocationNode | undefined>(() => {
     if (!verifiedSuburb) return undefined;
@@ -252,8 +322,13 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
     ...(!hasRecordedListings ? [{ id: 'supply-guidance', label: 'Keep looking' }] : []),
     ...(context ? [{ id: 'city-context', label: 'City context' }] : []),
     ...(suburbCenter ? [{ id: 'local-area', label: 'Local area' }] : []),
-    { id: 'city-areas', label: 'Explore more areas' },
+    { id: 'guide-methodology', label: 'How this guide works' },
+    { id: 'faqs', label: 'FAQs' },
+    { id: 'developers', label: 'Developers' },
+    { id: 'agencies', label: 'Agencies' },
     { id: 'local-experts', label: 'Local agents' },
+    { id: 'city-areas', label: 'Explore more areas' },
+    { id: 'plan-your-move', label: 'Plan your move' },
   ];
 
   const guideUrl = cityGuide
@@ -271,6 +346,76 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
           },
         ]
       : [];
+
+  const faqs = useMemo(() => {
+    if (!verifiedSuburb) return [];
+    const name = verifiedSuburb.name;
+    const city = verifiedSuburb.cityName;
+    const province = verifiedSuburb.provinceName;
+    const sale = marketInsights?.sale;
+    const rent = marketInsights?.rent;
+    const sample = Number(marketInsights?.minimumPriceSample || 0);
+    const saleCount = Number(stats?.saleCount || 0);
+    const rentCount = Number(stats?.rentalCount || 0);
+
+    const saleCountAnswer =
+      saleCount > 0
+        ? `Property Listify currently publishes ${saleCount.toLocaleString('en-ZA')} eligible ${saleCount === 1 ? 'listing' : 'listings'} for sale in ${name}.`
+        : `No eligible resale listings for sale are published for ${name} right now. New listings can appear at any time.`;
+    const rentCountAnswer =
+      rentCount > 0
+        ? `Property Listify currently publishes ${rentCount.toLocaleString('en-ZA')} eligible ${rentCount === 1 ? 'listing' : 'listings'} to rent in ${name}.`
+        : `No eligible rental listings are published for ${name} right now. New listings can appear at any time.`;
+
+    const priceParts: string[] = [];
+    if (sale?.medianPrice) {
+      priceParts.push(
+        `The median asking price for sale listings is ${formatZARCompact(sale.medianPrice)}, based on ${sale.pricedListingCount.toLocaleString('en-ZA')} priced listings.`,
+      );
+    } else if (sale && sale.pricedListingCount > 0) {
+      priceParts.push(
+        `A median sale asking price is shown once at least ${sample.toLocaleString('en-ZA')} sale listings carry a price; ${sale.pricedListingCount.toLocaleString('en-ZA')} are priced so far.`,
+      );
+    } else {
+      priceParts.push('No sale listings with a published asking price are recorded right now.');
+    }
+    if (rent?.medianPrice) {
+      priceParts.push(
+        `The median monthly rent is ${formatZARCompact(rent.medianPrice)}, based on ${rent.pricedListingCount.toLocaleString('en-ZA')} priced rentals.`,
+      );
+    } else if (rent && rent.pricedListingCount > 0) {
+      priceParts.push(
+        `A median rent is shown once at least ${sample.toLocaleString('en-ZA')} rentals carry a price; ${rent.pricedListingCount.toLocaleString('en-ZA')} are priced so far.`,
+      );
+    }
+
+    return [
+      {
+        question: `Where is ${name}?`,
+        answer: `${name} is a suburb of ${city} in ${province}, South Africa. This guide covers homes for sale, rentals and new developments published for this exact suburb on Property Listify.`,
+      },
+      {
+        question: `How many homes are for sale in ${name}?`,
+        answer: saleCountAnswer,
+      },
+      {
+        question: `How many homes are available to rent in ${name}?`,
+        answer: rentCountAnswer,
+      },
+      {
+        question: `What is the median asking price in ${name}?`,
+        answer: priceParts.join(' '),
+      },
+      {
+        question: `Does Property Listify list every property in ${name}?`,
+        answer: `No. Counts and medians cover only eligible listings published on Property Listify at the snapshot time shown on this page. They are not a census of all homes in ${name} and do not measure buyer demand. Medians use published asking prices, never completed sale prices.`,
+      },
+      {
+        question: `How do I get notified about new listings in ${name}?`,
+        answer: `Use the listing alert on this page to save a weekly search for ${name}. You can choose email and in-app notifications, and manage saved searches from your dashboard.`,
+      },
+    ];
+  }, [marketInsights, stats, verifiedSuburb]);
 
   if (suburbQuery.isLoading) {
     return (
@@ -328,6 +473,21 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
             '@type': 'Place',
             name: titleName,
             url: toAbsoluteUrl(path),
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: verifiedSuburb.cityName,
+              addressRegion: verifiedSuburb.provinceName,
+              addressCountry: 'ZA',
+            },
+            ...(suburbCenter
+              ? {
+                  geo: {
+                    '@type': 'GeoCoordinates',
+                    latitude: suburbCenter[0],
+                    longitude: suburbCenter[1],
+                  },
+                }
+              : {}),
             containedInPlace: {
               '@type': 'City',
               name: verifiedSuburb.cityName,
@@ -344,6 +504,22 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
               { name: titleName, item: toAbsoluteUrl(path) },
             ].map((item, index) => ({ '@type': 'ListItem', position: index + 1, ...item })),
           },
+          ...(faqs.length > 0
+            ? [
+                {
+                  '@context': 'https://schema.org',
+                  '@type': 'FAQPage',
+                  mainEntity: faqs.map(faq => ({
+                    '@type': 'Question',
+                    name: faq.question,
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: faq.answer,
+                    },
+                  })),
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -538,7 +714,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 </span>
                 <strong>Compare nearby areas</strong>
                 <span>
-                  Suburbs with current published listings appear first in the{' '}
+                  Compare distance, current published supply and gated medians across the{' '}
                   {verifiedSuburb.cityName} directory.
                 </span>
               </a>
@@ -738,27 +914,100 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 </p>
                 <h2 id="suburb-guide-local-area-title">What’s around {verifiedSuburb.name}?</h2>
                 <p>
-                  Explore mapped schools, healthcare, shopping and transport around the suburb
-                  centre.
+                  Explore mapped schools, healthcare, shopping, transport and leisure around the
+                  suburb centre. Choose a 2, 5 or 10 km radius and filter the categories you care
+                  about.
                 </p>
               </div>
               <span className="suburb-guide-local-area__scope">
-                <MapPin size={15} aria-hidden="true" /> About 2 km from the area centre
+                <MapPin size={15} aria-hidden="true" /> Adjustable radius around the area centre
               </span>
             </div>
             <p className="suburb-guide-local-area__note">
               Nearby places are measured from the suburb’s mapped centre and may sit outside its
-              boundary. The map is for orientation; it does not show property addresses.
+              boundary. Only established, highly rated places are listed. The map is for
+              orientation; it does not show property addresses.
             </p>
             <NearbyAmenitiesMap
               center={suburbCenter}
-              radius={2}
               mapHeight={370}
               showControls={false}
               className="suburb-guide-local-area__map"
             />
           </section>
         ) : null}
+
+        <section
+          id="guide-methodology"
+          className="suburb-guide-methodology"
+          aria-labelledby="suburb-guide-methodology-title"
+        >
+          <div className="suburb-guide-section-heading">
+            <div>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                HOW THIS GUIDE IS PUT TOGETHER
+              </p>
+              <h2 id="suburb-guide-methodology-title">Reading the {verifiedSuburb.name} numbers</h2>
+            </div>
+          </div>
+          <ul className="suburb-guide-methodology__list">
+            <li>
+              <strong>Scope.</strong> Counts and medians cover eligible listings published for this
+              exact suburb on Property Listify. Project units and other suburbs are kept separate.
+            </li>
+            <li>
+              <strong>Prices.</strong> Figures use published asking prices, never completed sale
+              prices. A median appears only once at least{' '}
+              {Number(marketInsights?.minimumPriceSample || 10).toLocaleString('en-ZA')} listings in
+              that group carry a price.
+            </li>
+            <li>
+              <strong>Supply.</strong> Listing counts are a snapshot of current published inventory
+              at the date shown above, not a census of all homes in {verifiedSuburb.name}.
+            </li>
+            <li>
+              <strong>Nearby places.</strong> Amenities come from Google Places, are filtered to
+              established and highly rated education, healthcare, shopping, transport and leisure
+              places, and are measured from the suburb centre.
+            </li>
+          </ul>
+        </section>
+
+        <section id="faqs" className="suburb-guide-faqs" aria-labelledby="suburb-guide-faqs-title">
+          <div className="suburb-guide-section-heading">
+            <div>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">
+                {verifiedSuburb.name.toUpperCase()} · COMMON QUESTIONS
+              </p>
+              <h2 id="suburb-guide-faqs-title">Frequently asked questions</h2>
+              <p>
+                Straight answers about {verifiedSuburb.name} supply, asking prices and how this
+                guide is scoped.
+              </p>
+            </div>
+          </div>
+          <div className="suburb-guide-faqs__list">
+            {faqs.map(faq => (
+              <details key={faq.question} className="suburb-guide-faqs__item">
+                <summary>{faq.question}</summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <SuburbDevelopers
+          suburbName={verifiedSuburb.name}
+          cityName={verifiedSuburb.cityName}
+          provinceName={verifiedSuburb.provinceName}
+          developments={suburbDevelopments}
+          viewAllDevelopmentsHref={viewAllHref.developments}
+        />
+
+        <SuburbAgencies
+          suburbId={Number(verifiedSuburb.id)}
+          suburbName={verifiedSuburb.name}
+        />
 
         <div id="local-experts">
           <SuburbLocalProfessionals
@@ -779,8 +1028,9 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 More suburbs to compare in {verifiedSuburb.cityName}
               </h2>
               <p>
-                Open another suburb guide or search the verified city directory. Areas with more
-                current published listings appear first when inventory is available.
+                Open another suburb guide or search the verified city directory. Nearer suburbs
+                appear first by default; switch to current published supply when listing volume
+                matters more.
               </p>
             </div>
             <Link className="suburb-guide-section-link" href={guideUrl}>
@@ -834,89 +1084,120 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 Try again
               </button>
             </div>
-          ) : visibleAreas.length > 0 ? (
-            <div className="suburb-guide-compare-wrap">
-              <table className="suburb-guide-compare">
-                <caption className="sr-only">
-                  Current published supply and sample-gated asking-price medians for{' '}
-                  {verifiedSuburb.name} and nearby suburbs in {verifiedSuburb.cityName}
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Suburb</th>
-                    <th scope="col">For sale</th>
-                    <th scope="col">To rent</th>
-                    <th scope="col">Median sale</th>
-                    <th scope="col">Median rent</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="suburb-guide-compare__row suburb-guide-compare__row--current">
-                    <th scope="row">
-                      <span className="suburb-guide-compare__name">{verifiedSuburb.name}</span>
-                      <span className="suburb-guide-compare__badge">This guide</span>
-                    </th>
-                    <td>{compareCount(stats?.saleCount)}</td>
-                    <td>{compareCount(stats?.rentalCount)}</td>
-                    <td>
-                      {compareMedian(
-                        marketInsights?.sale.medianPrice,
-                        marketInsights?.sale.pricedListingCount,
-                        marketInsights?.minimumPriceSample,
-                      )}
-                    </td>
-                    <td>
-                      {compareMedian(
-                        marketInsights?.rent.medianPrice,
-                        marketInsights?.rent.pricedListingCount,
-                        marketInsights?.minimumPriceSample,
-                      )}
-                    </td>
-                  </tr>
-                  {visibleAreas.map((area: any) => (
-                    <tr key={area.id} className="suburb-guide-compare__row">
+          ) : visibleAreaCount > 0 ? (
+            <>
+              {canSortAreasByDistance ? (
+                <div className="suburb-guide-area-sort" role="group" aria-label="Order suburbs">
+                  <span>Order by</span>
+                  <button
+                    type="button"
+                    aria-pressed={areaSort === 'nearest'}
+                    onClick={() => setAreaSort('nearest')}
+                  >
+                    Nearest first
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={areaSort === 'supply'}
+                    onClick={() => setAreaSort('supply')}
+                  >
+                    Most listings
+                  </button>
+                </div>
+              ) : null}
+              <div className="suburb-guide-compare-wrap">
+                <table className="suburb-guide-compare">
+                  <caption className="sr-only">
+                    Current published supply and sample-gated asking-price medians for{' '}
+                    {verifiedSuburb.name} and other suburbs in {verifiedSuburb.cityName}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Suburb</th>
+                      <th scope="col">Distance</th>
+                      <th scope="col">For sale</th>
+                      <th scope="col">To rent</th>
+                      <th scope="col">Median sale</th>
+                      <th scope="col">Median rent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="suburb-guide-compare__row suburb-guide-compare__row--current">
                       <th scope="row">
-                        <Link
-                          className="suburb-guide-compare__link"
-                          href={
-                            area.guideHref ||
-                            area.canonicalPath ||
-                            `/${provinceSlug}/${citySlug}/${area.slug}`
-                          }
-                        >
-                          {area.name}
-                          <ArrowRight size={14} aria-hidden="true" />
-                        </Link>
+                        <span className="suburb-guide-compare__name">{verifiedSuburb.name}</span>
+                        <span className="suburb-guide-compare__badge">This guide</span>
                       </th>
-                      <td>{compareCount(area.propertiesForSale)}</td>
-                      <td>{compareCount(area.propertiesForRent)}</td>
+                      <td>—</td>
+                      <td>{compareCount(stats?.saleCount)}</td>
+                      <td>{compareCount(stats?.rentalCount)}</td>
                       <td>
                         {compareMedian(
-                          area.medianSalePrice,
-                          area.pricedListingsForSale,
-                          area.minimumPriceSample,
+                          marketInsights?.sale.medianPrice,
+                          marketInsights?.sale.pricedListingCount,
+                          marketInsights?.minimumPriceSample,
                         )}
                       </td>
                       <td>
                         {compareMedian(
-                          area.medianRentalPrice,
-                          area.pricedListingsForRent,
-                          area.minimumPriceSample,
+                          marketInsights?.rent.medianPrice,
+                          marketInsights?.rent.pricedListingCount,
+                          marketInsights?.minimumPriceSample,
                         )}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="suburb-guide-compare__note">
-                Counts are current published supply on Property Listify. Medians use published
-                asking prices and appear once the priced sample reaches
-                {comparisonSampleMinimum > 0
-                  ? ` ${comparisonSampleMinimum.toLocaleString('en-ZA')} listings`
-                  : ' the required size'}
-                ; other cells show the priced sample recorded so far.
-              </p>
-            </div>
+                    {sortedAreas.map(({ area, distanceKm }) => (
+                      <tr key={area.id} className="suburb-guide-compare__row">
+                        <th scope="row">
+                          <Link
+                            className="suburb-guide-compare__link"
+                            href={
+                              area.guideHref ||
+                              area.canonicalPath ||
+                              `/${provinceSlug}/${citySlug}/${area.slug}`
+                            }
+                          >
+                            {area.name}
+                            <ArrowRight size={14} aria-hidden="true" />
+                          </Link>
+                        </th>
+                        <td className="suburb-guide-compare__distance">
+                          {compareDistance(distanceKm)}
+                        </td>
+                        <td>{compareCount(area.propertiesForSale)}</td>
+                        <td>{compareCount(area.propertiesForRent)}</td>
+                        <td>
+                          {compareMedian(
+                            area.medianSalePrice,
+                            area.pricedListingsForSale,
+                            area.minimumPriceSample,
+                          )}
+                        </td>
+                        <td>
+                          {compareMedian(
+                            area.medianRentalPrice,
+                            area.pricedListingsForRent,
+                            area.minimumPriceSample,
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="suburb-guide-compare__note">
+                  Comparing {visibleAreaCount.toLocaleString('en-ZA')} other verified{' '}
+                  {visibleAreaCount === 1 ? 'suburb' : 'suburbs'} in {verifiedSuburb.cityName},{' '}
+                  {orderedByNearest
+                    ? 'nearest to this guide first'
+                    : 'ordered by current published supply'}
+                  . Counts are current published supply on Property Listify. Medians use published
+                  asking prices and appear once the priced sample reaches
+                  {comparisonSampleMinimum > 0
+                    ? ` ${comparisonSampleMinimum.toLocaleString('en-ZA')} listings`
+                    : ' the required size'}
+                  ; other cells show the priced sample recorded so far.
+                </p>
+              </div>
+            </>
           ) : (
             <p className="suburb-guide-area-empty">
               {isAreaSearchActive || areaSearchTerm.length > 0
@@ -924,6 +1205,45 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
                 : `No other verified suburb guides are listed under ${verifiedSuburb.cityName} yet.`}
             </p>
           )}
+        </section>
+
+        <section
+          id="plan-your-move"
+          className="suburb-guide-next-steps"
+          aria-labelledby="suburb-guide-next-steps-title"
+        >
+          <div className="suburb-guide-section-heading">
+            <div>
+              <p className="suburb-guide-eyebrow suburb-guide-eyebrow--blue">NEXT STEPS</p>
+              <h2 id="suburb-guide-next-steps-title">Plan your move in {verifiedSuburb.name}</h2>
+              <p>
+                Check affordability, widen the search across {verifiedSuburb.cityName}, or read the
+                city guide before you shortlist.
+              </p>
+            </div>
+          </div>
+          <div className="suburb-guide-next-steps__grid">
+            <Link href="/tools/bond-calculator" className="suburb-guide-next-steps__card">
+              <strong>Bond calculator</strong>
+              <span>Estimate a monthly repayment before you shortlist.</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href="/tools/affordability-calculator" className="suburb-guide-next-steps__card">
+              <strong>Affordability calculator</strong>
+              <span>Test buying power, deposit and monthly comfort.</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href={citySearchHref} className="suburb-guide-next-steps__card">
+              <strong>Search all of {verifiedSuburb.cityName}</strong>
+              <span>Keep the same journey and widen the area.</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+            <Link href={guideUrl} className="suburb-guide-next-steps__card">
+              <strong>{verifiedSuburb.cityName} city guide</strong>
+              <span>Compare suburbs and regional context in one place.</span>
+              <ArrowRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
         </section>
       </main>
     </SuburbGuideShell>

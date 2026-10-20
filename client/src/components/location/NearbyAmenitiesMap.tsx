@@ -4,66 +4,64 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { School, Hospital, ShoppingCart, Car, MapPin, Navigation, Star, Info } from 'lucide-react';
+import {
+  School,
+  Hospital,
+  ShoppingCart,
+  Bus,
+  Trees,
+  MapPin,
+  Navigation,
+  Star,
+  Info,
+} from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import {
+  NEARBY_AMENITY_CATEGORIES,
+  NEARBY_AMENITY_CATEGORY_CONFIG,
+  NEARBY_AMENITY_DEFAULT_LIMIT,
+  NEARBY_AMENITY_DEFAULT_RADIUS_METRES,
+  type NearbyAmenity,
+  type NearbyAmenityCategory,
+} from '@shared/nearbyAmenities';
 import 'leaflet/dist/leaflet.css';
-
-interface Amenity {
-  id: number;
-  name: string;
-  type:
-    | 'school'
-    | 'hospital'
-    | 'shopping'
-    | 'transport'
-    | 'restaurant'
-    | 'bank'
-    | 'park'
-    | 'university';
-  address: string;
-  latitude: number;
-  longitude: number;
-  distance: number;
-  rating?: number;
-}
 
 interface NearbyAmenitiesMapProps {
   center?: [number, number];
   radius?: number;
   mapHeight?: number;
   showControls?: boolean;
-  onAmenitySelect?: (amenity: Amenity) => void;
+  onAmenitySelect?: (amenity: NearbyAmenity) => void;
   className?: string;
 }
 
+const AMENITY_RADIUS_OPTIONS_KM = [2, 5, 10] as const;
+
 const amenityIcons = {
-  school: School,
-  hospital: Hospital,
+  education: School,
+  healthcare: Hospital,
   shopping: ShoppingCart,
-  transport: Car,
-  restaurant: MapPin,
-  bank: MapPin,
-  park: MapPin,
-  university: School,
-};
+  transport: Bus,
+  lifestyle: Trees,
+} satisfies Record<NearbyAmenityCategory, typeof MapPin>;
 
 const amenityColors = {
-  school: 'text-blue-600',
-  hospital: 'text-red-600',
+  education: 'text-blue-600',
+  healthcare: 'text-red-600',
   shopping: 'text-green-600',
   transport: 'text-purple-600',
-  restaurant: 'text-orange-600',
-  bank: 'text-yellow-600',
-  park: 'text-emerald-600',
-  university: 'text-indigo-600',
-};
+  lifestyle: 'text-emerald-600',
+} satisfies Record<NearbyAmenityCategory, string>;
+
+const categoryLabels = Object.fromEntries(
+  NEARBY_AMENITY_CATEGORY_CONFIG.map(config => [config.id, config.label]),
+) as Record<NearbyAmenityCategory, string>;
 
 export function NearbyAmenitiesMap({
   center = [-26.2041, 28.0473], // Johannesburg default
-  radius = 2,
+  radius = NEARBY_AMENITY_DEFAULT_RADIUS_METRES / 1000,
   mapHeight = 500,
   showControls = true,
   onAmenitySelect,
@@ -71,39 +69,43 @@ export function NearbyAmenitiesMap({
 }: NearbyAmenitiesMapProps) {
   const [mapCenter, setMapCenter] = useState(center);
   const [searchRadius, setSearchRadius] = useState(radius);
-  const [enabledTypes, setEnabledTypes] = useState<Record<string, boolean>>({
-    school: true,
-    hospital: true,
-    shopping: true,
-    transport: true,
-    restaurant: false,
-    bank: false,
-    park: false,
-    university: false,
-  });
-  const [amenities, setAmenities] = useState<Amenity[]>([]);
-  const [selectedAmenity, setSelectedAmenity] = useState<Amenity | null>(null);
+  const [enabledCategories, setEnabledCategories] = useState<
+    Record<NearbyAmenityCategory, boolean>
+  >(
+    () =>
+      Object.fromEntries(NEARBY_AMENITY_CATEGORIES.map(category => [category, true])) as Record<
+        NearbyAmenityCategory,
+        boolean
+      >,
+  );
+  const [amenities, setAmenities] = useState<NearbyAmenity[]>([]);
+  const [selectedAmenity, setSelectedAmenity] = useState<NearbyAmenity | null>(null);
 
-  const getNearbyAmenities = trpc.location.getNearbyAmenities.useQuery({
-    latitude: mapCenter[0],
-    longitude: mapCenter[1],
-    radius: searchRadius * 1000,
-    types: Object.entries(enabledTypes)
-      .filter(([_, enabled]) => enabled)
-      .map(([type]) => type),
-    limit: 50,
-  }, { retry: false });
+  const selectedCategories = NEARBY_AMENITY_CATEGORIES.filter(
+    category => enabledCategories[category],
+  );
+
+  const getNearbyAmenities = trpc.location.getNearbyAmenities.useQuery(
+    {
+      latitude: mapCenter[0],
+      longitude: mapCenter[1],
+      radius: searchRadius * 1000,
+      categories: selectedCategories,
+      limit: NEARBY_AMENITY_DEFAULT_LIMIT,
+    },
+    { retry: false, enabled: selectedCategories.length > 0 },
+  );
 
   // Handle map move
   const handleMapMove = useCallback((newCenter: [number, number]) => {
     setMapCenter(newCenter);
   }, []);
 
-  // Update enabled types
-  const toggleAmenityType = useCallback((type: string) => {
-    setEnabledTypes(prev => ({
-      ...prev,
-      [type]: !prev[type],
+  // Update enabled categories
+  const toggleAmenityType = useCallback((category: NearbyAmenityCategory) => {
+    setEnabledCategories(previous => ({
+      ...previous,
+      [category]: !previous[category],
     }));
   }, []);
 
@@ -127,16 +129,62 @@ export function NearbyAmenitiesMap({
     }
   }, []);
 
-  // Get icon component for amenity type
-  const getAmenityIcon = (type: string) => {
-    const IconComponent = amenityIcons[type as keyof typeof amenityIcons] || MapPin;
+  // Get icon component for amenity category
+  const getAmenityIcon = (category: NearbyAmenityCategory) => {
+    const IconComponent = amenityIcons[category] || MapPin;
     return <IconComponent className="h-4 w-4" />;
   };
 
-  // Get color class for amenity type
-  const getAmenityColor = (type: string) => {
-    return amenityColors[type as keyof typeof amenityColors] || 'text-gray-600';
+  // Get color class for amenity category
+  const getAmenityColor = (category: NearbyAmenityCategory) => {
+    return amenityColors[category] || 'text-gray-600';
   };
+
+  const radiusOptions = (
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Search radius">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Radius
+      </span>
+      {AMENITY_RADIUS_OPTIONS_KM.map(option => (
+        <Button
+          key={option}
+          type="button"
+          size="sm"
+          variant={searchRadius === option ? 'default' : 'outline'}
+          aria-pressed={searchRadius === option}
+          onClick={() => updateRadius(option)}
+        >
+          {option} km
+        </Button>
+      ))}
+    </div>
+  );
+
+  const categoryChips = (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Amenity categories">
+      {NEARBY_AMENITY_CATEGORIES.map(category => {
+        const enabled = enabledCategories[category];
+        return (
+          <button
+            key={category}
+            type="button"
+            aria-pressed={enabled}
+            onClick={() => toggleAmenityType(category)}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+              enabled
+                ? 'border-primary/30 bg-primary/10 text-foreground'
+                : 'border-border bg-background text-muted-foreground hover:bg-muted/60'
+            }`}
+          >
+            <span className={enabled ? getAmenityColor(category) : 'text-muted-foreground'}>
+              {getAmenityIcon(category)}
+            </span>
+            {categoryLabels[category]}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   useEffect(() => {
     if (getNearbyAmenities.data) {
@@ -147,7 +195,7 @@ export function NearbyAmenitiesMap({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Controls Panel */}
-      {showControls && (
+      {showControls ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -173,21 +221,7 @@ export function NearbyAmenitiesMap({
               </Button>
             </div>
 
-            {/* Radius Control */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Search Radius</Label>
-                <span className="text-sm text-muted-foreground">{searchRadius}km</span>
-              </div>
-              <Slider
-                value={[searchRadius]}
-                onValueChange={([value]) => updateRadius(value)}
-                max={10}
-                min={0.5}
-                step={0.5}
-                className="w-full"
-              />
-            </div>
+            {radiusOptions}
 
             <Separator />
 
@@ -195,19 +229,19 @@ export function NearbyAmenitiesMap({
             <div className="space-y-3">
               <Label>Amenity Types</Label>
               <div className="grid grid-cols-2 gap-2">
-                {Object.entries(enabledTypes).map(([type, enabled]) => (
-                  <div key={type} className="flex items-center space-x-2">
+                {NEARBY_AMENITY_CATEGORIES.map(category => (
+                  <div key={category} className="flex items-center space-x-2">
                     <Switch
-                      checked={enabled}
-                      onCheckedChange={() => toggleAmenityType(type)}
-                      id={`amenity-${type}`}
+                      checked={enabledCategories[category]}
+                      onCheckedChange={() => toggleAmenityType(category)}
+                      id={`amenity-${category}`}
                     />
                     <Label
-                      htmlFor={`amenity-${type}`}
-                      className="text-sm flex items-center gap-2 capitalize"
+                      htmlFor={`amenity-${category}`}
+                      className="text-sm flex items-center gap-2"
                     >
-                      {getAmenityIcon(type)}
-                      {type}
+                      {getAmenityIcon(category)}
+                      {categoryLabels[category]}
                     </Label>
                   </div>
                 ))}
@@ -216,11 +250,24 @@ export function NearbyAmenitiesMap({
 
             {/* Results Summary */}
             <div className="text-sm text-muted-foreground">
-              Found {amenities.length} amenities within {searchRadius}km
+              {selectedCategories.length === 0
+                ? 'Select at least one amenity type.'
+                : `Found ${amenities.length} places within ${searchRadius}km`}
             </div>
           </CardContent>
         </Card>
+      ) : (
+        <div className="flex flex-col gap-3 rounded-xl border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+          {radiusOptions}
+          <div className="text-sm text-muted-foreground">
+            {selectedCategories.length === 0
+              ? 'Select at least one category.'
+              : `${amenities.length} places within ${searchRadius} km`}
+          </div>
+        </div>
       )}
+
+      {!showControls ? categoryChips : null}
 
       {/* Map */}
       <Card className="overflow-hidden">
@@ -254,8 +301,8 @@ export function NearbyAmenitiesMap({
                 <Popup className="amenity-popup">
                   <div className="p-2 min-w-[200px]">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={getAmenityColor(amenity.type)}>
-                        {getAmenityIcon(amenity.type)}
+                      <span className={getAmenityColor(amenity.category)}>
+                        {getAmenityIcon(amenity.category)}
                       </span>
                       <h3 className="font-semibold">{amenity.name}</h3>
                     </div>
@@ -263,18 +310,23 @@ export function NearbyAmenitiesMap({
                     <div className="space-y-1 text-sm">
                       <p className="text-muted-foreground">{amenity.address}</p>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs bg-muted px-2 py-1 rounded capitalize">
-                          {amenity.type}
+                        <span className="text-xs bg-muted px-2 py-1 rounded">
+                          {categoryLabels[amenity.category]}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {amenity.distance}km away
+                          {amenity.distance} away
                         </span>
                       </div>
 
-                      {amenity.rating && (
+                      {amenity.rating !== null && (
                         <div className="flex items-center gap-1">
                           <Star className="h-3 w-3 text-yellow-500 fill-current" />
                           <span className="text-xs">{amenity.rating.toFixed(1)}</span>
+                          {amenity.userRatingsTotal !== null ? (
+                            <span className="text-xs text-muted-foreground">
+                              ({amenity.userRatingsTotal.toLocaleString('en-ZA')})
+                            </span>
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -293,8 +345,8 @@ export function NearbyAmenitiesMap({
             <CardTitle className="text-lg">Nearby Amenities ({amenities.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 max-h-64 overflow-y-auto">
-            {amenities
-              .sort((a, b) => a.distance - b.distance)
+            {[...amenities]
+              .sort((a, b) => a.distanceValue - b.distanceValue)
               .map(amenity => (
                 <div
                   key={amenity.id}
@@ -311,8 +363,8 @@ export function NearbyAmenitiesMap({
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={getAmenityColor(amenity.type)}>
-                          {getAmenityIcon(amenity.type)}
+                        <span className={getAmenityColor(amenity.category)}>
+                          {getAmenityIcon(amenity.category)}
                         </span>
                         <h4 className="font-medium">{amenity.name}</h4>
                       </div>
@@ -320,14 +372,19 @@ export function NearbyAmenitiesMap({
                       <p className="text-sm text-muted-foreground mb-2">{amenity.address}</p>
 
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {amenity.type}
+                        <Badge variant="outline" className="text-xs">
+                          {categoryLabels[amenity.category]}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">{amenity.distance}km</span>
-                        {amenity.rating && (
+                        <span className="text-xs text-muted-foreground">{amenity.distance}</span>
+                        {amenity.rating !== null && (
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3 text-yellow-500 fill-current" />
                             <span className="text-xs">{amenity.rating.toFixed(1)}</span>
+                            {amenity.userRatingsTotal !== null ? (
+                              <span className="text-xs text-muted-foreground">
+                                ({amenity.userRatingsTotal.toLocaleString('en-ZA')})
+                              </span>
+                            ) : null}
                           </div>
                         )}
                       </div>
@@ -340,15 +397,26 @@ export function NearbyAmenitiesMap({
       )}
 
       {/* No results message */}
-      {amenities.length === 0 && getNearbyAmenities.isSuccess && (
+      {selectedCategories.length > 0 && amenities.length === 0 && getNearbyAmenities.isSuccess && (
         <Card>
           <CardContent className="p-6 text-center">
             <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-muted-foreground">
-              No amenities found within {searchRadius}km of this location.
+              No qualifying places found within {searchRadius}km of this location.
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Try increasing the search radius or enabling more amenity types.
+              Try a wider radius or enabling more amenity categories.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedCategories.length === 0 && (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <Info className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-muted-foreground">
+              Turn on at least one category to see nearby places.
             </p>
           </CardContent>
         </Card>
@@ -361,8 +429,8 @@ export function NearbyAmenitiesMap({
             <div>
               <p className="font-medium">Nearby places are unavailable right now.</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                The map still shows the area, but we couldn’t load amenity details. Please try
-                again shortly.
+                The map still shows the area, but we couldn’t load amenity details. Please try again
+                shortly.
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => getNearbyAmenities.refetch()}>
@@ -381,6 +449,11 @@ export function NearbyAmenitiesMap({
           </CardContent>
         </Card>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        Places data © Google. Only established, highly rated places are shown; results are measured
+        from the map centre and may sit outside the suburb boundary.
+      </p>
     </div>
   );
 }

@@ -116,6 +116,131 @@ function groupPropertiesByLocation(
   return grouped;
 }
 
+export type SuburbDevelopmentTypeMix = {
+  residential: number;
+  mixed_use: number;
+  commercial: number;
+  land: number;
+};
+
+export type SuburbDevelopmentStatusMix = {
+  'launching-soon': number;
+  selling: number;
+  'sold-out': number;
+};
+
+export type SuburbDevelopmentPublisher = {
+  id: number;
+  name: string;
+  slug: string | null;
+  logoUrl: string | null;
+  authorityKind: string | null;
+  developmentCount: number;
+};
+
+export type SuburbDevelopmentSummary = {
+  total: number;
+  byType: SuburbDevelopmentTypeMix;
+  byStatus: SuburbDevelopmentStatusMix;
+  priceFromMinimum: number | null;
+  priceToMaximum: number | null;
+  publishers: SuburbDevelopmentPublisher[];
+};
+
+export const EMPTY_SUBURB_DEVELOPMENT_SUMMARY: SuburbDevelopmentSummary = {
+  total: 0,
+  byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+  byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+  priceFromMinimum: null,
+  priceToMaximum: null,
+  publishers: [],
+};
+
+async function loadSuburbDevelopmentSummary(
+  db: any,
+  scope: { suburbName: string; suburbId: number; cityName: string },
+): Promise<SuburbDevelopmentSummary> {
+  const rows = await db
+    .select({
+      id: developments.id,
+      developmentType: developments.developmentType,
+      status: developments.status,
+      priceFrom: developments.priceFrom,
+      priceTo: developments.priceTo,
+      publisherId: cataloguePublishers.id,
+      publisherName: cataloguePublishers.name,
+      publisherSlug: cataloguePublishers.slug,
+      publisherLogoUrl: cataloguePublishers.logoUrl,
+      publisherAuthorityKind: cataloguePublishers.authorityKind,
+    })
+    .from(developments)
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
+    .where(
+      and(
+        sql`TRIM(LOWER(${developments.suburb})) = LOWER(${scope.suburbName})`,
+        sql`(TRIM(LOWER(${developments.city})) = LOWER(${scope.cityName}) OR ${developments.locationId} = ${scope.suburbId})`,
+        publicDevelopmentEligibilityConditions(),
+      ),
+    )
+    .limit(200);
+
+  const summary: SuburbDevelopmentSummary = {
+    total: rows.length,
+    byType: { residential: 0, mixed_use: 0, commercial: 0, land: 0 },
+    byStatus: { 'launching-soon': 0, selling: 0, 'sold-out': 0 },
+    priceFromMinimum: null,
+    priceToMaximum: null,
+    publishers: [],
+  };
+  const publishersById = new Map<number, SuburbDevelopmentPublisher>();
+
+  rows.forEach((row: any) => {
+    const type = String(row.developmentType || '') as keyof SuburbDevelopmentTypeMix;
+    if (type in summary.byType) summary.byType[type] += 1;
+    const status = String(row.status || '') as keyof SuburbDevelopmentStatusMix;
+    if (status in summary.byStatus) summary.byStatus[status] += 1;
+
+    const priceFrom = Number(row.priceFrom || 0);
+    if (priceFrom > 0) {
+      summary.priceFromMinimum =
+        summary.priceFromMinimum === null
+          ? priceFrom
+          : Math.min(summary.priceFromMinimum, priceFrom);
+    }
+    const priceTo = Number(row.priceTo || 0);
+    if (priceTo > 0) {
+      summary.priceToMaximum =
+        summary.priceToMaximum === null ? priceTo : Math.max(summary.priceToMaximum, priceTo);
+    }
+
+    const publisherId = Number(row.publisherId || 0);
+    const publisherName = String(row.publisherName || '').trim();
+    if (!publisherId || !publisherName) return;
+    const existing = publishersById.get(publisherId);
+    if (existing) {
+      existing.developmentCount += 1;
+      return;
+    }
+    publishersById.set(publisherId, {
+      id: publisherId,
+      name: publisherName,
+      slug: row.publisherSlug ? String(row.publisherSlug) : null,
+      logoUrl: row.publisherLogoUrl ? String(row.publisherLogoUrl) : null,
+      authorityKind: row.publisherAuthorityKind ? String(row.publisherAuthorityKind) : null,
+      developmentCount: 1,
+    });
+  });
+
+  summary.publishers = [...publishersById.values()]
+    .sort(
+      (left, right) =>
+        right.developmentCount - left.developmentCount || left.name.localeCompare(right.name),
+    )
+    .slice(0, 8);
+
+  return summary;
+}
+
 export const locationPagesService = {
   async getPopularCities(limit = 12) {
     const db = await getDb();
@@ -200,10 +325,7 @@ export const locationPagesService = {
         eq(properties.provinceId, province.id),
       );
     } catch (error) {
-      console.warn(
-        '[LocationPages] Public property eligibility failed for province',
-        error,
-      );
+      console.warn('[LocationPages] Public property eligibility failed for province', error);
       throw error;
     }
 
@@ -258,10 +380,7 @@ export const locationPagesService = {
         )
         .limit(6);
     } catch (error) {
-      console.warn(
-        '[LocationPages] Developments query failed for province',
-        error,
-      );
+      console.warn('[LocationPages] Developments query failed for province', error);
       throw error;
     }
 
@@ -290,10 +409,7 @@ export const locationPagesService = {
         )
         .slice(0, 10);
     } catch (error) {
-      console.warn(
-        '[LocationPages] Trending suburbs query failed for province',
-        error,
-      );
+      console.warn('[LocationPages] Trending suburbs query failed for province', error);
       throw error;
     }
 
@@ -317,7 +433,7 @@ export const locationPagesService = {
   async getCityData(
     provinceSlug: string,
     citySlug: string,
-    options?: { includeInventoryPreview?: boolean },
+    options?: { includeInventoryPreview?: boolean; suburbLimit?: number },
   ) {
     console.log(
       `[LocationPages] getCityData called with: provinceSlug="${provinceSlug}", citySlug="${citySlug}"`,
@@ -368,6 +484,8 @@ export const locationPagesService = {
           id: suburbs.id,
           name: suburbs.name,
           slug: suburbs.slug,
+          latitude: suburbs.latitude,
+          longitude: suburbs.longitude,
         })
         .from(suburbs)
         .where(eq(suburbs.cityId, city.id))
@@ -402,7 +520,7 @@ export const locationPagesService = {
           (left, right) =>
             right.listingCount - left.listingCount || left.name.localeCompare(right.name),
         )
-        .slice(0, 12);
+        .slice(0, Math.min(Math.max(options?.suburbLimit ?? 12, 1), 200));
 
       console.log(`[LocationPages] Found ${suburbList.length} suburbs`);
 
@@ -542,10 +660,7 @@ export const locationPagesService = {
         eq(properties.suburbId, suburb.id),
       );
     } catch (error) {
-      console.warn(
-        '[LocationPages] Public property eligibility failed for suburb',
-        error,
-      );
+      console.warn('[LocationPages] Public property eligibility failed for suburb', error);
       throw error;
     }
 
@@ -558,6 +673,17 @@ export const locationPagesService = {
       eligibleProperties.map(property => getPublicPropertyMarketFact(property.resolution)),
     );
 
+    let suburbDevelopments = EMPTY_SUBURB_DEVELOPMENT_SUMMARY;
+    try {
+      suburbDevelopments = await loadSuburbDevelopmentSummary(db, {
+        suburbName: suburb.name,
+        suburbId: Number(suburb.id),
+        cityName: suburb.cityName,
+      });
+    } catch (error) {
+      console.warn('[LocationPages] Suburb development summary failed', error);
+    }
+
     return {
       suburb,
       stats: {
@@ -567,6 +693,7 @@ export const locationPagesService = {
         saleCount,
       },
       marketInsights,
+      developments: suburbDevelopments,
     };
   },
 };

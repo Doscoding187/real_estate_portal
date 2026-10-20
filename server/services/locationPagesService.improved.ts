@@ -18,7 +18,7 @@ export const locationPagesService = {
   async getCityData(
     provinceSlug: string,
     citySlug: string,
-    options?: { includeInventoryPreview?: boolean },
+    options?: { includeInventoryPreview?: boolean; suburbLimit?: number },
   ) {
     return await baseLocationPagesService.getCityData(provinceSlug, citySlug, options);
   },

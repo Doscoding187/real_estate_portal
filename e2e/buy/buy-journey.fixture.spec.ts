@@ -372,8 +372,18 @@ async function installBuyFixture(page: Page, onLeadCapture?: () => void) {
           return trpcResult([]);
         case 'location.getNearbyAmenities':
           return trpcResult([
-            { id: 'poi-1', name: 'Parkhurst Primary School', type: 'school', distance: '1.2 km' },
-            { id: 'poi-2', name: 'Rosebank Clinic', type: 'hospital', distance: '2.8 km' },
+            {
+              id: 'poi-1',
+              name: 'Parkhurst Primary School',
+              category: 'education',
+              distance: '1.2 km',
+            },
+            {
+              id: 'poi-2',
+              name: 'Rosebank Clinic',
+              category: 'healthcare',
+              distance: '2.8 km',
+            },
           ]);
         case 'leads.create':
           onLeadCapture?.();

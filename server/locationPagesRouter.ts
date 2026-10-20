@@ -80,11 +80,13 @@ export const locationPagesRouter = router({
         provinceSlug: z.string(),
         citySlug: z.string(),
         includeInventoryPreview: z.boolean().optional(),
+        suburbLimit: z.number().int().min(1).max(200).optional(),
       }),
     )
     .query(async ({ input }) => {
       return await locationPagesService.getCityData(input.provinceSlug, input.citySlug, {
         includeInventoryPreview: input.includeInventoryPreview,
+        suburbLimit: input.suburbLimit,
       });
     }),
 

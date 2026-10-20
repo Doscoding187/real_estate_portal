@@ -4,6 +4,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 const mocks = vi.hoisted(() => ({
   feedInputs: [] as Array<{ tab: string; suburb?: string }>,
   suburbInputs: [] as Array<{ provinceSlug: string; citySlug: string; suburbSlug: string }>,
+  cityInputs: [] as Array<Record<string, unknown>>,
   suburbData: null as Record<string, unknown> | null,
   feedItems: {} as Record<string, Array<Record<string, unknown>>>,
   alertMutations: [] as Array<{
@@ -30,55 +31,67 @@ vi.mock('@/lib/trpc', () => ({
         },
       },
       getCityData: {
-        useQuery: () => ({
-          data: {
-            city: { id: 4 },
-            suburbs: [
-              {
-                id: 81,
-                name: 'Sandton',
-                slug: 'sandton',
-                listingCount: 8,
-                propertiesForSale: 5,
-                propertiesForRent: 3,
-              },
-              {
-                id: 82,
-                name: 'Rosebank',
-                slug: 'rosebank',
-                listingCount: 4,
-                propertiesForSale: 3,
-                propertiesForRent: 1,
-                minimumPriceSample: 10,
-                medianSalePrice: 3_200_000,
-                pricedListingsForSale: 12,
-                medianRentalPrice: null,
-                pricedListingsForRent: 2,
-              },
-              {
-                id: 83,
-                name: 'Bryanston',
-                slug: 'bryanston',
-                listingCount: 0,
-                propertiesForSale: 0,
-                propertiesForRent: 0,
-                minimumPriceSample: 10,
-                medianSalePrice: null,
-                pricedListingsForSale: 0,
-                medianRentalPrice: null,
-                pricedListingsForRent: 0,
-              },
-            ],
-          },
-          isLoading: false,
-          isError: false,
-          refetch: vi.fn(),
-        }),
+        useQuery: (input: Record<string, unknown>) => {
+          mocks.cityInputs.push(input);
+          return {
+            data: {
+              city: { id: 4 },
+              suburbs: [
+                {
+                  id: 81,
+                  name: 'Sandton',
+                  slug: 'sandton',
+                  listingCount: 8,
+                  propertiesForSale: 5,
+                  propertiesForRent: 3,
+                },
+                {
+                  id: 82,
+                  name: 'Rosebank',
+                  slug: 'rosebank',
+                  listingCount: 4,
+                  propertiesForSale: 3,
+                  propertiesForRent: 1,
+                  minimumPriceSample: 10,
+                  medianSalePrice: 3_200_000,
+                  pricedListingsForSale: 12,
+                  medianRentalPrice: null,
+                  pricedListingsForRent: 2,
+                  latitude: '-26.1600',
+                  longitude: '28.0600',
+                },
+                {
+                  id: 83,
+                  name: 'Bryanston',
+                  slug: 'bryanston',
+                  listingCount: 0,
+                  propertiesForSale: 0,
+                  propertiesForRent: 0,
+                  minimumPriceSample: 10,
+                  medianSalePrice: null,
+                  pricedListingsForSale: 0,
+                  medianRentalPrice: null,
+                  pricedListingsForRent: 0,
+                  latitude: '-26.1120',
+                  longitude: '28.0570',
+                },
+              ],
+            },
+            isLoading: false,
+            isError: false,
+            refetch: vi.fn(),
+          };
+        },
       },
     },
     location: {
       searchLocations: {
         useQuery: () => ({ data: [], isFetching: false, isError: false, refetch: vi.fn() }),
+      },
+    },
+    monetization: {
+      getRecommendedAgents: {
+        useQuery: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
       },
     },
     savedSearch: {
@@ -133,6 +146,9 @@ vi.mock('@/components/seo/MetaControl', () => ({ MetaControl: () => null }));
 vi.mock('@/components/location/SuburbLocalProfessionals', () => ({
   SuburbLocalProfessionals: () => <section aria-label="Local agents" />,
 }));
+vi.mock('@/components/location/SuburbAgencies', () => ({
+  SuburbAgencies: () => <section aria-label="Local agencies" />,
+}));
 vi.mock('@/components/location/NearbyAmenitiesMap', () => ({
   NearbyAmenitiesMap: () => <div aria-label="Nearby amenity map" />,
 }));
@@ -185,6 +201,23 @@ function suburbData(name: string, slug: string) {
     },
     stats: { totalListings: 8, saleCount: 5, rentalCount: 3 },
     marketInsights,
+    developments: {
+      total: 4,
+      byType: { residential: 3, mixed_use: 1, commercial: 0, land: 0 },
+      byStatus: { 'launching-soon': 1, selling: 2, 'sold-out': 1 },
+      priceFromMinimum: 1_250_000,
+      priceToMaximum: 4_800_000,
+      publishers: [
+        {
+          id: 1,
+          name: 'Sandton Developments',
+          slug: 'sandton-developments',
+          logoUrl: null,
+          authorityKind: 'developer_first_party',
+          developmentCount: 3,
+        },
+      ],
+    },
     listings: [],
   };
 }
@@ -240,6 +273,7 @@ describe('SuburbGuidePage transaction lanes', () => {
   beforeEach(() => {
     mocks.feedInputs.length = 0;
     mocks.suburbInputs.length = 0;
+    mocks.cityInputs.length = 0;
     mocks.alertMutations.length = 0;
     mocks.setLocationCalls.length = 0;
     mocks.authState.isAuthenticated = false;
@@ -429,7 +463,7 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(within(table).getByText('3 of 5 priced')).toBeInTheDocument();
     expect(within(table).getByText('R3.2M')).toBeInTheDocument();
     expect(within(table).getByText('2 of 10 priced')).toBeInTheDocument();
-    expect(within(table).getAllByText('—')).toHaveLength(2);
+    expect(within(table).getAllByText('—')).toHaveLength(3);
     expect(within(table).getByRole('link', { name: /Rosebank/ })).toHaveAttribute(
       'href',
       '/gauteng/johannesburg/rosebank',
@@ -437,6 +471,80 @@ describe('SuburbGuidePage transaction lanes', () => {
     expect(within(table).getByRole('link', { name: /Bryanston/ })).toHaveAttribute(
       'href',
       '/gauteng/johannesburg/bryanston',
+    );
+    expect(within(rows[2]).getByRole('link', { name: /Bryanston/ })).toBeInTheDocument();
+    expect(within(rows[2]).getByText('0.5 km')).toBeInTheDocument();
+    expect(within(rows[3]).getByRole('link', { name: /Rosebank/ })).toBeInTheDocument();
+    expect(within(rows[3]).getByText('5.8 km')).toBeInTheDocument();
+    expect(within(table).getByText('Distance')).toBeInTheDocument();
+  });
+
+  it('switches comparison ordering between distance and published supply', () => {
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    const table = within(container.querySelector('#city-areas') as HTMLElement).getByRole('table');
+    const nearestButton = screen.getByRole('button', { name: 'Nearest first' });
+    const supplyButton = screen.getByRole('button', { name: 'Most listings' });
+    expect(nearestButton).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      within(within(table).getAllByRole('row')[2]).getByRole('link', { name: /Bryanston/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(supplyButton);
+
+    const reorderedRows = within(table).getAllByRole('row');
+    expect(supplyButton).toHaveAttribute('aria-pressed', 'true');
+    expect(nearestButton).toHaveAttribute('aria-pressed', 'false');
+    expect(within(reorderedRows[2]).getByRole('link', { name: /Rosebank/ })).toBeInTheDocument();
+    expect(screen.getByText(/ordered by current published supply/)).toBeInTheDocument();
+  });
+
+  it('shows the development market and agencies in the guide navigation', () => {
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(container.querySelector('#developers')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Developers in Sandton' })).toBeInTheDocument();
+    expect(screen.getByText('What is being built in Sandton')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Sandton Developments/ })).toHaveAttribute(
+      'href',
+      '/developer/sandton-developments',
+    );
+    expect(container.querySelector('.suburb-guide-quick-nav')).toHaveTextContent('Developers');
+    expect(container.querySelector('.suburb-guide-quick-nav')).toHaveTextContent('Agencies');
+  });
+
+  it('adds data-backed FAQs, methodology and planning links for depth and discovery', () => {
+    const { container } = render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(container.querySelector('#guide-methodology')).not.toBeNull();
+    expect(container.querySelector('#faqs')).not.toBeNull();
+    expect(screen.getByText('Where is Sandton?')).toBeInTheDocument();
+    expect(
+      screen.getByText(/median asking price for sale listings is R2\.8M/i),
+    ).toBeInTheDocument();
+    expect(
+      within(container.querySelector('#faqs') as HTMLElement).getByText(
+        /not a census of all homes/i,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Bond calculator')).toBeInTheDocument();
+    expect(screen.getByText('Affordability calculator')).toBeInTheDocument();
+    expect(container.querySelector('.suburb-guide-quick-nav')).toHaveTextContent('FAQs');
+  });
+
+  it('requests the full verified suburb directory for comparison links', () => {
+    render(
+      <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
+    );
+
+    expect(mocks.cityInputs).toContainEqual(
+      expect.objectContaining({ suburbLimit: 100, includeInventoryPreview: false }),
     );
   });
 

@@ -776,8 +776,10 @@ export class GooglePlacesService {
         address: place.vicinity,
         latitude: place.geometry.location.lat,
         longitude: place.geometry.location.lng,
-        rating: place.rating,
-        user_ratings_total: place.user_ratings_total,
+        rating: typeof place.rating === 'number' ? place.rating : null,
+        user_ratings_total:
+          typeof place.user_ratings_total === 'number' ? place.user_ratings_total : null,
+        types: Array.isArray(place.types) ? place.types : [],
         place_id: place.place_id,
       }));
 
