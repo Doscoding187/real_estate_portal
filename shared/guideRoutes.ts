@@ -1,4 +1,5 @@
 import { CITY_GUIDE_CONTENT } from './cityGuideContent';
+import { COUNTRY_DISCOVERY_PATH } from './countryDiscovery';
 import { PROVINCE_GUIDE_CONTENT } from './provinceGuideContent';
 import { SUBURB_GUIDE_PILOT } from './suburbGuidePolicy';
 
@@ -11,6 +12,7 @@ import { SUBURB_GUIDE_PILOT } from './suburbGuidePolicy';
  * province, city or suburb row does not create a guide route.
  */
 export const GUIDE_HTML_ROUTES: readonly string[] = [
+  COUNTRY_DISCOVERY_PATH.replace(/^\//, ''),
   ...PROVINCE_GUIDE_CONTENT.map(guide => guide.slug),
   ...CITY_GUIDE_CONTENT.map(guide => `${guide.provinceSlug}/${guide.slug}`),
   `${SUBURB_GUIDE_PILOT.provinceSlug}/${SUBURB_GUIDE_PILOT.citySlug}/${SUBURB_GUIDE_PILOT.suburbSlug}`,

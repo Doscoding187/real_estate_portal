@@ -96,6 +96,15 @@ This packet is a frontend and guide-publication delivery. It does not reopen an 
 scope, authorise hosted execution, a protected database release or paid activation, and it
 does not change B08–B18, LRC-SUPPORT-001 or the paid-opening NO-GO.
 
+## National discovery entry published — 2026-10-20
+
+| Item               | Recorded                                                                                                                                                                             | Effect                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Route              | `/south-africa` is the one page above the province guides.                                                                                                                           | Someone searching for property in South Africa is handed to the nine provinces rather than to a filtered list. |
+| Model              | Province → city → suburb, with the country above it.                                                                                                                                 | One canonical national page, never a generated page per province.                                              |
+| Delivered document | `/south-africa` is emitted at build time with its title, description, canonical, `index, follow`, `BreadcrumbList` and `ItemList` structured data, and a visible province directory. | A crawler receives the page without executing JavaScript.                                                      |
+| Sitemap            | `/south-africa` is the first entry in `sitemap-guides.xml`.                                                                                                                          | The national entry is discoverable and is the only country-level URL in the guide sitemap.                     |
+
 ## Single geography authority decided — 2026-10-20
 
 [Packet 63](63-single-geography-authority-2026-10-20.md) records the founder's single-geography

@@ -1,4 +1,11 @@
 import { cityGuideInitialHtml } from '../../shared/cityGuideHtml';
+import {
+  COUNTRY_DISCOVERY_DESCRIPTION,
+  COUNTRY_DISCOVERY_PATH,
+  COUNTRY_DISCOVERY_TITLE,
+  COUNTRY_PROVINCES,
+  countryDiscoveryInitialHtml,
+} from '../../shared/countryDiscovery';
 import { getCityGuideContent } from '../../shared/cityGuideContent';
 import { PROVINCE_SLUGS } from '../../shared/location-contract';
 import { provinceGuideInitialHtml } from '../../shared/provinceGuideHtml';
@@ -101,6 +108,16 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
   const parsedUrl = new URL(requestUrl, CANONICAL_PUBLIC_ORIGIN);
   const pathname = normalizePathname(parsedUrl.pathname);
   const pathSegments = pathname.split('/').filter(Boolean);
+
+  if (pathname === COUNTRY_DISCOVERY_PATH) {
+    return {
+      title: COUNTRY_DISCOVERY_TITLE,
+      description: COUNTRY_DISCOVERY_DESCRIPTION,
+      canonicalUrl: absoluteUrl(COUNTRY_DISCOVERY_PATH),
+      robots: parsedUrl.search ? 'noindex, follow' : 'index, follow',
+      siteName: DEFAULT_SITE_NAME,
+    };
+  }
 
   const guide = pathSegments.length === 1 ? getProvinceGuideContent(pathSegments[0]) : undefined;
   if (guide)
@@ -329,6 +346,36 @@ export function resolveSeoPageData(requestUrl: string): SeoPageData {
  */
 function guideStructuredData(pathname: string): Record<string, unknown>[] | undefined {
   const segments = pathname.split('/').filter(Boolean);
+
+  if (segments.length === 1 && segments[0] === 'south-africa') {
+    return [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: absoluteUrl('/') },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'South Africa',
+            item: absoluteUrl(COUNTRY_DISCOVERY_PATH),
+          },
+        ],
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: 'South African provinces',
+        itemListElement: COUNTRY_PROVINCES.map((province, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: province.name,
+          url: absoluteUrl(province.path),
+        })),
+      },
+    ];
+  }
+
   const breadcrumb = (items: { name: string; url: string }[]) => ({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -420,6 +467,7 @@ function guideStructuredData(pathname: string): Record<string, unknown>[] | unde
 export function injectSeoHead(template: string, requestUrl: string): string {
   const seo = resolveSeoPageData(requestUrl);
   const initialHtml =
+    countryDiscoveryInitialHtml(requestUrl) ||
     provinceGuideInitialHtml(requestUrl) ||
     cityGuideInitialHtml(requestUrl) ||
     suburbGuideInitialHtml(requestUrl);
