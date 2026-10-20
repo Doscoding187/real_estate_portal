@@ -62,9 +62,9 @@ export default function ProvinceEditorialPage({ guide }: { guide: ProvinceGuideC
     { enabled: debounced.length >= 2, retry: false, staleTime: 600_000 },
   );
   const province = places.data?.province;
-  const verifiedCities = [
+  const verifiedPlaces = [
     ...new Map(
-      [...(places.data?.cities || []), ...(cities.data || [])].map(city => [city.slug, city]),
+      [...(places.data?.places || []), ...(cities.data || [])].map(place => [place.slug, place]),
     ).values(),
   ];
   const inventory = pulse.data;
@@ -127,7 +127,7 @@ export default function ProvinceEditorialPage({ guide }: { guide: ProvinceGuideC
           <ProvincialComposer
             config={config}
             province={province}
-            marketLocations={places.data?.cities || []}
+            marketLocations={places.data?.places || []}
           />
         ) : (
           <div
@@ -167,8 +167,8 @@ export default function ProvinceEditorialPage({ guide }: { guide: ProvinceGuideC
         </div>
       </nav>
       <main id="province-guide-main">
-        <ProvinceLifestyleDiscovery guide={guide} verifiedCities={verifiedCities} />
-        <ProvinceRegionDiscovery guide={guide} verifiedCities={verifiedCities} />
+        <ProvinceLifestyleDiscovery guide={guide} verifiedPlaces={verifiedPlaces} />
+        <ProvinceRegionDiscovery guide={guide} verifiedPlaces={verifiedPlaces} />
         {(places.isError || (!places.isLoading && !places.data)) && (
           <div className="provincial-rail guide-place-error">
             <p className="guide-inline-state" role="alert">

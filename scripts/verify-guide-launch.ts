@@ -92,8 +92,12 @@ async function main() {
   // The rendered page must survive a mobile viewport and a guide must remain readable.
   const page = await context.newPage();
   for (const route of routes) {
-    await page.goto(`${BASE_URL}${route.path}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2500);
+    // 'commit' rather than 'domcontentloaded': when the API host is unavailable the
+    // document is complete but the page's data calls keep the load event pending, and the
+    // delivered document is what a crawler reads.
+    await page.goto(`${BASE_URL}${route.path}`, { waitUntil: 'commit', timeout: 60_000 });
+    await page.waitForSelector('h1', { timeout: 30_000 }).catch(() => undefined);
+    await page.waitForTimeout(3000);
 
     const heading = await page.locator('h1').first();
     const headingText = (await heading.count()) ? (await heading.textContent())?.trim() : '';

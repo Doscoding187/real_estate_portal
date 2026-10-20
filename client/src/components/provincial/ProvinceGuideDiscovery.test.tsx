@@ -3,18 +3,45 @@ import { describe, expect, it } from 'vitest';
 import { getProvinceGuideContent } from '@shared/provinceGuideContent';
 import { ProvinceLifestyleDiscovery, ProvinceRegionDiscovery } from './ProvinceGuideDiscovery';
 const guide = getProvinceGuideContent('gauteng')!;
-const verifiedCities = [
-  { name: 'Johannesburg', slug: 'johannesburg', canonicalLocationId: 'city:1' },
-  { name: 'Pretoria', slug: 'pretoria', canonicalLocationId: 'city:2' },
+const verifiedPlaces = [
+  {
+    name: 'Johannesburg',
+    slug: 'johannesburg',
+    canonicalLocationId: 'city:1',
+    level: 'city' as const,
+  },
+  { name: 'Pretoria', slug: 'pretoria', canonicalLocationId: 'city:2', level: 'city' as const },
+  {
+    name: 'Sandton',
+    slug: 'sandton',
+    canonicalLocationId: 'suburb:91',
+    level: 'suburb' as const,
+    parentCitySlug: 'johannesburg',
+  },
 ];
 function renderDiscovery() {
   return render(
     <>
-      <ProvinceLifestyleDiscovery guide={guide} verifiedCities={verifiedCities} />
-      <ProvinceRegionDiscovery guide={guide} verifiedCities={verifiedCities} />
+      <ProvinceLifestyleDiscovery guide={guide} verifiedPlaces={verifiedPlaces} />
+      <ProvinceRegionDiscovery guide={guide} verifiedPlaces={verifiedPlaces} />
     </>,
   );
 }
+describe('Province guide place links', () => {
+  it('links a suburb scope to its own route under its city', () => {
+    renderDiscovery();
+    const link = screen.getByRole('link', { name: /Sandton/i });
+    expect(link.getAttribute('href')).toBe('/gauteng/johannesburg/sandton');
+  });
+
+  it('links a city scope to its own route', () => {
+    renderDiscovery();
+    const links = screen.getAllByRole('link', { name: /Johannesburg/i });
+    const city = links.find(link => link.getAttribute('href') === '/gauteng/johannesburg');
+    expect(city).toBeDefined();
+  });
+});
+
 describe('Province discovery with retained regional depth', () => {
   it('changes lifestyle collections independently of the selected region', () => {
     renderDiscovery();
