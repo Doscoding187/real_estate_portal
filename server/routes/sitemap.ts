@@ -10,6 +10,8 @@ import { resolvePublicPropertyEligibilityIds } from '../services/publicPropertyE
 
 import { getPublishedCityGuides } from '../../shared/cityGuideContent';
 import { getPublishedProvinceGuides } from '../../shared/provinceGuideContent';
+import { SITEMAP_INDEX_CHILDREN } from '../../shared/sitemapIndex';
+import { getPublishedSuburbGuidePaths } from '../../shared/suburbGuidePolicy';
 
 const router = Router();
 
@@ -161,16 +163,7 @@ router.get('/robots.txt', (_req, res) => {
 });
 
 router.get('/sitemap.xml', (req, res) => {
-  const xml = buildSitemapIndex(
-    [
-      '/sitemap-listings.xml',
-      '/sitemap-developments.xml',
-      '/sitemap-agents.xml',
-      '/sitemap-static.xml',
-      '/sitemap-guides.xml',
-    ],
-    resolveBaseUrl(req),
-  );
+  const xml = buildSitemapIndex([...SITEMAP_INDEX_CHILDREN], resolveBaseUrl(req));
 
   sendXml(res, xml);
 });
@@ -186,6 +179,9 @@ router.get('/sitemap-guides.xml', (req, res) => {
       })),
       ...getPublishedCityGuides().map(guide => ({
         loc: toAbsoluteUrl(`/${guide.provinceSlug}/${guide.slug}`, baseUrl),
+      })),
+      ...getPublishedSuburbGuidePaths().map(path => ({
+        loc: toAbsoluteUrl(`/${path}`, baseUrl),
       })),
     ]),
   );

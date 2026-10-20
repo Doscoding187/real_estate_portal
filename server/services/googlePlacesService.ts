@@ -18,6 +18,7 @@ import axios, { AxiosError } from 'axios';
 import { nanoid } from 'nanoid';
 import { redisCache, CacheTTL } from '../lib/redis';
 import { registerGooglePlacesServiceForShutdown } from './googlePlacesServiceLifecycle';
+import { classifyGooglePlacesFailure, describeGooglePlacesFailure } from './googlePlacesFailure';
 import { safeErrorSummary } from '../_core/safeError';
 
 // ============================================================================
@@ -194,6 +195,33 @@ export class GooglePlacesService {
   }
 
   /**
+   * Record a provider status that is not 'OK'. Google reports billing, API-enablement and
+   * key-restriction problems with an HTTP 200 response body, so a response that is never
+   * inspected produces a silent feature failure. Every non-OK provider status is classified
+   * and reported here.
+   */
+  private reportProviderStatus(
+    apiStatus: string | undefined,
+    errorMessage: string | undefined,
+    requestType: APIUsageLog['requestType'],
+    sessionToken: string | undefined,
+    startTime: number,
+  ): void {
+    // ZERO_RESULTS is a legitimate empty answer, not a provider failure.
+    if (!apiStatus || apiStatus === 'OK' || apiStatus === 'ZERO_RESULTS') return;
+    const detail = classifyGooglePlacesFailure({ apiStatus, message: errorMessage });
+    console.error(`❌ Google Places API (${requestType}): ${describeGooglePlacesFailure(detail)}`);
+    this.logAPIUsage({
+      timestamp: new Date(),
+      requestType,
+      sessionToken,
+      success: false,
+      responseTime: Date.now() - startTime,
+      error: `${apiStatus}: ${detail.reason}`,
+    }).catch(err => console.error('Failed to log API usage:', safeErrorSummary(err)));
+  }
+
+  /**
    * Create a new session token for grouping related autocomplete requests
    * Requirements 5.2: Use session tokens to group related requests
    */
@@ -285,6 +313,14 @@ export class GooglePlacesService {
         'autocomplete',
       );
 
+      this.reportProviderStatus(
+        response.data.status,
+        response.data.error_message,
+        'autocomplete',
+        sessionToken,
+        startTime,
+      );
+
       const predictions: PlacePrediction[] = (response.data.predictions || []).map((pred: any) => ({
         placeId: pred.place_id,
         description: pred.description,
@@ -351,7 +387,11 @@ export class GooglePlacesService {
       );
 
       if (response.data.status !== 'OK') {
-        throw new Error(`Place Details API error: ${response.data.status}`);
+        const detail = classifyGooglePlacesFailure({
+          apiStatus: response.data.status,
+          message: response.data.error_message,
+        });
+        throw new Error(`Place Details API error: ${response.data.status} — ${detail.reason}`);
       }
 
       const result = response.data.result;
@@ -426,6 +466,13 @@ export class GooglePlacesService {
       );
 
       if (response.data.status !== 'OK' || !response.data.results.length) {
+        this.reportProviderStatus(
+          response.data.status,
+          response.data.error_message,
+          'geocode',
+          undefined,
+          startTime,
+        );
         return null;
       }
 
@@ -493,6 +540,13 @@ export class GooglePlacesService {
       );
 
       if (response.data.status !== 'OK' || !response.data.results.length) {
+        this.reportProviderStatus(
+          response.data.status,
+          response.data.error_message,
+          'reverse_geocode',
+          undefined,
+          startTime,
+        );
         return null;
       }
 
@@ -610,20 +664,13 @@ export class GooglePlacesService {
         // API returned an error response
         const status = axiosError.response.status;
         const data = axiosError.response.data as any;
-
-        if (status === 403) {
-          errorMessage = 'Invalid API key';
-          console.error('❌ Google Places API: Invalid API key');
-        } else if (status === 429) {
-          errorMessage = 'Rate limit exceeded';
-          console.error('❌ Google Places API: Rate limit exceeded');
-        } else if (status === 503) {
-          errorMessage = 'Service unavailable';
-          console.error('❌ Google Places API: Service unavailable');
-        } else {
-          errorMessage = data?.error_message || `HTTP ${status}`;
-          console.error(`❌ Google Places API error: ${errorMessage}`);
-        }
+        const detail = classifyGooglePlacesFailure({
+          httpStatus: status,
+          apiStatus: data?.status,
+          message: data?.error_message,
+        });
+        errorMessage = detail.reason;
+        console.error(`❌ Google Places API: ${describeGooglePlacesFailure(detail)}`);
       } else if (axiosError.request) {
         // Request was made but no response received
         errorMessage = 'Network timeout';
@@ -767,7 +814,11 @@ export class GooglePlacesService {
       );
 
       if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-        throw new Error(`Nearby Search API error: ${response.data.status}`);
+        const detail = classifyGooglePlacesFailure({
+          apiStatus: response.data.status,
+          message: response.data.error_message,
+        });
+        throw new Error(`Nearby Search API error: ${response.data.status} — ${detail.reason}`);
       }
 
       const results = (response.data.results || []).map((place: any) => ({

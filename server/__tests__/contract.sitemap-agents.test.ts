@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getDbMock, publishedCityGuides } = vi.hoisted(() => ({
-  getDbMock: vi.fn(),
-  publishedCityGuides: [] as Array<{ provinceSlug: string; slug: string }>,
-}));
+const { getDbMock, publishedCityGuides, publishedProvinceGuides, publishedSuburbGuidePaths } =
+  vi.hoisted(() => ({
+    getDbMock: vi.fn(),
+    publishedCityGuides: [] as Array<{ provinceSlug: string; slug: string }>,
+    publishedProvinceGuides: [] as Array<{ slug: string }>,
+    publishedSuburbGuidePaths: [] as string[],
+  }));
 
 vi.mock('../db-connection', () => ({
   getDb: getDbMock,
@@ -11,12 +14,23 @@ vi.mock('../db-connection', () => ({
 
 vi.mock('../../shared/cityGuideContent', () => ({
   getPublishedCityGuides: () => publishedCityGuides,
+  getCityGuideContent: () => undefined,
+}));
+
+vi.mock('../../shared/provinceGuideContent', () => ({
+  getPublishedProvinceGuides: () => publishedProvinceGuides,
+}));
+
+vi.mock('../../shared/suburbGuidePolicy', () => ({
+  getPublishedSuburbGuidePaths: () => publishedSuburbGuidePaths,
 }));
 
 import sitemapRouter from '../routes/sitemap';
 
 beforeEach(() => {
   publishedCityGuides.length = 0;
+  publishedProvinceGuides.length = 0;
+  publishedSuburbGuidePaths.length = 0;
 });
 
 function makeFakeDb(rows: Array<Record<string, unknown>>) {
@@ -132,6 +146,12 @@ describe('province editorial sitemap readiness', () => {
     const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
     expect(capture.body).toContain('<urlset');
     expect(capture.body).not.toContain('<loc>');
+    expect(getDbMock).not.toHaveBeenCalled();
+  });
+  it('lists a published province guide without requiring inventory', async () => {
+    publishedProvinceGuides.push({ slug: 'gauteng' });
+    const capture = await requestAgentsSitemap([], '/sitemap-guides.xml');
+    expect(capture.body).toContain('<loc>https://www.propertylistifysa.co.za/gauteng</loc>');
     expect(getDbMock).not.toHaveBeenCalled();
   });
 });

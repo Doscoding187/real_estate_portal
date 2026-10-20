@@ -4,12 +4,15 @@
     <loc>https://www.propertylistifysa.co.za/sitemap-listings.xml</loc>
   </sitemap>
   <sitemap>
-    <loc>https://www.propertylistifysa.co.za/sitemap-areas.xml</loc>
-  </sitemap>
-  <sitemap>
     <loc>https://www.propertylistifysa.co.za/sitemap-developments.xml</loc>
   </sitemap>
   <sitemap>
+    <loc>https://www.propertylistifysa.co.za/sitemap-agents.xml</loc>
+  </sitemap>
+  <sitemap>
     <loc>https://www.propertylistifysa.co.za/sitemap-static.xml</loc>
+  </sitemap>
+  <sitemap>
+    <loc>https://www.propertylistifysa.co.za/sitemap-guides.xml</loc>
   </sitemap>
 </sitemapindex>

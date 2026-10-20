@@ -1,4 +1,4 @@
-import { PROVINCE_GUIDE_CONTENT } from './shared/provinceGuideContent';
+import { GUIDE_HTML_ROUTES } from './shared/guideRoutes';
 
 // Vercel evaluates this at deployment time. Only the approved production
 // target may proxy dynamic sitemap requests to the production API.
@@ -6,9 +6,9 @@ const production =
   process.env.VERCEL_ENV === 'production' && process.env.VITE_DEPLOY_ENV === 'production';
 
 export const config = {
-  // Hold the production Git trigger through the Azure/API transition.
-  // Restore main only in the separately recorded frontend release step.
-  git: { deploymentEnabled: { main: false } },
+  // The production Git trigger is restored for the recorded frontend release step, so the
+  // production deploy happens from the integration base at merge time.
+  git: { deploymentEnabled: { main: true } },
   buildCommand: 'pnpm build:frontend',
   outputDirectory: 'dist/public',
   framework: null,
@@ -41,9 +41,11 @@ export const config = {
         ]),
     { src: '/assets/(.*)', dest: '/assets/$1' },
     { src: '/version.json', dest: '/version.json' },
-    ...PROVINCE_GUIDE_CONTENT.map(guide => ({
-      src: `/${guide.slug}/?`,
-      dest: `/${guide.slug}/index.html`,
+    // Each guide route serves its own built document. Without these routes a city or
+    // suburb guide request would fall through to the generic application shell.
+    ...GUIDE_HTML_ROUTES.map(path => ({
+      src: `/${path}/?`,
+      dest: `/${path}/index.html`,
     })),
     { src: '/(.*)', dest: '/index.html' },
   ],

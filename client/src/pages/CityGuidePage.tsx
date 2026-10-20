@@ -571,7 +571,9 @@ export default function CityGuidePage({ guide }: { guide: CityGuideContent }) {
               Sources & how to read this guide <span>Sources checked 15 October 2026</span>
             </summary>
             <p>
-              This local-review guide uses official regional, parks and transport references.
+              {guide.status === 'published'
+                ? 'This guide uses official regional, parks and transport references.'
+                : 'This local-review guide uses official regional, parks and transport references.'}{' '}
               Editorial groupings explain places; they do not define property-search boundaries.
               Generated city scenes illustrate the wider setting and are not photographs of
               individual parks or neighbourhoods. Individual suburb-guide content is a separate

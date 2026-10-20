@@ -195,11 +195,14 @@ export function LocationAutocomplete({
         } else {
           console.error('Autocomplete error:', status);
 
-          // Requirement 11.1-11.3: Handle API errors with fallback to manual entry
+          // Requirement 11.1-11.3: Handle API errors with fallback to manual entry.
+          // The provider reports key restriction, API enablement and billing problems
+          // with the same status, so the public message states the effect on the reader
+          // and never attributes a cause we cannot prove.
           if (status === google.maps.places.PlacesServiceStatus.REQUEST_DENIED) {
-            setError('API key invalid. Please enter location manually.');
+            setError('Location suggestions are unavailable right now. You can enter it manually.');
           } else if (status === google.maps.places.PlacesServiceStatus.OVER_QUERY_LIMIT) {
-            setError('Too many requests. Please enter location manually.');
+            setError('Too many requests. You can enter it manually.');
           } else {
             setError('Failed to fetch suggestions. You can enter the address manually.');
           }

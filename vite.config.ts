@@ -1,6 +1,8 @@
-import { CITY_GUIDE_CONTENT, getCityGuideContent } from './shared/cityGuideContent';
-import { PROVINCE_GUIDE_CONTENT, getProvinceGuideContent } from './shared/provinceGuideContent';
+import { getCityGuideContent } from './shared/cityGuideContent';
+import { getProvinceGuideContent } from './shared/provinceGuideContent';
+import { isSuburbGuidePilot } from './shared/suburbGuidePolicy';
 import { injectSeoHead } from './server/_core/seoHead';
+import { GUIDE_HTML_ROUTES } from './shared/guideRoutes';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -42,7 +44,9 @@ function developmentSupersessionDevMiddleware(): Plugin {
   };
 }
 
-function provinceGuideEditorialHtml(): Plugin {
+/** Every guide route that receives its own delivered document. The province, city and suburb
+ *  pilot each get a static file so a crawler receives the guide, not the generic app shell. */
+export function guideEditorialHtml(): Plugin {
   return {
     name: 'province-guide-editorial-html',
     transformIndexHtml: {
@@ -52,7 +56,8 @@ function provinceGuideEditorialHtml(): Plugin {
         const slug = new URL(requestUrl, 'http://localhost').pathname.replace(/^\/|\/$/g, '');
         const parts = slug.split('/');
         return getProvinceGuideContent(slug) ||
-          (parts.length === 2 && getCityGuideContent(parts[0], parts[1]))
+          (parts.length === 2 && getCityGuideContent(parts[0], parts[1])) ||
+          (parts.length === 3 && isSuburbGuidePilot(parts[0], parts[1], parts[2]))
           ? injectSeoHead(html, requestUrl)
           : html;
       },
@@ -63,14 +68,11 @@ function provinceGuideEditorialHtml(): Plugin {
         const template = bundle['index.html'];
         if (!template || template.type !== 'asset')
           throw new Error('Guide HTML requires the built application shell');
-        for (const guide of [
-          ...PROVINCE_GUIDE_CONTENT.map(guide => ({ path: guide.slug })),
-          ...CITY_GUIDE_CONTENT.map(guide => ({ path: `${guide.provinceSlug}/${guide.slug}` })),
-        ]) {
+        for (const path of GUIDE_HTML_ROUTES) {
           this.emitFile({
             type: 'asset',
-            fileName: `${guide.path}/index.html`,
-            source: injectSeoHead(String(template.source), `/${guide.path}`),
+            fileName: `${path}/index.html`,
+            source: injectSeoHead(String(template.source), `/${path}`),
           });
         }
       },
@@ -79,7 +81,7 @@ function provinceGuideEditorialHtml(): Plugin {
 }
 
 const plugins = [
-  provinceGuideEditorialHtml(),
+  guideEditorialHtml(),
   developmentSupersessionDevMiddleware(),
   react(),
   tailwindcss(),

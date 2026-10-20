@@ -1,3 +1,5 @@
+import { selectPublishedGuides, type GuidePublicationStatus } from './guidePublication';
+
 /** Editorial orientation only. These groupings never create search boundaries. */
 export interface CityGuidePlace {
   name: string;
@@ -19,7 +21,7 @@ export interface CityGuideContent {
   provinceName: string;
   slug: string;
   name: string;
-  status: 'local-review' | 'published';
+  status: GuidePublicationStatus;
   sourceCheckedOn: string;
   title: string;
   description: string;
@@ -37,11 +39,16 @@ export interface CityGuideContent {
   faqs: readonly { question: string; answer: string }[];
   sources: readonly { id: string; title: string; url: string }[];
 }
-const suburb = (name: string, caption: string): CityGuidePlace => ({
+/**
+ * A suburb reference is typed as a suburb so the guide resolves it against the canonical
+ * hierarchy and links to its real place route. Typing a place as a city makes the lookup
+ * refuse it, which silently turns a named neighbourhood into plain text.
+ */
+const suburb = (name: string, caption: string, imageCity = 'johannesburg'): CityGuidePlace => ({
   name,
   caption,
   kind: 'suburb',
-  imageCity: 'johannesburg',
+  imageCity,
 });
 const city = (name: string, caption: string, imageCity: string): CityGuidePlace => ({
   name,
@@ -54,7 +61,7 @@ const johannesburg: CityGuideContent = {
   provinceName: 'Gauteng',
   slug: 'johannesburg',
   name: 'Johannesburg',
-  status: 'local-review',
+  status: 'published',
   sourceCheckedOn: '2026-10-15',
   title: 'Johannesburg area guide: neighbourhoods, parks & city life | Property Listify',
   description:
@@ -73,7 +80,7 @@ const johannesburg: CityGuideContent = {
       sourceIds: ['regions'],
       places: [
         city('Johannesburg', 'Start with the city and its neighbourhoods', 'johannesburg'),
-        city('Sandton', 'Explore a northern starting point', 'sandton'),
+        suburb('Sandton', 'Explore a northern starting point', 'sandton'),
         city('Randburg', 'Get to know the north-western side', 'randburg'),
         city('Midrand', 'Look further north in the metro', 'midrand'),
         city('Soweto', 'Explore the south-western side', 'soweto'),
@@ -101,11 +108,11 @@ const johannesburg: CityGuideContent = {
       description:
         'Use a station as a starting point for a more practical neighbourhood shortlist.',
       context:
-        'Park, Rosebank, Sandton and Midrand are Gautrain commuter-network reference points. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.',
+        'Park Station, Rosebank, Sandton and Midrand are reference points on the north–south Gautrain corridor, which also serves Marlboro, Centurion, Pretoria and Hatfield; the airport service branches east through Rhodesfield to O.R. Tambo International Airport. The station is only part of a journey: compare the walk, feeder connection or drive at both ends. A city-guide link does not mean every home is close to its station.',
       sourceIds: ['rail', 'rosebank'],
       places: [
         suburb('Rosebank', 'Compare the area around Rosebank station'),
-        city('Sandton', 'Explore around the Sandton node', 'sandton'),
+        suburb('Sandton', 'Explore around the Sandton node', 'sandton'),
         city('Midrand', 'Investigate your full station connection', 'midrand'),
         suburb('Braamfontein', 'Investigate connections around Park station'),
       ],
@@ -129,8 +136,8 @@ const johannesburg: CityGuideContent = {
   regions: [
     {
       id: 'a',
-      label: 'Midrand & north',
-      title: 'Region A · Midrand and the north',
+      label: 'Diepsloot & Midrand',
+      title: 'Region A · Diepsloot and Midrand',
       text: 'Midrand, Diepsloot and Ivory Park are northern reference points. The same municipal region includes quite different neighbourhoods and housing settings.',
       consider:
         'Start with the destination you need to reach. Compare the specific neighbourhood and the complete route rather than assuming that a northern address means a short commute.',
@@ -140,10 +147,10 @@ const johannesburg: CityGuideContent = {
       id: 'b',
       label: 'Randburg & parks',
       title: 'Region B · Randburg and the park neighbourhoods',
-      text: 'Northcliff and parts of Randburg, Sandton and Rosebank form this part of the metro. Familiar place names can cross the city’s administrative divisions.',
+      text: 'Northcliff and parts of Randburg form this part of the metro, and Rosebank sits here as well. Familiar place names can cross the city’s administrative divisions.',
       consider:
         'Look at a specific neighbourhood around your regular destinations. A park or business-node name is a useful reference point, but it does not describe every street around it.',
-      places: ['Randburg', 'Northcliff', 'Emmarentia'],
+      places: ['Randburg', 'Rosebank', 'Northcliff', 'Emmarentia'],
     },
     {
       id: 'c',
@@ -167,10 +174,10 @@ const johannesburg: CityGuideContent = {
       id: 'e',
       label: 'Sandton & Alexandra',
       title: 'Region E · Sandton and Alexandra',
-      text: 'Alexandra and parts of Sandton and Rosebank sit within Region E. An administrative grouping is not a single housing market or one lifestyle.',
+      text: 'Alexandra and parts of Sandton sit within Region E. An administrative grouping is not a single housing market or one lifestyle.',
       consider:
         'Compare the exact neighbourhood and property setting. If a rail connection matters, check the route to the station as well as the onward trip.',
-      places: ['Sandton', 'Alexandra', 'Rosebank'],
+      places: ['Sandton', 'Alexandra'],
     },
     {
       id: 'f',
@@ -237,6 +244,11 @@ const johannesburg: CityGuideContent = {
       url: 'https://joburg.org.za/departments_/Documents/Joburg-City-Safety-Strategy/Joburg-City-Safety-Strategy-JCSS-2025.pdf',
     },
     {
+      id: 'region-e',
+      title: 'City of Johannesburg · Region E: Sandton and Alexandra',
+      url: 'https://joburg.org.za/about_/regions/Pages/Region%20E%20-%20Sandton%2C%20Alexandra/region-e.aspx',
+    },
+    {
       id: 'parks',
       title: 'Johannesburg City Parks & Zoo · parks and walking destinations',
       url: 'https://www.jhbcityparksandzoo.com/services-facilities/nature-reserves-bird-sanctuary/walking-trails',
@@ -258,5 +270,5 @@ export function getCityGuideContent(province: string, city: string) {
   return CITY_GUIDE_CONTENT.find(guide => guide.provinceSlug === province && guide.slug === city);
 }
 export function getPublishedCityGuides() {
-  return CITY_GUIDE_CONTENT.filter(guide => guide.status === 'published');
+  return selectPublishedGuides(CITY_GUIDE_CONTENT);
 }
