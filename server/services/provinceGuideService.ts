@@ -1,52 +1,20 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import { cities, provinces } from '../../drizzle/schema';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 import { getProvinceGuideContent } from '../../shared/provinceGuideContent';
-import { getDb } from '../db';
 import { publicSearchService } from './publicSearchService';
+import { listVerifiedCityScopes, resolveVerifiedProvinceScope } from './geographyAuthorityService';
 
 /** Editorial links require exact verified parent/child identities; no widening or name fallback. */
 export async function getProvinceGuidePlaces(provinceSlug: string) {
   const guide = getProvinceGuideContent(provinceSlug);
   if (!guide) return null;
-  const db = await getDb();
-  const matches = await db
-    .select({ id: provinces.id, name: provinces.name, slug: provinces.slug })
-    .from(provinces)
-    .where(and(eq(provinces.slug, provinceSlug), eq(provinces.status, 'verified')))
-    .limit(2);
-  if (matches.length !== 1) return null;
-  const row = matches[0];
+  const province = await resolveVerifiedProvinceScope(provinceSlug);
+  if (!province) return null;
   const slugs = [
     ...new Set(guide.regions.flatMap(region => region.places.map(place => place.citySlug))),
   ];
-  const rows = await db
-    .select({ id: cities.id, name: cities.name, slug: cities.slug })
-    .from(cities)
-    .where(
-      and(
-        eq(cities.provinceId, row.id),
-        eq(cities.status, 'verified'),
-        inArray(cities.slug, slugs),
-      ),
-    )
-    .orderBy(asc(cities.name), asc(cities.id));
-  const frequency = new Map<string | null, number>();
-  for (const city of rows) frequency.set(city.slug, (frequency.get(city.slug) || 0) + 1);
+  const cities = await listVerifiedCityScopes({ provinceId: province.id, slugs });
   return {
-    province: {
-      id: row.id,
-      name: row.name,
-      slug: provinceSlug,
-      canonicalLocationId: encodeCanonicalLocationId('province', row.id),
-    },
-    cities: rows
-      .filter(city => city.slug && frequency.get(city.slug) === 1)
-      .map(city => ({
-        ...city,
-        slug: city.slug!,
-        canonicalLocationId: encodeCanonicalLocationId('city', city.id),
-      })),
+    province,
+    cities,
   };
 }
 

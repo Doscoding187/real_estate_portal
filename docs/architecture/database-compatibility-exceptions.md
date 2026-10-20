@@ -780,3 +780,46 @@ Failure and observability behavior: the canonical migration runner verifies mani
 Automated evidence: repository reachability census, zero-row count on the exact disposable target, migration manifest and schema-congruency checks, and feed ranking contract coverage.
 Expiry or objective removal condition: none; retain this record as historical evidence. Any future paid-placement design begins with a new canonical authority.
 Removal workstream: P8 Explore commercial authority.
+
+## DBX-PLACE-PROJECTION-READ-2026-10-20-Edward
+
+Exception ID: DBX-PLACE-PROJECTION-READ-2026-10-20-Edward
+Status: approved compatibility read
+Owner: Property Listify senior product engineering
+Approved by Edward on: 2026-10-20, by the single-geography-authority directive recorded in
+[launch packet 63](launch-readiness-and-product-convergence/63-single-geography-authority-2026-10-20.md)
+Business reason: location identity is owned by the canonical Place Authority. The runtime
+projection in `provinces` / `cities` / `suburbs` is a compatibility read of that authority and
+is being retired. Deleting the projection before the consumers move would break public search,
+every listing's geographic handle and the guide surfaces. The projection is therefore held
+behind one registered boundary while consumers move to the Place Authority reader, and the
+boundary is measured so it can only shrink.
+Canonical authority: the `place`, `place_name` and `place_relationship` tables and the
+`canonicalPlaceId` identity. The three-level runtime projection is not an authority and may not
+be extended.
+Exact files: `server/services/geographyAuthorityService.ts` is the registered boundary.
+Outstanding direct readers are enumerated in the allow-list of
+`server/__tests__/contract.geography-authority-single-read.test.ts`.
+Tables and columns: `provinces` (id, name, slug, status, provinceId), `cities` (id, name, slug,
+status, provinceId), `suburbs` (id, name, slug, status, cityId).
+Permitted read direction: read only, and only for the three-level scope the runtime search
+executes. No consumer may write a location row outside the canonical geography reference
+release. No listing may be authored against the projection's numeric identifiers as a
+durable identity.
+Permitted write direction: none. New geographic reference data is admitted only through the
+canonical Place Authority release path.
+Failure and observability behavior: an unknown, ambiguous or unverified place is refused rather
+than resolved to a parent, and a slug claimed by more than one row is refused rather than
+guessed. The boundary contract test fails when a consumer outside the allow-list reads the
+projection directly, so a second geography cannot start silently.
+Automated evidence: `server/__tests__/contract.geography-authority-single-read.test.ts` holds
+the allow-list; `server/services/__tests__/provinceGuideService.test.ts` and
+`server/services/__tests__/cityGuideDiscovery.test.ts` prove the switched consumers keep their
+existing behaviour.
+Expiry or objective removal condition: every entry in the allow-list is switched to the Place
+Authority reader and deleted from the allow-list. The exception closes when the allow-list
+contains only `server/services/geographyAuthorityService.ts` and that service reads the Place
+Authority directly. The runtime projection tables are then retired by a separate reviewed
+migration.
+Removal workstream: single geography authority — consumer switchover, then projection
+retirement.
