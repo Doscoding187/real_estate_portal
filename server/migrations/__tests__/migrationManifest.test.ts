@@ -354,7 +354,7 @@ describe('canonical migration manifest', () => {
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
     expect(manifest.expectedHead.filename).toBe(
-      '0143_distribution_deal_document_delivery_file_reference.sql',
+      '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
     );
   });
 
@@ -371,11 +371,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0143_distribution_deal_document_delivery_file_reference.sql',
+      expectedNewHead: '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(136);
+    expect(plan.pending).toHaveLength(140);
     expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -513,9 +513,13 @@ describe('canonical migration manifest', () => {
         '0141_distribution_deal_required_document_fk_restrict.sql',
         '0142_distribution_deal_document_deliveries_sequenced.sql',
         '0143_distribution_deal_document_delivery_file_reference.sql',
+        '0144_distribution_prospect_check_fits.sql',
+        '0145_distribution_prospect_check_fit_matches.sql',
+        '0146_distribution_deal_prospect_check_fit_reference.sql',
+        '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
     ]);
     expect(plan.expectedNewHead).toBe(
-      '0143_distribution_deal_document_delivery_file_reference.sql',
+      '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
     );
   });
 

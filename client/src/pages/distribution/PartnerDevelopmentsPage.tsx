@@ -500,62 +500,28 @@ export default function PartnerDevelopmentsPage() {
                 <p className="text-[14px] font-semibold text-[#0b1c3f]">Check fit (optional)</p>
               </div>
               <p className="mt-2 text-[12.5px] leading-5 text-muted-foreground">
-                Get a preliminary estimate to see what might be within reach. This is not a lender
-                decision.
+                Run a check fit on the prospect's gross income to see which current opportunities
+                they may reach. This is not a lender decision.
               </p>
-              <div className="mt-3 space-y-3">
-                <label className="block">
-                  <span className="text-[12px] font-medium text-muted-foreground">Monthly income</span>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="e.g. R 25,000"
-                    aria-label="Monthly income"
-                    className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[12px] font-medium text-muted-foreground">Deposit (optional)</span>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="e.g. R 100,000"
-                    aria-label="Deposit"
-                    className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                  />
-                </label>
-                <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">Looking to</span>
-                  <div className="mt-1.5 grid h-10 grid-cols-2 items-center rounded-lg border border-border bg-surface p-1">
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed rounded-md bg-white text-[13px] font-semibold text-[#0b1c3f] shadow-sm"
-                    >
-                      Buy
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed text-[13px] font-medium text-muted-foreground"
-                    >
-                      Rent
-                    </button>
-                  </div>
-                </div>
-              </div>
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
                 <p className="text-[12px] leading-5 text-[#33507e]">
-                  Preliminary affordability is not active yet. Browse by listed price, area, and
-                  bedrooms while the approved assessment model is pending. This is not a lender
-                  decision.
+                  The check fit asks for gross monthly income only. The prospect's identity,
+                  documents and consent are collected in the referral step that follows.
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-3 w-full border-[#9cc0ee] text-[#1d6fe3]"
+                onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
+              >
+                I have a prospect
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full border-[#9cc0ee] text-[#1d6fe3]"
                 onClick={() => setLocation('/distribution/partner/how-it-works')}
               >
                 Learn more

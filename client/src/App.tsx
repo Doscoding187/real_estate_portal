@@ -181,6 +181,9 @@ const PartnerReferralAcceleratorPage = lazy(
   () => import('./pages/distribution/PartnerReferralAcceleratorPage'),
 );
 const PartnerDevelopmentsPage = lazy(() => import('./pages/distribution/PartnerDevelopmentsPage'));
+const PartnerProspectCheckFitPage = lazy(
+  () => import('./pages/distribution/PartnerProspectCheckFitPage'),
+);
 const ManagerInviteOnboardingPage = lazy(
   () => import('./pages/distribution/ManagerInviteOnboardingPage'),
 );
@@ -635,6 +638,11 @@ function Router() {
           </Route>
           <Route path="/distribution/partner/overview" component={PartnerDashboardPage} />
           <Route path="/distribution/partner/how-it-works" component={PartnerHowItWorksPage} />
+          <Route path="/distribution/partner/prospect-check-fit">
+            <DistributionPartnerIdentityGate>
+              <PartnerProspectCheckFitPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
           <Route path="/distribution/partner/developments">
             <DistributionPartnerIdentityGate>
               <PartnerDevelopmentsPage />
