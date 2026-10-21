@@ -1,5 +1,10 @@
 import { and, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { aliasedTable } from 'drizzle-orm';
 import { place, placeName, placeRelationship } from '../../drizzle/schema';
+
+/** The same tables joined again for the child side of a relationship. */
+const childPlace = aliasedTable(place, 'childPlace');
+const childName = aliasedTable(placeName, 'childName');
 import { getDb } from '../db-connection';
 import type { CanonicalLocationDiscoveryResult } from '../../shared/searchDiscovery';
 import type { CanonicalLocationLevel } from '../../shared/locationAuthority';
@@ -60,6 +65,9 @@ interface AncestorRow {
   parentName: string;
   parentType: string;
   parentScope: string | null;
+  /** The child's own name and scope, so a container can be resolved to the scope it holds. */
+  childName?: string;
+  childScope?: string | null;
 }
 
 interface PlaceRow {
@@ -141,37 +149,6 @@ export async function searchNationalPlaces(
   // The hierarchy context comes from the same authority, so a result is never described with
   // a parent that the Place Authority does not assert.
   const candidateIds = rows.map(row => row.placeId);
-  const parents = (await db
-    .select({
-      childPlaceId: placeRelationship.fromPlaceId,
-      parentPlaceId: placeRelationship.toPlaceId,
-      parentName: placeName.name,
-      parentType: place.placeType,
-      parentScope: place.searchScope,
-    })
-    .from(placeRelationship)
-    .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
-    .innerJoin(
-      placeName,
-      and(
-        eq(placeName.placeId, place.placeId),
-        eq(placeName.nameRole, 'preferred_public'),
-        eq(placeName.nameState, 'active'),
-      ),
-    )
-    .where(
-      and(
-        inArray(placeRelationship.fromPlaceId, candidateIds),
-        eq(placeRelationship.relationshipType, 'administratively_contains'),
-      ),
-    )) as unknown as Array<{
-    childPlaceId: string;
-    parentPlaceId: string;
-    parentName: string;
-    parentType: string;
-    parentScope: string | null;
-  }>;
-
   // The whole administrative graph is read once and walked in memory. The graph is small
   // compared with the rest of the platform, and one read keeps the search fast.
   const edges = (await db
@@ -181,15 +158,26 @@ export async function searchNationalPlaces(
       parentName: placeName.name,
       parentType: place.placeType,
       parentScope: place.searchScope,
+      childName: childName.name,
+      childScope: childPlace.searchScope,
     })
     .from(placeRelationship)
     .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
+    .innerJoin(childPlace, eq(childPlace.placeId, placeRelationship.fromPlaceId))
     .innerJoin(
       placeName,
       and(
         eq(placeName.placeId, place.placeId),
         eq(placeName.nameRole, 'preferred_public'),
         eq(placeName.nameState, 'active'),
+      ),
+    )
+    .innerJoin(
+      childName,
+      and(
+        eq(childName.placeId, childPlace.placeId),
+        eq(childName.nameRole, 'preferred_public'),
+        eq(childName.nameState, 'active'),
       ),
     )
     .where(
@@ -225,6 +213,44 @@ export async function searchNationalPlaces(
   const ancestorByScope = (placeId: string, scope: string): AncestorRow | undefined =>
     ancestorsFor(placeId).find(ancestor => ancestor.parentScope === scope);
 
+  // The scopes each container holds, so a municipality can be resolved to its city or town.
+  const scopesByContainer = new Map<string, AncestorRow[]>();
+  for (const edge of edges) {
+    if (edge.childScope !== 'metro_city') continue;
+    const held = scopesByContainer.get(edge.parentPlaceId) ?? [];
+    if (!edge.childName) continue;
+    held.push({ ...edge, parentName: edge.childName, parentScope: edge.childScope });
+    scopesByContainer.set(edge.parentPlaceId, held);
+  }
+
+  const MUNICIPAL_SUFFIX =
+    /\s+(metropolitan municipality|local municipality|district municipality|metro municipality)$/i;
+
+  /**
+   * The region segment of a public path.
+   *
+   * This is a URL and display convention, not an administrative claim. A place's direct ancestor
+   * is often a municipality container rather than a searchable scope, so the container is
+   * resolved to the city or town scope it holds: the scope whose name the container names, or the
+   * single scope it holds, or otherwise the container's own name with its municipal form removed.
+   * The rule is versioned with the release policy, so a published URL never changes under a
+   * customer.
+   */
+  const regionFor = (placeId: string): { name: string; slug: string } | undefined => {
+    const scoped = ancestorByScope(placeId, 'metro_city');
+    if (scoped) return { name: scoped.parentName, slug: slugify(scoped.parentName) };
+
+    const container = ancestorsFor(placeId)[0];
+    if (!container) return undefined;
+    const held = scopesByContainer.get(container.parentPlaceId) ?? [];
+    const containerName = container.parentName.toLowerCase();
+    const named = held.find(scope => containerName.includes(scope.parentName.toLowerCase()));
+    if (named) return { name: named.parentName, slug: slugify(named.parentName) };
+    if (held.length === 1) return { name: held[0].parentName, slug: slugify(held[0].parentName) };
+    const stripped = container.parentName.replace(MUNICIPAL_SUFFIX, '').trim();
+    return { name: stripped, slug: slugify(stripped) };
+  };
+
   const results: CanonicalLocationDiscoveryResult[] = [];
   for (const row of rows) {
     const level = LEVEL_BY_SCOPE[row.searchScope || ''];
@@ -232,11 +258,16 @@ export async function searchNationalPlaces(
     const provinceAncestor = ancestorByScope(row.placeId, 'province');
     const cityAncestor = ancestorByScope(row.placeId, 'metro_city');
     const provinceName = level === 'province' ? row.name : (provinceAncestor?.parentName ?? null);
-    const cityName = level === 'city' ? row.name : (cityAncestor?.parentName ?? null);
+    const region = level === 'province' ? undefined : regionFor(row.placeId);
     const provinceSlug = provinceName ? slugify(provinceName) : undefined;
-    const citySlug = cityName && level !== 'province' ? slugify(cityName) : undefined;
-    const suburbSlug = level === 'suburb' ? slugify(row.name) : undefined;
-    const path = [provinceSlug, citySlug, suburbSlug].filter(Boolean).join('/');
+    const regionSlug = region?.slug;
+    const placeSlug = level === 'province' ? undefined : slugify(row.name);
+    // A place that is its own region, such as a city that is also its municipality's seat,
+    // is written once. The published form for those is province/place.
+    const path =
+      regionSlug && placeSlug && regionSlug === placeSlug
+        ? [provinceSlug, placeSlug].filter(Boolean).join('/')
+        : [provinceSlug, regionSlug, placeSlug].filter(Boolean).join('/');
 
     results.push({
       kind: 'canonical_location',
@@ -248,16 +279,18 @@ export async function searchNationalPlaces(
       display: {
         typeLabel: TYPE_LABEL_BY_TYPE[row.placeType] || 'Place',
         contextLabel:
-          level === 'province' ? undefined : [provinceName, cityName].filter(Boolean).join(' · '),
+          level === 'province'
+            ? undefined
+            : [provinceName, region?.name].filter(Boolean).join(' · '),
       },
       provinceSlug: provinceSlug || '',
-      ...(citySlug ? { citySlug } : {}),
-      ...(suburbSlug ? { suburbSlug } : {}),
+      ...(regionSlug ? { citySlug: regionSlug } : {}),
+      ...(level === 'suburb' && placeSlug ? { suburbSlug: placeSlug } : {}),
       ...(ancestorsFor(row.placeId)[0]
         ? { parentCanonicalLocationId: ancestorsFor(row.placeId)[0].parentPlaceId }
         : {}),
       ...(provinceName ? { provinceName } : {}),
-      ...(cityName ? { cityName } : {}),
+      ...(region ? { cityName: region.name } : {}),
       status: row.verificationStatus,
       canonicalPath: `/${path}`,
       source: 'canonical_geography',
