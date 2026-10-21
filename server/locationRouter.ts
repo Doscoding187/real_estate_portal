@@ -957,12 +957,16 @@ export const locationRouter = router({
    * Foundation for future ranking/personalisation; no ranking yet.
    */
   /**
-   * National place discovery, resolved from the canonical Place Authority.
+   * Public place discovery, resolved from the canonical Place Authority.
    *
    * Additive: the existing suggestion procedure keeps its contract and its projection
    * behaviour, so this can be adopted surface by surface and rolled back by removing the
    * adoption. The canonical handle is the Place identity, because the numeric runtime handle
    * only exists for the places the projection contains.
+   *
+   * A published location the Place Authority has not admitted is added from the published
+   * projection, at the URL we already publish, and says so in its source. The set is bounded by
+   * the published-place registry and disappears as the Place Authority admits those places.
    */
   placeSuggestions: publicProcedure
     .input(
@@ -972,8 +976,10 @@ export const locationRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const { searchNationalPlaces } = await import('./services/nationalPlaceSearchService');
-      return searchNationalPlaces({ query: input.query, limit: input.limit });
+      const { searchPublicPlaceSuggestions } = await import(
+        './services/nationalPlaceSearchService'
+      );
+      return searchPublicPlaceSuggestions({ query: input.query, limit: input.limit });
     }),
 
   searchDiscoverySuggestions: publicProcedure

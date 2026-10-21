@@ -19,12 +19,16 @@ import type { CanonicalLocationLevel } from '../../shared/locationAuthority';
  *
  * The release policy is applied exactly as the admission builder set it. A place appears in a
  * public result only when it is released by the licence policy and searchable. The places held
- * by the release policy, including the 720 Gauteng records under review, are excluded until
- * they are individually eligible for release.
+ * by the release policy are excluded until they are individually eligible for release.
  *
  * The canonical handle is the Place identity. The numeric runtime handle belonged to the
  * projection, and the projection does not contain the places outside Gauteng, so there is no
  * numeric handle to preserve for them.
+ *
+ * The published URL is a separate authority. The registry records the URL and the label we
+ * already publish for each place and the canonical Place behind it, so a published link never
+ * moves under a customer and a published place never disappears from search. The registry never
+ * decides whether a place exists, is searchable or is publishable.
  */
 
 const LEVEL_BY_SCOPE: Record<string, CanonicalLocationLevel> = {
@@ -59,6 +63,88 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/** One published location, bound to the canonical Place identity behind it. */
+export interface PublishedPlaceEntry {
+  /** The label we publish for this place. */
+  label: string;
+  /** The published region segment, or null when the place is published under its province. */
+  region: string | null;
+  /** The published region label, used for display. */
+  regionName: string | null;
+  /** The published place segment. */
+  place: string;
+  /** The published path. */
+  path: string;
+  /** The published level, which decides the published path shape. */
+  level: CanonicalLocationLevel;
+  provinceSlug: string;
+  provinceName: string;
+  /** The rule that bound this published location to this Place. */
+  matchRule: string;
+}
+
+export interface PublishedPlaceRegistry {
+  registryVersion: string;
+  places: Record<string, PublishedPlaceEntry>;
+  unmapped: Array<{
+    path: string;
+    label: string;
+    level: CanonicalLocationLevel;
+    region: string | null;
+    regionName: string | null;
+    place: string;
+    provinceSlug: string;
+    provinceName: string;
+    reason: string;
+  }>;
+}
+
+const REGISTRY_PATH = 'data/geography-coverage-v0.1/output/gauteng_published_place_registry_v0.2.json';
+
+let publishedRegistry: PublishedPlaceRegistry | null | undefined;
+
+function loadPublishedPlaceRegistry(): PublishedPlaceRegistry | null {
+  if (publishedRegistry === undefined) {
+    try {
+      const path = join(process.cwd(), REGISTRY_PATH);
+      const parsed = JSON.parse(readFileSync(path, 'utf8')) as PublishedPlaceRegistry;
+      publishedRegistry = parsed?.places ? parsed : null;
+    } catch {
+      publishedRegistry = null;
+    }
+  }
+  return publishedRegistry;
+}
+
+/**
+ * The published runtime handle for a published location.
+ *
+ * The read goes through the registered projection boundary, so the published projection keeps a
+ * single reader. The published geography is the only record of a location the Place Authority
+ * has not admitted, and it is resolved at the URL we already publish.
+ */
+async function resolvePublishedRuntimeHandle(
+  entry: {
+    level: CanonicalLocationLevel;
+    region: string | null;
+    place: string;
+    provinceSlug: string;
+  },
+): Promise<{ handle: string; parentHandle?: string; status?: string } | null> {
+  const { resolvePublishedPlaceScope } = await import('./geographyAuthorityService');
+  const scope = await resolvePublishedPlaceScope({
+    placeSlug: entry.place,
+    provinceSlug: entry.provinceSlug,
+    citySlug: entry.region,
+  });
+  if (!scope) return null;
+  return {
+    handle: scope.canonicalLocationId,
+    parentHandle: scope.parentCanonicalLocationId,
+    status: scope.status,
+  };
+}
+
 interface AncestorRow {
   childPlaceId: string;
   parentPlaceId: string;
@@ -76,11 +162,6 @@ interface PlaceRow {
   searchScope: string | null;
   verificationStatus: string;
   name: string;
-  parentPlaceId: string | null;
-  provincePlaceId: string | null;
-  provinceName: string | null;
-  cityPlaceId: string | null;
-  cityName: string | null;
 }
 
 let administrativeGraph: Promise<AncestorRow[]> | null = null;
@@ -132,8 +213,10 @@ export interface NationalPlaceSearchOptions {
 
 /**
  * Find the places a customer may search, with the hierarchy context they need to choose one.
+ *
  * A place is offered only when the release policy releases it and the Place Authority marks
- * it searchable.
+ * it searchable. A place we already publish is offered under the label and the URL we already
+ * publish, whether or not the Place Authority's own preferred spelling differs.
  */
 export async function searchNationalPlaces(
   options: NationalPlaceSearchOptions,
@@ -146,6 +229,16 @@ export async function searchNationalPlaces(
   const limit = Math.min(Math.max(options.limit ?? 8, 1), 20);
   const pattern = `%${query.toLowerCase()}%`;
 
+  const registry = loadPublishedPlaceRegistry();
+  const registryEntries = registry ? Object.entries(registry.places) : [];
+
+  // The published locations whose published label carries the query. A place we publish under
+  // a name the Place Authority does not carry as a searchable public name is still found,
+  // because the published label is what a customer types.
+  const publishedMatches = registryEntries
+    .filter(([, entry]) => entry.label.toLowerCase().includes(query.toLowerCase()))
+    .map(([placeId]) => placeId);
+
   const rows = (await db
     .select({
       placeId: place.placeId,
@@ -153,7 +246,6 @@ export async function searchNationalPlaces(
       searchScope: place.searchScope,
       verificationStatus: place.verificationStatus,
       name: placeName.name,
-      parentPlaceId: placeRelationship.toPlaceId,
     })
     .from(place)
     .innerJoin(
@@ -163,13 +255,6 @@ export async function searchNationalPlaces(
         eq(placeName.nameRole, 'preferred_public'),
         eq(placeName.nameState, 'active'),
         eq(placeName.isSearchable, 1),
-      ),
-    )
-    .leftJoin(
-      placeRelationship,
-      and(
-        eq(placeRelationship.fromPlaceId, place.placeId),
-        eq(placeRelationship.relationshipType, 'administratively_contains'),
       ),
     )
     .where(
@@ -185,9 +270,28 @@ export async function searchNationalPlaces(
         ),
       ),
     )
-    .limit(limit * 4)) as unknown as Array<
-    Omit<PlaceRow, 'provincePlaceId' | 'provinceName' | 'cityPlaceId' | 'cityName'>
-  >;
+    .limit(limit * 4)) as unknown as PlaceRow[];
+
+  const seen = new Set(rows.map(row => row.placeId));
+  const missingPublished = publishedMatches.filter(placeId => !seen.has(placeId));
+  if (missingPublished.length) {
+    // A published place whose canonical name is not a searchable public name is fetched by
+    // identity. The place record still comes from the Place Authority; only the label and the
+    // URL come from the published registry.
+    const extra = (await db
+      .select({
+        placeId: place.placeId,
+        placeType: place.placeType,
+        searchScope: place.searchScope,
+        verificationStatus: place.verificationStatus,
+      })
+      .from(place)
+      .where(and(eq(place.searchEligible, 1), inArray(place.placeId, missingPublished)))) as unknown as
+      Array<Omit<PlaceRow, 'name'>>;
+    for (const row of extra) {
+      rows.push({ ...row, name: registry?.places[row.placeId]?.label ?? '' });
+    }
+  }
 
   if (!rows.length) return [];
 
@@ -236,51 +340,20 @@ export async function searchNationalPlaces(
     scopesByContainer.set(edge.parentPlaceId, held);
   }
 
-  /**
-   * The region segment we already publish, keyed by the canonical place identity.
-   *
-   * This is a URL and display convention that keeps a published URL from moving. It never decides
-   * whether a place exists, is searchable or is publishable. Where the map has no entry, the
-   * region is derived from the place's own scope hierarchy.
-   */
-  let regionSegmentMap: Record<string, { region: string | null; place: string }> | null | undefined;
-
-  function publishedRegionSegment(placeId: string): string | null | undefined {
-    if (regionSegmentMap === undefined) {
-      try {
-        const path = join(
-          process.cwd(),
-          'data/geography-coverage-v0.1/output/gauteng_region_segment_map_v0.1.json',
-        );
-        const parsed = JSON.parse(readFileSync(path, 'utf8'));
-        regionSegmentMap = parsed?.segments ?? {};
-      } catch {
-        regionSegmentMap = null;
-      }
-    }
-    return regionSegmentMap?.[placeId]?.region;
-  }
-
   const MUNICIPAL_SUFFIX =
     /\s+(metropolitan municipality|local municipality|district municipality|metro municipality)$/i;
 
   /**
-   * The region segment of a public path.
+   * The region segment of a public path for a place the registry does not bind.
    *
    * This is a URL and display convention, not an administrative claim. A place's direct ancestor
    * is often a municipality container rather than a searchable scope, so the container is
-   * resolved to the city or town scope it holds: the scope whose name the container names, or the
-   * single scope it holds, or otherwise the container's own name with its municipal form removed.
-   * The rule is versioned with the release policy, so a published URL never changes under a
-   * customer.
+   * resolved to the city or town scope it holds: the scope whose name the container names, or
+   * the single scope it holds, or otherwise the container's own name with its municipal form
+   * removed. The rule is versioned with the release policy, so a published URL never changes
+   * under a customer.
    */
-  const regionFor = (placeId: string): { name: string; slug: string } | undefined => {
-    const published = publishedRegionSegment(placeId);
-    if (published !== undefined) {
-      // A place published without a region segment keeps that form.
-      if (published === null) return { name: '', slug: '' };
-      return { name: published, slug: published };
-    }
+  const derivedRegionFor = (placeId: string): { name: string; slug: string } | undefined => {
     const scoped = ancestorByScope(placeId, 'metro_city');
     if (scoped) return { name: scoped.parentName, slug: slugify(scoped.parentName) };
 
@@ -297,53 +370,160 @@ export async function searchNationalPlaces(
 
   const results: CanonicalLocationDiscoveryResult[] = [];
   for (const row of rows) {
-    const level = LEVEL_BY_SCOPE[row.searchScope || ''];
-    if (!level) continue;
+    const published = registry?.places[row.placeId];
+    const canonicalLevel = LEVEL_BY_SCOPE[row.searchScope || ''];
+    if (!published && !canonicalLevel) continue;
+
     const provinceAncestor = ancestorByScope(row.placeId, 'province');
-    const cityAncestor = ancestorByScope(row.placeId, 'metro_city');
-    const provinceName = level === 'province' ? row.name : (provinceAncestor?.parentName ?? null);
-    const region = level === 'province' ? undefined : regionFor(row.placeId);
-    const provinceSlug = provinceName ? slugify(provinceName) : undefined;
-    const regionSlug = region?.slug;
-    const placeSlug = level === 'province' ? undefined : slugify(row.name);
-    // A place that is its own region, such as a city that is also its municipality's seat,
-    // is written once. The published form for those is province/place.
-    const path =
-      regionSlug && placeSlug && regionSlug === placeSlug
-        ? [provinceSlug, placeSlug].filter(Boolean).join('/')
-        : [provinceSlug, regionSlug, placeSlug].filter(Boolean).join('/');
-    const publishedPath = publishedRegionSegment(row.placeId);
+    const provinceName = published
+      ? published.provinceName
+      : canonicalLevel === 'province'
+        ? row.name
+        : (provinceAncestor?.parentName ?? null);
+
+    let level: CanonicalLocationLevel;
+    let label: string;
+    let regionName: string | null;
+    let regionSlug: string | undefined;
+    let placeSlug: string | undefined;
+    let canonicalPath: string;
+
+    if (published) {
+      // A place we already publish is offered under the label and the URL we already publish.
+      // The published level decides the path shape, because the published path is the shape
+      // customers already hold.
+      level = published.level;
+      label = published.label;
+      regionName = published.regionName;
+      regionSlug = published.region ?? undefined;
+      placeSlug = published.level === 'suburb' ? published.place : undefined;
+      canonicalPath = published.path;
+    } else {
+      level = canonicalLevel as CanonicalLocationLevel;
+      label = row.name;
+      const region = level === 'province' ? undefined : derivedRegionFor(row.placeId);
+      regionName = region?.name ?? null;
+      regionSlug = region?.slug;
+      placeSlug = level === 'province' ? undefined : slugify(row.name);
+      const provinceSlug = provinceName ? slugify(provinceName) : undefined;
+      const path =
+        regionSlug && placeSlug && regionSlug === placeSlug
+          ? [provinceSlug, placeSlug].filter(Boolean).join('/')
+          : [provinceSlug, regionSlug, placeSlug].filter(Boolean).join('/');
+      canonicalPath = `/${path}`;
+    }
+
+    const parent = ancestorsFor(row.placeId)[0];
 
     results.push({
       kind: 'canonical_location',
       canonicalLocationId: row.placeId,
       factualLocationId: row.placeId,
-      label: row.name,
+      label,
       factualLevel: level,
       searchScopeKind: SCOPE_BY_LEVEL[level] as 'province' | 'metro_city' | 'locality',
       display: {
         typeLabel: TYPE_LABEL_BY_TYPE[row.placeType] || 'Place',
         contextLabel:
-          level === 'province'
-            ? undefined
-            : [provinceName, region?.name].filter(Boolean).join(' · '),
+          level === 'province' ? undefined : [provinceName, regionName].filter(Boolean).join(' · '),
       },
-      provinceSlug: provinceSlug || '',
+      provinceSlug: published ? published.provinceSlug : provinceName ? slugify(provinceName) : '',
       ...(regionSlug ? { citySlug: regionSlug } : {}),
-      ...(level === 'suburb' && placeSlug ? { suburbSlug: placeSlug } : {}),
-      ...(ancestorsFor(row.placeId)[0]
-        ? { parentCanonicalLocationId: ancestorsFor(row.placeId)[0].parentPlaceId }
-        : {}),
+      ...(placeSlug ? { suburbSlug: placeSlug } : {}),
+      ...(parent ? { parentCanonicalLocationId: parent.parentPlaceId } : {}),
       ...(provinceName ? { provinceName } : {}),
-      ...(region ? { cityName: region.name } : {}),
+      ...(regionName ? { cityName: regionName } : {}),
       status: row.verificationStatus,
-      canonicalPath:
-        publishedPath === null
-          ? `/${[provinceSlug, placeSlug].filter(Boolean).join('/')}`
-          : `/${path}`,
+      canonicalPath,
       source: 'canonical_geography',
     });
     if (results.length >= limit) break;
   }
   return results;
+}
+
+/**
+ * The published locations the Place Authority has not admitted.
+ *
+ * A published location that the Place Authority does not carry has no canonical identity. The
+ * published geography is the only record of it, so the published runtime projection remains the
+ * resolver for those locations, at the URL we already publish, until the Place Authority admits
+ * them.
+ *
+ * The set is bounded by the published-place registry, every result says which authority
+ * answered, and the removal condition is objective: the location is admitted to the Place
+ * Authority and leaves the registry's unmapped list.
+ */
+export async function searchPublishedProjectionFallback(
+  options: NationalPlaceSearchOptions,
+): Promise<CanonicalLocationDiscoveryResult[]> {
+  const registry = loadPublishedPlaceRegistry();
+  if (!registry?.unmapped.length) return [];
+
+  const query = options.query.trim().toLowerCase();
+  if (!query) return [];
+
+  const wanted = registry.unmapped.filter(entry =>
+    entry.label.toLowerCase().includes(query),
+  );
+  if (!wanted.length) return [];
+
+  const db = await getDb();
+  if (!db) return [];
+
+  const results: CanonicalLocationDiscoveryResult[] = [];
+  for (const entry of wanted) {
+    const resolved = await resolvePublishedRuntimeHandle(entry);
+    if (!resolved) continue;
+    results.push({
+      kind: 'canonical_location',
+      canonicalLocationId: resolved.handle,
+      factualLocationId: resolved.handle,
+      label: entry.label,
+      factualLevel: entry.level,
+      searchScopeKind: entry.level === 'city' ? 'metro_city' : 'locality',
+      display: {
+        typeLabel: entry.level === 'city' ? 'City' : 'Suburb',
+        contextLabel:
+          entry.level === 'province'
+            ? undefined
+            : [entry.provinceName ?? entry.provinceSlug, entry.regionName]
+                .filter(Boolean)
+                .join(' · '),
+      },
+      provinceSlug: entry.provinceSlug,
+      ...(entry.region ? { citySlug: entry.region } : {}),
+      ...(entry.level === 'suburb' ? { suburbSlug: entry.place } : {}),
+      ...(resolved.parentHandle ? { parentCanonicalLocationId: resolved.parentHandle } : {}),
+      ...(entry.provinceName ? { provinceName: entry.provinceName } : {}),
+      ...(entry.regionName ? { cityName: entry.regionName } : {}),
+      status: resolved.status,
+      canonicalPath: entry.path,
+      source: 'published_projection',
+    });
+  }
+  return results;
+}
+
+/**
+ * The published locations a customer may search, from both authorities.
+ *
+ * The Place Authority answers first. A published location the Place Authority does not carry
+ * is added from the published projection, so no published link disappears from search while the
+ * canonical authority catches up.
+ */
+export async function searchPublicPlaceSuggestions(
+  options: NationalPlaceSearchOptions,
+): Promise<CanonicalLocationDiscoveryResult[]> {
+  const limit = Math.min(Math.max(options.limit ?? 8, 1), 20);
+  const canonical = await searchNationalPlaces({ query: options.query, limit });
+  const covered = new Set(canonical.map(result => result.canonicalPath));
+  const merged = [...canonical];
+  for (const result of await searchPublishedProjectionFallback({ query: options.query })) {
+    if (merged.length >= limit) break;
+    if (covered.has(result.canonicalPath)) continue;
+    covered.add(result.canonicalPath);
+    merged.push(result);
+  }
+  return merged;
 }

@@ -51,7 +51,14 @@ export interface CanonicalLocationDiscoveryResult {
   origin?: string;
   /** Presentation/routing context only; it is never selection authority. */
   canonicalPath: string;
-  source: 'canonical_geography';
+  /**
+   * Which authority answered.
+   *
+   * `canonical_geography` is the Place Authority. `published_projection` is the published
+   * runtime projection, used only for a published location the Place Authority has not
+   * admitted, so a published link never disappears from search.
+   */
+  source: 'canonical_geography' | 'published_projection';
   listingCount?: number;
   /** How the query matched this result; alias hits never create new identities. */
   matchReason?: SearchDiscoveryMatchReason;

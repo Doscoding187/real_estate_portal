@@ -150,6 +150,77 @@ export async function listVerifiedPlaceScopes(input: {
 }
 
 /**
+ * The published runtime scope for one published location, resolved by its exact published path.
+ *
+ * A published location is identified by the province, the city scope it sits under and its own
+ * slug. A path that no row carries, or that two rows claim, is refused rather than guessed.
+ *
+ * The published projection's own `status` is returned, not filtered on. This function serves the
+ * published-location fallback, whose whole purpose is to keep a published location findable
+ * while the Place Authority admits it. The verified-only rule above belongs to the guide
+ * surfaces, which publish a curated set, not to a location that is already published.
+ */
+export async function resolvePublishedPlaceScope(input: {
+  placeSlug: string;
+  provinceSlug: string;
+  citySlug?: string | null;
+}): Promise<{
+  level: 'city' | 'suburb';
+  canonicalLocationId: string;
+  parentCanonicalLocationId?: string;
+  status: string;
+} | null> {
+  const db = await getDb();
+  const placeSlug = String(input.placeSlug || '').trim();
+  const provinceSlug = String(input.provinceSlug || '').trim();
+  if (!placeSlug || !provinceSlug) return null;
+
+  const provinceRows = await db
+    .select({ id: provinces.id })
+    .from(provinces)
+    .where(and(eq(provinces.slug, provinceSlug)))
+    .limit(2);
+  if (provinceRows.length !== 1) return null;
+  const provinceId = provinceRows[0].id;
+
+  const citySlug = input.citySlug ? String(input.citySlug).trim() : null;
+
+  if (!citySlug) {
+    const rows = await db
+      .select({ id: cities.id, status: cities.status })
+      .from(cities)
+      .where(and(eq(cities.provinceId, provinceId), eq(cities.slug, placeSlug)))
+      .limit(2);
+    if (rows.length !== 1) return null;
+    return {
+      level: 'city',
+      canonicalLocationId: encodeCanonicalLocationId('city', rows[0].id),
+      status: rows[0].status,
+    };
+  }
+
+  const rows = await db
+    .select({ id: suburbs.id, status: suburbs.status, cityId: cities.id })
+    .from(suburbs)
+    .innerJoin(cities, eq(suburbs.cityId, cities.id))
+    .where(
+      and(
+        eq(cities.provinceId, provinceId),
+        eq(cities.slug, citySlug),
+        eq(suburbs.slug, placeSlug),
+      ),
+    )
+    .limit(2);
+  if (rows.length !== 1) return null;
+  return {
+    level: 'suburb',
+    canonicalLocationId: encodeCanonicalLocationId('suburb', rows[0].id),
+    parentCanonicalLocationId: encodeCanonicalLocationId('city', rows[0].cityId),
+    status: rows[0].status,
+  };
+}
+
+/**
  * The city scopes available for guide discovery, in editorial order. A city qualifies when its
  * own record and its province are both verified and the province is a configured province.
  */

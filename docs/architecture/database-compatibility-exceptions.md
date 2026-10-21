@@ -823,3 +823,61 @@ Authority directly. The runtime projection tables are then retired by a separate
 migration.
 Removal workstream: single geography authority — consumer switchover, then projection
 retirement.
+
+## DBX-PUBLISHED-PLACE-FALLBACK-2026-10-21
+
+Status: proposed — awaiting Edward's approval on 2026-10-21
+
+Owner: Property Listify senior product engineering
+
+Approved by Edward on: not yet approved. This record is proposed because the fallback is
+required to keep five published locations findable, and it must not ship unapproved.
+
+Business reason: the canonical Place Authority does not carry every location the product
+publishes. Five published Gauteng locations have no canonical Place identity, and the published
+runtime projection is therefore the only record of them. Without a bounded fallback, switching
+the customer-facing search surfaces to the national Place Authority would remove those five
+locations from search, and their published URLs would be reachable only by direct entry. The
+fallback keeps them findable at the URL we already publish, and shrinks as the Place Authority
+admits them.
+
+Canonical authority: the `place`, `place_name` and `place_relationship` tables remain the only
+authority for location identity, existence, search eligibility and publication eligibility. The
+fallback never creates an identity, never asserts geography, and never widens a scope. A
+published location the Place Authority carries is answered by the Place Authority, never by the
+projection.
+
+Exact files: `server/services/nationalPlaceSearchService.ts` holds the fallback;
+`server/services/geographyAuthorityService.ts` holds the single registered projection read it
+uses; `shared/searchDiscovery.ts` carries the `published_projection` result source;
+`data/geography-coverage-v0.1/output/gauteng_published_place_registry_v0.2.json` holds the
+bounded set.
+
+Tables and columns: `provinces` (id, slug), `cities` (id, slug, status, provinceId), `suburbs`
+(id, slug, status, cityId), read only, and only through the registered boundary.
+
+Permitted read direction: read only, and only for a published location that the published-place
+registry records as having no canonical Place identity. A published location the Place
+Authority carries is never answered from the projection.
+
+Permitted write direction: none.
+
+Failure and observability behavior: a published location the projection does not carry, or that
+two rows claim, is refused rather than guessed. Every fallback result declares
+`source: 'published_projection'`, so a result answered by the projection is distinguishable from
+one answered by the Place Authority. The published-place registry reports the whole bounded set
+and its count on every build, and the published-URL compatibility check reports it.
+
+Automated evidence: `scripts/verify-published-urls.ts` proves that every published location URL
+is reproduced by the public place search, and reports the locations with no canonical identity
+and the one location the Place Authority marks not searchable;
+`server/__tests__/contract.geography-authority-single-read.test.ts` proves the projection still
+has a single registered reader.
+
+Expiry or objective removal condition: the exception closes when the published-place registry
+records no published location without a canonical Place identity. Each location leaves the set
+when the Place Authority admits it, and the set is regenerated on every build, so the exception
+can only shrink.
+
+Removal workstream: single geography authority — Place Authority admission of the remaining
+published locations, then retirement of the published-location fallback.
