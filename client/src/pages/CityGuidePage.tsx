@@ -47,7 +47,7 @@ function Sources({ guide, ids }: { guide: CityGuideContent; ids: readonly string
   );
 }
 function PlaceGuideCard({ guide, place }: { guide: CityGuideContent; place: CityGuidePlace }) {
-  const lookup = trpc.location.searchDiscoverySuggestions.useQuery(
+  const lookup = trpc.location.placeSuggestions.useQuery(
     { query: place.name, limit: 8 },
     { retry: false, staleTime: 600000 },
   );
@@ -100,7 +100,7 @@ function PlaceGuideCard({ guide, place }: { guide: CityGuideContent; place: City
   );
 }
 function RegionPlace({ guide, name }: { guide: CityGuideContent; name: string }) {
-  const lookup = trpc.location.searchDiscoverySuggestions.useQuery(
+  const lookup = trpc.location.placeSuggestions.useQuery(
     { query: name, limit: 8 },
     { retry: false, staleTime: 600000 },
   );
@@ -504,7 +504,7 @@ export default function CityGuidePage({ guide }: { guide: CityGuideContent }) {
           <div className="city-directory-search">
             <CitySuburbFinder
               guide={guide}
-              cityId={record?.id}
+              citySlug={record ? guide.slug : undefined}
               label={`Search suburbs and places`}
               onSelect={place => {
                 const href = buildLocationDiscoveryPath(place);

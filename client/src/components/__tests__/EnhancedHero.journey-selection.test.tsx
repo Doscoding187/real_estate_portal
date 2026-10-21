@@ -106,6 +106,9 @@ vi.mock('@/lib/trpc', () => ({
       searchDiscoverySuggestions: {
         useQuery: searchDiscoveryQuery,
       },
+      placeSuggestions: {
+        useQuery: searchDiscoveryQuery,
+      },
     },
   },
 }));

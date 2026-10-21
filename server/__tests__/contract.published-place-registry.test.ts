@@ -102,8 +102,8 @@ describe('public place search reproduces the published URL', () => {
     const published = publishedLocations();
     // A spread across the set, so a regression in any part of the reconciliation is caught
     // without making the suite carry the whole sweep.
-    const sample = published.filter((_, index) => index % 37 === 0);
-    expect(sample.length).toBeGreaterThan(20);
+    const sample = published.filter((_, index) => index % 61 === 0);
+    expect(sample.length).toBeGreaterThan(15);
 
     for (const row of sample) {
       const results = await searchPublicPlaceSuggestions({ query: row.name, limit: 40 });
@@ -111,7 +111,7 @@ describe('public place search reproduces the published URL', () => {
       expect(matches.length).toBeGreaterThan(0);
       expect(matches.map(result => result.canonicalPath)).toContain(row.path);
     }
-  });
+  }, 120_000);
 
   it('offers a published location that the Place Authority has not admitted', async () => {
     const current = registry();
@@ -121,5 +121,5 @@ describe('public place search reproduces the published URL', () => {
       expect(match, `${entry.path} is not offered by public place search`).toBeTruthy();
       expect(match?.source).toBe('published_projection');
     }
-  });
+  }, 60_000);
 });

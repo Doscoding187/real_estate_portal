@@ -27,6 +27,16 @@ export interface CanonicalLocationDiscoveryResult {
   factualLocationId?: string;
   /** Existing canonical location authority handle used by the runtime query. */
   canonicalLocationId: string;
+  /**
+   * The runtime query handle for a place the published projection still carries.
+   *
+   * The Place Authority identity is the canonical handle. The public search execution still
+   * resolves a city scope through the published projection, because the Place Authority has no
+   * reviewed city-to-suburb membership rule yet, so this handle is what keeps a city search
+   * covering its suburbs. It is absent for every place the projection does not carry, and it
+   * disappears when the search execution reads the Place Authority.
+   */
+  runtimeLocationId?: string;
   label: string;
   factualLevel: CanonicalLocationLevel;
   factualType?: FactualGeographyType;

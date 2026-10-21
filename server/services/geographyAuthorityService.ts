@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { cities, provinces, suburbs } from '../../drizzle/schema';
 import { CITY_GUIDE_FEATURES } from '../../shared/cityGuideFeatures';
 import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
@@ -218,6 +218,80 @@ export async function resolvePublishedPlaceScope(input: {
     parentCanonicalLocationId: encodeCanonicalLocationId('city', rows[0].cityId),
     status: rows[0].status,
   };
+}
+
+/**
+ * The published runtime scopes for a set of published locations, in one read.
+ *
+ * The published locations are resolved by their exact published path: a published suburb is the
+ * row whose own slug and whose city's slug and province's slug are the published ones. A path
+ * that no row carries, or that two rows claim, is refused rather than guessed.
+ *
+ * The published projection's own `status` is returned, not filtered on. This function serves the
+ * published-location fallback and the transitional runtime scope handle, whose whole purpose is
+ * to keep a published location findable and searchable while the Place Authority takes over.
+ */
+export async function resolvePublishedPlaceScopes(input: {
+  places: readonly {
+    placeSlug: string;
+    provinceSlug: string;
+    citySlug?: string | null;
+  }[];
+}): Promise<
+  Map<
+    string,
+    {
+      canonicalLocationId: string;
+      parentCanonicalLocationId?: string;
+      status: string;
+    }
+  >
+> {
+  const resolved = new Map<
+    string,
+    { canonicalLocationId: string; parentCanonicalLocationId?: string; status: string }
+  >();
+  const wanted = input.places.filter(
+    place => place.placeSlug && place.provinceSlug && place.citySlug,
+  );
+  if (!wanted.length) return resolved;
+  const db = await getDb();
+  if (!db) return resolved;
+
+  const rows = await db
+    .select({
+      placeSlug: suburbs.slug,
+      citySlug: cities.slug,
+      provinceSlug: provinces.slug,
+      suburbId: suburbs.id,
+      suburbStatus: suburbs.status,
+      cityId: cities.id,
+    })
+    .from(suburbs)
+    .innerJoin(cities, eq(suburbs.cityId, cities.id))
+    .innerJoin(provinces, eq(cities.provinceId, provinces.id))
+    .where(
+      or(
+        ...wanted.map(place =>
+          and(
+            eq(provinces.slug, place.provinceSlug),
+            eq(cities.slug, place.citySlug as string),
+            eq(suburbs.slug, place.placeSlug),
+          ),
+        ),
+      ),
+    );
+
+  for (const row of rows) {
+    const key = `${row.provinceSlug}/${row.citySlug}/${row.placeSlug}`;
+    if (resolved.has(key)) continue;
+    resolved.set(key, {
+      canonicalLocationId: encodeCanonicalLocationId('suburb', row.suburbId),
+      parentCanonicalLocationId: encodeCanonicalLocationId('city', row.cityId),
+      status: row.suburbStatus,
+    });
+  }
+  return resolved;
 }
 
 /**

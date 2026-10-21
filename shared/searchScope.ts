@@ -1,4 +1,5 @@
 import { parseCanonicalLocationId, type CanonicalLocationLevel } from './locationAuthority';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 export const SEARCH_SCOPE_KINDS = [
   'province',
@@ -225,6 +226,15 @@ function parseSearchScopeMember(
     };
   }
 
+  // A Place Authority identity is a canonical location identity. The member kind is the level
+  // the authority asserted, because the identity does not carry a level itself.
+  if (isCanonicalPlaceId(value.canonicalLocationId)) {
+    return {
+      ok: true,
+      member: { kind: value.kind, canonicalLocationId: value.canonicalLocationId },
+    };
+  }
+
   const parsedLocationId = parseCanonicalLocationId(value.canonicalLocationId);
   if (!parsedLocationId) {
     return {
@@ -355,6 +365,15 @@ export function parseSearchScope(value: unknown): SearchScopeParseResult {
 
   if (!hasOnlyKeys(value, ['kind', 'canonicalLocationId'])) {
     return invalid('unknown_scope_field', 'Canonical scope contains an unsupported field.');
+  }
+
+  // A Place Authority identity is a canonical location identity. It does not carry its level in
+  // the identifier, so the scope kind is the level the authority asserted.
+  if (isCanonicalPlaceId(value.canonicalLocationId)) {
+    return {
+      ok: true,
+      scope: { kind, canonicalLocationId: value.canonicalLocationId as string },
+    };
   }
 
   const parsedLocationId = parseCanonicalLocationId(value.canonicalLocationId);

@@ -145,6 +145,35 @@ async function resolvePublishedRuntimeHandle(
   };
 }
 
+/**
+ * The runtime query handles for the published places in a result set, in one read.
+ */
+async function resolveRuntimeHandles(
+  entries: readonly PublishedPlaceEntry[],
+): Promise<
+  Map<string, { canonicalLocationId: string; parentCanonicalLocationId?: string; status: string }>
+> {
+  const handles = new Map<
+    string,
+    { canonicalLocationId: string; parentCanonicalLocationId?: string; status: string }
+  >();
+  if (!entries.length) return handles;
+  const { resolvePublishedPlaceScopes } = await import('./geographyAuthorityService');
+  const resolved = await resolvePublishedPlaceScopes({
+    places: entries.map(entry => ({
+      placeSlug: entry.place,
+      provinceSlug: entry.provinceSlug,
+      citySlug: entry.region,
+    })),
+  });
+  for (const entry of entries) {
+    if (!entry.region) continue;
+    const handle = resolved.get(`${entry.provinceSlug}/${entry.region}/${entry.place}`);
+    if (handle) handles.set(entry.path, handle);
+  }
+  return handles;
+}
+
 interface AncestorRow {
   childPlaceId: string;
   parentPlaceId: string;
@@ -344,6 +373,19 @@ export async function searchNationalPlaces(
     /\s+(metropolitan municipality|local municipality|district municipality|metro municipality)$/i;
 
   /**
+   * The runtime query handle for the published places in this result set.
+   *
+   * The public search execution still resolves a city scope through the published projection,
+   * because the Place Authority has no reviewed city-to-suburb membership rule yet. The handle
+   * is read in one pass, through the registered projection boundary, and only for the places we
+   * already publish.
+   */
+  const publishedEntries = rows
+    .map(row => registry?.places[row.placeId])
+    .filter((entry): entry is PublishedPlaceEntry => Boolean(entry));
+  const runtimeHandles = await resolveRuntimeHandles(publishedEntries);
+
+  /**
    * The region segment of a public path for a place the registry does not bind.
    *
    * This is a URL and display convention, not an administrative claim. A place's direct ancestor
@@ -391,11 +433,12 @@ export async function searchNationalPlaces(
     if (published) {
       // A place we already publish is offered under the label and the URL we already publish.
       // The published level decides the path shape, because the published path is the shape
-      // customers already hold.
+      // customers already hold. A published city is its own city scope, and a published suburb
+      // sits under the city scope the published path names.
       level = published.level;
       label = published.label;
       regionName = published.regionName;
-      regionSlug = published.region ?? undefined;
+      regionSlug = published.level === 'city' ? published.place : (published.region ?? undefined);
       placeSlug = published.level === 'suburb' ? published.place : undefined;
       canonicalPath = published.path;
     } else {
@@ -403,8 +446,8 @@ export async function searchNationalPlaces(
       label = row.name;
       const region = level === 'province' ? undefined : derivedRegionFor(row.placeId);
       regionName = region?.name ?? null;
-      regionSlug = region?.slug;
-      placeSlug = level === 'province' ? undefined : slugify(row.name);
+      regionSlug = level === 'city' ? slugify(row.name) : region?.slug;
+      placeSlug = level === 'suburb' ? slugify(row.name) : undefined;
       const provinceSlug = provinceName ? slugify(provinceName) : undefined;
       const path =
         regionSlug && placeSlug && regionSlug === placeSlug
@@ -418,7 +461,9 @@ export async function searchNationalPlaces(
     results.push({
       kind: 'canonical_location',
       canonicalLocationId: row.placeId,
-      factualLocationId: row.placeId,
+      ...(published && runtimeHandles.get(published.path)
+        ? { runtimeLocationId: runtimeHandles.get(published.path)!.canonicalLocationId }
+        : {}),
       label,
       factualLevel: level,
       searchScopeKind: SCOPE_BY_LEVEL[level] as 'province' | 'metro_city' | 'locality',
@@ -478,7 +523,6 @@ export async function searchPublishedProjectionFallback(
     results.push({
       kind: 'canonical_location',
       canonicalLocationId: resolved.handle,
-      factualLocationId: resolved.handle,
       label: entry.label,
       factualLevel: entry.level,
       searchScopeKind: entry.level === 'city' ? 'metro_city' : 'locality',
