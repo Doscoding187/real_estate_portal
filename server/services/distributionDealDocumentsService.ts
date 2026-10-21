@@ -1066,6 +1066,7 @@ export async function deliverDealDocumentToDeveloper(input: {
   if (!db) throw new Error('Database not available');
 
   const dealScope = await getDealScope(db, input.dealId);
+  assertDealIsMutable(dealScope.currentStage, 'deliver checklist documents');
   await assertAssignedManagerForDevelopment(db, {
     developmentId: dealScope.developmentId,
     actorUserId: input.actorUserId,

@@ -566,6 +566,25 @@ describeWithDb('distribution developer document delivery integration', () => {
     ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
   });
 
+  it('refuses to deliver documents for a closed deal', async () => {
+    const seed = await seedDeliveryScenario();
+    const managerCaller = buildCaller(seed.managerUserId, 'visitor');
+    await uploadAndVerify(seed, seed.templateIds[0], 'buyer-id.pdf');
+
+    const db = await getDb();
+    await db!
+      .update(distributionDeals)
+      .set({ currentStage: 'cancelled' })
+      .where(eq(distributionDeals.id, seed.dealId));
+
+    await expect(
+      managerCaller.distribution.manager.deliverDealDocument({
+        dealId: seed.dealId,
+        templateId: seed.templateIds[0],
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+  });
+
   it('keeps deliveries scoped to the approved Developer organisation and role', async () => {
     const seed = await seedDeliveryScenario();
     const managerCaller = buildCaller(seed.managerUserId, 'visitor');
