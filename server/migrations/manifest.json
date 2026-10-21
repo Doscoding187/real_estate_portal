@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0147_distribution_deal_prospect_check_fit_foreign_key.sql",
+  "expectedHead": "0148_distribution_prospect_check_fit_prospect_names.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1542,6 +1542,17 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 148,
+      "filename": "0148_distribution_prospect_check_fit_prospect_names.sql",
+      "checksum": "5e19dc561a84653e72f878f3dcd33e3f603c9a5db2215e647838b13b14fc452a",
+      "parent": "0147_distribution_deal_prospect_check_fit_foreign_key.sql",
+      "parentChecksum": "544fcc4ab018a02e7e0431cedc33c7a68ba7aebcad1feec0debfc9a3ca201975",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the referrer prospect check fit prospect names, 2026-10-21; migration authoring and disposable worktree verification"
     }
   ]
 }

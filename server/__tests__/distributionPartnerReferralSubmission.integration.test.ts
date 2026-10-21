@@ -886,10 +886,12 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     const scenario = await seedScenario();
 
     const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
       grossIncomeMonthly: 50000,
     });
 
     expect(checkFit.policyVersion).toBe('prospect_check_fit_v1');
+    expect(checkFit.prospectName).toBe('Thandi Mokoena');
     expect(checkFit.assumptions).toMatchObject({
       termMonths: 240,
       repaymentAllowanceRatio: 0.3,
@@ -922,10 +924,14 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     const scenario = await seedScenario();
 
     const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
       grossIncomeMonthly: 30000,
+      coApplicantName: 'Sipho Mokoena',
       coApplicantGrossIncomeMonthly: 20000,
     });
 
+    expect(checkFit.prospectName).toBe('Thandi Mokoena');
+    expect(checkFit.coApplicantName).toBe('Sipho Mokoena');
     expect(checkFit.assumptions).toMatchObject({ applicantCount: 2, jointAssessment: true });
     expect(checkFit.outputs).toMatchObject({
       combinedGrossIncomeMonthly: 50000,
@@ -938,6 +944,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     await ensureCanonicalPrimeRate();
     const scenario = await seedScenario();
     const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
       grossIncomeMonthly: 50000,
     });
 
@@ -999,6 +1006,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     await ensureCanonicalPrimeRate();
     const scenario = await seedScenario();
     const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Nomvula Sibiya',
       grossIncomeMonthly: 10000,
     });
 

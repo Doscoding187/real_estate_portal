@@ -21,6 +21,8 @@ type DealChecklist = {
   qualification?: {
     checkFitId: string | null;
     policyVersion: string | null;
+    prospectName?: string | null;
+    coApplicantName?: string | null;
     estimatedPurchasePrice: number | null;
     assumptions: Record<string, unknown> | null;
     outputs: Record<string, unknown> | null;
@@ -214,6 +216,14 @@ export function ManagerDealChecklistPanel({
                   : `${checklist.currencyCode || 'ZAR'} ${Math.round(
                       checklist.qualification.estimatedPurchasePrice,
                     ).toLocaleString('en-ZA')}`}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Prospect as recorded by the referrer</p>
+              <p className="font-medium">
+                {[checklist.qualification.prospectName, checklist.qualification.coApplicantName]
+                  .filter(Boolean)
+                  .join(' and ') || 'Not recorded'}
               </p>
             </div>
             <div>

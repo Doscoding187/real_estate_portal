@@ -24,7 +24,8 @@ type CheckFitMatch = {
 
 type CheckFitRecord = {
   id: string;
-  referenceLabel: string | null;
+  prospectName: string | null;
+  coApplicantName: string | null;
   grossIncomeMonthly: number;
   coApplicantGrossIncomeMonthly: number | null;
   combinedGrossIncomeMonthly: number;
@@ -61,9 +62,10 @@ function parseAmount(value: string) {
 
 export default function PartnerProspectCheckFitPage() {
   const [, setLocation] = useLocation();
-  const [referenceLabel, setReferenceLabel] = useState('');
+  const [prospectName, setProspectName] = useState('');
   const [grossIncome, setGrossIncome] = useState('');
-  const [jointIncome, setJointIncome] = useState('');
+  const [coApplicantName, setCoApplicantName] = useState('');
+  const [coApplicantIncome, setCoApplicantIncome] = useState('');
   const [isJoint, setIsJoint] = useState(false);
   const [activeCheckFitId, setActiveCheckFitId] = useState<string | null>(null);
 
@@ -89,20 +91,33 @@ export default function PartnerProspectCheckFitPage() {
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!prospectName.trim()) {
+      toast.error('Enter the prospect’s name.');
+      return;
+    }
     const primary = parseAmount(grossIncome);
     if (primary <= 0) {
       toast.error('Enter the prospect’s gross monthly income.');
       return;
     }
-    const coApplicant = isJoint ? parseAmount(jointIncome) : 0;
+    const coApplicant = isJoint ? parseAmount(coApplicantIncome) : 0;
+    if (isJoint && !coApplicantName.trim()) {
+      toast.error('Enter the second applicant’s name.');
+      return;
+    }
     if (isJoint && coApplicant <= 0) {
       toast.error('Enter the second applicant’s gross monthly income.');
       return;
     }
     void createMutation.mutateAsync({
+      prospectName: prospectName.trim(),
       grossIncomeMonthly: primary,
-      ...(coApplicant > 0 ? { coApplicantGrossIncomeMonthly: coApplicant } : {}),
-      ...(referenceLabel.trim() ? { referenceLabel: referenceLabel.trim() } : {}),
+      ...(isJoint
+        ? {
+            coApplicantName: coApplicantName.trim(),
+            coApplicantGrossIncomeMonthly: coApplicant,
+          }
+        : {}),
     });
   }
 
@@ -124,56 +139,71 @@ export default function PartnerProspectCheckFitPage() {
               Check fit
             </CardTitle>
             <CardDescription>
-              Gross monthly income only. The prospect’s identity, documents and consent are
-              collected in the referral step that follows.
+              The prospect’s name and gross monthly income. Their documents and signed consent are
+              collected in the referral step that follows, before anything is shared with the
+              developer.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="check-fit-income">Gross monthly income</Label>
-                  <Input
-                    id="check-fit-income"
-                    inputMode="numeric"
-                    placeholder="e.g. 45000"
-                    value={grossIncome}
-                    onChange={event => setGrossIncome(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="check-fit-label">Reference (optional)</Label>
-                  <Input
-                    id="check-fit-label"
-                    placeholder="e.g. Prospect A"
-                    value={referenceLabel}
-                    onChange={event => setReferenceLabel(event.target.value)}
-                  />
-                </div>
-              </div>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input"
+                  checked={isJoint}
+                  onChange={event => setIsJoint(event.target.checked)}
+                />
+                Joint application (two people applying together)
+              </label>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-input"
-                    checked={isJoint}
-                    onChange={event => setIsJoint(event.target.checked)}
-                  />
-                  Joint application (two people applying together)
-                </label>
-                {isJoint ? (
+              <div className={isJoint ? 'grid gap-4 sm:grid-cols-2' : 'grid gap-4'}>
+                <div className="space-y-3 rounded-lg border p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    {isJoint ? 'Applicant 1' : 'Prospect'}
+                  </p>
                   <div className="space-y-2">
-                    <Label htmlFor="check-fit-joint-income">
-                      Second applicant gross monthly income
-                    </Label>
+                    <Label htmlFor="check-fit-name">Prospect name</Label>
                     <Input
-                      id="check-fit-joint-income"
-                      inputMode="numeric"
-                      placeholder="e.g. 20000"
-                      value={jointIncome}
-                      onChange={event => setJointIncome(event.target.value)}
+                      id="check-fit-name"
+                      placeholder="e.g. Thandi Mokoena"
+                      value={prospectName}
+                      onChange={event => setProspectName(event.target.value)}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="check-fit-income">Gross monthly income</Label>
+                    <Input
+                      id="check-fit-income"
+                      inputMode="numeric"
+                      placeholder="e.g. 45000"
+                      value={grossIncome}
+                      onChange={event => setGrossIncome(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {isJoint ? (
+                  <div className="space-y-3 rounded-lg border p-4">
+                    <p className="text-sm font-semibold text-foreground">Applicant 2</p>
+                    <div className="space-y-2">
+                      <Label htmlFor="check-fit-co-name">Prospect name</Label>
+                      <Input
+                        id="check-fit-co-name"
+                        placeholder="e.g. Sipho Mokoena"
+                        value={coApplicantName}
+                        onChange={event => setCoApplicantName(event.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="check-fit-co-income">Gross monthly income</Label>
+                      <Input
+                        id="check-fit-co-income"
+                        inputMode="numeric"
+                        placeholder="e.g. 20000"
+                        value={coApplicantIncome}
+                        onChange={event => setCoApplicantIncome(event.target.value)}
+                      />
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -190,8 +220,9 @@ export default function PartnerProspectCheckFitPage() {
             <CardHeader>
               <CardTitle>Result</CardTitle>
               <CardDescription>
-                {activeCheckFit.referenceLabel
-                  ? `${activeCheckFit.referenceLabel} · `
+                {activeCheckFit.prospectName ? `${activeCheckFit.prospectName} · ` : ''}
+                {activeCheckFit.coApplicantName
+                  ? `${activeCheckFit.coApplicantName} · `
                   : ''}
                 Based on a combined gross monthly income of{' '}
                 {formatAmount(activeCheckFit.outputs.combinedGrossIncomeMonthly)}.
@@ -334,7 +365,7 @@ export default function PartnerProspectCheckFitPage() {
                 >
                   <span>
                     <span className="font-medium text-foreground">
-                      {record.referenceLabel || 'Unnamed prospect'}
+                      {record.prospectName || 'Unnamed prospect'}
                     </span>
                     <span className="ml-2 text-muted-foreground">
                       {formatAmount(record.outputs.combinedGrossIncomeMonthly)} gross

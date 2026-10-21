@@ -43,7 +43,7 @@ describe('Canonical Listing Place persistence expansion', () => {
       expect(entry.statementCount).toBe(1);
     }
     expect(manifest.expectedHead.filename).toBe(
-      '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
+      '0148_distribution_prospect_check_fit_prospect_names.sql',
     );
   });
 });

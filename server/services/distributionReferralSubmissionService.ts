@@ -415,6 +415,8 @@ export async function createReferralDeal(
             affordabilityPurchasePrice: checkFit.record.outputs.estimatedPurchasePrice,
             affordabilityAssumptionsJson: {
               policyVersion: checkFit.record.policyVersion,
+              prospectName: checkFit.record.prospectName,
+              coApplicantName: checkFit.record.coApplicantName,
               assumptions: checkFit.record.assumptions,
               outputs: checkFit.record.outputs,
               qualifiedDevelopmentCount: checkFit.record.outputs.qualifiedDevelopmentCount,
