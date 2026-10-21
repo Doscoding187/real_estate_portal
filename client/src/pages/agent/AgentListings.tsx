@@ -20,6 +20,7 @@ import {
 import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentListingInventoryCard } from '@/components/agent/AgentListingInventoryCard';
+import { AgentServicesReferral } from '@/components/agent/AgentServicesReferral';
 import {
   Select,
   SelectContent,
@@ -578,6 +579,20 @@ export default function AgentListings() {
                             publicPropertyId == null
                               ? undefined
                               : () => setLocation(`/property/${publicPropertyId}`)
+                          }
+                          servicesReferral={
+                            listing.status &&
+                            ['draft', 'pending', 'pending_review', 'rejected'].includes(
+                              String(listing.status).toLowerCase(),
+                            ) ? (
+                              <AgentServicesReferral
+                                listingId={listing.listingId}
+                                propertyId={publicPropertyId}
+                                suburb={listing.suburb}
+                                city={listing.city}
+                                province={listing.province}
+                              />
+                            ) : null
                           }
                         />
                       );

@@ -77,3 +77,33 @@ describe('canonical Service Partner client identity authority', () => {
     expect(resultsPage).toContain('lead?.notes');
   });
 });
+
+describe('canonical Service Partner publication review surface', () => {
+  const reviewWorkspace = read('client/src/pages/admin/ServicesReviewWorkspace.tsx');
+
+  const adminRegistry = read('client/src/pages/admin/adminRouteRegistry.tsx');
+
+  it('mounts the review worklist inside the super-admin operations surface', () => {
+    expect(adminRegistry).toContain("path: '/admin/services-review'");
+
+    expect(adminRegistry).toContain('ServicesReviewWorkspace');
+  });
+
+  it('reads the worklist and writes only through the reviewed transition', () => {
+    expect(reviewWorkspace).toContain('trpc.servicesEngine.listProviderPublicationQueue.useQuery');
+
+    expect(reviewWorkspace).toContain('trpc.servicesEngine.reviewProviderPublication.useMutation');
+
+    expect(reviewWorkspace).not.toContain('trpc.partners.update');
+  });
+
+  it('never presents a radius, distance or trust claim in the review worklist', () => {
+    expect(reviewWorkspace).not.toContain('radiusKm');
+
+    expect(reviewWorkspace).not.toContain('trustScore');
+
+    expect(reviewWorkspace).not.toContain('moderationTier');
+
+    expect(reviewWorkspace).not.toContain('subscriptionTier');
+  });
+});

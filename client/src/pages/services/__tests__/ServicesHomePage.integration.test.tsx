@@ -7,7 +7,6 @@ const mockProviders = [
     companyName: 'Cape Plumbing Co',
     verificationStatus: 'verified',
     subscriptionTier: 'directory',
-
     services: [{ category: 'home_improvement', code: 'plumbing', displayName: 'Plumbing' }],
     locations: [
       { suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape', radiusKm: 30 },
@@ -20,7 +19,6 @@ const mockProviders = [
     companyName: 'Gauteng Movers',
     verificationStatus: 'verified',
     subscriptionTier: 'directory',
-
     services: [{ category: 'moving', code: 'moving', displayName: 'Residential Moving' }],
     locations: [{ suburb: 'Sandton', city: 'Johannesburg', province: 'Gauteng', radiusKm: 50 }],
     logoUrl: null,
@@ -62,10 +60,10 @@ describe('ServicesHomePage', () => {
     render(<ServicesHomePage />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Find the right property professional',
+      'Trusted local service providers for your property and home',
     );
     expect(screen.getByRole('combobox', { name: /service category/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/suburb, city, province/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. Gauteng, Sandton/i)).toBeInTheDocument();
   });
 
   it('renders real provider records and the platform verification signal', () => {
@@ -84,9 +82,24 @@ describe('ServicesHomePage', () => {
     expect(screen.queryByText(/Nomsa K\./i)).not.toBeInTheDocument();
   });
 
+  it('does not present ratings, review counts or paid placement', () => {
+    render(<ServicesHomePage />);
+
+    // A review count always carries a number next to the word.
+    expect(screen.queryByText(/\d+\s*reviews?/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\brated\b/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/sponsored|featured placement|top provider/i),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/per month|\/month|R\d+\s*\/mo/i)).not.toBeInTheDocument();
+  });
+
   it('keeps a clear request entry point', () => {
     render(<ServicesHomePage />);
-    expect(screen.getAllByRole('button', { name: /browse providers/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /find a provider/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /search/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /view all providers/i }).length).toBeGreaterThan(
+      0,
+    );
   });
 });

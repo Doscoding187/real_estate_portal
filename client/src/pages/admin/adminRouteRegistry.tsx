@@ -47,6 +47,7 @@ const ListingOversight = lazy(() => import('./ListingOversight'));
 const AgentApprovals = lazy(() => import('./AgentApprovals'));
 const DevelopmentOversight = lazy(() => import('./DevelopmentOversight'));
 const PartnerNetworkPage = lazy(() => import('./PartnerNetworkPage'));
+const ServicesReviewWorkspace = lazy(() => import('./ServicesReviewWorkspace'));
 const DistributionNetworkPage = lazy(() => import('./DistributionNetworkPage'));
 const SuperAdminPublisher = lazy(() => import('./publisher/SuperAdminPublisher'));
 const PlanEditor = lazy(() => import('./PlanEditor'));
@@ -139,6 +140,10 @@ const ROUTES = {
   },
 
   partners: { path: '/admin/partners', render: () => <PartnerNetworkPage /> },
+  servicesReview: {
+    path: '/admin/services-review',
+    render: () => <ServicesReviewWorkspace />,
+  },
   distribution: { path: '/admin/distribution', render: () => <DistributionNetworkPage /> },
   distributionSubmodule: {
     path: '/admin/distribution/:submodule',
@@ -195,6 +200,7 @@ export const ADMIN_DASHBOARD_ROUTES: AdminDashboardRoute[] = [
   ROUTES.agentApprovals,
   ROUTES.developmentApprovals,
   ROUTES.partners,
+  ROUTES.servicesReview,
   ROUTES.distribution,
   ROUTES.distributionSubmodule,
   ROUTES.publisher,
@@ -287,7 +293,9 @@ export const getAdminNavGroupForPath = (location: string): AdminNavGroupId => {
 export function getAdminNavItemForPath(location: string): string | undefined {
   const pathname = location.split('?')[0];
   if (
-    ['/admin/listing-approvals', '/admin/agent-approvals'].includes(pathname) ||
+    ['/admin/listing-approvals', '/admin/agent-approvals', '/admin/services-review'].includes(
+      pathname,
+    ) ||
     pathname.startsWith('/admin/review/')
   )
     return ROUTES.approvals.path;

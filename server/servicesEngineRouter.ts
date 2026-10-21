@@ -9,6 +9,7 @@ import {
 import { requireUser } from './_core/requireUser';
 import {
   hasProviderCoverage,
+  SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
 } from './services/servicesEngineService';
@@ -42,6 +43,9 @@ const intentStageSchema = z.enum([
 
 const sourceSurfaceSchema = z.enum(['directory', 'journey_injection', 'agent_dashboard']);
 const leadStatusSchema = z.enum(['new', 'accepted', 'quoted', 'won', 'lost', 'expired']);
+const publicationQueueViewSchema = z.enum(
+  SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS as unknown as [string, ...string[]],
+);
 const serviceCodeSchema = z.string().trim().min(1).max(80);
 const requestKeySchema = z
   .string()
@@ -331,6 +335,35 @@ export const servicesEngineRouter = router({
       } catch (error) {
         throwProviderReplacementError(error);
       }
+    }),
+
+  /**
+   * Super-admin publication review worklist. It is read-only: it reports
+   * canonical provider state so a reviewer can decide, and it never grants
+   * publication. The reviewed transition below remains the only writer.
+   */
+  listProviderPublicationQueue: superAdminProcedure
+    .input(
+      z.object({
+        page: z.number().int().positive().default(1),
+        limit: z.number().int().min(1).max(100).default(25),
+        search: z.string().trim().max(255).optional(),
+        view: publicationQueueViewSchema.default('all'),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await servicesEngineService.listProviderPublicationQueue({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        view: input.view as
+          | 'all'
+          | 'ready'
+          | 'awaiting_review'
+          | 'published'
+          | 'blocked'
+          | 'drifted',
+      });
     }),
 
   providerPublicationReadiness: superAdminProcedure

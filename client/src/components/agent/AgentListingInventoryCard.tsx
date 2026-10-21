@@ -70,6 +70,7 @@ export function AgentListingInventoryCard({
   onDelete,
   onView,
   editUnavailableLabel,
+  servicesReferral,
 }: {
   listing: InventoryListing;
   view: 'list' | 'grid';
@@ -77,6 +78,12 @@ export function AgentListingInventoryCard({
   onDelete?: () => void;
   onView?: () => void;
   editUnavailableLabel?: string;
+  /**
+   * The agent-to-Services referral for this listing. It is supplied by the
+   * caller so the listing context that the Services server validates stays
+   * owned by the workspace that owns the listing.
+   */
+  servicesReferral?: React.ReactNode;
 }) {
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const status = String(listing.status || 'draft').toLowerCase();
@@ -223,6 +230,7 @@ export function AgentListingInventoryCard({
           {!onEdit && editUnavailableLabel && (
             <p className="mt-2 text-xs text-slate-500">{editUnavailableLabel}</p>
           )}
+          {servicesReferral}
         </div>
         <div
           className={cn(

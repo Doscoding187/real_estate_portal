@@ -1,113 +1,110 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  Camera,
-  CheckCircle2,
-  ClipboardCheck,
-  Hammer,
+  BadgeCheck,
+  ClipboardList,
+  Home,
   MapPin,
-  Scale,
+  MessageSquare,
   Search,
   ShieldCheck,
-  Truck,
-  type LucideIcon,
+  UserCheck,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-import { Button } from '@/components/ui/button';
-import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import {
   SERVICE_CATEGORIES,
   buildProviderProfilePath,
   buildServiceCategoryPath,
   buildServiceLocationPath,
-  buildServiceRequestPath,
-  formatArea,
-  getCategoryMeta,
   parseServiceLocationInput,
   serviceJourneyContextFromSearch,
   toProviderSlug,
   type ServiceCategory,
 } from '@/features/services/catalog';
-import { ProviderCardSkeleton } from '@/components/services/ServicesSkeletons';
+import { servicesUi } from '@/features/services/design';
+import { CategoryIconWell, CategoryShowcaseCard } from '@/components/services/CategoryShowcaseCard';
+import { ProviderShowcaseCard } from '@/components/services/ProviderShowcaseCard';
+import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
+import type { ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { applySeo } from '@/lib/seo';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
 
-const CATEGORY_ICONS: Record<ServiceCategory, LucideIcon> = {
-  home_improvement: Hammer,
-  moving: Truck,
-  finance_legal: Scale,
-  inspection_compliance: ClipboardCheck,
-  insurance: ShieldCheck,
-  media_marketing: Camera,
-};
+const DIRECTORY_SCAN_LIMIT = 50;
 
-type LastSearchLocation = {
-  suburb?: string;
-  city?: string;
-  province?: string;
-};
+const HOW_IT_WORKS = [
+  {
+    title: 'Search & explore',
+    description: 'Choose a service category and add your location.',
+    icon: Search,
+  },
+  {
+    title: 'Compare providers',
+    description: 'Review published services and listed coverage in your area.',
+    icon: ClipboardList,
+  },
+  {
+    title: 'Send an enquiry',
+    description: 'Get in touch directly with the provider you choose.',
+    icon: MessageSquare,
+  },
+  {
+    title: 'Get it done',
+    description: 'The provider responds with next steps and a quote.',
+    icon: UserCheck,
+  },
+];
 
-function getLastSearchLocation(): LastSearchLocation | null {
-  try {
-    const raw = localStorage.getItem('lastSearchLocation');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as LastSearchLocation;
-    if (!parsed || (!parsed.suburb && !parsed.city && !parsed.province)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
+const TRUST_POINTS = [
+  {
+    title: 'Verified professionals',
+    description: 'All providers are platform verified for your peace of mind.',
+    icon: BadgeCheck,
+  },
+  {
+    title: 'Local & trusted',
+    description: 'Real professionals in your area, ready to help.',
+    icon: ShieldCheck,
+  },
+  {
+    title: 'Easy enquiries',
+    description: 'Get in touch directly with the right provider, fast and simple.',
+    icon: MessageSquare,
+  },
+];
 
 export default function ServicesHomePage() {
   const { search, setLocation } = useServicesLocation();
   const journeyContext = serviceJourneyContextFromSearch(search);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory>('home_improvement');
   const [searchLocation, setSearchLocation] = useState('');
-  const lastLocation = useMemo(() => getLastSearchLocation(), []);
-  const journeyLocation = {
-    suburb: journeyContext.suburb || undefined,
-    city: journeyContext.city || undefined,
-    province: journeyContext.province || undefined,
-  };
-  const hasJourneyLocation = Boolean(
-    journeyLocation.suburb || journeyLocation.city || journeyLocation.province,
-  );
-  const effectiveLocation: LastSearchLocation = hasJourneyLocation
-    ? journeyLocation
-    : lastLocation || {};
-  const hasKnownLocation = Boolean(
-    effectiveLocation.suburb || effectiveLocation.city || effectiveLocation.province,
-  );
-  const locationLabel = formatArea(
-    effectiveLocation.city,
-    effectiveLocation.province,
-    effectiveLocation.suburb,
-  );
-  const navigationContext = {
-    ...journeyContext,
-    ...effectiveLocation,
-  };
 
-  const providersQuery = trpc.servicesEngine.directorySearch.useQuery(
-    {
-      category: selectedCategory,
-      limit: 12,
-      ...(hasKnownLocation
-        ? {
-            suburb: effectiveLocation.suburb,
-            city: effectiveLocation.city,
-            province: effectiveLocation.province,
-          }
-        : {}),
-    },
-    { enabled: true },
+  const directoryQuery = trpc.servicesEngine.directorySearch.useQuery({
+    limit: DIRECTORY_SCAN_LIMIT,
+  });
+  const providers = useMemo(
+    () => (directoryQuery.data || []) as ProviderDirectoryItem[],
+    [directoryQuery.data],
   );
-  const providers = (providersQuery.data || []) as ProviderDirectoryItem[];
-  const isLoading = providersQuery.isLoading;
-  const hasError = Boolean(providersQuery.error);
-  const SelectedCategoryIcon = CATEGORY_ICONS[selectedCategory];
-  const selectedCategoryMeta = getCategoryMeta(selectedCategory);
+  const isLoading = directoryQuery.isLoading;
+  const hasError = Boolean(directoryQuery.error);
+  const isPartialCohort = providers.length >= DIRECTORY_SCAN_LIMIT;
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<ServiceCategory, number>();
+    for (const category of SERVICE_CATEGORIES) counts.set(category.value, 0);
+    for (const provider of providers) {
+      for (const service of provider.services || []) {
+        const category = service.category as ServiceCategory | undefined;
+        if (category && counts.has(category)) {
+          counts.set(category, (counts.get(category) || 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [providers]);
+
+  const featuredProviders = useMemo(() => providers.slice(0, 6), [providers]);
+  const spotlightProvider = featuredProviders[0] || null;
 
   useEffect(() => {
     applySeo({
@@ -120,36 +117,60 @@ export default function ServicesHomePage() {
 
   function submitSearch(category: ServiceCategory, rawLocation: string) {
     const location = parseServiceLocationInput(rawLocation);
-    setLocation(buildServiceLocationPath(category, location, navigationContext));
+    setLocation(buildServiceLocationPath(category, location, journeyContext));
+  }
+
+  function providerProfileHref(provider: ProviderDirectoryItem) {
+    return buildProviderProfilePath(
+      toProviderSlug(provider.companyName, provider.providerId),
+      search,
+      {
+        ...journeyContext,
+        providerId: provider.providerId,
+        serviceCode:
+          provider.services?.find(service => service.category === selectedCategory)?.code || '',
+      },
+    );
   }
 
   return (
-    <main className="bg-white text-slate-900">
-      <section className="border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-4 py-14 md:px-6 md:py-20">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center text-center">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-blue-700">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Property Listify Services
-          </div>
-          <h1 className="max-w-4xl font-['Sora'] text-4xl font-bold tracking-[-0.05em] text-slate-950 md:text-6xl">
-            Find the right property professional.
-          </h1>
-          <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-600 md:text-lg">
-            Browse services and listed coverage, understand what a provider offers, and send one
-            clear request when you are ready.
+    <main className="bg-[#FDFDFD] text-[#0B1B2A]">
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="relative bg-[#02111E]">
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden opacity-70"
+          style={{
+            backgroundImage:
+              'radial-gradient(900px 420px at 12% 0%, rgba(22,131,99,0.32) 0%, transparent 60%), radial-gradient(700px 380px at 88% 18%, rgba(13,56,92,0.55) 0%, transparent 62%)',
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-10 pt-14 md:px-6 md:pb-14 md:pt-20">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5FD3AC]">
+            Services
           </p>
+          <h1 className="mt-4 max-w-3xl font-['Sora'] text-[34px] font-bold leading-[1.08] tracking-[-0.04em] text-white md:text-[54px]">
+            Trusted local service providers for your property and home.
+          </h1>
+          <p className="mt-5 max-w-2xl text-[15px] leading-7 text-slate-300 md:text-lg">
+            Find verified professionals across {SERVICE_CATEGORIES.length} service categories. From
+            home repairs to renovations, connect with the right experts in your area.
+          </p>
+        </div>
 
-          <div className="mt-8 w-full max-w-3xl rounded-[24px] border border-slate-200 bg-white p-3 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <div className="grid gap-3 md:grid-cols-[1.1fr_1fr_auto]">
-              <label className="space-y-2 text-left">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Service
+        {/* The search card straddles the hero edge, as in the approved blueprint. */}
+        <div className="relative z-10 mx-auto -mb-16 w-full max-w-7xl px-4 md:-mb-20 md:px-6">
+          <div className="rounded-2xl border border-white/10 bg-white p-4 shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] md:p-5">
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <label className="block text-left">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]">
+                  Select a service category
                 </span>
                 <select
                   aria-label="Service category"
                   value={selectedCategory}
                   onChange={event => setSelectedCategory(event.target.value as ServiceCategory)}
-                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                  className="mt-2 h-12 w-full rounded-xl border border-[#E3EBF0] bg-[#FDFDFD] px-4 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
                 >
                   {SERVICE_CATEGORIES.map(category => (
                     <option key={category.value} value={category.value}>
@@ -158,242 +179,309 @@ export default function ServicesHomePage() {
                   ))}
                 </select>
               </label>
-              <label className="space-y-2 text-left">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+
+              <label className="block text-left">
+                <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4B5C6B]">
                   Location
                 </span>
-                <div className="flex h-12 items-center rounded-xl border border-slate-200 bg-slate-50 px-4 transition focus-within:border-blue-400 focus-within:bg-white">
-                  <MapPin className="mr-2 h-4 w-4 text-slate-400" />
+                <div className="mt-2 flex h-12 items-center rounded-xl border border-[#E3EBF0] bg-[#FDFDFD] px-4 transition focus-within:border-[#168363]">
+                  <MapPin className="mr-2 h-4 w-4 shrink-0 text-[#8A99A6]" aria-hidden="true" />
                   <input
                     aria-label="Service location"
                     value={searchLocation}
                     onChange={event => setSearchLocation(event.target.value)}
-                    placeholder="Suburb, city, province"
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+                    placeholder="e.g. Gauteng, Sandton"
+                    className="w-full bg-transparent text-sm text-[#0B1B2A] outline-none placeholder:text-[#A8B4BF]"
                   />
                 </div>
               </label>
-              <div className="flex items-end">
-                <Button
-                  className="h-12 w-full rounded-xl bg-blue-700 px-6 text-sm font-semibold hover:bg-blue-800 md:w-auto"
-                  onClick={() => submitSearch(selectedCategory, searchLocation)}
-                >
-                  <Search className="mr-2 h-4 w-4" />
-                  Browse providers
-                </Button>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => submitSearch(selectedCategory, searchLocation)}
+                className={servicesUi.action}
+              >
+                <Search className="h-4 w-4" aria-hidden="true" />
+                Search
+              </button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-sm text-slate-500">
-            <span>{providers.length} published providers</span>
-            <span className="h-1 w-1 rounded-full bg-slate-300" />
-            <span>{SERVICE_CATEGORIES.length} service categories</span>
-            {hasKnownLocation && (
-              <>
-                <span className="h-1 w-1 rounded-full bg-slate-300" />
-                <span>Listed coverage near {locationLabel}</span>
-              </>
-            )}
+      {/* ── Category icon rail ───────────────────────────────────────────── */}
+      <section className="border-b border-[#E3EBF0] bg-white pt-24 md:pt-28">
+        <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6">
+          <div className="flex gap-6 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {SERVICE_CATEGORIES.map(category => (
+              <CategoryIconWell
+                key={category.value}
+                category={category.value}
+                label={category.label}
+                href={buildServiceCategoryPath(category.value, journeyContext)}
+                isActive={category.value === selectedCategory}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="border-b border-slate-200 px-4 py-8 md:px-6">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-              Browse by service
-            </p>
-            <h2 className="mt-2 font-['Sora'] text-3xl font-bold tracking-[-0.04em] text-slate-950">
-              Choose a property need
-            </h2>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {SERVICE_CATEGORIES.map(category => {
-              const Icon = CATEGORY_ICONS[category.value];
-              const isActive = selectedCategory === category.value;
-              return (
-                <button
-                  key={category.value}
-                  type="button"
-                  onClick={() => setSelectedCategory(category.value)}
-                  className={`flex min-h-28 items-center gap-4 rounded-2xl border px-5 py-4 text-left transition ${
-                    isActive
-                      ? 'border-blue-200 bg-blue-50 text-blue-700'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span>
-                    <span className="block text-sm font-semibold">{category.label}</span>
-                    <span className="mt-1 block text-xs text-slate-500">{category.subtitle}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-12 md:px-6 md:py-16">
+      {/* ── Popular service categories ───────────────────────────────────── */}
+      <section className="bg-white px-4 py-12 md:px-6 md:py-16">
         <div className="mx-auto w-full max-w-7xl">
-          <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-                Directory
-              </div>
-              <h2 className="mt-2 font-['Sora'] text-3xl font-bold tracking-[-0.04em] text-slate-950">
-                {selectedCategoryMeta.label} providers
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-                Every provider shown has an active published profile and lists a service area.
-                Review the profile before you contact them.
-              </p>
+              <p className={servicesUi.eyebrow}>Popular service categories</p>
+              <h2 className={`mt-2 ${servicesUi.heading}`}>Start with what you need done</h2>
             </div>
-            <Button
-              variant="outline"
-              className="self-start text-blue-700 md:self-auto"
-              onClick={() =>
-                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
-              }
-            >
-              Open category
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <p className="text-sm text-[#8A99A6]">
+              {SERVICE_CATEGORIES.length} categories in the Services directory
+            </p>
           </div>
 
-          <div className="grid gap-4">
-            {isLoading &&
-              Array.from({ length: 3 }).map((_, index) => (
-                <ProviderCardSkeleton key={`services-provider-skeleton-${index}`} />
-              ))}
-            {!isLoading && hasError && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
-                We could not load the provider directory. Please try again.
-              </div>
-            )}
-            {!isLoading &&
-              !hasError &&
-              providers.map(provider => (
-                <ProviderCard
-                  key={provider.providerId}
-                  provider={provider}
-                  serviceCategory={selectedCategory}
-                  profileHref={buildProviderProfilePath(
-                    toProviderSlug(provider.companyName, provider.providerId),
-                    '',
-                    {
-                      ...journeyContext,
-                      ...effectiveLocation,
-                      category: selectedCategory,
-                      providerId: provider.providerId,
-                      serviceCode:
-                        provider.services?.find(service => service.category === selectedCategory)
-                          ?.code || '',
-                    },
-                  )}
-                  onCta={providerId => {
-                    const serviceCode =
-                      provider.services?.find(service => service.category === selectedCategory)
-                        ?.code || '';
-                    setLocation(
-                      buildServiceRequestPath(selectedCategory, providerId, serviceCode, {
-                        ...journeyContext,
-                        ...effectiveLocation,
-                      }),
-                    );
-                  }}
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            {SERVICE_CATEGORIES.map(category => (
+              <CategoryShowcaseCard
+                key={category.value}
+                category={category.value}
+                label={category.label}
+                href={buildServiceCategoryPath(category.value, journeyContext)}
+                providerCount={categoryCounts.get(category.value) || 0}
+                isPartial={isPartialCohort}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Featured providers ───────────────────────────────────────────── */}
+      <section className="bg-[#F7FAFB] px-4 py-12 md:px-6 md:py-16">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className={servicesUi.eyebrow}>Featured service providers</p>
+              <h2 className={`mt-2 ${servicesUi.heading}`}>Published and platform verified</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setLocation(buildServiceCategoryPath(selectedCategory, journeyContext))
+              }
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#168363]"
+            >
+              View all providers
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          {isLoading && (
+            <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={`services-featured-skeleton-${index}`}
+                  className="h-72 animate-pulse rounded-2xl bg-[#E9F0F4]"
                 />
               ))}
-            {!isLoading && !hasError && providers.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-sm leading-6 text-slate-600">
-                No published providers match this service and location yet. Try another category or
-                browse the wider category directory.
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+            </div>
+          )}
 
-      <section className="border-y border-slate-200 bg-slate-50 px-4 py-12 md:px-6 md:py-16">
-        <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[28px] bg-slate-950 p-8 text-white md:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-300">
-              How Services V1 works
-            </p>
-            <h2 className="mt-3 max-w-xl font-['Sora'] text-3xl font-bold tracking-[-0.04em]">
-              A direct path from property need to professional contact.
-            </h2>
-            <div className="mt-7 space-y-4">
-              {[
-                'Choose the service and area that matter.',
-                'Compare the provider profile, services, and listed coverage.',
-                'Send one request with your project details and account contact context.',
-              ].map((step, index) => (
-                <div key={step} className="flex gap-4">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-sm font-semibold text-blue-200">
-                    {index + 1}
-                  </span>
-                  <p className="pt-1 text-sm leading-6 text-slate-300">{step}</p>
-                </div>
+          {!isLoading && hasError && (
+            <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">
+              We could not load the provider directory. Please try again.
+            </div>
+          )}
+
+          {!isLoading && !hasError && featuredProviders.length > 0 && (
+            <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+              {featuredProviders.map(provider => (
+                <ProviderShowcaseCard
+                  key={provider.providerId}
+                  provider={provider}
+                  profileHref={providerProfileHref(provider)}
+                />
               ))}
             </div>
-            <Button
-              className="mt-8 bg-white text-slate-950 hover:bg-slate-100"
-              onClick={() =>
-                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
-              }
-            >
-              Find a provider
-            </Button>
-          </div>
-          <div className="rounded-[28px] border border-slate-200 bg-white p-8 md:p-10">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-700">
-              <SelectedCategoryIcon className="h-6 w-6" />
+          )}
+
+          {!isLoading && !hasError && featuredProviders.length === 0 && (
+            <div className="mt-8 rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
+              No published providers are available yet. The Services directory opens as providers
+              complete review and publication.
             </div>
-            <h2 className="mt-6 font-['Sora'] text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-              Looking for {selectedCategoryMeta.label.toLowerCase()}?
-            </h2>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
-              {selectedCategoryMeta.subtitle} Start with the directory when you want to compare
-              providers, or go straight to a request when you already know what you need.
+          )}
+        </div>
+      </section>
+
+      {/* ── Featured provider spotlight ──────────────────────────────────── */}
+      {spotlightProvider && (
+        <section className="bg-white px-4 py-12 md:px-6 md:py-16">
+          <div className="mx-auto grid w-full max-w-7xl overflow-hidden rounded-3xl bg-[#071829] lg:grid-cols-2">
+            <div className="relative min-h-[240px] bg-[linear-gradient(140deg,#0D2237_0%,#116E54_100%)]">
+              <div className="flex h-full items-center justify-center p-10">
+                <span className="font-['Sora'] text-6xl font-bold tracking-[-0.04em] text-white/90">
+                  {spotlightProvider.companyName.slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+            </div>
+            <div className="p-8 md:p-12">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5FD3AC]">
+                Featured provider
+              </p>
+              <h2 className="mt-3 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-white md:text-3xl">
+                {spotlightProvider.companyName}
+              </h2>
+              <p className="mt-4 text-sm leading-7 text-slate-300">
+                {spotlightProvider.headline || spotlightProvider.bio}
+              </p>
+
+              <ul className="mt-6 space-y-2.5">
+                {(spotlightProvider.services || []).slice(0, 4).map(service => (
+                  <li
+                    key={service.code || service.displayName}
+                    className="flex items-center gap-2.5 text-sm text-slate-200"
+                  >
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-[#5FD3AC]" aria-hidden="true" />
+                    {service.displayName}
+                  </li>
+                ))}
+                {(spotlightProvider.locations || []).slice(0, 1).map(location => (
+                  <li
+                    key={`${location.city}-${location.suburb}`}
+                    className="flex items-center gap-2.5 text-sm text-slate-200"
+                  >
+                    <MapPin className="h-4 w-4 shrink-0 text-[#5FD3AC]" aria-hidden="true" />
+                    {[location.suburb, location.city, location.province].filter(Boolean).join(', ')}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                type="button"
+                onClick={() => setLocation(providerProfileHref(spotlightProvider))}
+                className={`mt-8 ${servicesUi.action}`}
+              >
+                View full profile
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Trust row ────────────────────────────────────────────────────── */}
+      <section className="bg-[#F7FAFB] px-4 py-12 md:px-6 md:py-16">
+        <div className="mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-4">
+          {TRUST_POINTS.map(point => {
+            const Icon = point.icon;
+            return (
+              <div key={point.title} className={servicesUi.surface + ' p-6'}>
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EDF8F6]">
+                  <Icon className="h-5 w-5 text-[#168363]" aria-hidden="true" />
+                </span>
+                <h3 className="mt-4 text-[15px] font-bold text-[#0B1B2A]">{point.title}</h3>
+                <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">{point.description}</p>
+              </div>
+            );
+          })}
+
+          <figure className={`${servicesUi.tintPanel} p-6`}>
+            <blockquote className="text-[14px] leading-7 text-[#0B1B2A]">
+              “From small repairs to big renovations, Property Listify makes it easy to find trusted
+              professionals in your area.”
+            </blockquote>
+            <figcaption className="mt-4 text-[12px] font-semibold text-[#4B5C6B]">
+              — Property Listify
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <section className="bg-white px-4 py-12 md:px-6 md:py-16">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.6fr_1fr] lg:items-start">
+          <div>
+            <p className={servicesUi.eyebrow}>How it works</p>
+            <h2 className={`mt-2 ${servicesUi.heading}`}>Get the right service in a few steps</h2>
+            <ol className="mt-8 grid gap-6 sm:grid-cols-2">
+              {HOW_IT_WORKS.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <li key={step.title} className="flex gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#168363] text-sm font-bold text-white">
+                      {index + 1}
+                    </span>
+                    <div>
+                      <h3 className="flex items-center gap-2 text-[15px] font-bold text-[#0B1B2A]">
+                        <Icon className="h-4 w-4 text-[#168363]" aria-hidden="true" />
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 text-[13px] leading-6 text-[#4B5C6B]">
+                        {step.description}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+
+          <div className={servicesUi.tintPanel + ' p-8'}>
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white">
+              <Home className="h-5 w-5 text-[#168363]" aria-hidden="true" />
+            </span>
+            <h3 className="mt-5 font-['Sora'] text-xl font-bold tracking-[-0.02em] text-[#0B1B2A]">
+              Need help with a property or home service?
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-[#4B5C6B]">
+              Our team is here to assist you in finding the right professional.
             </p>
-            <Button
-              className="mt-7"
-              onClick={() =>
-                setLocation(buildServiceCategoryPath(selectedCategory, navigationContext))
-              }
+            <button
+              type="button"
+              onClick={() => setLocation('/contact')}
+              className={`mt-6 ${servicesUi.actionOutline}`}
             >
-              Browse {selectedCategoryMeta.label}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+              Contact support
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-12 md:px-6 md:py-16">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 rounded-[28px] border border-slate-200 bg-white p-8 md:flex-row md:items-center md:justify-between md:p-10">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
-              For service providers
+      {/* ── Ecosystem band ───────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden bg-[#02111E] px-4 py-14 md:px-6 md:py-20">
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            backgroundImage:
+              'radial-gradient(760px 320px at 20% 0%, rgba(22,131,99,0.30) 0%, transparent 62%)',
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#5FD3AC]">
+              Part of the Property Listify ecosystem
             </p>
-            <h2 className="mt-2 font-['Sora'] text-2xl font-semibold tracking-[-0.03em] text-slate-950">
-              Publish a clear profile for the first provider cohort.
+            <h2 className="mt-3 font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-white md:text-3xl">
+              More than just properties
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-              Complete your business profile, services, and coverage areas. Publication is reviewed
-              manually before a provider appears in the public directory.
+            <p className="mt-3 text-sm leading-7 text-slate-300">
+              From buying and renting to property services, developments and more — Property Listify
+              is a complete property and home lifestyle platform.
             </p>
           </div>
-          <Button className="shrink-0" onClick={() => setLocation('/service/profile')}>
-            Manage provider profile
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <button
+            type="button"
+            onClick={() => setLocation('/')}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#02111E] transition hover:bg-[#EDF8F6]"
+          >
+            Explore the full platform
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
       </section>
+
+      <ServicesSiteFooter />
     </main>
   );
 }

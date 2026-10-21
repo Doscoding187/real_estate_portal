@@ -79,13 +79,15 @@ Services does not dual-write to platform `leads`, `partnerLeads`, or Explore con
 
 Publication is a reviewed super-admin transition, not a provider self-service mutation. A new canonical partner starts at `verificationStatus = 'pending'` with `directoryActive = 0`, so a newly onboarded provider is never public.
 
-The Services server exposes exactly two super-admin-only publication procedures: a readiness inspection that reports canonical provider/profile readiness, and the reviewed transition itself with three decisions:
+The Services server exposes three super-admin-only publication procedures: a read-only review worklist that lists service providers with their canonical readiness state, a readiness inspection that reports canonical provider/profile readiness for one provider, and the reviewed transition itself with three decisions:
 
 - `publish` — writes `partners.verificationStatus = 'verified'` and `service_provider_profiles.directoryActive = 1` in one transaction;
 - `unpublish` — withdraws `directoryActive` without rejecting the canonical partner;
 - `reject` — writes `partners.verificationStatus = 'rejected'` and withdraws `directoryActive`.
 
-Authorization boundary: the transition requires the existing `super_admin` authority on the canonical `partners` identity. No service-provider role, and no provider self-service mutation, can reach either procedure or write `directoryActive`, `verificationStatus`, `moderationTier`, or a subscription tier.
+Exactly one of the three writes. The reviewed transition is the only writer of `partners.verificationStatus` and `service_provider_profiles.directoryActive`; the worklist and the readiness inspection are reads. The worklist reports the canonical state a reviewer needs — identity, published profile, active services, listed coverage, subscription eligibility, and the named blockers — and never grants publication on its own.
+
+Authorization boundary: the transition requires the existing `super_admin` authority on the canonical `partners` identity. No service-provider role, and no provider self-service mutation, can reach any of the three procedures or write `directoryActive`, `verificationStatus`, `moderationTier`, or a subscription tier.
 
 Publication fails closed. `publish` is refused, with the blocking reasons named, unless the provider has an existing profile with a complete public profile (headline, biography, and at least one contact channel), at least one active service, at least one valid listed coverage row, an eligible subscription state, and an active canonical partner.
 
@@ -106,6 +108,8 @@ A later schema-authority workstream must decide:
 - canonical location snapshots on a service request.
 
 No new migration or schema change is included in this workstream; the integration consumes the current mainline `0080_service_lead_request_idempotency.sql` authority.
+
+**Deferral reaffirmed, 2026-10-21.** Services coverage and request geography stay on exact listed-coverage matching for the pilot. The convergence to typed canonical Place references is a separate Place Authority consumer slice, with the intended cardinality already recorded in the geography coverage contract as multiple operating locations and service-specific coverage. It must not be folded into a Services product change, and it does not block the pilot: listed coverage is truthful as labelled.
 
 Provider service and coverage replacement is authoritative over the submitted canonical set. Submitted row identifiers must belong to the authenticated provider; an identifier owned by another provider is rejected rather than silently inserted. Changing a service code or a coverage tuple updates the owned canonical row in place, so no active orphan or duplicate is created. A service that is intentionally removed from the submitted set is deactivated and stays visible to the provider editor, and a coverage row that is intentionally removed — including one the provider blanked out — stops matching immediately. Structured fields the caller did not intentionally change are preserved, and an empty or all-blank location replacement is still rejected rather than deleting existing coverage. Blank coverage rows never satisfy publication or directory queries, and canonical coverage and service-code uniqueness remain enforced.
 
@@ -131,6 +135,7 @@ Service request writes require a stable request key, the existing public-lead ra
 | `/services/results/:leadId` | Pilot | Server-authoritative request status and provider attribution |
 | `/service/profile` | Pilot | Manual provider profile and publication review |
 | `/service/dashboard` | Pilot | Private request custody and response status |
+| `/admin/services-review` | Pilot | Super-admin publication review worklist; read-only over canonical state |
 | `/service/explore` | Hidden | Explore publishing is outside Services V1 |
 | Provider paid plans and paid placement | Hidden | No billing or entitlement authority is changed here |
 | Generic Explore feed integration | Hidden | Future boundary only; no Explore redesign in this workstream |
@@ -147,8 +152,8 @@ Explore must not read private provider contact fields, service leads, request no
 
 These are explicit launch dependencies, not hidden implementation shortcuts:
 
-1. Canonical provider coverage geography and request location authority.
-2. An accountable `super_admin` reviewer operating the reviewed publication transition. The workflow and its fail-closed readiness gate are implemented; the remaining dependency is operational staffing and a review queue for the operator.
+1. Canonical provider coverage geography and request location authority. Deferred for the pilot by the recorded decision above; it is a Place Authority consumer slice, not a Services release blocker.
+2. An accountable `super_admin` reviewer operating the reviewed publication transition. The workflow, its fail-closed readiness gate, and the read-only review worklist at `/admin/services-review` are implemented; the remaining dependency is operational staffing and the reviewer's operating cadence.
 3. Durable requester contact/consent evidence if contact details must be retained beyond the canonical user record.
 4. Provider messaging or formal quote semantics if status updates are insufficient for the next cohort.
 5. Review authorship, moderation, and aggregate recalculation before ratings become a public trust signal.

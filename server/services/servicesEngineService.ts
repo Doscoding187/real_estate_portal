@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import {
   auditLogs,
   developers,
@@ -30,11 +30,7 @@ export type ServiceLeadEventType = (typeof SERVICE_LEAD_EVENT_TYPE_VALUES)[numbe
 export type ServiceSourceSurface = (typeof SERVICE_SOURCE_SURFACE_VALUES)[number];
 export type ServiceLeadStatus = (typeof SERVICE_LEAD_STATUS_VALUES)[number];
 
-export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = [
-  'publish',
-  'unpublish',
-  'reject',
-] as const;
+export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = ['publish', 'unpublish', 'reject'] as const;
 
 export type ServiceProviderPublicationDecision =
   (typeof SERVICE_PROVIDER_PUBLICATION_DECISIONS)[number];
@@ -54,6 +50,70 @@ export type ServiceProviderPublicationReadiness = {
   readyForPublication: boolean;
   publicationDriftDetected: boolean;
   blockers: string[];
+};
+
+export type ServiceProviderPublicationBlocker =
+  | 'partner_inactive'
+  | 'profile_missing'
+  | 'profile_incomplete'
+  | 'no_active_service'
+  | 'no_valid_coverage'
+  | 'subscription_ineligible';
+
+export type ServiceProviderPublicationReadinessInput = {
+  providerId: number;
+  companyName: string | null;
+  verificationStatus: string | null | undefined;
+  isActive: boolean;
+  profileExists: boolean;
+  headline: string | null;
+  bio: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  directoryActive: boolean;
+  subscriptionStatus: string | null | undefined;
+  activeServiceCount: number;
+  validCoverageCount: number;
+};
+
+export type ServiceProviderPublicationQueueEntry = ServiceProviderPublicationReadiness & {
+  headline: string | null;
+  bio: string | null;
+  websiteUrl: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  serviceCategories: ServiceCategory[];
+  services: Array<{
+    serviceCode: string;
+    displayName: string;
+    category: ServiceCategory;
+    minPrice: number | null;
+    maxPrice: number | null;
+    currency: string;
+  }>;
+  coverageAreas: Array<{
+    province: string | null;
+    city: string | null;
+    suburb: string | null;
+  }>;
+  createdAt: string | null;
+};
+
+export type ServiceProviderPublicationQueue = {
+  entries: ServiceProviderPublicationQueueEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  counts: {
+    awaitingReview: number;
+    ready: number;
+    published: number;
+    blocked: number;
+    drifted: number;
+  };
 };
 
 type ProviderDirectoryRecord = {
@@ -347,6 +407,61 @@ export function hasProviderCoverage(location: {
   );
 }
 
+/**
+ * The single authority for Services publication readiness. Both the
+ * single-provider readiness inspection and the super-admin publication queue
+ * derive their blockers from this function, so a queue row and a reviewed
+ * transition can never disagree about why a provider is not publishable.
+ */
+export function computeProviderPublicationReadiness(
+  input: ServiceProviderPublicationReadinessInput,
+): ServiceProviderPublicationReadiness {
+  const verificationStatus = (input.verificationStatus ||
+    'pending') as ServiceProviderPublicationReadiness['verificationStatus'];
+  const subscriptionStatus =
+    (input.subscriptionStatus as ServiceProviderPublicationReadiness['subscriptionStatus']) || null;
+  const profileComplete = Boolean(
+    normalizeText(input.headline) &&
+    normalizeText(input.bio) &&
+    (normalizeText(input.contactEmail) || normalizeText(input.contactPhone)),
+  );
+
+  const blockers: ServiceProviderPublicationBlocker[] = [];
+  if (!input.isActive) blockers.push('partner_inactive');
+  if (!input.profileExists) blockers.push('profile_missing');
+  else if (!profileComplete) blockers.push('profile_incomplete');
+  if (input.activeServiceCount === 0) blockers.push('no_active_service');
+  if (input.validCoverageCount === 0) blockers.push('no_valid_coverage');
+  if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
+    blockers.push('subscription_ineligible');
+  }
+
+  return {
+    providerId: Number(input.providerId),
+    companyName: input.companyName || null,
+    verificationStatus,
+    isActive: input.isActive,
+    directoryActive: input.directoryActive,
+    profileExists: input.profileExists,
+    profileComplete,
+    subscriptionStatus,
+    activeServiceCount: input.activeServiceCount,
+    validCoverageCount: input.validCoverageCount,
+    isPublished:
+      isProviderDirectoryEligible({
+        verificationStatus,
+        isActive: input.isActive,
+        directoryActive: input.directoryActive,
+        subscriptionStatus,
+      }) &&
+      input.activeServiceCount > 0 &&
+      input.validCoverageCount > 0,
+    readyForPublication: blockers.length === 0,
+    publicationDriftDetected: input.directoryActive && verificationStatus !== 'verified',
+    blockers,
+  };
+}
+
 export function providerCoversLocation(
   locations: Array<{
     province: string | null;
@@ -563,6 +678,26 @@ type DirectorySearchInput = {
  * loading the entire eligible directory before the in-memory limit is applied.
  */
 export const SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT = 1000;
+
+/**
+ * The super-admin publication queue scans a bounded prefix of the service
+ * provider cohort before it filters and paginates in memory. The reviewed
+ * transition is unaffected by this bound: it re-checks one provider inside its
+ * own transaction.
+ */
+export const SERVICES_PUBLICATION_QUEUE_SCAN_LIMIT = 1000;
+
+export const SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS = [
+  'all',
+  'ready',
+  'awaiting_review',
+  'published',
+  'blocked',
+  'drifted',
+] as const;
+
+export type ServiceProviderPublicationQueueView =
+  (typeof SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS)[number];
 
 type CreateServiceLeadInput = {
   requesterUserId?: number | null;
@@ -899,55 +1034,26 @@ export class ServicesEngineService {
     const profileExists = Boolean(base.profileId);
     const isActive = Number(base.isActive || 0) === 1;
     const directoryActive = Number(base.directoryActive || 0) === 1;
-    const verificationStatus = (base.verificationStatus ||
-      'pending') as 'pending' | 'verified' | 'rejected';
-    const subscriptionStatus =
-      (base.subscriptionStatus as ServiceProviderPublicationReadiness['subscriptionStatus']) ||
-      null;
-    const profileComplete = Boolean(
-      normalizeText(base.headline) &&
-        normalizeText(base.bio) &&
-        (normalizeText(base.contactEmail) || normalizeText(base.contactPhone)),
-    );
     const activeServiceCount = (services || []).filter(
       service => Number(service.isActive || 0) === 1,
     ).length;
     const validCoverageCount = (locations || []).filter(hasProviderCoverage).length;
 
-    const blockers: string[] = [];
-    if (!isActive) blockers.push('partner_inactive');
-    if (!profileExists) blockers.push('profile_missing');
-    else if (!profileComplete) blockers.push('profile_incomplete');
-    if (activeServiceCount === 0) blockers.push('no_active_service');
-    if (validCoverageCount === 0) blockers.push('no_valid_coverage');
-    if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
-      blockers.push('subscription_ineligible');
-    }
-
-    return {
+    return computeProviderPublicationReadiness({
       providerId: Number(base.providerId),
       companyName: base.companyName || null,
-      verificationStatus,
+      verificationStatus: base.verificationStatus,
       isActive,
-      directoryActive,
       profileExists,
-      profileComplete,
-      subscriptionStatus,
+      headline: base.headline,
+      bio: base.bio,
+      contactEmail: base.contactEmail,
+      contactPhone: base.contactPhone,
+      directoryActive,
+      subscriptionStatus: base.subscriptionStatus,
       activeServiceCount,
       validCoverageCount,
-      isPublished:
-        isProviderDirectoryEligible({
-          verificationStatus,
-          isActive,
-          directoryActive,
-          subscriptionStatus,
-        }) &&
-        activeServiceCount > 0 &&
-        validCoverageCount > 0,
-      readyForPublication: blockers.length === 0,
-      publicationDriftDetected: directoryActive && verificationStatus !== 'verified',
-      blockers,
-    };
+    });
   }
 
   async getProviderPublicationReadiness(
@@ -959,6 +1065,182 @@ export class ServicesEngineService {
     const readiness = await this.readProviderPublicationReadiness(db, Number(providerId));
     if (!readiness) throw new Error('Provider not found');
     return readiness;
+  }
+
+  /**
+   * Super-admin publication review worklist.
+   *
+   * This is a read-only projection of canonical provider state. It never
+   * grants publication: the reviewed transition in `reviewProviderPublication`
+   * remains the only writer of `partners.verificationStatus` and
+   * `service_provider_profiles.directoryActive`, and it re-checks readiness
+   * inside its own transaction.
+   */
+  async listProviderPublicationQueue(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    view?: ServiceProviderPublicationQueueView;
+  }): Promise<ServiceProviderPublicationQueue> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const page = Math.max(1, Number(options?.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(options?.limit || 25)));
+    const search = normalizeText(options?.search);
+    const view = options?.view || 'all';
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(users.role, 'service_provider')];
+    if (search) {
+      conditions.push(like(partners.companyName, `%${search}%`));
+    }
+
+    const baseRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        verificationStatus: partners.verificationStatus,
+        isActive: partners.isActive,
+        createdAt: partners.createdAt,
+        profileId: serviceProviderProfiles.id,
+        headline: serviceProviderProfiles.headline,
+        bio: serviceProviderProfiles.bio,
+        websiteUrl: serviceProviderProfiles.websiteUrl,
+        contactEmail: serviceProviderProfiles.contactEmail,
+        contactPhone: serviceProviderProfiles.contactPhone,
+        directoryActive: serviceProviderProfiles.directoryActive,
+        subscriptionStatus: serviceProviderSubscriptions.status,
+      })
+      .from(partners)
+      .innerJoin(users, eq(users.id, partners.userId))
+      .leftJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .where(and(...conditions))
+      .orderBy(desc(partners.createdAt), desc(partners.id))
+      .limit(SERVICES_PUBLICATION_QUEUE_SCAN_LIMIT);
+
+    const providerIds = baseRows.map(row => Number(row.providerId));
+    const serviceRows =
+      providerIds.length > 0
+        ? await db
+            .select({
+              providerId: serviceProviderServices.providerId,
+              serviceCategory: serviceProviderServices.serviceCategory,
+              serviceCode: serviceProviderServices.serviceCode,
+              displayName: serviceProviderServices.displayName,
+              description: serviceProviderServices.description,
+              minPrice: serviceProviderServices.minPrice,
+              maxPrice: serviceProviderServices.maxPrice,
+              currency: serviceProviderServices.currency,
+              isActive: serviceProviderServices.isActive,
+            })
+            .from(serviceProviderServices)
+            .where(inArray(serviceProviderServices.providerId, providerIds))
+        : [];
+    const locationRows =
+      providerIds.length > 0
+        ? await db
+            .select({
+              providerId: serviceProviderLocations.providerId,
+              province: serviceProviderLocations.province,
+              city: serviceProviderLocations.city,
+              suburb: serviceProviderLocations.suburb,
+            })
+            .from(serviceProviderLocations)
+            .where(inArray(serviceProviderLocations.providerId, providerIds))
+        : [];
+
+    const entries = baseRows.map(row => {
+      const providerId = Number(row.providerId);
+      const providerServices = serviceRows.filter(
+        service => Number(service.providerId) === providerId,
+      );
+      const providerLocations = locationRows.filter(
+        location => Number(location.providerId) === providerId,
+      );
+      const activeServices = providerServices.filter(
+        service => Number(service.isActive || 0) === 1,
+      );
+
+      const readiness = computeProviderPublicationReadiness({
+        providerId,
+        companyName: row.companyName || null,
+        verificationStatus: row.verificationStatus,
+        isActive: Number(row.isActive || 0) === 1,
+        profileExists: Boolean(row.profileId),
+        headline: row.headline,
+        bio: row.bio,
+        contactEmail: row.contactEmail,
+        contactPhone: row.contactPhone,
+        directoryActive: Number(row.directoryActive || 0) === 1,
+        subscriptionStatus: row.subscriptionStatus,
+        activeServiceCount: activeServices.length,
+        validCoverageCount: providerLocations.filter(hasProviderCoverage).length,
+      });
+
+      return {
+        ...readiness,
+        headline: row.headline || null,
+        bio: row.bio || null,
+        websiteUrl: row.websiteUrl || null,
+        contactEmail: row.contactEmail || null,
+        contactPhone: row.contactPhone || null,
+        serviceCategories: Array.from(
+          new Set(
+            activeServices.map(service => service.serviceCategory as unknown as ServiceCategory),
+          ),
+        ),
+        services: activeServices.map(service => ({
+          serviceCode: service.serviceCode,
+          displayName: service.displayName,
+          category: service.serviceCategory as unknown as ServiceCategory,
+          minPrice: service.minPrice ?? null,
+          maxPrice: service.maxPrice ?? null,
+          currency: service.currency,
+        })),
+        coverageAreas: providerLocations.filter(hasProviderCoverage).map(location => ({
+          province: location.province || null,
+          city: location.city || null,
+          suburb: location.suburb || null,
+        })),
+        createdAt: row.createdAt || null,
+      };
+    });
+
+    const counts = {
+      awaitingReview: entries.filter(entry => !entry.isPublished && entry.readyForPublication)
+        .length,
+      ready: entries.filter(entry => entry.readyForPublication).length,
+      published: entries.filter(entry => entry.isPublished).length,
+      blocked: entries.filter(entry => entry.blockers.length > 0).length,
+      drifted: entries.filter(entry => entry.publicationDriftDetected).length,
+    };
+
+    const filtered = entries.filter(entry => {
+      if (view === 'ready') return entry.readyForPublication;
+      if (view === 'awaiting_review') return !entry.isPublished && entry.readyForPublication;
+      if (view === 'published') return entry.isPublished;
+      if (view === 'blocked') return entry.blockers.length > 0;
+      if (view === 'drifted') return entry.publicationDriftDetected;
+      return true;
+    });
+
+    const pageEntries = filtered.slice(offset, offset + limit);
+
+    return {
+      entries: pageEntries,
+      pagination: {
+        page,
+        limit,
+        total: filtered.length,
+        totalPages: Math.ceil(filtered.length / limit),
+      },
+      counts,
+    };
   }
 
   /**
@@ -984,9 +1266,7 @@ export class ServicesEngineService {
     if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
       throw new Error('A reviewing operator is required');
     }
-    const decision = SERVICE_PROVIDER_PUBLICATION_DECISIONS.find(
-      value => value === input.decision,
-    );
+    const decision = SERVICE_PROVIDER_PUBLICATION_DECISIONS.find(value => value === input.decision);
     if (!decision) {
       throw new Error('Unsupported publication decision');
     }
