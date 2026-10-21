@@ -463,29 +463,33 @@ export default function PartnerDashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
-              <Info className="h-4 w-4 shrink-0 text-[#1d6fe3]" />
-              <p className="min-w-0 flex-1 text-[12.5px] leading-5 text-[#33507e]">
-                The check fit asks for the gross monthly income only. The prospect's identity,
-                documents and consent are collected in the referral step that follows, and the final
-                affordability assessment is done by the Distribution manager.
-              </p>
-              <Button
-                variant="conversion"
-                size="sm"
-                className="bg-[#1d6fe3] text-white"
-                onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
-              >
-                I have a prospect
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-[#9cc0ee] bg-white text-[#1d6fe3]"
-                onClick={() => setLocation('/distribution/partner/developments')}
-              >
-                Browse opportunities
-              </Button>
+            <div className="mt-4 space-y-3 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="conversion"
+                  size="sm"
+                  className="bg-[#1d6fe3] text-white"
+                  onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
+                >
+                  I have a prospect
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#9cc0ee] bg-white text-[#1d6fe3]"
+                  onClick={() => setLocation('/distribution/partner/developments')}
+                >
+                  Browse opportunities
+                </Button>
+              </div>
+              <div className="flex items-start gap-2">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+                <p className="min-w-0 flex-1 text-[12.5px] leading-5 text-[#33507e]">
+                  The check fit asks for the gross monthly income only. The prospect's identity,
+                  documents and consent are collected in the referral step that follows, and the final
+                  affordability assessment is done by the Distribution manager.
+                </p>
+              </div>
             </div>
           </div>
 
