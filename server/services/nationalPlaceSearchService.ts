@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { and, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { aliasedTable } from 'drizzle-orm';
 import { place, placeName, placeRelationship } from '../../drizzle/schema';
@@ -81,6 +83,48 @@ interface PlaceRow {
   cityName: string | null;
 }
 
+let administrativeGraph: Promise<AncestorRow[]> | null = null;
+
+async function loadAdministrativeGraph(db: any): Promise<AncestorRow[]> {
+  if (!administrativeGraph) administrativeGraph = readAdministrativeGraph(db);
+  return administrativeGraph;
+}
+
+async function readAdministrativeGraph(db: any): Promise<AncestorRow[]> {
+  return (await db
+    .select({
+      childPlaceId: placeRelationship.fromPlaceId,
+      parentPlaceId: placeRelationship.toPlaceId,
+      parentName: placeName.name,
+      parentType: place.placeType,
+      parentScope: place.searchScope,
+      childName: childName.name,
+      childScope: childPlace.searchScope,
+    })
+    .from(placeRelationship)
+    .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
+    .innerJoin(childPlace, eq(childPlace.placeId, placeRelationship.fromPlaceId))
+    .innerJoin(
+      placeName,
+      and(
+        eq(placeName.placeId, place.placeId),
+        eq(placeName.nameRole, 'preferred_public'),
+        eq(placeName.nameState, 'active'),
+      ),
+    )
+    .innerJoin(
+      childName,
+      and(
+        eq(childName.placeId, childPlace.placeId),
+        eq(childName.nameRole, 'preferred_public'),
+        eq(childName.nameState, 'active'),
+      ),
+    )
+    .where(
+      eq(placeRelationship.relationshipType, 'administratively_contains'),
+    )) as unknown as AncestorRow[];
+}
+
 export interface NationalPlaceSearchOptions {
   limit?: number;
   query: string;
@@ -149,41 +193,9 @@ export async function searchNationalPlaces(
 
   // The hierarchy context comes from the same authority, so a result is never described with
   // a parent that the Place Authority does not assert.
-  const candidateIds = rows.map(row => row.placeId);
-  // The whole administrative graph is read once and walked in memory. The graph is small
-  // compared with the rest of the platform, and one read keeps the search fast.
-  const edges = (await db
-    .select({
-      childPlaceId: placeRelationship.fromPlaceId,
-      parentPlaceId: placeRelationship.toPlaceId,
-      parentName: placeName.name,
-      parentType: place.placeType,
-      parentScope: place.searchScope,
-      childName: childName.name,
-      childScope: childPlace.searchScope,
-    })
-    .from(placeRelationship)
-    .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
-    .innerJoin(childPlace, eq(childPlace.placeId, placeRelationship.fromPlaceId))
-    .innerJoin(
-      placeName,
-      and(
-        eq(placeName.placeId, place.placeId),
-        eq(placeName.nameRole, 'preferred_public'),
-        eq(placeName.nameState, 'active'),
-      ),
-    )
-    .innerJoin(
-      childName,
-      and(
-        eq(childName.placeId, childPlace.placeId),
-        eq(childName.nameRole, 'preferred_public'),
-        eq(childName.nameState, 'active'),
-      ),
-    )
-    .where(
-      eq(placeRelationship.relationshipType, 'administratively_contains'),
-    )) as unknown as AncestorRow[];
+  // The administrative graph is reference data. It is read once and kept for the life of the
+  // process, so a search does not re-read it.
+  const edges = await loadAdministrativeGraph(db);
 
   const ancestorsByChild = new Map<string, AncestorRow[]>();
   for (const edge of edges) {
@@ -224,6 +236,31 @@ export async function searchNationalPlaces(
     scopesByContainer.set(edge.parentPlaceId, held);
   }
 
+  /**
+   * The region segment we already publish, keyed by the canonical place identity.
+   *
+   * This is a URL and display convention that keeps a published URL from moving. It never decides
+   * whether a place exists, is searchable or is publishable. Where the map has no entry, the
+   * region is derived from the place's own scope hierarchy.
+   */
+  let regionSegmentMap: Record<string, { region: string | null; place: string }> | null | undefined;
+
+  function publishedRegionSegment(placeId: string): string | null | undefined {
+    if (regionSegmentMap === undefined) {
+      try {
+        const path = join(
+          process.cwd(),
+          'data/geography-coverage-v0.1/output/gauteng_region_segment_map_v0.1.json',
+        );
+        const parsed = JSON.parse(readFileSync(path, 'utf8'));
+        regionSegmentMap = parsed?.segments ?? {};
+      } catch {
+        regionSegmentMap = null;
+      }
+    }
+    return regionSegmentMap?.[placeId]?.region;
+  }
+
   const MUNICIPAL_SUFFIX =
     /\s+(metropolitan municipality|local municipality|district municipality|metro municipality)$/i;
 
@@ -238,6 +275,12 @@ export async function searchNationalPlaces(
    * customer.
    */
   const regionFor = (placeId: string): { name: string; slug: string } | undefined => {
+    const published = publishedRegionSegment(placeId);
+    if (published !== undefined) {
+      // A place published without a region segment keeps that form.
+      if (published === null) return { name: '', slug: '' };
+      return { name: published, slug: published };
+    }
     const scoped = ancestorByScope(placeId, 'metro_city');
     if (scoped) return { name: scoped.parentName, slug: slugify(scoped.parentName) };
 
@@ -269,6 +312,7 @@ export async function searchNationalPlaces(
       regionSlug && placeSlug && regionSlug === placeSlug
         ? [provinceSlug, placeSlug].filter(Boolean).join('/')
         : [provinceSlug, regionSlug, placeSlug].filter(Boolean).join('/');
+    const publishedPath = publishedRegionSegment(row.placeId);
 
     results.push({
       kind: 'canonical_location',
@@ -293,7 +337,10 @@ export async function searchNationalPlaces(
       ...(provinceName ? { provinceName } : {}),
       ...(region ? { cityName: region.name } : {}),
       status: row.verificationStatus,
-      canonicalPath: `/${path}`,
+      canonicalPath:
+        publishedPath === null
+          ? `/${[provinceSlug, placeSlug].filter(Boolean).join('/')}`
+          : `/${path}`,
       source: 'canonical_geography',
     });
     if (results.length >= limit) break;
