@@ -4,6 +4,7 @@ import PartnerProspectCheckFitPage from './PartnerProspectCheckFitPage';
 
 const {
   mockListProspectCheckFits,
+  mockGetProspectDocumentPacks,
   mockCreateProspectCheckFit,
   mockMutateAsync,
   mockSetLocation,
@@ -11,6 +12,7 @@ const {
   mockToastSuccess,
 } = vi.hoisted(() => ({
   mockListProspectCheckFits: vi.fn(),
+  mockGetProspectDocumentPacks: vi.fn(),
   mockCreateProspectCheckFit: vi.fn(),
   mockMutateAsync: vi.fn(),
   mockSetLocation: vi.fn(),
@@ -43,6 +45,9 @@ vi.mock('@/lib/trpc', () => ({
       partner: {
         listProspectCheckFits: {
           useQuery: (...args: unknown[]) => mockListProspectCheckFits(...args),
+        },
+        getProspectDocumentPacks: {
+          useQuery: (...args: unknown[]) => mockGetProspectDocumentPacks(...args),
         },
         createProspectCheckFit: {
           useMutation: (options?: { onSuccess?: (value: any) => void }) => ({
@@ -114,6 +119,7 @@ describe('PartnerProspectCheckFitPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockListProspectCheckFits.mockReturnValue({ data: [] });
+    mockGetProspectDocumentPacks.mockReturnValue({ data: [] });
     mockMutateAsync.mockResolvedValue(qualifyingCheckFit);
   });
 
@@ -192,12 +198,47 @@ describe('PartnerProspectCheckFitPage', () => {
     render(<PartnerProspectCheckFitPage />);
 
     expect(screen.getByText('Indicative purchase price')).toBeInTheDocument();
-    expect(screen.getByText(/R\s*1[\s\u00a0]*502[\s\u00a0]*434/)).toBeInTheDocument();
+    expect(screen.getAllByText(/R\s*1[\s\u00a0]*502[\s\u00a0]*434/).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/qualifies for properties priced up to about/i),
+    ).toBeInTheDocument();
     expect(screen.getByText('Thandi Mokoena')).toBeInTheDocument();
     expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
     expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
     expect(screen.getByText(/Sandton Heights/)).toBeInTheDocument();
     expect(screen.getByText(/May qualify/)).toBeInTheDocument();
+  });
+
+  it('shows the next step with the documents to download and sign', async () => {
+    mockListProspectCheckFits.mockReturnValue({ data: [qualifyingCheckFit] });
+    mockGetProspectDocumentPacks.mockReturnValue({
+      data: [
+        {
+          developmentId: 42,
+          downloads: [
+            {
+              key: 'required_document_9',
+              label: 'Client info sheet',
+              url: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
+              instructions: 'Complete it and upload the signed copy.',
+            },
+          ],
+          uploads: [
+            { evidenceType: 'identity_document', label: 'Identity document', instructions: null },
+          ],
+          signatureMethod: 'Signed electronic acknowledgement',
+        },
+      ],
+    });
+
+    render(<PartnerProspectCheckFitPage />);
+
+    expect(await screen.findByText('Next step')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Download Client info sheet' })).toHaveAttribute(
+      'href',
+      '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
+    );
+    expect(screen.getByText('Upload: Identity document')).toBeInTheDocument();
   });
 
   it('says plainly when the prospect does not qualify for any opportunity', () => {

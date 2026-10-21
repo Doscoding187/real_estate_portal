@@ -78,6 +78,9 @@ vi.mock('@/lib/trpc', () => ({
         uploadReferralIntakeEvidence: {
           useMutation: (opts: unknown) => mockUploadEvidence(opts),
         },
+        getProspectDocumentPacks: {
+          useQuery: () => ({ data: [] }),
+        },
         submitReferral: {
           useMutation: (opts: unknown) => mockSubmitReferral(opts),
         },

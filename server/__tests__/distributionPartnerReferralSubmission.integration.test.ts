@@ -276,6 +276,8 @@ async function insertRequiredDocument(developmentId: number) {
     isRequired: 1,
     isActive: 1,
     sortOrder: 1,
+    templateFileUrl: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
+    templateFileName: 'CLIENT INFO SHEET.pdf',
   });
 
   const documentId = Number((insertResult as any).insertId || 0);
@@ -289,6 +291,7 @@ function buildPolicyConfiguration() {
       version: '1.0',
       title: 'Prospect sharing permission',
       content: 'The prospect agrees that their details may be shared with the developer.',
+      downloadUrl: '/api/local-media/object?key=properties%2Fdraft-1%2Fpopia-consent.pdf',
     },
     privacyNoticeDocument: {
       version: '1.0',
@@ -881,6 +884,27 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(actorADealIds).toContain(Number(actorADeal.dealId));
     expect(actorADealIds).not.toContain(Number(actorBDeal.dealId));
   }, INTEGRATION_TIMEOUT_MS);
+  it('gives the referrer the prospect documents to download and sign', async () => {
+    const scenario = await seedScenario();
+
+    const packs = await scenario.caller.distribution.partner.getProspectDocumentPacks({
+      developmentIds: [scenario.developmentId],
+    });
+
+    expect(packs).toHaveLength(1);
+    expect(packs[0].downloads.map(download => download.label)).toEqual(
+      expect.arrayContaining(['Prospect sharing permission', 'Buyer ID document']),
+    );
+    expect(
+      packs[0].downloads.find(download => download.label === 'Buyer ID document')?.url,
+    ).toContain('client-info-sheet.pdf');
+    expect(packs[0].uploads.map(upload => upload.evidenceType)).toEqual([
+      'sharing_permission',
+      'privacy_notice',
+      'identity_document',
+    ]);
+  });
+
   it('records a prospect check fit and names the developments the prospect qualifies for', async () => {
     await ensureCanonicalPrimeRate();
     const scenario = await seedScenario();
