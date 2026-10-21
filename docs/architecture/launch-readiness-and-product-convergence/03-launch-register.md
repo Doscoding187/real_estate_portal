@@ -108,6 +108,26 @@ does not change B08–B18, LRC-SUPPORT-001 or the paid-opening NO-GO.
 | Effect      | The 525 released places become usable at the next reference-data release, with no licensing spend.                                                                                                                                                                                         | Rosebank, Soweto, Krugersdorp, Vereeniging, Magaliesburg, Meyerton, Roodepoort, Heidelberg, Carletonville, Randfontein and Vanderbijlpark become searchable and citable.                |
 | Remaining   | The canonical factual geography input is not in the repository, so the projection itself cannot be regenerated here. The projection, the mapping and the admitted Place packages use three different identity namespaces.                                                                  | The runtime no longer depends on the projection's tier. Regenerating the projection to remove the disagreement still needs the canonical input.                                         |
 
+## Discoverability is not gated by the licence — founder decision 2026-10-20
+
+Edward's decision: withholding an area from search would destroy discoverability and break the
+experience, so the rule must change.
+
+**The rule now is:** a place we hold a record for is always searchable and always has its own
+page. The licence classification of a place decides whether we may _publish_ it in a guide's
+curated place list. It never decides whether a customer may _find_ it.
+
+| Surface                       | Filter                  | Effect                                                    |
+| ----------------------------- | ----------------------- | --------------------------------------------------------- |
+| Location search and picker    | excludes `retired` only | Every place we know is offered, licensed or not.          |
+| Place URL and slug resolution | excludes `retired` only | Every place has a working page.                           |
+| City and suburb page data     | no licence filter       | Every place page renders.                                 |
+| Guide place list              | requires `verified`     | Publication only. This is where the licence gate belongs. |
+
+`server/__tests__/contract.place-discoverability.test.ts` holds this as an executable rule, so a
+later change cannot quietly tighten the search filters and break the picker, the suburb search
+or the direct place URLs.
+
 ## What the held set is, and what it needs — 2026-10-20
 
 | Measurement                        | Recorded                                                                                                                                   | Effect                                                                                                                                                                                                                                                                                                  |
