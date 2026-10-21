@@ -75,22 +75,32 @@ export default function PartnerProspectCheckFitPage() {
   const [coApplicantIncome, setCoApplicantIncome] = useState('');
   const [isJoint, setIsJoint] = useState(false);
   const [activeCheckFitId, setActiveCheckFitId] = useState<string | null>(null);
+  const [recordedCheckFits, setRecordedCheckFits] = useState<CheckFitRecord[]>([]);
 
+  const utils = trpc.useUtils();
   const checkFitsQuery = trpc.distribution.partner.listProspectCheckFits.useQuery(
     { limit: 20 },
     { retry: false },
   );
   const createMutation = trpc.distribution.partner.createProspectCheckFit.useMutation({
     onSuccess: record => {
+      setRecordedCheckFits(current => [record as CheckFitRecord, ...current]);
       setActiveCheckFitId(record.id);
       toast.success('Check fit recorded.');
+      void utils.distribution.partner.listProspectCheckFits.invalidate();
     },
     onError: error => {
       toast.error(error?.message || 'Could not record the check fit.');
     },
   });
 
-  const checkFits = (checkFitsQuery.data || []) as CheckFitRecord[];
+  const listedCheckFits = (checkFitsQuery.data || []) as CheckFitRecord[];
+  const checkFits = [
+    ...recordedCheckFits.filter(
+      recorded => !listedCheckFits.some(listed => listed.id === recorded.id),
+    ),
+    ...listedCheckFits,
+  ];
   const activeCheckFit =
     checkFits.find(record => record.id === activeCheckFitId) || checkFits[0] || null;
   const qualifiedMatches = (activeCheckFit?.matches || []).filter(match => match.qualified);
