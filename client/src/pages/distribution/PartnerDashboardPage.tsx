@@ -389,7 +389,7 @@ export default function PartnerDashboardPage() {
               step={2}
               icon={<Home className="h-5 w-5" />}
               title="Find suitable properties"
-              points={['Current sale and rental options', 'Preliminary affordability (not active yet)']}
+              points={['Current sale and rental options', 'Check fit on the prospect']}
             />
             <ArrowRight className="mt-3 hidden h-4 w-4 shrink-0 text-[#c7dbf5] md:block" />
             <JourneyStep
@@ -457,61 +457,27 @@ export default function PartnerDashboardPage() {
               <div>
                 <h2 className="text-lg font-semibold text-[#0b1c3f]">Check fit before you refer</h2>
                 <p className="mt-1 text-[13.5px] leading-5 text-muted-foreground">
-                  Get a preliminary estimate and see what might be available. This is not a lender
-                  decision.
+                  Run a check fit on the prospect's gross income and see which current opportunities
+                  they may reach, and where they are. This is not a lender decision.
                 </p>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <label className="block">
-                <span className="text-[12px] font-medium text-muted-foreground">Monthly income</span>
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Optional"
-                  aria-label="Monthly income"
-                  className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                />
-              </label>
-              <label className="block">
-                <span className="text-[12px] font-medium text-muted-foreground">Deposit</span>
-                <input
-                  type="text"
-                  disabled
-                  placeholder="Optional"
-                  aria-label="Deposit"
-                  className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                />
-              </label>
-              <div>
-                <span className="text-[12px] font-medium text-muted-foreground">Looking to</span>
-                <div className="mt-1.5 grid h-10 grid-cols-2 items-center rounded-lg border border-border bg-surface p-1">
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed rounded-md bg-white text-[13px] font-semibold text-[#0b1c3f] shadow-sm"
-                  >
-                    Buy
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="cursor-not-allowed text-[13px] font-medium text-muted-foreground"
-                  >
-                    Rent
-                  </button>
-                </div>
               </div>
             </div>
 
             <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
               <Info className="h-4 w-4 shrink-0 text-[#1d6fe3]" />
               <p className="min-w-0 flex-1 text-[12.5px] leading-5 text-[#33507e]">
-                Preliminary affordability is not active yet. Browse by listed price, area, and
-                bedrooms while the approved assessment model is pending. This is not a lender
-                decision.
+                The check fit asks for the gross monthly income only. The prospect's identity,
+                documents and consent are collected in the referral step that follows, and the final
+                affordability assessment is done by the Distribution manager.
               </p>
+              <Button
+                variant="conversion"
+                size="sm"
+                className="bg-[#1d6fe3] text-white"
+                onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
+              >
+                I have a prospect
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

@@ -28,7 +28,7 @@ describe('PartnerHowItWorksPage', () => {
     expect(screen.getByText('Understand their needs')).toBeInTheDocument();
     expect(screen.getByText('Find suitable properties')).toBeInTheDocument();
     expect(screen.getByText("Introduce when they're ready")).toBeInTheDocument();
-    expect(screen.getByText(/Preliminary affordability is not active yet/)).toBeInTheDocument();
+    expect(screen.getByText(/A check fit on their gross income/)).toBeInTheDocument();
     expect(screen.getByText(/does not mean a viewing is booked/)).toBeInTheDocument();
     expect(screen.getByText(/a payment date appears only when/)).toBeInTheDocument();
   });

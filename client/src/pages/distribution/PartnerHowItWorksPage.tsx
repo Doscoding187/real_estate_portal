@@ -25,7 +25,7 @@ const JOURNEY_STEPS = [
     step: 2,
     icon: <Home className="h-5 w-5" />,
     title: 'Find suitable properties',
-    body: 'Browse current sale and rental options by area, listed price, and bedrooms. Options come from what developers are actively marketing. Preliminary affordability is not active yet, so treat listed prices as the starting point and confirm fit with the person.',
+    body: 'Start with what the person earns. A check fit on their gross income shows which current sale options they may reach, and where they are. Then browse by area, listed price, and bedrooms. Options come from what developers are actively marketing, and a check fit is not a lender decision.',
   },
   {
     step: 3,
