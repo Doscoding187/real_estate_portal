@@ -370,7 +370,8 @@ export default function PartnerReferralDetailPage() {
           <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
               <p className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-sm text-[#33507e]">
-                Files are stored in private Distribution storage. Developer delivery is not connected yet.
+                Files are stored in private Distribution storage. The Distribution team can deliver
+                verified files to the approved Developer organisation and record their acknowledgement.
               </p>
               {applicationDocuments.map((document: any) => {
                 const templateId = Number(document.templateId);

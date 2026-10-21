@@ -14,7 +14,7 @@ import {
 import { users } from './core';
 import { agents } from './agencies';
 import { developments, developerBrandProfiles } from './developments';
-import { cataloguePublishers } from './developerIdentity';
+import { cataloguePublishers, developerOrganisations } from './developerIdentity';
 import { leads } from './leads';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
@@ -374,7 +374,9 @@ export const distributionReferralIntakeEvidence = mysqlTable(
     mimeType: varchar('mime_type', { length: 120 }),
     byteSize: int('byte_size'),
     sha256: varchar('sha256', { length: 64 }),
-    uploadedByUserId: int('uploaded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    uploadedByUserId: int('uploaded_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     reviewStatus: mysqlEnum(
       'review_status',
       DISTRIBUTION_REFERRAL_EVIDENCE_REVIEW_STATUS_VALUES as unknown as [string, ...string[]],
@@ -890,8 +892,12 @@ export const distributionDeals = mysqlTable(
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
     marketMode: mysqlEnum('market_mode', ['sale', 'rent']),
     developerProjectionRevision: varchar('developer_projection_revision', { length: 80 }),
-    developerProjectionObservedAt: timestamp('developer_projection_observed_at', { mode: 'string' }),
-    referralTermsSnapshotJson: json('referral_terms_snapshot_json').$type<Record<string, unknown>>(),
+    developerProjectionObservedAt: timestamp('developer_projection_observed_at', {
+      mode: 'string',
+    }),
+    referralTermsSnapshotJson: json('referral_terms_snapshot_json').$type<
+      Record<string, unknown>
+    >(),
     referralTermsSnapshotDigest: varchar('referral_terms_snapshot_digest', { length: 64 }),
   },
   table => [
@@ -955,6 +961,49 @@ export const distributionDealDocuments = mysqlTable(
 );
 
 export const distributionDealDocumentStatuses = distributionDealDocuments;
+
+export const distributionDealDocumentDeliveries = mysqlTable(
+  'distribution_deal_document_deliveries',
+  {
+    id: int().autoincrement().primaryKey(),
+    dealDocumentId: int('deal_document_id')
+      .notNull()
+      .references(() => distributionDealDocuments.id, { onDelete: 'cascade' }),
+    dealId: int('deal_id')
+      .notNull()
+      .references(() => distributionDeals.id, { onDelete: 'cascade' }),
+    deliveryVersion: int('delivery_version').default(1).notNull(),
+    developerOrganisationId: int('developer_organisation_id')
+      .notNull()
+      .references(() => developerOrganisations.id, { onDelete: 'restrict' }),
+    documentCode: varchar('document_code', { length: 80 }).notNull(),
+    documentLabel: varchar('document_label', { length: 160 }).notNull(),
+    documentFileName: varchar('document_file_name', { length: 255 }).notNull(),
+    documentSubmittedAt: timestamp('document_submitted_at', { mode: 'string' }),
+    deliveredBy: int('delivered_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    deliveredAt: timestamp('delivered_at', { mode: 'string' }).defaultNow().notNull(),
+    acknowledgedBy: int('acknowledged_by').references(() => users.id, { onDelete: 'restrict' }),
+    acknowledgedAt: timestamp('acknowledged_at', { mode: 'string' }),
+    acknowledgementNote: text('acknowledgement_note'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    documentFileUrl: varchar('document_file_url', { length: 2048 }),
+  },
+  table => [
+    unique('ux_distribution_deal_document_delivery_version').on(
+      table.dealDocumentId,
+      table.deliveryVersion,
+    ),
+    index('idx_distribution_deal_document_deliveries_organisation').on(
+      table.developerOrganisationId,
+      table.deliveredAt,
+    ),
+    index('idx_distribution_deal_document_deliveries_deal').on(table.dealId),
+    index('idx_distribution_deal_document_deliveries_acknowledged').on(table.acknowledgedAt),
+  ],
+);
 
 export const dealRequirementStatuses = mysqlTable(
   'deal_requirement_statuses',

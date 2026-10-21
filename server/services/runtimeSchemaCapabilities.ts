@@ -53,7 +53,8 @@ export type DistributionSchemaOperation =
   | 'distribution.selectedPractitioners'
   | 'distribution.listingLeadQueue'
   | 'distribution.referralIntakeWorkflow'
-  | 'distribution.referralEvidenceRetention';
+  | 'distribution.referralEvidenceRetention'
+  | 'distribution.developerDocumentDelivery';
 
 export type DistributionSchemaRequirement = {
   tableName: string;
@@ -385,6 +386,67 @@ export const DISTRIBUTION_SCHEMA_REQUIREMENTS: Record<
     { tableName: 'distribution_referral_intake_events', columnName: 'actor_user_id' },
     { tableName: 'distribution_referral_intake_events', columnName: 'details' },
     { tableName: 'distribution_referral_intake_events', columnName: 'occurred_at' },
+  ],
+  'distribution.developerDocumentDelivery': [
+    { tableName: 'distribution_deal_document_deliveries' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'id' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'deal_document_id' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'deal_id' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'delivery_version' },
+    {
+      tableName: 'distribution_deal_document_deliveries',
+      columnName: 'developer_organisation_id',
+    },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'document_code' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'document_label' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'document_file_name' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'document_submitted_at' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'document_file_url' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'delivered_by' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'delivered_at' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'acknowledged_by' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'acknowledged_at' },
+    { tableName: 'distribution_deal_document_deliveries', columnName: 'acknowledgement_note' },
+    { tableName: 'distribution_deal_documents' },
+    { tableName: 'distribution_deal_documents', columnName: 'development_required_document_id' },
+    { tableName: 'distribution_deal_documents', columnName: 'status' },
+    { tableName: 'distribution_deal_documents', columnName: 'submitted_file_url' },
+    { tableName: 'distribution_deal_documents', columnName: 'submitted_file_name' },
+    { tableName: 'distribution_deal_documents', columnName: 'submitted_at' },
+    { tableName: 'distribution_deals' },
+    { tableName: 'distribution_deals', columnName: 'development_id' },
+    { tableName: 'distribution_deals', columnName: 'manager_user_id' },
+    { tableName: 'distribution_deals', columnName: 'external_ref' },
+    { tableName: 'distribution_deals', columnName: 'buyer_name' },
+    { tableName: 'distribution_deals', columnName: 'referral_terms_snapshot_json' },
+    { tableName: 'distribution_deals', columnName: 'referral_terms_snapshot_digest' },
+    { tableName: 'development_manager_assignments' },
+    { tableName: 'development_manager_assignments', columnName: 'development_id' },
+    { tableName: 'development_manager_assignments', columnName: 'manager_user_id' },
+    { tableName: 'development_manager_assignments', columnName: 'is_active' },
+    { tableName: 'developments' },
+    { tableName: 'developments', columnName: 'name' },
+    { tableName: 'developments', columnName: 'catalogue_publisher_id' },
+    { tableName: 'catalogue_publishers' },
+    { tableName: 'catalogue_publishers', columnName: 'name' },
+    { tableName: 'catalogue_publishers', columnName: 'authority_kind' },
+    { tableName: 'catalogue_publishers', columnName: 'developer_organisation_id' },
+    { tableName: 'developer_organisations' },
+    { tableName: 'developer_organisations', columnName: 'name' },
+    { tableName: 'developer_organisations', columnName: 'status' },
+    { tableName: 'developer_organisation_memberships' },
+    { tableName: 'developer_organisation_memberships', columnName: 'user_id' },
+    { tableName: 'developer_organisation_memberships', columnName: 'organisation_id' },
+    { tableName: 'developer_organisation_memberships', columnName: 'status' },
+    { tableName: 'development_required_documents' },
+    { tableName: 'development_required_documents', columnName: 'development_id' },
+    { tableName: 'development_required_documents', columnName: 'document_code' },
+    { tableName: 'development_required_documents', columnName: 'category' },
+    { tableName: 'users' },
+    { tableName: 'users', columnName: 'id' },
+    { tableName: 'users', columnName: 'name' },
+    { tableName: 'users', columnName: 'firstName' },
+    { tableName: 'users', columnName: 'lastName' },
   ],
 };
 

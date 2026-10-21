@@ -17,6 +17,7 @@ import {
   BarChart3,
   FileEdit,
   FolderOpen,
+  FileCheck2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { trpc } from '@/lib/trpc';
@@ -67,6 +68,12 @@ const MENU_SECTIONS: MenuSection[] = [
         label: 'Project Library',
         icon: FolderOpen,
         path: '/developer/documents',
+      },
+      {
+        id: 'referral-documents',
+        label: 'Referral Documents',
+        icon: FileCheck2,
+        path: '/developer/referral-documents',
       },
       {
         id: 'leads',

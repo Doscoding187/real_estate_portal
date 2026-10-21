@@ -45,6 +45,16 @@ type DealChecklist = {
     verifiedBy: { userId: number; name?: string } | null;
     submittedBy?: { userId: number; name?: string } | null;
     notes: string | null;
+    delivery?: {
+      deliveryId: number;
+      deliveryVersion: number;
+      deliveredAt: string;
+      deliveredBy: { userId: number; name?: string } | null;
+      acknowledgedAt: string | null;
+      acknowledgedBy: { userId: number; name?: string } | null;
+      acknowledgementNote: string | null;
+      isCurrentFile: boolean;
+    } | null;
   }>;
   computed: {
     requiredCount: number;
@@ -74,17 +84,24 @@ function formatActor(actor: { userId: number; name?: string } | null) {
   return actor.name || `User #${actor.userId}`;
 }
 
+function formatDateTime(value: string) {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+}
+
 export function ManagerDealChecklistPanel({
   checklist,
   savingTemplateId,
   uploadingTemplateId,
   downloadingTemplateId,
+  deliveringTemplateId,
   isBatchSaving,
   isSavingPayoutBasis,
   onRecordPayoutBasis,
   onUpdateDocumentStatus,
   onUploadDocument,
   onDownloadDocument,
+  onDeliverDocument,
   onMarkAllRequiredReceived,
   onMarkAllRequiredVerified,
 }: {
@@ -92,6 +109,7 @@ export function ManagerDealChecklistPanel({
   savingTemplateId: number | null;
   uploadingTemplateId?: number | null;
   downloadingTemplateId?: number | null;
+  deliveringTemplateId?: number | null;
   isBatchSaving?: boolean;
   isSavingPayoutBasis?: boolean;
   onRecordPayoutBasis?: (amount: number) => Promise<void>;
@@ -102,6 +120,7 @@ export function ManagerDealChecklistPanel({
   }) => Promise<void>;
   onUploadDocument?: (input: { templateId: number; file: File }) => Promise<void>;
   onDownloadDocument?: (templateId: number) => Promise<void>;
+  onDeliverDocument?: (templateId: number) => Promise<void>;
   onMarkAllRequiredReceived?: () => Promise<void>;
   onMarkAllRequiredVerified?: () => Promise<void>;
 }) {
@@ -170,8 +189,9 @@ export function ManagerDealChecklistPanel({
       </Card>
 
       <p className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-        Files are stored in private Distribution storage and are available only to authorized partners
-        and assigned managers. Developer delivery is not connected yet.
+        Files are stored in private Distribution storage and are available only to authorized
+        partners, assigned managers, and the approved Developer organisation receiving a verified
+        delivery.
       </p>
 
       {checklist.commissionSummary.referrerCommissionType === 'percentage' ? (
@@ -249,8 +269,10 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Payout readiness uses the Distribution team’s document checks and a recorded transaction milestone.
-            It does not confirm that the developer received the files. Unsupported milestones need a documented administrator confirmation.
+            Payout readiness uses the Distribution team’s document checks and a recorded transaction
+            milestone. Developer delivery and acknowledgement are recorded separately and do not
+            change payout readiness. Unsupported milestones need a documented administrator
+            confirmation.
           </p>
         </CardContent>
       </Card>
@@ -371,53 +393,106 @@ export function ManagerDealChecklistPanel({
                   This saved requirement cannot be matched to its document record. It remains a blocker until an administrator reviews it.
                 </p>
               ) : (
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border bg-slate-50 p-3">
-                  <div>
-                    <p className="text-xs font-medium text-slate-600">Secure document</p>
-                    <p className="text-sm text-slate-900">
-                      {document.hasFile
-                        ? document.submittedFileName || 'Attached file'
-                        : 'No file attached'}
-                    </p>
+                <>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border bg-slate-50 p-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-600">Secure document</p>
+                      <p className="text-sm text-slate-900">
+                        {document.hasFile
+                          ? document.submittedFileName || 'Attached file'
+                          : 'No file attached'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {document.hasFile && document.templateId !== null && onDownloadDocument ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={downloadingTemplateId === document.templateId}
+                          onClick={() => void onDownloadDocument?.(document.templateId as number)}
+                        >
+                          {downloadingTemplateId === document.templateId ? 'Opening…' : 'Download'}
+                        </Button>
+                      ) : null}
+                      {onUploadDocument &&
+                      document.templateId !== null &&
+                      document.isActive &&
+                      document.status !== 'verified' ? (
+                        <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50">
+                          {uploadingTemplateId === document.templateId
+                            ? 'Uploading…'
+                            : document.hasFile
+                              ? 'Replace file'
+                              : 'Attach file'}
+                          <input
+                            type="file"
+                            className="sr-only"
+                            accept=".pdf,.jpg,.jpeg,.png,.webp"
+                            disabled={uploadingTemplateId === document.templateId}
+                            onChange={event => {
+                              const file = event.target.files?.[0];
+                              event.target.value = '';
+                              if (file && document.templateId !== null) {
+                                void onUploadDocument({ templateId: document.templateId, file });
+                              }
+                            }}
+                          />
+                        </label>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {document.hasFile && document.templateId !== null && onDownloadDocument ? (
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded border bg-white px-3 py-2">
+                    <div className="text-xs text-slate-600">
+                      {document.delivery ? (
+                        <>
+                          <p className="font-medium text-slate-800">
+                            Delivered {formatDateTime(document.delivery.deliveredAt)} to the
+                            Developer
+                          </p>
+                          {document.delivery.acknowledgedAt ? (
+                            <p className="mt-1 text-emerald-700">
+                              Acknowledged {formatDateTime(document.delivery.acknowledgedAt)} by{' '}
+                              {formatActor(document.delivery.acknowledgedBy)}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-amber-700">
+                              Awaiting Developer acknowledgement.
+                            </p>
+                          )}
+                          {!document.delivery.isCurrentFile ? (
+                            <p className="mt-1 text-amber-700">
+                              The current verified file has changed since this delivery.
+                            </p>
+                          ) : null}
+                          {document.delivery.acknowledgementNote ? (
+                            <p className="mt-1 text-slate-600">
+                              Note: {document.delivery.acknowledgementNote}
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <p>Not delivered to the Developer yet.</p>
+                      )}
+                    </div>
+                    {document.templateId !== null &&
+                    document.hasFile &&
+                    document.status === 'verified' &&
+                    (!document.delivery || !document.delivery.isCurrentFile) &&
+                    onDeliverDocument ? (
                       <Button
                         size="sm"
-                        variant="outline"
-                        disabled={downloadingTemplateId === document.templateId}
-                        onClick={() => void onDownloadDocument?.(document.templateId as number)}
+                        disabled={deliveringTemplateId === document.templateId}
+                        onClick={() => void onDeliverDocument(document.templateId as number)}
                       >
-                        {downloadingTemplateId === document.templateId ? 'Opening…' : 'Download'}
+                        {deliveringTemplateId === document.templateId
+                          ? 'Delivering…'
+                          : document.delivery
+                            ? 'Deliver updated file'
+                            : 'Deliver to Developer'}
                       </Button>
                     ) : null}
-                    {onUploadDocument &&
-                    document.templateId !== null &&
-                    document.isActive &&
-                    document.status !== 'verified' ? (
-                      <label className="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50">
-                        {uploadingTemplateId === document.templateId
-                          ? 'Uploading…'
-                          : document.hasFile
-                            ? 'Replace file'
-                            : 'Attach file'}
-                        <input
-                          type="file"
-                          className="sr-only"
-                          accept=".pdf,.jpg,.jpeg,.png,.webp"
-                          disabled={uploadingTemplateId === document.templateId}
-                          onChange={event => {
-                            const file = event.target.files?.[0];
-                            event.target.value = '';
-                            if (file && document.templateId !== null) {
-                              void onUploadDocument({ templateId: document.templateId, file });
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : null}
                   </div>
-                </div>
+                </>
               )}
               <div className="mt-3 grid gap-1 text-xs text-slate-500 md:grid-cols-2">
                 <p>

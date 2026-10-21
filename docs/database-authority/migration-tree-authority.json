@@ -1618,6 +1618,27 @@
       "approvedFiles": [
         "server/migrations/0141_distribution_deal_required_document_fk_restrict.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0142_distribution_deal_document_deliveries_sequenced.sql",
+      "classification": "canonical active",
+      "purpose": "Records authorized Developer recipients of verified deal documents and their delivery acknowledgement.",
+      "approvedFiles": [
+        "server/migrations/0142_distribution_deal_document_deliveries_sequenced.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0143_distribution_deal_document_delivery_file_reference.sql",
+      "classification": "canonical active",
+      "purpose": "Pins each Developer delivery to the exact private deal-document file reference that was delivered.",
+      "approvedFiles": [
+        "server/migrations/0143_distribution_deal_document_delivery_file_reference.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
     }
   ],
   "prohibitedPaths": [

@@ -75,10 +75,14 @@ import {
 } from './services/distributionProgramService';
 import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
 import {
+  acknowledgeDeveloperDealDocument,
   assertDealPayoutReady,
+  deliverDealDocumentToDeveloper,
   getDealChecklist,
+  listDeveloperDocumentDeliveries,
   MAX_DEAL_DOCUMENT_BASE64_CHARS,
   MAX_DEAL_DOCUMENT_BYTES,
+  readDeveloperDealDocument,
   readManagerDealDocument,
   readPartnerDealDocument,
   submitPartnerDealDocument,
@@ -5554,6 +5558,28 @@ const managerDistributionRouter = router({
       });
     }),
 
+  deliverDealDocument: protectedProcedure
+    .input(
+      z.object({
+        dealId: z.number().int().positive(),
+        templateId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.developerDocumentDelivery');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+
+      return await deliverDealDocumentToDeveloper({
+        dealId: input.dealId,
+        templateId: input.templateId,
+        actorUserId: ctx.user!.id,
+        skipAssignmentCheck: ctx.user!.role === 'super_admin',
+      });
+    }),
+
   listViewings: protectedProcedure
     .input(
       z.object({
@@ -8276,6 +8302,82 @@ const developerDistributionRouter = router({
         })),
         commissions,
       };
+    }),
+
+  listDocumentDeliveries: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(500).default(200),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      if (ctx.user!.role !== 'property_developer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers can access Developer document deliveries.',
+        });
+      }
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.developerDocumentDelivery');
+
+      return await listDeveloperDocumentDeliveries({
+        actorUserId: ctx.user!.id,
+        limit: input?.limit,
+      });
+    }),
+
+  downloadDocumentDelivery: protectedProcedure
+    .input(
+      z.object({
+        deliveryId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      if (ctx.user!.role !== 'property_developer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers can download Developer document deliveries.',
+        });
+      }
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.developerDocumentDelivery');
+
+      return await readDeveloperDealDocument({
+        deliveryId: input.deliveryId,
+        actorUserId: ctx.user!.id,
+      });
+    }),
+
+  acknowledgeDocumentDelivery: protectedProcedure
+    .input(
+      z.object({
+        deliveryId: z.number().int().positive(),
+        note: z.string().trim().max(1000).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      if (ctx.user!.role !== 'property_developer') {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only developers can acknowledge Developer document deliveries.',
+        });
+      }
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.developerDocumentDelivery');
+
+      return await acknowledgeDeveloperDealDocument({
+        deliveryId: input.deliveryId,
+        actorUserId: ctx.user!.id,
+        note: input.note,
+      });
     }),
 });
 

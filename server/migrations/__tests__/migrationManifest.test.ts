@@ -354,7 +354,7 @@ describe('canonical migration manifest', () => {
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
     expect(manifest.expectedHead.filename).toBe(
-      '0141_distribution_deal_required_document_fk_restrict.sql',
+      '0143_distribution_deal_document_delivery_file_reference.sql',
     );
   });
 
@@ -371,11 +371,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0141_distribution_deal_required_document_fk_restrict.sql',
+      expectedNewHead: '0143_distribution_deal_document_delivery_file_reference.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(134);
+    expect(plan.pending).toHaveLength(136);
     expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -511,8 +511,12 @@ describe('canonical migration manifest', () => {
         '0139_distribution_deal_event_to_referral_received_stage.sql',
         '0140_distribution_deal_referral_received_backfill.sql',
         '0141_distribution_deal_required_document_fk_restrict.sql',
+        '0142_distribution_deal_document_deliveries_sequenced.sql',
+        '0143_distribution_deal_document_delivery_file_reference.sql',
     ]);
-    expect(plan.expectedNewHead).toBe('0141_distribution_deal_required_document_fk_restrict.sql');
+    expect(plan.expectedNewHead).toBe(
+      '0143_distribution_deal_document_delivery_file_reference.sql',
+    );
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {
