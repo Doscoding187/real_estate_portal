@@ -172,51 +172,56 @@ export async function searchNationalPlaces(
     parentScope: string | null;
   }>;
 
-  // The hierarchy is resolved by the scope each ancestor asserts, not by a fixed depth.
-  // A locality sits under a city scope and a city scope sits under a province scope. The
-  // municipality container is context, never a path segment.
-  const ancestorRows = new Map<string, AncestorRow>();
-  const ancestorsByChild = new Map<string, AncestorRow[]>();
-  let frontier = [...new Set(rows.map(row => row.placeId))];
-  for (let depth = 0; depth < 4 && frontier.length; depth += 1) {
-    const edges = (await db
-      .select({
-        childPlaceId: placeRelationship.fromPlaceId,
-        parentPlaceId: placeRelationship.toPlaceId,
-        parentName: placeName.name,
-        parentType: place.placeType,
-        parentScope: place.searchScope,
-      })
-      .from(placeRelationship)
-      .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
-      .innerJoin(
-        placeName,
-        and(
-          eq(placeName.placeId, place.placeId),
-          eq(placeName.nameRole, 'preferred_public'),
-          eq(placeName.nameState, 'active'),
-        ),
-      )
-      .where(
-        and(
-          inArray(placeRelationship.fromPlaceId, frontier),
-          eq(placeRelationship.relationshipType, 'administratively_contains'),
-        ),
-      )) as unknown as AncestorRow[];
+  // The whole administrative graph is read once and walked in memory. The graph is small
+  // compared with the rest of the platform, and one read keeps the search fast.
+  const edges = (await db
+    .select({
+      childPlaceId: placeRelationship.fromPlaceId,
+      parentPlaceId: placeRelationship.toPlaceId,
+      parentName: placeName.name,
+      parentType: place.placeType,
+      parentScope: place.searchScope,
+    })
+    .from(placeRelationship)
+    .innerJoin(place, eq(place.placeId, placeRelationship.toPlaceId))
+    .innerJoin(
+      placeName,
+      and(
+        eq(placeName.placeId, place.placeId),
+        eq(placeName.nameRole, 'preferred_public'),
+        eq(placeName.nameState, 'active'),
+      ),
+    )
+    .where(
+      eq(placeRelationship.relationshipType, 'administratively_contains'),
+    )) as unknown as AncestorRow[];
 
-    if (!edges.length) break;
-    const next: string[] = [];
-    for (const edge of edges) {
-      ancestorRows.set(edge.parentPlaceId, edge);
-      const chain = ancestorsByChild.get(edge.childPlaceId) ?? [];
-      chain.push(edge);
-      ancestorsByChild.set(edge.childPlaceId, chain);
-      next.push(edge.parentPlaceId);
-    }
-    frontier = [...new Set(next)];
+  const ancestorsByChild = new Map<string, AncestorRow[]>();
+  for (const edge of edges) {
+    const chain = ancestorsByChild.get(edge.childPlaceId) ?? [];
+    chain.push(edge);
+    ancestorsByChild.set(edge.childPlaceId, chain);
   }
 
-  const ancestorsFor = (placeId: string): AncestorRow[] => ancestorsByChild.get(placeId) ?? [];
+  // The chain is walked transitively: a place's ancestors include its grandparent, so a city
+  // reaches its province through the municipality that contains it.
+  const ancestorsFor = (placeId: string): AncestorRow[] => {
+    const chain: AncestorRow[] = [];
+    const seen = new Set<string>([placeId]);
+    let cursor = placeId;
+    for (let depth = 0; depth < 6; depth += 1) {
+      const direct = ancestorsByChild.get(cursor);
+      if (!direct || !direct.length) break;
+      for (const ancestor of direct) {
+        if (seen.has(ancestor.parentPlaceId)) continue;
+        seen.add(ancestor.parentPlaceId);
+        chain.push(ancestor);
+      }
+      cursor = direct[0].parentPlaceId;
+    }
+    return chain;
+  };
+
   const ancestorByScope = (placeId: string, scope: string): AncestorRow | undefined =>
     ancestorsFor(placeId).find(ancestor => ancestor.parentScope === scope);
 
