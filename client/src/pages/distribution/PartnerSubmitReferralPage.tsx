@@ -87,6 +87,7 @@ export default function PartnerSubmitReferralPage() {
   const [, setLocation] = useLocation();
   const [developmentId, setDevelopmentId] = useState<number | null>(null);
   const [marketMode, setMarketMode] = useState<MarketMode | null>(null);
+  const [checkFitId, setCheckFitId] = useState<string | null>(null);
   const [sessionUuid, setSessionUuid] = useState<string | null>(null);
   const [confirmedPermission, setConfirmedPermission] = useState(false);
   const [confirmedPrivacyNotice, setConfirmedPrivacyNotice] = useState(false);
@@ -105,8 +106,10 @@ export default function PartnerSubmitReferralPage() {
     const params = new URLSearchParams(window.location.search);
     const requestedDevelopmentId = Number(params.get('developmentId') || 0);
     const requestedMode = params.get('marketMode');
+    const requestedCheckFitId = params.get('checkFitId');
     if (requestedDevelopmentId > 0) setDevelopmentId(requestedDevelopmentId);
     if (requestedMode === 'sale' || requestedMode === 'rent') setMarketMode(requestedMode);
+    if (requestedCheckFitId) setCheckFitId(requestedCheckFitId);
   }, []);
 
   const programsQuery = trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(
@@ -452,6 +455,7 @@ export default function PartnerSubmitReferralPage() {
                             buyerEmail: buyerEmail.trim() || undefined,
                             notes: buyerNotes.trim() || undefined,
                             clientReference: clientReference.trim() || undefined,
+                            checkFitId: checkFitId || undefined,
                           });
                         }}
                       >
