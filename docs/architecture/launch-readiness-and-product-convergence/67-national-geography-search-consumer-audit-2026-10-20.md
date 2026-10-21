@@ -133,3 +133,61 @@ older one.
 
 This is the one place where the instruction to preserve existing API contracts cannot be met,
 and the reason is measured rather than assumed.
+
+## The hierarchy differs, and that changes the migration's shape
+
+Measured on the disposable target, the canonical Place Authority's Gauteng hierarchy is:
+
+```
+Gauteng                                            province
+└── City of Johannesburg                           local_municipality container, search scope null
+    ├── Johannesburg                               city, metro_city scope
+    ├── 61 towns                                   metro_city scope
+    ├── 316 suburbs, 58 localities, 7 neighbourhoods, 4 villages   locality scope
+    └── 1 locality
+```
+
+The runtime projection's hierarchy is:
+
+```
+gauteng → johannesburg (city) → sandton (locality)
+```
+
+**The two models are not the same shape.** The Place Authority is
+**province → municipality → { city scopes, locality scopes }**: a municipality container holds
+the city scopes and the locality scopes side by side. The projection is
+**province → city → locality**: a city scope holds its localities.
+
+Two consequences.
+
+**A suburb has no single city parent.** `sandton` asserts one administrative parent, the
+`City of Johannesburg` container, which is not a searchable scope. There are 63 `metro_city`
+scopes under that one container and 386 locality scopes, so "the city this suburb belongs to"
+is not a fact the Place Authority asserts. A locality's path segment therefore cannot be
+"the parent city" the way the projection's is.
+
+**The public URL shape has to be decided, not just the handle.** The current contract is
+`/province/city/suburb`, which assumes a city scope owns its localities. The Place Authority's
+own shape is `/province/municipality/place`, where a municipality may hold a city scope, a town
+scope or a locality scope.
+
+**Recommendation.** Adopt the Place Authority's shape and let the URL be
+`/province/municipality/place`, with the municipality segment the container's own name. That
+gives `/gauteng/city-of-johannesburg/sandton`, which is not the URL our existing links use and
+would break every published link, every saved search and every listing filter.
+
+The alternative — keep `/province/city/suburb` and derive the city segment from the container's
+name — is a name-based path rule, and the projection's city scopes and the container's
+subdivisions are not one-to-one, so the mapping is not derivable without a decided rule.
+
+**This is a product decision, not a mechanical one, and it is the last thing standing between
+the current branch and a working national search.** The options are:
+
+| Option                                                                | Path                                                      | Cost                                                                                           |
+| --------------------------------------------------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| A. Municipality segment                                               | `/gauteng/city-of-johannesburg/sandton`                   | Breaks every published link, saved search and listing filter.                                  |
+| B. City segment from the container name                               | `/gauteng/johannesburg/sandton`                           | Needs a decided name-to-segment rule, and it is not derivable from the Place Authority alone.  |
+| C. Keep the projection for the path, the Place Authority for identity | `/gauteng/johannesburg/sandton` with a Place id behind it | Needs a Place-to-projection path mapping, which does not exist for the places outside Gauteng. |
+
+The handle change Edward approved is necessary under every option. The path decision is
+additional, and it was not visible until the hierarchy was measured.

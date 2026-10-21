@@ -54,6 +54,14 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+interface AncestorRow {
+  childPlaceId: string;
+  parentPlaceId: string;
+  parentName: string;
+  parentType: string;
+  parentScope: string | null;
+}
+
 interface PlaceRow {
   placeId: string;
   placeType: string;
@@ -164,11 +172,14 @@ export async function searchNationalPlaces(
     parentScope: string | null;
   }>;
 
-  const parentByChild = new Map(parents.map(row => [row.childPlaceId, row]));
-  const grandparentByChild = new Map<string, (typeof parents)[number]>();
-  const parentIds = [...new Set(parents.map(row => row.parentPlaceId))];
-  if (parentIds.length) {
-    const grandparents = (await db
+  // The hierarchy is resolved by the scope each ancestor asserts, not by a fixed depth.
+  // A locality sits under a city scope and a city scope sits under a province scope. The
+  // municipality container is context, never a path segment.
+  const ancestorRows = new Map<string, AncestorRow>();
+  const ancestorsByChild = new Map<string, AncestorRow[]>();
+  let frontier = [...new Set(rows.map(row => row.placeId))];
+  for (let depth = 0; depth < 4 && frontier.length; depth += 1) {
+    const edges = (await db
       .select({
         childPlaceId: placeRelationship.fromPlaceId,
         parentPlaceId: placeRelationship.toPlaceId,
@@ -188,27 +199,35 @@ export async function searchNationalPlaces(
       )
       .where(
         and(
-          inArray(placeRelationship.fromPlaceId, parentIds),
+          inArray(placeRelationship.fromPlaceId, frontier),
           eq(placeRelationship.relationshipType, 'administratively_contains'),
         ),
-      )) as unknown as Array<{
-      childPlaceId: string;
-      parentPlaceId: string;
-      parentName: string;
-      parentType: string;
-      parentScope: string | null;
-    }>;
-    for (const row of grandparents) grandparentByChild.set(row.childPlaceId, row);
+      )) as unknown as AncestorRow[];
+
+    if (!edges.length) break;
+    const next: string[] = [];
+    for (const edge of edges) {
+      ancestorRows.set(edge.parentPlaceId, edge);
+      const chain = ancestorsByChild.get(edge.childPlaceId) ?? [];
+      chain.push(edge);
+      ancestorsByChild.set(edge.childPlaceId, chain);
+      next.push(edge.parentPlaceId);
+    }
+    frontier = [...new Set(next)];
   }
+
+  const ancestorsFor = (placeId: string): AncestorRow[] => ancestorsByChild.get(placeId) ?? [];
+  const ancestorByScope = (placeId: string, scope: string): AncestorRow | undefined =>
+    ancestorsFor(placeId).find(ancestor => ancestor.parentScope === scope);
 
   const results: CanonicalLocationDiscoveryResult[] = [];
   for (const row of rows) {
     const level = LEVEL_BY_SCOPE[row.searchScope || ''];
     if (!level) continue;
-    const parent = parentByChild.get(row.placeId);
-    const provinceRow = parent ? grandparentByChild.get(parent.parentPlaceId) : undefined;
-    const provinceName = provinceRow?.parentName ?? (level === 'province' ? row.name : null);
-    const cityName = level === 'city' ? row.name : (parent?.parentName ?? null);
+    const provinceAncestor = ancestorByScope(row.placeId, 'province');
+    const cityAncestor = ancestorByScope(row.placeId, 'metro_city');
+    const provinceName = level === 'province' ? row.name : (provinceAncestor?.parentName ?? null);
+    const cityName = level === 'city' ? row.name : (cityAncestor?.parentName ?? null);
     const provinceSlug = provinceName ? slugify(provinceName) : undefined;
     const citySlug = cityName && level !== 'province' ? slugify(cityName) : undefined;
     const suburbSlug = level === 'suburb' ? slugify(row.name) : undefined;
@@ -229,7 +248,9 @@ export async function searchNationalPlaces(
       provinceSlug: provinceSlug || '',
       ...(citySlug ? { citySlug } : {}),
       ...(suburbSlug ? { suburbSlug } : {}),
-      ...(parent ? { parentCanonicalLocationId: parent.parentPlaceId } : {}),
+      ...(ancestorsFor(row.placeId)[0]
+        ? { parentCanonicalLocationId: ancestorsFor(row.placeId)[0].parentPlaceId }
+        : {}),
       ...(provinceName ? { provinceName } : {}),
       ...(cityName ? { cityName } : {}),
       status: row.verificationStatus,
