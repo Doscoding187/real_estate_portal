@@ -36,7 +36,14 @@ export const PLACE_RELEASE_BATCH_LIMITS = {
   payloadBytes: 262144,
 } as const;
 
-export const PLACE_RELEASE_POLICY = 'admitted-national-non-osm-only-v1';
+/**
+ * The release policy name records the rule. It changed on 2026-10-20: a place whose evidence
+ * is traceable and whose supported type, spatial confidence and boundary integrity hold is
+ * released for search and selection, whether or not a second gazetteer lists it. The stricter
+ * gate for a public guide page is unchanged and lives in the place's own publication
+ * eligibility, not here.
+ */
+export const PLACE_RELEASE_POLICY = 'admitted-national-traceable-sources-v2';
 const ELIGIBLE_LICENSING = ['permissive_supported', 'mixed_odbl_supported'] as const;
 export const PLACE_RELEASE_TABLES = {
   place: [
@@ -189,15 +196,24 @@ export function loadPlaceReleaseCandidate(root = process.cwd()) {
     )
       throw new Error('Place release refused: unregistered licensing classification.');
   }
-  const allowed = new Set(
-    admitted.place
-      .filter(p => p.licensing_classification !== 'osm_only_odbl_provisional')
-      .map(p => String(p.place_id)),
-  );
-  const held = admitted.place
-    .filter(p => !allowed.has(String(p.place_id)))
+  // A place whose evidence is OpenStreetMap alone is released for search and selection, on
+  // the founder direction of 2026-10-20. The second-source corroboration requirement is no
+  // longer a universal publication gate: a record with a traceable source, a supported type,
+  // supported spatial confidence and no unresolved boundary conflict is usable.
+  //
+  // Two things are deliberately unchanged. The per-row attribution and provenance of every
+  // released place remain, so an OpenStreetMap-derived place keeps its licence notice. And
+  // publication as a public guide page stays a stricter gate than search, so these places
+  // are selectable and searchable without becoming indexable pages.
+  //
+  // The set of OpenStreetMap-derived places released this way is reported separately, so the
+  // decision is auditable and a later correction can find every affected record.
+  const osmDerived = admitted.place
+    .filter(p => p.licensing_classification === 'osm_only_odbl_provisional')
     .map(p => String(p.place_id))
     .sort(compare);
+  const allowed = new Set(admitted.place.map(p => String(p.place_id)));
+  const held: string[] = [];
   const desired = emptyRows();
   for (const table of tables) {
     desired[table] = admitted[table].filter(row =>
@@ -248,6 +264,8 @@ export function loadPlaceReleaseCandidate(root = process.cwd()) {
     desiredDigest: stableDigest(desired),
     heldPlaceIds: held,
     heldDigest: stableDigest(held),
+    osmDerivedPlaceIds: osmDerived,
+    osmDerivedDigest: stableDigest(osmDerived),
     heldRows: Object.fromEntries(tables.map(t => [t, admitted[t].length - desired[t].length])),
     provinceIds: desired.place.filter(p => p.place_type === 'province').map(p => p.place_id),
   };
