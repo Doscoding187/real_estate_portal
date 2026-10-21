@@ -1,7 +1,11 @@
-import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { platformSettings } from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  calculatePurchaseCapacity,
+  CHECKFIT_RATE_SOURCE_KEY,
+  CHECKFIT_RATE_SOURCE_LABEL,
+  resolveCheckfitRate,
+} from './checkfitPolicy';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -16,8 +20,8 @@ export const CHECKFIT_V1_POLICY = Object.freeze({
   version: 'checkfit_v1' as const,
   termMonths: 240,
   repaymentAllowanceRatio: 0.3,
-  rateSourceKey: 'sarb_prime_rate',
-  rateSourceLabel: 'SARB prime rate (platform settings)',
+  rateSourceKey: CHECKFIT_RATE_SOURCE_KEY,
+  rateSourceLabel: CHECKFIT_RATE_SOURCE_LABEL,
 });
 
 export const CHECKFIT_V1_DISCLAIMERS = Object.freeze([
@@ -68,10 +72,6 @@ export type CheckfitV1Outcome =
       disclaimers: string[];
     };
 
-function roundToCents(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
 export function calculateCheckfitV1(input: {
   grossMonthlyIncome: number;
   monthlyDebts: number;
@@ -79,16 +79,13 @@ export function calculateCheckfitV1(input: {
   annualInterestRate: number;
   rateUpdatedAt: string | null;
 }): CheckfitV1AvailableResult {
-  const repaymentAllowanceMonthly = roundToCents(
-    Math.max(
-      0,
-      input.grossMonthlyIncome * CHECKFIT_V1_POLICY.repaymentAllowanceRatio - input.monthlyDebts,
-    ),
-  );
-  const monthlyRate = input.annualInterestRate / 100 / 12;
-  const growth = Math.pow(1 + monthlyRate, CHECKFIT_V1_POLICY.termMonths);
-  const annuityFactor = (growth - 1) / (monthlyRate * growth);
-  const estimatedLoanAmount = Math.round(repaymentAllowanceMonthly * annuityFactor);
+  const { repaymentAllowanceMonthly, estimatedLoanAmount } = calculatePurchaseCapacity({
+    grossMonthlyIncome: input.grossMonthlyIncome,
+    monthlyDebts: input.monthlyDebts,
+    annualInterestRate: input.annualInterestRate,
+    termMonths: CHECKFIT_V1_POLICY.termMonths,
+    repaymentAllowanceRatio: CHECKFIT_V1_POLICY.repaymentAllowanceRatio,
+  });
   const estimatedPurchasePrice = estimatedLoanAmount + input.deposit;
 
   return {
@@ -125,30 +122,7 @@ export async function resolveCheckfitV1Rate(db: DbHandle): Promise<{
   annualInterestRate: number;
   rateUpdatedAt: string | null;
 } | null> {
-  const [row] = await db
-    .select({
-      settingValue: platformSettings.settingValue,
-      updatedAt: platformSettings.updatedAt,
-    })
-    .from(platformSettings)
-    .where(eq(platformSettings.settingKey, CHECKFIT_V1_POLICY.rateSourceKey))
-    .limit(1);
-
-  if (!row) return null;
-
-  const annualInterestRate = Number.parseFloat(String(row.settingValue ?? '').trim());
-  if (!Number.isFinite(annualInterestRate) || annualInterestRate <= 0) return null;
-
-  const updatedAt = row.updatedAt;
-  return {
-    annualInterestRate,
-    rateUpdatedAt:
-      updatedAt instanceof Date
-        ? updatedAt.toISOString()
-        : updatedAt
-          ? String(updatedAt)
-          : null,
-  };
+  return await resolveCheckfitRate(db);
 }
 
 export async function runCheckfitV1(params: {

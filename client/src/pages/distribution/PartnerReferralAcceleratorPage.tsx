@@ -30,15 +30,21 @@ export default function PartnerReferralAcceleratorPage() {
             <Calculator className="h-3.5 w-3.5" /> Budget and property fit
           </span>
           <h1 className="mt-3 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
-            Income-based estimates are not ready yet
+            Check what a prospect can reach
           </h1>
           <p className="mt-2 max-w-3xl text-[15px] leading-6 text-muted-foreground">
-            We are finalizing the assumptions behind purchase estimates before showing matches based
-            on someone's income. For now, you can explore current properties by listed price, area,
-            bedrooms, and whether the person wants to buy or rent.
+            Start a check fit on the prospect's gross income to see which current opportunities they
+            may reach, and where they are. It asks for the income only. Their documents, consent,
+            and the final affordability assessment follow in the referral itself.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button variant="conversion" onClick={() => setLocation('/distribution/partner/developments')}>
+            <Button
+              variant="conversion"
+              onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
+            >
+              <Calculator className="mr-2 h-4 w-4" /> I have a prospect
+            </Button>
+            <Button variant="outline" onClick={() => setLocation('/distribution/partner/developments')}>
               <Search className="mr-2 h-4 w-4" /> Find property opportunities
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/referrals')}>
@@ -51,17 +57,18 @@ export default function PartnerReferralAcceleratorPage() {
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
             <p>
-              <span className="font-semibold text-[#0b1c3f]">What you can do now.</span> Browse
-              opportunities by listed price, area, and bedrooms, and start an introduction when the
-              person is ready.
+              <span className="font-semibold text-[#0b1c3f]">What you can do now.</span> Run a
+              check fit before you collect anything, see which developments the prospect may reach,
+              and then start an introduction for the one that suits them.
             </p>
           </div>
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
             <p>
-              <span className="font-semibold text-[#0b1c3f]">A listed price is not an approval.</span>{' '}
-              A listed price does not mean a lender will approve them. Estimates will appear only
-              once the approved assessment model is in place.
+              <span className="font-semibold text-[#0b1c3f]">A check fit is not an approval.</span>{' '}
+              It is an estimate from the income you provided. The final affordability assessment is
+              completed by the Distribution manager once the prospect has signed their consent and
+              submitted their documents.
             </p>
           </div>
         </section>

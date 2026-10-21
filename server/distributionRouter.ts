@@ -99,6 +99,13 @@ import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
+import {
+  createProspectCheckFit as createProspectCheckFitRecord,
+  getProspectCheckFit,
+  listProspectCheckFits,
+  prospectCheckFitInputSchema,
+  type QualifiedOpportunity,
+} from './services/distributionProspectCheckFitService';
 import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
 import {
   checkfitV1InputSchema,
@@ -6700,6 +6707,95 @@ const partnerDistributionRouter = router({
       });
     }),
 
+  createProspectCheckFit: protectedProcedure
+    .input(prospectCheckFitInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      const { items } = await listPartnerProgramTerms({
+        actor: {
+          userId: Number(ctx.user!.id),
+          role: String(ctx.user!.role || ''),
+        },
+        includeDisabled: false,
+      });
+
+      const opportunities: QualifiedOpportunity[] = [];
+      for (const item of items) {
+        const sale = item.inventory.modes.sale;
+        if (!sale || sale.availableCount <= 0 || sale.priceFrom <= 0) continue;
+        opportunities.push({
+          developmentId: item.developmentId,
+          programId: item.program.programId,
+          developmentName: item.developmentName,
+          city: item.city,
+          province: item.province,
+          entryPrice: sale.priceFrom,
+          currencyCode: item.program.currencyCode || 'ZAR',
+        });
+      }
+
+      return await createProspectCheckFitRecord({
+        db,
+        actorUserId: Number(ctx.user!.id),
+        checkFit: input,
+        opportunities,
+      });
+    }),
+
+  listProspectCheckFits: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().int().positive().max(100).default(20),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      return await listProspectCheckFits({
+        db,
+        actorUserId: Number(ctx.user!.id),
+        limit: input?.limit ?? 20,
+      });
+    }),
+
+  getProspectCheckFit: protectedProcedure
+    .input(
+      z.object({
+        checkFitId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      const record = await getProspectCheckFit({
+        db,
+        actorUserId: Number(ctx.user!.id),
+        checkFitId: input.checkFitId,
+      });
+      if (!record) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Prospect check fit not found.',
+        });
+      }
+      return record;
+    }),
+
   getReferralIntakeRequirements: protectedProcedure
     .input(z.object({ developmentId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
@@ -6836,6 +6932,7 @@ const partnerDistributionRouter = router({
         buyerEmail: z.string().email().max(320).optional(),
         notes: z.string().max(2000).nullable().optional(),
         clientReference: z.string().trim().max(100).optional(),
+        checkFitId: z.string().uuid().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -6865,6 +6962,7 @@ const partnerDistributionRouter = router({
         buyerEmail: input.buyerEmail ?? null,
         notes: input.notes ?? null,
         clientReference: input.clientReference ?? null,
+        checkFitId: input.checkFitId ?? null,
       });
     }),
 

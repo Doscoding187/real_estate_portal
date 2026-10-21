@@ -93,6 +93,39 @@ export type DeveloperDealDocumentDelivery = {
   acknowledgementNote: string | null;
 };
 
+function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === 'object') return value as Record<string, unknown>;
+  return null;
+}
+
+function buildQualificationSummary(dealScope: {
+  prospectCheckFitId: string | null;
+  affordabilityPurchasePrice: number | null;
+  affordabilityAssumptionsJson: unknown;
+}) {
+  if (!dealScope.prospectCheckFitId) return null;
+  const snapshot = parseJsonObject(dealScope.affordabilityAssumptionsJson);
+  if (!snapshot) return null;
+  const assumptions = parseJsonObject(snapshot.assumptions);
+  const outputs = parseJsonObject(snapshot.outputs);
+  return {
+    checkFitId: dealScope.prospectCheckFitId,
+    policyVersion: snapshot.policyVersion ? String(snapshot.policyVersion) : null,
+    estimatedPurchasePrice: dealScope.affordabilityPurchasePrice,
+    assumptions: assumptions as Record<string, unknown> | null,
+    outputs: outputs as Record<string, unknown> | null,
+  };
+}
+
 export type DealChecklistPayload = {
   dealId: number;
   dealRef: string;
@@ -103,6 +136,13 @@ export type DealChecklistPayload = {
   payoutMilestone: string | null;
   payoutMilestoneNotes: string | null;
   currencyCode: string | null;
+  qualification: {
+    checkFitId: string | null;
+    policyVersion: string | null;
+    estimatedPurchasePrice: number | null;
+    assumptions: Record<string, unknown> | null;
+    outputs: Record<string, unknown> | null;
+  } | null;
   commissionSummary: {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
@@ -378,6 +418,9 @@ async function getDealScope(db: any, dealId: number) {
       commissionStatus: distributionDeals.commissionStatus,
       referralTermsSnapshotJson: distributionDeals.referralTermsSnapshotJson,
       referralTermsSnapshotDigest: distributionDeals.referralTermsSnapshotDigest,
+      prospectCheckFitId: distributionDeals.prospectCheckFitId,
+      affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      affordabilityAssumptionsJson: distributionDeals.affordabilityAssumptionsJson,
     })
     .from(distributionDeals)
     .where(eq(distributionDeals.id, dealId))
@@ -408,6 +451,9 @@ async function getDealScope(db: any, dealId: number) {
     commissionStatus: String(deal.commissionStatus || ''),
     referralTermsSnapshotJson: deal.referralTermsSnapshotJson,
     referralTermsSnapshotDigest: deal.referralTermsSnapshotDigest || null,
+    prospectCheckFitId: deal.prospectCheckFitId ? String(deal.prospectCheckFitId) : null,
+    affordabilityPurchasePrice: toNumberOrNull(deal.affordabilityPurchasePrice),
+    affordabilityAssumptionsJson: deal.affordabilityAssumptionsJson,
   };
 }
 
@@ -751,6 +797,7 @@ export async function getDealChecklist(
     payoutMilestone,
     payoutMilestoneNotes: frozenPayoutTerms?.payoutMilestoneNotes || null,
     currencyCode: frozenPayoutTerms?.currencyCode || null,
+    qualification: buildQualificationSummary(dealScope),
     commissionSummary: {
       commissionModel: frozenPayoutTerms?.commissionModel || null,
       defaultCommissionPercent:

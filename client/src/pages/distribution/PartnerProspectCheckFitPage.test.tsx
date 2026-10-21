@@ -1,0 +1,189 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import PartnerProspectCheckFitPage from './PartnerProspectCheckFitPage';
+
+const {
+  mockListProspectCheckFits,
+  mockCreateProspectCheckFit,
+  mockMutateAsync,
+  mockSetLocation,
+  mockToastError,
+  mockToastSuccess,
+} = vi.hoisted(() => ({
+  mockListProspectCheckFits: vi.fn(),
+  mockCreateProspectCheckFit: vi.fn(),
+  mockMutateAsync: vi.fn(),
+  mockSetLocation: vi.fn(),
+  mockToastError: vi.fn(),
+  mockToastSuccess: vi.fn(),
+}));
+
+vi.mock('wouter', async () => {
+  const actual = await vi.importActual<typeof import('wouter')>('wouter');
+  return {
+    ...actual,
+    useLocation: () => ['/distribution/partner/prospect-check-fit', mockSetLocation],
+  };
+});
+
+vi.mock('@/components/referral/ReferralAppShell', () => ({
+  ReferralAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => mockToastSuccess(...args),
+    error: (...args: unknown[]) => mockToastError(...args),
+  },
+}));
+
+vi.mock('@/lib/trpc', () => ({
+  trpc: {
+    distribution: {
+      partner: {
+        listProspectCheckFits: {
+          useQuery: (...args: unknown[]) => mockListProspectCheckFits(...args),
+        },
+        createProspectCheckFit: {
+          useMutation: (options?: { onSuccess?: (value: any) => void }) => ({
+            isPending: false,
+            mutateAsync: async (input: unknown) => {
+              const result = await mockMutateAsync(input);
+              options?.onSuccess?.(result);
+              return result;
+            },
+          }),
+        },
+      },
+    },
+  },
+}));
+
+const qualifyingCheckFit = {
+  id: '11111111-1111-4111-8111-111111111111',
+  referenceLabel: 'Prospect A',
+  grossIncomeMonthly: 50000,
+  coApplicantGrossIncomeMonthly: null,
+  combinedGrossIncomeMonthly: 50000,
+  policyVersion: 'prospect_check_fit_v1',
+  assumptions: {
+    annualInterestRate: 10.5,
+    termMonths: 240,
+    repaymentAllowanceRatio: 0.3,
+    rateSourceLabel: 'SARB prime rate (platform settings)',
+    applicantCount: 1,
+    jointAssessment: false,
+  },
+  outputs: {
+    combinedGrossIncomeMonthly: 50000,
+    repaymentAllowanceMonthly: 15000,
+    estimatedLoanAmount: 1502434,
+    estimatedPurchasePrice: 1502434,
+    qualifiedDevelopmentCount: 1,
+  },
+  matches: [
+    {
+      developmentId: 42,
+      programId: 7,
+      developmentName: 'Soweto Ridge',
+      city: 'Soweto',
+      province: 'Gauteng',
+      entryPrice: 1200000,
+      currencyCode: 'ZAR',
+      qualified: true,
+      matchRank: 1,
+    },
+    {
+      developmentId: 43,
+      programId: 8,
+      developmentName: 'Sandton Heights',
+      city: 'Sandton',
+      province: 'Gauteng',
+      entryPrice: 4000000,
+      currencyCode: 'ZAR',
+      qualified: false,
+      matchRank: 2,
+    },
+  ],
+  lockedByDealId: null,
+  createdAt: '2026-10-21 12:00:00',
+};
+
+describe('PartnerProspectCheckFitPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockListProspectCheckFits.mockReturnValue({ data: [] });
+    mockMutateAsync.mockResolvedValue(qualifyingCheckFit);
+  });
+
+  it('runs a check fit on the gross monthly income alone', async () => {
+    render(<PartnerProspectCheckFitPage />);
+
+    fireEvent.change(screen.getByLabelText('Gross monthly income'), {
+      target: { value: '50000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({ grossIncomeMonthly: 50000 });
+    });
+  });
+
+  it('asks for the second applicant income on a joint application', async () => {
+    render(<PartnerProspectCheckFitPage />);
+
+    fireEvent.change(screen.getByLabelText('Gross monthly income'), {
+      target: { value: '30000' },
+    });
+    fireEvent.click(screen.getByLabelText(/Joint application/));
+    fireEvent.change(screen.getByLabelText('Second applicant gross monthly income'), {
+      target: { value: '20000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        grossIncomeMonthly: 30000,
+        coApplicantGrossIncomeMonthly: 20000,
+      });
+    });
+  });
+
+  it('refuses to run without an income', async () => {
+    render(<PartnerProspectCheckFitPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
+
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(mockToastError).toHaveBeenCalled();
+  });
+
+  it('names the developments the prospect may qualify for and keeps the rest visible', () => {
+    mockListProspectCheckFits.mockReturnValue({ data: [qualifyingCheckFit] });
+
+    render(<PartnerProspectCheckFitPage />);
+
+    expect(screen.getByText('Indicative purchase price')).toBeInTheDocument();
+    expect(screen.getByText(/R\s*1[\s\u00a0]*502[\s\u00a0]*434/)).toBeInTheDocument();
+    expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
+    expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
+    expect(screen.getByText(/Sandton Heights/)).toBeInTheDocument();
+    expect(screen.getByText(/May qualify/)).toBeInTheDocument();
+  });
+
+  it('says plainly when the prospect does not qualify for any opportunity', () => {
+    mockListProspectCheckFits.mockReturnValue({
+      data: [
+        {
+          ...qualifyingCheckFit,
+          outputs: { ...qualifyingCheckFit.outputs, qualifiedDevelopmentCount: 0 },
+          matches: qualifyingCheckFit.matches.map(match => ({ ...match, qualified: false })),
+        },
+      ],
+    });
+
+    render(<PartnerProspectCheckFitPage />);
+
+    expect(screen.getByText(/does not qualify for any current opportunity/)).toBeInTheDocument();
+  });
+});

@@ -327,13 +327,13 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.queryByRole('button', { name: /shortlist/i })).not.toBeInTheDocument();
   });
 
-  it('keeps the check-fit panel disabled with an honest explanation', () => {
+  it('sends the referrer to the live check fit instead of a disabled panel', () => {
     render(<PartnerDevelopmentsPage />);
 
-    expect(screen.getByLabelText('Monthly income')).toBeDisabled();
-    expect(screen.getByLabelText('Deposit')).toBeDisabled();
+    expect(screen.queryByLabelText('Monthly income')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Preliminary affordability is not active yet/),
+      screen.getByRole('button', { name: 'I have a prospect' }),
     ).toBeInTheDocument();
+    expect(screen.getByText(/gross monthly income only/)).toBeInTheDocument();
   });
 });

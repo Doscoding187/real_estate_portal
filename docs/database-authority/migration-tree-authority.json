@@ -1639,6 +1639,38 @@
       "path": "server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql",
       "classification": "archived historical",
       "purpose": "Preserves the unchanged checksum evidence for the local zero-statement delivery-table migration rejected because a foreign-key constraint name exceeded MySQL's 64-character identifier limit; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/0144_distribution_prospect_check_fits.sql",
+      "classification": "canonical active",
+      "purpose": "Records a referrer-owned prospect check fit under the approved purchase assumptions.",
+      "approvedFiles": [
+        "server/migrations/0144_distribution_prospect_check_fits.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0145_distribution_prospect_check_fit_matches.sql",
+      "classification": "canonical active",
+      "purpose": "Records the developments a prospect check fit was measured against and the ones it reached.",
+      "approvedFiles": [
+        "server/migrations/0145_distribution_prospect_check_fit_matches.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0146_distribution_deal_prospect_check_fit_reference.sql",
+      "classification": "canonical active",
+      "purpose": "Links a referral to the prospect check fit that qualified it.",
+      "approvedFiles": [
+        "server/migrations/0146_distribution_deal_prospect_check_fit_reference.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0147_distribution_deal_prospect_check_fit_foreign_key.sql",
+      "classification": "canonical active",
+      "purpose": "Enforces the referral-to-check-fit reference and its lookup index.",
+      "approvedFiles": [
+        "server/migrations/0147_distribution_deal_prospect_check_fit_foreign_key.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

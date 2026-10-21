@@ -1,0 +1,23 @@
+CREATE TABLE `distribution_prospect_check_fits` (
+  `id` varchar(36) NOT NULL,
+  `actor_user_id` int NOT NULL,
+  `reference_label` varchar(120),
+  `gross_income_monthly` int NOT NULL,
+  `co_applicant_gross_income_monthly` int,
+  `combined_gross_income_monthly` int NOT NULL,
+  `policy_version` varchar(64) NOT NULL,
+  `assumptions_json` json NOT NULL,
+  `outputs_json` json NOT NULL,
+  `locked_at` timestamp NULL,
+  `locked_by_deal_id` int,
+  `locked_by_user_id` int,
+  `created_at` timestamp NOT NULL DEFAULT (now()),
+  `updated_at` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `distribution_prospect_check_fits_id` PRIMARY KEY (`id`),
+  KEY `idx_distribution_prospect_check_fits_actor` (`actor_user_id`),
+  KEY `idx_distribution_prospect_check_fits_created_at` (`created_at`),
+  KEY `idx_distribution_prospect_check_fits_locked_at` (`locked_at`),
+  KEY `idx_distribution_prospect_check_fits_locked_deal` (`locked_by_deal_id`),
+  CONSTRAINT `distribution_prospect_check_fits_actor_user_id_fk` FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `distribution_prospect_check_fits_locked_by_user_id_fk` FOREIGN KEY (`locked_by_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+);

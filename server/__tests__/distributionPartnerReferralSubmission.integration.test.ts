@@ -25,9 +25,12 @@ import {
   distributionReferralIntakeEvents,
   distributionReferralIntakePolicyReleases,
   distributionReferralIntakeSessions,
+  distributionProspectCheckFits,
+  platformSettings,
   unitTypes,
   users,
 } from '../../drizzle/schema';
+import { CANONICAL_PLATFORM_SETTINGS } from '../_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import {
   upsertBrandPartnership,
@@ -58,6 +61,7 @@ const createdState = {
   intakePolicyReleaseIds: [] as number[],
   intakeSessionUuids: [] as string[],
   requiredDocumentIds: [] as number[],
+  platformSettingKeys: [] as string[],
 };
 
 function uniqueIds(values: number[]) {
@@ -387,6 +391,29 @@ async function completeIntake(input: {
   return session.sessionUuid;
 }
 
+async function ensureCanonicalPrimeRate() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [existing] = await db
+    .select({ id: platformSettings.id })
+    .from(platformSettings)
+    .where(eq(platformSettings.settingKey, 'sarb_prime_rate'))
+    .limit(1);
+  if (existing) return;
+
+  const seed = CANONICAL_PLATFORM_SETTINGS.find(setting => setting.settingKey === 'sarb_prime_rate');
+  if (!seed) throw new Error('Canonical prime rate seed missing');
+  await db.insert(platformSettings).values({
+    settingKey: seed.settingKey,
+    settingValue: seed.settingValue,
+    description: seed.description,
+    category: seed.category,
+    isPublic: seed.isPublic,
+  });
+  createdState.platformSettingKeys.push(seed.settingKey);
+}
+
 async function seedScenario(input?: {
   isActive?: boolean;
   isReferralEnabled?: boolean;
@@ -540,6 +567,10 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(users).where(inArray(users.id, userIds));
     }
 
+    for (const settingKey of uniqueStringIds(createdState.platformSettingKeys)) {
+      await db.delete(platformSettings).where(eq(platformSettings.settingKey, settingKey));
+    }
+
     createdState.userIds = [];
     createdState.cataloguePublisherIds = [];
     createdState.developmentIds = [];
@@ -552,6 +583,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.intakePolicyReleaseIds = [];
     createdState.intakeSessionUuids = [];
     createdState.requiredDocumentIds = [];
+    createdState.platformSettingKeys = [];
   });
 
   it('blocks submission when the program is inactive or referrals are disabled', async () => {
@@ -848,5 +880,141 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     expect(actorADealIds).toContain(Number(actorADeal.dealId));
     expect(actorADealIds).not.toContain(Number(actorBDeal.dealId));
+  }, INTEGRATION_TIMEOUT_MS);
+  it('records a prospect check fit and names the developments the prospect qualifies for', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      grossIncomeMonthly: 50000,
+    });
+
+    expect(checkFit.policyVersion).toBe('prospect_check_fit_v1');
+    expect(checkFit.assumptions).toMatchObject({
+      termMonths: 240,
+      repaymentAllowanceRatio: 0.3,
+      applicantCount: 1,
+      jointAssessment: false,
+      approvalReference: 'EDWARD-CHECKFIT-MODEL-2026-10-21',
+    });
+    expect(checkFit.outputs).toMatchObject({
+      combinedGrossIncomeMonthly: 50000,
+      repaymentAllowanceMonthly: 15000,
+      estimatedPurchasePrice: 1502434,
+    });
+
+    const match = checkFit.matches.find(
+      candidate => candidate.developmentId === scenario.developmentId,
+    );
+    expect(match).toMatchObject({
+      qualified: true,
+      entryPrice: 1000000,
+      developmentName: expect.any(String),
+    });
+    expect(checkFit.outputs.qualifiedDevelopmentCount).toBeGreaterThan(0);
+
+    const stored = await scenario.caller.distribution.partner.listProspectCheckFits({ limit: 10 });
+    expect(stored.map(record => record.id)).toContain(checkFit.id);
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('assesses a joint application as one combined income', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      grossIncomeMonthly: 30000,
+      coApplicantGrossIncomeMonthly: 20000,
+    });
+
+    expect(checkFit.assumptions).toMatchObject({ applicantCount: 2, jointAssessment: true });
+    expect(checkFit.outputs).toMatchObject({
+      combinedGrossIncomeMonthly: 50000,
+      repaymentAllowanceMonthly: 15000,
+      estimatedPurchasePrice: 1502434,
+    });
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('attaches the prospect check fit to the referral and locks it to that referral', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      grossIncomeMonthly: 50000,
+    });
+
+    const result = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
+      buyerName: 'Checked Buyer',
+      buyerEmail: `checked-${Date.now()}@example.com`,
+      checkFitId: checkFit.id,
+    });
+    createdState.dealIds.push(Number(result.dealId));
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [deal] = await db
+      .select({
+        prospectCheckFitId: distributionDeals.prospectCheckFitId,
+        affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, Number(result.dealId)))
+      .limit(1);
+    expect(deal?.prospectCheckFitId).toBe(checkFit.id);
+    expect(deal?.affordabilityPurchasePrice).toBe(1502434);
+
+    const [locked] = await db
+      .select({
+        lockedAt: distributionProspectCheckFits.lockedAt,
+        lockedByDealId: distributionProspectCheckFits.lockedByDealId,
+      })
+      .from(distributionProspectCheckFits)
+      .where(eq(distributionProspectCheckFits.id, checkFit.id))
+      .limit(1);
+    expect(locked?.lockedAt).toBeTruthy();
+    expect(Number(locked?.lockedByDealId)).toBe(Number(result.dealId));
+
+    const secondIntakeSessionUuid = await completeIntake({
+      caller: scenario.caller,
+      developmentId: scenario.developmentId,
+    });
+    const reuseError = (await scenario.caller.distribution.partner
+      .submitReferral({
+        developmentId: scenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: secondIntakeSessionUuid,
+        buyerName: 'Second Buyer',
+        buyerEmail: `second-${Date.now()}@example.com`,
+        checkFitId: checkFit.id,
+      })
+      .catch(error => error)) as TRPCError;
+
+    expect(reuseError).toBeInstanceOf(TRPCError);
+    expect(reuseError.code).toBe('PRECONDITION_FAILED');
+    expect(reuseError.message).toContain('already attached to a referral');
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('refuses a check fit that did not qualify for the selected opportunity', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      grossIncomeMonthly: 10000,
+    });
+
+    const error = (await scenario.caller.distribution.partner
+      .submitReferral({
+        developmentId: scenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: scenario.intakeSessionUuid,
+        buyerName: 'Unqualified Buyer',
+        buyerEmail: `unqualified-${Date.now()}@example.com`,
+        checkFitId: checkFit.id,
+      })
+      .catch(error => error)) as TRPCError;
+
+    expect(error).toBeInstanceOf(TRPCError);
+    expect(error.code).toBe('PRECONDITION_FAILED');
+    expect(error.message).toContain('did not qualify');
   }, INTEGRATION_TIMEOUT_MS);
 });
