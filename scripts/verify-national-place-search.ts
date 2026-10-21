@@ -30,28 +30,27 @@ async function main() {
     return;
   }
 
-  const held = (await db
-    .select({ placeId: (await import('../drizzle/schema')).place.placeId })
-    .from((await import('../drizzle/schema')).place)
-    .where(
-      (await import('drizzle-orm')).eq(
-        (await import('../drizzle/schema')).place.licensingClassification,
-        'osm_only_odbl_provisional',
-      ),
-    )) as unknown as Array<{ placeId: string }>;
-  const heldIds = new Set(held.map(row => row.placeId));
+  // A place that may never appear in a public result is one the release policy did not
+  // release, or that the Place Authority does not mark searchable.
+  const place = (await import('../drizzle/schema')).place;
+  const { eq } = await import('drizzle-orm');
+  const excluded = (await db
+    .select({ placeId: place.placeId })
+    .from(place)
+    .where(eq(place.searchEligible, 0))) as unknown as Array<{ placeId: string }>;
+  const excludedIds = new Set(excluded.map(row => row.placeId));
 
   let failures = 0;
   console.log('# National place discovery proof\n');
   for (const probe of PROBES) {
     const results = await searchNationalPlaces({ query: probe, limit: 8 });
-    const leaked = results.filter(result => heldIds.has(result.canonicalLocationId));
+    const leaked = results.filter(result => excludedIds.has(result.canonicalLocationId));
     const provinces = [...new Set(results.map(result => result.provinceName).filter(Boolean))];
     const ok = results.length > 0 && leaked.length === 0;
     if (!ok) failures += 1;
     console.log(
       `${ok ? 'PASS' : 'FAIL'}  ${probe.padEnd(12)} ${results.length} result(s) · ${provinces.join(', ') || 'no province'}` +
-        (leaked.length ? ` · LEAKED ${leaked.length} held record(s)` : ''),
+        (leaked.length ? ` · LEAKED ${leaked.length} excluded record(s)` : ''),
     );
     for (const result of results.slice(0, 3)) {
       console.log(

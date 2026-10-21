@@ -25,8 +25,6 @@ import type { CanonicalLocationLevel } from '../../shared/locationAuthority';
  * numeric handle to preserve for them.
  */
 
-const RELEASED_LICENSING = ['permissive_supported', 'mixed_odbl_supported'] as const;
-
 const LEVEL_BY_SCOPE: Record<string, CanonicalLocationLevel> = {
   province: 'province',
   metro_city: 'city',
@@ -132,8 +130,11 @@ export async function searchNationalPlaces(
     )
     .where(
       and(
+        // A place appears in a public result when the release policy released it and the
+        // Place Authority marks it searchable. The licensing classification no longer
+        // withholds a place from search: the release policy admits traceable places, and
+        // publication as a guide page stays the stricter gate.
         eq(place.searchEligible, 1),
-        inArray(place.licensingClassification, [...RELEASED_LICENSING]),
         or(
           like(sql`LOWER(${placeName.name})`, pattern),
           like(sql`LOWER(${placeName.normalizedName})`, pattern),
