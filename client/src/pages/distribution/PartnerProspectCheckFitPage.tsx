@@ -275,7 +275,7 @@ export default function PartnerProspectCheckFitPage() {
                           size="sm"
                           onClick={() =>
                             setLocation(
-                              `/distribution/partner/submit?developmentId=${match.developmentId}&marketMode=sale`,
+                              `/distribution/partner/submit?developmentId=${match.developmentId}&marketMode=sale&checkFitId=${activeCheckFit.id}`,
                             )
                           }
                         >

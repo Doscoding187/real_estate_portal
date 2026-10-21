@@ -250,6 +250,30 @@ describe('PartnerSubmitReferralPage', () => {
     });
   });
 
+  it('carries the prospect check fit into the referral', () => {
+    window.history.pushState(
+      {},
+      '',
+      '/distribution/partner/submit?developmentId=101&marketMode=sale&checkFitId=11111111-1111-4111-8111-111111111111',
+    );
+    const rendered = render(<PartnerSubmitReferralPage />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to add documents' }));
+
+    state.sessionComplete = true;
+    rendered.rerender(<PartnerSubmitReferralPage />);
+
+    fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Jane Buyer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send introduction' }));
+
+    expect(state.lastSubmitPayload).toMatchObject({
+      checkFitId: '11111111-1111-4111-8111-111111111111',
+    });
+  });
+
   it('shows the server message when submission is blocked, then follows the deal on success', () => {
     state.sessionStarted = true;
     state.sessionComplete = true;
