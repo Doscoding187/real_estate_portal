@@ -5,6 +5,7 @@ import PartnerProspectCheckFitPage from './PartnerProspectCheckFitPage';
 const {
   mockListProspectCheckFits,
   mockGetProspectDocumentPacks,
+  mockInvalidate,
   mockCreateProspectCheckFit,
   mockMutateAsync,
   mockSetLocation,
@@ -13,6 +14,7 @@ const {
 } = vi.hoisted(() => ({
   mockListProspectCheckFits: vi.fn(),
   mockGetProspectDocumentPacks: vi.fn(),
+  mockInvalidate: vi.fn(),
   mockCreateProspectCheckFit: vi.fn(),
   mockMutateAsync: vi.fn(),
   mockSetLocation: vi.fn(),
@@ -41,6 +43,13 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
+    useUtils: () => ({
+      distribution: {
+        partner: {
+          listProspectCheckFits: { invalidate: mockInvalidate },
+        },
+      },
+    }),
     distribution: {
       partner: {
         listProspectCheckFits: {
@@ -140,6 +149,23 @@ describe('PartnerProspectCheckFitPage', () => {
         grossIncomeMonthly: 50000,
       });
     });
+  });
+
+  it('shows the result of the check fit it just ran', async () => {
+    render(<PartnerProspectCheckFitPage />);
+
+    fireEvent.change(screen.getByLabelText('Prospect name'), {
+      target: { value: 'Thandi Mokoena' },
+    });
+    fireEvent.change(screen.getByLabelText('Gross monthly income'), {
+      target: { value: '50000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
+
+    expect(await screen.findByText('Thandi Mokoena')).toBeInTheDocument();
+    expect(screen.getByText(/qualifies for properties priced up to about/i)).toBeInTheDocument();
+    expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
+    expect(mockInvalidate).toHaveBeenCalled();
   });
 
   it('shows one applicant until the joint application is ticked', async () => {
