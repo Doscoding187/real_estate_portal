@@ -97,3 +97,39 @@ The migration is confined to six read paths plus one procedure. Each is behind a
 resolution point, so a rollback is a revert of that consumer to the projection read. The
 projection is not removed as part of this work, so the fallback stays available until every
 consumer has moved and the projection is retired separately.
+
+## The bridge that does not exist, and what it forces
+
+The legacy tables carry a `place_id` column in the schema (`drizzle/schema/locations.ts:35`
+for provinces, `:63` for cities, `:142` for the flat `locations` table). Measured on the
+disposable target:
+
+```
+provinces  9 rows, 0 with a place_id bridge
+cities   340 rows, 0 with a place_id bridge
+suburbs 1089 rows, no place_id column at all
+city rows that resolve to a canonical Place: 0
+```
+
+The two authorities are not merely uneven, they are **disconnected in the database**. There is
+no pointer from a runtime row to its Place, in either direction.
+
+**What this forces.** The public discovery contract carries a numeric runtime handle —
+`canonicalLocationId` is `province:3`, `city:42`, `suburb:91` — and the client compares a
+result's parent against the guide's own numeric city id
+(`client/src/lib/cityGuideDiscovery.ts`, `parentCanonicalLocationId === 'city:' + cityId`).
+
+For the 15,198 places outside Gauteng there is no numeric handle, because the numeric handle
+_is_ the projection and the projection does not contain them. A contract-preserving switch is
+therefore not possible for them: there is no id to preserve.
+
+**The end state the migration must reach:** the canonical handle in the public discovery
+contract becomes the Place id (`pl-place-01-…`). The URL contract is unaffected, because
+`buildLocationDiscoveryPath` is slug-based and the slug chain comes from
+`place_relationship`. The listing form already selects places by Place id through
+`CanonicalPlaceSelector` and `placeAuthority.discover`, so this is the identity the product
+already uses when an agent lists a property — it is the consumer surfaces that still use the
+older one.
+
+This is the one place where the instruction to preserve existing API contracts cannot be met,
+and the reason is measured rather than assumed.
