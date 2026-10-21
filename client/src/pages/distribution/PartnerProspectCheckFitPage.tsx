@@ -22,6 +22,13 @@ type CheckFitMatch = {
   matchRank: number;
 };
 
+type DocumentPack = {
+  developmentId: number;
+  downloads: { key: string; label: string; url: string; instructions: string | null }[];
+  uploads: { evidenceType: string; label: string; instructions: string | null }[];
+  signatureMethod: string | null;
+};
+
 type CheckFitRecord = {
   id: string;
   prospectName: string | null;
@@ -88,6 +95,12 @@ export default function PartnerProspectCheckFitPage() {
     checkFits.find(record => record.id === activeCheckFitId) || checkFits[0] || null;
   const qualifiedMatches = (activeCheckFit?.matches || []).filter(match => match.qualified);
   const outOfReachMatches = (activeCheckFit?.matches || []).filter(match => !match.qualified);
+  const qualifiedMatchDevelopmentIds = qualifiedMatches.map(match => match.developmentId);
+  const documentPacksQuery = trpc.distribution.partner.getProspectDocumentPacks.useQuery(
+    { developmentIds: qualifiedMatchDevelopmentIds },
+    { enabled: qualifiedMatchDevelopmentIds.length > 0, retry: false },
+  );
+  const documentPacks = (documentPacksQuery.data || []) as DocumentPack[];
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -256,6 +269,15 @@ export default function PartnerProspectCheckFitPage() {
                 </div>
               </div>
 
+              <p className="text-sm text-foreground">
+                On a gross monthly income of{' '}
+                {formatAmount(activeCheckFit.outputs.combinedGrossIncomeMonthly)} and the current
+                prime rate of {activeCheckFit.assumptions.annualInterestRate}%
+                {activeCheckFit.assumptions.jointAssessment ? ' (both applicants combined)' : ''}, this
+                prospect qualifies for properties priced up to about{' '}
+                {formatAmount(activeCheckFit.outputs.estimatedPurchasePrice)}.
+              </p>
+
               <p className="text-xs text-muted-foreground">
                 Assumes {activeCheckFit.assumptions.annualInterestRate}% (
                 {activeCheckFit.assumptions.rateSourceLabel}), a{' '}
@@ -294,7 +316,7 @@ export default function PartnerProspectCheckFitPage() {
                           {[match.city, match.province].filter(Boolean).join(', ')}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          From {formatAmount(match.entryPrice)}
+                          Qualifies for units from about {formatAmount(match.entryPrice)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -314,6 +336,56 @@ export default function PartnerProspectCheckFitPage() {
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                       </div>
+                      {(() => {
+                        const pack = documentPacks.find(
+                          candidate => candidate.developmentId === match.developmentId,
+                        );
+                        if (!pack) return null;
+                        return (
+                          <div className="mt-3 w-full space-y-2 rounded-lg border bg-muted/40 p-3">
+                            <p className="text-sm font-medium text-foreground">Next step</p>
+                            <p className="text-xs text-muted-foreground">
+                              {pack.uploads.length
+                                ? 'Download these for the prospect, sign them, and upload them back with the prospect\u2019s ID before you introduce them.'
+                                : 'Start the referral and upload the required documents for the prospect.'}
+                            </p>
+                            {pack.downloads.length ? (
+                              <ul className="space-y-1">
+                                {pack.downloads.map(download => (
+                                  <li key={download.key} className="text-xs">
+                                    <a
+                                      href={download.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="font-medium text-primary underline"
+                                    >
+                                      Download {download.label}
+                                    </a>
+                                    {download.instructions ? (
+                                      <span className="ml-1 text-muted-foreground">
+                                        {download.instructions}
+                                      </span>
+                                    ) : null}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                No downloadable documents are published for this opportunity yet.
+                              </p>
+                            )}
+                            {pack.uploads.length ? (
+                              <ul className="space-y-1">
+                                {pack.uploads.map(upload => (
+                                  <li key={upload.evidenceType} className="text-xs text-muted-foreground">
+                                    Upload: {upload.label}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

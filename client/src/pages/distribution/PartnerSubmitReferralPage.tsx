@@ -185,6 +185,12 @@ export default function PartnerSubmitReferralPage() {
     },
   });
 
+  const documentPackQuery = trpc.distribution.partner.getProspectDocumentPacks.useQuery(
+    { developmentIds: developmentId ? [Number(developmentId)] : [] },
+    { enabled: Boolean(developmentId) && isAuthenticated, retry: false },
+  );
+  const documentPack = (documentPackQuery.data || [])[0] || null;
+
   const session = sessionQuery.data;
   const uploadedTypes = new Set((session?.evidence || []).map(item => item.evidenceType));
   const intakeComplete = session?.requiredEvidenceComplete === true;
@@ -370,6 +376,34 @@ export default function PartnerSubmitReferralPage() {
                     title="Add the signed documents"
                     description="These documents confirm permission and identity. They are stored with the referral for the responsible team to review."
                   />
+                  {documentPack && documentPack.downloads.length ? (
+                    <div className="mt-4 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5">
+                      <p className="text-sm font-semibold text-[#0b1c3f]">
+                        Download these for the prospect
+                      </p>
+                      <p className="mt-1 text-xs text-[#33507e]">
+                        Give the prospect these documents, let them complete and sign them, then upload
+                        the signed copies below.
+                      </p>
+                      <ul className="mt-2 space-y-1">
+                        {documentPack.downloads.map(download => (
+                          <li key={download.key} className="text-xs">
+                            <a
+                              href={download.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-[#1d6fe3] underline"
+                            >
+                              Download {download.label}
+                            </a>
+                            {download.instructions ? (
+                              <span className="ml-1 text-[#33507e]">{download.instructions}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   <div className="mt-4 space-y-4">
                     {REQUIRED_EVIDENCE.map(item => {
                       const uploaded = uploadedTypes.has(item.type);

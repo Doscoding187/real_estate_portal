@@ -106,6 +106,7 @@ import {
   prospectCheckFitInputSchema,
   type QualifiedOpportunity,
 } from './services/distributionProspectCheckFitService';
+import { getProspectDocumentPacks } from './services/distributionProspectDocumentPackService';
 import { listPublicDistributionOpportunities } from './services/distributionPublicOpportunityReadService';
 import {
   checkfitV1InputSchema,
@@ -6745,6 +6746,30 @@ const partnerDistributionRouter = router({
         checkFit: input,
         opportunities,
       });
+    }),
+
+  getProspectDocumentPacks: protectedProcedure
+    .input(
+      z.object({
+        developmentIds: z.array(z.number().int().positive()).min(1).max(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      const actor = {
+        userId: Number(ctx.user!.id),
+        role: String(ctx.user!.role || ''),
+      };
+      for (const developmentId of input.developmentIds) {
+        await assertPartnerDevelopmentProgramAccess({ db, actor, developmentId });
+      }
+
+      return await getProspectDocumentPacks({ developmentIds: input.developmentIds, db });
     }),
 
   listProspectCheckFits: protectedProcedure

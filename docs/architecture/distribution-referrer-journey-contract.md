@@ -53,6 +53,7 @@ Exploring or printing a shortlist is not a referral. Submitting a referral does 
 ### 4. Prepare and submit a referral
 
 - The prospect first receives the applicable information and permission documents. Distribution collects the required signed permission and identity evidence before collecting the prospect's contact details.
+- The referrer is given the prospect documents to download for the opportunity: the information sheet the prospect completes, the permission to share their details, and the privacy notice they must have seen. The download is a copy for the prospect; the signed upload is the evidence of record, and the referral is not submitted until the required evidence is uploaded.
 - Requirements and terms are opportunity-specific and are snapshotted for the referral.
 - The Distribution terms snapshot records each required document's stable template ID, code, label, required state, and order. Manager checklists, partner deal details, progress counts, and manager queues read those saved requirements rather than the current template configuration.
 - Existing version 1 snapshots have no stable template ID. Resolve them only when the saved document code maps to exactly one template for that development; otherwise show the saved requirement as unavailable and keep it blocking. Never substitute today's requirements.
