@@ -24,6 +24,7 @@ import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 import { lazy, Suspense } from 'react';
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
 const ProjectLibrary = lazy(() => import('@/pages/developer/ProjectLibrary'));
+const ReferralDocuments = lazy(() => import('@/pages/developer/ReferralDocuments'));
 
 const getRoleHomePath = (role?: string | null) => {
   switch (role) {
@@ -192,6 +193,11 @@ export default function DeveloperRoutes() {
         <Route path="/developer/documents">
           <Suspense fallback={<LoadingSpinner />}>
             <ProjectLibrary />
+          </Suspense>
+        </Route>
+        <Route path="/developer/referral-documents">
+          <Suspense fallback={<LoadingSpinner />}>
+            <ReferralDocuments />
           </Suspense>
         </Route>
 

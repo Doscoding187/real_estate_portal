@@ -52,6 +52,7 @@ export default function ManagerDealChecklistPage() {
   const [savingTemplateId, setSavingTemplateId] = useState<number | null>(null);
   const [uploadingTemplateId, setUploadingTemplateId] = useState<number | null>(null);
   const [downloadingTemplateId, setDownloadingTemplateId] = useState<number | null>(null);
+  const [deliveringTemplateId, setDeliveringTemplateId] = useState<number | null>(null);
   const [isBatchSaving, setIsBatchSaving] = useState(false);
   const [localChecklist, setLocalChecklist] = useState<any | null>(null);
   const [workflowDrafts, setWorkflowDrafts] = useState<Record<string, WorkflowStepDraft>>({});
@@ -76,6 +77,7 @@ export default function ManagerDealChecklistPage() {
   const updateDocumentStatusMutation = trpc.distribution.manager.updateDealDocumentStatus.useMutation();
   const uploadDealDocumentMutation = trpc.distribution.manager.uploadDealDocument.useMutation();
   const downloadDealDocumentMutation = trpc.distribution.manager.downloadDealDocument.useMutation();
+  const deliverDealDocumentMutation = trpc.distribution.manager.deliverDealDocument.useMutation();
   const downloadIntakeEvidenceMutation = trpc.distribution.manager.downloadDealReferralIntakeEvidence.useMutation();
   const recordPayoutBasisMutation = trpc.distribution.manager.recordDealPayoutBasis.useMutation();
   const updateWorkflowStepMutation = trpc.distribution.manager.updateReferralWorkflowStep.useMutation();
@@ -171,6 +173,19 @@ export default function ManagerDealChecklistPage() {
       toast.error(error?.message || 'Could not retrieve the secure document.');
     } finally {
       setDownloadingTemplateId(null);
+    }
+  }
+
+  async function handleDeliverDealDocument(templateId: number) {
+    setDeliveringTemplateId(templateId);
+    try {
+      const result = await deliverDealDocumentMutation.mutateAsync({ dealId, templateId });
+      await checklistQuery.refetch();
+      toast.success(`Delivered “${result.documentLabel}” to ${result.organisationName}.`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Could not deliver the verified document.');
+    } finally {
+      setDeliveringTemplateId(null);
     }
   }
 
@@ -321,12 +336,14 @@ export default function ManagerDealChecklistPage() {
           savingTemplateId={savingTemplateId}
           uploadingTemplateId={uploadingTemplateId}
           downloadingTemplateId={downloadingTemplateId}
+          deliveringTemplateId={deliveringTemplateId}
           isBatchSaving={isBatchSaving}
           isSavingPayoutBasis={recordPayoutBasisMutation.isPending}
           onRecordPayoutBasis={handleRecordPayoutBasis}
           onUpdateDocumentStatus={handleUpdateDocumentStatus}
           onUploadDocument={handleUploadDealDocument}
           onDownloadDocument={handleDownloadDealDocument}
+          onDeliverDocument={handleDeliverDealDocument}
           onMarkAllRequiredReceived={() => handleBatchUpdateRequired('received')}
           onMarkAllRequiredVerified={() => handleBatchUpdateRequired('verified')}
         />

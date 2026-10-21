@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0141_distribution_deal_required_document_fk_restrict.sql",
+  "expectedHead": "0143_distribution_deal_document_delivery_file_reference.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1482,6 +1482,26 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "Edward approval of the Distribution required-template FK reconciliation, 2026-10-21; migration authoring and disposable worktree verification"
+    },
+    {
+      "sequence": 142,
+      "filename": "0142_distribution_deal_document_deliveries_sequenced.sql",
+      "checksum": "f084627a2b0ed1924d0cb8e3b2bc2f769b2f3acc3e24101d664bb3b0cadea4c2",
+      "parent": "0141_distribution_deal_required_document_fk_restrict.sql",
+      "parentChecksum": "3b6bab45dd01d8a74a45757443efde34fdd53a73a5bba82f69acac8b6ee0138c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 143,
+      "filename": "0143_distribution_deal_document_delivery_file_reference.sql",
+      "checksum": "7d9a0d146b5e1e0657c2ab836cd9a28612b4615aea7423aa4678f9ded7b01a6b",
+      "parent": "0142_distribution_deal_document_deliveries_sequenced.sql",
+      "parentChecksum": "f084627a2b0ed1924d0cb8e3b2bc2f769b2f3acc3e24101d664bb3b0cadea4c2",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

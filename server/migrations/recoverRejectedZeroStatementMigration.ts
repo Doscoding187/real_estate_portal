@@ -18,7 +18,21 @@ import {
   releaseMigrationLock,
 } from './runSqlMigrations';
 
-export const REJECTED_CATALOGUE_PUBLISHER_TRIGGER = Object.freeze({
+export type RejectedZeroStatementMigration = {
+  filename: string;
+  checksum: string;
+  archivedPath: string;
+  acceptedHead: string;
+  failedExpectedHead: string;
+  expectedFailureClass: string;
+  rejectedObjectName: string;
+  rejectedObjectType: 'trigger' | 'table';
+  replacementFilename?: string;
+  replacementChecksum?: string;
+  replacementReason: string;
+};
+
+export const REJECTED_CATALOGUE_PUBLISHER_TRIGGER: RejectedZeroStatementMigration = Object.freeze({
   filename: '0019_catalogue_publisher_authority_immutability.sql',
   checksum: 'e251a0f99162c00a08437287092659e93685f06dda4a7feac43a547bde3bbf80',
   archivedPath:
@@ -27,8 +41,29 @@ export const REJECTED_CATALOGUE_PUBLISHER_TRIGGER = Object.freeze({
   failedExpectedHead: '0019_catalogue_publisher_authority_immutability.sql',
   expectedFailureClass: 'ER_BINLOG_CREATE_ROUTINE_NEED_SUPER',
   rejectedObjectName: 'trg_catalogue_publishers_immutable_authority',
+  rejectedObjectType: 'trigger',
   replacementReason: 'tidb_unsupported_trigger',
 });
+
+export const REJECTED_DISTRIBUTION_DELIVERY_TABLE: RejectedZeroStatementMigration = Object.freeze({
+  filename: '0142_distribution_deal_document_deliveries.sql',
+  checksum: '777fa93ad961eaa64b7c1b487539bf9905507ed08c887439aec22572313cba21',
+  archivedPath:
+    'server/migrations/_archived/rejected-zero-statement/0142_distribution_deal_document_deliveries.sql',
+  acceptedHead: '0141_distribution_deal_required_document_fk_restrict.sql',
+  failedExpectedHead: '0142_distribution_deal_document_deliveries.sql',
+  expectedFailureClass: 'ER_TOO_LONG_IDENT',
+  rejectedObjectName: 'distribution_deal_document_deliveries',
+  rejectedObjectType: 'table',
+  replacementFilename: '0142_distribution_deal_document_deliveries_sequenced.sql',
+  replacementChecksum: 'f084627a2b0ed1924d0cb8e3b2bc2f769b2f3acc3e24101d664bb3b0cadea4c2',
+  replacementReason: 'mysql_identifier_length_limit',
+});
+
+const REVIEWED_REJECTED_MIGRATIONS: readonly RejectedZeroStatementMigration[] = [
+  REJECTED_CATALOGUE_PUBLISHER_TRIGGER,
+  REJECTED_DISTRIBUTION_DELIVERY_TABLE,
+];
 
 type AttemptEvidence = {
   attemptId: string;
@@ -60,6 +95,7 @@ export type RejectedMigrationRecoveryPlan = {
   };
   physicalEvidence: {
     rejectedObjectName: string;
+    rejectedObjectType: 'trigger' | 'table';
     rejectedObjectAbsent: true;
   };
   review: {
@@ -88,11 +124,16 @@ function sha256(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function replacementFailureDigest(archivedChecksum: string): string {
+function replacementFailureDigest(
+  rejected: RejectedZeroStatementMigration,
+  archivedChecksum: string,
+): string {
   return sha256({
-    reason: REJECTED_CATALOGUE_PUBLISHER_TRIGGER.replacementReason,
+    reason: rejected.replacementReason,
     archivedChecksum,
     rejectedObjectAbsent: true,
+    replacementFilename: rejected.replacementFilename,
+    replacementChecksum: rejected.replacementChecksum,
   });
 }
 
@@ -134,8 +175,8 @@ function attemptFromRow(row: Record<string, unknown>): AttemptEvidence {
 function assertExactFailedAttempt(
   attempt: AttemptEvidence,
   authority: ResolvedDatabaseAuthority,
+  rejected: RejectedZeroStatementMigration,
 ): void {
-  const rejected = REJECTED_CATALOGUE_PUBLISHER_TRIGGER;
   if (!['failed', 'failed_replaced'].includes(attempt.state)) {
     throw new Error(
       `Migration recovery refused: attempt state ${attempt.state} is not recoverable.`,
@@ -161,12 +202,21 @@ function assertExactFailedAttempt(
 async function assertCanonicalHead(
   connection: AuthoritySqlConnection,
   manifest: ReturnType<typeof loadAndValidateMigrationManifest>,
+  acceptedHead: string,
 ): Promise<void> {
+  const acceptedIndex = manifest.orderedMigrations.findIndex(
+    item => item.filename === acceptedHead,
+  );
+  if (acceptedIndex < 0) {
+    throw new Error(
+      'Migration recovery refused: accepted canonical head is missing from the manifest.',
+    );
+  }
   const rows = await queryMigrationRows(
     connection,
     `SELECT filename, checksum FROM \`${manifest.document.historyTable}\` ORDER BY numeric_version, filename`,
   );
-  if (rows.length !== manifest.orderedMigrations.length) {
+  if (rows.length !== acceptedIndex + 1) {
     throw new Error(
       'Migration recovery refused: successful history is not at the accepted canonical head.',
     );
@@ -184,6 +234,51 @@ async function assertCanonicalHead(
   }
 }
 
+function resolveReviewedRejectedMigration(
+  attempt: AttemptEvidence,
+): RejectedZeroStatementMigration {
+  const rejected = REVIEWED_REJECTED_MIGRATIONS.find(
+    item =>
+      item.filename === attempt.migrationFilename && item.checksum === attempt.migrationChecksum,
+  );
+  if (!rejected) {
+    throw new Error(
+      'Migration recovery refused: durable attempt evidence does not match a reviewed zero-statement failure.',
+    );
+  }
+  return rejected;
+}
+
+function assertReviewedManifest(
+  manifest: ReturnType<typeof loadAndValidateMigrationManifest>,
+  rejected: RejectedZeroStatementMigration,
+): void {
+  if (manifest.orderedMigrations.some(item => item.filename === rejected.filename)) {
+    throw new Error('Migration recovery refused: the rejected migration is still runnable.');
+  }
+  if (!rejected.replacementFilename || !rejected.replacementChecksum) {
+    if (manifest.document.expectedHead !== rejected.acceptedHead) {
+      throw new Error(
+        'Migration recovery refused: the rejected migration is still runnable or the accepted head changed.',
+      );
+    }
+    return;
+  }
+  const replacement = manifest.orderedMigrations.find(
+    item => item.filename === rejected.replacementFilename,
+  );
+  if (
+    !replacement ||
+    replacement.checksum !== rejected.replacementChecksum ||
+    replacement.parent !== rejected.acceptedHead ||
+    manifest.document.expectedHead !== rejected.replacementFilename
+  ) {
+    throw new Error(
+      'Migration recovery refused: the reviewed replacement migration is not active authority.',
+    );
+  }
+}
+
 async function buildRecoveryPlan(input: {
   connection: AuthoritySqlConnection;
   authority: ResolvedDatabaseAuthority;
@@ -192,7 +287,6 @@ async function buildRecoveryPlan(input: {
   approvalActor: string;
 }): Promise<RejectedMigrationRecoveryPlan> {
   const { connection, authority } = input;
-  const rejected = REJECTED_CATALOGUE_PUBLISHER_TRIGGER;
   if (
     !authority.context.local ||
     !['disposable-worktree', 'disposable-test'].includes(authority.context.targetClass) ||
@@ -204,15 +298,6 @@ async function buildRecoveryPlan(input: {
   }
   await assertRunnerConnectionTarget(connection, authority);
   const manifest = loadAndValidateMigrationManifest();
-  if (
-    manifest.document.expectedHead !== rejected.acceptedHead ||
-    manifest.orderedMigrations.some(item => item.filename === rejected.filename)
-  ) {
-    throw new Error(
-      'Migration recovery refused: the rejected migration is still runnable or the accepted head changed.',
-    );
-  }
-  await assertCanonicalHead(connection, manifest);
 
   const attemptRows = await queryMigrationRows(
     connection,
@@ -223,7 +308,10 @@ async function buildRecoveryPlan(input: {
     throw new Error('Migration recovery refused: exact failed attempt was not found once.');
   }
   const attempt = attemptFromRow(attemptRows[0]);
-  assertExactFailedAttempt(attempt, authority);
+  const rejected = resolveReviewedRejectedMigration(attempt);
+  assertExactFailedAttempt(attempt, authority, rejected);
+  assertReviewedManifest(manifest, rejected);
+  await assertCanonicalHead(connection, manifest, rejected.acceptedHead);
   const incompleteRows = await queryMigrationRows(
     connection,
     `SELECT attempt_id FROM \`${manifest.document.attemptTable}\` WHERE state IN ('running', 'failed', 'blocked') ORDER BY started_at, attempt_id`,
@@ -237,13 +325,22 @@ async function buildRecoveryPlan(input: {
     throw new Error('Migration recovery refused: another incomplete migration attempt exists.');
   }
 
-  const triggerRows = await queryMigrationRows(
-    connection,
-    'SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = DATABASE() AND trigger_name = ?',
-    [rejected.rejectedObjectName],
-  );
-  if (triggerRows.length !== 0) {
-    throw new Error('Migration recovery refused: rejected trigger exists physically.');
+  const physicalRows =
+    rejected.rejectedObjectType === 'trigger'
+      ? await queryMigrationRows(
+          connection,
+          'SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = DATABASE() AND trigger_name = ?',
+          [rejected.rejectedObjectName],
+        )
+      : await queryMigrationRows(
+          connection,
+          'SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?',
+          [rejected.rejectedObjectName],
+        );
+  if (physicalRows.length !== 0) {
+    throw new Error(
+      `Migration recovery refused: rejected ${rejected.rejectedObjectType} exists physically.`,
+    );
   }
 
   const archivedAbsolutePath = resolve(authority.context.repository.root, rejected.archivedPath);
@@ -266,8 +363,15 @@ async function buildRecoveryPlan(input: {
       state: 'failed-or-reviewed',
     },
     archivedEvidence: { path: rejected.archivedPath, checksum: archivedChecksum },
+    replacementEvidence: rejected.replacementFilename
+      ? {
+          filename: rejected.replacementFilename,
+          checksum: rejected.replacementChecksum,
+        }
+      : null,
     physicalEvidence: {
       rejectedObjectName: rejected.rejectedObjectName,
+      rejectedObjectType: rejected.rejectedObjectType,
       rejectedObjectAbsent: true,
     },
     review: { reference, actor, reason: rejected.replacementReason },
@@ -303,11 +407,11 @@ async function buildRecoveryPlan(input: {
       recovery.migrationFilename !== rejected.filename ||
       recovery.migrationChecksum !== rejected.checksum ||
       recovery.acceptedOldHead !== rejected.acceptedHead ||
-      recovery.expectedNewHead !== rejected.acceptedHead ||
+      recovery.expectedNewHead !== manifest.document.expectedHead ||
       recovery.completedStatementCount !== 0 ||
       recovery.lastStatementDigest !== null ||
       recovery.failureClass !== 'reviewed_zero_statement_replacement' ||
-      recovery.failureDigest !== replacementFailureDigest(archivedChecksum) ||
+      recovery.failureDigest !== replacementFailureDigest(rejected, archivedChecksum) ||
       recovery.applicationArtifact !== expectedArtifact
     ) {
       throw new Error('Migration recovery refused: durable replacement evidence is inconsistent.');
@@ -330,6 +434,7 @@ async function buildRecoveryPlan(input: {
     archivedEvidence: Object.freeze({ path: rejected.archivedPath, checksum: archivedChecksum }),
     physicalEvidence: Object.freeze({
       rejectedObjectName: rejected.rejectedObjectName,
+      rejectedObjectType: rejected.rejectedObjectType,
       rejectedObjectAbsent: true as const,
     }),
     review: Object.freeze({ reference, actor, reason: rejected.replacementReason }),
@@ -381,19 +486,20 @@ export async function runRejectedZeroStatementRecovery(
       return { mode: options.mode, plan, applied: false };
     }
 
+    const rejected = resolveReviewedRejectedMigration(plan.rejectedAttempt);
     const reviewArtifact = JSON.stringify({
       reference: plan.review.reference,
       actor: plan.review.actor,
       replaces: plan.rejectedAttempt.attemptId,
     });
-    const reviewFailureDigest = replacementFailureDigest(plan.archivedEvidence.checksum);
+    const reviewFailureDigest = replacementFailureDigest(rejected, plan.archivedEvidence.checksum);
     try {
       // Transaction-control statements are portable SQL, but MySQL does not
       // accept START TRANSACTION through its prepared-statement protocol.
       await connection.query('START TRANSACTION');
       await connection.execute(
         `UPDATE \`${manifest.document.attemptTable}\` SET state = 'failed_replaced' WHERE attempt_id = ? AND state = 'failed' AND completed_statement_count = 0 AND last_statement_digest IS NULL AND failure_class = ?`,
-        [plan.rejectedAttempt.attemptId, REJECTED_CATALOGUE_PUBLISHER_TRIGGER.expectedFailureClass],
+        [plan.rejectedAttempt.attemptId, rejected.expectedFailureClass],
       );
       const changedRows = await queryMigrationRows(
         connection,
@@ -420,7 +526,7 @@ export async function runRejectedZeroStatementRecovery(
           plan.targetFingerprintHash,
           plan.rejectedAttempt.migrationFilename,
           plan.rejectedAttempt.migrationChecksum,
-          plan.canonicalHead,
+          rejected.acceptedHead,
           plan.canonicalHead,
           reviewFailureDigest,
           reviewArtifact,

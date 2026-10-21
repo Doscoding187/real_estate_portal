@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/mysql-core';
 import {
+  cataloguePublishers,
+  developerOrganisations,
+  developments,
+  distributionDealDocumentDeliveries,
   distributionDealDocuments,
   distributionCommissionEntries,
   distributionDeals,
@@ -11,6 +16,7 @@ import {
 } from '../../drizzle/schema';
 import { DISTRIBUTION_REFERRAL_EVIDENCE_MIME_TYPES } from '../../shared/distributionReferralIntake';
 import { getDb } from '../db';
+import { resolveDeveloperActorForUser } from './developerActorResolution';
 import { evaluatePayoutMilestone } from './distributionPayoutMilestoneService';
 import { assertDealIsMutable } from './distributionDealMutationGuards';
 import { readFrozenPayoutTerms } from './distributionCommissionService';
@@ -57,6 +63,36 @@ type ChecklistOptions = {
   skipAssignmentCheck?: boolean;
 };
 
+export type DealDocumentDeliveryState = {
+  deliveryId: number;
+  deliveryVersion: number;
+  deliveredAt: string;
+  deliveredBy: { userId: number; name?: string } | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: { userId: number; name?: string } | null;
+  acknowledgementNote: string | null;
+  isCurrentFile: boolean;
+};
+
+export type DeveloperDealDocumentDelivery = {
+  deliveryId: number;
+  deliveryVersion: number;
+  dealId: number;
+  dealRef: string;
+  buyerName: string | null;
+  developmentId: number;
+  developmentName: string;
+  templateId: number;
+  documentCode: string;
+  documentLabel: string;
+  fileName: string;
+  deliveredAt: string;
+  deliveredBy: { userId: number; name?: string } | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: { userId: number; name?: string } | null;
+  acknowledgementNote: string | null;
+};
+
 export type DealChecklistPayload = {
   dealId: number;
   dealRef: string;
@@ -95,6 +131,7 @@ export type DealChecklistPayload = {
     verifiedBy: { userId: number; name?: string } | null;
     submittedBy: { userId: number; name?: string } | null;
     notes: string | null;
+    delivery: DealDocumentDeliveryState | null;
   }>;
   computed: {
     requiredCount: number;
@@ -374,6 +411,159 @@ async function getDealScope(db: any, dealId: number) {
   };
 }
 
+async function resolveDeveloperRecipientForDevelopment(db: any, developmentId: number) {
+  const [recipient] = await db
+    .select({
+      developmentId: developments.id,
+      publisherId: cataloguePublishers.id,
+      publisherName: cataloguePublishers.name,
+      developerOrganisationId: developerOrganisations.id,
+      organisationName: developerOrganisations.name,
+      organisationStatus: developerOrganisations.status,
+    })
+    .from(developments)
+    .innerJoin(
+      cataloguePublishers,
+      and(
+        eq(developments.cataloguePublisherId, cataloguePublishers.id),
+        eq(cataloguePublishers.authorityKind, 'developer_first_party'),
+      ),
+    )
+    .innerJoin(
+      developerOrganisations,
+      eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
+    )
+    .where(eq(developments.id, developmentId))
+    .limit(1);
+
+  if (!recipient) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'This development has no first-party Developer organisation recipient for document delivery.',
+    });
+  }
+  if (recipient.organisationStatus !== 'approved') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Documents can only be delivered to an approved Developer organisation.',
+    });
+  }
+
+  return {
+    developmentId: Number(recipient.developmentId),
+    publisherId: Number(recipient.publisherId),
+    publisherName: String(recipient.publisherName),
+    developerOrganisationId: Number(recipient.developerOrganisationId),
+    organisationName: String(recipient.organisationName),
+  };
+}
+
+async function resolveDeveloperDeliveryActor(db: any, actorUserId: number) {
+  const actor = await resolveDeveloperActorForUser(db, actorUserId);
+  if (!actor) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'An active Developer organisation membership is required.',
+    });
+  }
+  return actor;
+}
+
+async function loadDeliveryActorDirectory(db: any, actorIds: number[]) {
+  const ids = Array.from(
+    new Set(actorIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0)),
+  );
+  const directory = new Map<number, { name?: string }>();
+  if (!ids.length) return directory;
+
+  const rows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      firstName: users.firstName,
+      lastName: users.lastName,
+    })
+    .from(users)
+    .where(inArray(users.id, ids));
+  for (const row of rows) {
+    directory.set(Number(row.id), { name: formatUserDisplayName(row) });
+  }
+  return directory;
+}
+
+function toDeliveryState(
+  row: {
+    id: number;
+    deliveryVersion: number;
+    documentFileName: string;
+    documentSubmittedAt: string | null;
+    documentFileUrl: string | null;
+    deliveredAt: string;
+    deliveredBy: number;
+    acknowledgedAt: string | null;
+    acknowledgedBy: number | null;
+    acknowledgementNote: string | null;
+  },
+  directory: Map<number, { name?: string }>,
+  currentFile: { fileUrl: string | null },
+): DealDocumentDeliveryState {
+  const deliveredById = Number(row.deliveredBy);
+  const acknowledgedById = row.acknowledgedBy ? Number(row.acknowledgedBy) : null;
+  return {
+    deliveryId: Number(row.id),
+    deliveryVersion: Number(row.deliveryVersion),
+    deliveredAt: row.deliveredAt,
+    deliveredBy: {
+      userId: deliveredById,
+      name: directory.get(deliveredById)?.name,
+    },
+    acknowledgedAt: row.acknowledgedAt || null,
+    acknowledgedBy: acknowledgedById
+      ? {
+          userId: acknowledgedById,
+          name: directory.get(acknowledgedById)?.name,
+        }
+      : null,
+    acknowledgementNote: row.acknowledgementNote || null,
+    isCurrentFile:
+      Boolean(row.documentFileUrl) &&
+      String(row.documentFileUrl) === String(currentFile.fileUrl || ''),
+  };
+}
+
+async function readLatestDeliveriesByDocumentId(db: any, dealDocumentIds: number[]) {
+  const ids = Array.from(
+    new Set(dealDocumentIds.map(Number).filter(id => Number.isSafeInteger(id) && id > 0)),
+  );
+  if (!ids.length) return new Map<number, any>();
+
+  const rows = await db
+    .select({
+      id: distributionDealDocumentDeliveries.id,
+      dealDocumentId: distributionDealDocumentDeliveries.dealDocumentId,
+      deliveryVersion: distributionDealDocumentDeliveries.deliveryVersion,
+      documentFileName: distributionDealDocumentDeliveries.documentFileName,
+      documentSubmittedAt: distributionDealDocumentDeliveries.documentSubmittedAt,
+      documentFileUrl: distributionDealDocumentDeliveries.documentFileUrl,
+      deliveredAt: distributionDealDocumentDeliveries.deliveredAt,
+      deliveredBy: distributionDealDocumentDeliveries.deliveredBy,
+      acknowledgedAt: distributionDealDocumentDeliveries.acknowledgedAt,
+      acknowledgedBy: distributionDealDocumentDeliveries.acknowledgedBy,
+      acknowledgementNote: distributionDealDocumentDeliveries.acknowledgementNote,
+    })
+    .from(distributionDealDocumentDeliveries)
+    .where(inArray(distributionDealDocumentDeliveries.dealDocumentId, ids))
+    .orderBy(desc(distributionDealDocumentDeliveries.deliveryVersion));
+
+  const latest = new Map<number, (typeof rows)[number]>();
+  for (const row of rows) {
+    const documentId = Number(row.dealDocumentId);
+    if (!latest.has(documentId)) latest.set(documentId, row);
+  }
+  return latest;
+}
+
 export async function getDealChecklist(
   dealId: number,
   actorUserId: number,
@@ -452,21 +642,15 @@ export async function getDealChecklist(
     if (row.submittedBy) actorIds.add(Number(row.submittedBy));
   }
 
-  const actorDirectory = new Map<number, { name?: string }>();
-  if (actorIds.size) {
-    const actorRows = await db
-      .select({
-        id: users.id,
-        name: users.name,
-        firstName: users.firstName,
-        lastName: users.lastName,
-      })
-      .from(users)
-      .where(inArray(users.id, Array.from(actorIds)));
-    for (const row of actorRows) {
-      actorDirectory.set(Number(row.id), { name: formatUserDisplayName(row) });
-    }
+  const latestDeliveries = await readLatestDeliveriesByDocumentId(
+    db,
+    persistedDealDocs.map(row => Number(row.id)),
+  );
+  for (const row of latestDeliveries.values()) {
+    actorIds.add(Number(row.deliveredBy));
+    if (row.acknowledgedBy) actorIds.add(Number(row.acknowledgedBy));
   }
+  const actorDirectory = await loadDeliveryActorDirectory(db, Array.from(actorIds));
 
   const requiredDocuments: DealChecklistPayload['requiredDocuments'] = savedRequirements.map(
     document => {
@@ -475,6 +659,7 @@ export async function getDealChecklist(
       const receivedById = persisted?.receivedBy ? Number(persisted.receivedBy) : null;
       const verifiedById = persisted?.verifiedBy ? Number(persisted.verifiedBy) : null;
       const status = (persisted?.status || 'unavailable') as DealDocumentStatus;
+      const delivery = persisted ? latestDeliveries.get(Number(persisted.id)) : null;
 
       return {
         templateId,
@@ -509,6 +694,11 @@ export async function getDealChecklist(
             }
           : null,
         notes: persisted?.notes || null,
+        delivery: delivery
+          ? toDeliveryState(delivery, actorDirectory, {
+              fileUrl: persisted?.submittedFileUrl || null,
+            })
+          : null,
       };
     },
   );
@@ -863,6 +1053,414 @@ export async function readPartnerDealDocument(input: {
   return await readStoredDealDocument(db, {
     dealId: input.dealId,
     templateId: input.templateId,
+  });
+}
+
+export async function deliverDealDocumentToDeveloper(input: {
+  dealId: number;
+  templateId: number;
+  actorUserId: number;
+  skipAssignmentCheck?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const dealScope = await getDealScope(db, input.dealId);
+  assertDealIsMutable(dealScope.currentStage, 'deliver checklist documents');
+  await assertAssignedManagerForDevelopment(db, {
+    developmentId: dealScope.developmentId,
+    actorUserId: input.actorUserId,
+    dealManagerUserId: dealScope.managerUserId,
+    skipAssignmentCheck: input.skipAssignmentCheck,
+  });
+
+  const [documentRow] = await db
+    .select({
+      id: distributionDealDocuments.id,
+      status: distributionDealDocuments.status,
+      submittedAt: distributionDealDocuments.submittedAt,
+      submittedFileUrl: distributionDealDocuments.submittedFileUrl,
+      submittedFileName: distributionDealDocuments.submittedFileName,
+    })
+    .from(distributionDealDocuments)
+    .where(
+      and(
+        eq(distributionDealDocuments.dealId, input.dealId),
+        eq(distributionDealDocuments.developmentRequiredDocumentId, input.templateId),
+      ),
+    )
+    .limit(1);
+
+  if (!documentRow) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Document requirement record not found.',
+    });
+  }
+  if (documentRow.status !== 'verified') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'Only verified documents can be delivered to the Developer.',
+    });
+  }
+  const documentFileUrl = String(documentRow.submittedFileUrl || '').trim();
+  if (!documentFileUrl || !parseDistributionDealDocumentReference(documentFileUrl)) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The verified document has no secure file to deliver.',
+    });
+  }
+
+  const requirementSnapshots = await resolveDealRequirementSnapshots(db, [
+    {
+      dealId: dealScope.dealId,
+      developmentId: dealScope.developmentId,
+      snapshotJson: dealScope.referralTermsSnapshotJson,
+      snapshotDigest: dealScope.referralTermsSnapshotDigest,
+    },
+  ]);
+  const requirementSnapshot = requirementSnapshots.get(dealScope.dealId);
+  const savedRequirement = requirementSnapshot?.requirements.find(
+    requirement => requirement.templateId === input.templateId && requirement.isAvailable,
+  );
+  if (!requirementSnapshot?.snapshotValid || !savedRequirement) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The saved document requirement cannot be resolved for delivery.',
+    });
+  }
+
+  const recipient = await resolveDeveloperRecipientForDevelopment(db, dealScope.developmentId);
+  const fileName = String(documentRow.submittedFileName || '').trim();
+  if (!fileName) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The verified document has no file name to deliver.',
+    });
+  }
+
+  const delivery = await db.transaction(async tx => {
+    await tx.execute(
+      sql`SELECT id FROM distribution_deal_documents WHERE id = ${documentRow.id} FOR UPDATE`,
+    );
+    const [latest] = await tx
+      .select({
+        id: distributionDealDocumentDeliveries.id,
+        deliveryVersion: distributionDealDocumentDeliveries.deliveryVersion,
+        documentFileName: distributionDealDocumentDeliveries.documentFileName,
+        documentSubmittedAt: distributionDealDocumentDeliveries.documentSubmittedAt,
+        documentFileUrl: distributionDealDocumentDeliveries.documentFileUrl,
+        deliveredAt: distributionDealDocumentDeliveries.deliveredAt,
+        acknowledgedAt: distributionDealDocumentDeliveries.acknowledgedAt,
+      })
+      .from(distributionDealDocumentDeliveries)
+      .where(eq(distributionDealDocumentDeliveries.dealDocumentId, Number(documentRow.id)))
+      .orderBy(desc(distributionDealDocumentDeliveries.deliveryVersion))
+      .limit(1);
+
+    const sameFile =
+      latest &&
+      Boolean(latest.documentFileUrl) &&
+      String(latest.documentFileUrl) === documentFileUrl;
+    if (latest && sameFile) {
+      return {
+        deliveryId: Number(latest.id),
+        deliveryVersion: Number(latest.deliveryVersion),
+        deliveredAt: latest.deliveredAt,
+        acknowledgedAt: latest.acknowledgedAt || null,
+        developerOrganisationId: recipient.developerOrganisationId,
+        organisationName: recipient.organisationName,
+        documentCode: savedRequirement.documentCode,
+        documentLabel: savedRequirement.documentLabel,
+      };
+    }
+
+    const now = sqlDateNow();
+    const deliveryVersion = latest ? Number(latest.deliveryVersion) + 1 : 1;
+    const [insertResult] = await tx.insert(distributionDealDocumentDeliveries).values({
+      dealDocumentId: Number(documentRow.id),
+      dealId: dealScope.dealId,
+      deliveryVersion,
+      developerOrganisationId: recipient.developerOrganisationId,
+      documentCode: savedRequirement.documentCode,
+      documentLabel: savedRequirement.documentLabel,
+      documentFileName: fileName,
+      documentSubmittedAt: documentRow.submittedAt || null,
+      documentFileUrl,
+      deliveredBy: input.actorUserId,
+      deliveredAt: now,
+    });
+    return {
+      deliveryId: Number((insertResult as any).insertId || 0),
+      deliveryVersion,
+      deliveredAt: now,
+      acknowledgedAt: null,
+      developerOrganisationId: recipient.developerOrganisationId,
+      organisationName: recipient.organisationName,
+      documentCode: savedRequirement.documentCode,
+      documentLabel: savedRequirement.documentLabel,
+    };
+  });
+
+  return delivery;
+}
+
+export async function listDeveloperDocumentDeliveries(input: {
+  actorUserId: number;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const actor = await resolveDeveloperDeliveryActor(db, input.actorUserId);
+  const limit = Math.min(Math.max(Math.trunc(input.limit ?? 200), 1), 1000);
+  const latestDelivery = alias(distributionDealDocumentDeliveries, 'latest_delivery');
+  const rows = await db
+    .select({
+      deliveryId: distributionDealDocumentDeliveries.id,
+      dealDocumentId: distributionDealDocumentDeliveries.dealDocumentId,
+      deliveryVersion: distributionDealDocumentDeliveries.deliveryVersion,
+      dealId: distributionDeals.id,
+      externalRef: distributionDeals.externalRef,
+      buyerName: distributionDeals.buyerName,
+      developmentId: developments.id,
+      developmentName: developments.name,
+      templateId: distributionDealDocuments.developmentRequiredDocumentId,
+      documentCode: distributionDealDocumentDeliveries.documentCode,
+      documentLabel: distributionDealDocumentDeliveries.documentLabel,
+      fileName: distributionDealDocumentDeliveries.documentFileName,
+      deliveredAt: distributionDealDocumentDeliveries.deliveredAt,
+      deliveredBy: distributionDealDocumentDeliveries.deliveredBy,
+      acknowledgedAt: distributionDealDocumentDeliveries.acknowledgedAt,
+      acknowledgedBy: distributionDealDocumentDeliveries.acknowledgedBy,
+      acknowledgementNote: distributionDealDocumentDeliveries.acknowledgementNote,
+    })
+    .from(distributionDealDocumentDeliveries)
+    .innerJoin(
+      distributionDealDocuments,
+      eq(distributionDealDocumentDeliveries.dealDocumentId, distributionDealDocuments.id),
+    )
+    .innerJoin(
+      distributionDeals,
+      eq(distributionDealDocumentDeliveries.dealId, distributionDeals.id),
+    )
+    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
+    .where(
+      and(
+        eq(distributionDealDocumentDeliveries.developerOrganisationId, actor.organisationId),
+        sql`${distributionDealDocumentDeliveries.deliveryVersion} = (
+          select max(${latestDelivery.deliveryVersion})
+          from ${distributionDealDocumentDeliveries} as ${sql.identifier('latest_delivery')}
+          where ${latestDelivery.dealDocumentId} = ${distributionDealDocumentDeliveries.dealDocumentId}
+            and ${latestDelivery.developerOrganisationId} = ${actor.organisationId}
+        )`,
+      ),
+    )
+    .orderBy(
+      desc(distributionDealDocumentDeliveries.deliveredAt),
+      desc(distributionDealDocumentDeliveries.id),
+    )
+    .limit(limit);
+
+  const latestRows: typeof rows = [];
+  const seenDocumentIds = new Set<number>();
+  for (const row of rows) {
+    const documentId = Number(row.dealDocumentId);
+    if (seenDocumentIds.has(documentId)) continue;
+    seenDocumentIds.add(documentId);
+    latestRows.push(row);
+    if (latestRows.length >= limit) break;
+  }
+
+  const actorIds: number[] = [];
+  for (const row of latestRows) {
+    actorIds.push(Number(row.deliveredBy));
+    if (row.acknowledgedBy) actorIds.push(Number(row.acknowledgedBy));
+  }
+  const actorDirectory = await loadDeliveryActorDirectory(db, actorIds);
+
+  const deliveries: DeveloperDealDocumentDelivery[] = latestRows.map(row => {
+    const deliveredById = Number(row.deliveredBy);
+    const acknowledgedById = row.acknowledgedBy ? Number(row.acknowledgedBy) : null;
+    return {
+      deliveryId: Number(row.deliveryId),
+      deliveryVersion: Number(row.deliveryVersion),
+      dealId: Number(row.dealId),
+      dealRef: String(row.externalRef || `DEAL-${row.dealId}`),
+      buyerName: row.buyerName || null,
+      developmentId: Number(row.developmentId),
+      developmentName: String(row.developmentName),
+      templateId: Number(row.templateId),
+      documentCode: String(row.documentCode),
+      documentLabel: String(row.documentLabel),
+      fileName: String(row.fileName),
+      deliveredAt: row.deliveredAt,
+      deliveredBy: {
+        userId: deliveredById,
+        name: actorDirectory.get(deliveredById)?.name,
+      },
+      acknowledgedAt: row.acknowledgedAt || null,
+      acknowledgedBy: acknowledgedById
+        ? {
+            userId: acknowledgedById,
+            name: actorDirectory.get(acknowledgedById)?.name,
+          }
+        : null,
+      acknowledgementNote: row.acknowledgementNote || null,
+    };
+  });
+
+  return {
+    deliveries,
+    awaitingAcknowledgementCount: deliveries.filter(delivery => !delivery.acknowledgedAt).length,
+    acknowledgedCount: deliveries.filter(delivery => Boolean(delivery.acknowledgedAt)).length,
+  };
+}
+
+export async function readDeveloperDealDocument(input: {
+  deliveryId: number;
+  actorUserId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const actor = await resolveDeveloperDeliveryActor(db, input.actorUserId);
+  const [delivery] = await db
+    .select({
+      deliveryId: distributionDealDocumentDeliveries.id,
+      dealDocumentId: distributionDealDocumentDeliveries.dealDocumentId,
+      deliveryVersion: distributionDealDocumentDeliveries.deliveryVersion,
+      developerOrganisationId: distributionDealDocumentDeliveries.developerOrganisationId,
+      documentFileUrl: distributionDealDocumentDeliveries.documentFileUrl,
+      documentFileName: distributionDealDocumentDeliveries.documentFileName,
+    })
+    .from(distributionDealDocumentDeliveries)
+    .where(eq(distributionDealDocumentDeliveries.id, input.deliveryId))
+    .limit(1);
+
+  if (!delivery || Number(delivery.developerOrganisationId) !== actor.organisationId) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'Developer document delivery not found.',
+    });
+  }
+
+  const [latest] = await db
+    .select({ id: distributionDealDocumentDeliveries.id })
+    .from(distributionDealDocumentDeliveries)
+    .where(eq(distributionDealDocumentDeliveries.dealDocumentId, Number(delivery.dealDocumentId)))
+    .orderBy(desc(distributionDealDocumentDeliveries.deliveryVersion))
+    .limit(1);
+  if (Number(latest?.id || 0) !== Number(delivery.deliveryId)) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'This document delivery has been superseded by a newer delivery.',
+    });
+  }
+
+  const reference = parseDistributionDealDocumentReference(delivery.documentFileUrl);
+  if (!reference) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'No secure file is attached to this delivery.',
+    });
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = await readDistributionDealDocument(reference);
+  } catch (error) {
+    toDealDocumentStorageError(error);
+  }
+
+  const fileName =
+    String(delivery.documentFileName || '').trim() || `developer-delivery-${input.deliveryId}`;
+  const mimeType =
+    DEAL_DOCUMENT_MIME_BY_EXTENSION[path.extname(fileName).toLowerCase()] ||
+    'application/octet-stream';
+  return {
+    deliveryId: Number(delivery.deliveryId),
+    fileName,
+    mimeType,
+    byteSize: buffer.length,
+    base64Content: buffer.toString('base64'),
+  };
+}
+
+export async function acknowledgeDeveloperDealDocument(input: {
+  deliveryId: number;
+  actorUserId: number;
+  note?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const actor = await resolveDeveloperDeliveryActor(db, input.actorUserId);
+  const note = input.note?.trim() || null;
+
+  return await db.transaction(async tx => {
+    await tx.execute(
+      sql`SELECT id FROM distribution_deal_document_deliveries WHERE id = ${input.deliveryId} FOR UPDATE`,
+    );
+    const [delivery] = await tx
+      .select({
+        id: distributionDealDocumentDeliveries.id,
+        dealDocumentId: distributionDealDocumentDeliveries.dealDocumentId,
+        deliveryVersion: distributionDealDocumentDeliveries.deliveryVersion,
+        developerOrganisationId: distributionDealDocumentDeliveries.developerOrganisationId,
+        acknowledgedAt: distributionDealDocumentDeliveries.acknowledgedAt,
+      })
+      .from(distributionDealDocumentDeliveries)
+      .where(eq(distributionDealDocumentDeliveries.id, input.deliveryId))
+      .limit(1);
+
+    if (!delivery || Number(delivery.developerOrganisationId) !== actor.organisationId) {
+      throw new TRPCError({
+        code: 'NOT_FOUND',
+        message: 'Developer document delivery not found.',
+      });
+    }
+
+    await tx.execute(
+      sql`SELECT id FROM distribution_deal_documents WHERE id = ${delivery.dealDocumentId} FOR UPDATE`,
+    );
+
+    const [latest] = await tx
+      .select({ id: distributionDealDocumentDeliveries.id })
+      .from(distributionDealDocumentDeliveries)
+      .where(eq(distributionDealDocumentDeliveries.dealDocumentId, Number(delivery.dealDocumentId)))
+      .orderBy(desc(distributionDealDocumentDeliveries.deliveryVersion))
+      .limit(1);
+    if (Number(latest?.id || 0) !== Number(delivery.id)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'This document delivery has been superseded by a newer delivery.',
+      });
+    }
+
+    if (delivery.acknowledgedAt) {
+      return {
+        deliveryId: Number(delivery.id),
+        acknowledgedAt: delivery.acknowledgedAt,
+        alreadyAcknowledged: true,
+      };
+    }
+
+    const now = sqlDateNow();
+    await tx
+      .update(distributionDealDocumentDeliveries)
+      .set({
+        acknowledgedAt: now,
+        acknowledgedBy: actor.userId,
+        acknowledgementNote: note,
+      })
+      .where(eq(distributionDealDocumentDeliveries.id, input.deliveryId));
+
+    return {
+      deliveryId: Number(delivery.id),
+      acknowledgedAt: now,
+      alreadyAcknowledged: false,
+    };
   });
 }
 
