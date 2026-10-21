@@ -120,6 +120,8 @@ function buildQualificationSummary(dealScope: {
   return {
     checkFitId: dealScope.prospectCheckFitId,
     policyVersion: snapshot.policyVersion ? String(snapshot.policyVersion) : null,
+    prospectName: snapshot.prospectName ? String(snapshot.prospectName) : null,
+    coApplicantName: snapshot.coApplicantName ? String(snapshot.coApplicantName) : null,
     estimatedPurchasePrice: dealScope.affordabilityPurchasePrice,
     assumptions: assumptions as Record<string, unknown> | null,
     outputs: outputs as Record<string, unknown> | null,
@@ -139,6 +141,8 @@ export type DealChecklistPayload = {
   qualification: {
     checkFitId: string | null;
     policyVersion: string | null;
+    prospectName: string | null;
+    coApplicantName: string | null;
     estimatedPurchasePrice: number | null;
     assumptions: Record<string, unknown> | null;
     outputs: Record<string, unknown> | null;

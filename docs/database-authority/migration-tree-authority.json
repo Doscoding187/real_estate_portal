@@ -1671,6 +1671,14 @@
       "approvedFiles": [
         "server/migrations/0147_distribution_deal_prospect_check_fit_foreign_key.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0148_distribution_prospect_check_fit_prospect_names.sql",
+      "classification": "canonical active",
+      "purpose": "Records the prospect name the referrer supplied, and the second applicant name for a joint application.",
+      "approvedFiles": [
+        "server/migrations/0148_distribution_prospect_check_fit_prospect_names.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

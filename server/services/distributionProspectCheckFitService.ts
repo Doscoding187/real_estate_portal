@@ -52,8 +52,9 @@ export const PROSPECT_CHECK_FIT_DISCLAIMERS = Object.freeze([
 ]);
 
 export const prospectCheckFitInputSchema = z.object({
-  referenceLabel: z.string().trim().max(120).optional(),
+  prospectName: z.string().trim().min(1).max(200),
   grossIncomeMonthly: z.number().int().positive().max(100_000_000),
+  coApplicantName: z.string().trim().min(1).max(200).optional(),
   coApplicantGrossIncomeMonthly: z.number().int().positive().max(100_000_000).optional(),
 });
 
@@ -95,7 +96,8 @@ export type ProspectCheckFitMatch = {
 export type ProspectCheckFitRecord = {
   id: string;
   actorUserId: number;
-  referenceLabel: string | null;
+  prospectName: string | null;
+  coApplicantName: string | null;
   grossIncomeMonthly: number;
   coApplicantGrossIncomeMonthly: number | null;
   combinedGrossIncomeMonthly: number;
@@ -236,8 +238,9 @@ export async function createProspectCheckFit(input: {
     await tx.insert(distributionProspectCheckFits).values({
       id,
       actorUserId: input.actorUserId,
-      referenceLabel: input.checkFit.referenceLabel?.trim() || null,
+      prospectName: input.checkFit.prospectName.trim(),
       grossIncomeMonthly: Math.trunc(input.checkFit.grossIncomeMonthly),
+      coApplicantName: input.checkFit.coApplicantName?.trim() || null,
       coApplicantGrossIncomeMonthly: input.checkFit.coApplicantGrossIncomeMonthly
         ? Math.trunc(input.checkFit.coApplicantGrossIncomeMonthly)
         : null,
@@ -272,7 +275,8 @@ export async function createProspectCheckFit(input: {
   return {
     id,
     actorUserId: input.actorUserId,
-    referenceLabel: input.checkFit.referenceLabel?.trim() || null,
+    prospectName: input.checkFit.prospectName.trim(),
+    coApplicantName: input.checkFit.coApplicantName?.trim() || null,
     grossIncomeMonthly: Math.trunc(input.checkFit.grossIncomeMonthly),
     coApplicantGrossIncomeMonthly: input.checkFit.coApplicantGrossIncomeMonthly
       ? Math.trunc(input.checkFit.coApplicantGrossIncomeMonthly)
@@ -293,7 +297,8 @@ function toRecord(row: any, matches: ProspectCheckFitMatch[]): ProspectCheckFitR
   return {
     id: String(row.id),
     actorUserId: Number(row.actorUserId),
-    referenceLabel: row.referenceLabel || null,
+    prospectName: row.prospectName || null,
+    coApplicantName: row.coApplicantName || null,
     grossIncomeMonthly: Number(row.grossIncomeMonthly),
     coApplicantGrossIncomeMonthly: row.coApplicantGrossIncomeMonthly
       ? Number(row.coApplicantGrossIncomeMonthly)

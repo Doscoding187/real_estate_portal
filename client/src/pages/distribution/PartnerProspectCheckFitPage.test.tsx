@@ -61,7 +61,8 @@ vi.mock('@/lib/trpc', () => ({
 
 const qualifyingCheckFit = {
   id: '11111111-1111-4111-8111-111111111111',
-  referenceLabel: 'Prospect A',
+  prospectName: 'Thandi Mokoena',
+  coApplicantName: null,
   grossIncomeMonthly: 50000,
   coApplicantGrossIncomeMonthly: null,
   combinedGrossIncomeMonthly: 50000,
@@ -116,40 +117,67 @@ describe('PartnerProspectCheckFitPage', () => {
     mockMutateAsync.mockResolvedValue(qualifyingCheckFit);
   });
 
-  it('runs a check fit on the gross monthly income alone', async () => {
+  it('asks for the prospect name and gross monthly income', async () => {
     render(<PartnerProspectCheckFitPage />);
 
+    fireEvent.change(screen.getByLabelText('Prospect name'), {
+      target: { value: 'Thandi Mokoena' },
+    });
     fireEvent.change(screen.getByLabelText('Gross monthly income'), {
       target: { value: '50000' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
 
     await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({ grossIncomeMonthly: 50000 });
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        prospectName: 'Thandi Mokoena',
+        grossIncomeMonthly: 50000,
+      });
     });
   });
 
-  it('asks for the second applicant income on a joint application', async () => {
+  it('shows one applicant until the joint application is ticked', async () => {
     render(<PartnerProspectCheckFitPage />);
 
+    expect(screen.getByText('Prospect')).toBeInTheDocument();
+    expect(screen.queryByText('Applicant 2')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(/Joint application/));
+
+    expect(screen.getByText('Applicant 1')).toBeInTheDocument();
+    expect(screen.getByText('Applicant 2')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Prospect name')).toHaveLength(2);
+  });
+
+  it('records both applicants on a joint application', async () => {
+    render(<PartnerProspectCheckFitPage />);
+
+    fireEvent.change(screen.getAllByLabelText('Prospect name')[0], {
+      target: { value: 'Thandi Mokoena' },
+    });
     fireEvent.change(screen.getByLabelText('Gross monthly income'), {
       target: { value: '30000' },
     });
     fireEvent.click(screen.getByLabelText(/Joint application/));
-    fireEvent.change(screen.getByLabelText('Second applicant gross monthly income'), {
+    fireEvent.change(screen.getAllByLabelText('Prospect name')[1], {
+      target: { value: 'Sipho Mokoena' },
+    });
+    fireEvent.change(screen.getByLabelText('Gross monthly income', { selector: '#check-fit-co-income' }), {
       target: { value: '20000' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
+        prospectName: 'Thandi Mokoena',
         grossIncomeMonthly: 30000,
+        coApplicantName: 'Sipho Mokoena',
         coApplicantGrossIncomeMonthly: 20000,
       });
     });
   });
 
-  it('refuses to run without an income', async () => {
+  it('refuses to run without a name or an income', async () => {
     render(<PartnerProspectCheckFitPage />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
@@ -165,6 +193,7 @@ describe('PartnerProspectCheckFitPage', () => {
 
     expect(screen.getByText('Indicative purchase price')).toBeInTheDocument();
     expect(screen.getByText(/R\s*1[\s\u00a0]*502[\s\u00a0]*434/)).toBeInTheDocument();
+    expect(screen.getByText('Thandi Mokoena')).toBeInTheDocument();
     expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
     expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
     expect(screen.getByText(/Sandton Heights/)).toBeInTheDocument();

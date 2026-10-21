@@ -810,7 +810,7 @@ export const distributionProspectCheckFits = mysqlTable(
     actorUserId: int('actor_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    referenceLabel: varchar('reference_label', { length: 120 }),
+    prospectName: varchar('prospect_name', { length: 200 }),
     grossIncomeMonthly: int('gross_income_monthly').notNull(),
     coApplicantGrossIncomeMonthly: int('co_applicant_gross_income_monthly'),
     combinedGrossIncomeMonthly: int('combined_gross_income_monthly').notNull(),
@@ -826,6 +826,7 @@ export const distributionProspectCheckFits = mysqlTable(
     lockedByUserId: int('locked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    coApplicantName: varchar('co_applicant_name', { length: 200 }),
   },
   table => [
     index('idx_distribution_prospect_check_fits_actor').on(table.actorUserId),

@@ -35,13 +35,22 @@ describe('prospect check fit policy', () => {
     expect(PROSPECT_CHECK_FIT_DISCLAIMERS[0]).toContain('Not a final bond approval');
   });
 
-  it('accepts a single applicant income and rejects a missing income', () => {
+  it('requires the prospect name and a positive income', () => {
     expect(
-      prospectCheckFitInputSchema.parse({ grossIncomeMonthly: 45000 }),
-    ).toMatchObject({ grossIncomeMonthly: 45000 });
+      prospectCheckFitInputSchema.parse({
+        prospectName: 'Thandi Mokoena',
+        grossIncomeMonthly: 45000,
+      }),
+    ).toMatchObject({ prospectName: 'Thandi Mokoena', grossIncomeMonthly: 45000 });
     expect(() => prospectCheckFitInputSchema.parse({})).toThrow();
     expect(() =>
-      prospectCheckFitInputSchema.parse({ grossIncomeMonthly: 0 }),
+      prospectCheckFitInputSchema.parse({ prospectName: 'Thandi Mokoena' }),
+    ).toThrow();
+    expect(() =>
+      prospectCheckFitInputSchema.parse({ prospectName: '  ', grossIncomeMonthly: 45000 }),
+    ).toThrow();
+    expect(() =>
+      prospectCheckFitInputSchema.parse({ prospectName: 'Thandi Mokoena', grossIncomeMonthly: 0 }),
     ).toThrow();
   });
 
