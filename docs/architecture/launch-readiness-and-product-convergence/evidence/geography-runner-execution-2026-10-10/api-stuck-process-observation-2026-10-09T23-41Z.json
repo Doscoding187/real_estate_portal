@@ -1,0 +1,30 @@
+{
+  "label": "api-stuck-process-observation",
+  "mode": "read-only /proc observation through the exact approved instance; no signal, no write",
+  "role": "api",
+  "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+  "deploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "instanceId": "41e46a78-215c-4feb-9c7a-b0aa7d5faf50",
+  "observedInContainerAt": "2026-10-09T23:41:35.599Z",
+  "observedFromSessionAt": "2026-10-09T23:41:31Z",
+  "identity": {
+    "pid": 77,
+    "state": "S",
+    "startTicks": "755793067",
+    "exitRaw": "0"
+  },
+  "fdCount": 36,
+  "fdByType": {
+    "/dev/null": 4,
+    "pipe:[N]": 14,
+    "anon_inode:[eventfd]": 5,
+    "anon_inode:[eventpoll]": 5,
+    "socket:[N]": 8
+  },
+  "ownedTcpRows": 0,
+  "interpretation": "Process identity unchanged from the preflight binding. The process is alive with no exit code. None of its 8 open file descriptors matches a row in /proc/net/tcp: the process owns zero TCP connections, including no database socket. The remaining descriptors are files, pipes, eventfd/eventpoll and non-TCP sockets, consistent with an event loop held open by timer and internal handles rather than by any network connection.",
+  "earlierSameShapeObservations": [
+    {"at": "2026-10-09T23:33Z", "fdCount": 36, "ownedTcpRows": 0},
+    {"at": "2026-10-09T23:29Z-23:30Z", "via": "approved drain-control exit mode", "fdCount": 36, "appState": "S", "exitRaw": "0"}
+  ]
+}

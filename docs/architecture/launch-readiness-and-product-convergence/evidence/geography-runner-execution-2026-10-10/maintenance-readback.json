@@ -1,0 +1,12 @@
+[
+  {
+    "origin": "https://api.propertylistifysa.co.za",
+    "status": 403,
+    "maintenanceBodyConfirmed": true
+  },
+  {
+    "origin": "https://realestateportal-production-9bb8.up.railway.app",
+    "status": 403,
+    "maintenanceBodyConfirmed": true
+  }
+]

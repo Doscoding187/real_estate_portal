@@ -1,0 +1,55 @@
+{
+  "deploy": [
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "kind",
+          "value": "\"attended-drain\""
+        },
+        {
+          "key": "token",
+          "value": "\"geography-20261010-email-senior\""
+        },
+        {
+          "key": "event",
+          "value": "\"POOL_END_STARTED\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:57.170510978Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "kind",
+          "value": "\"attended-drain\""
+        },
+        {
+          "key": "token",
+          "value": "\"geography-20261010-email-senior\""
+        },
+        {
+          "key": "event",
+          "value": "\"POOL_END_COMPLETED\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:57.170520855Z"
+    }
+  ],
+  "deploymentId": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "scope": "deployment",
+  "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+  "status": "SUCCESS"
+}

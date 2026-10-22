@@ -1,0 +1,28 @@
+{
+  "operatorBaseSourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "operatorOverlay": true,
+  "archiveSha256": "1bf8cdfd59e26dd011e37150e45bd02e3fd8934604ec2640429dffdd05a7c3c5",
+  "dependencyLockVerified": true,
+  "hostingDeploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalReference": "GEOGRAPHY-SENIOR-DELEGATED-SESSION-INSPECTION-2026-10-10-Edward",
+  "credentialClass": "bootstrap-admin",
+  "credential": "existing operator; fixed metadata allowlist only",
+  "databaseMutations": false,
+  "deployedFilesChanged": false,
+  "temporarySourceOnly": true,
+  "startedAt": "2026-10-09T23:40:25.966Z",
+  "commands": [
+    {
+      "label": "session-inventory",
+      "command": [
+        "pnpm",
+        "db:release:sessions:inspect"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "completed": true,
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-09T23:40:35.730Z"
+}

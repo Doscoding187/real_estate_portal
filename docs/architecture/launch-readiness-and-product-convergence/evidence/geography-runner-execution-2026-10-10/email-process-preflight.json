@@ -1,0 +1,87 @@
+{
+  "at": "2026-10-09T23:10:10.781Z",
+  "source": "7756376c9ec604b352595b4e4ba8ced73f18562b",
+  "deployment": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+  "instance": "247f1dd2-351f-4eca-9e9d-848aad046f9e",
+  "node": "v22.23.3",
+  "hashes": {
+    "package.json": "0bebefd82a5644df10ca057edb61810fe41b617ae327f5291bf1f06252878328",
+    "pnpm-lock.yaml": "a565f7331ef0a76881c135ad39c965b99b0bd75827b3edea3b7fd70eb822b9f1",
+    "server/_core/start.ts": "706c47d931531181b822c402e4932c05100648fd73e5b3631789f58d92ab530b",
+    "server/_core/index.ts": "1e00dbc071222479ad374153b4529c8cd186db138c9c7149bb6e1b5fdf92e6ad",
+    "scripts/runTransactionalEmailSupervisor.ts": "bfcdc55ea5b818612dceba3c0b752a3d302a009644475afe953d9ecda393cfd4",
+    "scripts/emailWorkerSupervisor.ts": "6f4b2d6b9c38f0d7e1d70ac6fcfe40fcd0ec1f36fbfade5378cb37db3849eef3",
+    "server/db-connection.ts": "873f3a91c353d2bad721f474156be7500b9c519a9e1c77c612b877dad780cc19"
+  },
+  "procs": [
+    {
+      "pid": 1,
+      "state": "S",
+      "ppid": 0,
+      "startTicks": "891991637",
+      "argv": [
+        "/mise/installs/node/22.23.3/bin/node",
+        "/app/node_modules/.bin/../pnpm/bin/pnpm.cjs",
+        "email:supervisor"
+      ]
+    },
+    {
+      "pid": 48,
+      "state": "S",
+      "ppid": 1,
+      "startTicks": "891991854",
+      "argv": [
+        "node",
+        "/opt/pnpm/.tools/pnpm/10.4.1/bin/pnpm",
+        "email:supervisor"
+      ]
+    },
+    {
+      "pid": 60,
+      "state": "S",
+      "ppid": 48,
+      "startTicks": "891991915",
+      "argv": [
+        "sh",
+        "-c",
+        "tsx scripts/runTransactionalEmailSupervisor.ts"
+      ]
+    },
+    {
+      "pid": 61,
+      "state": "S",
+      "ppid": 60,
+      "startTicks": "891991915",
+      "argv": [
+        "node",
+        "/app/node_modules/.bin/../tsx/dist/cli.mjs",
+        "scripts/runTransactionalEmailSupervisor.ts"
+      ]
+    },
+    {
+      "pid": 77,
+      "state": "S",
+      "ppid": 61,
+      "startTicks": "891991926",
+      "argv": [
+        "/mise/installs/node/22.23.3/bin/node",
+        "--require",
+        "/app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/preflight.cjs",
+        "--import",
+        "file:///app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/loader.mjs",
+        "scripts/runTransactionalEmailSupervisor.ts"
+      ]
+    },
+    {
+      "pid": 89,
+      "state": "S",
+      "ppid": 77,
+      "startTicks": "891991953",
+      "argv": [
+        "/app/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "--service=0.27.3",
+        "--ping"
+      ]
+    }
+  ]
+}

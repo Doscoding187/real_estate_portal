@@ -1,0 +1,87 @@
+{
+  "at": "2026-10-09T23:10:10.786Z",
+  "source": "68f2c679eb423dd0da8cb2b5115a85d4620a10aa",
+  "deployment": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "instance": "41e46a78-215c-4feb-9c7a-b0aa7d5faf50",
+  "node": "v22.23.3",
+  "hashes": {
+    "package.json": "0bebefd82a5644df10ca057edb61810fe41b617ae327f5291bf1f06252878328",
+    "pnpm-lock.yaml": "a565f7331ef0a76881c135ad39c965b99b0bd75827b3edea3b7fd70eb822b9f1",
+    "server/_core/start.ts": "706c47d931531181b822c402e4932c05100648fd73e5b3631789f58d92ab530b",
+    "server/_core/index.ts": "1e00dbc071222479ad374153b4529c8cd186db138c9c7149bb6e1b5fdf92e6ad",
+    "scripts/runTransactionalEmailSupervisor.ts": "bfcdc55ea5b818612dceba3c0b752a3d302a009644475afe953d9ecda393cfd4",
+    "scripts/emailWorkerSupervisor.ts": "6f4b2d6b9c38f0d7e1d70ac6fcfe40fcd0ec1f36fbfade5378cb37db3849eef3",
+    "server/db-connection.ts": "873f3a91c353d2bad721f474156be7500b9c519a9e1c77c612b877dad780cc19"
+  },
+  "procs": [
+    {
+      "pid": 1,
+      "state": "S",
+      "ppid": 0,
+      "startTicks": "755792886",
+      "argv": [
+        "/mise/installs/node/22.23.3/bin/node",
+        "/app/node_modules/.bin/../pnpm/bin/pnpm.cjs",
+        "start:hosted:api"
+      ]
+    },
+    {
+      "pid": 48,
+      "state": "S",
+      "ppid": 1,
+      "startTicks": "755793028",
+      "argv": [
+        "node",
+        "/opt/pnpm/.tools/pnpm/10.4.1/bin/pnpm",
+        "start:hosted:api"
+      ]
+    },
+    {
+      "pid": 60,
+      "state": "S",
+      "ppid": 48,
+      "startTicks": "755793060",
+      "argv": [
+        "sh",
+        "-c",
+        "tsx server/_core/start.ts"
+      ]
+    },
+    {
+      "pid": 61,
+      "state": "S",
+      "ppid": 60,
+      "startTicks": "755793060",
+      "argv": [
+        "node",
+        "/app/node_modules/.bin/../tsx/dist/cli.mjs",
+        "server/_core/start.ts"
+      ]
+    },
+    {
+      "pid": 77,
+      "state": "S",
+      "ppid": 61,
+      "startTicks": "755793067",
+      "argv": [
+        "/mise/installs/node/22.23.3/bin/node",
+        "--require",
+        "/app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/preflight.cjs",
+        "--import",
+        "file:///app/node_modules/.pnpm/tsx@4.21.0/node_modules/tsx/dist/loader.mjs",
+        "server/_core/start.ts"
+      ]
+    },
+    {
+      "pid": 89,
+      "state": "S",
+      "ppid": 77,
+      "startTicks": "755793082",
+      "argv": [
+        "/app/node_modules/.pnpm/@esbuild+linux-x64@0.27.3/node_modules/@esbuild/linux-x64/bin/esbuild",
+        "--service=0.27.3",
+        "--ping"
+      ]
+    }
+  ]
+}

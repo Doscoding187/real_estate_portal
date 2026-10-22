@@ -1,0 +1,870 @@
+{
+  "deploy": [
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-started\""
+        },
+        {
+          "key": "reason",
+          "value": "null"
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "null"
+        },
+        {
+          "key": "durationMs",
+          "value": "null"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "\"0496ccb0-1210-4501-8b8d-91d788521e9c\""
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "14345"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"not-reached\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "null"
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "null"
+        },
+        {
+          "key": "stages",
+          "value": "[]"
+        },
+        {
+          "key": "activeStage",
+          "value": "null"
+        },
+        {
+          "key": "verdict",
+          "value": "null"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:52.313305636Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-phase-started\""
+        },
+        {
+          "key": "reason",
+          "value": "null"
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "null"
+        },
+        {
+          "key": "durationMs",
+          "value": "null"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587931959"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "\"0496ccb0-1210-4501-8b8d-91d788521e9c\""
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "14346"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"resolved\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "\"b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced\""
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "null"
+        },
+        {
+          "key": "stages",
+          "value": "[{\"name\":\"authorize\",\"startOffsetMs\":1,\"durationMs\":null,\"outcome\":null}]"
+        },
+        {
+          "key": "activeStage",
+          "value": "\"authorize\""
+        },
+        {
+          "key": "verdict",
+          "value": "null"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:52.313309286Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-phase-started\""
+        },
+        {
+          "key": "reason",
+          "value": "null"
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "null"
+        },
+        {
+          "key": "durationMs",
+          "value": "null"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587931959"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "\"0496ccb0-1210-4501-8b8d-91d788521e9c\""
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "14346"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"resolved\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "\"b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced\""
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "null"
+        },
+        {
+          "key": "stages",
+          "value": "[{\"name\":\"authorize\",\"startOffsetMs\":1,\"durationMs\":0,\"outcome\":\"ok\"},{\"name\":\"connect\",\"startOffsetMs\":1,\"durationMs\":null,\"outcome\":null}]"
+        },
+        {
+          "key": "activeStage",
+          "value": "\"connect\""
+        },
+        {
+          "key": "verdict",
+          "value": "null"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:52.313313516Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"error\""
+        }
+      ],
+      "message": "Debugger attached.",
+      "severity": "error",
+      "timestamp": "2026-10-09T23:18:52.315481678Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"error\""
+        }
+      ],
+      "message": "Debugger ending on ws://127.0.0.1:9229/64e89afd-2e5f-4535-a2cc-56ba5328f903",
+      "severity": "error",
+      "timestamp": "2026-10-09T23:18:52.359252002Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"error\""
+        }
+      ],
+      "message": "For help, see: https://nodejs.org/learn/getting-started/debugging",
+      "severity": "error",
+      "timestamp": "2026-10-09T23:18:52.359261372Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        }
+      ],
+      "message": "[Shutdown] SIGTERM received; draining HTTP and stopping local schedulers.",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:52.374698512Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-phase-started\""
+        },
+        {
+          "key": "reason",
+          "value": "null"
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "null"
+        },
+        {
+          "key": "durationMs",
+          "value": "null"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587933924"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "null"
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "null"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"resolved\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "\"b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced\""
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "null"
+        },
+        {
+          "key": "stages",
+          "value": "[{\"name\":\"authorize\",\"startOffsetMs\":1,\"durationMs\":0,\"outcome\":\"ok\"},{\"name\":\"connect\",\"startOffsetMs\":1,\"durationMs\":1965,\"outcome\":\"ok\"},{\"name\":\"verify\",\"startOffsetMs\":1966,\"durationMs\":null,\"outcome\":null}]"
+        },
+        {
+          "key": "activeStage",
+          "value": "\"verify\""
+        },
+        {
+          "key": "verdict",
+          "value": "null"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:18:53.932774182Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-phase-started\""
+        },
+        {
+          "key": "reason",
+          "value": "null"
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "null"
+        },
+        {
+          "key": "durationMs",
+          "value": "null"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587941074"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "null"
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "null"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"resolved\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "\"b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced\""
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "null"
+        },
+        {
+          "key": "stages",
+          "value": "[{\"name\":\"authorize\",\"startOffsetMs\":1,\"durationMs\":0,\"outcome\":\"ok\"},{\"name\":\"connect\",\"startOffsetMs\":1,\"durationMs\":1965,\"outcome\":\"ok\"},{\"name\":\"verify\",\"startOffsetMs\":1966,\"durationMs\":7150,\"outcome\":\"ok\"},{\"name\":\"cleanup\",\"startOffsetMs\":9116,\"durationMs\":null,\"outcome\":null}]"
+        },
+        {
+          "key": "activeStage",
+          "value": "\"cleanup\""
+        },
+        {
+          "key": "verdict",
+          "value": "{\"applicationReady\":true,\"notReadyLayers\":[]}"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.342780762Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "component",
+          "value": "\"hosted-database-readiness\""
+        },
+        {
+          "key": "event",
+          "value": "\"assessment-completed\""
+        },
+        {
+          "key": "reason",
+          "value": "\"stopped\""
+        },
+        {
+          "key": "assessmentId",
+          "value": "\"c05bf791-7903-40bc-a68c-250fe342b4b5\""
+        },
+        {
+          "key": "assessmentStartedAt",
+          "value": "1791587931958"
+        },
+        {
+          "key": "assessmentCompletedAt",
+          "value": "1791587941074"
+        },
+        {
+          "key": "durationMs",
+          "value": "9116"
+        },
+        {
+          "key": "inFlight",
+          "value": "true"
+        },
+        {
+          "key": "observedAt",
+          "value": "1791587941074"
+        },
+        {
+          "key": "snapshotAssessmentId",
+          "value": "null"
+        },
+        {
+          "key": "snapshotAgeMs",
+          "value": "null"
+        },
+        {
+          "key": "contextGeneration",
+          "value": "0"
+        },
+        {
+          "key": "assessmentGeneration",
+          "value": "0"
+        },
+        {
+          "key": "trigger",
+          "value": "\"scheduled\""
+        },
+        {
+          "key": "scheduledStartAt",
+          "value": "1791587931955"
+        },
+        {
+          "key": "scheduledDelayMs",
+          "value": "5000"
+        },
+        {
+          "key": "startLagMs",
+          "value": "3"
+        },
+        {
+          "key": "targetIdentity",
+          "value": "\"resolved\""
+        },
+        {
+          "key": "targetFingerprintHash",
+          "value": "\"b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced\""
+        },
+        {
+          "key": "targetFingerprintMatchesReport",
+          "value": "true"
+        },
+        {
+          "key": "stages",
+          "value": "[{\"name\":\"authorize\",\"startOffsetMs\":1,\"durationMs\":0,\"outcome\":\"ok\"},{\"name\":\"connect\",\"startOffsetMs\":1,\"durationMs\":1965,\"outcome\":\"ok\"},{\"name\":\"verify\",\"startOffsetMs\":1966,\"durationMs\":7150,\"outcome\":\"ok\"},{\"name\":\"cleanup\",\"startOffsetMs\":9116,\"durationMs\":0,\"outcome\":\"ok\"}]"
+        },
+        {
+          "key": "activeStage",
+          "value": "null"
+        },
+        {
+          "key": "verdict",
+          "value": "{\"applicationReady\":true,\"notReadyLayers\":[]}"
+        },
+        {
+          "key": "sourceSha",
+          "value": "\"68f2c679eb423dd0da8cb2b5115a85d4620a10aa\""
+        },
+        {
+          "key": "deployment",
+          "value": "\"93b7b423-91ac-4855-b8a7-e8fb53a0f112\""
+        },
+        {
+          "key": "replica",
+          "value": "\"41e46a78-215c-4feb-9c7a-b0aa7d5faf50\""
+        },
+        {
+          "key": "processId",
+          "value": "77"
+        },
+        {
+          "key": "moduleInitializedAt",
+          "value": "\"2026-10-09T08:02:49.292Z\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.342784962Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        }
+      ],
+      "message": "Redis cache services shutdown",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.343854183Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "kind",
+          "value": "\"attended-drain\""
+        },
+        {
+          "key": "token",
+          "value": "\"geography-20261010-api-senior\""
+        },
+        {
+          "key": "event",
+          "value": "\"POOL_END_STARTED\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.343860453Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        },
+        {
+          "key": "kind",
+          "value": "\"attended-drain\""
+        },
+        {
+          "key": "token",
+          "value": "\"geography-20261010-api-senior\""
+        },
+        {
+          "key": "event",
+          "value": "\"POOL_END_COMPLETED\""
+        }
+      ],
+      "message": "",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.343864183Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"error\""
+        }
+      ],
+      "message": "Redis: Connection closed",
+      "severity": "error",
+      "timestamp": "2026-10-09T23:19:01.343867853Z"
+    },
+    {
+      "attributes": [
+        {
+          "key": "level",
+          "value": "\"info\""
+        }
+      ],
+      "message": "Redis: Connection ended",
+      "severity": "info",
+      "timestamp": "2026-10-09T23:19:01.343871433Z"
+    }
+  ],
+  "deploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "scope": "deployment",
+  "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+  "status": "SUCCESS"
+}

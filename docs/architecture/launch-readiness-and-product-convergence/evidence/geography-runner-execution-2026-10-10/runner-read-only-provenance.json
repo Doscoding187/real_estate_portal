@@ -1,0 +1,40 @@
+{
+  "sourceSha": "49a48572c24d1b122fcf17b025a76e5ab77f03a8",
+  "archiveSha256": "a131ce4d8896d9c64624cd14760d964cc0d97c443c0f840985c8ab592161e9b6",
+  "dependencyLockVerified": true,
+  "hostingDeploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+  "protectedFingerprint": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+  "approvalReference": "GEOGRAPHY-SENIOR-ATTENDED-PREFLIGHT-2026-10-10-Edward",
+  "credentialClass": "read-only",
+  "credential": "dedicated SELECT-only inspector",
+  "databaseMutations": false,
+  "deployedFilesChanged": false,
+  "temporarySourceOnly": true,
+  "startedAt": "2026-10-09T23:11:44.782Z",
+  "commands": [
+    {
+      "label": "protected-inspect",
+      "command": [
+        "pnpm",
+        "db:release:reference:inspect",
+        "--",
+        "--adapter=places"
+      ],
+      "exitCode": 0
+    },
+    {
+      "label": "protected-schema-plan",
+      "command": [
+        "pnpm",
+        "db:release:plan",
+        "--",
+        "--accepted-old-head=0096_user_founder_authority_unique.sql",
+        "--expected-new-head=0111_properties_canonical_place_reference_fk.sql"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "completed": true,
+  "temporarySourceRemoved": true,
+  "completedAt": "2026-10-09T23:12:06.017Z"
+}

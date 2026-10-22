@@ -1,0 +1,41 @@
+{
+  "label": "pause-deployment-readback",
+  "readbackAt": "2026-10-09T23:32Z",
+  "mode": "read-only provider deployment list; no mutation",
+  "projectId": "8cdd7515-ddd2-4252-bbee-df5a5c209d4b",
+  "environmentId": "63070d99-357a-40ba-99c3-6d1368f61652",
+  "deployments": [
+    {
+      "role": "api",
+      "serviceId": "db88a720-2d1f-4afc-a3a8-6228b6b08d3e",
+      "currentDeploymentId": "93b7b423-91ac-4855-b8a7-e8fb53a0f112",
+      "status": "SUCCESS",
+      "createdAt": "2026-10-09T08:01:00.073Z",
+      "note": "Unchanged from the approved binding. Instance still running: outer pnpm alive, three intermediate launchers SIGSTOP-held, application child PID 77 drained but alive. No replacement deployment. Not removed; removal remains gated on a clean API child exit."
+    },
+    {
+      "role": "email",
+      "serviceId": "59c0d8f8-abe2-4696-ad9c-de1037723b66",
+      "currentDeploymentId": "4d18e7ce-084c-486a-87b1-39dca207bdde",
+      "status": "SUCCESS",
+      "createdAt": "2026-10-07T22:20:36.724Z",
+      "note": "Unchanged from the approved binding. Application child exited clean zero (zombie Z, exitRaw 0, fdCount 0, evidence email-exit-1791587952641489706.json) with launchers held, so the supervisor cannot restart a writer. Restart policy is ALWAYS: if the launcher holds are ever released before provider removal, a writer will restart. Not removed; removal remains gated on the API clean-exit gate."
+    },
+    {
+      "role": "lead-cron",
+      "serviceId": "e1e32aa8-0b85-4c91-af18-843f1bc52d9f",
+      "currentDeploymentId": "19a8fac1-b750-4a8f-8f5d-1d94e725f460",
+      "status": "SUCCESS",
+      "createdAt": "2026-10-07T22:23:01.516Z",
+      "note": "deploy.cronSchedule=null committed with skipDeploys=true; no running lead-job replica was observed during this execution. Schedule remains paused; */5 * * * * resumption stays a separately approved recovery decision."
+    },
+    {
+      "role": "temporary-release-runner",
+      "serviceId": "e519b6e7-6c52-47ca-99ec-3a0cd7994f8e",
+      "currentDeploymentId": "5e8edb5a-6515-4528-b077-2fbeec12a4b4",
+      "status": "SUCCESS",
+      "createdAt": "2026-10-09T23:09:30.928Z",
+      "note": "Temporary idle runner hosting the delegated session observer. Created ~23:09 UTC; the approved envelope limits attended lifetime to two hours and incremental cost to USD 1. Its cleanup under the existing approved cleanup scope is an Edward decision at the pause; do not leave it orphaned."
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "role": "email",
+  "mode": "terminate",
+  "exitCode": 0,
+  "stdout": "{\"mode\":\"terminate\",\"signal\":\"SIGTERM\",\"pid\":77,\"startTicks\":\"891991926\",\"at\":\"2026-10-09T23:18:57.161Z\"}\n",
+  "stderr": "Using SSH key from agent: pl-azure84-rehearsal-20260928\nwarning: Config as Code (railway.json / railway.toml) is deprecated. Prefer Infrastructure as Code (.railway/railway.ts). Run `railway config migrate` or see https://docs.railway.com/infrastructure-as-code#migrating-from-config-as-code\n  \u2192 Migrate: `railway config migrate` \u2014 https://docs.railway.com/infrastructure-as-code#migrating-from-config-as-code\n  Existing files keep working until 2026-12-01.\n"
+}
