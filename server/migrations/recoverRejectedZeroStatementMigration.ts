@@ -30,6 +30,7 @@ export type RejectedZeroStatementMigration = {
   replacementFilename?: string;
   replacementChecksum?: string;
   replacementReason: string;
+  allowFreshBatch?: boolean;
 };
 
 export const REJECTED_CATALOGUE_PUBLISHER_TRIGGER: RejectedZeroStatementMigration = Object.freeze({
@@ -60,9 +61,27 @@ export const REJECTED_DISTRIBUTION_DELIVERY_TABLE: RejectedZeroStatementMigratio
   replacementReason: 'mysql_identifier_length_limit',
 });
 
+export const REJECTED_SERVICE_PROVIDER_REVIEW_REPORTS_TABLE: RejectedZeroStatementMigration =
+  Object.freeze({
+    filename: '0151_service_provider_review_reports.sql',
+    checksum: '94f8afaf998469233e32480664c87be7af3259062364ba10e8cd858f96818733',
+    archivedPath:
+      'server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql',
+    acceptedHead: '0150_service_provider_reviews_moderation_index.sql',
+    failedExpectedHead: '0151_service_provider_review_reports.sql',
+    expectedFailureClass: 'ER_TOO_LONG_IDENT',
+    rejectedObjectName: 'service_provider_review_reports',
+    rejectedObjectType: 'table',
+    replacementFilename: '0151_service_provider_review_reports_sequenced.sql',
+    replacementChecksum: 'd1272ddd283c0ce679b9244823c1aeb2dd2b810a41652f00eb81711769897b60',
+    replacementReason: 'mysql_identifier_length_limit',
+    allowFreshBatch: true,
+  });
+
 const REVIEWED_REJECTED_MIGRATIONS: readonly RejectedZeroStatementMigration[] = [
   REJECTED_CATALOGUE_PUBLISHER_TRIGGER,
   REJECTED_DISTRIBUTION_DELIVERY_TABLE,
+  REJECTED_SERVICE_PROVIDER_REVIEW_REPORTS_TABLE,
 ];
 
 type AttemptEvidence = {
@@ -186,7 +205,8 @@ function assertExactFailedAttempt(
     attempt.targetFingerprintHash !== authority.context.targetFingerprintHash ||
     attempt.migrationFilename !== rejected.filename ||
     attempt.migrationChecksum !== rejected.checksum ||
-    attempt.acceptedOldHead !== rejected.acceptedHead ||
+    (attempt.acceptedOldHead !== rejected.acceptedHead &&
+      !(rejected.allowFreshBatch && attempt.acceptedOldHead === null)) ||
     attempt.expectedNewHead !== rejected.failedExpectedHead ||
     attempt.completedStatementCount !== 0 ||
     attempt.lastStatementDigest !== null ||

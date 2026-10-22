@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { formatPriceRange } from '@/features/services/catalog';
+import ServicesReviewModerationPanel from './ServicesReviewModerationPanel';
 
 /**
  * Private super-admin review surface for the Services publication authority.
@@ -55,6 +56,7 @@ function priceLabel(service: { minPrice: number | null; maxPrice: number | null 
 
 export default function ServicesReviewWorkspace() {
   const utils = trpc.useUtils();
+  const [section, setSection] = useState<'publication' | 'reviews'>('publication');
   const [view, setView] = useState<QueueView>('awaiting_review');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -84,15 +86,41 @@ export default function ServicesReviewWorkspace() {
     <main className="mx-auto max-w-5xl space-y-6 p-4 md:p-6">
       <header>
         <p className="text-sm font-medium text-emerald-700">Operations · Services</p>
-        <h1 className="text-2xl font-semibold">Service provider publication review</h1>
+        <h1 className="text-2xl font-semibold">Services review workspace</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Publication is a reviewed transition, not a provider self-service action. A provider can
-          only be published when it is verified, active, holds at least one active service and one
-          listed coverage area, and its subscription is eligible. Every decision is recorded in the
-          audit log.
+          Provider publication and customer reviews are reviewed transitions, not self-service
+          actions. Every decision is recorded in the audit log.
         </p>
       </header>
 
+      <div className="flex flex-wrap gap-2 border-b pb-3">
+        <button
+          type="button"
+          aria-pressed={section === 'publication'}
+          onClick={() => setSection('publication')}
+          className={
+            section === 'publication'
+              ? 'rounded bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white'
+              : 'rounded border bg-white px-3 py-1.5 text-sm'
+          }
+        >
+          Provider publication
+        </button>
+        <button
+          type="button"
+          aria-pressed={section === 'reviews'}
+          onClick={() => setSection('reviews')}
+          className={
+            section === 'reviews'
+              ? 'rounded bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white'
+              : 'rounded border bg-white px-3 py-1.5 text-sm'
+          }
+        >
+          Customer reviews
+        </button>
+      </div>
+
+      {section === 'publication' && (<>
       {counts && (
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {(
@@ -356,6 +384,9 @@ export default function ServicesReviewWorkspace() {
           </button>
         </div>
       )}
+      </>)}
+
+      {section === 'reviews' && <ServicesReviewModerationPanel />}
     </main>
   );
 }

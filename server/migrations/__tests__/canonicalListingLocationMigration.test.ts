@@ -22,7 +22,8 @@ describe('PLE-6B canonical listing location migration', () => {
       approvalReference: 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     });
     expect(manifest.expectedHead.filename).toBe(
-      '0148_distribution_prospect_check_fit_prospect_names.sql',
+      '0151_service_provider_review_reports_sequenced.sql',
+      '0152_service_provider_review_reports_review_index.sql',
     );
   });
 

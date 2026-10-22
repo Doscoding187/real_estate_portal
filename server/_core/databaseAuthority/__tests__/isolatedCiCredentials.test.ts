@@ -27,7 +27,7 @@ describe('isolated CI physical credential boundary', () => {
 
   it('builds explicit application and worker grants without control-table DML', () => {
     const plan = buildIsolatedCiGrantPlan();
-    expect(plan.applicationTables).toHaveLength(236);
+    expect(plan.applicationTables).toHaveLength(237);
     expect(
       plan.statementsByCredential.runtime.filter(statement =>
         /legal_releases|legal_active_release|user_legal_acceptances/.test(statement),

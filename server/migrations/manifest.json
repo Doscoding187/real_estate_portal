@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0148_distribution_prospect_check_fit_prospect_names.sql",
+  "expectedHead": "0151_service_provider_review_reports_sequenced.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1553,6 +1553,36 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "Edward approval of the referrer prospect check fit prospect names, 2026-10-21; migration authoring and disposable worktree verification"
+    },
+    {
+      "sequence": 149,
+      "filename": "0149_service_provider_reviews_moderation.sql",
+      "checksum": "7bf45cfd8bfdc93251229309a690364219a1827c79b6734e6153540e5398a346",
+      "parent": "0148_distribution_prospect_check_fit_prospect_names.sql",
+      "parentChecksum": "5e19dc561a84653e72f878f3dcd33e3f603c9a5db2215e647838b13b14fc452a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 150,
+      "filename": "0150_service_provider_reviews_moderation_index.sql",
+      "checksum": "8745fdbc1076184f9515bd6802c745611c6ef318adbad64cd79fafd0a6f8ee7f",
+      "parent": "0149_service_provider_reviews_moderation.sql",
+      "parentChecksum": "7bf45cfd8bfdc93251229309a690364219a1827c79b6734e6153540e5398a346",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 151,
+      "filename": "0151_service_provider_review_reports_sequenced.sql",
+      "checksum": "d1272ddd283c0ce679b9244823c1aeb2dd2b810a41652f00eb81711769897b60",
+      "parent": "0150_service_provider_reviews_moderation_index.sql",
+      "parentChecksum": "8745fdbc1076184f9515bd6802c745611c6ef318adbad64cd79fafd0a6f8ee7f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }
