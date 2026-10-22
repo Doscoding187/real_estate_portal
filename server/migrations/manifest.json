@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0090_retire_disconnected_boost_campaigns.sql",
+  "expectedHead": "0091_agent_workplace_contacts.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -958,6 +958,16 @@
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
       "approvalReference": "DBX-PRELAUNCH-RETIRE-DISCONNECTED-BOOST-CAMPAIGNS-2026-09-11-Edward"
+    },
+    {
+      "sequence": 91,
+      "filename": "0091_agent_workplace_contacts.sql",
+      "checksum": "922f4efcf745293f4dd3e1038a1969193719623c682afba52986ae70a2885e84",
+      "parent": "0090_retire_disconnected_boost_campaigns.sql",
+      "parentChecksum": "767f3767f3a7f69d947ba150598cee45194ebfb64a11f52d7b3114c2b5467421",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
     }
   ]
 }

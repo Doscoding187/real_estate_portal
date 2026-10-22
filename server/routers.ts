@@ -11,6 +11,7 @@ import { TRPCError } from '@trpc/server';
 import { adminRouter } from './adminRouter';
 import { agencyRouter } from './agencyRouter';
 import { canvassingRouter } from './canvassingRouter';
+import { contactsRouter } from './contactsRouter';
 import { userRouter } from './userRouter';
 import { invitationRouter } from './invitationRouter';
 import { agentRouter } from './agentRouter';
@@ -132,6 +133,7 @@ const appRouterConfig = {
   admin: adminRouter,
   agency: agencyRouter,
   canvassing: canvassingRouter,
+  contacts: contactsRouter,
   user: userRouter,
   invitation: invitationRouter,
   agent: agentRouter,

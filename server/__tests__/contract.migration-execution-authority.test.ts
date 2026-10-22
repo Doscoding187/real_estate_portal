@@ -457,8 +457,9 @@ describe('migration execution authority', () => {
       '0088_retire_obsolete_billing_families.sql',
       '0089_retire_disconnected_analytics_aggregations.sql',
       '0090_retire_disconnected_boost_campaigns.sql',
+      '0091_agent_workplace_contacts.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0090_retire_disconnected_boost_campaigns.sql');
+    expect(executionManifest.expectedHead).toBe('0091_agent_workplace_contacts.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -1239,6 +1239,14 @@
       "purpose": "P8 retirement of disconnected boost campaign authority",
       "approvedFiles": [
         "server/migrations/0090_retire_disconnected_boost_campaigns.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0091_agent_workplace_contacts.sql",
+      "classification": "canonical active",
+      "purpose": "AW-MVP-001/002 establishes the single curated Agent Workplace Contacts authority with server-enforced ownership and visibility scopes.",
+      "approvedFiles": [
+        "server/migrations/0091_agent_workplace_contacts.sql"
       ]
     }
   ],

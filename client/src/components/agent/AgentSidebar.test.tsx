@@ -62,6 +62,7 @@ describe('AgentSidebar workplace navigation', () => {
     const workplaceButtons = [
       screen.getByRole('button', { name: 'Overview' }),
       screen.getByRole('button', { name: /Leads & CRM/ }),
+      screen.getByRole('button', { name: 'Contacts' }),
       screen.getByRole('button', { name: 'Productivity' }),
       screen.getByRole('button', { name: 'Listings' }),
       screen.getByRole('button', { name: 'Seller Growth' }),

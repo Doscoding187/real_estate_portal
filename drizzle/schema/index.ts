@@ -22,6 +22,8 @@ export * from './listingPerformance';
 export * from './land';
 export * from './commercial';
 export * from './sharedLiving';
+export * from './contacts';
+export * from './curatedPersonAuthority';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

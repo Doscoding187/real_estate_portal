@@ -9,6 +9,7 @@ import {
   Building2,
   CalendarDays,
   CircleHelp,
+  ContactRound,
   DollarSign,
   Home,
   MapPinned,
@@ -33,6 +34,7 @@ type NavItem = {
 const OPERATE_LINKS = [
   { label: 'Overview', href: '/agent/dashboard', icon: Home },
   { label: 'Leads & CRM', href: '/agent/leads', icon: Users },
+  { label: 'Contacts', href: '/agent/contacts', icon: ContactRound },
   { label: 'Productivity', href: '/agent/productivity', icon: CalendarDays },
   { label: 'Listings', href: '/agent/listings', icon: Building2 },
   { label: 'Seller Growth', href: '/agent/canvassing', icon: MapPinned },
@@ -101,13 +103,16 @@ export function AgentSidebar({ mode = 'desktop' }: SidebarProps) {
     },
     {
       ...OPERATE_LINKS[2],
-      badge: activeLeadCount || undefined,
     },
     {
       ...OPERATE_LINKS[3],
+      badge: activeLeadCount || undefined,
     },
     {
       ...OPERATE_LINKS[4],
+    },
+    {
+      ...OPERATE_LINKS[5],
     },
   ];
 

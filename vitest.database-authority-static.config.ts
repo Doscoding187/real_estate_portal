@@ -8,6 +8,7 @@ export default {
       'server/__tests__/contract.database-final-closure-authority.test.ts',
       'server/__tests__/contract.database-agent-authority.test.ts',
       'server/__tests__/contract.database-canonical-model-authority.test.ts',
+      'server/__tests__/contract.contacts-authority.test.ts',
       'server/__tests__/contract.database-local-lifecycle-authority.test.ts',
       'server/__tests__/contract.database-connection-path-authority.test.ts',
       'server/__tests__/contract.database-residual-utility-authority.test.ts',

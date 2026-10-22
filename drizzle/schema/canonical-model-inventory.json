@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "95f6c6b11056df70c0e1fd5639dcf0e9cb58e0616e01ac6f243564112dd24cea",
+  "structuralDigest": "0493d17b15be82bb874d43db5a3b4abe04cbadd0a91bcf6cb5547a14a113d8b1",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 212,
+  "tableCount": 213,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -59,6 +59,7 @@
     "commercial_space_specifications",
     "commercial_spaces",
     "commissions",
+    "contacts",
     "content_approval_queue",
     "content_quality_scores",
     "content_topics",
@@ -252,5 +253,26 @@
       "explore_feed_sessions"
     ],
     "note": "Explore redesign is deferred. Compatibility authorities remain modelled until a separately approved Explore migration."
+  },
+  "curatedPersonAuthority": {
+    "canonicalTables": [
+      "contacts"
+    ],
+    "approvedDecision": "AW-MVP-001",
+    "sourceOrCaptureTables": [
+      "leads",
+      "seller_prospects",
+      "listing_leads",
+      "prospect_identities"
+    ],
+    "admissionRule": "A new mutable curated person, customer, or contact authority requires an explicit architecture decision before schema admission.",
+    "monitoredTableNameTerms": [
+      "contact",
+      "customer",
+      "person",
+      "people",
+      "crm"
+    ],
+    "reviewInvariant": "The registry is mechanically checked; introducing a new curated authority still requires architecture review before adding it to the canonical schema."
   }
 }

@@ -14,8 +14,8 @@ describe('TiDB CHECK/FK structural admission', () => {
     const desired = normalizedDesiredSchema(canonical);
     const before = JSON.stringify(desired);
     const report = auditTidbStructuralAdmission(desired);
-    expect(report.checks).toHaveLength(23);
-    expect(report.foreignKeyImpacts).toHaveLength(15);
+    expect(report.checks).toHaveLength(24);
+    expect(report.foreignKeyImpacts).toHaveLength(16);
     expect(
       report.foreignKeyImpacts.filter(key => key.review === 'domain-lifecycle-decision-required'),
     ).toHaveLength(5);
@@ -42,6 +42,19 @@ describe('TiDB CHECK/FK structural admission', () => {
         }),
       ]),
     );
+    expect(
+      report.checks.find(check => check.constraintName === 'chk_contacts_shared_requires_agency'),
+    ).toMatchObject({
+      tableName: 'contacts',
+      status: 'blocked-for-review',
+      dependencies: [
+        expect.objectContaining({
+          columns: ['agency_id'],
+          onDelete: 'restrict',
+          review: 'ddl-action-provenance-required',
+        }),
+      ],
+    });
     expect(() => assertTidbStructuralAdmission(desired)).toThrow(
       'TiDB structural admission refused',
     );
