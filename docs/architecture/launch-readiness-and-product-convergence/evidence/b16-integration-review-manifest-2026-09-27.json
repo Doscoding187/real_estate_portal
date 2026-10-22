@@ -1,0 +1,122 @@
+{
+  "manifestVersion": 1,
+  "updatedDate": "2026-09-27",
+  "reviewStatus": "prepared-for-senior-review; B16 acceptance pending",
+  "scope": "B15 copy approval preparation, B12 diagnostic preparation, and B16 local source composition for review; no merge to the integration branch, hosted change, deployment, or production activation",
+  "reviewWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence",
+    "branch": "prep/b16-converged-candidate",
+    "headBeforeEvidence": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "treeBeforeEvidence": "b5a3475633ea330469507551574c7e61a73b0900"
+  },
+  "seniorAcceptance": {
+    "date": "2026-09-27",
+    "workstreams": ["B03", "B04", "B05", "B06", "B07"],
+    "scope": "accepted within each reviewed scope; hosted readiness remains open"
+  },
+  "acceptedCandidateIdentities": {
+    "composedBaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "b03SixFilePatchSha256": "3e292cce43aafefb20075190bf6064b8e2c22ef1785843873f8dffe43880ea76",
+    "b05TestPatchSha256": "1e210e5e348576d82663136a2fa2f215f9def31a1fe364dcddf6298072bfd754",
+    "b03B05B06EightFileCompositionSha256": "926086a2e3cf68e9edc1c3d0969717352af6feb42c0d5c91f01c5970b129a711",
+    "b06SpecSha256": "2ce67a21dc05c0bcb9cae67ea8001dbe7a594c71cc48d92f06db57dfb17944d7",
+    "b07AcceptedTree": "2600386978a46b29f371c230f05511c81be2465f",
+    "b07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "b07RoleSessionTestSha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28"
+  },
+  "sourceComposition": {
+    "acceptedB03B05B06BaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "acceptedB07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "acceptedB03ThroughB07TreeBeforePleCorrection": "2600386978a46b29f371c230f05511c81be2465f",
+    "testedCandidateTreeAfterPleCorrection": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "pleSpecSha256": "0cc29dad31dd47d26b862c2a44ae3711e1436a42321019b42161f462c7675d7c",
+    "pleConfigSha256": "49b48ae4b07da3ca62e1966fa575752c85761c6adacc023f8d7b556ba527dc39",
+    "compositionMethod": "B16-owned branch created at the accepted B03/B05/B06 base commit; the exact accepted B07 seven-file diff was hash-verified and applied locally. No source was merged to main or deployed."
+  },
+  "b04B07Evidence": {
+    "priorDirectApiMatrix": { "date": "2026-09-26", "filesPassed": 11, "testsPassed": 99, "rerunForRoleTestCorrection": false },
+    "focusedRoleSessionRerun": { "date": "2026-09-27", "filesPassed": 1, "testsPassed": 5, "failed": 0 },
+    "b04JoinedBrowser": { "passed": 2, "failed": 0 },
+    "b05DedicatedAgencyJourney": { "passed": 1, "failed": 0 },
+    "b06DeveloperJourney": { "passedSteps": 370, "authorityTestsPassed": 31 },
+    "pleSmoke": {
+      "date": "2026-09-26",
+      "passed": 0,
+      "failed": 1,
+      "notRun": 9,
+      "followUp": "historical failure retained; the fixture/test expectation mismatch was corrected and the complete journey rerun under Database Authority",
+      "currentRerun": {
+        "date": "2026-09-27",
+        "evidence": "b16-ple-browser-journey-2026-09-27.json",
+        "command": "pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts",
+        "passed": 10,
+        "failed": 0,
+        "notRun": 0,
+        "testedCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+        "targetFingerprintSha256": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+        "migrationHead": "0094_content_topics_primary_key.sql",
+        "targetDisposed": true,
+        "localServiceStopped": true
+      }
+    },
+    "currentEvidenceChecksums": {
+      "reviewPacket": "2cdf36a7ea1e29f894d1aa522eae750915dff2d114a8c2424161c819546dd727",
+      "securityMatrix": "d585cd7db57817c6190d9cf10d7fb89569009e3dfe37d62f4738896aefc36995",
+      "roleSessionCases": "4329fb5d0ecd80e9a56670d4c31d062ff5b62859cc4c4c155602d31ca1c37d57"
+    },
+    "databaseCleanup": { "targetFingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd", "disposed": true, "localServiceStopped": true }
+  },
+  "b15Copy": {
+    "worktreeHead": "fceb4a380f23548b03608e3e24389c225c01215c",
+    "worktreeTree": "ef9b2c003b9ff098eaf7dabb59663e2910f91ab8",
+    "candidateSha256": "9fce97d738efa3eddd1740684d76fadbffb803eabb5445faaa312b8c1799aea3",
+    "status": "not approved; required publication fields and legal/accounting review remain open",
+    "sarsVatThresholdReference": "R2.3 million effective 2026-04-01; does not prove company registration status"
+  },
+  "b09SourceDataCensus": {
+    "status": "missing-not-accepted",
+    "searchedScope": "B16 checked-in launch-convergence evidence and named B09/source-data census/disposition artifacts on 2026-09-27",
+    "finding": "No accepted B09 source-data census or disposition was found to establish launch data scope. Generic database-takeover coverage inventories are not accepted B09 launch-scope evidence.",
+    "requiredInputOwner": "Data owner + Edward",
+    "requiredDecision": "Identify authoritative source systems and records, the launch in-scope data, and dispositions for excluded or deferred data, with evidence sufficient to approve launch data scope."
+  },
+  "b12Diagnostics": {
+    "worktreeHead": "bb1a5d7af53b7f62f5aa9ea7ae9068f59cd87854",
+    "worktreeTree": "d41a3594787f2cda74c9245cb3ce16de166a6a2a",
+    "latestRecordedObservationDate": "2026-09-27",
+    "publicDiagnostics": {
+      "evidence": "b12-public-diagnostics-2026-09-27.json",
+      "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "apiHealthHttp": 200,
+      "apiReadinessHttp": 503,
+      "frontendVersionJsonContentType": "text/html; charset=utf-8",
+      "apexTlsHostnameVerified": false,
+      "stagingDns": "NXDOMAIN-for-both-hosts",
+      "providerConfigurationRead": false,
+      "stagingRehearsalPerformed": false
+    },
+    "databaseAuthorityPreflight": {
+      "date": "2026-09-27",
+      "commandsExitCodeZero": ["pnpm db:authority:status", "pnpm db:authority:manifest", "pnpm db:authority:context"],
+      "targetClass": "disposable-worktree",
+      "targetFingerprintSha256": "ed89dd57652eff4df661f663e83ba9c40003d156f82b1f812045cec42a3fd814",
+      "manifestDigest": "595cb5f15235d473ee71eda7105fa802dfac2650242b950021e4dce62e091e6b",
+      "expectedHead": "0092_transactional_email_attempts.sql",
+      "localServiceAvailability": "database-unreachable",
+      "migrationLedgerAndSchemaEvaluated": false,
+      "sanitizedEvidence": "b12-database-authority-preflight-2026-09-27.json",
+      "hostedEvidence": false,
+      "targetMutated": false
+    },
+    "status": "public DNS/TLS/HTTP refreshed; provider configuration and staging proof remain open",
+    "providerOrDnsChanges": false
+  },
+  "remainingLimits": [
+    "B15 copy approval and customer-page proof are open.",
+    "B12 current hosted diagnostics and staging proof are open; production no-spend boundaries remain in force.",
+    "The historical B06 Gauteng-selection failure remains unattributed.",
+    "B09 source-data census/disposition is missing; launch data scope is not established.",
+    "Local email, media, Redis and MySQL substitutes do not establish hosted-provider readiness.",
+    "B16 senior acceptance is pending; B08 cutover, merge, deployment and production activation were not performed."
+  ]
+}

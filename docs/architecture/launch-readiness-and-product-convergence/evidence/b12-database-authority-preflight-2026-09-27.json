@@ -1,0 +1,46 @@
+{
+  "evidenceVersion": 1,
+  "date": "2026-09-27",
+  "classification": "local Database Authority context only; not hosted evidence",
+  "worktree": {
+    "path": "/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-b12-hosted-runtime",
+    "branch": "feat/b12-hosted-runtime",
+    "head": "bb1a5d7af53b7f62f5aa9ea7ae9068f59cd87854",
+    "tree": "d41a3594787f2cda74c9245cb3ce16de166a6a2a",
+    "registered": true,
+    "worktreeOwnershipMatches": true
+  },
+  "commands": [
+    { "command": "pnpm db:authority:status", "exitCode": 0 },
+    { "command": "pnpm db:authority:manifest", "exitCode": 0 },
+    { "command": "pnpm db:authority:context", "exitCode": 0 }
+  ],
+  "authority": {
+    "version": 3,
+    "runtimeMode": "development",
+    "targetClass": "disposable-worktree",
+    "targetFingerprintSha256": "ed89dd57652eff4df661f663e83ba9c40003d156f82b1f812045cec42a3fd814",
+    "databaseName": "listify_wt_b12_hosted_runtime_34135a9158de",
+    "credentialClass": "local-owner",
+    "manifestDigest": "595cb5f15235d473ee71eda7105fa802dfac2650242b950021e4dce62e091e6b",
+    "expectedHead": "0092_transactional_email_attempts.sql",
+    "localServiceAvailability": "database-unreachable",
+    "targetOwnershipState": "not-evaluated",
+    "migrationLedgerState": "head-not-evaluated",
+    "incompleteAttemptState": "attempts-not-evaluated",
+    "schemaMigrationState": "not-evaluated",
+    "schemaCongruencyState": "not-evaluated"
+  },
+  "actions": {
+    "serviceStarted": false,
+    "targetProvisioned": false,
+    "databaseMutated": false,
+    "hostedProviderAccessed": false,
+    "dnsOrRuntimeSettingsChanged": false
+  },
+  "limits": [
+    "This status identifies only the B12 worktree's local disposable target.",
+    "The unreachable service prevented ledger, attempt, and schema evaluation.",
+    "This does not refresh or establish staging or production readiness."
+  ]
+}

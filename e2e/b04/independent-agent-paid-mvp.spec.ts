@@ -485,6 +485,8 @@ async function verifyPublishedInventoryActions(
   page: Page,
   input: { listingId: number; propertyId: number; title: string },
 ) {
+  expect(input.propertyId).not.toBe(input.listingId);
+
   await page.goto('/agent/listings');
   await expect(page.getByRole('heading', { name: 'My Listings' })).toBeVisible();
   await expect(page.getByText(input.title, { exact: true })).toBeVisible();
