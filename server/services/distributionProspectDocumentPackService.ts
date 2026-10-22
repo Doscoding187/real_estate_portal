@@ -5,11 +5,19 @@ import { getPartnerReferralIntakeRequirements } from './distributionReferralInta
 
 type DbExecutor = any;
 
+export type ProspectDocumentCategory =
+  | 'consent'
+  | 'privacy_notice'
+  | 'information_sheet'
+  | 'other';
+
 export type ProspectDocumentDownload = {
   key: string;
   label: string;
   url: string;
   instructions: string | null;
+  category: ProspectDocumentCategory;
+  developmentId: number;
 };
 
 export type ProspectDocumentUpload = {
@@ -74,10 +82,12 @@ export async function getProspectDocumentPacks(input: {
     };
     if (sharingPermission?.downloadUrl) {
       downloads.push({
-        key: 'sharing_permission',
+        key: `sharing_permission_${developmentId}`,
         label: sharingPermission.title || 'Permission to share their details',
         url: sharingPermission.downloadUrl,
         instructions: 'The prospect signs this before their details are shared with the developer.',
+        category: 'consent',
+        developmentId,
       });
     }
     const privacyNotice = requirements.privacyNoticeDocument as {
@@ -86,10 +96,12 @@ export async function getProspectDocumentPacks(input: {
     };
     if (privacyNotice?.downloadUrl) {
       downloads.push({
-        key: 'privacy_notice',
+        key: `privacy_notice_${developmentId}`,
         label: privacyNotice.title || 'Privacy notice',
         url: privacyNotice.downloadUrl,
         instructions: 'The prospect reads this before their details are shared with the developer.',
+        category: 'privacy_notice',
+        developmentId,
       });
     }
     for (const template of templates) {
@@ -102,6 +114,10 @@ export async function getProspectDocumentPacks(input: {
           template.templateFileName
             ? `Download "${template.templateFileName}", complete it, and upload the signed copy.`
             : 'Download this document, complete it, and upload the signed copy.',
+        category: /info\s*sheet|information/i.test(template.documentLabel)
+          ? 'information_sheet'
+          : 'other',
+        developmentId,
       });
     }
 

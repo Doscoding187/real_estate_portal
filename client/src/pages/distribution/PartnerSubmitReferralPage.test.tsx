@@ -112,8 +112,8 @@ function eligibleItem(overrides: Record<string, unknown> = {}) {
     campaign: { visible: true },
     inventory: {
       modes: {
-        for_sale: { availableCount: 3, priceFrom: 1000000, priceTo: 1500000 },
-        for_rent: null,
+        sale: { availableCount: 3, priceFrom: 1000000, priceTo: 1500000 },
+        rent: null,
       },
     },
     opportunity: { openForReferral: true },
@@ -233,11 +233,12 @@ describe('PartnerSubmitReferralPage', () => {
   it('guides permission, documents, and contact details in order', () => {
     const rendered = render(<PartnerSubmitReferralPage />);
 
-    expect(screen.getByText('Choose an opportunity and market')).toBeInTheDocument();
-    expect(
-      screen.getByText('Get the documents, then confirm the prospect has seen them'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Introduce a prospect to property opportunities')).toBeInTheDocument();
+    expect(screen.getByText('Documents to prepare')).toBeInTheDocument();
+    expect(screen.getByText('POPIA consent form')).toBeInTheDocument();
+    expect(screen.getAllByText('Prepare the documents').length).toBeGreaterThan(0);
 
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Sky City' }));
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
@@ -259,7 +260,7 @@ describe('PartnerSubmitReferralPage', () => {
     state.sessionComplete = true;
     rendered.rerender(<PartnerSubmitReferralPage />);
 
-    expect(screen.getByText('Add their contact details')).toBeInTheDocument();
+    expect(screen.getByText('Submit the introduction')).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText('Full name'), { target: { value: 'Jane Buyer' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send introduction' }));
 
@@ -296,12 +297,12 @@ describe('PartnerSubmitReferralPage', () => {
   });
 
   it('offers the prospect documents to download before the documents are confirmed', () => {
-    state.sessionStarted = true;
-
     render(<PartnerSubmitReferralPage />);
 
-    expect(screen.getByText('Download these for the prospect')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Download/ })).toBeInTheDocument();
+    expect(screen.getByText('Development brochures')).toBeInTheDocument();
+    expect(screen.getByText('Prospect information sheet')).toBeInTheDocument();
+    expect(screen.getByText('POPIA consent form')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Download/ }).length).toBeGreaterThan(0);
   });
 
   it('shows the server message when submission is blocked, then follows the deal on success', () => {
