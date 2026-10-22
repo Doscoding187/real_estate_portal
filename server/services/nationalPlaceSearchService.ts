@@ -469,8 +469,12 @@ export async function searchNationalPlaces(
       searchScopeKind: SCOPE_BY_LEVEL[level] as 'province' | 'metro_city' | 'locality',
       display: {
         typeLabel: TYPE_LABEL_BY_TYPE[row.placeType] || 'Place',
+        // The context is the place's immediate published parent, so a suggestion reads
+        // "Melville, Johannesburg" rather than "Gauteng, Johannesburg". The province stays
+        // on the result for a consumer that needs to disambiguate two places of the same
+        // name in the same parent.
         contextLabel:
-          level === 'province' ? undefined : [provinceName, regionName].filter(Boolean).join(' · '),
+          level === 'province' ? undefined : level === 'city' ? provinceName ?? undefined : regionName ?? undefined,
       },
       provinceSlug: published ? published.provinceSlug : provinceName ? slugify(provinceName) : '',
       ...(regionSlug ? { citySlug: regionSlug } : {}),

@@ -4,6 +4,7 @@ import { useGoogleMaps } from '@/hooks/useGoogleMaps';
 import { PROVINCE_SLUGS, isProvinceSearch } from '@/lib/locationUtils';
 import { slugify } from '@/lib/urlUtils';
 import { trpc } from '@/lib/trpc';
+import { suggestionContextLabel } from '@/lib/locationSuggestionContext';
 import { LocationNode } from '@/types/location';
 import { encodeCanonicalLocationId } from '../../../shared/locationAuthority';
 import type { SearchDiscoveryResult } from '../../../shared/searchDiscovery';
@@ -544,7 +545,9 @@ export function LocationAutosuggest({
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm text-gray-900 truncate">{s.label}</div>
                       <div className="text-xs text-gray-500 truncate">
-                        {[s.display.typeLabel, s.display.contextLabel].filter(Boolean).join(' · ')}
+                        {s.kind === 'canonical_location'
+                          ? suggestionContextLabel(s, discoverySuggestions)
+                          : [s.display.typeLabel, s.display.contextLabel].filter(Boolean).join(' · ')}
                       </div>
                     </div>
                     <div className="text-xs text-emerald-600 font-medium whitespace-nowrap">
