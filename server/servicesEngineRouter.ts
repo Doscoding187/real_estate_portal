@@ -11,13 +11,14 @@ import {
   SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
+  type ServiceProviderReviewReportReason,
 } from './services/servicesEngineService';
 import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
 import { getDb } from './db';
-import { users } from '../drizzle/schema';
+import { SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES, users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 const serviceCategorySchema = z.enum([
@@ -57,7 +58,9 @@ const reviewDecisionSchema = z.enum(
 const reviewReportDecisionSchema = z.enum(
   SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS as unknown as [string, ...string[]],
 );
-const reviewReportReasonSchema = z.enum(['abuse', 'spam', 'false_information', 'privacy', 'other']);
+const reviewReportReasonSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES as unknown as [string, ...string[]],
+);
 const serviceCodeSchema = z.string().trim().min(1).max(80);
 const requestKeySchema = z
   .string()
@@ -584,7 +587,7 @@ export const servicesEngineRouter = router({
         return await servicesEngineService.reportProviderReview({
           reviewId: input.reviewId,
           reporterUserId: user.id,
-          reason: input.reason as 'abuse' | 'spam' | 'false_information' | 'privacy' | 'other',
+          reason: input.reason as ServiceProviderReviewReportReason,
           detail: input.detail ?? null,
         });
       } catch (error: any) {
