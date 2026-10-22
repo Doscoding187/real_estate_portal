@@ -22,7 +22,15 @@ import { expect, test } from '../helpers/audit-network';
  */
 const clientErrors: string[] = [];
 
+/**
+ * The journey boots the whole application in a browser. A cold first load of a real page is not
+ * a five-second operation, especially on a fresh runner, so the journey waits for the page it
+ * actually means to see.
+ */
+const PAGE_READY_TIMEOUT = 30_000;
+
 test.beforeEach(async ({ page }) => {
+  test.setTimeout(120_000);
   clientErrors.length = 0;
   page.on('pageerror', error => clientErrors.push(error.message));
   page.on('console', message => {
@@ -60,10 +68,10 @@ async function openBuyHero(page: Page): Promise<Locator> {
 
 async function waitForSuggestionsOrEmptyState(page: Page, option: Locator) {
   await Promise.race([
-    option.first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => null),
+    option.first().waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT }).catch(() => null),
     page
       .getByText('No locations found')
-      .waitFor({ state: 'visible', timeout: 10_000 })
+      .waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT })
       .catch(() => null),
   ]);
 }
@@ -73,7 +81,9 @@ test.describe('Neutral geography routing', () => {
     test(`${path} serves discovery content and never SRP controls`, async ({ page }) => {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
 
-      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: heading }),
+      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
       await expect(
         page.locator('[data-testid="search-filters"], [data-testid="filters-sidebar"]'),
       ).toHaveCount(0);
@@ -86,7 +96,9 @@ test.describe('Neutral geography routing', () => {
   test('retired SRP-path geography URLs stay retired', async ({ page }) => {
     for (const path of RETIRED_SRP_GEOGRAPHY_PATHS) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Page not found' }),
+      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
       await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}$`));
     }
   });
