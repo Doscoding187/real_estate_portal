@@ -90,6 +90,8 @@
     "listingPreviewDemo": "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
     "homepageJourneyPreviewDemo": "server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts",
     "searchToLeadScenario": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
+    "b09Census": "server/_core/databaseAuthority/b09Census.ts",
+    "b09SyntheticBillingVerifier": "scripts/databaseAuthorityCli.ts b09:census:verify-billing",
     "plePublicationEntitlement": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
     "pleReviewerFixture": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
     "dataRoleManifest": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",

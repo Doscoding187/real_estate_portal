@@ -11,8 +11,75 @@ import type { DatabaseOperation, ResolvedDatabaseAuthority } from './types';
 export type AuthoritySqlConnection = {
   execute: (statement: string, values?: readonly unknown[]) => Promise<unknown>;
   query: (statement: string, values?: readonly unknown[]) => Promise<unknown>;
+  /** Bounded query capability. Present on canonical connections; optional for existing test doubles. */
+  queryBounded?: (
+    statement: string,
+    timeoutMs: number,
+    values?: readonly unknown[],
+  ) => Promise<unknown>;
+  /** Bounded transaction-control capability. B09 uses only these fixed commands. */
+  queryControlBounded?: (statement: string, timeoutMs: number) => Promise<unknown>;
+  /** Bounded, allow-listed synthetic billing inserts; exposed only to test-fixture operations. */
+  executeFixtureBounded?: (
+    statement: string,
+    timeoutMs: number,
+    values?: readonly unknown[],
+  ) => Promise<unknown>;
+  /** Server connection id used only to terminate this connection's own timed-out work. */
+  connectionId?: number;
+  isTerminated?: () => boolean;
+  destroy?: () => void;
   end: () => Promise<void>;
 };
+
+const MAX_AUTHORITY_QUERY_TIMEOUT_MS = 15_000;
+const MAX_AUTHORITY_CONTROL_TIMEOUT_MS = 1_000;
+const MAX_AUTHORITY_CANCEL_CLEANUP_MS = 3_000;
+const MAX_AUTHORITY_CONNECTION_END_MS = 1_000;
+const SERVER_EXECUTION_TIMEOUT_GRACE_MS = 1_000;
+
+class AuthorityOperationTimeout extends Error {
+  constructor() {
+    super('Authority operation timed out.');
+  }
+}
+
+async function awaitWithin<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error('Database query refused: timeout is outside the authority limit.');
+  }
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new AuthorityOperationTimeout()), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function maxExecutionTimeHint(statement: string, timeoutMs: number): string {
+  if (!/^\s*SELECT\b/i.test(statement) || statement.includes(';') || /\/\*\+/i.test(statement)) {
+    throw new Error('Database query refused: bounded reads require one static SELECT statement.');
+  }
+  return statement.replace(/^(\s*SELECT\b)/i, `$1 /*+ MAX_EXECUTION_TIME(${timeoutMs}) */`);
+}
+
+const SYNTHETIC_BILLING_INSERTS = new Set([
+  'INSERT INTO billing_invoices (owner_type, owner_id, billable_account_id, subscription_id, invoice_number, payment_reference, amount_due) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  'INSERT INTO billing_payments (invoice_id, subscription_id, owner_type, owner_id, billable_account_id, amount, payment_reference, idempotency_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  'INSERT INTO billing_payment_documents (payment_id, invoice_id, owner_type, owner_id, billable_account_id, storage_key, original_file_name, mime_type, file_size_bytes, sha256_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  'INSERT INTO billing_audit_events (owner_type, owner_id, billable_account_id, subscription_id, invoice_id, payment_id, event_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+]);
+
+function assertSyntheticBillingInsert(statement: string): void {
+  if (!SYNTHETIC_BILLING_INSERTS.has(statement)) {
+    throw new Error(
+      'Database fixture refused: only an exact bounded synthetic billing insert is allowed.',
+    );
+  }
+}
 
 export type AuthorityRuntimePool = {
   pool: mysql.Pool;
@@ -51,6 +118,7 @@ const SQL_CONNECTION_OPERATIONS: readonly DatabaseOperation[] = [
   'runtime-identities-provision',
   'runtime-ledger-read-grant',
   'b08-behavior-verify',
+  'b09-source-census',
   'read-only-connect',
   'migration-plan',
   'migration-apply',
@@ -107,10 +175,184 @@ export async function createAuthoritySqlConnection(
   try {
     const config = buildMysqlConnectionSecurityConfig(databaseUrl, authority.context.runtimeMode);
     const connection = await mysql.createConnection({ ...config, timezone: 'Z' });
+    const connectionId = Number(connection.threadId);
+    if (!Number.isSafeInteger(connectionId) || connectionId < 1) {
+      connection.destroy();
+      throw new Error('Database connection refused: server connection identity is unavailable.');
+    }
+    let terminated = false;
+    const destroy = (): void => {
+      if (terminated) return;
+      terminated = true;
+      connection.destroy();
+    };
+    const terminateTimedOutWork = async (pendingQuery: Promise<unknown>): Promise<void> => {
+      const deadline = Date.now() + MAX_AUTHORITY_CANCEL_CLEANUP_MS;
+      let cancellationConnection: mysql.Connection | undefined;
+      const remaining = (): number => Math.max(0, deadline - Date.now());
+      const abandon = (): void => {
+        cancellationConnection?.destroy();
+        destroy();
+      };
+      try {
+        const connectTimeout = Math.min(MAX_AUTHORITY_CONTROL_TIMEOUT_MS, remaining());
+        if (connectTimeout < 1) throw new AuthorityOperationTimeout();
+        const opening = mysql.createConnection({
+          ...config,
+          timezone: 'Z',
+          connectTimeout,
+        });
+        try {
+          cancellationConnection = await awaitWithin(opening, connectTimeout);
+        } catch (error) {
+          void opening.then(
+            candidate => candidate.destroy(),
+            () => undefined,
+          );
+          throw error;
+        }
+        const killTimeout = Math.min(MAX_AUTHORITY_CONTROL_TIMEOUT_MS, remaining());
+        if (killTimeout < 1) throw new AuthorityOperationTimeout();
+        await awaitWithin(
+          cancellationConnection.query(`KILL CONNECTION ${connectionId}`),
+          killTimeout,
+        );
+        const settleTimeout = remaining();
+        if (settleTimeout < 1) throw new AuthorityOperationTimeout();
+        await awaitWithin(
+          pendingQuery.then(
+            () => undefined,
+            () => undefined,
+          ),
+          settleTimeout,
+        );
+        terminated = true;
+      } catch {
+        abandon();
+        throw new Error(
+          `Database query refused: execution deadline expired; the server did not confirm termination within ${MAX_AUTHORITY_CANCEL_CLEANUP_MS} ms. Preserve the disposable target and review Authority status.`,
+        );
+      } finally {
+        cancellationConnection?.destroy();
+      }
+      // KILL CONNECTION closes the read-only transaction as well as its query.
+      // Closing the local socket makes the client-side terminal state explicit.
+      connection.destroy();
+    };
     const wrapped: AuthoritySqlConnection = {
       execute: (statement, values) => connection.execute(statement, values as any),
       query: (statement, values) => connection.query(statement, values as any),
-      end: () => connection.end(),
+      queryBounded: async (statement, timeoutMs, values) => {
+        if (
+          !Number.isSafeInteger(timeoutMs) ||
+          timeoutMs < 1 ||
+          timeoutMs > MAX_AUTHORITY_QUERY_TIMEOUT_MS
+        ) {
+          throw new Error(
+            'Database query refused: bounded timeout is outside the authority limit.',
+          );
+        }
+        if (terminated) {
+          throw new Error('Database query refused: authorized connection has been terminated.');
+        }
+        const serverTimeoutMs = Math.min(
+          MAX_AUTHORITY_QUERY_TIMEOUT_MS,
+          timeoutMs + SERVER_EXECUTION_TIMEOUT_GRACE_MS,
+        );
+        const serverBoundedStatement = maxExecutionTimeHint(statement, serverTimeoutMs);
+        const pendingQuery = connection.query(serverBoundedStatement, values as any);
+        try {
+          return await awaitWithin(pendingQuery, timeoutMs);
+        } catch (error) {
+          if (!(error instanceof AuthorityOperationTimeout)) throw error;
+          await terminateTimedOutWork(pendingQuery);
+          throw new Error(
+            'Database query refused: execution deadline expired; the server session was terminated and the active query settled.',
+          );
+        }
+      },
+      queryControlBounded: async (statement, timeoutMs) => {
+        const command = statement.trim().toUpperCase();
+        const allowedCommands = ['START TRANSACTION READ ONLY', 'COMMIT', 'ROLLBACK'];
+        if (decision.operation === 'test-fixture') allowedCommands.push('START TRANSACTION');
+        if (!allowedCommands.includes(command)) {
+          throw new Error(
+            'Database query refused: bounded transaction control is not allow-listed.',
+          );
+        }
+        if (
+          !Number.isSafeInteger(timeoutMs) ||
+          timeoutMs < 1 ||
+          timeoutMs > MAX_AUTHORITY_CONTROL_TIMEOUT_MS
+        ) {
+          throw new Error(
+            'Database query refused: transaction-control timeout is outside the authority limit.',
+          );
+        }
+        if (terminated) {
+          throw new Error('Database query refused: authorized connection has been terminated.');
+        }
+        const pendingCommand = connection.query(statement);
+        try {
+          return await awaitWithin(pendingCommand, timeoutMs);
+        } catch (error) {
+          if (!(error instanceof AuthorityOperationTimeout)) throw error;
+          await terminateTimedOutWork(pendingCommand);
+          throw new Error(
+            `Database query refused: transaction control exceeded ${timeoutMs} ms; the server session was terminated.`,
+          );
+        }
+      },
+      ...(decision.operation === 'test-fixture'
+        ? {
+            executeFixtureBounded: async (
+              statement: string,
+              timeoutMs: number,
+              values?: readonly unknown[],
+            ) => {
+              assertSyntheticBillingInsert(statement);
+              if (
+                !Number.isSafeInteger(timeoutMs) ||
+                timeoutMs < 1 ||
+                timeoutMs > MAX_AUTHORITY_QUERY_TIMEOUT_MS
+              ) {
+                throw new Error(
+                  'Database fixture refused: insert timeout is outside the authority limit.',
+                );
+              }
+              if (terminated) {
+                throw new Error(
+                  'Database fixture refused: authorized connection has been terminated.',
+                );
+              }
+              const pendingInsert = connection.execute(statement, values as any);
+              try {
+                return await awaitWithin(pendingInsert, timeoutMs);
+              } catch (error) {
+                if (!(error instanceof AuthorityOperationTimeout)) throw error;
+                await terminateTimedOutWork(pendingInsert);
+                throw new Error(
+                  'Database fixture refused: insert deadline expired; the server session was terminated and the active statement settled.',
+                );
+              }
+            },
+          }
+        : {}),
+      connectionId,
+      isTerminated: () => terminated,
+      destroy,
+      end: async () => {
+        if (terminated) return;
+        try {
+          await awaitWithin(connection.end(), MAX_AUTHORITY_CONNECTION_END_MS);
+          terminated = true;
+        } catch {
+          destroy();
+          throw new Error(
+            `Database query refused: connection cleanup exceeded ${MAX_AUTHORITY_CONNECTION_END_MS} ms; the client socket was destroyed.`,
+          );
+        }
+      },
     };
     try {
       await configureUtcSession(wrapped);

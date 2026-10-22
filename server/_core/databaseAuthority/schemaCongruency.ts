@@ -569,7 +569,10 @@ function finishSchema(tables: NormalizedTable[]): NormalizedSchema {
   return Object.freeze({ ...canonical, digest: schemaDigest(canonical) });
 }
 
-export function normalizedDesiredSchema(schemaExports: Record<string, unknown>): NormalizedSchema {
+export function normalizedDesiredSchema(
+  schemaExports: Record<string, unknown>,
+  tableScope?: readonly string[],
+): NormalizedSchema {
   const byName = new Map<string, MySqlTable>();
   for (const value of Object.values(schemaExports)) {
     if (!is(value, MySqlTable)) continue;
@@ -582,78 +585,92 @@ export function normalizedDesiredSchema(schemaExports: Record<string, unknown>):
     byName.set(config.name, value);
   }
 
-  const tables = [...byName.values()].map(table => {
-    const config = getTableConfig(table);
-    const columns: NormalizedColumn[] = config.columns.map((column: any, ordinal) => {
-      const type = normalizedType(column.getSQLType());
-      return {
-        name: column.name,
-        ordinal: ordinal + 1,
-        type,
-        nullable: !column.notNull,
-        default: desiredDefault(column, type),
-        autoIncrement: Boolean(column.autoIncrement),
-        onUpdateCurrentTimestamp: Boolean(column.hasOnUpdateNow || column.onUpdateFn),
-      };
-    });
+  const requestedNames = tableScope === undefined ? null : [...tableScope];
+  const requested = requestedNames === null ? null : new Set(requestedNames);
+  if (
+    requestedNames &&
+    (requestedNames.length === 0 ||
+      !requested ||
+      requested.size !== requestedNames.length ||
+      requestedNames.some(name => !/^[A-Za-z0-9_]+$/.test(name) || !byName.has(name)))
+  ) {
+    throw new Error('Canonical schema table scope is empty, duplicated, or unsupported.');
+  }
 
-    const indexes: NormalizedIndex[] = config.indexes.map((index: any) => ({
-      name: index.config.name,
-      unique: Boolean(index.config.unique),
-      columns: index.config.columns.map(indexColumnName),
-    }));
-    const primaryColumns = [
-      ...config.columns.filter((column: any) => column.primary).map((column: any) => column.name),
-      ...config.primaryKeys.flatMap((key: any) => key.columns.map((column: any) => column.name)),
-    ];
-    if (primaryColumns.length > 0) {
-      indexes.push({ name: 'PRIMARY', unique: true, columns: [...new Set(primaryColumns)] });
-    }
-    for (const constraint of config.uniqueConstraints as any[]) {
-      indexes.push({
-        name: constraint.name,
-        unique: true,
-        columns: constraint.columns.map((column: any) => column.name),
+  const tables = [...byName.values()]
+    .filter(table => requested === null || requested.has(getTableConfig(table).name))
+    .map(table => {
+      const config = getTableConfig(table);
+      const columns: NormalizedColumn[] = config.columns.map((column: any, ordinal) => {
+        const type = normalizedType(column.getSQLType());
+        return {
+          name: column.name,
+          ordinal: ordinal + 1,
+          type,
+          nullable: !column.notNull,
+          default: desiredDefault(column, type),
+          autoIncrement: Boolean(column.autoIncrement),
+          onUpdateCurrentTimestamp: Boolean(column.hasOnUpdateNow || column.onUpdateFn),
+        };
       });
-    }
-    for (const column of config.columns as any[]) {
-      if (column.isUnique) {
+
+      const indexes: NormalizedIndex[] = config.indexes.map((index: any) => ({
+        name: index.config.name,
+        unique: Boolean(index.config.unique),
+        columns: index.config.columns.map(indexColumnName),
+      }));
+      const primaryColumns = [
+        ...config.columns.filter((column: any) => column.primary).map((column: any) => column.name),
+        ...config.primaryKeys.flatMap((key: any) => key.columns.map((column: any) => column.name)),
+      ];
+      if (primaryColumns.length > 0) {
+        indexes.push({ name: 'PRIMARY', unique: true, columns: [...new Set(primaryColumns)] });
+      }
+      for (const constraint of config.uniqueConstraints as any[]) {
         indexes.push({
-          name: column.uniqueName,
+          name: constraint.name,
           unique: true,
-          columns: [column.name],
+          columns: constraint.columns.map((column: any) => column.name),
         });
       }
-    }
+      for (const column of config.columns as any[]) {
+        if (column.isUnique) {
+          indexes.push({
+            name: column.uniqueName,
+            unique: true,
+            columns: [column.name],
+          });
+        }
+      }
 
-    const foreignKeys: NormalizedForeignKey[] = (config.foreignKeys as any[]).map(key => {
-      const reference = key.reference();
-      const columns = reference.columns.map((column: any) => column.name);
-      const referencedTable = tableName(reference.foreignTable);
-      const referencedColumns = reference.foreignColumns.map((column: any) => column.name);
+      const foreignKeys: NormalizedForeignKey[] = (config.foreignKeys as any[]).map(key => {
+        const reference = key.reference();
+        const columns = reference.columns.map((column: any) => column.name);
+        const referencedTable = tableName(reference.foreignTable);
+        const referencedColumns = reference.foreignColumns.map((column: any) => column.name);
+        return {
+          name: canonicalForeignKeyName(columns, referencedTable, referencedColumns),
+          columns,
+          referencedTable,
+          referencedColumns,
+          onDelete: normalizedAction(key.onDelete),
+          onUpdate: normalizedAction(key.onUpdate),
+        };
+      });
+      const checks: NormalizedCheck[] = (config.checks as any[]).map(check => ({
+        name: check.name,
+        expression: normalizeSqlExpression(dialect.sqlToQuery(check.value).sql),
+        enforced: true,
+      }));
+
       return {
-        name: canonicalForeignKeyName(columns, referencedTable, referencedColumns),
+        name: config.name,
         columns,
-        referencedTable,
-        referencedColumns,
-        onDelete: normalizedAction(key.onDelete),
-        onUpdate: normalizedAction(key.onUpdate),
+        indexes: indexes.sort((left, right) => left.name.localeCompare(right.name)),
+        foreignKeys: foreignKeys.sort((left, right) => left.name.localeCompare(right.name)),
+        checks: checks.sort((left, right) => left.name.localeCompare(right.name)),
       };
     });
-    const checks: NormalizedCheck[] = (config.checks as any[]).map(check => ({
-      name: check.name,
-      expression: normalizeSqlExpression(dialect.sqlToQuery(check.value).sql),
-      enforced: true,
-    }));
-
-    return {
-      name: config.name,
-      columns,
-      indexes: indexes.sort((left, right) => left.name.localeCompare(right.name)),
-      foreignKeys: foreignKeys.sort((left, right) => left.name.localeCompare(right.name)),
-      checks: checks.sort((left, right) => left.name.localeCompare(right.name)),
-    };
-  });
   return finishSchema(tables);
 }
 
@@ -711,7 +728,26 @@ export async function normalizedPhysicalSchema(
   connection: AuthoritySqlConnection,
   provider: 'mysql' | 'tidb' | 'unknown' = 'unknown',
   desired?: NormalizedSchema,
+  tableScope?: readonly string[],
 ): Promise<NormalizedSchema> {
+  const scopedNames = tableScope === undefined ? null : [...tableScope];
+  if (scopedNames) {
+    const desiredNames = desired?.tables.map(table => table.name) ?? [];
+    if (
+      !desired ||
+      scopedNames.length === 0 ||
+      new Set(scopedNames).size !== scopedNames.length ||
+      scopedNames.some(name => !/^[A-Za-z0-9_]+$/.test(name)) ||
+      desiredNames.length !== scopedNames.length ||
+      desiredNames.some(name => !scopedNames.includes(name))
+    ) {
+      throw new Error('Physical schema table scope does not exactly match the desired mapping.');
+    }
+  }
+  const scopedFilter = (column: string): string => {
+    if (!scopedNames) return '';
+    return ` AND ${column} IN (${scopedNames.map(name => `'${name}'`).join(', ')})`;
+  };
   let lowerCaseTableNames = 0;
   if (provider === 'mysql' && desired) {
     const settingRows = await queryRows(
@@ -727,7 +763,7 @@ export async function normalizedPhysicalSchema(
   const excluded = new Set<string>(RUNNER_CONTROL_TABLES);
   const tableRows = await queryRows(
     connection,
-    "SELECT TABLE_NAME AS table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME",
+    `SELECT TABLE_NAME AS table_name FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_TYPE = 'BASE TABLE'${scopedFilter('TABLE_NAME')} ORDER BY TABLE_NAME`,
   );
   const names = tableRows
     .map(row => String(rowValue(row, 'table_name') ?? ''))
@@ -738,7 +774,7 @@ export async function normalizedPhysicalSchema(
 
   const columnRows = await queryRows(
     connection,
-    'SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name, ORDINAL_POSITION AS ordinal_position, COLUMN_TYPE AS column_type, IS_NULLABLE AS is_nullable, COLUMN_DEFAULT AS column_default, EXTRA AS extra FROM information_schema.columns WHERE table_schema = DATABASE() ORDER BY TABLE_NAME, ORDINAL_POSITION',
+    `SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name, ORDINAL_POSITION AS ordinal_position, COLUMN_TYPE AS column_type, IS_NULLABLE AS is_nullable, COLUMN_DEFAULT AS column_default, EXTRA AS extra FROM information_schema.columns WHERE table_schema = DATABASE()${scopedFilter('TABLE_NAME')} ORDER BY TABLE_NAME, ORDINAL_POSITION`,
   );
   for (const row of columnRows) {
     const table = tables.get(String(rowValue(row, 'table_name') ?? ''));
@@ -758,7 +794,7 @@ export async function normalizedPhysicalSchema(
 
   const indexRows = await queryRows(
     connection,
-    'SELECT TABLE_NAME AS table_name, INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, SEQ_IN_INDEX AS sequence_in_index, COLUMN_NAME AS column_name FROM information_schema.statistics WHERE table_schema = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX',
+    `SELECT TABLE_NAME AS table_name, INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, SEQ_IN_INDEX AS sequence_in_index, COLUMN_NAME AS column_name FROM information_schema.statistics WHERE table_schema = DATABASE()${scopedFilter('TABLE_NAME')} ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX`,
   );
   const indexGroups = new Map<string, NormalizedIndex & { tableName: string }>();
   for (const row of indexRows) {
@@ -782,7 +818,7 @@ export async function normalizedPhysicalSchema(
 
   const foreignKeyRows = await queryRows(
     connection,
-    'SELECT kcu.TABLE_NAME AS table_name, kcu.CONSTRAINT_NAME AS constraint_name, kcu.COLUMN_NAME AS column_name, kcu.ORDINAL_POSITION AS ordinal_position, kcu.REFERENCED_TABLE_NAME AS referenced_table_name, kcu.REFERENCED_COLUMN_NAME AS referenced_column_name, rc.DELETE_RULE AS delete_rule, rc.UPDATE_RULE AS update_rule FROM information_schema.KEY_COLUMN_USAGE kcu INNER JOIN information_schema.REFERENTIAL_CONSTRAINTS rc ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA AND rc.TABLE_NAME = kcu.TABLE_NAME AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME WHERE kcu.CONSTRAINT_SCHEMA = DATABASE() AND kcu.REFERENCED_TABLE_NAME IS NOT NULL ORDER BY kcu.TABLE_NAME, kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION',
+    `SELECT kcu.TABLE_NAME AS table_name, kcu.CONSTRAINT_NAME AS constraint_name, kcu.COLUMN_NAME AS column_name, kcu.ORDINAL_POSITION AS ordinal_position, kcu.REFERENCED_TABLE_NAME AS referenced_table_name, kcu.REFERENCED_COLUMN_NAME AS referenced_column_name, rc.DELETE_RULE AS delete_rule, rc.UPDATE_RULE AS update_rule FROM information_schema.KEY_COLUMN_USAGE kcu INNER JOIN information_schema.REFERENTIAL_CONSTRAINTS rc ON rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA AND rc.TABLE_NAME = kcu.TABLE_NAME AND rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME WHERE kcu.CONSTRAINT_SCHEMA = DATABASE() AND kcu.REFERENCED_TABLE_NAME IS NOT NULL${scopedFilter('kcu.TABLE_NAME')} ORDER BY kcu.TABLE_NAME, kcu.CONSTRAINT_NAME, kcu.ORDINAL_POSITION`,
   );
   const foreignKeyGroups = new Map<string, NormalizedForeignKey & { tableName: string }>();
   for (const row of foreignKeyRows) {
@@ -863,31 +899,34 @@ export async function normalizedPhysicalSchema(
   try {
     portableCheckRows = await queryRows(
       connection,
-      "SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause, tc.ENFORCED AS enforced FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK' ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME",
+      `SELECT tc.TABLE_NAME AS table_name, tc.CONSTRAINT_NAME AS constraint_name, cc.CHECK_CLAUSE AS check_clause, tc.ENFORCED AS enforced FROM information_schema.TABLE_CONSTRAINTS tc INNER JOIN information_schema.CHECK_CONSTRAINTS cc ON cc.CONSTRAINT_SCHEMA = tc.CONSTRAINT_SCHEMA AND cc.CONSTRAINT_NAME = tc.CONSTRAINT_NAME WHERE tc.CONSTRAINT_SCHEMA = DATABASE() AND tc.CONSTRAINT_TYPE = 'CHECK'${scopedFilter('tc.TABLE_NAME')} ORDER BY tc.TABLE_NAME, tc.CONSTRAINT_NAME`,
     );
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Database query refused:')) throw error;
     // Some TiDB versions do not support the portable MySQL CHECK inventory;
     // retain the failure and require the provider inventory to supply proof.
     portableInventoryError = error;
   }
   addCheckRows(portableCheckRows);
-  // TiDB's provider-specific inventory includes the owning table. Merge it
-  // with the portable catalog instead of treating a partial portable result as
-  // authoritative. MySQL-compatible providers that do not expose this view
-  // simply reject the read and retain their portable evidence.
+  // TiDB's provider-specific inventory includes the owning table. Use it only
+  // for the explicitly selected TiDB provider; a MySQL physical mapping must
+  // be established from MySQL's portable catalog and never probes a second
+  // provider's metadata surface as a fallback.
   let tidbCheckRows: Array<Record<string, unknown>> = [];
   let tidbInventoryError: unknown = null;
-  try {
-    tidbCheckRows = await queryRows(
-      connection,
-      'SELECT TABLE_NAME AS table_name, CONSTRAINT_NAME AS constraint_name, CHECK_CLAUSE AS check_clause FROM information_schema.TIDB_CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() ORDER BY TABLE_NAME, CONSTRAINT_NAME',
-    );
-  } catch (error) {
-    // Non-TiDB providers do not expose this inventory. It is safe to rely on
-    // the portable inventory only when that inventory itself was readable.
-    tidbInventoryError = error;
+  if (provider === 'tidb') {
+    try {
+      tidbCheckRows = await queryRows(
+        connection,
+        `SELECT TABLE_NAME AS table_name, CONSTRAINT_NAME AS constraint_name, CHECK_CLAUSE AS check_clause FROM information_schema.TIDB_CHECK_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()${scopedFilter('TABLE_NAME')} ORDER BY TABLE_NAME, CONSTRAINT_NAME`,
+      );
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('Database query refused:'))
+        throw error;
+      tidbInventoryError = error;
+    }
   }
-  if (portableInventoryError && tidbInventoryError) {
+  if (portableInventoryError && (provider !== 'tidb' || tidbInventoryError)) {
     throw new Error(
       'Physical CHECK metadata could not be read from either the portable or TiDB inventory.',
     );
@@ -941,8 +980,7 @@ export async function normalizedPhysicalSchema(
       table.name = desiredByFold.get(table.name.toLowerCase()) ?? table.name;
       for (const foreignKey of table.foreignKeys) {
         foreignKey.referencedTable =
-          desiredByFold.get(foreignKey.referencedTable.toLowerCase()) ??
-          foreignKey.referencedTable;
+          desiredByFold.get(foreignKey.referencedTable.toLowerCase()) ?? foreignKey.referencedTable;
         foreignKey.name = canonicalForeignKeyName(
           foreignKey.columns,
           foreignKey.referencedTable,

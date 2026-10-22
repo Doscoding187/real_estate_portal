@@ -1,0 +1,323 @@
+{
+  "evidenceVersion": 2,
+  "workstream": "B09",
+  "status": "local-synthetic-runner-verification-passed; source-census-and-final-disposition-open",
+  "recordedAt": "2026-09-27T21:10:23.909Z",
+  "source": {
+    "branch": "feat/b09-db-census-runner-20260927",
+    "baseCommit": "a05868c66f493e3cbc972a119074c91a10797777",
+    "baseTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "acceptedProductCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "changedSourceFileCount": 13,
+    "changedSourceFileManifestSha256": "36056244f3fc27b697647f307a13cea14816910a18c1a18911dfd71a3df61f4b",
+    "changedSourceFileHashes": [
+      {
+        "file": "docs/database-authority/authority-manifest.json",
+        "sha256": "d687034449249125c85b89e4723f76ede1c7ce7b0860f8fb98e8e181b5f2c36c"
+      },
+      {
+        "file": "docs/database-authority/connection-path-inventory.json",
+        "sha256": "a3012e59664bcacbe4ad0977191a96b74fe7b86206829611bb160c7a9d0e7720"
+      },
+      {
+        "file": "docs/database-authority/operation-policy.json",
+        "sha256": "7760864e3b86a1a99ff8055d026f3c092761dccea75f131f1a8d032d44a692cf"
+      },
+      {
+        "file": "package.json",
+        "sha256": "0e9f0c353d469fa270b74af16d1f6eeccdde9c8ba44c19ddd44782dd70a5d9b3"
+      },
+      {
+        "file": "scripts/databaseAuthorityCli.ts",
+        "sha256": "f6caea6e1ef0bde87f9459234f948916ae5daf4a9a4669079542208b609f694b"
+      },
+      {
+        "file": "scripts/databaseAuthorityStatus.ts",
+        "sha256": "6606d00d0ed6c06dc4101a7e31ea13ba7e6b9158402395fbb2a623ecae88c05c"
+      },
+      {
+        "file": "server/_core/databaseAuthority/__tests__/b09Census.test.ts",
+        "sha256": "f63b36297d538f95bd47a5df3c8c12a077a65eb0c937228f798ba3dc13286b87"
+      },
+      {
+        "file": "server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts",
+        "sha256": "208f486124d4b3b129ee4bd085a8b7d0f4a321e8e5eb8df5da7d82b6ffefb477"
+      },
+      {
+        "file": "server/_core/databaseAuthority/b09BillingSyntheticVerification.ts",
+        "sha256": "89357e59e649bc72f4b5b6af579485da42b549a4e7bb6ec210680e7650471831"
+      },
+      {
+        "file": "server/_core/databaseAuthority/b09Census.ts",
+        "sha256": "fc5f06ea4b10a2020de46eeb2a3a1c695d906a7d7020f20e53fa65826412973c"
+      },
+      {
+        "file": "server/_core/databaseAuthority/connectionAuthority.ts",
+        "sha256": "fd7322e8d203f2e6d4eda4f722bcc89328f2864ce009437297bf0231b02b4f9a"
+      },
+      {
+        "file": "server/_core/databaseAuthority/schemaCongruency.ts",
+        "sha256": "3d832ebe5dfbd118df0a3adfadcee978550711e2b275aa9d94ac7909be420be1"
+      },
+      {
+        "file": "server/_core/databaseAuthority/types.ts",
+        "sha256": "95a3ad03480a6399e4c5933ff1f6088ec447bdb60374fc16b7f407be5ab51bba"
+      }
+    ],
+    "runnerCodeSha256": "b92f877daeb618ee46f1fc6c6636e577cdeca34b056e08de4e8c8c51e308d31f",
+    "querySha256": "eb12f8f58c71225575051757a59a3e3f1349aa66dcd7146a20434e5e1fa58fdb",
+    "queryMetrics": 79,
+    "queryTableScope": {
+      "migrationControlTables": 2,
+      "applicationTables": 24,
+      "total": 26
+    },
+    "lockfileChanged": false
+  },
+  "target": {
+    "targetFingerprintSha256": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+    "targetClass": "disposable-worktree",
+    "sanitizedDatabaseIdentity": "mysql://127.0.0.1:3307/listify_wt_b09_db_census_runner_20260927_87bba57347db",
+    "ownershipKey": "87bba57347db3a7f094a5310",
+    "localAuthorityServiceFingerprintSha256": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "credentialClass": "local-owner",
+    "lifecycle": "newly created by db:worktree:create for this verification; disposed after checks",
+    "migrationManifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "migrationPlanId": "dd6e37392b9e671285f8d5cf",
+    "migrationPlanDigest": "dd6e37392b9e671285f8d5cf45503a0d09c2f56da6cc6571bd5080c84977f1d4",
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "migrationsAppliedFromEmpty": 95,
+    "migrationLedgerRowsMatched": 95,
+    "schemaCongruency": {
+      "result": "passed",
+      "desiredDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+      "physicalDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+      "canonicalTables": 214,
+      "checkConstraints": {
+        "total": 23,
+        "enforced": 23
+      }
+    }
+  },
+  "toolchain": {
+    "frozenInstallCommand": "pnpm install --frozen-lockfile",
+    "frozenInstallResult": "passed; lockfile unchanged",
+    "node": "v22.22.3",
+    "pnpm": "10.4.1",
+    "typeCheck": {
+      "command": "pnpm check",
+      "result": "passed"
+    },
+    "authorityStaticGate": {
+      "command": "pnpm db:authority:check",
+      "result": "passed",
+      "testFiles": 37,
+      "tests": 337,
+      "classifiedUtilitySurfaces": 120,
+      "canonicalSchemaTables": 214,
+      "activeMigrations": 95
+    },
+    "focusedAuthoritySuites": {
+      "command": "pnpm exec vitest run server/_core/databaseAuthority/__tests__/b09Census.test.ts server/_core/databaseAuthority/__tests__/schemaCongruency.test.ts --reporter=basic",
+      "result": "passed",
+      "testFiles": 2,
+      "tests": 47
+    },
+    "gitDiffCheck": "passed"
+  },
+  "fixturePreparation": {
+    "canonicalGeography": {
+      "version": "canonical-geography-v2",
+      "provinces": 9,
+      "cities": 340,
+      "suburbs": 1089
+    },
+    "canonicalFoundation": {
+      "version": "canonical-launch-foundation-v1",
+      "developerLaunchAccess": true
+    },
+    "acceptanceScenario": {
+      "version": "search-to-lead-v5",
+      "result": "passed",
+      "scenarioCount": 3,
+      "expectedEligibleDevelopments": 1
+    },
+    "scenarioExecution": "env NODE_ENV=test APP_ENV=test pnpm db:scenario:verify",
+    "localSubstitutes": [
+      "Redis used the in-memory fallback because REDIS_URL was not configured.",
+      "Email used the mock/log adapter with invalid.example recipients.",
+      "The local listing-media adapter was selected; external media storage was not configured or inspected."
+    ]
+  },
+  "census": {
+    "commands": [
+      "pnpm db:b09:census -- --authorization-file=<private temporary authorization file>",
+      "pnpm db:b09:census:verify-timeout -- --authorization-file=<same private temporary authorization file>"
+    ],
+    "authorizationDocumentSha256": "a2cc463c037cf7f371c648f8d26b5bafb4112a3a13e5b345bb0b6dc811d4f58e",
+    "authorizationFileMode": "0600",
+    "authorizationScope": "user-authorized disposable synthetic verification only; private file removed after cleanup",
+    "scopeId": "b09-launch-data-aggregate-v2",
+    "schemaMappingId": "canonical-launch-0094-v2",
+    "elapsedMsAfterFixtureRollback": 105,
+    "maximumExecutionMs": 15000,
+    "maximumResultRows": 1,
+    "resultRows": 1,
+    "migrationLineageVerified": true,
+    "physicalMappingVerified": true,
+    "sanitization": "79 allow-listed aggregate integer counts only; no identifiers or source values returned",
+    "countsAfterFixtureRollback": {
+      "users_total": "7",
+      "users_super_admin": "1",
+      "users_agent": "2",
+      "users_agency_admin": "2",
+      "users_developer": "2",
+      "users_missing_agency": "0",
+      "agencies_total": "3",
+      "agents_total": "2",
+      "agents_missing_user": "0",
+      "agents_missing_agency": "0",
+      "developer_organisations_total": "2",
+      "developer_organisations_pending": "0",
+      "developer_organisations_approved": "2",
+      "developer_memberships_total": "2",
+      "developer_memberships_missing_organisation": "0",
+      "developer_memberships_missing_user": "0",
+      "developer_organisations_without_active_owner": "0",
+      "catalogue_publishers_total": "3",
+      "catalogue_publishers_platform_reference": "1",
+      "catalogue_publishers_developer_first_party": "2",
+      "catalogue_publishers_authority_relationship_mismatch": "0",
+      "developments_total": "1",
+      "developments_published": "1",
+      "developments_published_without_publisher": "0",
+      "development_units_total": "0",
+      "development_units_missing_development": "0",
+      "development_drafts_total": "0",
+      "development_drafts_without_canonical_organisation": "0",
+      "development_drafts_missing_publisher": "0",
+      "listings_total": "8",
+      "listings_published": "5",
+      "listings_missing_owner": "0",
+      "listings_missing_agent": "0",
+      "listings_missing_agency": "0",
+      "listings_owner_agency_mismatch": "0",
+      "properties_total": "9",
+      "properties_published": "0",
+      "properties_missing_owner": "0",
+      "properties_missing_source_listing": "0",
+      "properties_missing_development": "0",
+      "published_properties_without_image_pointer": "0",
+      "property_images_total": "13",
+      "property_images_missing_property": "0",
+      "videos_total": "0",
+      "videos_ready": "0",
+      "videos_missing_owner_relationship": "0",
+      "videos_without_owner": "0",
+      "leads_total": "5",
+      "leads_missing_listing": "0",
+      "leads_missing_property": "0",
+      "leads_missing_development": "0",
+      "leads_missing_agency": "0",
+      "leads_missing_agent": "0",
+      "leads_missing_assignee": "0",
+      "leads_assigned_across_agency": "0",
+      "lead_activities_total": "0",
+      "lead_activities_missing_lead": "0",
+      "lead_activities_missing_user": "0",
+      "prospect_identities_total": "0",
+      "prospect_identities_missing_user": "0",
+      "billable_accounts_total": "4",
+      "billable_accounts_owner_shape_or_reference_issue": "0",
+      "subscriptions_total": "4",
+      "subscriptions_owner_relationship_issue": "0",
+      "billing_invoices_total": "0",
+      "billing_invoices_missing_account_or_subscription": "0",
+      "billing_invoices_owner_relationship_issue": "0",
+      "billing_payments_total": "0",
+      "billing_payments_owner_relationship_issue": "0",
+      "billing_payment_documents_total": "0",
+      "billing_payment_documents_owner_relationship_issue": "0",
+      "billing_payment_documents_not_private": "0",
+      "billing_audit_events_total": "0",
+      "billing_audit_events_missing_account": "0",
+      "billing_audit_events_owner_relationship_issue": "0",
+      "audit_logs_total": "0",
+      "audit_logs_missing_user": "0",
+      "managerial_audit_logs_total": "0",
+      "managerial_audit_logs_missing_actor": "0"
+    }
+  },
+  "timeoutVerification": {
+    "command": "pnpm db:b09:census:verify-timeout -- --authorization-file=<private temporary authorization file>",
+    "statement": "fixed synthetic SELECT SLEEP(30) probe; result discarded",
+    "requestedClientDeadlineMs": 200,
+    "cancellationCleanupLimitMs": 3000,
+    "observedElapsedMs": 211,
+    "ownServerSessionKilled": true,
+    "activeSessionCountAfterCancellation": 0,
+    "readOnlyTransactionReleasedByConnectionTermination": true
+  },
+  "unchangedLedgerInvalidPhysicalMappingCase": {
+    "test": "server/_core/databaseAuthority/__tests__/b09Census.test.ts: unchanged full migration ledger with absent scoped physical tables",
+    "migrationLedgerRows": 95,
+    "latestMigrationFilenameUnchanged": "0094_content_topics_primary_key.sql",
+    "syntheticInvalidMapping": "physical information_schema mapping omitted the approved scoped application tables",
+    "rejectedBeforeAggregateQuery": true,
+    "databaseCountsQueryExecuted": false,
+    "verificationMode": "synthetic mocked metadata; no manual DDL was used because Database Authority prohibits manual schema mutation"
+  },
+  "billingOwnershipVerification": {
+    "command": "pnpm db:b09:census:verify-billing",
+    "executionBoundMs": 15000,
+    "elapsedMs": 48,
+    "transaction": "bounded disposable-target transaction; all fixture writes rolled back within the 1000 ms rollback limit",
+    "syntheticRowsInsertedInsideTransaction": {
+      "invoices": 2,
+      "payments": 1,
+      "privatePaymentDocuments": 1,
+      "auditEvents": 1
+    },
+    "anomalyDeltas": {
+      "billing_invoices_owner_relationship_issue": "1",
+      "billing_payments_owner_relationship_issue": "1",
+      "billing_payment_documents_owner_relationship_issue": "1",
+      "billing_audit_events_owner_relationship_issue": "1"
+    },
+    "identifiersAndFixtureValuesReturned": false,
+    "postRollbackCensusBillingTotals": {
+      "invoices": "0",
+      "payments": "0",
+      "paymentDocuments": "0",
+      "auditEvents": "0"
+    },
+    "postRollbackCensusBillingAnomalies": {
+      "invoice": "0",
+      "payment": "0",
+      "document": "0",
+      "auditEvent": "0"
+    }
+  },
+  "cleanup": {
+    "governedDisposalCommand": "pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_e5da91b9e0f98ee8",
+    "targetFingerprintSha256": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+    "disposalChanged": true,
+    "authorityStatusAfterDisposalWhileServiceAvailable": "database-unreachable",
+    "ownershipProfilePresent": false,
+    "serviceStop": "passed; cleanly stopped through the exact Unix socket within the 30-second bound",
+    "serviceRecovery": "passed; safe no-op after clean stop",
+    "finalServiceStatus": "stopped",
+    "privateAuthorizationAndTemplateRemoved": true,
+    "historicalDatabaseAndStorageProviderAccessed": false
+  },
+  "limits": {
+    "protectedOrHistoricalDatabaseAccess": "not authorized and not attempted",
+    "storageProviderAccess": "not authorized and not attempted",
+    "realSourceProvenanceAndOwnership": "not established; local synthetic counts cannot classify or disposition launch data",
+    "mediaCompleteness": "database attachment relationships only; object presence and orphaned objects remain unverified",
+    "schemaMapping": "canonical MySQL launch 0094 only; no TiDB/0065 or other historical schema mapping",
+    "sourceAuthorization": "no source-specific exact target authorization exists in this packet",
+    "finalB09Disposition": "requires source-specific census evidence and accountable data-owner approval",
+    "B15B16": "remain open"
+  }
+}

@@ -1,0 +1,2 @@
+7e53b8c5505651c8ec59c291b9ad00a65ad4f8de3b258eb30375cf5b45c9ed40  b09-census-runner-authorization-packet-2026-09-27.md
+1afd4793b49775d7d8e5736cc9f186242d4a7f5b768c19bce9661cdedd1f6a67  b09-census-runner-synthetic-verification-2026-09-27.json

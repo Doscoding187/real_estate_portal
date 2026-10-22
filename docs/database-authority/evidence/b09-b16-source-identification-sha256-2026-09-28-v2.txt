@@ -1,0 +1,13 @@
+# B09/B16 TiDB source-role and read-only request checksum set — 2026-09-28 v2
+
+18a1274655333db402d02991a19ea7891899d14ea2d1fb006f9690de62d4ad58  docs/database-authority/evidence/b09-b16-source-identification-request-2026-09-28-v2.md
+5334dfccd58957c7c7275ae056f5d20119fe241d16c9d175d106e1ccd41ff589  docs/database-authority/evidence/b09-tidb-readonly-identity-probes-2026-09-28.sql
+9326b323a2458f82db34c65b69ab4d260fee55dc45b8793da63cfe5e74ae9686  docs/database-authority/evidence/b09-b16-source-identification-request-2026-09-28.md
+2abbb0e65841a1a1e2eaa06cd60cd3affc6ed5e866ccb721cb3b50a4fb0c16da  docs/database-authority/evidence/b09-b16-source-identification-sha256-2026-09-28.txt
+0b64e1c001dace5f022702fa2d786c1f5d10c2b5748c99d737330b935313d7d0  docs/database-authority/evidence/b09-census-runner-authorization-packet-2026-09-27-v2.md
+fd90e6cf4de4f50c5d745b6705c2040fa5ea7d82aabd8b6eb27e793fd40fd2b7  docs/database-authority/evidence/b09-census-runner-synthetic-verification-2026-09-27-v2.json
+6e5c06344132065e2693b74a7b58d9ef98b2d92059547df5a36fbc546073e135  docs/database-authority/evidence/b09-census-runner-source-sha256-2026-09-27-v2.txt
+1fcb583c7a38fecd34d3897942e1bf1962a3307c7c12a1d3b664dde7f2410529  docs/database-authority/evidence/b09-census-runner-sha256-2026-09-27-v2.txt
+fc5f06ea4b10a2020de46eeb2a3a1c695d906a7d7020f20e53fa65826412973c  server/_core/databaseAuthority/b09Census.ts
+fd7322e8d203f2e6d4eda4f722bcc89328f2864ce009437297bf0231b02b4f9a  server/_core/databaseAuthority/connectionAuthority.ts
+cccbf6cf71f01ac51e88ec39f6137c99c29f0e18345404a12c12ac43a6f94e83  docs/database-authority/evidence/b08-tidb-v1-candidate-2026-09-24.json

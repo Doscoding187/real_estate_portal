@@ -1,0 +1,229 @@
+{
+  "evidenceVersion": 1,
+  "workstream": "B09",
+  "status": "runner-locally-verified; protected-source-census-and-disposition-open",
+  "observedAt": "2026-09-27T20:18:39.372Z",
+  "source": {
+    "branch": "feat/b09-db-census-runner-20260927",
+    "worktreeBaseCommit": "a05868c66f493e3cbc972a119074c91a10797777",
+    "worktreeBaseTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "acceptedProductCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "runnerCodeSha256": "4c912b78d93bb73944dc428a5ab962e1932424b3218efc86e540f38c0b5f3392",
+    "querySha256": "180963587bc3db7cdc9f33807af1ed447ccdbf45e0f78d1c2518cfb34f1e0a8f"
+  },
+  "target": {
+    "identityFingerprintSha256": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+    "localAuthorityServiceFingerprintSha256": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "targetClass": "disposable-worktree",
+    "credentialClass": "local-owner",
+    "ownership": "exact task-owned disposable worktree target under Database Authority",
+    "observedMigrationHead": "0094_content_topics_primary_key.sql",
+    "migrationManifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "schemaCongruency": "verified before synthetic seed and census"
+  },
+  "toolchain": {
+    "pinnedInstall": "pnpm install --frozen-lockfile passed; lockfile unchanged",
+    "node": "v22.22.3"
+  },
+  "localSyntheticVerification": {
+    "authoritySetupCommands": [
+      "pnpm db:authority:service:start",
+      "pnpm db:worktree:create",
+      "pnpm db:migrate:plan",
+      "pnpm db:migrate:apply -- --accepted-old-head=none --expected-new-head=0094_content_topics_primary_key.sql",
+      "pnpm db:schema:congruency",
+      "pnpm db:reference:prepare",
+      "pnpm db:foundation:prepare",
+      "pnpm db:scenario:prepare"
+    ],
+    "fixtureVersions": {
+      "reference": "canonical-geography-v2",
+      "foundation": "canonical-launch-foundation-v1",
+      "scenario": "search-to-lead-v5"
+    },
+    "scenarioVerification": {
+      "result": "passed",
+      "command": "env NODE_ENV=test APP_ENV=test pnpm db:scenario:verify",
+      "targetFingerprintSha256": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+      "initialDefaultRuntimeAttempt": "refused before connection because the contained scenario verifier requires the test runtime; rerun passed on the same exact target"
+    },
+    "censusCommand": "pnpm db:b09:census -- --authorization-file=<private-temporary-file>",
+    "censusReport": {
+      "reportVersion": 1,
+      "operation": "b09-source-census",
+      "targetFingerprintHash": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+      "targetClass": "disposable-worktree",
+      "credentialClass": "local-owner",
+      "scopeId": "b09-launch-data-aggregate-v1",
+      "schemaMappingId": "canonical-launch-0094-v1",
+      "migrationHead": "0094_content_topics_primary_key.sql",
+      "migrationManifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+      "querySha256": "180963587bc3db7cdc9f33807af1ed447ccdbf45e0f78d1c2518cfb34f1e0a8f",
+      "codeSha256": "4c912b78d93bb73944dc428a5ab962e1932424b3218efc86e540f38c0b5f3392",
+      "executedAt": "2026-09-27T20:18:39.372Z",
+      "elapsedMs": 24,
+      "maximumExecutionMs": 15000,
+      "maximumResultRows": 1,
+      "resultRows": 1,
+      "disclosure": {
+        "output": "allow-listed aggregate counts only; no record identifiers or source values",
+        "media": "database attachment relationships only; storage-object presence was not checked",
+        "providerAccess": "not performed"
+      },
+      "counts": {
+        "users_total": "7",
+        "users_super_admin": "1",
+        "users_agent": "2",
+        "users_agency_admin": "2",
+        "users_developer": "2",
+        "users_missing_agency": "0",
+        "agencies_total": "3",
+        "agents_total": "2",
+        "agents_missing_user": "0",
+        "agents_missing_agency": "0",
+        "developer_organisations_total": "2",
+        "developer_organisations_pending": "0",
+        "developer_organisations_approved": "2",
+        "developer_memberships_total": "2",
+        "developer_memberships_missing_organisation": "0",
+        "developer_memberships_missing_user": "0",
+        "developer_organisations_without_active_owner": "0",
+        "catalogue_publishers_total": "3",
+        "catalogue_publishers_platform_reference": "1",
+        "catalogue_publishers_developer_first_party": "2",
+        "catalogue_publishers_authority_relationship_mismatch": "0",
+        "developments_total": "1",
+        "developments_published": "1",
+        "developments_published_without_publisher": "0",
+        "development_units_total": "0",
+        "development_units_missing_development": "0",
+        "development_drafts_total": "0",
+        "development_drafts_without_canonical_organisation": "0",
+        "development_drafts_missing_publisher": "0",
+        "listings_total": "8",
+        "listings_published": "5",
+        "listings_missing_owner": "0",
+        "listings_missing_agent": "0",
+        "listings_missing_agency": "0",
+        "listings_owner_agency_mismatch": "0",
+        "properties_total": "9",
+        "properties_published": "0",
+        "properties_missing_owner": "0",
+        "properties_missing_source_listing": "0",
+        "properties_missing_development": "0",
+        "published_properties_without_image_pointer": "0",
+        "property_images_total": "13",
+        "property_images_missing_property": "0",
+        "videos_total": "0",
+        "videos_ready": "0",
+        "videos_missing_owner_relationship": "0",
+        "videos_without_owner": "0",
+        "leads_total": "5",
+        "leads_missing_listing": "0",
+        "leads_missing_property": "0",
+        "leads_missing_development": "0",
+        "leads_missing_agency": "0",
+        "leads_missing_agent": "0",
+        "leads_missing_assignee": "0",
+        "leads_assigned_across_agency": "0",
+        "lead_activities_total": "0",
+        "lead_activities_missing_lead": "0",
+        "lead_activities_missing_user": "0",
+        "prospect_identities_total": "0",
+        "prospect_identities_missing_user": "0",
+        "billable_accounts_total": "4",
+        "billable_accounts_owner_shape_or_reference_issue": "0",
+        "subscriptions_total": "4",
+        "subscriptions_owner_relationship_issue": "0",
+        "billing_invoices_total": "0",
+        "billing_invoices_missing_account_or_subscription": "0",
+        "billing_payments_total": "0",
+        "billing_payments_owner_relationship_issue": "0",
+        "billing_payment_documents_total": "0",
+        "billing_payment_documents_owner_relationship_issue": "0",
+        "billing_payment_documents_not_private": "0",
+        "billing_audit_events_total": "0",
+        "billing_audit_events_missing_account": "0",
+        "audit_logs_total": "0",
+        "audit_logs_missing_user": "0",
+        "managerial_audit_logs_total": "0",
+        "managerial_audit_logs_missing_actor": "0"
+      }
+    },
+    "authorizationDocumentSha256": "e68d0bfc96022f2f713d5573fb15a7acfeb4fdc6884dffeb2054d631ef30f044",
+    "authorizationApprovalScope": "the user instruction authorizing local synthetic verification only"
+  },
+  "authorizationFailureEvidence": {
+    "extraTableScope": {
+      "authorizationSha256": "e6d5f325f7800dfaa9389ea4f376ff5de248e9dd1ddfa9a202f04a36e562745a",
+      "commandExitCode": 1,
+      "result": "refused before database connection"
+    },
+    "expiredWindow": {
+      "authorizationSha256": "d4df959fa7763f3dd40c1c47ce904631ab95a1a7d56c0d0c9daba59ecc8fa9bd",
+      "commandExitCode": 1,
+      "result": "refused before database connection"
+    },
+    "differentTargetFingerprint": {
+      "authorizationSha256": "c1d0470f189b358645d63c398593a0695ff239611738b4e522b9934426367380",
+      "commandExitCode": 1,
+      "result": "refused before database connection"
+    },
+    "focusedUnitTestCommand": "pnpm exec vitest run server/_core/databaseAuthority/__tests__/b09Census.test.ts --reporter=basic",
+    "focusedUnitTestResult": {
+      "filesPassed": 1,
+      "testsPassed": 16
+    },
+    "databaseAuthorityStaticGate": {
+      "command": "pnpm db:authority:check",
+      "filesPassed": 37,
+      "testsPassed": 327,
+      "utilitySurfacesClassified": 120,
+      "schemaSanityTables": 214,
+      "activeMigrations": 95,
+      "result": "passed"
+    },
+    "typeCheck": {
+      "command": "pnpm check",
+      "result": "passed"
+    }
+  },
+  "reproducedAndCorrectedRunnerDefects": [
+    {
+      "finding": "MySQL rejected transaction-control SQL sent through prepared execute as ER_UNSUPPORTED_PS",
+      "correction": "use the canonical connection text-query method for fixed START TRANSACTION READ ONLY, COMMIT, and ROLLBACK statements"
+    },
+    {
+      "finding": "fractional performance-clock milliseconds violated the canonical bounded-query integer contract",
+      "correction": "floor the remaining total budget before each bounded read"
+    },
+    {
+      "finding": "the leads assignment field is physically named assigned_to, not the TypeScript property spelling assignedTo",
+      "correction": "correct both fixed relationship checks to the mapped SQL identifier assigned_to"
+    }
+  ],
+  "limits": {
+    "protectedOrHistoricalDatabaseAccess": "not authorized and not attempted",
+    "storageProviderAccess": "not authorized and not attempted",
+    "mediaCompleteness": "database attachment relationships only; object presence and orphaned provider objects remain unverified",
+    "sourceOwnershipAndProvenance": "local synthetic fixture totals do not classify real production records or establish an authoritative source",
+    "finalB09Disposition": "requires source-specific authorization, verified authoritative systems, data-owner review, and category-level decisions",
+    "schemaMappings": "only canonical-launch-0094-v1 is implemented; no historical mapping or compatibility fallback"
+  },
+  "cleanup": {
+    "status": "completed",
+    "targetFingerprintSha256": "e5da91b9e0f98ee89230206fd11abb633094d106eff76cef3c06a2803156e0e2",
+    "databaseTarget": "unreachable after governed disposal while the local Authority service remained available",
+    "ownershipProfilePresentAfterDisposal": false,
+    "serviceStop": "passed; cleanly stopped through the exact Unix socket",
+    "recovery": "passed; safe no-op",
+    "finalServiceStatus": "stopped",
+    "commands": [
+      "pnpm db:worktree:dispose -- --ack=CONFIRM_DATABASE_DISPOSE_<fingerprint-prefix>",
+      "pnpm db:authority:service:stop",
+      "pnpm db:authority:service:recover",
+      "pnpm db:authority:service:status"
+    ],
+    "historicalSourcesAndStorageProviderAccessed": false
+  }
+}

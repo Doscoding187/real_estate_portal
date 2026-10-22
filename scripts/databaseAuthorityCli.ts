@@ -6,6 +6,19 @@ import {
   protectedDatabaseApprovalFromEnvironment,
 } from '../server/_core/databaseAuthority/authorization';
 import { createAuthoritySqlConnection } from '../server/_core/databaseAuthority/connectionAuthority';
+import {
+  B09_CENSUS_OPERATION,
+  B09_CENSUS_ACTIVE_SESSION_QUERY,
+  B09_CENSUS_CANCELLATION_CLEANUP_MS,
+  B09_CENSUS_CONTROL_TIMEOUT_MS,
+  B09_CENSUS_TIMEOUT_PROBE_MS,
+  B09_CENSUS_TIMEOUT_PROBE_QUERY,
+  buildB09CensusAuthorizationTemplate,
+  readB09AuthorizationFile,
+  runB09Census,
+  validateB09CensusAuthorization,
+} from '../server/_core/databaseAuthority/b09Census';
+import { verifyB09SyntheticBillingRelationships } from '../server/_core/databaseAuthority/b09BillingSyntheticVerification';
 import { provisionB08AzureInspectionIdentity } from '../server/_core/databaseAuthority/b08AzureInspectionIdentity';
 import { provisionB08TidbSourceReader } from '../server/_core/databaseAuthority/b08TidbSourceReader';
 import { inventoryB08TidbV1 } from '../server/_core/databaseAuthority/b08TidbV1Inventory';
@@ -99,6 +112,10 @@ type Command =
   | 'context'
   | 'manifest'
   | 'data:manifest'
+  | 'b09:census:prepare'
+  | 'b09:census'
+  | 'b09:census:verify-timeout'
+  | 'b09:census:verify-billing'
   | 'b08:inspector:provision'
   | 'b08:tidb-reader:provision'
   | 'b08:tidb-v1:inventory'
@@ -277,6 +294,138 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
+  if (command === 'b09:census:verify-billing') {
+    const authority = authorityFor('test-fixture', 'local-owner');
+    const decision = authorizationFor(authority);
+    print(await verifyB09SyntheticBillingRelationships(authority, decision));
+    return;
+  }
+
+  if (
+    command === 'b09:census:prepare' ||
+    command === 'b09:census' ||
+    command === 'b09:census:verify-timeout'
+  ) {
+    const authority = authorityFor(B09_CENSUS_OPERATION, 'local-owner');
+    const decision = authorizationFor(authority);
+    const migrationManifest = loadAndValidateMigrationManifest();
+    if (command === 'b09:census:prepare') {
+      print({
+        preparationVersion: 2,
+        operation: B09_CENSUS_OPERATION,
+        targetFingerprintHash: authority.context.targetFingerprintHash,
+        targetClass: authority.context.targetClass,
+        credentialClass: authority.context.credentialClass,
+        authorizationTemplate: buildB09CensusAuthorizationTemplate({
+          context: authority.context,
+          migrationManifestDigest: migrationManifest.manifestDigest,
+        }),
+        limitations: [
+          'The runner authorizes only an exact owned disposable-worktree target.',
+          'Only the fixed canonical-launch-0094-v2 mapping is implemented.',
+          'No historical/protected database or storage provider is accessed by preparation.',
+        ],
+      });
+      return;
+    }
+
+    const authorization = validateB09CensusAuthorization(
+      readB09AuthorizationFile(requiredOption('authorization-file')),
+      {
+        context: authority.context,
+        migrationManifestDigest: migrationManifest.manifestDigest,
+      },
+    );
+    const connection = await createAuthoritySqlConnection(authority, decision);
+    try {
+      if (command === 'b09:census:verify-timeout') {
+        const connectionId = connection.connectionId;
+        if (
+          !Number.isSafeInteger(connectionId) ||
+          !connection.queryControlBounded ||
+          !connection.queryBounded ||
+          !connection.isTerminated
+        ) {
+          throw new Error(
+            'B09 timeout verification refused: cancellable connection capability is unavailable.',
+          );
+        }
+        const startedAt = Date.now();
+        await connection.queryControlBounded(
+          'START TRANSACTION READ ONLY',
+          B09_CENSUS_CONTROL_TIMEOUT_MS,
+        );
+        let timeoutObserved = false;
+        try {
+          await connection.queryBounded(
+            B09_CENSUS_TIMEOUT_PROBE_QUERY,
+            B09_CENSUS_TIMEOUT_PROBE_MS,
+          );
+        } catch (error) {
+          timeoutObserved =
+            error instanceof Error &&
+            error.message.startsWith(
+              'Database query refused: execution deadline expired; the server session was terminated and the active query settled.',
+            );
+          if (!timeoutObserved) throw error;
+        }
+        const elapsedMs = Date.now() - startedAt;
+        const maximumProbeWallMs = B09_CENSUS_TIMEOUT_PROBE_MS + B09_CENSUS_CANCELLATION_CLEANUP_MS;
+        if (!timeoutObserved || !connection.isTerminated() || elapsedMs > maximumProbeWallMs) {
+          throw new Error(
+            'B09 timeout verification failed: the session did not terminate within its bound.',
+          );
+        }
+        const observer = await createAuthoritySqlConnection(authority, decision);
+        try {
+          const activeResult = await observer.queryBounded?.(
+            B09_CENSUS_ACTIVE_SESSION_QUERY,
+            B09_CENSUS_CONTROL_TIMEOUT_MS,
+            [connectionId],
+          );
+          const activeRows =
+            Array.isArray(activeResult) && Array.isArray(activeResult[0])
+              ? (activeResult[0] as Array<Record<string, unknown>>)
+              : [];
+          const activeValue = activeRows[0]?.active_sessions ?? activeRows[0]?.ACTIVE_SESSIONS;
+          if (activeRows.length !== 1 || Number(activeValue) !== 0) {
+            throw new Error(
+              'B09 timeout verification failed: terminated query session remains active.',
+            );
+          }
+        } finally {
+          await observer.end();
+        }
+        print({
+          verificationVersion: 1,
+          operation: 'b09-census-timeout-cancellation',
+          targetFingerprintHash: authority.context.targetFingerprintHash,
+          targetClass: authority.context.targetClass,
+          timedOutQuery: 'fixed synthetic SELECT SLEEP probe; result discarded',
+          timeoutMs: B09_CENSUS_TIMEOUT_PROBE_MS,
+          cancellationCleanupLimitMs: B09_CENSUS_CANCELLATION_CLEANUP_MS,
+          elapsedMs,
+          serverSessionTerminated: true,
+          activeSessionCountAfterCancellation: 0,
+          readOnlyTransactionReleasedByConnectionTermination: true,
+        });
+        return;
+      }
+      print(
+        await runB09Census({
+          authority,
+          connection,
+          authorization,
+          migrationManifest,
+          migrationManifestDigest: migrationManifest.manifestDigest,
+        }),
+      );
+    } finally {
+      await connection.end();
+    }
+    return;
+  }
+
   if (command === 'b08:inspector:provision') {
     print(await provisionB08AzureInspectionIdentity());
     return;
@@ -350,7 +499,8 @@ async function run(command: Command): Promise<void> {
         : [];
     };
     try {
-      const session = (await rows(`SELECT VERSION() AS version, DATABASE() AS selected_database,
+      const session = (
+        await rows(`SELECT VERSION() AS version, DATABASE() AS selected_database,
         CURRENT_USER() AS current_identity, @@session.sql_mode AS sql_mode,
         @@session.time_zone AS session_time_zone,
         @@session.transaction_isolation AS transaction_isolation,
@@ -359,7 +509,8 @@ async function run(command: Command): Promise<void> {
         @@global.lower_case_table_names AS lower_case_table_names,
         @@global.sql_generate_invisible_primary_key AS sql_generate_invisible_primary_key,
         @@session.sql_require_primary_key AS sql_require_primary_key,
-        @@global.require_secure_transport AS require_secure_transport`))[0];
+        @@global.require_secure_transport AS require_secure_transport`)
+      )[0];
       if (
         session?.selected_database !== 'propertylistify_database' ||
         !String(session.current_identity).startsWith('propertylistify_b08_inspector@')
@@ -371,16 +522,19 @@ async function run(command: Command): Promise<void> {
       const tables = await rows(`SELECT TABLE_NAME AS table_name, TABLE_TYPE AS table_type,
         TABLE_ROWS AS estimated_rows, ENGINE AS engine, TABLE_COLLATION AS table_collation
         FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME`);
-      const specialColumns = await rows(`SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
+      const specialColumns =
+        await rows(`SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name,
         EXTRA AS extra, COLUMN_KEY AS column_key, DATA_TYPE AS data_type
         FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME IN ('content_topics', 'user_onboarding_state') ORDER BY TABLE_NAME, ORDINAL_POSITION`);
-      const foreignKeys = await rows(`SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
+      const foreignKeys =
+        await rows(`SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS
         WHERE CONSTRAINT_SCHEMA = DATABASE()`);
       const checks = await rows(`SELECT CONSTRAINT_NAME AS name, ENFORCED AS enforced
         FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE()
         AND CONSTRAINT_TYPE = 'CHECK' ORDER BY CONSTRAINT_NAME`);
-      const indexes = await rows(`SELECT COUNT(DISTINCT CONCAT(TABLE_NAME, '.', INDEX_NAME)) AS total
+      const indexes =
+        await rows(`SELECT COUNT(DISTINCT CONCAT(TABLE_NAME, '.', INDEX_NAME)) AS total
         FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE()`);
       const features = await rows(`SELECT
         SUM(DATA_TYPE = 'json') AS json_columns,
@@ -389,9 +543,10 @@ async function run(command: Command): Promise<void> {
       const grantRows = await rows('SHOW GRANTS');
       const grants = grantRows.flatMap(row => Object.values(row)).map(String);
       const usageOnly = grants.filter(grant => /^GRANT USAGE ON \*\.\*/i.test(grant)).length === 1;
-      const selectOnly = grants.filter(grant =>
-        /^GRANT SELECT ON [`']?propertylistify_database[`']?\.\* TO /i.test(grant),
-      ).length === 1;
+      const selectOnly =
+        grants.filter(grant =>
+          /^GRANT SELECT ON [`']?propertylistify_database[`']?\.\* TO /i.test(grant),
+        ).length === 1;
       print({
         targetFingerprintHash: authority.context.targetFingerprintHash,
         server: session.version,
@@ -416,19 +571,23 @@ async function run(command: Command): Promise<void> {
         tableInventory: {
           count: tables.length,
           names: tables.map(table => table.table_name),
-          estimatedNonempty: tables.filter(table => Number(table.estimated_rows) > 0).map(table => ({
-            table: table.table_name,
-            estimatedRows: table.estimated_rows,
-          })),
+          estimatedNonempty: tables
+            .filter(table => Number(table.estimated_rows) > 0)
+            .map(table => ({
+              table: table.table_name,
+              estimatedRows: table.estimated_rows,
+            })),
           engines: [...new Set(tables.map(table => table.engine))],
           collations: [...new Set(tables.map(table => table.table_collation))],
         },
-        propertyImagesPhysicalNames: tables.filter(table =>
-          String(table.table_name).toLowerCase() === 'propertyimages',
-        ).map(table => table.table_name),
+        propertyImagesPhysicalNames: tables
+          .filter(table => String(table.table_name).toLowerCase() === 'propertyimages')
+          .map(table => table.table_name),
         specialColumns,
         migrationLedgerPresent: tables.some(table => table.table_name === 'sql_migration_history'),
-        migrationAttemptLedgerPresent: tables.some(table => table.table_name === 'sql_migration_attempts'),
+        migrationAttemptLedgerPresent: tables.some(
+          table => table.table_name === 'sql_migration_attempts',
+        ),
         foreignKeyCount: foreignKeys[0]?.total ?? null,
         checks,
         indexCount: indexes[0]?.total ?? null,
@@ -439,7 +598,9 @@ async function run(command: Command): Promise<void> {
           onlyUsageAndDatabaseSelect: usageOnly && selectOnly && grants.length === 2,
           selectOnApprovedDatabase: selectOnly,
           mutationPrivilegesPresent: grants.some(grant =>
-            /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|INDEX|TRIGGER|GRANT OPTION)\b/i.test(grant),
+            /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|INDEX|TRIGGER|GRANT OPTION)\b/i.test(
+              grant,
+            ),
           ),
         },
       });
@@ -798,6 +959,10 @@ const commands = new Set<Command>([
   'context',
   'manifest',
   'data:manifest',
+  'b09:census:prepare',
+  'b09:census',
+  'b09:census:verify-timeout',
+  'b09:census:verify-billing',
   'b08:inspector:provision',
   'b08:tidb-reader:provision',
   'b08:tidb-v1:inventory',

@@ -68,6 +68,7 @@ export type AuthorityManifest = {
   operatingPlaybook: string;
   releaseMigrationRecoveryCommands: string[];
   acceptanceScenarioAdapter: string;
+  b09CensusAdapter: string;
 };
 
 const MANIFEST_PATH = 'docs/database-authority/authority-manifest.json';
@@ -140,6 +141,7 @@ export function validateAuthorityManifest(manifest: AuthorityManifest, root = pr
     manifest.canonicalCommercialReleaseEntrypoint,
     manifest.operatingPlaybook,
     manifest.acceptanceScenarioAdapter,
+    manifest.b09CensusAdapter,
   ];
   const missingPaths = paths.filter(path => !existsSync(resolve(root, path)));
   const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as {

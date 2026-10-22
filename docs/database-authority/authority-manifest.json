@@ -39,6 +39,10 @@
     "db:authority:manifest",
     "db:data:manifest",
     "db:authority:context",
+    "db:b09:census:prepare",
+    "db:b09:census",
+    "db:b09:census:verify-timeout",
+    "db:b09:census:verify-billing",
     "db:worktree:create",
     "db:migrate:plan",
     "db:migrate:apply",
@@ -110,6 +114,7 @@
     "db:release-tidb-check-constraint-convergence:apply"
   ],
   "acceptanceScenarioAdapter": "server/_core/databaseAuthority/dataAdapters/searchToLeadScenario.ts",
+  "b09CensusAdapter": "server/_core/databaseAuthority/b09Census.ts",
   "plePublicationEntitlementAdapter": "server/_core/databaseAuthority/dataAdapters/plePublicationEntitlement.ts",
   "pleReviewerFixtureAdapter": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts"
 }

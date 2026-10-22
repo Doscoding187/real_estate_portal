@@ -89,6 +89,14 @@
       "acknowledgement": "exact-target",
       "evidence": "exact-b08-azure-transactional-behavior-and-rollback-proof"
     },
+    "b09-source-census": {
+      "allowedTargetClasses": ["disposable-worktree"],
+      "credentialClasses": ["read-only", "local-owner"],
+      "ownership": "exact-local-owner",
+      "approval": "none",
+      "acknowledgement": "none",
+      "evidence": "b09-exact-scope-query-code-hashes-bounded-server-cancellation-ledger-and-schema-congruency-and-sanitized-aggregate-report"
+    },
     "migration-plan": {
       "allowedTargetClasses": ["clean-main-local", "disposable-worktree", "disposable-test"],
       "credentialClasses": ["read-only", "migration", "local-owner", "test-owner"],
