@@ -13,6 +13,33 @@ import { expect, test } from '../helpers/audit-network';
  * environments without it the suite skips those cases with an honest reason.
  */
 
+/**
+ * A client-side crash must be reported as a crash.
+ *
+ * Without this, a page that throws during render is indistinguishable from a page that never
+ * rendered, and the journey only says a heading is missing. The journey is the gate for the
+ * geography surface, so it has to say what broke.
+ */
+const clientErrors: string[] = [];
+
+test.beforeEach(async ({ page }) => {
+  clientErrors.length = 0;
+  page.on('pageerror', error => clientErrors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') clientErrors.push(message.text());
+  });
+});
+
+test.afterEach(async ({ page }) => {
+  if (!clientErrors.length) return;
+  const errors = [...clientErrors];
+  clientErrors.length = 0;
+  await expect(
+    errors.length,
+    `the page raised a client-side error:\n${errors.join('\n')}`,
+  ).toBe(0);
+});
+
 const NEUTRAL_DISCOVERY_PAGES = [
   { path: '/gauteng', heading: /Explore Gauteng/i },
   { path: '/gauteng/johannesburg', heading: /Explore Johannesburg/i },
