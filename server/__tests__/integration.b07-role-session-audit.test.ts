@@ -115,9 +115,20 @@ describeWithDatabase('B07 mounted global role mutation authority', () => {
     });
 
     const adminCaller = callerFor({ id: actor.id, role: 'super_admin' }, 'b07-admin-role-demotion');
+    const adminsBeforeDemotion = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, 'super_admin'));
+    expect(adminsBeforeDemotion.length).toBeGreaterThan(1);
     await adminCaller.admin.updateUserRole({ userId: target.id, role: 'visitor' });
     const [demoted] = await db.select().from(users).where(eq(users.id, target.id)).limit(1);
     expect(demoted).toMatchObject({ role: 'visitor', sessionVersion: 12 });
+    const adminsAfterDemotion = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.role, 'super_admin'));
+    expect(adminsAfterDemotion.length).toBeGreaterThan(0);
+    expect(adminsAfterDemotion.map(row => row.id)).toContain(actor.id);
     await expect(authenticateToken(preDemotionToken)).rejects.toMatchObject({ statusCode: 403 });
 
     const auditRows = await db
@@ -206,22 +217,65 @@ describeWithDatabase('B07 mounted global role mutation authority', () => {
     expect(auditRows).toEqual([]);
   });
 
-  it('applies the last-super-admin safeguard to the actual canonical admin count', async () => {
-    const subject = await insertUser('admin-subject', 'super_admin');
-    const caller = callerFor({ id: subject.id, role: 'super_admin' }, 'b07-admin-demotion');
-    const existingAdmins = await db.select({ id: users.id }).from(users)
-      .where(eq(users.role, 'super_admin'));
-    const demotion = caller.user.updateRole({ userId: subject.id, role: 'visitor' });
+  it.each([
+    { endpoint: 'user.updateRole', requestId: 'b07-last-admin-user-route' },
+    { endpoint: 'admin.updateUserRole', requestId: 'b07-last-admin-admin-route' },
+  ])(
+    'rejects last-super-admin removal through $endpoint with exactly one canonical admin',
+    async ({ endpoint, requestId }) => {
+      const subject = await insertUser('sole-admin-subject', 'super_admin');
+      const caller = callerFor({ id: subject.id, role: 'super_admin' }, requestId);
+      const adminsBefore = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, 'super_admin'));
+      expect(adminsBefore).toEqual([{ id: subject.id }]);
 
-    if (existingAdmins.length === 1) {
+      const [subjectBefore] = await db
+        .select({ id: users.id, role: users.role, sessionVersion: users.sessionVersion })
+        .from(users)
+        .where(eq(users.id, subject.id))
+        .limit(1);
+      expect(subjectBefore).toMatchObject({ role: 'super_admin', sessionVersion: 10 });
+      const auditBefore = await db
+        .select()
+        .from(managerialAuditLogs)
+        .where(
+          or(
+            eq(managerialAuditLogs.targetId, subject.id),
+            eq(managerialAuditLogs.actorUserId, subject.id),
+          ),
+        )
+        .orderBy(asc(managerialAuditLogs.id));
+      expect(auditBefore).toEqual([]);
+
+      const demotion = endpoint === 'user.updateRole'
+        ? caller.user.updateRole({ userId: subject.id, role: 'visitor' })
+        : caller.admin.updateUserRole({ userId: subject.id, role: 'visitor' });
       await expect(demotion).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
-      const [unchanged] = await db.select().from(users).where(eq(users.id, subject.id)).limit(1);
-      expect(unchanged).toMatchObject({ role: 'super_admin', sessionVersion: 10 });
-    } else {
-      await expect(demotion).resolves.toMatchObject({ role: 'visitor', sessionVersion: 11 });
-      const [remaining] = await db.select({ id: users.id }).from(users)
-        .where(eq(users.role, 'super_admin')).limit(1);
-      expect(remaining).toBeDefined();
-    }
-  });
+
+      const adminsAfter = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.role, 'super_admin'));
+      expect(adminsAfter).toEqual([{ id: subject.id }]);
+      const [subjectAfter] = await db
+        .select({ id: users.id, role: users.role, sessionVersion: users.sessionVersion })
+        .from(users)
+        .where(eq(users.id, subject.id))
+        .limit(1);
+      expect(subjectAfter).toEqual(subjectBefore);
+      const auditAfter = await db
+        .select()
+        .from(managerialAuditLogs)
+        .where(
+          or(
+            eq(managerialAuditLogs.targetId, subject.id),
+            eq(managerialAuditLogs.actorUserId, subject.id),
+          ),
+        )
+        .orderBy(asc(managerialAuditLogs.id));
+      expect(auditAfter).toEqual(auditBefore);
+    },
+  );
 });
