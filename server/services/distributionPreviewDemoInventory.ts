@@ -23,6 +23,7 @@ export type DistributionPreviewDemoUnitType = {
   bedrooms: number | null;
   bathrooms: number | null;
   unitSize: number | null;
+  yardSize: number | null;
   basePriceFrom: number | null;
   basePriceTo: number | null;
   availableUnits: number;
@@ -42,6 +43,7 @@ export type DistributionPreviewDemoInventory = {
     bedrooms: number | null;
     bathrooms: number | null;
     size: number | null;
+    yardSize: number | null;
     imageUrl: string | null;
     media: DistributionUnitMedia;
     modes: Partial<Record<DistributionPreviewDemoMode, DistributionPreviewDemoModeFacts>>;
@@ -137,6 +139,7 @@ export function resolveDistributionPreviewDemoInventory(input: {
         bedrooms: unitType.bedrooms,
         bathrooms: unitType.bathrooms,
         size: unitType.unitSize,
+        yardSize: unitType.yardSize,
         imageUrl: media.gallery[0]?.url ?? media.renders[0]?.url ?? null,
         media,
         modes: { for_sale: modes } as Partial<

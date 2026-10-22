@@ -64,6 +64,7 @@ export interface DevelopmentSalesProjection {
       bedrooms: number | null;
       bathrooms: number | null;
       size: number | null;
+      yardSize: number | null;
       imageUrl: string | null;
       media: DistributionUnitMedia;
       modes: Partial<Record<DevelopmentSalesMode, DevelopmentSalesModeProjection>>;
@@ -227,6 +228,7 @@ function toDistributionPreviewDemoUnitType(row: {
   bedrooms: number;
   bathrooms: string;
   unitSize: number | null;
+  yardSize: number | null;
   basePriceFrom: string;
   basePriceTo: string | null;
   availableUnits: number;
@@ -245,6 +247,7 @@ function toDistributionPreviewDemoUnitType(row: {
     bedrooms: Number(row.bedrooms),
     bathrooms: Number(row.bathrooms),
     unitSize: row.unitSize === null ? null : Number(row.unitSize),
+    yardSize: row.yardSize === null ? null : Number(row.yardSize),
     basePriceFrom: numeric(row.basePriceFrom),
     basePriceTo: numeric(row.basePriceTo),
     availableUnits: Number(row.availableUnits || 0),
@@ -323,6 +326,7 @@ export async function getDevelopmentSalesProjection(
         bedrooms: unitTypes.bedrooms,
         bathrooms: unitTypes.bathrooms,
         unitSize: unitTypes.unitSize,
+        yardSize: unitTypes.yardSize,
         basePriceFrom: unitTypes.basePriceFrom,
         basePriceTo: unitTypes.basePriceTo,
         availableUnits: unitTypes.availableUnits,
