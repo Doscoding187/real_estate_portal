@@ -105,3 +105,43 @@ this preparation.
 Freeze a new short-lived release candidate only after these inputs are
 available. Record its exact SHAs/tree/target/plan and rerun the required gates;
 do not treat this preparation branch as a permanent release authority.
+
+## Current B14/B15 schedule-evidence update — 2026-09-27
+
+This dated addendum updates the B14/B15 evidence references for the accepted
+founder schedule. It does not rewrite the historical local gates above, close
+B14, or change the accepted B03–B07/B16 product source composition.
+
+- The accepted [B15 review copy v0.3](b15-founder-approval-candidate-2026-09-27-v0.3.md)
+  is reproduced byte-for-byte here with SHA-256
+  `d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368`.
+  It records founder-managed support and billing/payment monitoring Monday–Friday,
+  09:00–17:00 South Africa time, excluding South African public holidays;
+  off-period requests are monitored and answered during the next operating
+  period. B15 remains open for the customer-facing address, privacy-request
+  route, remaining privacy/disclosure decisions, final copy approval and
+  implementation proof.
+- The B14 procedure-only reconciliation was applied to the reviewed
+  `b21f454e215d8b02129e4daa14ba6f8d338406d1` source tree on branch
+  `docs/b14-schedule-reconciliation-review`. The procedure now aligns finance
+  queue work and the one-business-day target to that operating period, retains
+  the existing weekday-specific sales-window bound and 72-hour maximum, allows
+  sales to pause across longer holiday closures, preserves pending records and
+  paid access, and requires return triage/reconciliation while paused before
+  controlled resumption. The accepted proposal remains an unchanged decision
+  record at SHA-256 `5a6857e5c41c79f0e0d62cd8fd54850dfd8c425652b8c064930d65781dbc613a`.
+- The current procedure also defines rehearsal cases for an ordinary weekend,
+  an extended holiday closure, a missed check/renewal, planned pause and return,
+  and unexpected absence. These are proposed execution cases only. No B14
+  rehearsal or runtime change is claimed. The B14 package remains open pending
+  actual contact/queue and pause/resumption rehearsal evidence.
+- [B14 implementation evidence](b14-schedule-reconciliation-implementation-2026-09-27.md)
+  records the source identities, acceptance mapping, non-runtime scope and
+  evidence checksums. The resulting B14 procedure SHA-256 is
+  `80545f1092297fb0bf7d634ed54005be45326d49bc634f0fa3d3a610d73b3acf`. The
+  corresponding checksum list is
+  `b14-b15-b16-schedule-evidence-sha256-2026-09-27.txt`.
+
+B09 remains unresolved. B15 and B16 remain open. This documentation update
+performs no database, provider, merge, deployment, publication or production
+operation, and grants no authority for those actions.
