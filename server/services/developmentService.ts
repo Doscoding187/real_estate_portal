@@ -1,4 +1,4 @@
-import { sql, eq, desc, and, inArray, isNull, isNotNull } from 'drizzle-orm';
+import { sql, eq, desc, and, inArray, isNull, isNotNull, or } from 'drizzle-orm';
 import type { InferSelectModel } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { randomUUID } from 'crypto';
@@ -19,6 +19,11 @@ import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligi
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { developerIdentityService } from './developerIdentityService';
+import {
+  prepareDevelopmentPhase,
+  refreshItemizedProjection,
+} from './developerInventoryService';
+import { hasValidDevelopmentInventoryMarketPrice } from './developmentInventoryPricing';
 import { AuditActions } from '../_core/auditLog';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
 import { publicDevelopmentDetailService } from './publicDevelopmentDetailService';
@@ -32,6 +37,7 @@ import {
   developments,
   users,
   unitTypes,
+  developmentInventoryItems,
   developmentPhases,
   cataloguePublishers,
   developerOrganisations,
@@ -153,6 +159,345 @@ function rejectPhaseArrayWrite(data: CreateDevelopmentData): void {
     message:
       'Non-empty phase arrays cannot be saved through development create or update. Phase and release management is not connected to the current inventory authority, so no phase changes were applied.',
   });
+}
+
+const DEVELOPER_INVENTORY_MANAGER_ROLES = new Set(['owner', 'admin', 'sales_manager']);
+
+function requireDeveloperInventoryManagerRole(role: unknown): void {
+  if (typeof role === 'string' && DEVELOPER_INVENTORY_MANAGER_ROLES.has(role)) return;
+  throw new TRPCError({
+    code: 'FORBIDDEN',
+    message: 'Only a developer owner, admin, or sales manager can change inventory availability.',
+  });
+}
+
+function readInventoryCount(
+  payload: Record<string, unknown>,
+  field: 'totalUnits' | 'availableUnits' | 'reservedUnits',
+  fallback: number,
+): number {
+  const value = payload[field];
+  if (value === undefined || value === null || value === '') return fallback;
+  const count = Number(value);
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `${field} must be a non-negative whole number.`,
+    });
+  }
+  return count;
+}
+
+function normalizeInventoryRangeValue(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  const amount = Number(value);
+  return Number.isFinite(amount) ? (Math.round(amount * 100) / 100).toFixed(2) : null;
+}
+
+function getIncomingUnitTypePriceRanges(unit: Record<string, unknown>) {
+  const rawSaleFrom = unit.basePriceFrom ?? unit.priceFrom;
+  const rawSaleTo = unit.basePriceTo ?? unit.priceTo;
+  const rawRentFrom = unit.monthlyRentFrom ?? unit.monthlyRent;
+  return {
+    saleFrom: normalizeInventoryRangeValue(rawSaleFrom) ?? '0.00',
+    saleTo: normalizeInventoryRangeValue(rawSaleTo),
+    rentFrom: normalizeInventoryRangeValue(rawRentFrom),
+    rentTo: normalizeInventoryRangeValue(unit.monthlyRentTo),
+  };
+}
+
+function getPersistedUnitTypePriceRanges(unit: {
+  basePriceFrom: unknown;
+  basePriceTo: unknown;
+  monthlyRentFrom: unknown;
+  monthlyRentTo: unknown;
+}) {
+  return {
+    saleFrom: normalizeInventoryRangeValue(unit.basePriceFrom) ?? '0.00',
+    saleTo: normalizeInventoryRangeValue(unit.basePriceTo),
+    rentFrom: normalizeInventoryRangeValue(unit.monthlyRentFrom),
+    rentTo: normalizeInventoryRangeValue(unit.monthlyRentTo),
+  };
+}
+
+/**
+ * The catalogue editor can submit a complete, stale unit-type snapshot. Keep
+ * it useful for product edits while preventing it from silently replacing
+ * protected inventory state. New development setup remains handled by the
+ * create path; subsequent changes that affect committed or unclassified stock
+ * must use a dedicated inventory operation.
+ */
+async function guardUnitTypeInventoryUpdate(input: {
+  database: any;
+  developmentId: number;
+  current: DevelopmentRow;
+  unitTypesData: any[];
+  developerMembershipRole: string | null;
+  isPlatformCurator: boolean;
+}): Promise<any[]> {
+  const itemizedInventory = input.current.inventoryMode === 'itemized';
+  const existingRows = await input.database
+    .select({
+      id: unitTypes.id,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      reservedUnits: unitTypes.reservedUnits,
+      basePriceFrom: unitTypes.basePriceFrom,
+      basePriceTo: unitTypes.basePriceTo,
+      monthlyRentFrom: unitTypes.monthlyRentFrom,
+      monthlyRentTo: unitTypes.monthlyRentTo,
+    })
+    .from(unitTypes)
+    .where(eq(unitTypes.developmentId, input.developmentId))
+    .for('update');
+
+  const allocationsByType = new Map<string, number>();
+  const protectedPriceFallbackByType = new Map<string, { for_sale: boolean; for_rent: boolean }>();
+  if (itemizedInventory) {
+    const allocationRows = await input.database
+      .select({
+        unitTypeId: developmentInventoryItems.unitTypeId,
+        transactionType: developmentInventoryItems.transactionType,
+        status: developmentInventoryItems.status,
+        salePrice: developmentInventoryItems.salePrice,
+        rentPrice: developmentInventoryItems.rentPrice,
+      })
+      .from(developmentInventoryItems)
+      .where(eq(developmentInventoryItems.developmentId, input.developmentId))
+      .for('update');
+    for (const allocation of allocationRows as Array<{
+      unitTypeId: string;
+      transactionType: string;
+      status: string;
+      salePrice: unknown;
+      rentPrice: unknown;
+    }>) {
+      const unitTypeId = String(allocation.unitTypeId);
+      allocationsByType.set(unitTypeId, (allocationsByType.get(unitTypeId) || 0) + 1);
+      if (allocation.status === 'planned' || allocation.status === 'available') continue;
+      const effectivePrice = allocation.transactionType === 'for_rent'
+        ? Number(allocation.rentPrice)
+        : Number(allocation.salePrice);
+      if (Number.isFinite(effectivePrice) && effectivePrice > 0) continue;
+      const protectedModes = protectedPriceFallbackByType.get(unitTypeId) || {
+        for_sale: false,
+        for_rent: false,
+      };
+      if (allocation.transactionType === 'for_rent') protectedModes.for_rent = true;
+      else protectedModes.for_sale = true;
+      protectedPriceFallbackByType.set(unitTypeId, protectedModes);
+    }
+    const catalogueTypeIds = new Set(existingRows.map((row: any) => String(row.id)));
+    if (Array.from(allocationsByType.keys()).some(unitTypeId => !catalogueTypeIds.has(unitTypeId))) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'The itemized register contains allocations outside this development’s unit-type catalogue.',
+      });
+    }
+  }
+
+  const existingById = new Map<string, any>(existingRows.map((row: any) => [String(row.id), row]));
+  const matchedIds = new Set<string>();
+  const editableRows = input.unitTypesData.map((unit: any) => {
+    if (!unit || typeof unit !== 'object' || Array.isArray(unit)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Each unit type must be an object with its saved inventory identity.',
+      });
+    }
+    const suppliedId = unit?.id === undefined || unit?.id === null ? '' : String(unit.id).trim();
+    if (!suppliedId || !existingById.has(suppliedId)) return { unit, existing: null };
+    if (matchedIds.has(suppliedId)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'This update contains duplicate unit type references.',
+      });
+    }
+    matchedIds.add(suppliedId);
+    return { unit, existing: existingById.get(suppliedId) };
+  });
+
+  if (existingRows.length > 0 && input.unitTypesData.length > 0 && matchedIds.size === 0) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'The unit-type list no longer matches this development. Reload it before saving.',
+    });
+  }
+
+  const approvedCatalogue =
+    input.current.approvalStatus === 'approved' || Number(input.current.isPublished) === 1;
+  let inventoryChanged = false;
+
+  for (const row of existingRows) {
+    const id = String(row.id);
+    const existingTotal = Math.max(0, Number(row.totalUnits ?? 0));
+    const existingAvailable = Math.max(0, Number(row.availableUnits ?? 0));
+    const existingReserved = Math.max(0, Number(row.reservedUnits ?? 0));
+    const unclassified = Math.max(existingTotal - existingAvailable - existingReserved, 0);
+    if (itemizedInventory && (allocationsByType.get(id) || 0) !== existingTotal) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'The itemized register and unit-type totals do not reconcile. Refresh the inventory workspace before editing catalogue details.',
+      });
+    }
+    const incoming = editableRows.find(entry => entry.existing && String(entry.existing.id) === id);
+
+    if (!incoming) {
+      if (itemizedInventory && (allocationsByType.get(id) || 0) > 0) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'A unit type with itemized allocations cannot be removed from development details. Retain it so allocation and release history stay attached to their original type.',
+        });
+      }
+      if (existingReserved > 0 || unclassified > 0) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'A unit type with reserved or unclassified inventory cannot be removed from development details.',
+        });
+      }
+      if (existingTotal > 0 || existingAvailable > 0) inventoryChanged = true;
+      continue;
+    }
+
+    const incomingRecord = incoming.unit as Record<string, unknown>;
+    if (itemizedInventory) {
+      // The general catalogue editor is transaction-mode scoped and may omit
+      // the other mode's fields. Preserve omitted shared ranges in itemized
+      // mode; an absent field is not an instruction to erase sale/rent pricing.
+      if (incomingRecord.basePriceFrom === undefined && incomingRecord.priceFrom === undefined) {
+        incomingRecord.basePriceFrom = row.basePriceFrom;
+      }
+      if (incomingRecord.basePriceTo === undefined && incomingRecord.priceTo === undefined) {
+        incomingRecord.basePriceTo = row.basePriceTo;
+      }
+      if (incomingRecord.monthlyRentFrom === undefined && incomingRecord.monthlyRent === undefined) {
+        incomingRecord.monthlyRentFrom = row.monthlyRentFrom;
+      }
+      if (incomingRecord.monthlyRentTo === undefined) {
+        incomingRecord.monthlyRentTo = row.monthlyRentTo;
+      }
+    }
+    const protectedModes = protectedPriceFallbackByType.get(id);
+    if (itemizedInventory && protectedModes) {
+      const cents = (value: unknown): number | null => {
+        if (value === null || value === undefined || value === '') return null;
+        const amount = Number(value);
+        return Number.isFinite(amount) ? Math.round(amount * 100) : null;
+      };
+      const nextSaleFrom = cents(incomingRecord.basePriceFrom)
+        ?? cents(incomingRecord.priceFrom)
+        ?? 0;
+      const nextSaleTo = cents(incomingRecord.basePriceTo) ?? cents(incomingRecord.priceTo);
+      const nextRentFrom = cents(incomingRecord.monthlyRentFrom ?? incomingRecord.monthlyRent);
+      const nextRentTo = cents(incomingRecord.monthlyRentTo);
+      const saleRangeChanged =
+        nextSaleFrom !== cents(row.basePriceFrom) || nextSaleTo !== cents(row.basePriceTo);
+      const rentRangeChanged =
+        nextRentFrom !== cents(row.monthlyRentFrom) || nextRentTo !== cents(row.monthlyRentTo);
+
+      if ((protectedModes.for_sale && saleRangeChanged) || (protectedModes.for_rent && rentRangeChanged)) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'This unit type range still supplies the price for reserved or committed inventory. Keep the shared range unchanged; set new prices on eligible planned or available allocations individually.',
+        });
+      }
+    }
+    const nextTotal = readInventoryCount(incomingRecord, 'totalUnits', existingTotal);
+    const nextAvailable = readInventoryCount(incomingRecord, 'availableUnits', existingAvailable);
+    const nextReserved = readInventoryCount(incomingRecord, 'reservedUnits', existingReserved);
+    const countsChanged =
+      nextTotal !== existingTotal ||
+      nextAvailable !== existingAvailable ||
+      nextReserved !== existingReserved;
+
+    if (itemizedInventory && countsChanged) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Unit-type counts are projections of the itemized register. Change stock through the inventory workspace so allocation states and public availability stay in sync.',
+      });
+    }
+
+    if (nextReserved !== existingReserved) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Reserved inventory cannot be changed in development details. Reservations need their own recorded workflow.',
+      });
+    }
+
+    if (countsChanged && (existingReserved > 0 || unclassified > 0)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Inventory with reservations or unclassified units is protected from catalogue edits.',
+      });
+    }
+
+    if (countsChanged && approvedCatalogue) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Approved inventory cannot be changed through development details. Use the audited availability action for live available stock; refresh this page if its inventory is stale.',
+      });
+    }
+
+    if (countsChanged) inventoryChanged = true;
+    incoming.unit.totalUnits = nextTotal;
+    incoming.unit.availableUnits = nextAvailable;
+    incoming.unit.reservedUnits = existingReserved;
+  }
+
+  for (const entry of editableRows) {
+    if (entry.existing) continue;
+    const incomingRecord = entry.unit as Record<string, unknown>;
+    const nextTotal = readInventoryCount(incomingRecord, 'totalUnits', 0);
+    const nextAvailable = readInventoryCount(incomingRecord, 'availableUnits', 0);
+    const nextReserved = readInventoryCount(incomingRecord, 'reservedUnits', 0);
+    if (itemizedInventory && (nextTotal > 0 || nextAvailable > 0 || nextReserved > 0)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'New unit types must start with zero inventory. Add named allocations through a reviewed inventory reconciliation.',
+      });
+    }
+    if (nextReserved > 0) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Reserved inventory must be created through a recorded reservation workflow, not as a unit-type count.',
+      });
+    }
+    if (nextTotal > 0 || nextAvailable > 0) inventoryChanged = true;
+    if (approvedCatalogue && (nextTotal > 0 || nextAvailable > 0)) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'New marketable inventory cannot be added to an approved development through catalogue details.',
+      });
+    }
+    entry.unit.totalUnits = nextTotal;
+    entry.unit.availableUnits = nextAvailable;
+    entry.unit.reservedUnits = 0;
+  }
+
+  if (approvedCatalogue && inventoryChanged) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'Inventory on an approved development cannot be removed or replaced through catalogue details.',
+    });
+  }
+
+  if (inventoryChanged && !input.isPlatformCurator) {
+    requireDeveloperInventoryManagerRole(input.developerMembershipRole);
+  }
+
+  return editableRows.map(entry => entry.unit);
 }
 
 type TransactionType = 'for_sale' | 'for_rent' | 'auction';
@@ -792,8 +1137,11 @@ function buildDeveloperDisplay(dev: any) {
  * Canonical consumer detail read. Search and detail share the public fact
  * projection in publicDevelopmentDetailService.
  */
-export async function getPublicDevelopmentBySlug(slugOrId: string) {
-  return publicDevelopmentDetailService.getBySlugOrId(slugOrId);
+export async function getPublicDevelopmentBySlug(
+  slugOrId: string,
+  transactionType?: 'for_sale' | 'for_rent',
+) {
+  return publicDevelopmentDetailService.getBySlugOrId(slugOrId, transactionType);
 }
 
 export async function getPublicDevelopment(id: number) {
@@ -871,7 +1219,31 @@ export async function listPublicDevelopments(options: {
     conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
   }
   if (developmentType) conditions.push(eq(developments.developmentType, developmentType as any));
-  if (transactionType) conditions.push(eq(developments.transactionType, transactionType as any));
+  if (transactionType === 'for_sale' || transactionType === 'for_rent') {
+    const modeAvailability =
+      transactionType === 'for_rent'
+        ? sql.raw('mode_inventory.available_for_rent_units')
+        : sql.raw('mode_inventory.available_for_sale_units');
+    conditions.push(
+      or(
+        and(
+          eq(developments.inventoryMode, 'aggregate'),
+          eq(developments.transactionType, transactionType),
+        ),
+        and(
+          eq(developments.inventoryMode, 'itemized'),
+          sql`EXISTS (
+            SELECT 1 FROM ${unitTypes} mode_inventory
+            WHERE mode_inventory.development_id = ${developments.id}
+              AND mode_inventory.is_active = 1
+              AND ${modeAvailability} > 0
+          )`,
+        ),
+      )!,
+    );
+  } else if (transactionType) {
+    conditions.push(eq(developments.transactionType, transactionType as any));
+  }
 
   const results = await db
     .select({
@@ -887,6 +1259,7 @@ export async function listPublicDevelopments(options: {
       priceTo: developments.priceTo,
       status: developments.status,
       transactionType: developments.transactionType,
+      inventoryMode: developments.inventoryMode,
       isFeatured: developments.isFeatured,
       rating: developments.rating,
       highlights: developments.highlights,
@@ -925,9 +1298,16 @@ export async function listPublicDevelopments(options: {
             basePriceTo: unitTypes.basePriceTo,
             monthlyRentFrom: unitTypes.monthlyRentFrom,
             monthlyRentTo: unitTypes.monthlyRentTo,
+            availableForSaleUnits: unitTypes.availableForSaleUnits,
+            availableForRentUnits: unitTypes.availableForRentUnits,
+            availableSalePriceFrom: unitTypes.availableSalePriceFrom,
+            availableSalePriceTo: unitTypes.availableSalePriceTo,
+            availableRentPriceFrom: unitTypes.availableRentPriceFrom,
+            availableRentPriceTo: unitTypes.availableRentPriceTo,
             displayOrder: unitTypes.displayOrder,
             developmentType: developments.developmentType,
             transactionType: developments.transactionType,
+            inventoryMode: developments.inventoryMode,
           })
           .from(unitTypes)
           .leftJoin(developments, eq(unitTypes.developmentId, developments.id))
@@ -944,6 +1324,14 @@ export async function listPublicDevelopments(options: {
       priceTo: number | null;
     }>
   >();
+  const availableModesByDevelopment = new Map<number, Set<'for_sale' | 'for_rent'>>();
+  for (const unit of unitRows as any[]) {
+    if (unit.inventoryMode !== 'itemized') continue;
+    const modes = availableModesByDevelopment.get(Number(unit.developmentId)) || new Set<'for_sale' | 'for_rent'>();
+    if (Number(unit.availableForSaleUnits || 0) > 0) modes.add('for_sale');
+    if (Number(unit.availableForRentUnits || 0) > 0) modes.add('for_rent');
+    availableModesByDevelopment.set(Number(unit.developmentId), modes);
+  }
 
   const mapUnitKind = (structuralType: unknown, developmentType: unknown) => {
     const s = String(structuralType || '').toLowerCase();
@@ -958,15 +1346,34 @@ export async function listPublicDevelopments(options: {
 
   for (const unit of unitRows as any[]) {
     const devId = Number(unit.developmentId);
+    const availableModes = availableModesByDevelopment.get(devId) || new Set<'for_sale' | 'for_rent'>();
+    const selectedMode = transactionType || (
+      unit.inventoryMode === 'itemized'
+        ? availableModes.has('for_sale') ? 'for_sale' : 'for_rent'
+        : unit.transactionType
+    );
+    if (
+      unit.inventoryMode === 'itemized' &&
+      Number(selectedMode === 'for_rent' ? unit.availableForRentUnits : unit.availableForSaleUnits) <= 0
+    ) continue;
     if (!unitsByDevelopment.has(devId)) unitsByDevelopment.set(devId, []);
     const kind = mapUnitKind(unit.structuralType, unit.developmentType);
     const label =
       unit.name || (Number(unit.bedrooms) > 0 ? `${Number(unit.bedrooms)} Bed ${kind}` : `${kind}`);
     // Transaction-driven price facts mirror the public search projection:
-    // rentals quote monthly rent, sales quote the base purchase price.
-    const isRental = unit.transactionType === 'for_rent';
-    const rawFrom = isRental ? unit.monthlyRentFrom : unit.basePriceFrom;
-    const rawTo = isRental ? unit.monthlyRentTo : unit.basePriceTo;
+    // itemized listings use the current available allocation range, while
+    // aggregate listings use the unit type's configured price range.
+    const isRental = selectedMode === 'for_rent';
+    const rawFrom = unit.inventoryMode === 'itemized'
+      ? isRental
+        ? unit.availableRentPriceFrom
+        : unit.availableSalePriceFrom
+      : isRental ? unit.monthlyRentFrom : unit.basePriceFrom;
+    const rawTo = unit.inventoryMode === 'itemized'
+      ? isRental
+        ? unit.availableRentPriceTo
+        : unit.availableSalePriceTo
+      : isRental ? unit.monthlyRentTo : unit.basePriceTo;
     const priceFrom = rawFrom != null && Number(rawFrom) > 0 ? Number(rawFrom) : null;
     const priceTo = rawTo != null && Number(rawTo) > 0 ? Number(rawTo) : priceFrom;
     unitsByDevelopment.get(devId)!.push({
@@ -994,6 +1401,14 @@ export async function listPublicDevelopments(options: {
 
     return {
       ...d,
+      transactionType:
+        d.inventoryMode === 'itemized'
+          ? transactionType || (availableModesByDevelopment.get(Number(d.id))?.has('for_sale') ? 'for_sale' : 'for_rent')
+          : d.transactionType,
+      transactionModes:
+        d.inventoryMode === 'itemized'
+          ? Array.from(availableModesByDevelopment.get(Number(d.id)) || [])
+          : [d.transactionType],
       canonicalRoute: buildDevelopmentRootPath(d),
       images: parseJsonField(d.images),
       highlights: parseJsonField(d.highlights),
@@ -1007,8 +1422,8 @@ export async function listPublicDevelopments(options: {
         d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
       referrerCommissionAmount:
         d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
-      priceFrom: derivedPriceFrom ?? d.priceFrom ?? null,
-      priceTo: derivedPriceTo ?? d.priceTo ?? null,
+      priceFrom: d.inventoryMode === 'itemized' ? derivedPriceFrom : derivedPriceFrom ?? d.priceFrom ?? null,
+      priceTo: d.inventoryMode === 'itemized' ? derivedPriceTo : derivedPriceTo ?? d.priceTo ?? null,
       configurations,
       unitTypes: configurations,
     };
@@ -1569,6 +1984,7 @@ export async function updateDevelopment(
   let developerProfileId: number | null = null;
   let developerPublisherId: number | null = null;
   let superAdminCataloguePublisherId: number | null = null;
+  let developerMembershipRole: string | null = null;
 
   const user = await db.query.users.findFirst({
     where: (u, { eq }) => eq(u.id, userId),
@@ -1589,6 +2005,7 @@ export async function updateDevelopment(
 
     developerProfileId = devProfile.organisationId;
     developerPublisherId = devProfile.publisherId;
+    developerMembershipRole = devProfile.membership.role;
   }
 
   let {
@@ -1636,8 +2053,15 @@ export async function updateDevelopment(
     assertLandDevelopmentOperationAvailable(developmentType, 'Land development authoring');
     updatePayload.developmentType = developmentType;
   }
-  if (developmentData.transactionType !== undefined)
+  if (developmentData.transactionType !== undefined) {
+    if (String(developmentData.transactionType).trim().toLowerCase() === 'mixed') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Choose sale or rent on each item in the inventory workspace. Mixed availability is derived from the current itemized inventory.',
+      });
+    }
     updatePayload.transactionType = normalizeTransactionType(developmentData.transactionType);
+  }
   if (developmentData.propertyCategory !== undefined)
     updatePayload.propertyCategory = developmentData.propertyCategory;
   if (developmentData.subCategory !== undefined)
@@ -1962,6 +2386,72 @@ export async function updateDevelopment(
     }
 
     const persistedPayload = { ...updatePayload };
+    const priorUnitTypePriceRanges =
+      current?.inventoryMode === 'itemized' && Array.isArray(unitTypesData)
+        ? await writeDb
+            .select({
+              id: unitTypes.id,
+              name: unitTypes.name,
+              basePriceFrom: unitTypes.basePriceFrom,
+              basePriceTo: unitTypes.basePriceTo,
+              monthlyRentFrom: unitTypes.monthlyRentFrom,
+              monthlyRentTo: unitTypes.monthlyRentTo,
+            })
+            .from(unitTypes)
+            .where(eq(unitTypes.developmentId, id))
+            .for('update')
+        : [];
+    let unitTypePriceRangeChanges: Array<{
+      id: string;
+      name: string;
+      before: ReturnType<typeof getPersistedUnitTypePriceRanges>;
+      after: ReturnType<typeof getPersistedUnitTypePriceRanges>;
+    }> = [];
+
+    if (
+      current &&
+      persistedPayload.transactionType !== undefined &&
+      persistedPayload.transactionType !== current.transactionType
+    ) {
+      if (current.inventoryMode === 'itemized') {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Transaction mode is derived from itemized inventory. Change the mode on the specific inventory item in the inventory workspace.',
+        });
+      }
+      const protectedInventoryRows = await writeDb
+        .select({
+          totalUnits: unitTypes.totalUnits,
+          availableUnits: unitTypes.availableUnits,
+          reservedUnits: unitTypes.reservedUnits,
+        })
+        .from(unitTypes)
+        .where(eq(unitTypes.developmentId, id))
+        .for('update');
+      const hasProtectedInventory = protectedInventoryRows.some((unit: any) => {
+        const totalUnits = Math.max(0, Number(unit.totalUnits ?? 0));
+        const availableUnits = Math.max(0, Number(unit.availableUnits ?? 0));
+        const reservedUnits = Math.max(0, Number(unit.reservedUnits ?? 0));
+        return (
+          availableUnits + reservedUnits > totalUnits ||
+          reservedUnits > 0 ||
+          totalUnits - availableUnits - reservedUnits > 0
+        );
+      });
+
+      if (
+        current.approvalStatus === 'approved' ||
+        Number(current.isPublished) === 1 ||
+        hasProtectedInventory
+      ) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'Sale or rent mode cannot be changed through development details while this project is approved or has committed or unclassified inventory. The current inventory model applies one transaction mode to the whole development; per-unit mode changes need a dedicated, recorded workflow.',
+        });
+      }
+    }
 
     if (superAdminCataloguePublisherId === null && current) {
       const authorizedMedia = await authorizeDeveloperDevelopmentMedia({
@@ -1997,6 +2487,66 @@ export async function updateDevelopment(
         persistedPayload.brochures = JSON.stringify(authorizedMedia.brochures);
       }
       if ('unitTypes' in authorizedMedia) unitTypesData = authorizedMedia.unitTypes as any;
+    }
+
+    if (Array.isArray(unitTypesData)) {
+      if (!current) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'A saved development is required before its inventory can be updated.',
+        });
+      }
+      unitTypesData = await guardUnitTypeInventoryUpdate({
+        database: writeDb,
+        developmentId: id,
+        current,
+        unitTypesData,
+        developerMembershipRole,
+        isPlatformCurator: superAdminCataloguePublisherId !== null,
+      });
+
+      if (current.inventoryMode === 'itemized') {
+        const previousById = new Map<string, any>(
+          priorUnitTypePriceRanges.map((row: any) => [String(row.id), row]),
+        );
+        unitTypePriceRangeChanges = unitTypesData.flatMap((unit: any) => {
+          const unitTypeId = String(unit?.id || '').trim();
+          const previous = previousById.get(unitTypeId);
+          if (!previous) return [];
+          const before = getPersistedUnitTypePriceRanges(previous);
+          const after = getIncomingUnitTypePriceRanges(unit as Record<string, unknown>);
+          const changed = Object.keys(before).some(
+            key => before[key as keyof typeof before] !== after[key as keyof typeof after],
+          );
+          return changed
+            ? [{
+                id: unitTypeId,
+                name: String(unit.name || unit.label || previous.name),
+                before,
+                after,
+              }]
+            : [];
+        });
+
+        if (unitTypePriceRangeChanges.length > 0) {
+          if (
+            superAdminCataloguePublisherId === null &&
+            !DEVELOPER_INVENTORY_MANAGER_ROLES.has(String(developerMembershipRole || ''))
+          ) {
+            throw new TRPCError({
+              code: 'FORBIDDEN',
+              message: 'Only a developer owner, admin, or sales manager can change shared inventory price ranges.',
+            });
+          }
+          const inventoryChangeReason = String(developmentData.inventoryChangeReason || '').trim();
+          if (inventoryChangeReason.length < 10 || inventoryChangeReason.length > 500) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Enter a reason between 10 and 500 characters for the unit-type price range change.',
+            });
+          }
+        }
+      }
     }
 
     // A live catalogue record cannot be edited in place. Until S1 adds
@@ -2046,6 +2596,31 @@ export async function updateDevelopment(
       }
     } else {
       console.log('[updateDevelopment] No unitTypes in payload - preserving existing');
+    }
+
+    if (unitTypePriceRangeChanges.length > 0) {
+      const inventoryChangeReason = String(developmentData.inventoryChangeReason || '').trim();
+      await writeDb.insert(managerialAuditLogs).values(
+        unitTypePriceRangeChanges.map(change => ({
+          actorUserId: userId,
+          action: 'developer.inventory.unit_type_price_range_changed',
+          targetType: 'development',
+          targetId: id,
+          beforeData: change.before,
+          afterData: change.after,
+          metadata: {
+            unitTypeId: change.id,
+            unitTypeName: change.name,
+            reason: inventoryChangeReason,
+            actorRole: developerMembershipRole || 'platform_curator',
+          },
+        })),
+      );
+    }
+
+    if (current?.inventoryMode === 'itemized') {
+      await assertItemizedMarketablePrices(writeDb, id, current.inventoryMode);
+      await refreshItemizedProjection(writeDb, id);
     }
 
     return updated;
@@ -2139,11 +2714,19 @@ export async function updateDeveloperUnitAvailability(
   developmentId: number,
   unitTypeId: string,
   userId: number,
+  expectedAvailableUnits: number,
   availableUnits: number,
   reason: string,
 ) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+
+  if (!Number.isInteger(expectedAvailableUnits) || expectedAvailableUnits < 0) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Expected available units must be a non-negative whole number.',
+    });
+  }
 
   if (!Number.isInteger(availableUnits) || availableUnits < 0) {
     throw new TRPCError({
@@ -2164,12 +2747,14 @@ export async function updateDeveloperUnitAvailability(
   if (!devProfile) {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
   }
+  requireDeveloperInventoryManagerRole(devProfile.membership.role);
 
   return db.transaction(async tx => {
     const [development] = await tx
       .select({
         id: developments.id,
         developmentType: developments.developmentType,
+        inventoryMode: developments.inventoryMode,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
       })
@@ -2185,6 +2770,13 @@ export async function updateDeveloperUnitAvailability(
 
     if (!development) {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
+    }
+    if (development.inventoryMode === 'itemized') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'This development uses itemized inventory. Change availability on the specific inventory item in the inventory workspace.',
+      });
     }
     assertLandDevelopmentOperationAvailable(
       development.developmentType,
@@ -2230,6 +2822,13 @@ export async function updateDeveloperUnitAvailability(
     }
 
     const previousAvailableUnits = Math.max(0, Number(unit.availableUnits || 0));
+    if (previousAvailableUnits !== expectedAvailableUnits) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Availability changed after you opened this form. Refresh the development and review the current count before saving.',
+      });
+    }
     if (availableUnits === previousAvailableUnits) {
       throw new TRPCError({
         code: 'BAD_REQUEST',
@@ -2716,102 +3315,90 @@ async function getDevelopmentsByDeveloperId(developerProfileId: number) {
 }
 
 async function createPhase(developmentId: number, developerId: number, data: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // (optional but recommended) ownership check: dev must own the development
-  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
-  if (!devProfile)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
-
-  const [owned] = await db
-    .select({ id: developments.id })
-    .from(developments)
-    .where(
-      and(
-        eq(developments.id, developmentId),
-        eq(developments.cataloguePublisherId, devProfile.publisherId),
-      ),
-    )
-    .limit(1);
-
-  if (!owned) {
+  const allowedKeys = new Set(['name', 'phaseNumber', 'description', 'status', 'reason']);
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Provide phase details.' });
+  }
+  if (Object.keys(data).some(key => !allowedKeys.has(key))) {
     throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Unauthorized: you do not own this development',
+      code: 'PRECONDITION_FAILED',
+      message: 'Phase creation accepts only planning details. Inventory and release fields are managed through the developer workspace.',
+    });
+  }
+  if (data.status !== undefined && data.status !== 'planning') {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message: 'A new phase must start in planning. Use the authorized phase-release action to make it active.',
     });
   }
 
-  // IMPORTANT: developmentPhases.id is INT auto_increment -> never pass id
-  const { id, ...safe } = data || {};
-
-  const [result] = await db.insert(developmentPhases).values({
-    ...safe,
+  return prepareDevelopmentPhase({
     developmentId,
-    createdAt: mysqlDateTime(),
+    userId: developerId,
+    phaseNumber: data.phaseNumber,
+    name: data.name,
+    description: data.description,
+    reason: data.reason,
   });
-
-  const [created] = await db
-    .select()
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, Number(result.insertId)))
-    .limit(1);
-
-  return created;
 }
 
 async function updatePhase(phaseId: number, developerId: number, data: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  void phaseId;
+  void developerId;
+  void data;
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Direct phase edits are disabled. Prepare phases through the audited workspace and use its authorized release action to change lifecycle status.',
+  });
+}
 
-  const idNum = Number(phaseId);
-  if (!Number.isFinite(idNum)) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid phaseId' });
+async function assertItemizedMarketablePrices(
+  tx: any,
+  developmentId: number,
+  inventoryMode: DevelopmentRow['inventoryMode'],
+): Promise<void> {
+  if (inventoryMode !== 'itemized') return;
+  const allocations = await tx
+    .select({
+      internalIdentifier: developmentInventoryItems.internalIdentifier,
+      transactionType: developmentInventoryItems.transactionType,
+      status: developmentInventoryItems.status,
+      salePrice: developmentInventoryItems.salePrice,
+      rentPrice: developmentInventoryItems.rentPrice,
+      phaseStatus: developmentPhases.status,
+      phaseArchivedAt: developmentPhases.archivedAt,
+      basePriceFrom: unitTypes.basePriceFrom,
+      basePriceTo: unitTypes.basePriceTo,
+      monthlyRentFrom: unitTypes.monthlyRentFrom,
+      monthlyRentTo: unitTypes.monthlyRentTo,
+      unitTypeDevelopmentId: unitTypes.developmentId,
+      phaseDevelopmentId: developmentPhases.developmentId,
+    })
+    .from(developmentInventoryItems)
+    .innerJoin(unitTypes, eq(developmentInventoryItems.unitTypeId, unitTypes.id))
+    .innerJoin(developmentPhases, eq(developmentInventoryItems.phaseId, developmentPhases.id))
+    .where(eq(developmentInventoryItems.developmentId, developmentId))
+    .for('update');
+
+  for (const item of allocations as any[]) {
+    if (
+      Number(item.unitTypeDevelopmentId) !== developmentId ||
+      Number(item.phaseDevelopmentId) !== developmentId
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `${item.internalIdentifier} is linked to a phase or unit type outside this development. Correct the inventory register before publication.`,
+      });
+    }
+    if (item.status !== 'available' || item.phaseStatus !== 'selling' || item.phaseArchivedAt) continue;
+    if (!hasValidDevelopmentInventoryMarketPrice(item, item)) {
+      const modeLabel = item.transactionType === 'for_rent' ? 'monthly rent' : 'sale';
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: `${item.internalIdentifier} is marked available in a selling phase but has no valid ${modeLabel} price. Add a unit-type range or allocation override before publication.`,
+      });
+    }
   }
-
-  // (optional but recommended) ownership check via phase -> development -> developer
-  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
-  if (!devProfile)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
-
-  const [phaseRow] = await db
-    .select({ developmentId: developmentPhases.developmentId })
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, idNum))
-    .limit(1);
-
-  if (!phaseRow) throw new TRPCError({ code: 'NOT_FOUND', message: 'Phase not found' });
-
-  const [owned] = await db
-    .select({ id: developments.id })
-    .from(developments)
-    .where(
-      and(
-        eq(developments.id, Number(phaseRow.developmentId)),
-        eq(developments.cataloguePublisherId, devProfile.publisherId),
-      ),
-    )
-    .limit(1);
-
-  if (!owned) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Unauthorized: you do not own this development',
-    });
-  }
-
-  // IMPORTANT: never allow id changes
-  const { id, ...safe } = data || {};
-
-  await db.update(developmentPhases).set(safe).where(eq(developmentPhases.id, idNum));
-
-  const [updated] = await db
-    .select()
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, idNum))
-    .limit(1);
-
-  return updated;
 }
 
 async function publishDevelopment(
@@ -2871,6 +3458,7 @@ async function publishDevelopment(
       throwAuctionPublicationDisabled();
     }
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
+    await assertItemizedMarketablePrices(tx, id, ownedDevelopment.inventoryMode);
     const blockers = validatePersistedSubmissionReadiness(ownedDevelopment, persistedUnits);
     if (blockers.length > 0) throw submissionValidationError(blockers);
 
@@ -3419,6 +4007,7 @@ export async function publishPlatformCuratedDevelopmentInTransaction(
     const openRow = openRows[0];
 
     const persistedUnits = await tx.select().from(unitTypes).where(eq(unitTypes.developmentId, id));
+    await assertItemizedMarketablePrices(tx, id, existingDev.inventoryMode);
     const blockers = validatePersistedSubmissionReadiness(existingDev, persistedUnits);
     if (blockers.length > 0) throw submissionValidationError(blockers);
 
@@ -3581,6 +4170,7 @@ export async function completeReviewInTransaction(
       .select()
       .from(unitTypes)
       .where(eq(unitTypes.developmentId, developmentId));
+    await assertItemizedMarketablePrices(tx, developmentId, development.inventoryMode);
     const blockers = validatePersistedSubmissionReadiness(development, reviewUnitTypes);
     if (blockers.length > 0) throw submissionValidationError(blockers);
   }
@@ -3749,6 +4339,7 @@ export async function publishDeveloperOwnedDevelopmentInTransaction(
     .select()
     .from(unitTypes)
     .where(eq(unitTypes.developmentId, developmentId));
+  await assertItemizedMarketablePrices(tx, developmentId, development.inventoryMode);
   const blockers = validatePersistedSubmissionReadiness(development, persistedUnits);
   if (blockers.length > 0) throw submissionValidationError(blockers);
 
@@ -3965,6 +4556,7 @@ async function deleteDevelopment(
     const [owned] = await tx
       .select({
         id: developments.id,
+        inventoryMode: developments.inventoryMode,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
       })
@@ -3979,6 +4571,20 @@ async function deleteDevelopment(
     }
     assertDevelopmentDeletionAllowed(owned);
 
+    const [itemizedInventory] = await tx
+      .select({ id: developmentInventoryItems.id })
+      .from(developmentInventoryItems)
+      .where(eq(developmentInventoryItems.developmentId, id))
+      .limit(1)
+      .for('update');
+    if (itemizedInventory || owned.inventoryMode === 'itemized') {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'A development with itemized inventory cannot be deleted. Archive it to preserve allocation and release history.',
+      });
+    }
+
     const [existingLead] = await tx
       .select({ id: leads.id })
       .from(leads)
@@ -3990,6 +4596,33 @@ async function deleteDevelopment(
         code: 'PRECONDITION_FAILED',
         message:
           'A development with recorded enquiries cannot be deleted. Keep the project record so lead custody and history remain intact.',
+      });
+    }
+
+    const inventoryRows = await tx
+      .select({
+        totalUnits: unitTypes.totalUnits,
+        availableUnits: unitTypes.availableUnits,
+        reservedUnits: unitTypes.reservedUnits,
+      })
+      .from(unitTypes)
+      .where(eq(unitTypes.developmentId, id))
+      .for('update');
+    const protectedInventory = inventoryRows.find((unit: any) => {
+      const totalUnits = Math.max(0, Number(unit.totalUnits ?? 0));
+      const availableUnits = Math.max(0, Number(unit.availableUnits ?? 0));
+      const reservedUnits = Math.max(0, Number(unit.reservedUnits ?? 0));
+      return (
+        availableUnits + reservedUnits > totalUnits ||
+        reservedUnits > 0 ||
+        totalUnits - availableUnits - reservedUnits > 0
+      );
+    });
+    if (protectedInventory) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'This development has reserved or unclassified inventory and cannot be deleted. Reconcile the inventory and retain the project record.',
       });
     }
 

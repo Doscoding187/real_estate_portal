@@ -10,14 +10,35 @@ import { Input } from '@/components/ui/input';
 import { invalidateDeveloperOperatingHomeRanges } from '@/lib/developmentHomeInvalidation';
 import { trpc } from '@/lib/trpc';
 
+type DevelopmentView = 'active' | 'history' | 'all';
 type DevelopmentFilter = 'all' | 'ready' | 'available' | 'attention';
 
-const DEVELOPMENT_FILTERS: Array<{ value: DevelopmentFilter; label: string }> = [
+const DEVELOPMENT_VIEWS: Array<{ value: DevelopmentView; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'history', label: 'Sold-out history' },
   { value: 'all', label: 'All developments' },
+];
+
+const DEVELOPMENT_FILTERS: Array<{ value: DevelopmentFilter; label: string }> = [
+  { value: 'all', label: 'All' },
   { value: 'ready', label: 'Ready to progress' },
   { value: 'available', label: 'Available inventory' },
   { value: 'attention', label: 'Needs attention' },
 ];
+
+function matchesDevelopmentView(
+  development: { market: { status: string }; inventory: { availableUnits: number | null } },
+  view: DevelopmentView,
+): boolean {
+  const hasMarketableInventory = (development.inventory.availableUnits ?? 0) > 0;
+  if (view === 'history') {
+    return development.market.status === 'sold-out' && !hasMarketableInventory;
+  }
+  if (view === 'active') {
+    return development.market.status !== 'sold-out' || hasMarketableInventory;
+  }
+  return true;
+}
 
 function matchesDevelopmentFilter(
   development: {
@@ -33,12 +54,36 @@ function matchesDevelopmentFilter(
   return true;
 }
 
-function getDevelopmentFilter(location: string): DevelopmentFilter {
+function getRouteParams(location: string): URLSearchParams {
   const search = location.includes('?') ? location.slice(location.indexOf('?') + 1) : '';
-  const candidate = new URLSearchParams(search).get('filter');
+  return new URLSearchParams(search);
+}
+
+function getDevelopmentView(location: string): DevelopmentView {
+  const candidate = getRouteParams(location).get('view');
+  return DEVELOPMENT_VIEWS.some(view => view.value === candidate)
+    ? (candidate as DevelopmentView)
+    : 'active';
+}
+
+function getDevelopmentFilter(location: string): DevelopmentFilter {
+  const candidate = getRouteParams(location).get('filter');
   return DEVELOPMENT_FILTERS.some(filter => filter.value === candidate)
     ? (candidate as DevelopmentFilter)
     : 'all';
+}
+
+function routeWithParam(
+  location: string,
+  key: 'view' | 'filter',
+  value: string,
+  defaultValue: string,
+) {
+  const params = getRouteParams(location);
+  if (value === defaultValue) params.delete(key);
+  else params.set(key, value);
+  const query = params.toString();
+  return `/developer/developments${query ? `?${query}` : ''}`;
 }
 
 function lifecycleLabel(state: string): string {
@@ -66,6 +111,36 @@ function numberLabel(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : new Intl.NumberFormat().format(value);
 }
 
+function marketStatusLabel(
+  status: string,
+  availableUnits: number | null,
+  transactionType: string,
+): string {
+  if (status === 'sold-out' && (availableUnits ?? 0) > 0) {
+    if (transactionType === 'for_rent') return 'Rental availability';
+    if (transactionType === 'mixed') return 'Sale and rent availability';
+    return 'For sale';
+  }
+  return (
+    {
+      'launching-soon': 'Launching soon',
+      selling: 'Selling',
+      'sold-out': 'Sold out',
+    }[status] ?? status
+  );
+}
+
+function transactionTypeLabel(transactionType: string): string {
+  return (
+    {
+      for_sale: 'For sale',
+      for_rent: 'For rent',
+      auction: 'Auction',
+      mixed: 'For sale and rent',
+    }[transactionType] ?? transactionType
+  );
+}
+
 export default function DevelopmentsList() {
   const [location, setLocation] = useLocation();
   const utils = trpc.useUtils();
@@ -88,15 +163,19 @@ export default function DevelopmentsList() {
 
   const developmentRows = homeQuery.data?.developments;
   const developments = useMemo(() => developmentRows ?? [], [developmentRows]);
+  const activeView = getDevelopmentView(location);
   const activeFilter = getDevelopmentFilter(location);
-  const setFilter = (filter: DevelopmentFilter) => {
-    setLocation(
-      filter === 'all' ? '/developer/developments' : `/developer/developments?filter=${filter}`,
-    );
-  };
+  const setView = (view: DevelopmentView) =>
+    setLocation(routeWithParam(location, 'view', view, 'active'));
+  const setFilter = (filter: DevelopmentFilter) =>
+    setLocation(routeWithParam(location, 'filter', filter, 'all'));
+  const viewDevelopments = useMemo(
+    () => developments.filter(development => matchesDevelopmentView(development, activeView)),
+    [activeView, developments],
+  );
   const filteredDevelopments = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    return developments.filter(development => {
+    return viewDevelopments.filter(development => {
       if (!matchesDevelopmentFilter(development, activeFilter)) return false;
       if (!query) return true;
       const location = development.identity.location;
@@ -104,20 +183,30 @@ export default function DevelopmentsList() {
         .filter(Boolean)
         .some(value => value.toLowerCase().includes(query));
     });
-  }, [activeFilter, developments, searchTerm]);
+  }, [activeFilter, searchTerm, viewDevelopments]);
+  const viewCounts = useMemo(
+    () => ({
+      active: developments.filter(development => matchesDevelopmentView(development, 'active'))
+        .length,
+      history: developments.filter(development => matchesDevelopmentView(development, 'history'))
+        .length,
+      all: developments.length,
+    }),
+    [developments],
+  );
   const filterCounts = useMemo(
     () => ({
-      all: developments.length,
-      ready: developments.filter(development => matchesDevelopmentFilter(development, 'ready'))
+      all: viewDevelopments.length,
+      ready: viewDevelopments.filter(development => matchesDevelopmentFilter(development, 'ready'))
         .length,
-      available: developments.filter(development =>
+      available: viewDevelopments.filter(development =>
         matchesDevelopmentFilter(development, 'available'),
       ).length,
-      attention: developments.filter(development =>
+      attention: viewDevelopments.filter(development =>
         matchesDevelopmentFilter(development, 'attention'),
       ).length,
     }),
-    [developments],
+    [viewDevelopments],
   );
 
   const handleDelete = (id: number, name: string) => {
@@ -188,22 +277,47 @@ export default function DevelopmentsList() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter developments">
-        {DEVELOPMENT_FILTERS.map(filter => (
-          <Button
-            key={filter.value}
-            type="button"
-            size="sm"
-            variant={activeFilter === filter.value ? 'default' : 'outline'}
-            aria-pressed={activeFilter === filter.value}
-            onClick={() => setFilter(filter.value)}
-          >
-            {filter.label}{' '}
-            <span aria-label={`${filterCounts[filter.value]} matching`}>
-              ({filterCounts[filter.value]})
-            </span>
-          </Button>
-        ))}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Portfolio view">
+          <span className="mr-1 text-sm font-medium text-slate-700">Portfolio</span>
+          {DEVELOPMENT_VIEWS.map(view => (
+            <Button
+              key={view.value}
+              type="button"
+              size="sm"
+              variant={activeView === view.value ? 'default' : 'outline'}
+              aria-pressed={activeView === view.value}
+              onClick={() => setView(view.value)}
+            >
+              {view.label}{' '}
+              <span aria-label={`${viewCounts[view.value]} matching`}>
+                ({viewCounts[view.value]})
+              </span>
+            </Button>
+          ))}
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Filter developments"
+        >
+          <span className="mr-1 text-sm font-medium text-slate-700">Show</span>
+          {DEVELOPMENT_FILTERS.map(filter => (
+            <Button
+              key={filter.value}
+              type="button"
+              size="sm"
+              variant={activeFilter === filter.value ? 'default' : 'outline'}
+              aria-pressed={activeFilter === filter.value}
+              onClick={() => setFilter(filter.value)}
+            >
+              {filter.label}{' '}
+              <span aria-label={`${filterCounts[filter.value]} matching`}>
+                ({filterCounts[filter.value]})
+              </span>
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -216,6 +330,16 @@ export default function DevelopmentsList() {
                     <CardTitle className="truncate">{development.identity.name}</CardTitle>
                     <Badge variant={lifecycleVariant(development.lifecycle.state)}>
                       {lifecycleLabel(development.lifecycle.state)}
+                    </Badge>
+                    <Badge variant="outline">
+                      {marketStatusLabel(
+                        development.market.status,
+                        development.inventory.availableUnits,
+                        development.market.transactionType,
+                      )}
+                    </Badge>
+                    <Badge variant="outline">
+                      {transactionTypeLabel(development.market.transactionType)}
                     </Badge>
                     <Badge variant="outline">
                       {development.readiness.status === 'ready' ? 'Ready' : 'Readiness blocked'}
@@ -291,9 +415,13 @@ export default function DevelopmentsList() {
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             {developments.length === 0
               ? 'No developments yet. Create a private draft to get started.'
-              : activeFilter !== 'all'
-                ? `No developments match “${DEVELOPMENT_FILTERS.find(filter => filter.value === activeFilter)?.label}” and your search.`
-                : 'No developments match your search.'}
+              : viewDevelopments.length === 0 && activeView === 'active'
+                ? 'No active developments yet. Sold-out developments are available in Sold-out history.'
+                : viewDevelopments.length === 0 && activeView === 'history'
+                  ? 'No sold-out developments are in this portfolio yet.'
+                  : activeFilter !== 'all'
+                    ? `No developments match “${DEVELOPMENT_FILTERS.find(filter => filter.value === activeFilter)?.label}” and your search.`
+                    : 'No developments match your search.'}
           </CardContent>
         </Card>
       )}

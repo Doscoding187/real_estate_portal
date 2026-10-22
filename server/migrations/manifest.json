@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0115_non_geographic_place_search_eligibility.sql",
+  "expectedHead": "0124_development_phase_archival.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1213,6 +1213,96 @@
       "parentChecksum": "44bd9e23779fefee710eb90da832261dc0ade2b51649a4b59fdefe675dd1d3a4",
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 116,
+      "filename": "0116_development_inventory_mode.sql",
+      "checksum": "f38f3052086b058ea2e077c595482fdd12c11100f607ae33fd0598105bf7b80d",
+      "parent": "0115_non_geographic_place_search_eligibility.sql",
+      "parentChecksum": "53c65883b900d639d1ea989041386a4d4fea28e7a9a7b35579a52c449e9d649c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 117,
+      "filename": "0117_development_inventory_items.sql",
+      "checksum": "33093956b2a05a312d34094000684bef668e16cd75a1e3d97f6fde4f8a4821c0",
+      "parent": "0116_development_inventory_mode.sql",
+      "parentChecksum": "f38f3052086b058ea2e077c595482fdd12c11100f607ae33fd0598105bf7b80d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 118,
+      "filename": "0118_unit_type_inventory_mode_projections.sql",
+      "checksum": "c71933c625af30a06c81f4a29ca8d3591255be68e7a30dfa0ffd4dcfb7bb32a3",
+      "parent": "0117_development_inventory_items.sql",
+      "parentChecksum": "33093956b2a05a312d34094000684bef668e16cd75a1e3d97f6fde4f8a4821c0",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 119,
+      "filename": "0119_unit_type_transaction_mode_projections.sql",
+      "checksum": "968c95d942f087ea5c20fc8473de882c6abc385599b49119179cc86a29be62cf",
+      "parent": "0118_unit_type_inventory_mode_projections.sql",
+      "parentChecksum": "c71933c625af30a06c81f4a29ca8d3591255be68e7a30dfa0ffd4dcfb7bb32a3",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 120,
+      "filename": "0120_unit_type_sold_inventory_projections.sql",
+      "checksum": "6b5ec1fa11091f4754057071b8c5ab9dfbc2e4c770284644211aa1fbd276c0a5",
+      "parent": "0119_unit_type_transaction_mode_projections.sql",
+      "parentChecksum": "968c95d942f087ea5c20fc8473de882c6abc385599b49119179cc86a29be62cf",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 121,
+      "filename": "0121_unit_type_available_inventory_prices.sql",
+      "checksum": "3e5c23d4920f516bc874458e5e538451f68a683e30b5d6285f25fa6cb425bcb1",
+      "parent": "0120_unit_type_sold_inventory_projections.sql",
+      "parentChecksum": "6b5ec1fa11091f4754057071b8c5ab9dfbc2e4c770284644211aa1fbd276c0a5",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 122,
+      "filename": "0122_development_inventory_allocation_notes.sql",
+      "checksum": "b74cdacc0b3ed6b9d236eac032683a5eb73c1dc8a4782c9558fff80fd9456ca1",
+      "parent": "0121_unit_type_available_inventory_prices.sql",
+      "parentChecksum": "3e5c23d4920f516bc874458e5e538451f68a683e30b5d6285f25fa6cb425bcb1",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 123,
+      "filename": "0123_development_team_contacts.sql",
+      "checksum": "10ce117727711e5b41dfc2f1f59cf808b5bc007e1d19e442fd77b4904eb5119a",
+      "parent": "0122_development_inventory_allocation_notes.sql",
+      "parentChecksum": "b74cdacc0b3ed6b9d236eac032683a5eb73c1dc8a4782c9558fff80fd9456ca1",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 124,
+      "filename": "0124_development_phase_archival.sql",
+      "checksum": "a22a090dd846bae5ce0ba89d97b49476ec7281e47da64120abfdb7049a9fc1f4",
+      "parent": "0123_development_team_contacts.sql",
+      "parentChecksum": "10ce117727711e5b41dfc2f1f59cf808b5bc007e1d19e442fd77b4904eb5119a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
     }
   ]

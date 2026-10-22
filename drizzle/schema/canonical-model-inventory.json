@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "65996db8ffc4fe1b8906108abe58c6202aae247d8ee8f0fef1e2e7c3da345721",
+  "structuralDigest": "1e23f715815d4e7ab06d0113e1472f984a9081c08284a7aeaa7ce839d3b95d2b",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 224,
+  "tableCount": 226,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -80,11 +80,13 @@
     "development_approval_queue",
     "development_documents",
     "development_drafts",
+    "development_inventory_items",
     "development_lead_routes",
     "development_manager_assignments",
     "development_phases",
     "development_required_documents",
     "development_supersessions",
+    "development_team_contacts",
     "development_units",
     "developments",
     "distribution_agent_access",

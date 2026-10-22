@@ -1,6 +1,8 @@
-import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, or, sql, type SQL } from 'drizzle-orm';
 import {
   cataloguePublishers,
+  developmentPhases,
+  developmentTeamContacts,
   developments,
   distributionDevelopmentAccess,
   distributionPrograms,
@@ -14,6 +16,7 @@ type ListPartnerProgramTermsInput = {
   cataloguePublisherId?: number;
   developmentIds?: number[];
   includeDisabled?: boolean;
+  includeSoldOut?: boolean;
 };
 
 type BrochureConfig = {
@@ -30,6 +33,12 @@ type BrochureConfig = {
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
+  marketStatus: 'launching-soon' | 'selling' | 'sold-out';
+  transactionModes: Array<'for_sale' | 'for_rent'>;
+  pricingByMode: {
+    for_sale: { priceFrom: number | null; priceTo: number | null } | null;
+    for_rent: { priceFrom: number | null; priceTo: number | null } | null;
+  };
   city?: string | null;
   province?: string | null;
   suburb?: string | null;
@@ -61,6 +70,8 @@ export type PartnerProgramTermsItem = {
   };
   unitTypes: Array<{
     name: string;
+    transactionType: 'for_sale' | 'for_rent';
+    availableUnits: number | null;
     bedrooms: number | null;
     bathrooms: number | null;
     unitSize: number | null;
@@ -84,6 +95,16 @@ export type PartnerProgramTermsItem = {
     fileUrl: string | null;
     fileName: string | null;
     sortOrder: number;
+    sharedAt: string | null;
+  }>;
+  teamContacts: Array<{
+    phaseLabel: string | null;
+    roleTitle: string;
+    displayName: string;
+    organizationName: string | null;
+    email: string | null;
+    phone: string | null;
+    responsibility: string | null;
   }>;
   computed: {
     commissionDisplay: string;
@@ -277,6 +298,10 @@ export async function listPartnerProgramTerms(
     conditions.push(inArray(developments.id, input.developmentIds));
   }
 
+  if (!input.includeSoldOut) {
+    conditions.push(ne(developments.status, 'sold-out'));
+  }
+
   if (!includeDisabled) {
     conditions.push(eq(distributionPrograms.isActive, 1));
     conditions.push(eq(distributionPrograms.isReferralEnabled, 1));
@@ -293,6 +318,9 @@ export async function listPartnerProgramTerms(
     const selectFields: Record<string, any> = {
       developmentId: developments.id,
       developmentName: developments.name,
+      marketStatus: developments.status,
+      transactionType: developments.transactionType,
+      inventoryMode: developments.inventoryMode,
       suburb: developments.suburb,
       city: developments.city,
       province: developments.province,
@@ -409,8 +437,61 @@ export async function listPartnerProgramTerms(
           fileUrl: template.templateFileUrl || null,
           fileName: template.templateFileName || null,
           sortOrder: Number(template.sortOrder || 0),
+          sharedAt: template.createdAt || null,
         })),
     );
+  }
+
+  const partnerContactRows = developmentIds.length
+    ? await db
+        .select({
+          developmentId: developmentTeamContacts.developmentId,
+          phaseId: developmentTeamContacts.phaseId,
+          phaseNumber: developmentPhases.phaseNumber,
+          phaseName: developmentPhases.name,
+          phaseStatus: developmentPhases.status,
+          roleTitle: developmentTeamContacts.roleTitle,
+          displayName: developmentTeamContacts.displayName,
+          organizationName: developmentTeamContacts.organizationName,
+          email: developmentTeamContacts.email,
+          phone: developmentTeamContacts.phone,
+          responsibility: developmentTeamContacts.responsibility,
+        })
+        .from(developmentTeamContacts)
+        .leftJoin(
+          developmentPhases,
+          and(
+            eq(developmentTeamContacts.phaseId, developmentPhases.id),
+            eq(developmentTeamContacts.developmentId, developmentPhases.developmentId),
+          ),
+        )
+        .where(and(
+          inArray(developmentTeamContacts.developmentId, developmentIds),
+          eq(developmentTeamContacts.isActive, 1),
+          eq(developmentTeamContacts.visibleToPartners, 1),
+          or(
+            isNull(developmentTeamContacts.phaseId),
+            and(eq(developmentPhases.status, 'selling'), isNull(developmentPhases.archivedAt)),
+          ),
+        ))
+        .orderBy(developmentTeamContacts.displayOrder, developmentTeamContacts.roleTitle)
+    : [];
+  const teamContactsByDevelopmentId = new Map<number, PartnerProgramTermsItem['teamContacts']>();
+  for (const contact of partnerContactRows) {
+    const developmentId = Number(contact.developmentId);
+    const contacts = teamContactsByDevelopmentId.get(developmentId) || [];
+    contacts.push({
+      phaseLabel: contact.phaseId === null
+        ? null
+        : `Phase ${Number(contact.phaseNumber)}: ${String(contact.phaseName || '')}`,
+      roleTitle: String(contact.roleTitle || ''),
+      displayName: String(contact.displayName || ''),
+      organizationName: contact.organizationName || null,
+      email: contact.email || null,
+      phone: contact.phone || null,
+      responsibility: contact.responsibility || null,
+    });
+    teamContactsByDevelopmentId.set(developmentId, contacts);
   }
 
   const unitRows = developmentIds.length
@@ -426,23 +507,32 @@ export async function listPartnerProgramTerms(
           priceTo: unitTypes.priceTo,
           basePriceFrom: unitTypes.basePriceFrom,
           basePriceTo: unitTypes.basePriceTo,
+          monthlyRentFrom: unitTypes.monthlyRentFrom,
+          monthlyRentTo: unitTypes.monthlyRentTo,
+          availableUnits: unitTypes.availableUnits,
+          availableForSaleUnits: unitTypes.availableForSaleUnits,
+          availableForRentUnits: unitTypes.availableForRentUnits,
+          availableSalePriceFrom: unitTypes.availableSalePriceFrom,
+          availableSalePriceTo: unitTypes.availableSalePriceTo,
+          availableRentPriceFrom: unitTypes.availableRentPriceFrom,
+          availableRentPriceTo: unitTypes.availableRentPriceTo,
         })
         .from(unitTypes)
         .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
         .orderBy(unitTypes.displayOrder, unitTypes.name)
     : [];
 
+  const developmentById = new Map(rows.map(row => [Number(row.developmentId), row]));
   const unitPriceRangeByDevelopment = new Map<
     number,
-    {
-      priceFrom: number | null;
-      priceTo: number | null;
-    }
+    Record<'for_sale' | 'for_rent', { priceFrom: number | null; priceTo: number | null }>
   >();
   const unitTypesByDevelopment = new Map<
     number,
     Array<{
       name: string;
+      transactionType: 'for_sale' | 'for_rent';
+      availableUnits: number | null;
       bedrooms: number | null;
       bathrooms: number | null;
       unitSize: number | null;
@@ -454,71 +544,74 @@ export async function listPartnerProgramTerms(
   for (const row of unitRows) {
     const developmentId = Number(row.developmentId || 0);
     if (!developmentId) continue;
+    const development = developmentById.get(developmentId);
+    if (!development) continue;
     const unitName = String(row.name || '').trim();
-    const unitPriceFrom =
-      toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
-    const fallbackTo =
-      toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
-    const unitPriceTo = fallbackTo ?? unitPriceFrom;
-    if (unitPriceFrom === null && unitPriceTo === null) continue;
+    const isItemized = development.inventoryMode === 'itemized';
+    const modes: Array<'for_sale' | 'for_rent'> = isItemized
+      ? [
+          ...(Number(row.availableForSaleUnits || 0) > 0 ? (['for_sale'] as const) : []),
+          ...(Number(row.availableForRentUnits || 0) > 0 ? (['for_rent'] as const) : []),
+        ]
+      : development.transactionType === 'for_sale' || development.transactionType === 'for_rent'
+        ? [development.transactionType]
+        : [];
 
-    const current = unitPriceRangeByDevelopment.get(developmentId) || {
-      priceFrom: null,
-      priceTo: null,
-    };
-
-    const nextMin =
-      unitPriceFrom === null
-        ? current.priceFrom
-        : current.priceFrom === null
-          ? unitPriceFrom
-          : Math.min(current.priceFrom, unitPriceFrom);
-    const nextMax =
-      unitPriceTo === null
-        ? current.priceTo
-        : current.priceTo === null
-          ? unitPriceTo
-          : Math.max(current.priceTo, unitPriceTo);
-
-    unitPriceRangeByDevelopment.set(developmentId, {
-      priceFrom: nextMin,
-      priceTo: nextMax,
-    });
-
-    if (unitName) {
-      const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
-      const existingIndex = currentUnitTypes.findIndex(item => item.name === unitName);
-      if (existingIndex >= 0) {
-        const existing = currentUnitTypes[existingIndex];
-        currentUnitTypes[existingIndex] = {
-          name: unitName,
-          bedrooms: existing.bedrooms ?? toNumberOrNull(row.bedrooms),
-          bathrooms: existing.bathrooms ?? toNumberOrNull(row.bathrooms),
-          unitSize: existing.unitSize ?? toNumberOrNull(row.unitSize),
-          priceFrom:
-            existing.priceFrom === null
+    for (const transactionType of modes) {
+      const unitPriceFrom =
+        isItemized
+          ? transactionType === 'for_rent'
+            ? toPositiveNumberOrNull(row.availableRentPriceFrom)
+            : toPositiveNumberOrNull(row.availableSalePriceFrom)
+          : transactionType === 'for_rent'
+            ? toPositiveNumberOrNull(row.monthlyRentFrom)
+            : toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
+      const unitPriceTo =
+        (isItemized
+          ? transactionType === 'for_rent'
+            ? toPositiveNumberOrNull(row.availableRentPriceTo)
+            : toPositiveNumberOrNull(row.availableSalePriceTo)
+          : transactionType === 'for_rent'
+            ? toPositiveNumberOrNull(row.monthlyRentTo)
+            : toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo)) ??
+        unitPriceFrom;
+      const currentByMode = unitPriceRangeByDevelopment.get(developmentId) || {
+        for_sale: { priceFrom: null, priceTo: null },
+        for_rent: { priceFrom: null, priceTo: null },
+      };
+      const current = currentByMode[transactionType];
+      currentByMode[transactionType] = {
+        priceFrom:
+          unitPriceFrom === null
+            ? current.priceFrom
+            : current.priceFrom === null
               ? unitPriceFrom
-              : unitPriceFrom === null
-                ? existing.priceFrom
-                : Math.min(existing.priceFrom, unitPriceFrom),
-          priceTo:
-            existing.priceTo === null
+              : Math.min(current.priceFrom, unitPriceFrom),
+        priceTo:
+          unitPriceTo === null
+            ? current.priceTo
+            : current.priceTo === null
               ? unitPriceTo
-              : unitPriceTo === null
-                ? existing.priceTo
-                : Math.max(existing.priceTo, unitPriceTo),
-        };
-      } else {
+              : Math.max(current.priceTo, unitPriceTo),
+      };
+      unitPriceRangeByDevelopment.set(developmentId, currentByMode);
+
+      if (unitName) {
+        const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
         currentUnitTypes.push({
           name: unitName,
+          transactionType,
+          availableUnits: isItemized
+            ? Number(transactionType === 'for_rent' ? row.availableForRentUnits : row.availableForSaleUnits)
+            : toNumberOrNull(row.availableUnits),
           bedrooms: toNumberOrNull(row.bedrooms),
           bathrooms: toNumberOrNull(row.bathrooms),
           unitSize: toNumberOrNull(row.unitSize),
           priceFrom: unitPriceFrom,
           priceTo: unitPriceTo,
         });
+        unitTypesByDevelopment.set(developmentId, currentUnitTypes);
       }
-      unitTypesByDevelopment.set(developmentId, currentUnitTypes);
     }
   }
 
@@ -534,14 +627,33 @@ export async function listPartnerProgramTerms(
     const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
     const primaryBrandId = Number(row.cataloguePublisherId || 0);
     const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
-    const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
+    const unitPriceRanges = unitPriceRangeByDevelopment.get(developmentId) || {
+      for_sale: { priceFrom: null, priceTo: null },
+      for_rent: { priceFrom: null, priceTo: null },
+    };
+    const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
+    const transactionModes = Array.from(
+      new Set(currentUnitTypes.map(unit => unit.transactionType)),
+    );
+    const isItemized = row.inventoryMode === 'itemized';
     const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
     const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
-    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
+    const singleModeRange =
+      transactionModes.length === 1 ? unitPriceRanges[transactionModes[0]] : null;
+    const priceFrom = isItemized
+      ? transactionModes.length === 1
+        ? singleModeRange?.priceFrom ?? null
+        : null
+      : singleModeRange?.priceFrom ?? developmentPriceFrom;
     const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
-    const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
-    const priceTo =
-      priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
+    const rawPriceTo = isItemized
+      ? transactionModes.length === 1
+        ? singleModeRange?.priceTo ?? priceFrom
+        : null
+      : transactionModes.length > 1
+        ? null
+        : singleModeRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
+    const priceTo = priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
     const brochureConfig =
       row.brochureConfigJson && typeof row.brochureConfigJson === 'object'
         ? (row.brochureConfigJson as BrochureConfig)
@@ -552,6 +664,12 @@ export async function listPartnerProgramTerms(
       developmentName:
         String(brochureConfig.headline || '').trim() ||
         String(row.developmentName || `Development #${developmentId}`),
+      marketStatus: row.marketStatus,
+      transactionModes,
+      pricingByMode: {
+        for_sale: transactionModes.includes('for_sale') ? unitPriceRanges.for_sale : null,
+        for_rent: transactionModes.includes('for_rent') ? unitPriceRanges.for_rent : null,
+      },
       suburb: row.suburb || null,
       city: row.city || null,
       province: row.province || null,
@@ -590,9 +708,10 @@ export async function listPartnerProgramTerms(
         payoutMilestone,
         payoutMilestoneNotes,
       },
-      unitTypes: unitTypesByDevelopment.get(developmentId) || [],
+      unitTypes: currentUnitTypes,
       requiredDocuments,
       sourceDocuments: sourceDocsByDevelopmentId.get(developmentId) || [],
+      teamContacts: teamContactsByDevelopmentId.get(developmentId) || [],
       computed: {
         commissionDisplay: buildCommissionDisplay({
           commissionModel,
@@ -624,6 +743,14 @@ export async function listPartnerProgramTerms(
         return {
           ...item,
           opportunity: evaluation.opportunity,
+          teamContacts:
+            item.marketStatus !== 'sold-out' && evaluation.opportunity.status === 'ready'
+              ? item.teamContacts
+              : [],
+          sourceDocuments:
+            item.marketStatus !== 'sold-out' && evaluation.opportunity.status === 'ready'
+              ? item.sourceDocuments
+              : [],
           program: {
             ...item.program,
             isActive: evaluation.programActive,
@@ -631,7 +758,7 @@ export async function listPartnerProgramTerms(
           },
         };
       } catch {
-        return item;
+        return { ...item, teamContacts: [], sourceDocuments: [] };
       }
     }),
   );
@@ -645,6 +772,7 @@ export async function getPartnerProgramTermsByDevelopmentId(developmentId: numbe
   const result = await listPartnerProgramTerms({
     developmentIds: [developmentId],
     includeDisabled: false,
+    includeSoldOut: true,
   });
   return result.items.find(item => item.developmentId === developmentId) || null;
 }

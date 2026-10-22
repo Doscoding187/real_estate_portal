@@ -6,6 +6,7 @@ import {
   ExternalLink,
   Home,
   Loader2,
+  Mail,
   MapPin,
   Search,
   SlidersHorizontal,
@@ -25,6 +26,7 @@ import { Button } from '@/components/ui/button';
 const ALL_FILTER_VALUE = 'all';
 const VIEW_MODE_SUBMIT = 'submit';
 const VIEW_MODE_EXPLORE = 'explore';
+type MarketView = 'active' | 'history' | 'all';
 const BROCHURE_BOND_YEARS = 20;
 const BROCHURE_ANNUAL_INTEREST_RATE = 11.75;
 const BROCHURE_MIN_INCOME_RATIO = 0.3;
@@ -375,8 +377,10 @@ export default function PartnerDevelopmentsPage() {
   const [viewMode, setViewMode] = useState<typeof VIEW_MODE_SUBMIT | typeof VIEW_MODE_EXPLORE>(
     VIEW_MODE_SUBMIT,
   );
+  const [marketView, setMarketView] = useState<MarketView>('active');
   const [searchText, setSearchText] = useState('');
   const [brochureItem, setBrochureItem] = useState<any | null>(null);
+  const [resourceItem, setResourceItem] = useState<any | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -384,29 +388,34 @@ export default function PartnerDevelopmentsPage() {
   }, [isAuthenticated, loading, setLocation]);
 
   const termsQuery = trpc.distribution.partner.listProgramTerms.useQuery(
-    { includeDisabled: true },
+    { includeDisabled: true, includeSoldOut: marketView !== 'active' },
     { enabled: isAuthenticated, retry: false },
   );
 
   const allItems = termsQuery.data?.items || [];
+  const marketItems = useMemo(() => {
+    if (marketView === 'history') return allItems.filter(item => item.marketStatus === 'sold-out');
+    if (marketView === 'active') return allItems.filter(item => item.marketStatus !== 'sold-out');
+    return allItems;
+  }, [allItems, marketView]);
   const modeItems = useMemo(
     () =>
-      viewMode === VIEW_MODE_SUBMIT
-        ? allItems.filter(item => item.opportunity?.status === 'ready')
-        : allItems,
-    [allItems, viewMode],
+      viewMode === VIEW_MODE_SUBMIT && marketView !== 'history'
+        ? marketItems.filter(item => item.opportunity?.status === 'ready')
+        : marketItems,
+    [marketItems, marketView, viewMode],
   );
 
   const brandOptions = useMemo(() => {
     const map = new Map<number, string>();
-    for (const item of allItems) {
+    for (const item of marketItems) {
       if (item.brand)
         map.set(Number(item.brand.cataloguePublisherId), String(item.brand.brandName || ''));
     }
     return Array.from(map.entries())
       .map(([cataloguePublisherId, brandName]) => ({ cataloguePublisherId, brandName }))
       .sort((a, b) => a.brandName.localeCompare(b.brandName));
-  }, [allItems]);
+  }, [marketItems]);
 
   const provinceOptions = useMemo(
     () =>
@@ -471,6 +480,15 @@ export default function PartnerDevelopmentsPage() {
   }, [filteredItems]);
 
   useEffect(() => {
+    if (
+      selectedBrandId !== ALL_FILTER_VALUE &&
+      !brandOptions.some(option => String(option.cataloguePublisherId) === selectedBrandId)
+    ) {
+      setSelectedBrandId(ALL_FILTER_VALUE);
+    }
+  }, [brandOptions, selectedBrandId]);
+
+  useEffect(() => {
     if (selectedProvince !== ALL_FILTER_VALUE && !provinceOptions.includes(selectedProvince)) {
       setSelectedProvince(ALL_FILTER_VALUE);
     }
@@ -526,6 +544,36 @@ export default function PartnerDevelopmentsPage() {
             >
               Explore mode
             </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 border-b border-primary/15 px-5 py-3 md:px-6">
+            <span className="mr-1 text-[11px] font-medium text-muted-foreground">
+              Project view
+            </span>
+            {([
+              ['active', 'Active developments'],
+              ['history', 'Sold-out history'],
+              ['all', 'All developments'],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={marketView === value}
+                className={`rounded-md border px-3 py-1.5 text-[11px] font-semibold ${
+                  marketView === value
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-primary/15 bg-white text-foreground'
+                }`}
+                onClick={() => setMarketView(value)}
+              >
+                {label}
+              </button>
+            ))}
+            {marketView === 'history' ? (
+              <p className="basis-full text-[11px] text-muted-foreground">
+                Sold-out projects are kept for reference. New buyer referrals are closed.
+              </p>
+            ) : null}
           </div>
 
           <div className="grid gap-2 border-b border-primary/15 px-5 py-4 md:grid-cols-4 md:px-6">
@@ -606,7 +654,9 @@ export default function PartnerDevelopmentsPage() {
         {!termsQuery.error && !filteredItems.length ? (
           <section className="mt-4 rounded-xl border border-border bg-white px-5 py-8 text-center">
             <p className="text-[13px] font-medium text-foreground">
-              No developments match this filter.
+              {marketView === 'history'
+                ? 'No sold-out developments are available in this history.'
+                : 'No developments match this filter.'}
             </p>
             <p className="mt-1 text-[12px] text-muted-foreground">
               Clear filters or switch to Explore mode to view upcoming opportunities.
@@ -622,7 +672,9 @@ export default function PartnerDevelopmentsPage() {
             >
               <div className="relative h-40 bg-primary/5">
                 <span className="absolute left-3 top-3 rounded bg-primary px-2 py-1 text-[9px] font-semibold uppercase text-primary-foreground">
-                  {getOpportunityLabel(item)}
+                  {item.marketStatus === 'sold-out'
+                    ? 'Sold out · history'
+                    : getOpportunityLabel(item)}
                 </span>
                 {item.imageUrl ? (
                   <img
@@ -652,11 +704,60 @@ export default function PartnerDevelopmentsPage() {
                 {item.brand?.brandName ? (
                   <p className="text-[10px] text-muted-foreground">{item.brand.brandName}</p>
                 ) : null}
+                {item.brand?.publicContactEmail ? (
+                  <a
+                    href={`mailto:${item.brand.publicContactEmail}?subject=${encodeURIComponent(
+                      `Question about ${item.developmentName}`,
+                    )}`}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    Contact development team
+                  </a>
+                ) : null}
+                {item.teamContacts?.length ? (
+                  <details className="rounded-md border border-primary/10 bg-white px-2.5 py-2">
+                    <summary className="cursor-pointer text-[11px] font-semibold text-primary">
+                      Site and sales contacts ({item.teamContacts.length})
+                    </summary>
+                    <ul className="mt-2 space-y-2">
+                      {item.teamContacts.map((contact: any, index: number) => (
+                        <li key={`${contact.roleTitle}-${contact.displayName}-${index}`} className="border-t border-border pt-2 text-[11px]">
+                          <p className="font-semibold text-foreground">{contact.roleTitle}: {contact.displayName}</p>
+                          {contact.phaseLabel ? <p className="text-muted-foreground">{contact.phaseLabel}</p> : null}
+                          {contact.organizationName ? <p className="text-muted-foreground">{contact.organizationName}</p> : null}
+                          {contact.responsibility ? <p className="mt-1 text-muted-foreground">{contact.responsibility}</p> : null}
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            {contact.phone ? <a href={`tel:${contact.phone}`} className="font-medium text-primary hover:underline">Call {contact.phone}</a> : null}
+                            {contact.email ? <a href={`mailto:${contact.email}`} className="font-medium text-primary hover:underline">Email</a> : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
 
-                <p className="font-mono text-[14px] font-semibold text-foreground">
-                  {formatCurrencyRange(item.priceFrom, item.priceTo)}
-                </p>
-                <div className="rounded-md border border-success/20 bg-success/5 p-2.5">
+                {Array.isArray(item.transactionModes) && item.transactionModes.length ? (
+                  <div className="space-y-1 rounded-md border border-primary/10 bg-primary/5 p-2.5">
+                    <p className="text-[9px] font-semibold uppercase text-muted-foreground">Available now</p>
+                    {item.transactionModes.map((mode: 'for_sale' | 'for_rent') => {
+                      const range = item.pricingByMode?.[mode];
+                      const available = (item.unitTypes || [])
+                        .filter((unit: any) => unit.transactionType === mode)
+                        .reduce((total: number, unit: any) => total + Number(unit.availableUnits || 0), 0);
+                      return (
+                        <p key={mode} className="text-[11px] font-medium text-foreground">
+                          {mode === 'for_sale' ? 'For sale' : 'For rent'} · {available} available · {formatCurrencyRange(range?.priceFrom ?? null, range?.priceTo ?? null)}{mode === 'for_rent' ? ' / month' : ''}
+                        </p>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="font-mono text-[14px] font-semibold text-foreground">
+                    {formatCurrencyRange(item.priceFrom, item.priceTo)}
+                  </p>
+                )}
+                {(!Array.isArray(item.transactionModes) || item.transactionModes.includes('for_sale')) ? <div className="rounded-md border border-success/20 bg-success/5 p-2.5">
                   <p className="text-[9px] font-semibold uppercase text-muted-foreground">
                     Estimated reward
                   </p>
@@ -664,15 +765,15 @@ export default function PartnerDevelopmentsPage() {
                     {getRewardDisplay(item)}
                   </p>
                   <p className="mt-1 text-[10px] text-muted-foreground">{getPayoutDisplay(item)}</p>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
+                </div> : null}
+                {(!Array.isArray(item.transactionModes) || item.transactionModes.includes('for_sale')) ? <p className="text-[11px] text-muted-foreground">
                   Estimated installment from{' '}
                   {formatCurrency(
                     estimateMonthlyInstallment(
                       pickRepresentativePrice(item.priceFrom, item.priceTo),
                     ),
                   )}
-                </p>
+                </p> : null}
                 <p className="rounded-md border border-primary/10 bg-primary/5 px-2.5 py-2 text-[11px] text-foreground">
                   <span className="font-semibold">Best buyer:</span> {getBuyerProfile(item)}
                 </p>
@@ -682,7 +783,7 @@ export default function PartnerDevelopmentsPage() {
                     ? `${item.unitTypes.length} unit type${item.unitTypes.length === 1 ? '' : 's'}`
                     : 'Unit type details available'}
                 </p>
-                <div className="grid grid-cols-2 gap-2 rounded-md border border-primary/10 bg-primary/5 p-2">
+                {(!Array.isArray(item.transactionModes) || item.transactionModes.includes('for_sale')) ? <div className="grid grid-cols-2 gap-2 rounded-md border border-primary/10 bg-primary/5 p-2">
                   <div>
                     <p className="text-[9px] font-semibold uppercase text-muted-foreground">
                       Bond estimate
@@ -709,7 +810,7 @@ export default function PartnerDevelopmentsPage() {
                       )}
                     </p>
                   </div>
-                </div>
+                </div> : null}
 
                 <div className="grid grid-cols-2 gap-2">
                   <Button
@@ -734,6 +835,16 @@ export default function PartnerDevelopmentsPage() {
                     {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Not open yet'}
                   </Button>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-primary/15 text-[11px]"
+                  disabled={!item.sourceDocuments?.some((document: any) => document.fileUrl)}
+                  onClick={() => setResourceItem(item)}
+                >
+                  <Download className="mr-1 h-3.5 w-3.5" />
+                  Sales resources ({item.sourceDocuments?.length || 0})
+                </Button>
                 {item.opportunity?.status !== 'ready' ? (
                   <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
                     {item.opportunity?.friendlyMessage || 'Referral submissions are not open yet.'}
@@ -746,9 +857,15 @@ export default function PartnerDevelopmentsPage() {
 
         {!!citySummary.length && (
           <section className="mt-4 rounded-lg border border-primary/15 bg-white px-5 py-4 shadow-sm md:px-6">
-            <h3 className="text-[12px] font-semibold text-foreground">City Opportunity Summary</h3>
+            <h3 className="text-[12px] font-semibold text-foreground">
+              {marketView === 'history'
+                ? 'Historical Development Summary'
+                : 'City Opportunity Summary'}
+            </h3>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Snapshot of where opportunities are concentrated.
+              {marketView === 'history'
+                ? 'Reference view of past development locations.'
+                : 'Snapshot of where opportunities are concentrated.'}
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {citySummary.map(city => (
@@ -757,7 +874,11 @@ export default function PartnerDevelopmentsPage() {
                   <p className="text-[10px] text-muted-foreground">
                     {city.total} development{city.total === 1 ? '' : 's'}
                   </p>
-                  <p className="mt-0.5 text-[10px] text-[#0f6a36]">{city.live} live for referral</p>
+                  <p className="mt-0.5 text-[10px] text-[#0f6a36]">
+                    {marketView === 'history'
+                      ? 'Historical record'
+                      : `${city.live} live for referral`}
+                  </p>
                 </div>
               ))}
             </div>
@@ -954,6 +1075,53 @@ export default function PartnerDevelopmentsPage() {
               </div>
             </>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(resourceItem)} onOpenChange={open => !open && setResourceItem(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{resourceItem?.developmentName} sales resources</DialogTitle>
+            <DialogDescription>
+              Maps, plans, specifications, and other files shared across this development’s
+              partner catalog. These resources are development-wide, not limited to a named
+              agency or phase.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            {(resourceItem?.sourceDocuments || []).map((document: any) => (
+              <div
+                key={document.templateId}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-primary/10 bg-primary/5 p-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {document.documentLabel || 'Development resource'}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {document.fileName || 'File pending upload'}
+                  </p>
+                  {document.sharedAt ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Added {new Date(document.sharedAt).toLocaleDateString('en-ZA')}
+                    </p>
+                  ) : null}
+                </div>
+                {document.fileUrl ? (
+                  <Button asChild size="sm" variant="outline">
+                    <a href={document.fileUrl} target="_blank" rel="noreferrer">
+                      Open file
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+            {!resourceItem?.sourceDocuments?.some((document: any) => document.fileUrl) ? (
+              <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                No sales resources have been uploaded for this development yet.
+              </p>
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
     </ReferralAppShell>

@@ -6157,6 +6157,7 @@ const partnerDistributionRouter = router({
           cataloguePublisherId: z.number().int().positive().optional(),
           developmentIds: z.array(z.number().int().positive()).max(200).optional(),
           includeDisabled: z.boolean().default(false),
+          includeSoldOut: z.boolean().default(false),
         })
         .optional(),
     )
@@ -6171,6 +6172,7 @@ const partnerDistributionRouter = router({
         cataloguePublisherId: input?.cataloguePublisherId,
         developmentIds: input?.developmentIds,
         includeDisabled: input?.includeDisabled ?? false,
+        includeSoldOut: input?.includeSoldOut ?? false,
       });
     }),
 

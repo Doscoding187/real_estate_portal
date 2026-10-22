@@ -14,6 +14,7 @@ const validDevelopment = {
   city: 'Cape Town',
   province: 'Western Cape',
   transactionType: 'for_sale',
+  status: 'selling',
   approvalStatus: 'approved',
   isPublished: 1,
   publishedAt: new Date('2026-01-01'),

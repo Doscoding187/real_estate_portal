@@ -22,6 +22,7 @@ export type DevelopmentRequiredDocumentRow = {
   isRequired: boolean;
   sortOrder: number;
   isActive: boolean;
+  createdAt: string | null;
 };
 
 export function isMissingRequiredDocumentsSchemaError(error: unknown): boolean {
@@ -72,6 +73,7 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
         isRequired: developmentRequiredDocuments.isRequired,
         sortOrder: developmentRequiredDocuments.sortOrder,
         isActive: developmentRequiredDocuments.isActive,
+        createdAt: developmentRequiredDocuments.createdAt,
       })
       .from(developmentRequiredDocuments)
       .where(eq(developmentRequiredDocuments.developmentId, developmentId))
@@ -100,5 +102,6 @@ export async function listDevelopmentRequiredDocumentsOrEmpty(
       isRequired: Number(row.isRequired || 0) === 1,
       sortOrder: Number(row.sortOrder || 0),
       isActive: Number(row.isActive || 0) === 1,
+      createdAt: row.createdAt || null,
   }));
 }
