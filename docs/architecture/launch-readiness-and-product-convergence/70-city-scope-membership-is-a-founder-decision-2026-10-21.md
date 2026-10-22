@@ -99,6 +99,57 @@ authorised per edge, and released through the place release. The search projecti
 authorised edges, the transitional runtime handle retires, and the published projection can be
 retired by a separate reviewed migration.
 
+## Option C, measured: it does not hold
+
+Option C was "a city scope's membership is derivable where its container holds exactly one city
+scope". Measured on the disposable worktree target:
+
+| Container shape | Containers | Localities held |
+| --- | --- | --- |
+| exactly one city scope | **2** | **90** |
+| several city scopes | 54 | 13,920 |
+| no city scope at all | 9 | 40 |
+
+The two single-city containers are incidental — Eastern Cape → Clydesdale (63 localities) and
+KwaZulu-Natal → Matatiele (27). They cover **0.6%** of the localities, and **no published
+Gauteng city** binds to one, so the published geography could not be reproduced from the
+derivable set at all.
+
+**Option C is dead.** 99.4% of the localities sit under a container that holds several town
+clusters, which is exactly the case the parent context registry refuses to default.
+
+## The decision surface, sized
+
+What option A actually asks for: for each container that holds several town clusters, decide
+which city scope each of its localities belongs to.
+
+| Province | Containers | City scopes | Localities to place |
+| --- | --- | --- | --- |
+| Eastern Cape | 8 | 63 | 4,506 |
+| KwaZulu-Natal | 11 | 70 | 1,471 |
+| Limpopo | 5 | 36 | 1,396 |
+| Noord-Kaap | 5 | 26 | 1,282 |
+| Free State | 5 | 51 | 1,229 |
+| Western Cape | 6 | 57 | 1,032 |
+| Gauteng | 3 | 206 | 927 |
+| North-West | 4 | 34 | 781 |
+| Mpumalanga | 3 | 60 | 666 |
+| province not resolved | 4 | 144 | 630 |
+| **Total** | **54** | **747** | **13,920** |
+
+Gauteng's three containers are `Ekurhuleni`, `Sedibeng` and `West Rand` — the three the parent
+context registry names in `no_default_contexts`.
+
+**And the finding that matters most for the launch:** the published projection already carries a
+town-cluster answer for those 927 Gauteng localities — it publishes Alberton, Benoni, Katlehong,
+Tembisa, Thokoza and Vosloorus under Ekurhuleni — while the registry deliberately declines to
+decide them. So the published projection is currently a **second authority on town clusters for
+Gauteng**, and every published URL encodes that unadjudicated answer.
+
+That is the strongest argument for doing option A for Gauteng first: 927 assignments, on the
+province with the largest live surface, and it is the only way the published URLs stop depending
+on an authority the canonical model does not hold.
+
 ## The three options, and what each costs
 
 | | Decision | Cost | What it buys |
@@ -109,11 +160,21 @@ retired by a separate reviewed migration.
 
 ## Recommendation
 
-Measure **C** first, because it is free if it holds and the structure suggests it may: a
-container that holds exactly one city scope and its localities may make that city's membership
-derivable with no founder decision. Then run **A** for what C does not cover, province by
-province, in the same decision class as the two metros already decided, and launch on **B**
-meanwhile.
+**C** is measured and dead. So the decision is between **A** and **B**.
+
+- Launch on **B** now, and say plainly what it means: a national search where a city search
+  returns the city, the customer narrows to a suburb or searches the province, and a Gauteng
+  customer keeps a wider city search than a Cape Town customer because the projection carries
+  the Gauteng slice.
+- Run **A** for **Gauteng first** — 927 assignments on the province with the largest live
+  surface, in the same decision class as the two metros already decided — and then province by
+  province: Eastern Cape 4,506, KwaZulu-Natal 1,471, Limpopo 1,396, Noord-Kaap 1,282, Free
+  State 1,229, Western Cape 1,032, North-West 781, Mpumalanga 666.
+
+When A is decided, the membership is admitted as `settlement_within` edges with per-edge search
+scope authorisation, the search execution reads the Place Authority for a city, the transitional
+runtime handle retires, and the published projection can be retired by a separate reviewed
+migration.
 
 **Not on the table: inferring membership in code.** A city widened to its descendants by
 containment inference, or by a market association, would silently widen every city search in the

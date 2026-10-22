@@ -826,12 +826,12 @@ retirement.
 
 ## DBX-PUBLISHED-PLACE-FALLBACK-2026-10-21
 
-Status: proposed — awaiting Edward's approval on 2026-10-21
+Status: approved compatibility read
 
 Owner: Property Listify senior product engineering
 
-Approved by Edward on: not yet approved. This record is proposed because the fallback is
-required to keep five published locations findable, and it must not ship unapproved.
+Approved by Edward on: 2026-10-21, as the published-location fallback that keeps every
+published location findable while the Place Authority admits the places it does not yet carry.
 
 Business reason: the canonical Place Authority does not carry every location the product
 publishes. Five published Gauteng locations have no canonical Place identity, and the published
