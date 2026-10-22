@@ -553,6 +553,7 @@ export function loadLocationAuthorityCatalog(input: {
   const factualIds = new Set<string>();
 
   for (const source of catalog.sources) {
+    if (source.sourceAuthority) readVerifiedJson(input.rootDirectory, source.sourceAuthority);
     const manifest = readVerifiedJson(input.rootDirectory, source.manifest);
     const projection = toGovernedReferenceProjection(
       readVerifiedJson(input.rootDirectory, source.runtimeProjection),

@@ -197,7 +197,8 @@ def assertion_id(source_record: str, assertion_type: str, value: Any) -> str:
 
 
 def candidate_id(canonical_key: str) -> str:
-    return f"pl-gp-v01-{hashlib.sha256(canonical_key.encode('utf-8')).hexdigest()[:20]}"
+    prefix = os.environ.get("PL_GAUTENG_CANDIDATE_ID_PREFIX", "pl-gp-v01")
+    return f"{prefix}-{hashlib.sha256(canonical_key.encode('utf-8')).hexdigest()[:20]}"
 
 
 def http_request(

@@ -13,7 +13,6 @@ from .common import (
     normalize_lookup,
     read_jsonl,
     stable_digest,
-    utc_now,
 )
 from .geometry import GautengSpatialGate
 
@@ -542,7 +541,10 @@ def reconcile_records(records: list[dict[str, Any]], gate: GautengSpatialGate) -
             "source_modification_dates": sorted(
                 {record["source_modification_date"] for record in group if record.get("source_modification_date")}
             ),
-            "last_verified_at": utc_now(),
+            "last_verified_at": max(
+                (record.get("retrieved_at") for record in group if record.get("retrieved_at")),
+                default=None,
+            ),
             "evidence_edge_count": len(direct_edges),
             "reconciliation_edges": direct_edges,
             "conflicts": gate_conflicts,

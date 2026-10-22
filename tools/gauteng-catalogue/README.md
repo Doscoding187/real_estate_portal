@@ -170,3 +170,50 @@ artifacts. OSM-only rows are explicitly classified as
 `osm_only_odbl_provisional`; assigning a Property Listify ID does not remove
 ODbL obligations. This workstream does not write application geography,
 databases, migrations, Search Areas or product code.
+
+## vNext compact source closure
+
+The v0.1 canonical source remains unrecoverable and is not regenerated. A
+forward vNext source snapshot uses the same approved acquisition pipeline with
+an explicit versioned identity namespace and a disposable data root:
+
+```bash
+export PL_GAUTENG_VNEXT_WORK_ROOT=/path/to/disposable-vnext-work-root
+export PL_GAUTENG_CATALOGUE_DATA_ROOT="$PL_GAUTENG_VNEXT_WORK_ROOT/data/gauteng-candidate-catalogue-v0.1"
+
+PL_GAUTENG_CANDIDATE_ID_PREFIX="pl-geo-v01-za-gp" \
+PYTHONPATH="/tmp/property-listify-gauteng-catalogue-deps:tools/gauteng-catalogue" \
+  python3 tools/gauteng-catalogue/run_catalogue.py all
+
+PL_GAUTENG_CANDIDATE_ID_PREFIX="pl-geo-v01-za-gp" \
+PYTHONPATH="/tmp/property-listify-gauteng-catalogue-deps:tools/gauteng-catalogue" \
+  python3 tools/gauteng-catalogue/run_promotion.py \
+  --catalogue-root "$PL_GAUTENG_CATALOGUE_DATA_ROOT" \
+  --output-root "$PL_GAUTENG_VNEXT_WORK_ROOT/data/gauteng-canonical-promotion-v0.2/output"
+
+PL_GAUTENG_CANDIDATE_ID_PREFIX="pl-geo-v01-za-gp" \
+PYTHONPATH="/tmp/property-listify-gauteng-catalogue-deps:tools/gauteng-catalogue" \
+  python3 tools/gauteng-catalogue/run_canonical.py \
+  --candidate-root "$PL_GAUTENG_CATALOGUE_DATA_ROOT" \
+  --promotion-output-root "$PL_GAUTENG_VNEXT_WORK_ROOT/data/gauteng-canonical-promotion-v0.2/output" \
+  --output-root "$PL_GAUTENG_VNEXT_WORK_ROOT/data/gauteng-factual-canonical-v0.1/output"
+
+node tools/geography-coverage/pack-vnext-source.mjs \
+  --input-root "$PL_GAUTENG_VNEXT_WORK_ROOT/data/gauteng-candidate-catalogue-v0.1" \
+  --output-root data/gauteng-source-authority-v0.2
+
+node tools/geography-coverage/generate.mjs \
+  --manifest data/geography-coverage-v0.2/gauteng-territory-manifest.v0.2.json
+node tools/geography-coverage/generate.mjs \
+  --manifest data/geography-coverage-v0.2/gauteng-territory-manifest.v0.2.json \
+  --check
+node tools/geography-coverage/vnext-source-probes.mjs
+node tools/geography-coverage/diff-vnext.mjs
+```
+
+The raw pack remains outside Git. The repository stores the compact normalized
+geography, names, source links, candidate dispositions, source manifest,
+generated coverage artifacts, source-driven probe results, and a comparison-only
+v0.1 diff. The vNext
+coverage catalog is a candidate source registration; the default v0.1 consumer
+catalog is not replaced by this workflow.

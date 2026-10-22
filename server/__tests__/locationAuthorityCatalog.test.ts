@@ -245,6 +245,29 @@ describe('location authority aggregate catalog', () => {
     }
   });
 
+  it('validates the separate vNext source registration without replacing the frozen default', () => {
+    const root = path.resolve(import.meta.dirname, '../..');
+    const catalog = JSON.parse(
+      readFileSync(
+        path.join(root, 'data/geography-coverage-v0.2/territory-catalog.v0.2.json'),
+        'utf8',
+      ),
+    ) as Record<string, unknown>;
+    const aggregate = loadLocationAuthorityCatalog({ rootDirectory: root, catalog });
+
+    expect(aggregate.catalog.catalogId).toBe(
+      'property-listify-location-authority-catalog-v0.2-gauteng-source-closure',
+    );
+    expect(aggregate.runtimeRows).toHaveLength(954);
+    expect(aggregate.factualEntries).toHaveLength(1488);
+    expect(
+      aggregate.factualEntries.filter(entry => entry.projectionStatus === 'projection_ready'),
+    ).toHaveLength(953);
+    expect(aggregate.coPublications).toHaveLength(0);
+    expect(LOCATION_AUTHORITY_CATALOG.sources).toHaveLength(1);
+    expect(LOCATION_AUTHORITY_CATALOG.runtimeRows).toHaveLength(1414);
+  });
+
   it('loads a synthetic non-Gauteng territory without changing the real catalog', () => {
     const { root, catalog } = createSyntheticCatalog();
     const aggregate = loadLocationAuthorityCatalog({ rootDirectory: root, catalog });

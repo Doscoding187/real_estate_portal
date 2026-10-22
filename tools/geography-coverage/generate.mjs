@@ -78,11 +78,9 @@ function extensionAliasForms(name) {
   if (!match) return [];
   const base = match[1].trim();
   const number = match[3];
-  return [
-    `${base} Extension ${number}`,
-    `${base} Ext ${number}`,
-    `${base} Ext. ${number}`,
-  ].filter(form => normalizeName(form) !== normalizeName(name));
+  return [`${base} Extension ${number}`, `${base} Ext ${number}`, `${base} Ext. ${number}`].filter(
+    form => normalizeName(form) !== normalizeName(name),
+  );
 }
 
 function parseArguments(argv) {
@@ -99,23 +97,72 @@ function parseArguments(argv) {
   return options;
 }
 
-function loadInputs(ROOT, manifest) {
-  const carriedProjectionPath = path.join(ROOT, manifest.inputs.carried_projection);
-  const carriedProjectionRaw = readJson(carriedProjectionPath);
-  if (carriedProjectionRaw.schema_version !== '0.1') {
-    throw new Error(
-      `Carried projection has unexpected schema ${carriedProjectionRaw.schema_version}.`,
-    );
-  }
+function resolveRepositoryPath(ROOT, value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  return path.isAbsolute(value) ? value : path.resolve(ROOT, value);
+}
 
+function createRootProjectionRow(manifest, geography) {
+  const rootNaturalKey = manifest.territory?.province_slug;
+  const provinceName = manifest.territory?.province_name ?? manifest.territory?.province;
+  if (typeof rootNaturalKey !== 'string' || typeof provinceName !== 'string') {
+    throw new Error('A seed projection requires territory province_slug and province_name.');
+  }
+  const province = geography.find(
+    record =>
+      record.canonical_type === 'province' &&
+      normalizeName(record.preferred_name) === normalizeName(provinceName),
+  );
+  return {
+    runtime_search_scope_kind: 'province',
+    runtime_storage_level: 'province',
+    runtime_natural_key: rootNaturalKey,
+    runtime_parent_natural_key: null,
+    name: province?.preferred_name ?? provinceName,
+    slug: rootNaturalKey,
+    code: manifest.territory.code ?? rootNaturalKey.slice(0, 2).toUpperCase(),
+    factual_location_ids: [],
+    factual_preferred_names: [],
+    factual_types: [],
+  };
+}
+
+function loadInputs(ROOT, manifest) {
   const canonicalRoot =
-    process.env[manifest.inputs.canonical_root_env] || manifest.inputs.canonical_root_default;
+    resolveRepositoryPath(
+      ROOT,
+      process.env[manifest.inputs.canonical_root_env] || manifest.inputs.canonical_root_default,
+    ) ?? path.resolve(ROOT, manifest.inputs.canonical_root_default);
   const geographyPath = path.join(canonicalRoot, manifest.inputs.geography_jsonl);
   const namesPath = path.join(canonicalRoot, manifest.inputs.names_jsonl);
   if (!fs.existsSync(geographyPath) || !fs.existsSync(namesPath)) {
     throw new Error(
       `Canonical layer files not found under ${canonicalRoot}. Restore the approved canonical-root worktree.`,
     );
+  }
+
+  const geography = readJsonl(geographyPath);
+  const names = readJsonl(namesPath);
+  let carriedRows;
+  let carriedDigest = null;
+  let carriedMapping = [];
+  if (manifest.inputs.carried_projection) {
+    const carriedProjectionPath = resolveRepositoryPath(ROOT, manifest.inputs.carried_projection);
+    const carriedProjectionRaw = readJson(carriedProjectionPath);
+    if (carriedProjectionRaw.schema_version !== '0.1') {
+      throw new Error(
+        `Carried projection has unexpected schema ${carriedProjectionRaw.schema_version}.`,
+      );
+    }
+    carriedRows = carriedProjectionRaw.rows;
+    carriedDigest = sha256File(carriedProjectionPath);
+    const carriedMappingPath = resolveRepositoryPath(ROOT, manifest.inputs.carried_mapping);
+    carriedMapping = carriedMappingPath ? readJsonl(carriedMappingPath) : [];
+  } else {
+    if (manifest.inputs.carried_mapping) {
+      throw new Error('A carried mapping requires a carried projection.');
+    }
+    carriedRows = [createRootProjectionRow(manifest, geography)];
   }
 
   const dispositionPath = path.join(
@@ -126,28 +173,27 @@ function loadInputs(ROOT, manifest) {
   const recordedInputs = manifest.inputs.expected_sha256 ?? readJson(dispositionPath).inputs;
   const geographyDigest = sha256File(geographyPath);
   const namesDigest = sha256File(namesPath);
-  const carriedDigest = sha256File(carriedProjectionPath);
   for (const [label, actual, expected] of [
     ['geography', geographyDigest, recordedInputs.factual_geography_sha256],
     ['names', namesDigest, recordedInputs.factual_names_sha256],
     ['carried projection', carriedDigest, recordedInputs.carried_projection_sha256],
   ]) {
-    if (actual !== expected) {
+    if (expected !== undefined && actual !== expected) {
       throw new Error(
         `Canonical ${label} digest ${actual} does not match the approved checkpoint ${expected}.`,
       );
     }
   }
 
-  const carriedMappingPath = path.join(ROOT, manifest.inputs.carried_mapping);
   return {
-    carriedRows: carriedProjectionRaw.rows,
+    canonicalRoot,
+    carriedRows,
     carriedDigest,
-    geography: readJsonl(geographyPath),
-    names: readJsonl(namesPath),
+    geography,
+    names,
     geographyDigest,
     namesDigest,
-    carriedMapping: readJsonl(carriedMappingPath),
+    carriedMapping,
   };
 }
 
@@ -155,11 +201,7 @@ function projectionVersionFor(ROOT, manifest) {
   if (typeof manifest.outputs.projection_version === 'string') {
     return manifest.outputs.projection_version;
   }
-  const projectionPath = path.join(
-    ROOT,
-    manifest.outputs.output_dir,
-    manifest.outputs.projection,
-  );
+  const projectionPath = path.join(ROOT, manifest.outputs.output_dir, manifest.outputs.projection);
   if (fs.existsSync(projectionPath)) {
     const existingVersion = readJson(projectionPath).projection_version;
     if (typeof existingVersion === 'string' && existingVersion) return existingVersion;
@@ -249,12 +291,7 @@ function collectCandidates(state, inputs, manifest) {
     const type = record.canonical_type;
 
     if (type === 'province') {
-      queueRecord(
-        state,
-        record,
-        provinceDisposition.reason,
-        provinceDisposition.nextAction,
-      );
+      queueRecord(state, record, provinceDisposition.reason, provinceDisposition.nextAction);
       continue;
     }
 
@@ -418,9 +455,7 @@ function resolveCollisions(state, candidates) {
         queueRecord(
           state,
           candidate.record,
-          occupant
-            ? 'natural_key_owned_by_accepted_row'
-            : 'duplicate_natural_key_within_parent',
+          occupant ? 'natural_key_owned_by_accepted_row' : 'duplicate_natural_key_within_parent',
           'Reconcile the same-name identities before either can be published.',
         );
       }
@@ -542,9 +577,7 @@ function buildPromotedMappingEntry(entry, manifest) {
     projection_status: 'projection_ready',
     runtime_reference_status: 'reference_data_expansion_required',
     environment_runtime_compatibility_ids: [],
-    evidence_references: [
-      `${manifest.manifestPath}#parent_context_registry`,
-    ],
+    evidence_references: [`${manifest.manifestPath}#parent_context_registry`],
     decision_reason: `Territory coverage pipeline promotion (${row.publication_status}); licensing ${record.licensing_classification}.${entry.decisionNote ? ` Parent via ${entry.decisionNote}.` : ''}`,
     name_only_match: false,
   };
@@ -639,17 +672,27 @@ async function main() {
     left.runtime_natural_key.localeCompare(right.runtime_natural_key),
   );
 
-  const recordsById = new Map(inputs.geography.map(record => [record.canonical_location_id, record]));
-  const promotedIds = new Set(state.runtimeRecords.map(entry => entry.record.canonical_location_id));
+  const recordsById = new Map(
+    inputs.geography.map(record => [record.canonical_location_id, record]),
+  );
+  const promotedIds = new Set(
+    state.runtimeRecords.map(entry => entry.record.canonical_location_id),
+  );
 
   const mappingEntries = [
     ...inputs.carriedMapping.map(entry => ({ ...entry })),
     ...state.runtimeRecords.map(entry => buildPromotedMappingEntry(entry, manifest)),
     ...[...state.queueById.keys()]
       .filter(factualId => !promotedIds.has(factualId))
-      .filter(factualId => !inputs.carriedMapping.some(entry => entry.factual_location_id === factualId))
+      .filter(
+        factualId => !inputs.carriedMapping.some(entry => entry.factual_location_id === factualId),
+      )
       .map(factualId =>
-        buildBlockedMappingEntry(recordsById.get(factualId), state.queueById.get(factualId), manifest),
+        buildBlockedMappingEntry(
+          recordsById.get(factualId),
+          state.queueById.get(factualId),
+          manifest,
+        ),
       ),
   ].sort((left, right) => left.factual_location_id.localeCompare(right.factual_location_id));
 
@@ -677,9 +720,7 @@ async function main() {
     contract: 'docs/architecture/geography-coverage-contract.md',
     manifest: options.manifest,
     inputs: {
-      canonical_root:
-        process.env[rawManifest.inputs.canonical_root_env] ||
-        rawManifest.inputs.canonical_root_default,
+      canonical_root: rawManifest.inputs.canonical_root_default,
       factual_geography_sha256: inputs.geographyDigest,
       factual_names_sha256: inputs.namesDigest,
       carried_projection_sha256: inputs.carriedDigest,
@@ -703,7 +744,8 @@ async function main() {
       queued: state.queueById.size,
     },
     tier_counts: {
-      verified_rows: finalRows.filter(row => (row.publication_status ?? 'verified') === 'verified').length,
+      verified_rows: finalRows.filter(row => (row.publication_status ?? 'verified') === 'verified')
+        .length,
       provisional_rows: finalRows.filter(row => row.publication_status === 'provisional').length,
       carried_rows: inputs.carriedRows.length,
     },

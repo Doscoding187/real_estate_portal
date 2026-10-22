@@ -11,6 +11,7 @@ export interface LocationAuthorityCatalogSource {
   sourceId: string;
   rootNaturalKey: string;
   factualIdNamespaces: readonly string[];
+  sourceAuthority?: LocationAuthorityCatalogArtifact;
   manifest: LocationAuthorityCatalogArtifact;
   runtimeProjection: LocationAuthorityCatalogArtifact;
   factualMapping: LocationAuthorityCatalogArtifact;
@@ -32,6 +33,7 @@ interface RawLocationAuthorityCatalogSource {
   source_id: string;
   root_natural_key: string;
   factual_id_namespaces: string[];
+  source_authority?: LocationAuthorityCatalogArtifact;
   manifest: LocationAuthorityCatalogArtifact;
   runtime_projection: LocationAuthorityCatalogArtifact;
   factual_mapping: LocationAuthorityCatalogArtifact;
@@ -147,6 +149,15 @@ export function assertLocationAuthorityCatalog(
       namespaces.add(namespace);
     });
 
+    if (source.source_authority !== undefined) {
+      assertArtifact(source.source_authority, `${label} source authority`);
+      const artifactPath = source.source_authority.path;
+      if (artifactPaths.has(artifactPath)) {
+        throw new Error(`Location authority catalog reuses artifact ${artifactPath}.`);
+      }
+      artifactPaths.add(artifactPath);
+    }
+
     for (const [field, labelPrefix] of [
       ['manifest', 'manifest'],
       ['runtime_projection', 'runtime projection'],
@@ -194,6 +205,7 @@ export function toLocationAuthorityCatalog(value: unknown): LocationAuthorityCat
       sourceId: source.source_id,
       rootNaturalKey: source.root_natural_key,
       factualIdNamespaces: [...source.factual_id_namespaces],
+      ...(source.source_authority ? { sourceAuthority: { ...source.source_authority } } : {}),
       manifest: source.manifest,
       runtimeProjection: source.runtime_projection,
       factualMapping: source.factual_mapping,

@@ -1,0 +1,805 @@
+{
+  "report_version": "gauteng-vnext-source-diff-v0.2",
+  "comparison_only": true,
+  "old_generated_output_used_as_vnext_source": false,
+  "old_authority": {
+    "source_status": "exact_source_unrecoverable",
+    "source_recovery": "data/geography-coverage-v0.1/source-recovery.v0.1.json",
+    "projection_path": "data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json",
+    "projection_sha256": "faad65e4216c2fb62886e5561984a8b82fe3b750942a4bb38c2eba12a8141399",
+    "mapping_path": "data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl",
+    "mapping_sha256": "ed709559ba69b28b6dcc20fc7381478f2e822ff8436bcaaf7dcaaddd410c63fa",
+    "disposition_path": "data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json",
+    "disposition_sha256": "d80601e2b368190c31650a68c3f38d1ba351e9e05803ebd01ff21ae7a860d232",
+    "runtime_row_count": 1414,
+    "factual_mapping_count": 1480,
+    "ready_identity_count": 1424,
+    "queued_identity_count": 56
+  },
+  "new_authority": {
+    "source_snapshot_id": "14666e91befd11e1aea6b220c520678fbafbfc2c12383392e29c9e727fa0a06e",
+    "source_summary_path": "data/gauteng-source-authority-v0.2/gauteng_source_build_summary_v0.2.json",
+    "projection_path": "data/geography-coverage-v0.2/output/gauteng_runtime_reference_projection_v0.3.json",
+    "projection_sha256": "079296a2179c9c9cebc2f7d15a550f33c0bb6ae0b2709ad891ed1b2cbb4ae77d",
+    "mapping_path": "data/geography-coverage-v0.2/output/gauteng_factual_runtime_mapping_v0.3.jsonl",
+    "mapping_sha256": "cc05d471cdc3ca1f33cc059dfb446a595a161d46352b326b9a83b94e7e9d4d4f",
+    "disposition_path": "data/geography-coverage-v0.2/output/gauteng_coverage_disposition_v0.2.json",
+    "disposition_sha256": "3bb5c9628beba1957addf3fc9f04f95e1acca917c281ab3b5829dd63b6fbf33f",
+    "runtime_row_count": 954,
+    "factual_mapping_count": 1488,
+    "ready_identity_count": 953,
+    "queued_identity_count": 535
+  },
+  "summary": {
+    "old_runtime_rows_removed_or_not_replaced": 489,
+    "old_ready_rows_retained_by_semantics": 871,
+    "old_ready_rows_retained_by_runtime_key": 64,
+    "old_ready_rows_ambiguous": 0,
+    "new_ready_rows_without_old_semantic_match": 18,
+    "old_to_new_factual_count_delta": 8,
+    "old_to_new_runtime_row_delta": -460,
+    "old_queue_delta": 479
+  },
+  "disposition_change": {
+    "old": {
+      "factual_identity_count": 1480,
+      "runtime_row_count": 1414,
+      "carried_row_count": 64,
+      "newly_promoted_row_count": 1350,
+      "newly_promoted_identity_count": 1364,
+      "queued_count": 116,
+      "represented_by_carried_count": 60,
+      "alias_drop_count": 2
+    },
+    "new": {
+      "factual_identity_count": 1488,
+      "runtime_row_count": 954,
+      "carried_row_count": 1,
+      "newly_promoted_row_count": 953,
+      "newly_promoted_identity_count": 953,
+      "queued_count": 535,
+      "represented_by_carried_count": 0,
+      "alias_drop_count": 0
+    }
+  },
+  "core_probe_diff": [
+    {
+      "probe": "Johannesburg",
+      "old_runtime_keys": [
+        "gauteng/johannesburg"
+      ],
+      "new_runtime_keys": [
+        "gauteng/johannesburg"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Pretoria",
+      "old_runtime_keys": [
+        "gauteng/pretoria"
+      ],
+      "new_runtime_keys": [
+        "gauteng/pretoria"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Soweto",
+      "old_runtime_keys": [
+        "gauteng/soweto"
+      ],
+      "new_runtime_keys": [],
+      "outcome": "queued"
+    },
+    {
+      "probe": "Mamelodi",
+      "old_runtime_keys": [
+        "gauteng/mamelodi"
+      ],
+      "new_runtime_keys": [
+        "gauteng/mamelodi"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Newtown",
+      "old_runtime_keys": [
+        "gauteng/johannesburg/newtown"
+      ],
+      "new_runtime_keys": [
+        "gauteng/johannesburg/newtown"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Sandton",
+      "old_runtime_keys": [
+        "gauteng/johannesburg/sandton"
+      ],
+      "new_runtime_keys": [
+        "gauteng/johannesburg/sandton",
+        "gauteng/sandton"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Bryanston",
+      "old_runtime_keys": [
+        "gauteng/johannesburg/bryanston"
+      ],
+      "new_runtime_keys": [
+        "gauteng/johannesburg/bryanston"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Randburg",
+      "old_runtime_keys": [
+        "gauteng/randburg"
+      ],
+      "new_runtime_keys": [
+        "gauteng/randburg"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Midrand",
+      "old_runtime_keys": [
+        "gauteng/midrand"
+      ],
+      "new_runtime_keys": [
+        "gauteng/midrand"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Centurion",
+      "old_runtime_keys": [
+        "gauteng/centurion"
+      ],
+      "new_runtime_keys": [],
+      "outcome": "not_in_accepted_source"
+    },
+    {
+      "probe": "Roodepoort",
+      "old_runtime_keys": [
+        "gauteng/roodepoort"
+      ],
+      "new_runtime_keys": [
+        "gauteng/roodepoort"
+      ],
+      "outcome": "resolved"
+    },
+    {
+      "probe": "Vereeniging",
+      "old_runtime_keys": [
+        "gauteng/vereeniging"
+      ],
+      "new_runtime_keys": [
+        "gauteng/vereeniging"
+      ],
+      "outcome": "resolved"
+    }
+  ],
+  "samples": {
+    "removed_or_not_replaced": [
+      {
+        "old_factual_location_id": "pl-gp-v01-0127d19bdec24cecd936",
+        "new_factual_location_id": null,
+        "name": "Devon",
+        "old_runtime_natural_key": "gauteng/nigel/devon",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-018e4ab1f5aa0fdaa5c9",
+        "new_factual_location_id": null,
+        "name": "Dalpark Ext. 1",
+        "old_runtime_natural_key": "gauteng/brakpan/dalpark-ext-1",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-01e5d6705104962667ff",
+        "new_factual_location_id": null,
+        "name": "Opmekaar",
+        "old_runtime_natural_key": "gauteng/boksburg/opmekaar",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-029159849439c2ea8783",
+        "new_factual_location_id": null,
+        "name": "Centurion",
+        "old_runtime_natural_key": "gauteng/centurion",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-02d794787142fa8b5d5b",
+        "new_factual_location_id": null,
+        "name": "Westside Park",
+        "old_runtime_natural_key": "gauteng/sebokeng/westside-park",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-031a4564f0bc02489ab8",
+        "new_factual_location_id": null,
+        "name": "SW2",
+        "old_runtime_natural_key": "gauteng/vanderbijlpark/sw2",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-038dd0cd0cd3da258d56",
+        "new_factual_location_id": null,
+        "name": "Generaal Albertspark",
+        "old_runtime_natural_key": "gauteng/alberton/generaal-albertspark",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-03ec1845a14271b9991b",
+        "new_factual_location_id": null,
+        "name": "Helderwyk",
+        "old_runtime_natural_key": "gauteng/brakpan/helderwyk",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-046290100f4b110766b7",
+        "new_factual_location_id": null,
+        "name": "Robin Park",
+        "old_runtime_natural_key": "gauteng/randfontein/robin-park",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0483b462fa1e41039f89",
+        "new_factual_location_id": null,
+        "name": "Alphen Park",
+        "old_runtime_natural_key": "gauteng/benoni/alphen-park",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-05d75a9c6d5582a6a7b9",
+        "new_factual_location_id": null,
+        "name": "Delmore",
+        "old_runtime_natural_key": "gauteng/boksburg/delmore",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-06fca9fad5944269ccde",
+        "new_factual_location_id": null,
+        "name": "Mansieville Location",
+        "old_runtime_natural_key": "gauteng/krugersdorp/mansieville-location",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0701aae57d8f15f78d1f",
+        "new_factual_location_id": null,
+        "name": "Sivana",
+        "old_runtime_natural_key": "gauteng/thembisa/sivana",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-07aac79edaf12c092ae1",
+        "new_factual_location_id": null,
+        "name": "Temong",
+        "old_runtime_natural_key": "gauteng/thembisa/temong",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0951415edb1dd117b3e1",
+        "new_factual_location_id": null,
+        "name": "Vrededorp",
+        "old_runtime_natural_key": "gauteng/johannesburg/vrededorp",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-09a0a1fd0a272e30a24d",
+        "new_factual_location_id": null,
+        "name": "Plantation",
+        "old_runtime_natural_key": "gauteng/boksburg/plantation",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-09fe0e1c02680a5705ed",
+        "new_factual_location_id": null,
+        "name": "Moshoeshoe",
+        "old_runtime_natural_key": "gauteng/katlehong/moshoeshoe",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0ad8d1f4440d85ef05b5",
+        "new_factual_location_id": null,
+        "name": "Dennydale AH",
+        "old_runtime_natural_key": "gauteng/westonaria/dennydale-ah",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0b32a8c1fe1a7e558ef4",
+        "new_factual_location_id": null,
+        "name": "Ethembeni Park",
+        "old_runtime_natural_key": "gauteng/boksburg/ethembeni-park",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0bc6ec4bbc42a9470352",
+        "new_factual_location_id": null,
+        "name": "Labore",
+        "old_runtime_natural_key": "gauteng/brakpan/labore",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0c2be125abe8d3cd863b",
+        "new_factual_location_id": null,
+        "name": "Bakerton",
+        "old_runtime_natural_key": "gauteng/springs/bakerton",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0c338ea99d8f9585a4ea",
+        "new_factual_location_id": null,
+        "name": "Symhurst",
+        "old_runtime_natural_key": "gauteng/germiston/symhurst",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0ccb1be8f6196b96e076",
+        "new_factual_location_id": null,
+        "name": "Hartebeesthoek Radio Astronomy Observatory",
+        "old_runtime_natural_key": "gauteng/krugersdorp/hartebeesthoek-radio-astronomy-observatory",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0dc501e9dbc9167833b1",
+        "new_factual_location_id": null,
+        "name": "Estherpark",
+        "old_runtime_natural_key": "gauteng/kempton-park/estherpark",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0dcdadd0e98c0090c5ce",
+        "new_factual_location_id": null,
+        "name": "Mnonjaneni",
+        "old_runtime_natural_key": "gauteng/thembisa/mnonjaneni",
+        "new_runtime_natural_key": null,
+        "old_projection_status": "projection_ready",
+        "new_projection_status": null
+      }
+    ],
+    "retained_by_runtime_key": [
+      {
+        "old_factual_location_id": "pl-gp-v01-06dc8b6ddee496aac71a",
+        "new_factual_location_id": "pl-geo-v01-za-gp-a7eea84d83f8068221c8",
+        "name": "Winchester Hills",
+        "old_runtime_natural_key": "gauteng/johannesburg/winchester-hills",
+        "new_runtime_natural_key": "gauteng/johannesburg/winchester-hills",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0a5455899c278220dc92",
+        "new_factual_location_id": "pl-geo-v01-za-gp-0a5455899c278220dc92",
+        "name": "Northgate",
+        "old_runtime_natural_key": "gauteng/johannesburg/northgate",
+        "new_runtime_natural_key": "gauteng/johannesburg/northgate",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0b0263731bfcf6144656",
+        "new_factual_location_id": "pl-geo-v01-za-gp-0b0263731bfcf6144656",
+        "name": "The Hills",
+        "old_runtime_natural_key": "gauteng/pretoria/the-hills",
+        "new_runtime_natural_key": "gauteng/pretoria/the-hills",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-0d7688adb9c7af392007",
+        "new_factual_location_id": "pl-geo-v01-za-gp-ac50a15f23fed28abb91",
+        "name": "Midrand",
+        "old_runtime_natural_key": "gauteng/midrand",
+        "new_runtime_natural_key": "gauteng/midrand",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-17dcf45fc5067998daa3",
+        "new_factual_location_id": "pl-geo-v01-za-gp-17dcf45fc5067998daa3",
+        "name": "Kibler Park",
+        "old_runtime_natural_key": "gauteng/johannesburg/kibler-park",
+        "new_runtime_natural_key": "gauteng/johannesburg/kibler-park",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-23fcc06d4da0c16f3292",
+        "new_factual_location_id": "pl-geo-v01-za-gp-a92e05109f97ec1997bf",
+        "name": "Moreletapark",
+        "old_runtime_natural_key": "gauteng/pretoria/moreletapark",
+        "new_runtime_natural_key": "gauteng/pretoria/moreletapark",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-2f6f0927cd3637313f57",
+        "new_factual_location_id": "pl-geo-v01-za-gp-2f6f0927cd3637313f57",
+        "name": "Mulbarton",
+        "old_runtime_natural_key": "gauteng/johannesburg/mulbarton",
+        "new_runtime_natural_key": "gauteng/johannesburg/mulbarton",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-311e8bf67621cd5f7b84",
+        "new_factual_location_id": "pl-geo-v01-za-gp-f61bae65faecc066b19b",
+        "name": "Rossmore",
+        "old_runtime_natural_key": "gauteng/johannesburg/rossmore",
+        "new_runtime_natural_key": "gauteng/johannesburg/rossmore",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-3338fac90838d10d971f",
+        "new_factual_location_id": "pl-geo-v01-za-gp-3338fac90838d10d971f",
+        "name": "Bedfordview",
+        "old_runtime_natural_key": "gauteng/bedfordview",
+        "new_runtime_natural_key": "gauteng/bedfordview",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-3462bd075a8d155a3b22",
+        "new_factual_location_id": "pl-geo-v01-za-gp-d29a0cce111216a2e15d",
+        "name": "Randburg",
+        "old_runtime_natural_key": "gauteng/randburg",
+        "new_runtime_natural_key": "gauteng/randburg",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-36dd1d157ca4d6380abf",
+        "new_factual_location_id": "pl-geo-v01-za-gp-36dd1d157ca4d6380abf",
+        "name": "Glen Austin",
+        "old_runtime_natural_key": "gauteng/johannesburg/glen-austin",
+        "new_runtime_natural_key": "gauteng/johannesburg/glen-austin",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-418038409a1c0a00d9bc",
+        "new_factual_location_id": "pl-geo-v01-za-gp-39942f80eb7e54713a60",
+        "name": "Sandton",
+        "old_runtime_natural_key": "gauteng/johannesburg/sandton",
+        "new_runtime_natural_key": "gauteng/johannesburg/sandton",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-456cfcd92d60f531753f",
+        "new_factual_location_id": "pl-geo-v01-za-gp-456cfcd92d60f531753f",
+        "name": "Carlswald",
+        "old_runtime_natural_key": "gauteng/johannesburg/carlswald",
+        "new_runtime_natural_key": "gauteng/johannesburg/carlswald",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-48a6d76485663a560f71",
+        "new_factual_location_id": "pl-geo-v01-za-gp-48a6d76485663a560f71",
+        "name": "Vorna Valley",
+        "old_runtime_natural_key": "gauteng/johannesburg/vorna-valley",
+        "new_runtime_natural_key": "gauteng/johannesburg/vorna-valley",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-4b69303d842a194b3650",
+        "new_factual_location_id": "pl-geo-v01-za-gp-4b69303d842a194b3650",
+        "name": "Mooikloof",
+        "old_runtime_natural_key": "gauteng/pretoria/mooikloof",
+        "new_runtime_natural_key": "gauteng/pretoria/mooikloof",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-4c21c1f81da64c1c6728",
+        "new_factual_location_id": "pl-geo-v01-za-gp-914ef1cb0487fb0e59dc",
+        "name": "Alberton",
+        "old_runtime_natural_key": "gauteng/alberton",
+        "new_runtime_natural_key": "gauteng/alberton",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-4e0f78700e62e5d829c7",
+        "new_factual_location_id": "pl-geo-v01-za-gp-48655c649a4953a204c0",
+        "name": "Edenvale",
+        "old_runtime_natural_key": "gauteng/edenvale",
+        "new_runtime_natural_key": "gauteng/edenvale",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-57f08089dda6322723d1",
+        "new_factual_location_id": "pl-geo-v01-za-gp-57f08089dda6322723d1",
+        "name": "Rosettenville",
+        "old_runtime_natural_key": "gauteng/johannesburg/rosettenville",
+        "new_runtime_natural_key": "gauteng/johannesburg/rosettenville",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-5c4c657aecad01c64729",
+        "new_factual_location_id": "pl-geo-v01-za-gp-5c4c657aecad01c64729",
+        "name": "Fourways",
+        "old_runtime_natural_key": "gauteng/fourways",
+        "new_runtime_natural_key": "gauteng/fourways",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-5c79f50c094ac4aef6d4",
+        "new_factual_location_id": "pl-geo-v01-za-gp-5c79f50c094ac4aef6d4",
+        "name": "Zwartkop",
+        "old_runtime_natural_key": "gauteng/pretoria/zwartkop",
+        "new_runtime_natural_key": "gauteng/pretoria/zwartkop",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-5cf9722b6322b12d8294",
+        "new_factual_location_id": "pl-geo-v01-za-gp-5cf9722b6322b12d8294",
+        "name": "Craigavon",
+        "old_runtime_natural_key": "gauteng/johannesburg/craigavon",
+        "new_runtime_natural_key": "gauteng/johannesburg/craigavon",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-63940211ffc72c74de88",
+        "new_factual_location_id": "pl-geo-v01-za-gp-05b4ea600349ea94f5ec",
+        "name": "Sunninghill",
+        "old_runtime_natural_key": "gauteng/johannesburg/sunninghill",
+        "new_runtime_natural_key": "gauteng/johannesburg/sunninghill",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-64d2fc0b81e2ceecf756",
+        "new_factual_location_id": "pl-geo-v01-za-gp-2811fa3a5b40c87ec825",
+        "name": "Bassonia",
+        "old_runtime_natural_key": "gauteng/johannesburg/bassonia",
+        "new_runtime_natural_key": "gauteng/johannesburg/bassonia",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-663e0c205f6e9728918a",
+        "new_factual_location_id": "pl-geo-v01-za-gp-b1a81c873ca195e0f750",
+        "name": "Booysens",
+        "old_runtime_natural_key": "gauteng/johannesburg/booysens",
+        "new_runtime_natural_key": "gauteng/johannesburg/booysens",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": "pl-gp-v01-695927c293e6421110f3",
+        "new_factual_location_id": "pl-geo-v01-za-gp-695927c293e6421110f3",
+        "name": "Noordwyk",
+        "old_runtime_natural_key": "gauteng/johannesburg/noordwyk",
+        "new_runtime_natural_key": "gauteng/johannesburg/noordwyk",
+        "old_projection_status": "projection_ready",
+        "new_projection_status": "projection_ready"
+      }
+    ],
+    "added": [
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-0f1f4bec0462d4b8207a",
+        "name": "Greenside",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/johannesburg/greenside",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-3d183ee41c08899c06c0",
+        "name": "Silverton",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/silverton",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-480fa75f70ff01496501",
+        "name": "Lyttelton",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/lyttelton",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-576f7aca661c3a9e07c1",
+        "name": "Laudium",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/laudium",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-59ca3f1986233a1d7b45",
+        "name": "Booysens",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria/booysens",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-6df74da562556f46ad4e",
+        "name": "Danville",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria/danville",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-75a3438144eb3c620d6d",
+        "name": "Pretoria",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-87c98ec84c57feb2eacd",
+        "name": "Douglasdale",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/johannesburg/douglasdale",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-8d9bb0514caeb89ced5c",
+        "name": "Soshanguve",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria/soshanguve",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-8e70dc910ee8a62ab596",
+        "name": "Johannesburg",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/johannesburg",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-ad70875e6050d4d23a11",
+        "name": "Waverley",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria/waverley",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-b96fb668ce4af3c86511",
+        "name": "Eldoraigne",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/eldoraigne",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-cb104fff918e81ed4d6b",
+        "name": "Broadacres AH",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/johannesburg/broadacres-ah",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-d58dcee9605f848b7881",
+        "name": "North Riding",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/johannesburg/north-riding",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-e09d7e4f7ea2b61eda86",
+        "name": "Hatfield",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/pretoria/hatfield",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-e79fa49d6d19ad937357",
+        "name": "Rooihuiskraal",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/rooihuiskraal",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-f73c98e4c91a4989967f",
+        "name": "Sandton",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/sandton",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      },
+      {
+        "old_factual_location_id": null,
+        "new_factual_location_id": "pl-geo-v01-za-gp-fad069efebae866b0e47",
+        "name": "Tembisa",
+        "old_runtime_natural_key": null,
+        "new_runtime_natural_key": "gauteng/tembisa",
+        "old_projection_status": null,
+        "new_projection_status": "projection_ready"
+      }
+    ],
+    "ambiguous": []
+  }
+}

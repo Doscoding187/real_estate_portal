@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +79,13 @@ class CataloguePipelineTests(unittest.TestCase):
         self.assertNotIn("geonames", candidate_id(key))
         self.assertNotIn("Q", candidate_id(key))
 
+    def test_candidate_id_namespace_can_be_versioned_without_changing_the_key(self) -> None:
+        key = "sandton|suburb|-26.1076|28.0567|"
+        with mock.patch.dict(os.environ, {"PL_GAUTENG_CANDIDATE_ID_PREFIX": "pl-geo-v01-za-gp"}):
+            versioned = candidate_id(key)
+        self.assertTrue(versioned.startswith("pl-geo-v01-za-gp-"))
+        self.assertEqual(versioned.removeprefix("pl-geo-v01-za-gp-"), candidate_id(key).removeprefix("pl-gp-v01-"))
+
     def test_spatial_gate_includes_inside_points_and_rejects_outside(self) -> None:
         gate = synthetic_gate()
         self.assertEqual(gate.point_status(-26.2, 28.0), "inside")
@@ -94,6 +103,7 @@ class CataloguePipelineTests(unittest.TestCase):
         self.assertEqual(result["summary"]["multi_source_candidates"], 1)
         self.assertTrue(any(edge["match_method"] == "direct_cross_identifier" for edge in result["candidates"][0]["reconciliation_edges"]))
         self.assertEqual(result["candidates"][0]["licence_classes"], ["CC0", "CC_BY_4", "ODBL_1"])
+        self.assertEqual(result["candidates"][0]["last_verified_at"], "2026-08-14T00:00:00Z")
 
     def test_duplicate_names_are_not_collapsed_and_fuzzy_matches_are_proposed(self) -> None:
         records = [

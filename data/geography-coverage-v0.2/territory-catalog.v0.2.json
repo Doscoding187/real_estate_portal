@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1",
+  "catalog_id": "property-listify-location-authority-catalog-v0.2-gauteng-source-closure",
+  "activation": "candidate_source_registration",
+  "default_runtime_catalog": "data/geography-coverage-v0.1/territory-catalog.v0.1.json",
+  "sources": [
+    {
+      "source_id": "za-gp-vnext",
+      "source_authority": {
+        "path": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+        "sha256": "334b2a6be8a575b677ade9668e61203574f80231a88d63a39fdd64b5d806bf7b"
+      },
+      "root_natural_key": "gauteng",
+      "factual_id_namespaces": ["za-gp"],
+      "manifest": {
+        "path": "data/geography-coverage-v0.2/gauteng-territory-manifest.v0.2.json",
+        "sha256": "02f263f140ea084725cbf1e0c4081762899634324316f28ba7da4ee9c043eb81"
+      },
+      "runtime_projection": {
+        "path": "data/geography-coverage-v0.2/output/gauteng_runtime_reference_projection_v0.3.json",
+        "sha256": "079296a2179c9c9cebc2f7d15a550f33c0bb6ae0b2709ad891ed1b2cbb4ae77d"
+      },
+      "factual_mapping": {
+        "path": "data/geography-coverage-v0.2/output/gauteng_factual_runtime_mapping_v0.3.jsonl",
+        "sha256": "cc05d471cdc3ca1f33cc059dfb446a595a161d46352b326b9a83b94e7e9d4d4f"
+      },
+      "expected_manifest_version": "0.2",
+      "expected_projection_version": "gauteng-runtime-reference-projection-v0.4",
+      "expected_runtime_rows": 954,
+      "expected_factual_entries": 1488,
+      "expected_projection_ready_entries": 953,
+      "expected_co_published_natural_keys": 0
+    }
+  ]
+}

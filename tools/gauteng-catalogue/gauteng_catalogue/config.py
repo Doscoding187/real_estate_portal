@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from . import CATALOGUE_VERSION, PIPELINE_VERSION
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-DATA_ROOT = REPO_ROOT / "data" / "gauteng-candidate-catalogue-v0.1"
+DATA_ROOT = Path(
+    os.environ.get(
+        "PL_GAUTENG_CATALOGUE_DATA_ROOT",
+        REPO_ROOT / "data" / "gauteng-candidate-catalogue-v0.1",
+    )
+).resolve()
 RAW_ROOT = DATA_ROOT / "raw"
 OUTPUT_ROOT = DATA_ROOT / "output"
 WORK_ROOT = DATA_ROOT / "work"

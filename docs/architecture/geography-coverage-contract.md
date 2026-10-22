@@ -2,9 +2,10 @@
 
 **Status:** Active authority for territory geography coverage work
 **Owner:** OX Alpha (implementation) / Edward (founder approval boundary)
-**Version:** 0.3 (2026-09-25)
+**Version:** 0.4 (2026-09-25)
 **Supersedes:** ad-hoc per-location additions; complements the runtime
-convergence v0.1 bounded slice without rewriting it.
+convergence v0.1 bounded slice without rewriting it; records the approved
+Gauteng vNext source authority without activating consumer convergence.
 
 This contract records the product and data decisions that govern the
 territory-wide geography coverage pipeline. It is the Phase 0 artifact of the
@@ -58,11 +59,11 @@ These decisions are binding until explicitly revised.
 
 Searchable runtime scopes are exactly the existing three executable levels:
 
-| Factual type | Runtime scope | Storage |
-| --- | --- | --- |
-| province | `province` | provinces |
-| city, town | `metro_city` | cities |
-| suburb, locality, neighbourhood, village, township | `locality` | suburbs |
+| Factual type                                       | Runtime scope | Storage   |
+| -------------------------------------------------- | ------------- | --------- |
+| province                                           | `province`    | provinces |
+| city, town                                         | `metro_city`  | cities    |
+| suburb, locality, neighbourhood, village, township | `locality`    | suburbs   |
 
 Municipalities (district and local) are parent **context**, never searchable
 scopes, in release 1. They appear only inside factual context metadata.
@@ -81,8 +82,12 @@ surfaces (admin coverage dashboard, research queue) expose it.
 ### D3 — Acceptable sources and licences
 
 - Approved evidence classes: official government registers and municipal
-  publications; GeoNames (CC0/attributed); Wikidata (CC0); geoBoundaries
-  gbOpen (CC BY 4.0); OSM/Geofabrik (ODbL 1.0); NGA GNS (no restriction).
+  publications; GeoNames (source-declared CC BY 4.0 in the vNext snapshot,
+  with attribution); Wikidata (CC0); geoBoundaries gbOpen (source-declared
+  CC BY 3.0 IGO in the vNext snapshot, with attribution); OSM/Geofabrik
+  (ODbL 1.0); NGA GNS (no restriction). The source-declared licence and
+  attribution metadata are retained verbatim in the source manifest; this
+  contract does not upgrade or silently restate a provider licence.
 - Google Places and any future commercial provider are **evidence and
   enrichment only**. Provider place IDs can never become public identity.
 - ODbL obligation: `osm_only_odbl_provisional` rows may be materialized in
@@ -142,12 +147,12 @@ non-searchable provenance.
 
 ## 3. Coverage tiers
 
-| Tier | Meaning | Runtime behavior |
-| --- | --- | --- |
-| A — verified | Identity, parent chain, scope, licensing all supported | status `verified`; fully searchable/selectable; SEO eligible |
-| B — provisional | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO |
-| C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates | No runtime row; recorded in disposition + review queue |
-| D — rejected/retired | Duplicate, non-independent, retired, licence-blocked | Never public; retained as provenance |
+| Tier                        | Meaning                                                                                  | Runtime behavior                                             |
+| --------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| A — verified                | Identity, parent chain, scope, licensing all supported                                   | status `verified`; fully searchable/selectable; SEO eligible |
+| B — provisional             | Identity and parent safe enough to search; evidence provisional or OSM-only pending gate | status `provisional`; searchable/selectable; no SEO          |
+| C — candidate/alias pending | Fails identity, parent, ambiguity, or natural-key gates                                  | No runtime row; recorded in disposition + review queue       |
+| D — rejected/retired        | Duplicate, non-independent, retired, licence-blocked                                     | Never public; retained as provenance                         |
 
 Tier assignment is computed by the pipeline and recorded per identity with an
 explicit reason string. Tiers map onto the existing schema enum
@@ -174,10 +179,15 @@ the generated disposition artifacts, which are the audit trail.
    name-slug/level/province triple matches an already-accepted row under a
    different parent queues for reconciliation rather than creating a second
    public identity.
-5. Existing v0.1 bounded-slice natural keys are frozen authority: the v0.2
-   projection must reproduce them exactly.
+5. Existing v0.1 bounded-slice natural keys are frozen authority for the
+   v0.1 runtime slice. The approved vNext source closure does not inherit or
+   reproduce those keys; it projects only identities and parent decisions
+   supported by the vNext source snapshot and queues all other cases.
 
 ## 5. Pipeline and artifacts
+
+The following diagram records the frozen v0.1 runtime slice. The forward vNext
+source and projection path is specified separately in Section 5.1.
 
 ```text
 factual canonical layer (1480) + names (2526)
@@ -193,6 +203,49 @@ factual canonical layer (1480) + names (2526)
 The generator reads the full factual canonical JSONLs from the approved
 canonical-root (external reproducible data worktree; summaries are checked in).
 It must refuse inputs whose checksums do not match the recorded checkpoints.
+
+### 5.1 Gauteng vNext compact source authority
+
+The approved forward source closure is
+`data/gauteng-source-authority-v0.2/`. It is a repository-contained normalized
+source authority built from a newly acquired, digest-pinned source snapshot. The
+raw source pack remains disposable and is not a repository authority. The
+compact source consists of:
+
+- `gauteng_source_manifest_v0.2.json` — acquisition URLs, retrieval metadata,
+  source-declared licences, source artifact SHA-256 values and the vNext
+  supersession record;
+- `gauteng_factual_canonical_geography_v0.2.jsonl` — accepted vNext factual
+  identities, context, type, coordinates, status and promotion decisions;
+- `gauteng_factual_canonical_names_v0.2.jsonl` — accepted name assertions and
+  searchable status; and
+- `gauteng_factual_canonical_source_links_v0.2.jsonl` — compact source-record
+  provenance and licensing links; and
+- `gauteng_candidate_dispositions_v0.2.jsonl` — one compact promotion and
+  rejection disposition for every candidate observation.
+
+The vNext identity namespace is `pl-geo-v01-za-gp-*`. The v0.1
+`pl-gp-v01-*` namespace and generated rows are historical evidence only. No old
+canonical output, old projection, or old mapping is an input to the vNext pack.
+The source snapshot currently contains 1,488 accepted identities, 2,459 name
+assertions, 2,971 source links, 4,350 candidate dispositions, and 19
+digest-pinned source artifacts.
+
+The vNext coverage manifest is
+`data/geography-coverage-v0.2/gauteng-territory-manifest.v0.2.json`. Its
+projection and mapping are candidate source-closure outputs, not the default
+runtime consumer catalog. The default catalog remains the frozen v0.1 catalog
+until a separate reviewed consumer-convergence and activation slice. The
+vNext source audit must pass before that activation can be considered.
+
+The source-driven vNext audit is
+`data/geography-coverage-v0.2/output/gauteng_vnext_probe_results_v0.2.json`. It
+covers every accepted identity, name assertion, and candidate disposition
+(8,297 governed probes), records every queue reason, verifies closed runtime
+parents, and keeps Kyalami
+non-public while its licence gate remains open. `gauteng_vnext_diff_v0.2.json`
+is comparison-only evidence against the frozen v0.1 output and cannot become a
+second source authority.
 
 ## 6. Guardrails (binding)
 
@@ -269,32 +322,35 @@ remain governed follow-on work with the dispositions below.
 
 ## 10. Legacy authority disposition matrix
 
-| Asset or path | Disposition | Authority role and required action |
-| --- | --- | --- |
-| `docs/architecture/geography-coverage-contract.md` and the active territory manifest | **CANONICAL** | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them. |
-| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json` | **CANONICAL** | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable. |
-| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl` | **CANONICAL** | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members. |
-| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl` | **CANONICAL** | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly. |
-| `data/geography-coverage-v0.1/territory-catalog.v0.1.json` | **CANONICAL** | Digest-pinned registry of immutable territory artifacts. It contains no copied geography rows and cannot override a source artifact. |
-| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader | **CANONICAL** | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data. |
-| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` and the `provinces`, `cities`, and `suburbs` tables | **CANONICAL** | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles. |
-| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter | **TRANSITIONAL** | Retain only as the reviewed foundation minimum in Slice 1. Replace them with a versioned generated foundation source in a later database-reference slice; do not add more hand entries. |
-| `server/services/searchAreaDefinitions.ts` and the Search Area execution contracts | **CANONICAL, SEPARATE** | Search Areas remain a separate governed market identity. Candidate evidence and activation decisions are not factual geography and are outside this Slice 1 change. |
-| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/` | **ARCHIVED EVIDENCE** | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership. |
-| Google/provider IDs, labels, and `location_provider_mappings` | **ARCHIVED EVIDENCE** | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row. |
-| `server/services/locationAutoPopulation.ts`, provider-driven geography writes, and retired auto-population completion notes | **RETIRED** | No runtime authority or compatibility fallback remains. Preserve historical artifacts only where they document research or incidents. |
-| Legacy `locations` rows, `locations.id`, `listings.locationId`, `developments.locationId`, and geography text columns | **TRANSITIONAL** | Preserve current consumers and historical evidence, but resolve new cross-environment identity through governed natural keys and typed target handles. Do not copy numeric IDs between environments. |
-| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching | **TRANSITIONAL** | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables. |
-| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, Developments, and location-page geography fields | **TRANSITIONAL** | Retain current behavior for Slice 1, then converge each family to typed canonical location IDs without rewriting unrelated product logic. |
-| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries | **ARCHIVED EVIDENCE** | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks. |
-| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps | **DO NOT MIGRATE** | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity. |
+| Asset or path                                                                                                                                     | Disposition                              | Authority role and required action                                                                                                                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/architecture/geography-coverage-contract.md` and the active territory manifest                                                              | **CANONICAL**                            | Govern policy, accepted inputs, sources, parent decisions, and licensing. Preserve and version them.                                                                                                 |
+| `data/geography-coverage-v0.1/output/gauteng_runtime_reference_projection_v0.2.json`                                                              | **CANONICAL**                            | Frozen current Gauteng runtime row authority. Load by digest; do not rewrite while Slice 1 is reviewable.                                                                                            |
+| `data/geography-coverage-v0.1/output/gauteng_factual_runtime_mapping_v0.2.jsonl`                                                                  | **CANONICAL**                            | Frozen current factual-to-runtime disposition bridge. Every factual identity remains distinct, including co-published members.                                                                       |
+| `data/geography-coverage-v0.1/output/gauteng_coverage_disposition_v0.1.json` and `gauteng_review_queue_v0.1.jsonl`                                | **CANONICAL**                            | Preserve counts, reasons, candidate evidence, and research obligations; never materialize blocked rows publicly.                                                                                     |
+| `data/geography-coverage-v0.1/territory-catalog.v0.1.json`                                                                                        | **CANONICAL**                            | Frozen default registry of immutable v0.1 territory artifacts. It contains no copied geography rows and cannot override a source artifact.                                                           |
+| `data/gauteng-source-authority-v0.2/` and `data/geography-coverage-v0.2/territory-catalog.v0.2.json`                                              | **CANONICAL FOR FORWARD SOURCE CLOSURE** | Approved vNext compact source and candidate source registration. Keep separate from the default v0.1 consumer catalog until a reviewed activation slice.                                             |
+| `shared/factualRuntimeGeographyBridge.ts`, `shared/runtimeGeography.ts`, and the governed runtime reference loader                                | **CANONICAL**                            | Validate IDs, projection shape, natural-key hierarchy, and exact governed co-publication. Reject malformed or ambiguous source data.                                                                 |
+| `server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts` and the `provinces`, `cities`, and `suburbs` tables                           | **CANONICAL**                            | Materialize and verify governed natural keys on authorized targets. Numeric IDs are environment-local handles.                                                                                       |
+| Static `PROVINCES`, `CITIES`, and `SUBURBS` arrays in the Database Authority geography adapter                                                    | **TRANSITIONAL**                         | Retain only as the reviewed foundation minimum in Slice 1. Replace them with a versioned generated foundation source in a later database-reference slice; do not add more hand entries.              |
+| `server/services/searchAreaDefinitions.ts` and the Search Area execution contracts                                                                | **CANONICAL, SEPARATE**                  | Search Areas remain a separate governed market identity. Candidate evidence and activation decisions are not factual geography and are outside this Slice 1 change.                                  |
+| `data/gauteng-search-area-candidates-v0.1/` and `data/gauteng-search-area-research-v0.1/`                                                         | **ARCHIVED EVIDENCE**                    | Preserve definitions, membership research, and provenance. Never copy a Search Area into a factual row or infer factual identity from membership.                                                    |
+| Google/provider IDs, labels, and `location_provider_mappings`                                                                                     | **ARCHIVED EVIDENCE**                    | Retain for enrichment, encounter review, and provenance. A provider observation must not create or promote a public geography row.                                                                   |
+| `server/services/locationAutoPopulation.ts`, provider-driven geography writes, and retired auto-population completion notes                       | **RETIRED**                              | No runtime authority or compatibility fallback remains. Preserve historical artifacts only where they document research or incidents.                                                                |
+| Legacy `locations` rows, `locations.id`, `listings.locationId`, `developments.locationId`, and geography text columns                             | **TRANSITIONAL**                         | Preserve current consumers and historical evidence, but resolve new cross-environment identity through governed natural keys and typed target handles. Do not copy numeric IDs between environments. |
+| Direct classic-table discovery, `resolveLocation` widening, free-text geography execution, and location-page text matching                        | **TRANSITIONAL**                         | Classify and remove in bounded consumer-convergence slices. They do not become canonical by being read from the canonical tables.                                                                    |
+| Agents, Agencies, Services, Canvassing, Demand, Saved Searches, Explore, Developments, and location-page geography fields                         | **TRANSITIONAL**                         | Retain current behavior for Slice 1, then converge each family to typed canonical location IDs without rewriting unrelated product logic.                                                            |
+| `data/gauteng-candidate-catalogue-v0.1/`, `data/gauteng-canonical-promotion-v0.1/`, `v0.2/`, and `data/gauteng-factual-canonical-v0.1/` summaries | **ARCHIVED EVIDENCE**                    | Retain provenance and research history. Do not bulk-migrate them around the governed projection and disposition checks.                                                                              |
+| Superseded numeric runtime handles, provider place IDs, display text, and hard-coded client maps                                                  | **DO NOT MIGRATE**                       | They may be read only inside an explicitly bounded transitional consumer. They never become canonical factual or cross-environment identity.                                                         |
 
 A disposition is not a compatibility approval. Any runtime fallback outside
 this matrix is audit debt, not authority.
 
 ## 11. Gauteng exact-source recovery status
 
-**Status:** exact source recovery failed; full regeneration is blocked.
+**Status:** exact v0.1 source recovery failed; v0.1 full regeneration remains
+blocked. A separately approved vNext compact source authority now exists at
+`data/gauteng-source-authority-v0.2/`; it does not restore or mutate v0.1.
 
 The required SHA-256 checkpoints are:
 
@@ -311,17 +367,22 @@ Reachable refs, history, archive refs, worktrees, the working filesystem,
 ignored files, and the recorded external root were searched. Neither exact
 source file exists.
 
-The governed record is
-`data/geography-coverage-v0.1/source-recovery.v0.1.json`. Replacement source
-data must not be synthesized, reverse-engineered from summaries, or copied
-from provider output and labelled canonical. Until an exact byte match is
-restored:
+The governed v0.1 recovery record is
+`data/geography-coverage-v0.1/source-recovery.v0.1.json`. Replacement data for
+the v0.1 byte checkpoint must not be synthesized, reverse-engineered from
+summaries, or copied from provider output and labelled v0.1 canonical. The
+vNext source closure is a distinct approved authority built from a newly
+retrieved source snapshot; it is not a claim that the v0.1 bytes were
+recovered. Until an exact v0.1 byte match is restored:
 
-- `geography:coverage:check` must fail closed with the missing-source error;
-- checked-in output digests, hierarchy, dispositions, grouped identities, and
-  generated probes remain the executable evidence;
+- the v0.1 `geography:coverage:check` must fail closed with the missing-source
+  error;
+- checked-in v0.1 output digests, hierarchy, dispositions, grouped identities,
+  and generated probes remain the executable historical evidence;
+- the vNext source pack, source audit, projection, and diff must remain
+  separately digest-pinned;
 - aggregate-catalog and focused contract tests must run without the external
-  source; and
+  v0.1 source; and
 - no later territory may reuse guessed Gauteng data as a template.
 
 ## 12. Slice 1 completion evidence
@@ -340,3 +401,32 @@ database operation:
 8. Gauteng projection and mapping bytes remain unchanged from the integration
    base; and
 9. typecheck, lint, focused tests, and CI contract checks pass.
+
+## 13. Gauteng vNext source closure evidence
+
+The vNext source closure is complete as a source and projection workstream
+when all of the following are true without a production or protected database
+operation:
+
+1. the vNext source manifest, compact geography, names, and source links are
+   digest-pinned under `data/gauteng-source-authority-v0.2/`;
+2. the source snapshot records all acquired artifact hashes, retrieval
+   metadata, source-declared licences, and the explicit fact that the raw pack
+   is disposable;
+3. the vNext source audit validates every accepted identity and name assertion,
+   all parent closures, all queue dispositions, and the Kyalami non-public
+   gate;
+4. the vNext projection is byte-deterministic from the compact source and its
+   territory manifest;
+5. the vNext diff is comparison-only and proves that v0.1 generated output was
+   not used as vNext source input;
+6. the vNext candidate source registration loads through the governed catalog
+   validator; and
+7. the default v0.1 consumer catalog, database target, Search Areas, and
+   consumer code remain unchanged pending a separate activation and convergence
+   decision.
+
+The current vNext audit covers 8,297 governed probes: 1,488 identity probes,
+2,459 name probes, and 4,350 candidate-disposition probes. It records 953
+resolved identities and 535 queued identities. The unresolved core cases are
+retained as explicit source outcomes rather than widened or merged.

@@ -1,0 +1,114 @@
+{
+  "manifest_version": "0.2",
+  "contract": "docs/architecture/geography-coverage-contract.md",
+  "source_authority": {
+    "version": "gauteng-source-authority-v0.2",
+    "manifest": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json",
+    "summary": "data/gauteng-source-authority-v0.2/gauteng_source_build_summary_v0.2.json",
+    "status": "vnext_compact_authority_ready"
+  },
+  "territory": {
+    "country": "ZA",
+    "country_name": "South Africa",
+    "province": "Gauteng",
+    "province_name": "Gauteng",
+    "province_slug": "gauteng",
+    "code": "GP"
+  },
+  "inputs": {
+    "canonical_root_env": "PL_GEOGRAPHY_CANONICAL_ROOT_VNEXT",
+    "canonical_root_default": "data/gauteng-source-authority-v0.2",
+    "geography_jsonl": "gauteng_factual_canonical_geography_v0.2.jsonl",
+    "names_jsonl": "gauteng_factual_canonical_names_v0.2.jsonl",
+    "carried_projection": null,
+    "carried_mapping": null,
+    "expected_sha256": {
+      "factual_geography_sha256": "7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e",
+      "factual_names_sha256": "b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd"
+    },
+    "researched_parent_edges": []
+  },
+  "outputs": {
+    "output_dir": "data/geography-coverage-v0.2/output",
+    "projection": "gauteng_runtime_reference_projection_v0.3.json",
+    "mapping": "gauteng_factual_runtime_mapping_v0.3.jsonl",
+    "disposition": "gauteng_coverage_disposition_v0.2.json",
+    "review_queue": "gauteng_review_queue_v0.2.jsonl",
+    "projection_version": "gauteng-runtime-reference-projection-v0.4"
+  },
+  "runtime_levels": {
+    "publicly_searchable_scopes": ["province", "metro_city", "locality"],
+    "storage_mapping": {
+      "province": "provinces",
+      "metro_city": "cities",
+      "locality": "suburbs"
+    },
+    "context_only_types": ["district_municipality", "local_municipality"]
+  },
+  "parent_context_registry": {
+    "entries": [
+      {
+        "administrative_context_name": "City of Johannesburg",
+        "parent_natural_key": "gauteng/johannesburg",
+        "relationship": "metro_market_context",
+        "evidence_class": "vnext_source_observation_plus_explicit_market_registry",
+        "citation": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json"
+      },
+      {
+        "administrative_context_name": "City of Tshwane",
+        "parent_natural_key": "gauteng/pretoria",
+        "relationship": "metro_market_context",
+        "evidence_class": "vnext_source_observation_plus_explicit_market_registry",
+        "citation": "data/gauteng-source-authority-v0.2/gauteng_source_manifest_v0.2.json"
+      }
+    ],
+    "no_default_contexts": ["Ekurhuleni", "Sedibeng", "West Rand"],
+    "excluded_non_territory_contexts": [
+      "Nkangala",
+      "Fezile Dabi",
+      "Bojanala",
+      "Waterberg",
+      "Dr Kenneth Kaunda",
+      "Gert Sibande"
+    ]
+  },
+  "tier_policy": {
+    "A_verified": "accepted vNext source evidence and closed parent chain",
+    "B_provisional": "vNext source evidence with provisional attributes or OSM-only licensing gate",
+    "C_candidate": "accepted identity without an explicit parent or with a blocked collision",
+    "D_rejected": "retained outside the public factual authority"
+  },
+  "licensing_policy": {
+    "source_declared_license_is_authoritative": true,
+    "materializable_classes": [
+      "mixed_odbl_supported",
+      "permissive_supported",
+      "osm_only_odbl_provisional"
+    ],
+    "production_gate": "OSM-only rows require the founder-owned production ODbL database-strategy gate before staging or production release"
+  },
+  "activation": {
+    "default_runtime_catalog": "data/geography-coverage-v0.1/territory-catalog.v0.1.json",
+    "status": "source_authority_ready_consumer_activation_separate",
+    "reason": "This source closure does not converge runtime consumers or replace the frozen v0.1 catalog"
+  },
+  "acceptance": {
+    "core_probes": [
+      "Johannesburg",
+      "Pretoria",
+      "Soweto",
+      "Mamelodi",
+      "Newtown",
+      "Sandton",
+      "Bryanston",
+      "Randburg",
+      "Midrand",
+      "Centurion",
+      "Roodepoort",
+      "Vereeniging"
+    ],
+    "must_stay_non_public": ["Kyalami"],
+    "source_identity_probe": "every compact source identity and name has one deterministic disposition"
+  },
+  "refresh_cadence": "Re-run source acquisition, compact packing, projection generation and diff review as a new immutable source snapshot"
+}

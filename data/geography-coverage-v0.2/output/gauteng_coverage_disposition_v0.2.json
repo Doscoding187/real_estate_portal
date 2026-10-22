@@ -1,0 +1,45 @@
+{
+  "disposition_version": "gauteng-coverage-disposition-v0.2",
+  "contract": "docs/architecture/geography-coverage-contract.md",
+  "manifest": "data/geography-coverage-v0.2/gauteng-territory-manifest.v0.2.json",
+  "inputs": {
+    "canonical_root": "data/gauteng-source-authority-v0.2",
+    "factual_geography_sha256": "7bba9cc217b207466916647cb674d637366eb45ed0c7c01b88c62c625e91884e",
+    "factual_names_sha256": "b5021e21df8728416e0bb7d0f7858c824cb9bca4bd382b8f98cbbeed285d79fd",
+    "carried_projection_sha256": null
+  },
+  "summary": {
+    "factual_identity_count": 1488,
+    "runtime_row_count": 954,
+    "carried_row_count": 1,
+    "newly_promoted_row_count": 953,
+    "newly_promoted_identity_count": 953,
+    "queued_count": 535,
+    "represented_by_carried_count": 0,
+    "alias_drop_count": 0
+  },
+  "disposition_invariant": {
+    "rule": "promoted_new_identities + queued === factual_identity_count",
+    "promoted_new_identities": 953,
+    "promoted_new_rows": 953,
+    "queued": 535
+  },
+  "tier_counts": {
+    "verified_rows": 182,
+    "provisional_rows": 772,
+    "carried_rows": 1
+  },
+  "queue_reason_counts": {
+    "context_only_type_municipality": 30,
+    "province_scope_owned_by_carried_gauteng_row": 2,
+    "awaiting_accepted_parent_edge": 467,
+    "duplicate_natural_key_within_parent": 36
+  },
+  "alias_drop_log": [],
+  "outputs": {
+    "projection": "data/geography-coverage-v0.2/output/gauteng_runtime_reference_projection_v0.3.json",
+    "projection_sha256": "079296a2179c9c9cebc2f7d15a550f33c0bb6ae0b2709ad891ed1b2cbb4ae77d",
+    "mapping": "data/geography-coverage-v0.2/output/gauteng_factual_runtime_mapping_v0.3.jsonl",
+    "review_queue": "data/geography-coverage-v0.2/output/gauteng_review_queue_v0.2.jsonl"
+  }
+}
