@@ -1,5 +1,11 @@
 # B15 customer copy for founder and legal review
 
+**Historical and superseded for current review as of 2026-09-27.** Use
+[`b15-founder-approval-candidate-2026-09-24.md`](b15-founder-approval-candidate-2026-09-24.md),
+review-copy version `B15-FOUNDER-REVIEW-0.3`, for Edward's current review.
+External legal/accounting reviewer prompts in this historical draft are not
+current requirements; Edward / Founder owns those reviews unless delegated.
+
 **Draft only — not approved, not published, and not a payment invitation.**
 This text translates the founder-approved B01 offer into a reviewable customer
 document. Bracketed items require a factual answer or legal/accounting decision.

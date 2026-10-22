@@ -1,0 +1,9 @@
+b2a47769f4eff5e4e71c1256908cfc25dd78f00d1b7b99a768e38fa160d6fbe0  docs/architecture/launch-readiness-and-product-convergence/03-launch-register.md
+a90db2d822fd2400350bb9a0a066d1fb0a39c3ee84e142b8e765cbbe5e19f6d0  docs/architecture/launch-readiness-and-product-convergence/19-first-customer-operating-procedure.md
+ee750981b9502e9d1d6cf50e56711f4d5add0b9c7d15880ae881a613f0914578  docs/architecture/launch-readiness-and-product-convergence/22-b15-founder-legal-payment-review-packet.md
+59527e5f63917c7237f91d3f56617f372a190b9a784c7e2d860694fca5da2866  docs/architecture/launch-readiness-and-product-convergence/23-paid-mvp-senior-reconciliation-2026-09-25.md
+d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368  docs/architecture/launch-readiness-and-product-convergence/evidence/b15-founder-approval-candidate-2026-09-24.md
+3aabebaf8ef6a8cd25f2dfde0de6ee5fcf7429fbe44db5261e12c08f7ea44eae  docs/architecture/launch-readiness-and-product-convergence/evidence/b15-customer-copy-review-draft-2026-09-24.md
+45393ad4529de5f7fad578e61ae172da9d6332283b2720fbe05bea79447641b0  docs/architecture/launch-readiness-and-product-convergence/evidence/b15-copy-approval-preparation-2026-09-27.md
+cb9a3978ca5e05a3f71217a9c5e57f8c4d32c4acc69aff040f362c9473c1d347  docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-manifest-2026-09-27.json
+871803b4e2a1acbe7dd862231dba825b15463cc8ae5b62235828963b41451f5d  docs/architecture/launch-readiness-and-product-convergence/evidence/b16-integration-review-packet-2026-09-27.md

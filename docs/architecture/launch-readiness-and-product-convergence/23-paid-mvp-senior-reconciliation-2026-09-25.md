@@ -355,8 +355,15 @@ B16/B18 and provider packages; it never authorizes paid operation.
 - **Risk / claimed state:** money/intake waits without a capable operator;
   founder-only procedure and sales-window guard prepared.
 - **Evidence:** [operating procedure](19-first-customer-operating-procedure.md),
-  Edward's recorded first-10–20-customer model and daily weekday checks; current
-  four sales-window tests pass; candidate CI payment-backed Agency walkthrough.
+  Edward's recorded first-10–20-customer model; **schedule update
+  2026-09-27:** founder-confirmed support and billing/payment monitoring is
+  Monday–Friday, 09:00–17:00 South Africa time, excluding South African public
+  holidays; requests may be submitted anytime and off-hours requests are
+  answered during the next operating period. The current B14 procedure still
+  uses daily-weekday/next-staffed-weekday wording without defining these hours
+  or holiday handling; reconcile finance checks, sales-window renewal and
+  planned/unplanned absence behavior before acceptance. Current four
+  sales-window tests pass; candidate CI payment-backed Agency walkthrough.
 - **Review/disposition:** **REMAINS OPEN — hosted rehearsal/contact evidence.**
   Do not reopen the approved sole-operator decision merely for lack of a backup.
   Owner: Edward; dependencies B03/B10–B13/B15/B17. Prove actual queue handling,

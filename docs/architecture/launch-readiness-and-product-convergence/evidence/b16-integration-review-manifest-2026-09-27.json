@@ -1,0 +1,205 @@
+{
+  "manifestVersion": 1,
+  "updatedDate": "2026-09-27",
+  "reviewStatus": "B16 remains open; accepted source composition and PLE correction preserved; B15 founder review draft refreshed with confirmed contact and operating schedule; B14 schedule mismatch recorded",
+  "scope": "B15 founder-confirmed copy preparation, B12 diagnostic evidence, and accepted B16 source composition; no publication, database work, merge, deployment, or production activation",
+  "reviewWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence",
+    "branch": "prep/b16-converged-candidate",
+    "headBeforeEvidence": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "treeBeforeEvidence": "b5a3475633ea330469507551574c7e61a73b0900"
+  },
+  "founderCopyRefreshWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-facts-refresh",
+    "branch": "docs/b15-founder-facts-refresh",
+    "head": "005eea36d71b238b7b744d23b9425489d592b1e2",
+    "baseTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "productRuntimeSourceChanged": false
+  },
+  "seniorAcceptance": {
+    "date": "2026-09-27",
+    "workstreams": [
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07"
+    ],
+    "scope": "accepted within each reviewed scope; hosted readiness remains open"
+  },
+  "acceptedCandidateIdentities": {
+    "composedBaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "b03SixFilePatchSha256": "3e292cce43aafefb20075190bf6064b8e2c22ef1785843873f8dffe43880ea76",
+    "b05TestPatchSha256": "1e210e5e348576d82663136a2fa2f215f9def31a1fe364dcddf6298072bfd754",
+    "b03B05B06EightFileCompositionSha256": "926086a2e3cf68e9edc1c3d0969717352af6feb42c0d5c91f01c5970b129a711",
+    "b06SpecSha256": "2ce67a21dc05c0bcb9cae67ea8001dbe7a594c71cc48d92f06db57dfb17944d7",
+    "b07AcceptedTree": "2600386978a46b29f371c230f05511c81be2465f",
+    "b07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "b07RoleSessionTestSha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28"
+  },
+  "sourceComposition": {
+    "acceptedB03B05B06BaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "acceptedB07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "acceptedB03ThroughB07TreeBeforePleCorrection": "2600386978a46b29f371c230f05511c81be2465f",
+    "testedCandidateTreeAfterPleCorrection": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "pleSpecSha256": "0cc29dad31dd47d26b862c2a44ae3711e1436a42321019b42161f462c7675d7c",
+    "pleConfigSha256": "49b48ae4b07da3ca62e1966fa575752c85761c6adacc023f8d7b556ba527dc39",
+    "compositionMethod": "B16-owned branch created at the accepted B03/B05/B06 base commit; the exact accepted B07 seven-file diff was hash-verified and applied locally. No source was merged to main or deployed."
+  },
+  "b04B07Evidence": {
+    "priorDirectApiMatrix": {
+      "date": "2026-09-26",
+      "filesPassed": 11,
+      "testsPassed": 99,
+      "rerunForRoleTestCorrection": false
+    },
+    "focusedRoleSessionRerun": {
+      "date": "2026-09-27",
+      "filesPassed": 1,
+      "testsPassed": 5,
+      "failed": 0
+    },
+    "b04JoinedBrowser": {
+      "passed": 2,
+      "failed": 0
+    },
+    "b05DedicatedAgencyJourney": {
+      "passed": 1,
+      "failed": 0
+    },
+    "b06DeveloperJourney": {
+      "passedSteps": 370,
+      "authorityTestsPassed": 31
+    },
+    "pleSmoke": {
+      "date": "2026-09-26",
+      "passed": 0,
+      "failed": 1,
+      "notRun": 9,
+      "followUp": "historical failure retained; the fixture/test expectation mismatch was corrected and the complete journey rerun under Database Authority",
+      "currentRerun": {
+        "date": "2026-09-27",
+        "evidence": "b16-ple-browser-journey-2026-09-27.json",
+        "command": "pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts",
+        "passed": 10,
+        "failed": 0,
+        "notRun": 0,
+        "testedCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+        "targetFingerprintSha256": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+        "migrationHead": "0094_content_topics_primary_key.sql",
+        "targetDisposed": true,
+        "localServiceStopped": true
+      }
+    },
+    "currentEvidenceChecksums": {
+      "reviewPacket": "2cdf36a7ea1e29f894d1aa522eae750915dff2d114a8c2424161c819546dd727",
+      "securityMatrix": "d585cd7db57817c6190d9cf10d7fb89569009e3dfe37d62f4738896aefc36995",
+      "roleSessionCases": "4329fb5d0ecd80e9a56670d4c31d062ff5b62859cc4c4c155602d31ca1c37d57"
+    },
+    "databaseCleanup": {
+      "targetFingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd",
+      "disposed": true,
+      "localServiceStopped": true
+    }
+  },
+  "b15Copy": {
+    "worktreeHead": "fceb4a380f23548b03608e3e24389c225c01215c",
+    "worktreeTree": "ef9b2c003b9ff098eaf7dabb59663e2910f91ab8",
+    "priorCandidateSha256": "9fce97d738efa3eddd1740684d76fadbffb803eabb5445faaa312b8c1799aea3",
+    "currentReviewCopy": "b15-founder-approval-candidate-2026-09-24.md",
+    "currentReviewCopyVersion": "B15-FOUNDER-REVIEW-0.3",
+    "currentReviewCopySha256": "d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368",
+    "status": "review draft prepared; not approved or publishable; business address and privacy-request route pending founder confirmation; WhatsApp telephone-disclosure sufficiency, company disclosure facts, B14 schedule alignment, privacy/provider decisions, final Edward approval, and rendered-page proof remain open",
+    "reviewWorktreePath": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-facts-refresh",
+    "reviewWorktreeBranch": "docs/b15-founder-facts-refresh",
+    "reviewWorktreeHead": "005eea36d71b238b7b744d23b9425489d592b1e2",
+    "acceptedSourceTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1"
+  },
+  "founderConfirmedB15Inputs": {
+    "date": "2026-09-27",
+    "legalName": "Property Listify (Pty) Ltd.",
+    "vatStatus": "Not VAT registered — founder-confirmed.",
+    "vatConfirmationLimit": "Edward confirmed 2026-09-27; VAT is not charged; this is not independent accountant, SARS, or other professional verification",
+    "generalEnquiries": "info@propertylistifysa.co.za",
+    "customerSupport": "Formal support: support@propertylistifysa.co.za",
+    "mvpBillingPaymentEnquiries": "Route through the existing customer-support contact; no separate public billing mailbox",
+    "legalPrivacyReviewOwner": "Edward / Founder unless delegated",
+    "accountingReviewOwner": "Edward / Founder unless delegated",
+    "noSeparatePublicPrivacyMailbox": true,
+    "noSeparatePublicBillingMailbox": true,
+    "privacyRequestsUseSupportByDefault": false,
+    "pendingFounderConfirmation": [
+      "business/customer-facing address",
+      "privacy-request handling route"
+    ],
+    "independentProfessionalReviewClaimed": false,
+    "whatsAppSupport": "078 555 8542; messages only; founder-managed support",
+    "supportAndBillingPaymentMonitoring": "Monday-Friday, 09:00-17:00 South Africa time, excluding South African public holidays",
+    "outsideOperatingHoursHandling": "Requests may be submitted anytime; requests received outside operating hours are monitored and answered during the next operating period",
+    "supportModelLimit": "Founder-managed; no staffed call centre, dedicated voice line, or immediate WhatsApp response is promised",
+    "pendingDisclosureOrCompanyFactsReview": [
+      "whether/how the supplied WhatsApp Support message number satisfies any required public business telephone disclosure",
+      "place of registration and any required office-bearer disclosure against company records"
+    ],
+    "futureSupportHoursExpansionCommitted": false
+  },
+  "b09SourceDataCensus": {
+    "status": "missing-not-accepted",
+    "searchedScope": "B16 checked-in launch-convergence evidence and named B09/source-data census/disposition artifacts on 2026-09-27",
+    "finding": "No accepted B09 source-data census or disposition was found to establish launch data scope. Generic database-takeover coverage inventories are not accepted B09 launch-scope evidence.",
+    "requiredInputOwner": "Data owner + Edward",
+    "requiredDecision": "Identify authoritative source systems and records, the launch in-scope data, and dispositions for excluded or deferred data, with evidence sufficient to approve launch data scope."
+  },
+  "b12Diagnostics": {
+    "worktreeHead": "bb1a5d7af53b7f62f5aa9ea7ae9068f59cd87854",
+    "worktreeTree": "d41a3594787f2cda74c9245cb3ce16de166a6a2a",
+    "latestRecordedObservationDate": "2026-09-27",
+    "publicDiagnostics": {
+      "evidence": "b12-public-diagnostics-2026-09-27.json",
+      "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "apiHealthHttp": 200,
+      "apiReadinessHttp": 503,
+      "frontendVersionJsonContentType": "text/html; charset=utf-8",
+      "apexTlsHostnameVerified": false,
+      "stagingDns": "NXDOMAIN-for-both-hosts",
+      "providerConfigurationRead": false,
+      "stagingRehearsalPerformed": false
+    },
+    "databaseAuthorityPreflight": {
+      "date": "2026-09-27",
+      "commandsExitCodeZero": [
+        "pnpm db:authority:status",
+        "pnpm db:authority:manifest",
+        "pnpm db:authority:context"
+      ],
+      "targetClass": "disposable-worktree",
+      "targetFingerprintSha256": "ed89dd57652eff4df661f663e83ba9c40003d156f82b1f812045cec42a3fd814",
+      "manifestDigest": "595cb5f15235d473ee71eda7105fa802dfac2650242b950021e4dce62e091e6b",
+      "expectedHead": "0092_transactional_email_attempts.sql",
+      "localServiceAvailability": "database-unreachable",
+      "migrationLedgerAndSchemaEvaluated": false,
+      "sanitizedEvidence": "b12-database-authority-preflight-2026-09-27.json",
+      "hostedEvidence": false,
+      "targetMutated": false
+    },
+    "status": "public DNS/TLS/HTTP refreshed; provider configuration and staging proof remain open",
+    "providerOrDnsChanges": false
+  },
+  "remainingLimits": [
+    "B15 review copy B15-FOUNDER-REVIEW-0.3 is not approved; business/customer-facing address and privacy-request route remain pending founder confirmation; WhatsApp telephone-disclosure sufficiency, company disclosure facts, provider/retention/cookie and other privacy decisions remain unresolved.",
+    "B14 schedule alignment remains open: the operating procedure does not define the confirmed 09:00-17:00 South Africa window or exclude South African public holidays in its finance-check, sales-window renewal and absence rules.",
+    "B12 current hosted diagnostics and staging proof are open; production no-spend boundaries remain in force.",
+    "The historical B06 Gauteng-selection failure remains unattributed.",
+    "B09 source-data census/disposition is missing; launch data scope is not established.",
+    "Local email, media, Redis and MySQL substitutes do not establish hosted-provider readiness.",
+    "B16 remains open pending B09 census/disposition, B15 acceptance, final candidate verification and deployment containment; B08 cutover, merge, deployment and production activation were not performed."
+  ],
+  "b14ScheduleAlignment": {
+    "status": "open-mismatch-recorded",
+    "confirmedSchedule": "Monday-Friday, 09:00-17:00 South Africa time, excluding South African public holidays",
+    "procedureMismatch": "B14 calls for daily weekday finance/support checks and renewal by the next staffed weekday (maximum 72 hours), and uses a one-business-day absence threshold, without defining the confirmed hours or public-holiday handling for checks, renewal, or the activation target.",
+    "requiredFollowUp": "B14 owner must align finance-check cadence, sales-window renewal, planned/unplanned absence and activation procedures, then rehearse pause/resume behavior.",
+    "b14ProcedureModified": false,
+    "rehearsalClaimed": false
+  }
+}
