@@ -1,18 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, sql, type SQL } from 'drizzle-orm';
 import {
   affordabilityAssessments,
   affordabilityMatchSnapshots,
-  cataloguePublishers,
-  developments,
   distributionDeals,
-  distributionPrograms,
   qualificationPackExports,
-  unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { validatePartnerSubmissionEligibility } from './distributionPartnerEligibilityService';
+import { assertDistributionReferralIntakeReady } from './distributionReferralIntakePolicy';
 
 const CALC_VERSION = 'v1' as const;
 const DEFAULT_INTEREST_RATE_ANNUAL = 11.75;
@@ -27,6 +23,14 @@ export const QUALIFICATION_DISCLAIMER_LINES = [
 ] as const;
 
 type DbExecutor = any;
+
+function requireDeveloperSalesProjection(): never {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message:
+      'Development matching is unavailable because the Developer Engine sales projection is not connected to this Distribution build.',
+  });
+}
 
 type ActorContext = {
   actorUserId: number;
@@ -336,32 +340,6 @@ async function getAssessmentForActor(
   return serializeAssessmentRow(row);
 }
 
-function parseCoordinate(value: unknown) {
-  if (value === null || typeof value === 'undefined') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function filterRowsByBounds(
-  rows: Array<{
-    latitude: string | null;
-    longitude: string | null;
-  }>,
-  bounds: AffordabilityLocationFilter['bounds'],
-) {
-  if (!bounds) return rows;
-  return rows.filter(row => {
-    const lat = parseCoordinate(row.latitude);
-    const lng = parseCoordinate(row.longitude);
-    if (lat === null || lng === null) return false;
-    return lat <= bounds.north && lat >= bounds.south && lng <= bounds.east && lng >= bounds.west;
-  });
-}
-
-function mapAreaLabel(input: { suburb: string | null; city: string | null; province: string | null }) {
-  return [input.suburb, input.city, input.province].filter(Boolean).join(', ') || 'Location unavailable';
-}
-
 function normalizeMatchSnapshotPayload(value: unknown): MatchSnapshotPayload {
   const parsed = parseJsonField<MatchSnapshotPayload | null>(value, null);
   if (parsed && Array.isArray(parsed.matches)) {
@@ -503,21 +481,6 @@ function makeQualificationPdfLines(input: {
   return lines;
 }
 
-function buildLocationSqlConditions(filter: AffordabilityLocationFilter | null) {
-  const conditions: SQL[] = [];
-  if (!filter) return conditions;
-  if (filter.province) {
-    conditions.push(sql`LOWER(${developments.province}) = LOWER(${filter.province})`);
-  }
-  if (filter.city) {
-    conditions.push(sql`LOWER(${developments.city}) = LOWER(${filter.city})`);
-  }
-  if (filter.suburb) {
-    conditions.push(sql`LOWER(${developments.suburb}) = LOWER(${filter.suburb})`);
-  }
-  return conditions;
-}
-
 export function calculateAffordabilityOutputs(input: {
   grossIncomeMonthly: number;
   deductionsMonthly?: number;
@@ -609,6 +572,7 @@ export async function createAffordabilityAssessment(input: {
   locationFilter?: AffordabilityLocationFilter | null;
   db?: DbExecutor;
 }) {
+  assertDistributionReferralIntakeReady();
   const db = await resolveDbOrThrow(input.db);
 
   const calculation = calculateAffordabilityOutputs({
@@ -670,244 +634,23 @@ export async function getAffordabilityAssessment(input: {
   };
 }
 
-async function buildFreshMatchSnapshot(
-  db: DbExecutor,
-  assessment: SerializedAssessmentRecord,
-  actor: ActorContext,
-) {
-  const purchasePrice = Math.max(0, Number(assessment.outputs.purchasePrice || 0));
-  const locationFilter = normalizeLocationFilter(assessment.locationFilter);
-  const locationConditions = buildLocationSqlConditions(locationFilter);
-
-  const rows = await db
-    .select({
-      developmentId: developments.id,
-      developmentName: developments.name,
-      city: developments.city,
-      province: developments.province,
-      suburb: developments.suburb,
-      latitude: developments.latitude,
-      longitude: developments.longitude,
-      developmentPriceFrom: developments.priceFrom,
-      developmentPriceTo: developments.priceTo,
-      isFeatured: developments.isFeatured,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      unitTypeId: unitTypes.id,
-      unitTypeName: unitTypes.name,
-      unitBedrooms: unitTypes.bedrooms,
-      unitPriceFrom: unitTypes.basePriceFrom,
-      unitPriceTo: unitTypes.basePriceTo,
-    })
-    .from(distributionPrograms)
-    .innerJoin(developments, eq(distributionPrograms.developmentId, developments.id))
-    .leftJoin(
-      unitTypes,
-      and(eq(unitTypes.developmentId, developments.id), eq(unitTypes.isActive, 1)),
-    )
-    .where(
-      withConditions([
-        eq(distributionPrograms.isActive, 1),
-        eq(distributionPrograms.isReferralEnabled, 1),
-        ...locationConditions,
-      ]),
-    );
-
-  const filteredRows = filterRowsByBounds(
-    rows.map(row => ({
-      latitude: row.latitude,
-      longitude: row.longitude,
-      ...row,
-    })),
-    locationFilter?.bounds || null,
-  ) as typeof rows;
-
-  const eligibilityByDevelopmentId = new Map<number, boolean>();
-  const developmentIds = new Set<number>();
-  for (const row of filteredRows) {
-    const developmentId = Number(row.developmentId);
-    if (Number.isFinite(developmentId) && developmentId > 0) {
-      developmentIds.add(developmentId);
-    }
-  }
-  await Promise.all(
-    Array.from(developmentIds).map(async developmentId => {
-      try {
-        await validatePartnerSubmissionEligibility({
-          developmentId,
-          actorUserId: actor.actorUserId,
-          actorRole: actor.actorRole,
-          db,
-        });
-        eligibilityByDevelopmentId.set(developmentId, true);
-      } catch {
-        eligibilityByDevelopmentId.set(developmentId, false);
-      }
-    }),
-  );
-
-  const brandIds = new Set<number>();
-  const grouped = new Map<number, MatchItem>();
-  for (const row of filteredRows) {
-    const developmentId = Number(row.developmentId);
-    if (!eligibilityByDevelopmentId.get(developmentId)) {
-      continue;
-    }
-    const cataloguePublisherId = Number(row.cataloguePublisherId || 0);
-    if (cataloguePublisherId > 0) brandIds.add(cataloguePublisherId);
-
-    const unitPriceFrom =
-      toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.developmentPriceFrom) ?? null;
-    const unitPriceTo =
-      toNumberOrNull(row.unitPriceTo) ??
-      toNumberOrNull(row.unitPriceFrom) ??
-      toNumberOrNull(row.developmentPriceTo) ??
-      unitPriceFrom;
-
-    if (unitPriceFrom === null || unitPriceFrom > purchasePrice) {
-      continue;
-    }
-
-    const current =
-      grouped.get(developmentId) ||
-      ({
-        developmentId,
-        developmentName: String(row.developmentName || `Development #${developmentId}`),
-        area: mapAreaLabel({
-          suburb: row.suburb || null,
-          city: row.city || null,
-          province: row.province || null,
-        }),
-        city: row.city || null,
-        province: row.province || null,
-        suburb: row.suburb || null,
-        logoUrl: null,
-        purchasePrice,
-        bestFitRatio: 0,
-        developmentPriority: Number(row.isFeatured || 0) === 1 ? 0 : 1,
-        unitOptions: [],
-      } as MatchItem);
-
-    const fitRatio = purchasePrice > 0 ? unitPriceFrom / purchasePrice : 0;
-    current.unitOptions.push({
-      unitTypeId: row.unitTypeId ? String(row.unitTypeId) : null,
-      unitName: String(row.unitTypeName || 'Development pricing'),
-      bedrooms: toNumberOrNull(row.unitBedrooms),
-      priceFrom: toWholeRand(unitPriceFrom),
-      priceTo: toWholeRand(unitPriceTo || unitPriceFrom),
-      fitRatio,
-    });
-    current.bestFitRatio = Math.max(current.bestFitRatio, fitRatio);
-    grouped.set(developmentId, current);
-  }
-
-  const brandRows =
-    brandIds.size > 0
-      ? await db
-          .select({
-            id: cataloguePublishers.id,
-            logoUrl: cataloguePublishers.logoUrl,
-          })
-          .from(cataloguePublishers)
-          .where(inArray(cataloguePublishers.id, Array.from(brandIds)))
-      : [];
-  const brandLogoById = new Map<number, string | null>();
-  for (const row of brandRows) {
-    brandLogoById.set(Number(row.id), row.logoUrl ? String(row.logoUrl) : null);
-  }
-
-  const matchItems: MatchItem[] = Array.from(grouped.values())
-    .map(item => {
-      const unitOptions = [...item.unitOptions]
-        .map(sanitizeMatchUnitOption)
-        .sort((a, b) => b.fitRatio - a.fitRatio || a.priceFrom - b.priceFrom);
-      return sanitizeMatchItem({
-        ...item,
-        unitOptions,
-        bestFitRatio: unitOptions[0]?.fitRatio || 0,
-      });
-    })
-    .sort((a, b) => {
-      if (b.bestFitRatio !== a.bestFitRatio) return b.bestFitRatio - a.bestFitRatio;
-      if (a.developmentPriority !== b.developmentPriority) {
-        return a.developmentPriority - b.developmentPriority;
-      }
-      return a.developmentName.localeCompare(b.developmentName);
-    });
-
-  // Attach logos after sorting to keep deterministic output stable.
-  for (const item of matchItems) {
-    const [row] = filteredRows.filter(r => Number(r.developmentId) === Number(item.developmentId));
-    const cataloguePublisherId = Number(row?.cataloguePublisherId || 0);
-    item.logoUrl =
-      brandLogoById.get(cataloguePublisherId) ||
-      null;
-  }
-
-  const snapshotPayload: MatchSnapshotPayload = {
-    assessmentId: assessment.id,
-    generatedAt: new Date().toISOString(),
-    purchasePrice,
-    matches: matchItems,
-  };
-  const snapshotId = randomUUID();
-  await db.insert(affordabilityMatchSnapshots).values({
-    id: snapshotId,
-    assessmentId: assessment.id,
-    matchesJson: snapshotPayload as any,
-  });
-
-  return {
-    matchSnapshotId: snapshotId,
-    createdAt: snapshotPayload.generatedAt,
-    payload: snapshotPayload,
-    createdNewSnapshot: true,
-  };
-}
-
 export async function getAffordabilityMatches(input: {
   assessmentId: string;
   actorUserId: number;
   actorRole: string;
   db?: DbExecutor;
-}) {
-  const db = await resolveDbOrThrow(input.db);
-  const assessment = await getAssessmentForActor(db, input);
-
-  const [existingSnapshot] = await db
-    .select({
-      id: affordabilityMatchSnapshots.id,
-      matchesJson: affordabilityMatchSnapshots.matchesJson,
-      createdAt: affordabilityMatchSnapshots.createdAt,
-    })
-    .from(affordabilityMatchSnapshots)
-    .where(eq(affordabilityMatchSnapshots.assessmentId, assessment.id))
-    .orderBy(desc(affordabilityMatchSnapshots.createdAt), desc(affordabilityMatchSnapshots.id))
-    .limit(1);
-
-  if (existingSnapshot) {
-    const payload = normalizeMatchSnapshotPayload(existingSnapshot.matchesJson);
-    return {
-      assessmentId: assessment.id,
-      matchSnapshotId: String(existingSnapshot.id),
-      createdAt: String(existingSnapshot.createdAt || payload.generatedAt),
-      purchasePrice: Number(payload.purchasePrice || assessment.outputs.purchasePrice || 0),
-      matches: Array.isArray(payload.matches) ? payload.matches : [],
-      createdNewSnapshot: false,
-    };
-  }
-
-  const created = await buildFreshMatchSnapshot(db, assessment, {
-    actorUserId: input.actorUserId,
-    actorRole: input.actorRole,
-  });
-  return {
-    assessmentId: assessment.id,
-    matchSnapshotId: created.matchSnapshotId,
-    createdAt: created.createdAt,
-    purchasePrice: Number(created.payload.purchasePrice || assessment.outputs.purchasePrice || 0),
-    matches: created.payload.matches,
-    createdNewSnapshot: true,
-  };
+}): Promise<{
+  assessmentId: string;
+  matchSnapshotId: string;
+  createdAt: string;
+  purchasePrice: number;
+  matches: MatchItem[];
+  createdNewSnapshot: boolean;
+}> {
+  void input;
+  // The legacy Developer-table matcher and its stored snapshots are intentionally retired.
+  // Re-enable matching only after the Distribution build can call the Developer projection.
+  return requireDeveloperSalesProjection();
 }
 
 export async function requestCreditCheckPlaceholder(input: {
@@ -917,6 +660,7 @@ export async function requestCreditCheckPlaceholder(input: {
   consentGiven: boolean;
   db?: DbExecutor;
 }) {
+  assertDistributionReferralIntakeReady();
   if (!input.consentGiven) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -1001,6 +745,7 @@ export async function exportQualificationPackPdfForReferral(input: {
   actorRole: string;
   db?: DbExecutor;
 }) {
+  requireDeveloperSalesProjection();
   const db = await resolveDbOrThrow(input.db);
   const [deal] = await db
     .select({

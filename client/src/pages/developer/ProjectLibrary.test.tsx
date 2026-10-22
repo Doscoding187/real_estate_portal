@@ -22,6 +22,14 @@ const mocks = vi.hoisted(() => ({
     isError: false,
     refetch: vi.fn(),
   },
+  salesResourcesQuery: {
+    data: { canManage: true, resources: [] as Array<Record<string, unknown>> },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+  },
+  shareSalesResource: { mutate: vi.fn(), isPending: false },
+  unshareSalesResource: { mutate: vi.fn(), isPending: false },
   developerDetailInput: vi.fn(),
   publisherDetailInput: vi.fn(),
   setLocation: vi.fn(),
@@ -50,6 +58,15 @@ vi.mock('@/lib/trpc', () => ({
           mocks.developerDetailInput(input, options);
           return mocks.developerDetailQuery;
         },
+      },
+      getDevelopmentSalesResources: {
+        useQuery: () => mocks.salesResourcesQuery,
+      },
+      shareDevelopmentSalesResource: {
+        useMutation: () => mocks.shareSalesResource,
+      },
+      unshareDevelopmentSalesResource: {
+        useMutation: () => mocks.unshareSalesResource,
       },
     },
     superAdminPublisher: {

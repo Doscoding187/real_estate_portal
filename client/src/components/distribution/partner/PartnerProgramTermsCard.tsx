@@ -26,19 +26,17 @@ export type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    category?: 'developer_document' | 'client_required_document';
-    templateFileUrl?: string | null;
-    templateFileName?: string | null;
+    category?: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
   }>;
   sourceDocuments?: Array<{
-    templateId: number;
-    documentCode: string;
-    documentLabel: string;
-    fileUrl?: string | null;
-    fileName?: string | null;
-    sortOrder: number;
+    id: number;
+    title: string;
+    documentType: string;
+    category: string;
+    version: number;
+    downloadable: boolean;
   }>;
   computed: {
     commissionDisplay: string;
@@ -90,7 +88,7 @@ export function PartnerProgramTermsCard({
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div>
-            <p className="text-xs text-slate-500">Commission</p>
+            <p className="text-xs text-slate-500">Referral payout</p>
             <p className="font-medium">{fallbackTerm(item.computed.commissionDisplay)}</p>
           </div>
           <div>
@@ -104,11 +102,11 @@ export function PartnerProgramTermsCard({
           <div>
             <p className="text-xs text-slate-500">Supporting pack</p>
             <p className="font-medium">
-              {(item.sourceDocuments || []).length
-                ? `${(item.sourceDocuments || []).length} buyer-ready file${
-                    (item.sourceDocuments || []).length === 1 ? '' : 's'
-                  }`
-                : 'No supporting files uploaded yet'}
+              {(item.sourceDocuments || []).some(document => document.downloadable)
+                ? `${(item.sourceDocuments || []).filter(document => document.downloadable).length} secure download${(item.sourceDocuments || []).filter(document => document.downloadable).length === 1 ? '' : 's'} available`
+                : (item.sourceDocuments || []).length
+                  ? `${(item.sourceDocuments || []).length} listed · no protected downloads available`
+                  : 'No Developer shared resources listed'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

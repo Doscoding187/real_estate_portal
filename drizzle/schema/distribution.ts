@@ -12,8 +12,10 @@ import {
   decimal,
 } from 'drizzle-orm/mysql-core';
 import { users } from './core';
+import { agents } from './agencies';
 import { developments, developerBrandProfiles } from './developments';
 import { cataloguePublishers } from './developerIdentity';
+import { leads } from './leads';
 
 export const DISTRIBUTION_DEAL_STAGE_VALUES = [
   'viewing_scheduled',
@@ -36,6 +38,47 @@ export const DISTRIBUTION_VIEWING_STATUS_VALUES = [
 ] as const;
 
 export const DISTRIBUTION_IDENTITY_TYPE_VALUES = ['referrer', 'manager'] as const;
+export const DISTRIBUTION_REFERRAL_INTAKE_POLICY_STATUS_VALUES = [
+  'draft',
+  'active',
+  'retired',
+] as const;
+export const DISTRIBUTION_REFERRAL_INTAKE_SESSION_STATUS_VALUES = [
+  'draft',
+  'submitted',
+  'withdrawn',
+  'closed',
+  'expired',
+] as const;
+export const DISTRIBUTION_REFERRAL_EVIDENCE_TYPE_VALUES = [
+  'sharing_permission',
+  'privacy_notice',
+  'identity_document',
+  'credit_authorization',
+] as const;
+export const DISTRIBUTION_REFERRAL_EVIDENCE_REVIEW_STATUS_VALUES = [
+  'pending',
+  'verified',
+  'rejected',
+  'not_required',
+] as const;
+export const DISTRIBUTION_REFERRAL_EVIDENCE_STORAGE_STATUS_VALUES = [
+  'stored',
+  'deleting',
+  'deletion_failed',
+  'deleted',
+] as const;
+export const DISTRIBUTION_REFERRAL_INTAKE_EVENT_TYPE_VALUES = [
+  'session_created',
+  'evidence_uploaded',
+  'evidence_reviewed',
+  'referral_submitted',
+  'referral_withdrawn',
+  'referral_closed',
+  'session_expired',
+  'evidence_deleted',
+  'evidence_deletion_failed',
+] as const;
 export const DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES = [
   'pending',
   'active',
@@ -72,7 +115,12 @@ const DISTRIBUTION_PROGRAM_STEP_TYPE_VALUES = [
   'decision',
   'closure',
 ] as const;
-const DISTRIBUTION_BANK_OUTCOME_STATUS_VALUES = ['pending', 'approved', 'declined', 'withdrawn'] as const;
+const DISTRIBUTION_BANK_OUTCOME_STATUS_VALUES = [
+  'pending',
+  'approved',
+  'declined',
+  'withdrawn',
+] as const;
 const DISTRIBUTION_COMMISSION_STATUS_VALUES = [
   'not_ready',
   'pending',
@@ -81,7 +129,12 @@ const DISTRIBUTION_COMMISSION_STATUS_VALUES = [
   'cancelled',
 ] as const;
 const DISTRIBUTION_COMMISSION_TRIGGER_STAGE_VALUES = ['contract_signed', 'bond_approved'] as const;
-const DISTRIBUTION_COMMISSION_ENTRY_STATUS_VALUES = ['pending', 'approved', 'paid', 'cancelled'] as const;
+const DISTRIBUTION_COMMISSION_ENTRY_STATUS_VALUES = [
+  'pending',
+  'approved',
+  'paid',
+  'cancelled',
+] as const;
 const DISTRIBUTION_COMMISSION_SNAPSHOT_SOURCE_VALUES = [
   'submission_gate',
   'backfill',
@@ -107,27 +160,7 @@ const DEVELOPMENT_REQUIRED_DOCUMENT_CODE_VALUES = [
   'transfer_documents',
   'custom',
 ] as const;
-export const DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES = [
-  'developer_document',
-  'client_required_document',
-] as const;
-const DEVELOPMENT_DOCUMENT_TYPE_VALUES = [
-  'price_list',
-  'house_plan',
-  'brochure',
-  'site_map',
-  'spec_sheet',
-  'availability_sheet',
-  'other',
-] as const;
-const DEVELOPMENT_DOCUMENT_CATEGORY_VALUES = [
-  'sales_asset',
-  'technical_asset',
-  'legal_asset',
-  'application_template',
-  'other',
-] as const;
-const DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES = ['internal', 'manager', 'referrer', 'public'] as const;
+const DEVELOPMENT_REQUIRED_DOCUMENT_CATEGORY_VALUES = ['client_required_document'] as const;
 const APPLICATION_REQUIREMENT_PROVIDER_VALUES = [
   'buyer',
   'referrer',
@@ -168,7 +201,11 @@ const DISTRIBUTION_VALIDATION_STATUS_VALUES = [
   'no_show',
   'cancelled',
 ] as const;
-const DISTRIBUTION_REFERRER_APPLICATION_STATUS_VALUES = ['pending', 'approved', 'rejected'] as const;
+const DISTRIBUTION_REFERRER_APPLICATION_STATUS_VALUES = [
+  'pending',
+  'approved',
+  'rejected',
+] as const;
 const PLATFORM_TEAM_REGISTRATION_STATUS_VALUES = ['pending', 'approved', 'rejected'] as const;
 const PLATFORM_TEAM_REGISTRATION_AREA_VALUES = [
   'distribution_manager',
@@ -240,6 +277,177 @@ export const distributionPrograms = mysqlTable(
   ],
 );
 
+/** Versioned program rules for referral permission, evidence, retention, and guidance. */
+export const distributionReferralIntakePolicyReleases = mysqlTable(
+  'distribution_referral_intake_policy_releases',
+  {
+    id: int().autoincrement().primaryKey(),
+    programId: int('program_id')
+      .notNull()
+      .references(() => distributionPrograms.id, { onDelete: 'cascade' }),
+    policyVersion: int('policy_version').notNull(),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_REFERRAL_INTAKE_POLICY_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('draft')
+      .notNull(),
+    configuration: json('configuration').$type<Record<string, unknown>>().notNull(),
+    configurationDigest: varchar('configuration_digest', { length: 64 }).notNull(),
+    approvalReference: varchar('approval_reference', { length: 180 }),
+    publishedBy: int('published_by').references(() => users.id, { onDelete: 'set null' }),
+    publishedAt: timestamp('published_at', { mode: 'string' }),
+    createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_intake_policy_program_version').on(
+      table.programId,
+      table.policyVersion,
+    ),
+    index('idx_distribution_intake_policy_program_status').on(table.programId, table.status),
+    index('idx_distribution_intake_policy_published_at').on(table.publishedAt),
+  ],
+);
+
+/** A referral intake session pins the exact published rules before any prospect data is collected. */
+export const distributionReferralIntakeSessions = mysqlTable(
+  'distribution_referral_intake_sessions',
+  {
+    id: int().autoincrement().primaryKey(),
+    sessionUuid: varchar('session_uuid', { length: 36 }).notNull(),
+    policyReleaseId: int('policy_release_id')
+      .notNull()
+      .references(() => distributionReferralIntakePolicyReleases.id, { onDelete: 'restrict' }),
+    policyVersion: int('policy_version').notNull(),
+    policyConfigurationDigest: varchar('policy_configuration_digest', { length: 64 }).notNull(),
+    partnerUserId: int('partner_user_id').references(() => users.id, { onDelete: 'set null' }),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_REFERRAL_INTAKE_SESSION_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('draft')
+      .notNull(),
+    draftExpiresAt: timestamp('draft_expires_at', { mode: 'string' }).notNull(),
+    submittedAt: timestamp('submitted_at', { mode: 'string' }),
+    withdrawnAt: timestamp('withdrawn_at', { mode: 'string' }),
+    closedAt: timestamp('closed_at', { mode: 'string' }),
+    expiredAt: timestamp('expired_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_referral_intake_session_uuid').on(table.sessionUuid),
+    index('idx_distribution_referral_intake_sessions_status_expiry').on(
+      table.status,
+      table.draftExpiresAt,
+    ),
+    index('idx_distribution_referral_intake_sessions_partner_status').on(
+      table.partnerUserId,
+      table.status,
+    ),
+    index('idx_distribution_referral_intake_sessions_policy').on(table.policyReleaseId),
+  ],
+);
+
+/** Private file metadata only; prospect names and contact details do not belong in an intake draft. */
+export const distributionReferralIntakeEvidence = mysqlTable(
+  'distribution_referral_intake_evidence',
+  {
+    id: int().autoincrement().primaryKey(),
+    evidenceUuid: varchar('evidence_uuid', { length: 36 }).notNull(),
+    sessionId: int('session_id')
+      .notNull()
+      .references(() => distributionReferralIntakeSessions.id, { onDelete: 'restrict' }),
+    evidenceType: mysqlEnum(
+      'evidence_type',
+      DISTRIBUTION_REFERRAL_EVIDENCE_TYPE_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    storageAdapter: mysqlEnum('storage_adapter', ['local', 's3']),
+    storageKey: varchar('storage_key', { length: 255 }),
+    mimeType: varchar('mime_type', { length: 120 }),
+    byteSize: int('byte_size'),
+    sha256: varchar('sha256', { length: 64 }),
+    uploadedByUserId: int('uploaded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    reviewStatus: mysqlEnum(
+      'review_status',
+      DISTRIBUTION_REFERRAL_EVIDENCE_REVIEW_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    storageStatus: mysqlEnum(
+      'storage_status',
+      DISTRIBUTION_REFERRAL_EVIDENCE_STORAGE_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('stored')
+      .notNull(),
+    retentionDueAt: timestamp('retention_due_at', { mode: 'string' }).notNull(),
+    deletionAttemptCount: int('deletion_attempt_count').default(0).notNull(),
+    deletionClaimedAt: timestamp('deletion_claimed_at', { mode: 'string' }),
+    deletionLeaseToken: varchar('deletion_lease_token', { length: 36 }),
+    deletionNextAttemptAt: timestamp('deletion_next_attempt_at', { mode: 'string' }),
+    deletionLastErrorCode: varchar('deletion_last_error_code', { length: 120 }),
+    deletedAt: timestamp('deleted_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_referral_intake_evidence_uuid').on(table.evidenceUuid),
+    unique('ux_distribution_referral_intake_evidence_storage_key').on(table.storageKey),
+    index('idx_distribution_referral_intake_evidence_session_type').on(
+      table.sessionId,
+      table.evidenceType,
+    ),
+    index('idx_distribution_referral_intake_evidence_retention').on(
+      table.storageStatus,
+      table.retentionDueAt,
+      table.deletionNextAttemptAt,
+    ),
+    index('idx_distribution_referral_intake_evidence_deletion_lease').on(
+      table.storageStatus,
+      table.deletionClaimedAt,
+    ),
+  ],
+);
+
+/** Append-only intake history; event details must not contain prospect PII or evidence contents. */
+export const distributionReferralIntakeEvents = mysqlTable(
+  'distribution_referral_intake_events',
+  {
+    id: int().autoincrement().primaryKey(),
+    sessionId: int('session_id')
+      .notNull()
+      .references(() => distributionReferralIntakeSessions.id, { onDelete: 'restrict' }),
+    evidenceId: int('evidence_id').references(() => distributionReferralIntakeEvidence.id, {
+      onDelete: 'set null',
+    }),
+    eventType: mysqlEnum(
+      'event_type',
+      DISTRIBUTION_REFERRAL_INTAKE_EVENT_TYPE_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    details: json('details').$type<Record<string, unknown>>(),
+    occurredAt: timestamp('occurred_at', { mode: 'string' }).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_distribution_referral_intake_events_session_time').on(
+      table.sessionId,
+      table.occurredAt,
+    ),
+    index('idx_distribution_referral_intake_events_evidence_time').on(
+      table.evidenceId,
+      table.occurredAt,
+    ),
+    index('idx_distribution_referral_intake_events_type_time').on(
+      table.eventType,
+      table.occurredAt,
+    ),
+  ],
+);
+
 export const distributionBrandPartnerships = mysqlTable(
   'distribution_brand_partnerships',
   {
@@ -263,10 +471,9 @@ export const distributionBrandPartnerships = mysqlTable(
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    cataloguePublisherId: int('catalogue_publisher_id').references(
-      () => cataloguePublishers.id,
-      { onDelete: 'restrict' },
-    ),
+    cataloguePublisherId: int('catalogue_publisher_id').references(() => cataloguePublishers.id, {
+      onDelete: 'restrict',
+    }),
   },
   table => [
     unique('ux_distribution_brand_partnerships_brand').on(table.brandProfileId),
@@ -309,10 +516,9 @@ export const distributionDevelopmentAccess = mysqlTable(
     updatedBy: int('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-    cataloguePublisherId: int('catalogue_publisher_id').references(
-      () => cataloguePublishers.id,
-      { onDelete: 'restrict' },
-    ),
+    cataloguePublisherId: int('catalogue_publisher_id').references(() => cataloguePublishers.id, {
+      onDelete: 'restrict',
+    }),
   },
   table => [
     unique('ux_distribution_development_access_development').on(table.developmentId),
@@ -424,52 +630,6 @@ export const developmentRequiredDocuments = mysqlTable(
 
 export const distributionProgramRequiredDocuments = developmentRequiredDocuments;
 
-export const developmentDocuments = mysqlTable(
-  'development_documents',
-  {
-    id: int().autoincrement().primaryKey(),
-    developmentId: int('development_id')
-      .notNull()
-      .references(() => developments.id, { onDelete: 'cascade' }),
-    title: varchar({ length: 255 }).notNull(),
-    documentType: mysqlEnum(
-      'document_type',
-      DEVELOPMENT_DOCUMENT_TYPE_VALUES as unknown as [string, ...string[]],
-    )
-      .default('other')
-      .notNull(),
-    category: mysqlEnum(
-      'category',
-      DEVELOPMENT_DOCUMENT_CATEGORY_VALUES as unknown as [string, ...string[]],
-    )
-      .default('other')
-      .notNull(),
-    storageKey: varchar('storage_key', { length: 512 }),
-    fileUrl: varchar('file_url', { length: 2048 }),
-    mimeType: varchar('mime_type', { length: 255 }),
-    fileSizeBytes: int('file_size_bytes'),
-    visibility: mysqlEnum(
-      'visibility',
-      DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES as unknown as [string, ...string[]],
-    )
-      .default('internal')
-      .notNull(),
-    downloadable: tinyint().default(1).notNull(),
-    isActive: tinyint('is_active').default(1).notNull(),
-    version: int().default(1).notNull(),
-    replacedByDocumentId: int('replaced_by_document_id'),
-    uploadedBy: int('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
-    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
-  },
-  table => [
-    index('idx_development_documents_development').on(table.developmentId),
-    index('idx_development_documents_active').on(table.isActive),
-    index('idx_development_documents_visibility').on(table.visibility),
-    index('idx_development_documents_type').on(table.documentType),
-  ],
-);
-
 export const applicationRequirements = mysqlTable(
   'application_requirements',
   {
@@ -488,10 +648,6 @@ export const applicationRequirements = mysqlTable(
       .notNull(),
     documentCode: varchar('document_code', { length: 80 }),
     acceptedFileTypesJson: json('accepted_file_types_json'),
-    linkedDevelopmentDocumentId: int('linked_development_document_id').references(
-      () => developmentDocuments.id,
-      { onDelete: 'set null' },
-    ),
     sortOrder: int('sort_order').default(0).notNull(),
     isActive: tinyint('is_active').default(1).notNull(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
@@ -628,9 +784,7 @@ export const distributionAgentTiers = mysqlTable(
     score: int().default(0).notNull(),
     windowDays: int('window_days').default(90).notNull(),
     reason: text(),
-    effectiveFrom: timestamp('effective_from', { mode: 'string' })
-      .defaultNow()
-      .notNull(),
+    effectiveFrom: timestamp('effective_from', { mode: 'string' }).defaultNow().notNull(),
     effectiveTo: timestamp('effective_to', { mode: 'string' }),
     assignedBy: int('assigned_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
@@ -653,6 +807,10 @@ export const distributionDeals = mysqlTable(
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
+    marketMode: mysqlEnum('market_mode', ['sale', 'rent']),
+    developerProjectionRevision: varchar('developer_projection_revision', { length: 128 }),
+    developerTermsSnapshot: json('developer_terms_snapshot'),
+    developerTermsDigest: varchar('developer_terms_digest', { length: 64 }),
     agentId: int('agent_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -667,10 +825,9 @@ export const distributionDeals = mysqlTable(
       () => affordabilityAssessments.id,
       { onDelete: 'set null' },
     ),
-    affordabilityMatchSnapshotId: varchar('affordability_match_snapshot_id', { length: 36 }).references(
-      () => affordabilityMatchSnapshots.id,
-      { onDelete: 'set null' },
-    ),
+    affordabilityMatchSnapshotId: varchar('affordability_match_snapshot_id', {
+      length: 36,
+    }).references(() => affordabilityMatchSnapshots.id, { onDelete: 'set null' }),
     affordabilityPurchasePrice: int('affordability_purchase_price'),
     affordabilityAssumptionsJson: json('affordability_assumptions_json'),
     externalRef: varchar('external_ref', { length: 100 }),
@@ -784,7 +941,9 @@ export const distributionDealDocuments = mysqlTable(
       table.developmentRequiredDocumentId,
     ),
     index('idx_distribution_deal_documents_deal').on(table.dealId),
-    index('idx_distribution_deal_documents_required_document').on(table.developmentRequiredDocumentId),
+    index('idx_distribution_deal_documents_required_document').on(
+      table.developmentRequiredDocumentId,
+    ),
     index('idx_distribution_deal_documents_status').on(table.status),
     index('idx_distribution_deal_documents_updated_at').on(table.updatedAt),
   ],
@@ -805,14 +964,7 @@ export const dealRequirementStatuses = mysqlTable(
     uploadedFileStorageKey: varchar('uploaded_file_storage_key', { length: 512 }),
     uploadedFileUrl: varchar('uploaded_file_url', { length: 2048 }),
     uploadedFileName: varchar('uploaded_file_name', { length: 255 }),
-    linkedDevelopmentDocumentId: int('linked_development_document_id').references(
-      () => developmentDocuments.id,
-      { onDelete: 'set null' },
-    ),
-    status: mysqlEnum(
-      'status',
-      DEAL_REQUIREMENT_STATUS_VALUES as unknown as [string, ...string[]],
-    )
+    status: mysqlEnum('status', DEAL_REQUIREMENT_STATUS_VALUES as unknown as [string, ...string[]])
       .default('missing')
       .notNull(),
     submittedBy: int('submitted_by').references(() => users.id, { onDelete: 'set null' }),
@@ -881,7 +1033,10 @@ export const distributionDealEvents = mysqlTable(
       'from_stage',
       DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]],
     ),
-    toStage: mysqlEnum('to_stage', DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]]),
+    toStage: mysqlEnum(
+      'to_stage',
+      DISTRIBUTION_DEAL_STAGE_VALUES as unknown as [string, ...string[]],
+    ),
     actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
     ownerType: mysqlEnum('owner_type', ['agent', 'agency']).default('agent').notNull(),
     ownerId: int('owner_id'),
@@ -931,8 +1086,12 @@ export const distributionViewings = mysqlTable(
       .default('scheduled')
       .notNull(),
     rescheduleCount: int('reschedule_count').default(0).notNull(),
-    scheduledByUserId: int('scheduled_by_user_id').references(() => users.id, { onDelete: 'set null' }),
-    lastRescheduledBy: int('last_rescheduled_by').references(() => users.id, { onDelete: 'set null' }),
+    scheduledByUserId: int('scheduled_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    lastRescheduledBy: int('last_rescheduled_by').references(() => users.id, {
+      onDelete: 'set null',
+    }),
     notes: text(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
@@ -1137,6 +1296,116 @@ export const distributionIdentities = mysqlTable(
   table => [
     unique('ux_distribution_identity_user_type').on(table.userId, table.identityType),
     index('idx_distribution_identities_type_active').on(table.identityType, table.active),
+  ],
+);
+
+export const DISTRIBUTION_SELECTED_PRACTITIONER_STATUS_VALUES = [
+  'active',
+  'paused',
+  'revoked',
+] as const;
+export const DISTRIBUTION_LISTING_LEAD_QUEUE_STATUS_VALUES = ['open', 'closed'] as const;
+export const DISTRIBUTION_LISTING_LEAD_QUEUE_SOURCE_VALUES = [
+  'platform_published_listing',
+  'pilot_search_results_unit',
+] as const;
+export const DISTRIBUTION_LISTING_LEAD_QUEUE_EVENT_VALUES = [
+  'queued',
+  'assigned',
+  'reassigned',
+  'unassigned',
+  'closed',
+  'reopened',
+] as const;
+
+/** Curated listing-lead team membership; separate from ordinary referral access. */
+export const distributionSelectedPractitioners = mysqlTable(
+  'distribution_selected_practitioners',
+  {
+    id: int().autoincrement().primaryKey(),
+    agentId: int('agent_id')
+      .notNull()
+      .references(() => agents.id, { onDelete: 'cascade' }),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_SELECTED_PRACTITIONER_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('active')
+      .notNull(),
+    addedByUserId: int('added_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    statusChangedByUserId: int('status_changed_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    statusChangedAt: timestamp('status_changed_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_selected_practitioners_agent').on(table.agentId),
+    index('idx_distribution_selected_practitioners_status').on(table.status),
+  ],
+);
+
+/** Work assignment for platform-curated leads; primary custody remains on lead_deliveries. */
+export const distributionListingLeadQueue = mysqlTable(
+  'distribution_listing_lead_queue',
+  {
+    id: int().autoincrement().primaryKey(),
+    leadId: int('lead_id')
+      .notNull()
+      .references(() => leads.id, { onDelete: 'cascade' }),
+    source: mysqlEnum(
+      'source',
+      DISTRIBUTION_LISTING_LEAD_QUEUE_SOURCE_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    status: mysqlEnum(
+      'status',
+      DISTRIBUTION_LISTING_LEAD_QUEUE_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('open')
+      .notNull(),
+    assignedAgentId: int('assigned_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    assignedByUserId: int('assigned_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    assignedAt: timestamp('assigned_at', { mode: 'string' }),
+    closedByUserId: int('closed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    closedAt: timestamp('closed_at', { mode: 'string' }),
+    closeReason: text('close_reason'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('ux_distribution_listing_lead_queue_lead').on(table.leadId),
+    index('idx_distribution_listing_lead_queue_status_created').on(table.status, table.createdAt),
+    index('idx_distribution_listing_lead_queue_assignee').on(table.assignedAgentId, table.status),
+  ],
+);
+
+/** Append-only audit history for selected-team queue assignment and closure. */
+export const distributionListingLeadQueueEvents = mysqlTable(
+  'distribution_listing_lead_queue_events',
+  {
+    id: int().autoincrement().primaryKey(),
+    queueItemId: int('queue_item_id')
+      .notNull()
+      .references(() => distributionListingLeadQueue.id, { onDelete: 'cascade' }),
+    eventType: mysqlEnum(
+      'event_type',
+      DISTRIBUTION_LISTING_LEAD_QUEUE_EVENT_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    actorUserId: int('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    fromAgentId: int('from_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    toAgentId: int('to_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    note: text(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_distribution_listing_lead_queue_events_item').on(table.queueItemId, table.createdAt),
+    index('idx_distribution_listing_lead_queue_events_actor').on(
+      table.actorUserId,
+      table.createdAt,
+    ),
   ],
 );
 

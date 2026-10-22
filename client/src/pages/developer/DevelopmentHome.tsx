@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
-import { ArrowLeft, ExternalLink, Pencil, Users } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Pencil, Users, Boxes } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { trpc } from '@/lib/trpc';
 import { formatReviewEventStatus } from '@/lib/developerStatusVocabulary';
 import { toast } from 'sonner';
+import DevelopmentTeamContacts from './DevelopmentTeamContacts';
 
 const lifecycleLabels = {
   live: 'Live',
@@ -164,6 +165,9 @@ export default function DevelopmentHome() {
     { enabled: hasValidDevelopmentId, retry: false, refetchOnWindowFocus: false },
   );
   const [editingInventoryUnitId, setEditingInventoryUnitId] = useState<string | null>(null);
+  const [expectedAvailableUnitsAtOpen, setExpectedAvailableUnitsAtOpen] = useState<
+    number | null
+  >(null);
   const [availableUnitsDraft, setAvailableUnitsDraft] = useState('');
   const [availabilityReasonDraft, setAvailabilityReasonDraft] = useState('');
 
@@ -171,6 +175,7 @@ export default function DevelopmentHome() {
     onSuccess: async result => {
       toast.success(`${result.unitType.name} availability updated.`);
       setEditingInventoryUnitId(null);
+      setExpectedAvailableUnitsAtOpen(null);
       setAvailableUnitsDraft('');
       setAvailabilityReasonDraft('');
       await homeQuery.refetch();
@@ -185,6 +190,7 @@ export default function DevelopmentHome() {
     return <DevelopmentHomeError onRetry={homeQuery.refetch} />;
 
   const { development, demand, funnel, inventory, attention, distribution } = homeQuery.data;
+  const transactionModes = inventory.transactionModes || [];
   const selectedRangeLabel = rangeLabels[demand.range];
   const location = [
     development.location.suburb,
@@ -205,11 +211,12 @@ export default function DevelopmentHome() {
   const openEditor = () => setLocation(`/developer/create-development?id=${development.id}`);
   const openInventoryEditor = (unit: (typeof inventory.unitTypes)[number]) => {
     setEditingInventoryUnitId(unit.id);
+    setExpectedAvailableUnitsAtOpen(unit.availableUnits);
     setAvailableUnitsDraft(String(unit.availableUnits));
     setAvailabilityReasonDraft('');
   };
   const saveUnitAvailability = () => {
-    if (!editingInventoryUnit) return;
+    if (!editingInventoryUnit || expectedAvailableUnitsAtOpen === null) return;
     const availableUnits = Number(availableUnitsDraft);
     const maximumAvailable = editingInventoryUnit.totalUnits - editingInventoryUnit.reservedUnits;
     if (!Number.isInteger(availableUnits) || availableUnits < 0) {
@@ -232,6 +239,7 @@ export default function DevelopmentHome() {
     updateUnitAvailability.mutate({
       developmentId: development.id,
       unitTypeId: editingInventoryUnit.id,
+      expectedAvailableUnits: expectedAvailableUnitsAtOpen,
       availableUnits,
       reason,
     });
@@ -273,7 +281,9 @@ export default function DevelopmentHome() {
               {location || development.location.address || 'Location not available'}
             </p>
             <p className="text-sm capitalize text-slate-500">
-              {development.transactionType.replace('_', ' ')}
+              {transactionModes.length > 1
+                ? 'for sale and rent'
+                : (transactionModes[0] || development.transactionType).replace('_', ' ')}
             </p>
           </div>
         </CardHeader>
@@ -281,6 +291,10 @@ export default function DevelopmentHome() {
           <Button onClick={openEditor}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit development
+          </Button>
+          <Button variant="outline" onClick={() => setLocation(`/developer/developments/${development.id}/inventory`)}>
+            <Boxes className="mr-2 h-4 w-4" />
+            Manage inventory
           </Button>
           <Button variant="outline" onClick={() => openLeads()}>
             <Users className="mr-2 h-4 w-4" />
@@ -297,6 +311,8 @@ export default function DevelopmentHome() {
           ) : null}
         </CardContent>
       </Card>
+
+      <DevelopmentTeamContacts developmentId={development.id} />
 
       <Card className="order-1 sm:order-2">
         <CardHeader>
@@ -482,33 +498,34 @@ export default function DevelopmentHome() {
                   <dd className="font-semibold text-slate-950">{inventory.activeUnitTypeCount}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-600">Aggregate total</dt>
+                  <dt className="text-slate-600">{development.inventoryMode === 'itemized' ? 'Total allocations' : 'Aggregate total'}</dt>
                   <dd className="font-semibold text-slate-950">
                     {inventory.totalUnits ?? 'Not available'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-600">Aggregate available</dt>
+                  <dt className="text-slate-600">{development.inventoryMode === 'itemized' ? 'Marketable now' : 'Aggregate available'}</dt>
                   <dd className="font-semibold text-slate-950">
                     {inventory.availableUnits ?? 'Not available'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-600">Aggregate reserved</dt>
+                  <dt className="text-slate-600">{development.inventoryMode === 'itemized' ? 'Reserved' : 'Aggregate reserved'}</dt>
                   <dd className="font-semibold text-slate-950">
                     {inventory.reservedUnits ?? 'Not available'}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-600">Unclassified remainder</dt>
+                  <dt className="text-slate-600">{development.inventoryMode === 'itemized' ? 'Other inventory states' : 'Unclassified remainder'}</dt>
                   <dd className="font-semibold text-slate-950">
                     {inventory.unclassifiedRemainderUnits ?? 'Not available'}
                   </dd>
                 </div>
               </dl>
               <p className="text-xs text-slate-600">
-                This is total inventory minus units marked available or reserved. It may include
-                sold, withdrawn, or otherwise unavailable units; it is not a sales count.
+                {development.inventoryMode === 'itemized'
+                  ? 'Counts are projected from the identified inventory register. Other states can include planned, under offer, under contract, sold, leased or withdrawn homes.'
+                  : 'This is total inventory minus units marked available or reserved. It may include sold, withdrawn, or otherwise unavailable units; it is not a sales count.'}
               </p>
               {inventory.availableUnits === 0 && (
                 <p className="text-sm text-amber-800">0 aggregate units are marked available.</p>
@@ -524,6 +541,13 @@ export default function DevelopmentHome() {
                   Monthly rent: {formatAmount(inventory.pricing.from)} to{' '}
                   {formatAmount(inventory.pricing.to)}
                 </p>
+              )}
+              {inventory.pricing.kind === 'mixed' && (
+                <div className="space-y-1 text-sm text-slate-700">
+                  {inventory.pricing.forSale ? <p>For sale: {formatAmount(inventory.pricing.forSale.from)} to {formatAmount(inventory.pricing.forSale.to)}</p> : null}
+                  {inventory.pricing.forRent ? <p>For rent: {formatAmount(inventory.pricing.forRent.from)} to {formatAmount(inventory.pricing.forRent.to)} per month</p> : null}
+                  {!inventory.pricing.forSale && !inventory.pricing.forRent ? <p>Current market pricing is not available.</p> : null}
+                </div>
               )}
               {development.transactionType === 'auction' && (
                 <p className="text-sm text-slate-700">
@@ -543,10 +567,12 @@ export default function DevelopmentHome() {
                 <div className="space-y-3 border-t border-slate-100 pt-4">
                   <div>
                     <p className="text-sm font-medium text-slate-900">
-                      Live availability by unit type
+                      {development.inventoryMode === 'itemized' ? 'Inventory summary by unit type' : 'Live availability by unit type'}
                     </p>
                     <p className="text-sm text-slate-600">
-                      Update stock here without sending the full development back through review.
+                      {development.inventoryMode === 'itemized'
+                        ? 'The inventory workspace is the control for individual homes, releases and status changes.'
+                        : 'Update stock here without sending the full development back through review.'}
                     </p>
                   </div>
                   <div className="space-y-2" aria-label="Live availability by unit type">
@@ -558,12 +584,11 @@ export default function DevelopmentHome() {
                         <div>
                           <p className="font-medium text-slate-900">{unit.name}</p>
                           <p className="text-sm text-slate-600">
-                            {unit.availableUnits} available of {unit.totalUnits} ·{' '}
-                            {unit.reservedUnits} reserved · {unit.unclassifiedRemainderUnits}{' '}
-                            unclassified
+                            {unit.availableUnits} available of {unit.totalUnits} · {unit.reservedUnits} reserved · {unit.unclassifiedRemainderUnits}{' '}
+                            {development.inventoryMode === 'itemized' ? 'other states' : 'unclassified'}
                           </p>
                         </div>
-                        {lifecycleState === 'live' && unit.id ? (
+                        {development.inventoryMode !== 'itemized' && lifecycleState === 'live' && unit.id ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -630,6 +655,7 @@ export default function DevelopmentHome() {
         onOpenChange={open => {
           if (!open && !updateUnitAvailability.isPending) {
             setEditingInventoryUnitId(null);
+            setExpectedAvailableUnitsAtOpen(null);
             setAvailableUnitsDraft('');
             setAvailabilityReasonDraft('');
           }
@@ -691,7 +717,10 @@ export default function DevelopmentHome() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setEditingInventoryUnitId(null)}
+              onClick={() => {
+                setEditingInventoryUnitId(null);
+                setExpectedAvailableUnitsAtOpen(null);
+              }}
               disabled={updateUnitAvailability.isPending}
             >
               Cancel

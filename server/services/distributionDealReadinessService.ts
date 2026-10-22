@@ -1,6 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
-import { applicationRequirements, dealRequirementStatuses, developmentDocuments, distributionDeals } from '../../drizzle/schema';
+import {
+  applicationRequirements,
+  dealRequirementStatuses,
+  distributionDeals,
+} from '../../drizzle/schema';
 import { getDb } from '../db';
 
 export type DealRequirementStatus =
@@ -58,7 +62,6 @@ export async function getDealReadinessByDealId(dealId: number): Promise<DealRead
   const requiredRequirements = await db
     .select({
       requirementId: applicationRequirements.id,
-      linkedDevelopmentDocumentId: applicationRequirements.linkedDevelopmentDocumentId,
     })
     .from(applicationRequirements)
     .where(
@@ -88,7 +91,6 @@ export async function getDealReadinessByDealId(dealId: number): Promise<DealRead
     .select({
       requirementId: dealRequirementStatuses.requirementId,
       status: dealRequirementStatuses.status,
-      linkedDevelopmentDocumentId: dealRequirementStatuses.linkedDevelopmentDocumentId,
     })
     .from(dealRequirementStatuses)
     .where(and(eq(dealRequirementStatuses.dealId, dealId), inArray(dealRequirementStatuses.requirementId, requirementIds)));
@@ -98,25 +100,6 @@ export async function getDealReadinessByDealId(dealId: number): Promise<DealRead
     statusByRequirementId.set(Number(row.requirementId), asStatus(row.status));
   });
 
-  const linkedDocIds: number[] = Array.from(
-    new Set(
-      requiredRequirements
-        .map(row => (row.linkedDevelopmentDocumentId === null ? null : Number(row.linkedDevelopmentDocumentId)))
-        .filter((value): value is number => typeof value === 'number'),
-    ),
-  );
-
-  const activeDevelopmentDocumentIds = linkedDocIds.length
-    ? new Set(
-        (
-          await db
-            .select({ id: developmentDocuments.id })
-            .from(developmentDocuments)
-            .where(and(inArray(developmentDocuments.id, linkedDocIds), eq(developmentDocuments.isActive, 1)))
-        ).map(row => Number(row.id)),
-      )
-    : new Set<number>();
-
   let uploadedCount = 0;
   let verifiedCount = 0;
   let waivedCount = 0;
@@ -125,16 +108,7 @@ export async function getDealReadinessByDealId(dealId: number): Promise<DealRead
   let missingCount = 0;
 
   requiredRequirements.forEach(row => {
-    let status = statusByRequirementId.get(Number(row.requirementId)) || 'missing';
-
-    // Auto-satisfy linked requirement when active development asset exists.
-    if (
-      status === 'missing' &&
-      row.linkedDevelopmentDocumentId !== null &&
-      activeDevelopmentDocumentIds.has(Number(row.linkedDevelopmentDocumentId))
-    ) {
-      status = 'verified';
-    }
+    const status = statusByRequirementId.get(Number(row.requirementId)) || 'missing';
 
     if (UPLOAD_READY_STATUSES.includes(status)) uploadedCount += 1;
     if (status === 'verified') verifiedCount += 1;

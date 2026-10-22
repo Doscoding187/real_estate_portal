@@ -1,7 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
-  developments,
   distributionDealDocuments,
   distributionDeals,
   distributionManagerAssignments,
@@ -27,6 +26,7 @@ export type DealChecklistPayload = {
   developmentName: string;
   programId: number | null;
   payoutMilestone: string | null;
+  payoutMilestoneNotes: string | null;
   currencyCode: string | null;
   commissionSummary: {
     commissionModel: string | null;
@@ -37,10 +37,7 @@ export type DealChecklistPayload = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    category: 'developer_document' | 'client_required_document';
-    templateFileUrl: string | null;
-    templateFileName: string | null;
-    templateUploadedAt: string | null;
+    category: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
@@ -59,6 +56,7 @@ export type DealChecklistPayload = {
     requiredCount: number;
     verifiedRequiredCount: number;
     allRequiredVerified: boolean;
+    payoutMilestoneSupported: boolean;
     payoutReady: boolean;
     blockers: string[];
   };
@@ -144,12 +142,10 @@ async function getDealScope(db: any, dealId: number) {
       externalRef: distributionDeals.externalRef,
       buyerName: distributionDeals.buyerName,
       developmentId: distributionDeals.developmentId,
-      developmentName: developments.name,
       currentStage: distributionDeals.currentStage,
       managerUserId: distributionDeals.managerUserId,
     })
     .from(distributionDeals)
-    .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
     .where(eq(distributionDeals.id, dealId))
     .limit(1);
 
@@ -165,7 +161,7 @@ async function getDealScope(db: any, dealId: number) {
     dealRef: String(deal.externalRef || `DEAL-${deal.dealId}`),
     buyerName: deal.buyerName || null,
     developmentId: Number(deal.developmentId),
-    developmentName: String(deal.developmentName || `Development #${deal.developmentId}`),
+    developmentName: `Development #${deal.developmentId}`,
     currentStage: deal.currentStage ? String(deal.currentStage) : null,
     managerUserId: deal.managerUserId ? Number(deal.managerUserId) : null,
   };
@@ -194,6 +190,7 @@ export async function getDealChecklist(
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
       payoutMilestone: distributionPrograms.payoutMilestone,
+      payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       currencyCode: distributionPrograms.currencyCode,
     })
     .from(distributionPrograms)
@@ -267,9 +264,6 @@ export async function getDealChecklist(
       documentCode: String(template.documentCode),
       documentLabel: String(template.documentLabel || ''),
       category: template.category,
-      templateFileUrl: template.templateFileUrl || null,
-      templateFileName: template.templateFileName || null,
-      templateUploadedAt: template.templateUploadedAt || null,
       isRequired: Boolean(template.isRequired),
       sortOrder: Number(template.sortOrder || 0),
       isActive: Boolean(template.isActive),
@@ -315,7 +309,8 @@ export async function getDealChecklist(
     })),
   });
   const payoutMilestoneSatisfied = payoutMilestoneEvaluation.satisfied;
-  const payoutReady = allRequiredVerified && payoutMilestoneSatisfied;
+  const payoutReady =
+    allRequiredVerified && payoutMilestoneEvaluation.supported && payoutMilestoneSatisfied;
   const blockers: string[] = [];
 
   if (requiredCount === 0) {
@@ -337,6 +332,9 @@ export async function getDealChecklist(
     developmentName: dealScope.developmentName,
     programId: program ? Number(program.id) : null,
     payoutMilestone,
+    payoutMilestoneNotes: program?.payoutMilestoneNotes
+      ? String(program.payoutMilestoneNotes)
+      : null,
     currencyCode: program?.currencyCode ? String(program.currencyCode) : null,
     commissionSummary: {
       commissionModel: normalizeCommissionModel(program?.commissionModel),
@@ -348,6 +346,7 @@ export async function getDealChecklist(
       requiredCount,
       verifiedRequiredCount,
       allRequiredVerified,
+      payoutMilestoneSupported: payoutMilestoneEvaluation.supported,
       payoutReady,
       blockers,
     },

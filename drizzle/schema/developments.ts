@@ -322,6 +322,9 @@ export const developments = mysqlTable(
     transactionType: mysqlEnum('transaction_type', ['for_sale', 'for_rent', 'auction'])
       .default('for_sale')
       .notNull(),
+    inventoryMode: mysqlEnum('inventory_mode', ['aggregate', 'itemized'])
+      .default('aggregate')
+      .notNull(),
     monthlyRentFrom: decimal('monthly_rent_from', { precision: 15, scale: 2 }),
     monthlyRentTo: decimal('monthly_rent_to', { precision: 15, scale: 2 }),
     auctionStartDate: datetime('auction_start_date', { mode: 'string' }),
@@ -449,6 +452,70 @@ export const developmentSupersessions = mysqlTable(
   ],
 );
 
+const DEVELOPMENT_DOCUMENT_TYPE_VALUES = [
+  'price_list',
+  'house_plan',
+  'brochure',
+  'site_map',
+  'spec_sheet',
+  'availability_sheet',
+  'other',
+] as const;
+const DEVELOPMENT_DOCUMENT_CATEGORY_VALUES = [
+  'sales_asset',
+  'technical_asset',
+  'legal_asset',
+  'application_template',
+  'other',
+] as const;
+const DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES = ['internal', 'manager', 'referrer', 'public'] as const;
+
+export const developmentDocuments = mysqlTable(
+  'development_documents',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    title: varchar({ length: 255 }).notNull(),
+    documentType: mysqlEnum(
+      'document_type',
+      DEVELOPMENT_DOCUMENT_TYPE_VALUES as unknown as [string, ...string[]],
+    )
+      .default('other')
+      .notNull(),
+    category: mysqlEnum(
+      'category',
+      DEVELOPMENT_DOCUMENT_CATEGORY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('other')
+      .notNull(),
+    storageKey: varchar('storage_key', { length: 512 }),
+    fileUrl: varchar('file_url', { length: 2048 }),
+    mimeType: varchar('mime_type', { length: 255 }),
+    fileSizeBytes: int('file_size_bytes'),
+    visibility: mysqlEnum(
+      'visibility',
+      DEVELOPMENT_DOCUMENT_VISIBILITY_VALUES as unknown as [string, ...string[]],
+    )
+      .default('internal')
+      .notNull(),
+    downloadable: tinyint().default(1).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    version: int().default(1).notNull(),
+    replacedByDocumentId: int('replaced_by_document_id'),
+    uploadedBy: int('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_development_documents_development').on(table.developmentId),
+    index('idx_development_documents_active').on(table.isActive),
+    index('idx_development_documents_visibility').on(table.visibility),
+    index('idx_development_documents_type').on(table.documentType),
+  ],
+);
+
 export const developmentPhases = mysqlTable(
   'development_phases',
   {
@@ -462,6 +529,7 @@ export const developmentPhases = mysqlTable(
     status: mysqlEnum(['planning', 'pre_launch', 'selling', 'sold_out', 'completed'])
       .default('planning')
       .notNull(),
+    archivedAt: timestamp('archived_at', { mode: 'string' }),
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),
     priceFrom: int('price_from'),
@@ -483,6 +551,40 @@ export const developmentPhases = mysqlTable(
     index('idx_development_phases_development_id').on(table.developmentId),
     index('idx_development_phases_status').on(table.status),
     index('idx_development_phases_spec_type').on(table.specType),
+  ],
+);
+
+/**
+ * Development-scoped responsibility directory. These are contact records,
+ * not distribution-manager assignments or developer login memberships.
+ */
+export const developmentTeamContacts = mysqlTable(
+  'development_team_contacts',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'restrict' }),
+    phaseId: int('phase_id').references(() => developmentPhases.id, { onDelete: 'restrict' }),
+    roleTitle: varchar('role_title', { length: 100 }).notNull(),
+    displayName: varchar('display_name', { length: 255 }).notNull(),
+    organizationName: varchar('organization_name', { length: 255 }),
+    email: varchar({ length: 320 }),
+    phone: varchar({ length: 50 }),
+    responsibility: text(),
+    visibleToPartners: tinyint('visible_to_partners').default(0).notNull(),
+    displayOrder: int('display_order').default(0).notNull(),
+    isActive: tinyint('is_active').default(1).notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    index('idx_development_team_contacts_development').on(
+      table.developmentId,
+      table.isActive,
+      table.displayOrder,
+    ),
+    index('idx_development_team_contacts_phase').on(table.phaseId, table.isActive),
   ],
 );
 
@@ -655,6 +757,17 @@ export const unitTypes = mysqlTable(
     totalUnits: int('total_units').default(0).notNull(),
     availableUnits: int('available_units').default(0).notNull(),
     reservedUnits: int('reserved_units').default(0),
+    availableForSaleUnits: int('available_for_sale_units').default(0).notNull(),
+    availableForRentUnits: int('available_for_rent_units').default(0).notNull(),
+    releasedForSaleUnits: int('released_for_sale_units').default(0).notNull(),
+    releasedForRentUnits: int('released_for_rent_units').default(0).notNull(),
+    reservedForSaleUnits: int('reserved_for_sale_units').default(0).notNull(),
+    reservedForRentUnits: int('reserved_for_rent_units').default(0).notNull(),
+    soldForSaleUnits: int('sold_for_sale_units').default(0).notNull(),
+    availableSalePriceFrom: decimal('available_sale_price_from', { precision: 15, scale: 2 }),
+    availableSalePriceTo: decimal('available_sale_price_to', { precision: 15, scale: 2 }),
+    availableRentPriceFrom: decimal('available_rent_price_from', { precision: 15, scale: 2 }),
+    availableRentPriceTo: decimal('available_rent_price_to', { precision: 15, scale: 2 }),
     transferCostsIncluded: tinyint('transfer_costs_included').default(0),
     monthlyLevy: int('monthly_levy'),
     monthlyLevyTo: int('monthly_levy_to'),
@@ -717,5 +830,74 @@ export const unitTypes = mysqlTable(
     index('idx_unit_types_bedrooms_bathrooms').on(table.bedrooms, table.bathrooms),
     index('idx_unit_types_display_order').on(table.displayOrder),
     index('idx_unit_types_auction_status').on(table.auctionStatus),
+  ],
+);
+
+/**
+ * One row per saleable allocation when a development has explicitly adopted
+ * itemized inventory. `unit_types` remains the marketing definition; this is
+ * the operational identity and state used for phase and channel release.
+ *
+ * Do not use the retired `development_units` table. Aggregate developments
+ * continue to use their existing `unit_types` counts until an explicit,
+ * reconciled transition to itemized inventory is performed.
+ */
+export const developmentInventoryItems = mysqlTable(
+  'development_inventory_items',
+  {
+    id: int().autoincrement().primaryKey(),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'restrict' }),
+    phaseId: int('phase_id')
+      .notNull()
+      .references(() => developmentPhases.id, { onDelete: 'restrict' }),
+    unitTypeId: varchar('unit_type_id', { length: 36 })
+      .notNull()
+      .references(() => unitTypes.id, { onDelete: 'restrict' }),
+    internalIdentifier: varchar('internal_identifier', { length: 100 }).notNull(),
+    publicIdentifier: varchar('public_identifier', { length: 100 }),
+    allocationNotes: text('allocation_notes'),
+    transactionType: mysqlEnum('transaction_type', ['for_sale', 'for_rent']).notNull(),
+    status: mysqlEnum([
+      'planned',
+      'available',
+      'reserved',
+      'under_offer',
+      'under_contract',
+      'sold',
+      'leased',
+      'withdrawn',
+      'legal_hold',
+      'reconciliation_required',
+    ])
+      .default('planned')
+      .notNull(),
+    salePrice: decimal('sale_price', { precision: 15, scale: 2 }),
+    rentPrice: decimal('rent_price', { precision: 15, scale: 2 }),
+    versionId: int('version_id').default(1).notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+  },
+  table => [
+    unique('uq_development_inventory_internal_identifier').on(
+      table.developmentId,
+      table.internalIdentifier,
+    ),
+    unique('uq_development_inventory_public_identifier').on(
+      table.developmentId,
+      table.publicIdentifier,
+    ),
+    index('idx_development_inventory_development_phase_status').on(
+      table.developmentId,
+      table.phaseId,
+      table.status,
+    ),
+    index('idx_development_inventory_phase_status_mode').on(
+      table.phaseId,
+      table.status,
+      table.transactionType,
+    ),
+    index('idx_development_inventory_type_status').on(table.unitTypeId, table.status),
   ],
 );

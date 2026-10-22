@@ -16,6 +16,12 @@ import {
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+function formatStageLabel(stage: string | null | undefined) {
+  return String(stage || 'unknown')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase());
+}
+
 export default function DistributionManagerDashboard() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -249,7 +255,7 @@ export default function DistributionManagerDashboard() {
                       {deal.developmentName} - {deal.buyerName}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
+                      Stage: {formatStageLabel(deal.currentStage)} | Referral payout: {formatStageLabel(deal.commissionStatus)}
                     </p>
                   </button>
                   <div className="flex flex-wrap gap-2">
@@ -273,7 +279,9 @@ export default function DistributionManagerDashboard() {
                           })
                         }
                       >
-                        {stage}
+                        {stage === 'commission_pending'
+                          ? 'Referral payout pending'
+                          : formatStageLabel(stage)}
                       </Button>
                     ))}
                   </div>

@@ -7,19 +7,12 @@ import { getBrandPartnershipByPublisherId } from './distributionAccessRepository
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 export const brandOnboardingPresetDocumentSchema = z.object({
-  category: z
-    .enum(['developer_document', 'client_required_document'])
-    .default('client_required_document'),
   documentCode: z.enum([
     'id_document',
     'proof_of_address',
     'proof_of_income',
     'bank_statement',
     'pre_approval',
-    'signed_offer_to_purchase',
-    'sale_agreement',
-    'attorney_instruction_letter',
-    'transfer_documents',
     'custom',
   ]),
   documentLabel: z.string().trim().min(2).max(160),
@@ -71,11 +64,6 @@ function normalizePreset(input: BrandOnboardingPreset): BrandOnboardingPreset {
         ...document,
         documentLabel: document.documentLabel.trim(),
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
-        category: (
-          document.category === 'developer_document'
-            ? 'developer_document'
-            : 'client_required_document'
-        ) as 'developer_document' | 'client_required_document',
       }))
       .sort((a, b) => a.sortOrder - b.sortOrder),
   };

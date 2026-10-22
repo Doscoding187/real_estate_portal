@@ -234,7 +234,6 @@ describe('distribution.admin.setProgramReferralEnabled readiness gating', () => 
       brandPartnershipStatus: 'active',
       developmentAccessStatus: 'included',
       submissionAllowed: true,
-      legacyFallbackUsed: false,
     });
     mockSummarizeDistributionBlockers.mockReturnValue({
       accessBlockers: [],

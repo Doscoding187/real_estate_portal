@@ -36,6 +36,7 @@ import {
   type ReferralReadinessStatus,
 } from './services/referralQualificationService';
 import { getAffordabilityConfigSnapshot } from './services/affordabilityConfigService';
+import { assertDistributionReferralIntakeReady } from './services/distributionReferralIntakePolicy';
 
 type ReferralStatus = (typeof referrals.status.enumValues)[number];
 const QUAL_MODE_VALUES = ['quick_qual', 'verified_qual'] as const;
@@ -492,6 +493,7 @@ function resolveUploadUrl(token: string) {
 
 export const distributionQualificationRouter = router({
   previewQuick: agentProcedure.input(quickQualificationInputSchema).mutation(async ({ ctx, input }) => {
+    assertDistributionReferralIntakeReady();
     assertDistributionEnabled();
     const agentId = Number(ctx.user!.id);
     const affordabilityConfig = await getAffordabilityConfigSnapshot();
@@ -518,6 +520,7 @@ export const distributionQualificationRouter = router({
   }),
 
   createReferral: agentProcedure.input(quickQualificationInputSchema).mutation(async ({ ctx, input }) => {
+    assertDistributionReferralIntakeReady();
     assertDistributionEnabled();
     const db = await getDb();
     if (!db) throw new Error('Database not available');
@@ -600,6 +603,7 @@ export const distributionQualificationRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDistributionReferralIntakeReady();
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');

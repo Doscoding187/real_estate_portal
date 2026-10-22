@@ -43,6 +43,8 @@ import {
   resolvePublicPropertyEligibility,
 } from './services/publicPropertyEligibilityService';
 import { toPublicPropertyDetailDto, toPublicPropertyImage } from './services/publicPropertyDto';
+import { createDistributionSearchContextToken } from './services/distributionSearchContextTokenService';
+import { ENV } from './_core/env';
 
 function getUserId(ctx: { user: { id: number } | null }) {
   return requireUser(ctx).id;
@@ -93,7 +95,6 @@ import { uploadRouter } from './uploadRouter';
 import { savedSearchRouter } from './savedSearchRouter';
 import { guestMigrationRouter } from './guestMigrationRouter';
 import { settingsRouter } from './settingsRouter';
-import { ENV } from './_core/env';
 import { marketingRouter } from './marketingRouter';
 import { subscriptionRouter } from './subscriptionRouter';
 import { developerRouter } from './developerRouter';
@@ -470,7 +471,31 @@ const appRouterConfig = {
       )
       .query(async ({ input }) => {
         const { publicSearchService } = await import('./services/publicSearchService');
-        return await publicSearchService.searchInventory(input);
+        const result = await publicSearchService.searchInventory(input);
+        if (!ENV.distributionNetworkEnabled || !ENV.distributionSelectedTeamQueueEnabled) {
+          return result;
+        }
+        return {
+          ...result,
+          cards: result.cards.map(card => {
+            if (card.kind !== 'development') return card;
+            const developmentId = Number(card.developmentId || 0);
+            const unitTypeId = String(card.unitTypeId || '').trim();
+            if (
+              !Number.isSafeInteger(developmentId) ||
+              developmentId <= 0 ||
+              !unitTypeId ||
+              !String(card.href || '').startsWith('/development/')
+            ) {
+              return card;
+            }
+
+            const token = createDistributionSearchContextToken({ developmentId, unitTypeId });
+            const url = new URL(String(card.href), 'https://property-listify.local');
+            url.searchParams.set('dnctx', token);
+            return { ...card, href: `${url.pathname}${url.search}${url.hash}` };
+          }),
+        };
       }),
 
     searchDevelopments: publicProcedure
