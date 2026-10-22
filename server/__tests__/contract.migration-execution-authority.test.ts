@@ -240,8 +240,17 @@ describe('migration execution authority', () => {
 
     const ci = read('.github/workflows/ci.yml');
     // The isolated CI contract provisions migration privileges before the fresh
-    // chain, then the test job independently applies its own fresh chain.
-    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(2);
+    // chain, then every job that needs a database independently applies its own
+    // fresh chain. The jobs that do so are named, so a new job that reaches the
+    // database has to be added here deliberately rather than slip in.
+    const CHAIN_JOBS = ['db-contract-verification', 'test', 'browser-journey'];
+    for (const job of CHAIN_JOBS) {
+      const block = ci.match(new RegExp(`\\n  ${job}:[\\s\\S]*?(?=\\n  [a-z-]+:)`))?.[0] ?? '';
+      expect(block, `${job} must apply its own fresh canonical chain`).toContain(
+        'pnpm db:migrate:test',
+      );
+    }
+    expect(ci.match(/pnpm db:migrate:test/g)).toHaveLength(CHAIN_JOBS.length);
     expect(ci.match(/pnpm db:authority:consumer-contract/g)).toHaveLength(1);
     expect(ci.match(/pnpm db:verify:ci/g)).toHaveLength(1);
   });
