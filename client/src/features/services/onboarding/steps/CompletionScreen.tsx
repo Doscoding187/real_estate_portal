@@ -1,9 +1,3 @@
-/**
- * Completion Screen (Step 6)
- * Requirements: 12.1, 12.2, 12.3, 12.4
- * Note: WizardProgressIndicator is NOT rendered here.
- */
-
 import { CheckCircle2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -12,42 +6,38 @@ import { type OnboardingState } from '../useOnboardingReducer';
 
 type CompletionScreenProps = {
   state: OnboardingState;
-  providerPublicPath: string;
 };
 
-export function CompletionScreen({ state, providerPublicPath }: CompletionScreenProps) {
+export function CompletionScreen({ state }: CompletionScreenProps) {
   const categoryLabel = state.primaryCategory
     ? formatCategoryLabel(state.primaryCategory)
     : 'your services';
 
   return (
     <div className="flex flex-col items-center gap-6 py-8 text-center">
-      <CheckCircle2 className="h-16 w-16 text-emerald-500" aria-hidden="true" />
-
+      <CheckCircle2 className="h-16 w-16 text-blue-700" aria-hidden="true" />
       <div className="space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-900">You're live!</h2>
-        <p className="text-slate-600">
-          <span className="font-medium">{state.companyName || 'Your business'}</span> is now listed
-          for <span className="font-medium">{categoryLabel}</span>.
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900">Profile setup complete</h2>
+        <p className="max-w-xl text-slate-600">
+          <span className="font-medium">{state.companyName || 'Your business'}</span> is saved with{' '}
+          <span className="font-medium">{categoryLabel}</span> details. The Property Listify team
+          will review the profile before it appears in the public directory. The profile is ready
+          for manual review, but it is not publicly published yet.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <Link href={providerPublicPath}>
-          <Button className="w-full" variant="default">
-            View your public profile
-          </Button>
-        </Link>
+      <div className="flex w-full max-w-xs flex-col gap-3">
         <Link href="/service/dashboard">
-          <Button className="w-full" variant="outline">
-            Go to your dashboard
-          </Button>
+          <Button className="w-full">Open provider workspace</Button>
         </Link>
         <Link href="/service/profile">
-          <Button className="w-full" variant="ghost">
-            Complete your profile
+          <Button className="w-full" variant="outline">
+            Review profile details
           </Button>
         </Link>
+        <p className="text-xs leading-5 text-slate-500">
+          Your dashboard will show requests after the profile is published.
+        </p>
       </div>
     </div>
   );
