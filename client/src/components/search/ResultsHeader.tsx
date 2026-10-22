@@ -1,4 +1,5 @@
 import { Bell, List, Map as MapIcon } from 'lucide-react';
+import { SelectedLocationChip } from './SelectedLocationChip';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -14,6 +15,13 @@ export type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'date_desc' 
 interface ResultsHeaderProps {
   title?: string;
   scopeLabels?: string[];
+  /** The location the search is scoped to, shown as a removable chip. */
+  selectedLocation?: {
+    label: string;
+    contextLabel?: string;
+    onRemove?: () => void;
+    onChange?: () => void;
+  };
   resultCount?: number;
   isLoading?: boolean;
   hasError?: boolean;
@@ -26,6 +34,7 @@ interface ResultsHeaderProps {
 export function ResultsHeader({
   title = 'Properties',
   scopeLabels = [],
+  selectedLocation,
   resultCount,
   isLoading,
   hasError,
@@ -52,8 +61,16 @@ export function ResultsHeader({
           <p role="status" className="mt-1.5 text-sm text-slate-500">
             {countLabel}
           </p>
-          {scopeLabels.length > 0 ? (
+          {scopeLabels.length > 0 || selectedLocation ? (
             <div className="mt-3 flex flex-wrap gap-2" aria-label="Search scope">
+              {selectedLocation ? (
+                <SelectedLocationChip
+                  label={selectedLocation.label}
+                  contextLabel={selectedLocation.contextLabel}
+                  onRemove={selectedLocation.onRemove}
+                  onChange={selectedLocation.onChange}
+                />
+              ) : null}
               {scopeLabels.map(label => (
                 <span
                   key={label}

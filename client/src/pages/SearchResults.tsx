@@ -437,6 +437,26 @@ export default function SearchResults({
       },
     ];
   }, [breadcrumbs, searchAreaContext, searchIntent]);
+  // The location a search is scoped to, shown as a chip the customer can take away. The label is
+  // the name the search authority resolved, so the chip never disagrees with the results.
+  const selectedLocationChip = useMemo(() => {
+    if (!locationContext) return undefined;
+    const contextLabel =
+      locationContext.type === 'suburb'
+        ? locationContext.hierarchy.city
+        : locationContext.type === 'city'
+          ? locationContext.hierarchy.province
+          : undefined;
+    return {
+      label: publicSearchResults?.canonicalPlaceContext?.label || locationContext.name,
+      contextLabel,
+      // Taking the location away returns the search to the country-wide default, which is the
+      // same search a customer gets when they never chose a location.
+      onRemove: () =>
+        setLocation(generateIntentUrl({ ...searchIntent, geography: { level: 'country' } })),
+    };
+  }, [locationContext, publicSearchResults?.canonicalPlaceContext?.label, searchIntent]);
+
   const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
   const navbarLocations = useMemo(() => {
     const multiContext = publicSearchResults?.multiLocationContext;
@@ -932,6 +952,7 @@ export default function SearchResults({
             <ResultsHeader
               title={discoveryHeading}
               scopeLabels={discoveryScopeLabels}
+              selectedLocation={selectedLocationChip}
               resultCount={publicSearchResults ? resultCount : undefined}
               isLoading={isLoading}
               hasError={hasSearchError}
