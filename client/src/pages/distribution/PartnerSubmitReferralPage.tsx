@@ -383,7 +383,8 @@ export default function PartnerSubmitReferralPage() {
                       </p>
                       <p className="mt-1 text-xs text-[#33507e]">
                         Give the prospect these documents, let them complete and sign them, then upload
-                        the signed copies below.
+                        the signed copies below. The referral is only sent once the required documents
+                        are in, and it then appears in My deals.
                       </p>
                       <ul className="mt-2 space-y-1">
                         {documentPack.downloads.map(download => (
