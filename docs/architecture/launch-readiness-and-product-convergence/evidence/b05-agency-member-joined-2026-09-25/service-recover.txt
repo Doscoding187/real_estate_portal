@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 db:authority:service:recover /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> bash scripts/local-db.sh recover
+
+Runtime state: cleanly stopped; recovery is a safe no-op.

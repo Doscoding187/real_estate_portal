@@ -1,0 +1,104 @@
+
+> real_estate_portal@1.0.0 db:readiness /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> tsx scripts/databaseAuthorityCli.ts readiness -- --purpose\=location-discovery
+
+{
+  "reportVersion": 1,
+  "checkedAt": "2026-09-25T14:25:16.862Z",
+  "targetFingerprintHash": "a741e71c34cbf6b800c49d9067aebfcd2018945810e023448a04fb2fd926078f",
+  "targetClass": "disposable-worktree",
+  "requestedRuntime": "location-discovery",
+  "applicationReady": true,
+  "layers": {
+    "processLiveness": {
+      "state": "ready",
+      "code": "process-alive",
+      "detail": "The process is able to answer."
+    },
+    "serviceAvailable": {
+      "state": "ready",
+      "code": "target-connected",
+      "detail": "Connected to authorized database listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70."
+    },
+    "targetOwned": {
+      "state": "ready",
+      "code": "exact-worktree-owned",
+      "detail": "Exact worktree target listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70 has a matching ownership profile."
+    },
+    "schemaMigrated": {
+      "state": "ready",
+      "code": "manifest-head-ready",
+      "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+    },
+    "schemaCongruent": {
+      "state": "ready",
+      "code": "schema-congruent",
+      "detail": "Physical schema matches canonical digest a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9."
+    },
+    "canonicalReferenceData": {
+      "state": "ready",
+      "code": "canonical-reference-ready",
+      "detail": "canonical-geography-v2 (6c3fb68b54fd0db6) verified: 9 provinces, 340 cities, 1089 suburb(s)."
+    },
+    "commercialReferenceData": {
+      "state": "not-evaluated",
+      "code": "foundation-not-evaluated",
+      "detail": "Canonical Launch Access foundation data is evaluated for database and Search-to-Lead readiness."
+    },
+    "acceptanceScenario": {
+      "state": "ready",
+      "code": "acceptance-scenario-ready",
+      "detail": "search-to-lead-v5 (a7b62da33e3f416e) verified: 3 property and 1 development prerequisite(s)."
+    },
+    "application": {
+      "state": "ready",
+      "code": "application-ready-for-requested-runtime",
+      "detail": "Database Authority is ready for location-discovery verification."
+    },
+    "targetConnectivity": {
+      "state": "ready",
+      "code": "target-connected",
+      "detail": "Connected to authorized database listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70."
+    },
+    "migrationHead": {
+      "state": "ready",
+      "code": "manifest-head-ready",
+      "detail": "Ledger is at 0094_content_topics_primary_key.sql."
+    },
+    "incompleteAttemptState": {
+      "state": "ready",
+      "code": "no-incomplete-attempts",
+      "detail": "No running, failed, or blocked migration attempt exists."
+    },
+    "structuralSchema": {
+      "state": "ready",
+      "code": "required-schema-present",
+      "detail": "All 214 application tables are present."
+    },
+    "requiredData": {
+      "state": "ready",
+      "code": "requested-data-ready",
+      "detail": "Required data versions canonical-geography-v2, search-to-lead-v5 are ready."
+    },
+    "consumerApi": {
+      "state": "not-evaluated",
+      "code": "consumer-not-evaluated",
+      "detail": "Consumer/API smoke is a separate readiness layer."
+    },
+    "browserJourney": {
+      "state": "not-evaluated",
+      "code": "browser-not-evaluated",
+      "detail": "Browser journey readiness is verified separately."
+    },
+    "release": {
+      "state": "not-evaluated",
+      "code": "release-not-evaluated",
+      "detail": "Release readiness requires protected release evidence."
+    },
+    "fullDiagnostics": {
+      "state": "not-evaluated",
+      "code": "diagnostics-not-evaluated",
+      "detail": "Full structural diagnostics are intentionally separate from routine readiness."
+    }
+  }
+}

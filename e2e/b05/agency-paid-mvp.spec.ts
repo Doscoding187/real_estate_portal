@@ -15,6 +15,7 @@ const apiOrigin = 'http://localhost:5000';
 const appOrigin = 'http://localhost:5177';
 const emailCapture = '/tmp/property-listify-b05-agency-paid-mvp-email-capture.jsonl';
 const reviewerEmail = 'ple-reviewer@listify.local';
+const mobileViewport = Object.freeze({ width: 390, height: 844 });
 const ownerEmail = `b05-owner-${runId}@invalid.example`;
 const ownerPassword = `B05!${randomUUID()}9a`;
 const firstMemberEmail = `b05-new-member-${runId}@invalid.example`;
@@ -194,6 +195,7 @@ async function next(page: Page) {
 
 async function completeFirstMemberProfile(page: Page) {
   await page.goto('/agent/setup');
+  await expectMobileViewport(page);
   await page.getByPlaceholder('Jane Doe').fill(firstMemberName);
   await page.getByPlaceholder('+27 82 000 0000').first().fill('+27820000021');
   await page.getByRole('button', { name: 'Save & Continue' }).click();
@@ -207,6 +209,17 @@ async function completeFirstMemberProfile(page: Page) {
   await page.getByRole('button', { name: 'Save & Continue' }).click();
   await page.getByRole('button', { name: 'Complete Setup' }).click();
   await expect(page).toHaveURL(/\/agent\/dashboard/);
+}
+
+async function expectMobileViewport(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        width: window.innerWidth,
+        touch: navigator.maxTouchPoints > 0,
+      })),
+    )
+    .toMatchObject({ width: mobileViewport.width, touch: true });
 }
 
 async function createAndSubmitSaleListing(page: Page) {
@@ -369,23 +382,34 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
     await connection?.end();
   });
 
-  test('joins, pays, operates Agency inventory and leads, then preserves history through scoped expiry', async ({
+  test('joins, pays, operates Agency inventory and leads, then retains Agency custody through revocation', async ({
     page: ownerPage,
     browser,
   }) => {
     const reviewerContext = await browser.newContext();
     const reviewerPage = await reviewerContext.newPage();
-    const firstMemberContext = await browser.newContext();
+    const firstMemberContext = await browser.newContext({
+      viewport: mobileViewport,
+      screen: mobileViewport,
+      deviceScaleFactor: 2,
+      isMobile: true,
+      hasTouch: true,
+    });
     const firstMemberPage = await firstMemberContext.newPage();
     const secondMemberContext = await browser.newContext();
     const secondMemberPage = await secondMemberContext.newPage();
+    const draftIsolationContext = await browser.newContext();
+    const draftIsolationPage = await draftIsolationContext.newPage();
     let subscriptionId = 0;
     let billableAccountId = 0;
     let agencyId = 0;
     let salePropertyId = 0;
     let leadId = 0;
+    let saleListingId = 0;
     let firstMemberAgentId = 0;
     let secondMemberAgentId = 0;
+    let firstMemberUserId = 0;
+    let secondMemberUserId = 0;
     let prospectName = '';
     let contactSummary = '';
     let noteText = '';
@@ -615,6 +639,7 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
           [firstMemberEmail, agencyId],
         );
         expect(membership).toMatchObject({ status: 'active', effectiveTo: null, invitationStatus: 'accepted' });
+        firstMemberUserId = Number(membership.userId);
         firstMemberAgentId = Number(membership.agentId);
         await firstMemberPage.goto('/agent/dashboard');
         await expect(firstMemberPage.getByText('Your agency manages Launch Access')).toBeVisible();
@@ -654,7 +679,7 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
         await expect(secondMemberPage).toHaveURL(/\/agent\/(dashboard|setup)/);
 
         const [membership] = await query(
-          `SELECT agent.id AS agentId, membership.status, membership.effective_to AS effectiveTo
+          `SELECT user.id AS userId, agent.id AS agentId, membership.status, membership.effective_to AS effectiveTo
              FROM users user
              INNER JOIN agents agent ON agent.userId = user.id
              INNER JOIN agency_agent_memberships membership ON membership.agent_id = agent.id
@@ -662,12 +687,14 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
           [secondMemberEmail, agencyId],
         );
         expect(membership).toMatchObject({ status: 'active', effectiveTo: null });
+        secondMemberUserId = Number(membership.userId);
         secondMemberAgentId = Number(membership.agentId);
       });
 
       await test.step('A current member creates Agency inventory, custody-confirmed media, and moderated public projections', async () => {
         const sale = await createAndSubmitSaleListing(firstMemberPage);
-        expect(sale.ownerId).toBeGreaterThan(0);
+        saleListingId = sale.id;
+        expect(sale.ownerId).toBe(firstMemberUserId);
         expect(sale.agencyId).toBe(agencyId);
         expect(sale.agentId).toBe(firstMemberAgentId);
         const [media] = await query(
@@ -679,7 +706,13 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
         salePropertyId = await approveListing(reviewerPage, sale.id);
         const rental = await createAndSubmitRentalListing(firstMemberPage);
         const rentalPropertyId = await approveListing(reviewerPage, rental.id);
-        const publicContext = await browser.newContext();
+        const publicContext = await browser.newContext({
+          viewport: mobileViewport,
+          screen: mobileViewport,
+          deviceScaleFactor: 2,
+          isMobile: true,
+          hasTouch: true,
+        });
         const publicPage = await publicContext.newPage();
         try {
           await publicPage.goto(
@@ -687,6 +720,7 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
           );
           await publicPage.getByRole('link', { name: `View ${saleTitle}` }).click();
           await expect(publicPage).toHaveURL(new RegExp(`/property/${salePropertyId}(?:-|$)`));
+          await expectMobileViewport(publicPage);
           await expect(publicPage.getByRole('heading', { name: saleTitle, exact: true })).toBeVisible();
           await expect(
             publicPage.getByLabel('Listing organization').getByText(agencyName, { exact: true }),
@@ -707,13 +741,20 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
       });
 
       await test.step('Buyer enquiry stays in Agency custody through replay, reassignment, and follow-up', async () => {
-        const buyerContext = await browser.newContext();
+        const buyerContext = await browser.newContext({
+          viewport: mobileViewport,
+          screen: mobileViewport,
+          deviceScaleFactor: 2,
+          isMobile: true,
+          hasTouch: true,
+        });
         const buyerPage = await buyerContext.newPage();
         prospectName = `B05 Prospect ${runId.slice(0, 8)}`;
         const prospectEmail = `b05-prospect-${runId}@example.test`;
         const prospectMessage = `Please arrange a viewing for ${saleTitle}.`;
         try {
           await buyerPage.goto(`/property/${salePropertyId}`);
+          await expectMobileViewport(buyerPage);
           await buyerPage.getByRole('button', { name: 'Send enquiry', exact: true }).first().click();
           const enquiry = buyerPage.getByRole('dialog', { name: 'Send an enquiry' });
           await enquiry.getByLabel('Your Name').fill(prospectName);
@@ -807,92 +848,170 @@ test.describe('B05 Agency paid MVP controlled acceptance', () => {
         await secondMemberPage.goto('/agency/team/invitations');
         await expect(secondMemberPage).toHaveURL(/\/agent\/dashboard/);
 
-        await firstMemberPage.goto('/listings/create');
-        await firstMemberPage.getByRole('radio', { name: /For Sale/ }).click();
-        await next(firstMemberPage);
-        await firstMemberPage.getByRole('radio', { name: /House/ }).click();
-        await next(firstMemberPage);
+        await signIn(draftIsolationPage, {
+          email: firstMemberEmail,
+          password: firstMemberPassword,
+          target: '/agent/dashboard',
+        });
+        await draftIsolationPage.goto('/listings/create');
+        await draftIsolationPage.getByRole('radio', { name: /For Sale/ }).click();
+        await next(draftIsolationPage);
+        await draftIsolationPage.getByRole('radio', { name: /House/ }).click();
+        await next(draftIsolationPage);
         const privateDraftTitle = `B05 member-private-draft-${runId.slice(0, 8)}`;
-        await firstMemberPage.locator('#title').fill(privateDraftTitle);
-        await firstMemberPage.getByRole('button', { name: 'Save progress on this device' }).click();
-        await expect(firstMemberPage.getByRole('button', { name: 'Saved on this device' })).toBeVisible();
-        await firstMemberPage.goto('/agent/dashboard');
-        await firstMemberPage.getByRole('button', { name: 'Logout', exact: true }).click();
-        await expect(firstMemberPage).toHaveURL(/\/login$/);
-        await signIn(firstMemberPage, {
+        await draftIsolationPage.locator('#title').fill(privateDraftTitle);
+        await draftIsolationPage.getByRole('button', { name: 'Save progress on this device' }).click();
+        await expect(draftIsolationPage.getByRole('button', { name: 'Saved on this device' })).toBeVisible();
+        await draftIsolationPage.goto('/agent/dashboard');
+        await draftIsolationPage.getByRole('button', { name: 'Logout', exact: true }).click();
+        await expect(draftIsolationPage).toHaveURL(/\/login$/);
+        await signIn(draftIsolationPage, {
           email: secondMemberEmail,
           password: secondMemberPassword,
           target: '/agent/dashboard',
         });
-        await firstMemberPage.goto('/listings/create');
-        await expect(firstMemberPage.getByRole('dialog', { name: 'Resume Draft Listing?' })).toHaveCount(0);
+        await draftIsolationPage.goto('/listings/create');
+        await expect(draftIsolationPage.getByRole('dialog', { name: 'Resume Draft Listing?' })).toHaveCount(0);
         await expect
-          .poll(() => firstMemberPage.evaluate(() => window.localStorage.getItem('listing-wizard-storage')))
+          .poll(() => draftIsolationPage.evaluate(() => window.localStorage.getItem('listing-wizard-storage')))
           .toBeNull();
       });
 
-      await test.step('Scoped expiry stops new commercial value while preserving Agency history', async () => {
-        // The single permitted terminal fixture transition is scoped to this
-        // run's Agency-owned term after the live paid journey completed.
-        await query(
-          `UPDATE subscriptions
-              SET current_period_end = DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 MINUTE)
-            WHERE id = ? AND billable_account_id = ? AND owner_type = 'agency' AND owner_id = ? AND status = 'active'`,
-          [subscriptionId, billableAccountId, agencyId],
-        );
-
-        const expiredBuyerContext = await browser.newContext();
-        const expiredBuyerPage = await expiredBuyerContext.newPage();
+      await test.step('Agency owner revokes member access through the team workflow and retains Agency custody', async () => {
+        const revokedMemberContext = await browser.newContext({
+          viewport: mobileViewport,
+          screen: mobileViewport,
+          deviceScaleFactor: 2,
+          isMobile: true,
+          hasTouch: true,
+        });
+        const revokedMemberPage = await revokedMemberContext.newPage();
         try {
-          await expiredBuyerPage.goto(`/property/${salePropertyId}`);
+          await signIn(revokedMemberPage, {
+            email: firstMemberEmail,
+            password: firstMemberPassword,
+            target: '/agent/dashboard',
+          });
+
+          await ownerPage.goto('/agency/team');
+          await ownerPage.getByPlaceholder('Search members').fill(firstMemberEmail);
+          await expect(ownerPage.getByText(firstMemberName, { exact: true })).toBeVisible();
+          const deactivate = ownerPage.getByRole('button', { name: 'Deactivate', exact: true });
+          await expect(deactivate).toHaveCount(1);
+          await deactivate.click();
+          await expect(ownerPage.getByText('Deactivate member', { exact: true })).toBeVisible();
+          const reassignment = ownerPage.getByRole('combobox').last();
+          await expect(reassignment).toHaveValue('');
+          await reassignment.selectOption({ label: secondMemberName });
+          const membershipUpdate = ownerPage.waitForResponse(
+            response =>
+              response.url().includes('agency.setAgentMembershipStatus') &&
+              response.request().method() === 'POST',
+          );
+          await ownerPage.getByRole('button', { name: 'Confirm deactivation', exact: true }).click();
+          expect((await membershipUpdate).status()).toBe(200);
           await expect(
-            expiredBuyerPage.getByRole('heading', {
-              name: /Property (no longer available|temporarily unavailable)/,
-            }),
+            ownerPage.getByLabel(firstMemberName).getByText('suspended', { exact: true }),
           ).toBeVisible();
-          await expect(expiredBuyerPage.getByRole('button', { name: 'Send enquiry', exact: true })).toHaveCount(0);
+
+          await revokedMemberPage.goto('/agent/dashboard');
+          await expect(revokedMemberPage).toHaveURL(/\/user\/dashboard$/);
+          await expect(
+            revokedMemberPage.getByText('Your agency manages Launch Access'),
+          ).toHaveCount(0);
+
+          const [revokedMembership] = await query(
+            `SELECT user.role AS userRole, agent.status AS agentStatus,
+                    membership.status AS membershipStatus, membership.effective_to AS effectiveTo
+               FROM users user
+               INNER JOIN agents agent ON agent.userId = user.id
+               INNER JOIN agency_agent_memberships membership ON membership.agent_id = agent.id
+              WHERE user.email = ? AND membership.agency_id = ?`,
+            [firstMemberEmail, agencyId],
+          );
+          expect(revokedMembership).toMatchObject({
+            userRole: 'visitor',
+            agentStatus: 'suspended',
+            membershipStatus: 'suspended',
+          });
+          expect(revokedMembership.effectiveTo).toBeTruthy();
+
+          const [retainedListing] = await query(
+            `SELECT ownerId, agencyId, agentId, status, approvalStatus
+               FROM listings WHERE id = ?`,
+            [saleListingId],
+          );
+          expect(retainedListing).toMatchObject({
+            ownerId: firstMemberUserId,
+            agencyId,
+            agentId: secondMemberAgentId,
+            status: 'published',
+            approvalStatus: 'approved',
+          });
+
+          const [retainedLead] = await query(
+            `SELECT agencyId, agentId, assigned_to AS assignedTo,
+                    firstRespondedAt, lastContactedAt, nextFollowUp
+               FROM leads WHERE id = ?`,
+            [leadId],
+          );
+          expect(retainedLead).toMatchObject({
+            agencyId,
+            agentId: secondMemberAgentId,
+            assignedTo: secondMemberUserId,
+          });
+          expect(retainedLead.firstRespondedAt).toBeTruthy();
+          expect(retainedLead.lastContactedAt).toBeTruthy();
+          expect(retainedLead.nextFollowUp).toBeTruthy();
+          const [retainedActivities] = await query(
+            'SELECT COUNT(*) AS total FROM lead_activities WHERE leadId = ?',
+            [leadId],
+          );
+          expect(Number(retainedActivities.total)).toBeGreaterThanOrEqual(4);
+
+          const [retainedTerm] = await query(
+            `SELECT subscription.status, subscription.owner_type AS ownerType,
+                    subscription.owner_id AS ownerId, account.account_kind AS accountKind,
+                    account.agency_id AS accountAgencyId, plan.name AS planName
+               FROM subscriptions subscription
+               INNER JOIN billable_accounts account ON account.id = subscription.billable_account_id
+               INNER JOIN plans plan ON plan.id = subscription.plan_id
+              WHERE subscription.id = ?`,
+            [subscriptionId],
+          );
+          expect(retainedTerm).toMatchObject({
+            status: 'active',
+            ownerType: 'agency',
+            ownerId: agencyId,
+            accountKind: 'agency',
+            accountAgencyId: agencyId,
+            planName: 'agency_launch_access',
+          });
+
+          await secondMemberPage.goto('/agent/dashboard');
+          await expect(secondMemberPage.getByText('Your agency manages Launch Access')).toBeVisible();
+          await secondMemberPage.goto('/agency/leads');
+          await expect(secondMemberPage).toHaveURL(/\/agent\/dashboard/);
+
+          const [personalAccess] = await query(
+            `SELECT COUNT(*) AS total
+               FROM billable_accounts account
+               INNER JOIN users user ON user.id = account.user_id
+              WHERE account.account_kind = 'agent'
+                AND user.email IN (?, ?)`,
+            [firstMemberEmail, secondMemberEmail],
+          );
+          expect(Number(personalAccess.total)).toBe(0);
         } finally {
-          await expiredBuyerContext.close();
+          await revokedMemberContext.close();
         }
-
-        await secondMemberPage.goto('/listings/create');
-        await expect(secondMemberPage.getByRole('status')).toContainText('Prepare your listing before activation');
-        await expect(secondMemberPage.getByRole('button', { name: 'Submit Listing', exact: true })).toHaveCount(0);
-
-        const [retained] = await query(
-          `SELECT agency.id AS agencyId,
-                  (SELECT COUNT(*) FROM agency_agent_memberships membership
-                    INNER JOIN agents agent ON agent.id = membership.agent_id
-                   WHERE membership.agency_id = agency.id AND membership.status = 'active') AS activeMemberships,
-                  (SELECT COUNT(*) FROM leads lead_record WHERE lead_record.id = ? AND lead_record.agencyId = agency.id) AS retainedLead,
-                  (SELECT COUNT(*) FROM lead_activities activity_record WHERE activity_record.leadId = ?) AS retainedActivities,
-                  subscription.status, subscription.current_period_end AS currentPeriodEnd
-             FROM agencies agency
-             INNER JOIN subscriptions subscription ON subscription.owner_id = agency.id AND subscription.owner_type = 'agency'
-            WHERE agency.id = ? AND subscription.id = ?`,
-          [leadId, leadId, agencyId, subscriptionId],
-        );
-        expect(retained).toMatchObject({ agencyId, retainedLead: 1, status: 'expired' });
-        expect(Number(retained.activeMemberships)).toBeGreaterThanOrEqual(2);
-        expect(Number(retained.retainedActivities)).toBeGreaterThanOrEqual(4);
-        expect(retained.currentPeriodEnd).toBeTruthy();
-        const [noPersonalFallback] = await query(
-          `SELECT COUNT(*) AS total
-             FROM subscriptions subscription
-             INNER JOIN billable_accounts account ON account.id = subscription.billable_account_id
-             INNER JOIN users user ON user.id = account.user_id
-            WHERE account.account_kind = 'agent'
-              AND user.email IN (?, ?)
-              AND subscription.status IN ('active', 'grace_period')`,
-          [firstMemberEmail, secondMemberEmail],
-        );
-        expect(Number(noPersonalFallback.total)).toBe(0);
       });
     } finally {
       await Promise.allSettled([
         reviewerContext.close(),
         firstMemberContext.close(),
         secondMemberContext.close(),
+        draftIsolationContext.close(),
       ]);
     }
   });

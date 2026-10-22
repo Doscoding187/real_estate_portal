@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:authority:service:wait /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> bash scripts/local-db.sh wait
+
+Legacy home service residue is inactive and never adopted: /home/edwardspc/.config/property-listify/mysql-3307
+Database Authority MySQL service is available on 127.0.0.1:3307.

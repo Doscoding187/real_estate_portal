@@ -1,0 +1,57 @@
+
+> real_estate_portal@1.0.0 db:authority:context /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> tsx scripts/databaseAuthorityCli.ts context
+
+{
+  "contextVersion": 1,
+  "contextId": "2c14ec6d-eebb-46a7-b029-4c48f890de67",
+  "correlationId": "7a06c20b-ee9d-4160-b396-1456ef6d6ad8",
+  "resolvedAt": "2026-09-25T15:32:30.746Z",
+  "operation": "read-only-connect",
+  "runtimeMode": "development",
+  "environmentSource": "worktree-profile",
+  "environmentFiles": [
+    "/home/edwardspc/.config/property-listify/local.env"
+  ],
+  "targetFingerprint": "mysql://127.0.0.1:3307/listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70",
+  "targetFingerprintHash": "a741e71c34cbf6b800c49d9067aebfcd2018945810e023448a04fb2fd926078f",
+  "targetClass": "disposable-worktree",
+  "databaseName": "listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70",
+  "host": "127.0.0.1",
+  "port": "3307",
+  "provider": "mysql",
+  "dialect": "mysql",
+  "local": true,
+  "tls": {
+    "required": false,
+    "certificateVerificationRequired": false
+  },
+  "credentialClass": "local-owner",
+  "credentialSource": "database-url",
+  "repository": {
+    "root": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925",
+    "gitCommonDirectoryFingerprint": "93fc65e6eeca51305b9e499eb130579e323d5501ceaa87cb76c4b5665185d04f",
+    "head": "5e4fe9244441e4138a836bc084c8d1e01881bc99"
+  },
+  "worktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925",
+    "branch": "fix/b05-agency-member-joined-reproduction",
+    "upstream": null,
+    "registered": true,
+    "clean": false,
+    "ownershipKey": "bb9bf51b1b707bc9a6719b5e",
+    "expectedDatabase": "listify_wt_b05_agency_member_joined_20260_bb9bf51b1b70",
+    "ownershipMatches": true,
+    "cleanMainOwnershipMatches": false
+  },
+  "localService": {
+    "applicability": "local",
+    "host": "127.0.0.1",
+    "port": "3307",
+    "directory": "/var/tmp/property-listify-1000/mysql-3307",
+    "dataDirectory": "/var/tmp/property-listify-1000/mysql-3307/data",
+    "fingerprint": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "legacyHomeDirectory": "/home/edwardspc/.config/property-listify/mysql-3307",
+    "legacyPathPolicy": "inactive-residue-only; never adopted or deleted automatically"
+  }
+}

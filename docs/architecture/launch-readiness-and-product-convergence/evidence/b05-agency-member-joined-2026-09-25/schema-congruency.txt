@@ -1,0 +1,25 @@
+
+> real_estate_portal@1.0.0 db:schema:congruency /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> tsx scripts/databaseAuthorityCli.ts schema:check
+
+{
+  "targetFingerprintHash": "a741e71c34cbf6b800c49d9067aebfcd2018945810e023448a04fb2fd926078f",
+  "targetClass": "disposable-worktree",
+  "congruent": true,
+  "desiredDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "actualDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+  "differences": [],
+  "checkConstraintEnforcement": {
+    "applicable": false,
+    "variable": "tidb_enable_check_constraint",
+    "value": null,
+    "enabled": null,
+    "physical": {
+      "total": 23,
+      "enforced": 23,
+      "allEnforced": true,
+      "unenforced": []
+    }
+  },
+  "omittedDifferenceCount": 0
+}

@@ -73,6 +73,20 @@ function configuredTermKind(value: unknown): CommercialTermKind | null {
     : null;
 }
 
+function readConsistentMetadataAlias<T>(input: {
+  metadata: Record<string, unknown>;
+  keys: readonly [string, string];
+  parse: (value: unknown) => T | null;
+}): T | null {
+  const values = input.keys
+    .filter(key => Object.prototype.hasOwnProperty.call(input.metadata, key))
+    .map(key => input.parse(input.metadata[key]));
+  if (values.length === 0 || values.some(value => value === null)) return null;
+
+  const first = values[0] as T;
+  return values.every(value => Object.is(value, first)) ? first : null;
+}
+
 /**
  * Resolve the commercial meaning of a canonical plan. `trialDays` is only
  * interpreted as a free-trial duration when the plan has no explicit term
@@ -129,9 +143,14 @@ export function resolveCommercialTerm(plan: PlanTermSource): CommercialTerm {
 
 export function getCommercialProductKey(plan: PlanTermSource): string {
   const metadata = parseCommercialMetadata(plan.metadata);
+  const hasExplicitProductKey =
+    Object.prototype.hasOwnProperty.call(metadata, 'commercial_product_key') ||
+    Object.prototype.hasOwnProperty.call(metadata, 'commercialProductKey');
   const configured = metadata.commercial_product_key ?? metadata.commercialProductKey;
-  if (typeof configured === 'string' && /^[a-z0-9][a-z0-9_-]*$/.test(configured)) {
-    return configured;
+  if (hasExplicitProductKey) {
+    return typeof configured === 'string' && /^[a-z0-9][a-z0-9_-]*$/.test(configured)
+      ? configured
+      : 'unidentified_product';
   }
   return String(plan.name || 'unidentified_product');
 }
@@ -148,7 +167,45 @@ export function getPaidMvpLaunchAccessProductKey(
   // Public read/capture paths must fail closed if a corrupted join or an
   // incomplete fixture supplies no canonical plan row.
   if (!plan || typeof plan !== 'object') return null;
-  const productKey = getCommercialProductKey(plan);
+  const metadata = parseCommercialMetadata(plan.metadata);
+  const productKey = readConsistentMetadataAlias({
+    metadata,
+    keys: ['commercial_product_key', 'commercialProductKey'],
+    parse: value =>
+      typeof value === 'string' && isPaidMvpLaunchAccessProductKey(value) ? value : null,
+  });
+  const termKind = readConsistentMetadataAlias({
+    metadata,
+    keys: ['commercial_term_kind', 'commercialTermKind'],
+    parse: value => configuredTermKind(value),
+  });
+  const durationDays = readConsistentMetadataAlias({
+    metadata,
+    keys: ['commercial_term_duration_days', 'commercialTermDurationDays'],
+    parse: value =>
+      typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : null,
+  });
+  const requiresVerifiedPayment = readConsistentMetadataAlias({
+    metadata,
+    keys: ['commercial_requires_verified_payment', 'commercialRequiresVerifiedPayment'],
+    parse: value => (typeof value === 'boolean' ? value : null),
+  });
+  const autoRenews = readConsistentMetadataAlias({
+    metadata,
+    keys: ['commercial_auto_renews', 'commercialAutoRenews'],
+    parse: value => (typeof value === 'boolean' ? value : null),
+  });
+
+  if (
+    !productKey ||
+    termKind !== 'paid_launch_access' ||
+    durationDays !== 90 ||
+    requiresVerifiedPayment !== true ||
+    autoRenews !== false
+  ) {
+    return null;
+  }
+
   if (!isPaidMvpLaunchAccessProductKey(productKey)) return null;
   if (expectedOwnerType && plan.segment !== expectedOwnerType) return null;
   // The canonical plan row must explicitly be live.  Treat a partial or

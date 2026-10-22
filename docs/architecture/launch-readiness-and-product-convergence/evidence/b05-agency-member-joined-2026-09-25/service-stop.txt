@@ -1,0 +1,6 @@
+
+> real_estate_portal@1.0.0 db:authority:service:stop /home/edwardspc/Desktop/Dev/worktrees/property-listify-b05-agency-member-joined-20260925
+> bash scripts/local-db.sh stop
+
+Runtime state: cleanly stopped; recovery is a safe no-op.
+Database Authority MySQL service stopped via the exact Unix socket within the 30-second bound.
