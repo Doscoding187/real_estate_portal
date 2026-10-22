@@ -168,7 +168,7 @@ describe('PartnerProspectCheckFitPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Run the check fit' }));
 
-    expect(await screen.findByText('Thandi Mokoena')).toBeInTheDocument();
+    expect(await screen.findByText(/Thandi Mokoena/)).toBeInTheDocument();
     expect(screen.getByText(/qualifies for properties priced up to about/i)).toBeInTheDocument();
     expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
     expect(mockInvalidate).toHaveBeenCalled();
@@ -234,7 +234,7 @@ describe('PartnerProspectCheckFitPage', () => {
     expect(
       screen.getByText(/qualifies for properties priced up to about/i),
     ).toBeInTheDocument();
-    expect(screen.getByText('Thandi Mokoena')).toBeInTheDocument();
+    expect(screen.getByText(/Thandi Mokoena/)).toBeInTheDocument();
     expect(screen.getByText('Soweto Ridge')).toBeInTheDocument();
     expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
     expect(screen.getByText(/Sandton Heights/)).toBeInTheDocument();
@@ -267,11 +267,21 @@ describe('PartnerProspectCheckFitPage', () => {
     expect(screen.getByText('Residential')).toBeInTheDocument();
     expect(screen.getByText(/4 homes available/)).toBeInTheDocument();
     expect(
-      screen.getByText(/Qualifies for units from about R\s*1[\s\u00a0]*200[\s\u00a0]*000/),
+      screen.getByText(/Qualifies from about R\s*1[\s\u00a0]*200[\s\u00a0]*000/),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Refer this development/ }),
     ).toBeInTheDocument();
+  });
+
+  it('does not repeat the prospect name when there is a single check fit', async () => {
+    mockListProspectCheckFits.mockReturnValue({ data: [qualifyingCheckFit] });
+
+    render(<PartnerProspectCheckFitPage />);
+
+    expect(await screen.findByText(/Thandi Mokoena/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Thandi Mokoena/)).toHaveLength(1);
+    expect(screen.queryByText('Your check fits')).not.toBeInTheDocument();
   });
 
   it('says plainly when the prospect does not qualify for any opportunity', () => {
