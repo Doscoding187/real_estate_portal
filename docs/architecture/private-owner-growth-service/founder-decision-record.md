@@ -1,0 +1,29 @@
+# Private-owner MVP — founder decision record
+
+**Status:** open decision worksheet, 12 October 2026. Companion: [draft product and architecture contract](mvp-product-architecture-contract.md).
+
+The agreed strategic direction is owner control, sale and rental support, meaningful marketing, optional professional assistance and protection of the existing professional launch. Recommendations below are proposed; no unanswered field is approved by default. Edward approves material product/commercial scope; named architecture, finance, operating and legal reviewers provide evidence within their responsibilities.
+
+| ID | Decision needed | Recommendation for first pilot | Required evidence / accountable approval | Status |
+| --- | --- | --- | --- | --- |
+| D01 | Pilot sale/rent cohort, property types/geography, maximum inventory and multi-persona eligibility | Model sale and rental separately; choose the first attended cohort. Initially House/Apartment/Townhouse, one property/action per package. Use consumer account capability; either support professional same-user context explicitly or exclude it visibly from pilot | Edward: selected cohort/limits. Architect: canonical type/context mapping and preserved professional custody. Operator: demand/capacity | OPEN |
+| D02 | What the base marketing service actually delivers | One property visibility term plus reviewed presentation/description, approved share pack and a specified organic channel task. Name quantity, format, channel, rights, operator and delivery proof. Do not sell unstaffed distribution or enhanced reach | Edward/marketing operator: final deliverable checklist, available channel, sample approved assets, measured time. Supplier quotes for optional work | OPEN |
+| D03 | Price, term, payment timing, rejected/unpublished orders, cancellation/refund/expiry/renewal | Distinct owner package; do not inherit professional prices/90 days. Prefer visibility term starting on first governed publication. Suitability precheck before invoice; formal review remains separate. No automatic renewal. Define remedies before accepting money | Edward/finance: approved net price, VAT/fees, actual payment process, contract terms, reconciliation/partial/duplicate rules and cancellation treatment. Architect/legal review of lifecycle | OPEN |
+| D04 | Right-to-advertise evidence, disclosures, recipient verification and privacy | Proportionate property-right checks, owner/representative declaration and private evidence. Do not label verified ownership from email/payment. Owner inbox plus verified delivery; decide whether public WhatsApp is optional. Limit precise address/contact exposure and define retention | Edward/operations/legal: evidence checklist, disputed/co-owner/representative policy, consent/terms/retention. Security: scoped access and revocation criteria | OPEN |
+| D05 | Staffed support, moderation, finance and marketing operation | Small attended cohort with named functions, working hours, absence coverage, task queue, complaints/refunds and incidents. A request acknowledgement is not a completion or response guarantee | Edward/operating owner: named responsible people, approved hours/capacity, measurable delivery budget, pause/escalation procedure | OPEN |
+| D06 | Commercial viability and optional supplier responsibility | Per-offer cost model using real supplier quotes and loaded labour, conservative acquisition/refund/renewal assumptions. Separate media pass-through budget from service revenue. Offer supplier purchase only with a real contract/process | Edward/finance/marketing: willingness-to-pay evidence, cost/time sample, contribution target, quote and cancellation/reshoot/remedy terms. No prices approved by worksheet | OPEN |
+| D07 | Regulatory classification and professional participation | Focused South African review of paid property advertising/marketing itself, plus introductions/viewings/negotiation/referral arrangements when proposed. Directory/request assistance only until real authorised delivery exists. Defer screening, leases, deposits and management | Edward commissions qualified review; record actual entity/offer, applicable PPRA/FFC/FICA/trust-money/disclosure/consumer/privacy obligations and limits. No blanket exemption inferred from owner control | OPEN |
+
+## Decision capture format
+
+For each ID record: decision/date; approving person; exact scope/options selected; evidence link; customer-facing promise; implementation consequence; unresolved exclusions; and objective review trigger. Do not substitute “agreed in principle” for an exact package, price or permission decision.
+
+Price worksheet per offer: net service revenue; advertising/pass-through budget; supplier cost; operator/support hours × loaded rate; payment fees; refund/dispute reserve; acquisition cost; gross margin; contribution; renewal/continuation assumption and supporting evidence. Manual payment does not eliminate reconciliation/support cost. Separate sales from rental operational assumptions.
+
+## Separate engineering design approval
+
+After product inputs are resolved, the architect records the minimum canonical representation of owner listing context, commercial principal/package unit, term and recipient custody. Account role, exact schema and route names remain design outputs, not founder worksheet assumptions. Review multi-persona billing uniqueness and enquiry recipient typing before implementation.
+
+Acceptance requires a scoped permission matrix, lifecycle mapping, privacy/marketing operation and test/release plan consistent with D01–D07. Any later canonical schema or data transition must use Database Authority and its own approved workstream. No runtime overrides, migration, commercial activation or deployment follow automatically from accepting documentation.
+
+The professional launch continues against its existing gate register while these owner decisions are made.
