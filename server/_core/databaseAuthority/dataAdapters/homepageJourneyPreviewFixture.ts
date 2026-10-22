@@ -34,7 +34,7 @@ import {
  * replace Search-to-Lead acceptance data or the small PLE authentication
  * fixture, and it never writes to a shared or protected target.
  */
-export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v2' as const;
+export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v3' as const;
 
 const TARGET = Object.freeze({
   host: '127.0.0.1',
@@ -1120,6 +1120,48 @@ async function ensureDeveloperIdentity(connection: AuthoritySqlConnection): Prom
   return organisation;
 }
 
+type HomepagePreviewBillableOwner = 'agent' | 'agency' | 'developer';
+
+const BILLABLE_ACCOUNT_OWNER_COLUMNS: Readonly<Record<HomepagePreviewBillableOwner, string>> =
+  Object.freeze({
+    agent: 'user_id',
+    agency: 'agency_id',
+    developer: 'developer_organisation_id',
+  });
+
+const BILLABLE_ACCOUNT_INSERTS: Readonly<Record<HomepagePreviewBillableOwner, string>> =
+  Object.freeze({
+    agent: "INSERT INTO billable_accounts (account_kind, user_id) VALUES ('agent', ?)",
+    agency: "INSERT INTO billable_accounts (account_kind, agency_id) VALUES ('agency', ?)",
+    developer:
+      "INSERT INTO billable_accounts (account_kind, developer_organisation_id) VALUES ('developer', ?)",
+  });
+
+export async function ensureHomepagePreviewBillableAccount(
+  connection: AuthoritySqlConnection,
+  ownerType: HomepagePreviewBillableOwner,
+  ownerId: number,
+): Promise<number> {
+  const ownerColumn = BILLABLE_ACCOUNT_OWNER_COLUMNS[ownerType];
+  const select = `SELECT id FROM billable_accounts WHERE account_kind = ? AND ${ownerColumn} = ? ORDER BY id`;
+  let rows = await queryRows(connection, select, [ownerType, ownerId]);
+  if (rows.length > 1) {
+    throw new Error(
+      `Homepage journey preview fixture has duplicate ${ownerType} billable accounts.`,
+    );
+  }
+  if (rows.length === 0) {
+    await connection.execute(BILLABLE_ACCOUNT_INSERTS[ownerType], [ownerId]);
+    rows = await queryRows(connection, select, [ownerType, ownerId]);
+  }
+  if (rows.length !== 1) {
+    throw new Error(
+      `Homepage journey preview fixture requires exactly one ${ownerType} billable account.`,
+    );
+  }
+  return asId(rows[0], `${ownerType} billable account`);
+}
+
 async function ensureLaunchAccessSubscription(input: {
   connection: AuthoritySqlConnection;
   ownerType: 'agent' | 'agency' | 'developer';
@@ -1138,21 +1180,11 @@ async function ensureLaunchAccessSubscription(input: {
     );
   }
   const planId = asId(planRows[0], `${input.plan.name} plan`);
-  const ownerColumn =
-    input.ownerType === 'agent'
-      ? 'user_id'
-      : input.ownerType === 'agency'
-        ? 'agency_id'
-        : 'developer_organisation_id';
-  const accountRows = await queryRows(
+  const billableAccountId = await ensureHomepagePreviewBillableAccount(
     input.connection,
-    `SELECT id FROM billable_accounts WHERE account_kind = ? AND ${ownerColumn} = ? ORDER BY id`,
-    [input.ownerType, input.ownerId],
+    input.ownerType,
+    input.ownerId,
   );
-  if (accountRows.length !== 1) {
-    throw new Error(`Homepage journey preview fixture requires exactly one ${input.ownerType} billable account.`);
-  }
-  const billableAccountId = rowValue(accountRows[0], 'id');
   const rows = await queryRows(
     input.connection,
     `SELECT id, plan_id, status, current_period_end, cancel_at_period_end
@@ -1223,7 +1255,8 @@ function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
       label: [location.suburbName, location.cityName, location.provinceName].join(', '),
     },
   ]);
-  if (!coverage) throw new Error('Homepage journey preview fixture requires one canonical agent coverage area.');
+  if (!coverage)
+    throw new Error('Homepage journey preview fixture requires one canonical agent coverage area.');
   return coverage;
 }
 

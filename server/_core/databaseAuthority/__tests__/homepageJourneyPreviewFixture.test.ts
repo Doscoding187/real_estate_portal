@@ -3,11 +3,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import bcrypt from 'bcryptjs';
 import { describe, expect, it } from 'vitest';
+import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { resolveDatabaseAuthority } from '../context';
 import { deriveGitWorktreeIdentity } from '../worktreeIdentity';
 import {
   assertHomepageJourneyPreviewPassword,
   assertHomepageJourneyPreviewTarget,
+  ensureHomepagePreviewBillableAccount,
   hashHomepageJourneyPreviewPassword,
   HOMEPAGE_JOURNEY_PREVIEW_DIGEST,
   HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES,
@@ -49,7 +51,7 @@ describe('homepage journey preview Database Authority fixture', () => {
   });
 
   it('defines a ten-card Buy rail, a separate rental, and local-only login identities', () => {
-    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v2');
+    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v3');
     expect(HOMEPAGE_JOURNEY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).toHaveLength(10);
     expect(new Set(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).size).toBe(10);
@@ -125,5 +127,65 @@ describe('homepage journey preview Database Authority fixture', () => {
     const hash = await hashHomepageJourneyPreviewPassword(password);
     expect(hash).not.toBe(password);
     expect(await bcrypt.compare(password, hash)).toBe(true);
+  });
+
+  it.each([
+    {
+      ownerType: 'agent' as const,
+      ownerId: 996002,
+      insert: "INSERT INTO billable_accounts (account_kind, user_id) VALUES ('agent', ?)",
+    },
+    {
+      ownerType: 'agency' as const,
+      ownerId: 996001,
+      insert: "INSERT INTO billable_accounts (account_kind, agency_id) VALUES ('agency', ?)",
+    },
+    {
+      ownerType: 'developer' as const,
+      ownerId: 996001,
+      insert:
+        "INSERT INTO billable_accounts (account_kind, developer_organisation_id) VALUES ('developer', ?)",
+    },
+  ])(
+    'creates the canonical $ownerType billable account when absent',
+    async ({ ownerType, ownerId, insert }) => {
+      const selectResponses: Array<Array<{ id: number }>> = [[], [{ id: 61 }]];
+      const executed: Array<{ statement: string; values?: readonly unknown[] }> = [];
+      const connection: AuthoritySqlConnection = {
+        execute: async (statement, values) => {
+          if (statement.startsWith('SELECT id FROM billable_accounts')) {
+            return [selectResponses.shift() ?? []];
+          }
+          executed.push({ statement, values });
+          return [{ affectedRows: 1 }];
+        },
+        query: async () => [],
+        end: async () => undefined,
+      };
+
+      await expect(
+        ensureHomepagePreviewBillableAccount(connection, ownerType, ownerId),
+      ).resolves.toBe(61);
+      expect(executed).toEqual([{ statement: insert, values: [ownerId] }]);
+    },
+  );
+
+  it('reuses one existing owner account and rejects duplicate accounts', async () => {
+    const connectionWithRows = (rows: Array<{ id: number }>): AuthoritySqlConnection => ({
+      execute: async () => [rows],
+      query: async () => [],
+      end: async () => undefined,
+    });
+
+    await expect(
+      ensureHomepagePreviewBillableAccount(connectionWithRows([{ id: 72 }]), 'developer', 996001),
+    ).resolves.toBe(72);
+    await expect(
+      ensureHomepagePreviewBillableAccount(
+        connectionWithRows([{ id: 72 }, { id: 73 }]),
+        'developer',
+        996001,
+      ),
+    ).rejects.toThrow('duplicate developer billable accounts');
   });
 });
