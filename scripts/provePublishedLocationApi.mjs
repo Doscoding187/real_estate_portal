@@ -13,7 +13,7 @@ const BASE = `http://127.0.0.1:${PORT}`;
 
 const server = spawn('npx', ['tsx', 'server/_core/start.ts'], {
   cwd: process.cwd(),
-  stdio: 'ignore',
+  stdio: ['ignore', 'inherit', 'inherit'],
   env: {
     ...process.env,
     NODE_ENV: process.env.PLAYWRIGHT_SERVER_NODE_ENV || 'test',
@@ -54,6 +54,7 @@ try {
   const { status, body } = await readSuburb();
   const suburb = body?.result?.data?.json?.suburb;
   console.log(`getSuburbData status ${status}`);
+  console.log(`body: ${JSON.stringify(body).slice(0, 2000)}`);
   console.log(`suburb: ${suburb ? JSON.stringify(suburb) : 'none'}`);
   if (!suburb) {
     console.error('The published location API did not return the published suburb.');
