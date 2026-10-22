@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   distributionProspectCheckFitMatches,
@@ -230,32 +230,76 @@ export async function createProspectCheckFit(input: {
   );
   const qualifiedDevelopmentCount = matches.filter(match => match.qualified).length;
 
-  const id = randomUUID();
   const now = toSqlDateTime(new Date());
   const combinedGrossIncomeMonthly = outputs.combinedGrossIncomeMonthly;
+  const prospectName = input.checkFit.prospectName.trim();
+  const coApplicantName = input.checkFit.coApplicantName?.trim() || null;
+  const grossIncomeMonthly = Math.trunc(input.checkFit.grossIncomeMonthly);
+  const coApplicantGrossIncomeMonthly = input.checkFit.coApplicantGrossIncomeMonthly
+    ? Math.trunc(input.checkFit.coApplicantGrossIncomeMonthly)
+    : null;
 
-  await input.db.transaction(async (tx: any) => {
-    await tx.insert(distributionProspectCheckFits).values({
-      id,
+  const id = await input.db.transaction(async (tx: any) => {
+    // Running the same check fit for the same prospect again is the same
+    // assessment, not a second one. The record that is not yet attached to a
+    // referral is updated in place so the referrer never sees a duplicate.
+    const [existing] = await tx
+      .select({
+        id: distributionProspectCheckFits.id,
+        lockedAt: distributionProspectCheckFits.lockedAt,
+      })
+      .from(distributionProspectCheckFits)
+      .where(
+        and(
+          eq(distributionProspectCheckFits.actorUserId, input.actorUserId),
+          eq(distributionProspectCheckFits.prospectName, prospectName),
+          eq(distributionProspectCheckFits.grossIncomeMonthly, grossIncomeMonthly),
+          coApplicantName === null
+            ? isNull(distributionProspectCheckFits.coApplicantName)
+            : eq(distributionProspectCheckFits.coApplicantName, coApplicantName),
+          coApplicantGrossIncomeMonthly === null
+            ? isNull(distributionProspectCheckFits.coApplicantGrossIncomeMonthly)
+            : eq(
+                distributionProspectCheckFits.coApplicantGrossIncomeMonthly,
+                coApplicantGrossIncomeMonthly,
+              ),
+          isNull(distributionProspectCheckFits.lockedAt),
+        ),
+      )
+      .orderBy(desc(distributionProspectCheckFits.createdAt))
+      .limit(1);
+
+    const checkFitId = existing?.id ? String(existing.id) : randomUUID();
+    const values = {
       actorUserId: input.actorUserId,
-      prospectName: input.checkFit.prospectName.trim(),
-      grossIncomeMonthly: Math.trunc(input.checkFit.grossIncomeMonthly),
-      coApplicantName: input.checkFit.coApplicantName?.trim() || null,
-      coApplicantGrossIncomeMonthly: input.checkFit.coApplicantGrossIncomeMonthly
-        ? Math.trunc(input.checkFit.coApplicantGrossIncomeMonthly)
-        : null,
+      prospectName,
+      grossIncomeMonthly,
+      coApplicantName,
+      coApplicantGrossIncomeMonthly,
       combinedGrossIncomeMonthly,
       policyVersion: assumptions.policyVersion,
       assumptionsJson: assumptions,
       outputsJson: { ...outputs, qualifiedDevelopmentCount },
-      createdAt: now,
       updatedAt: now,
-    });
+    };
+
+    if (existing?.id) {
+      await tx
+        .update(distributionProspectCheckFits)
+        .set(values)
+        .where(eq(distributionProspectCheckFits.id, checkFitId));
+      await tx
+        .delete(distributionProspectCheckFitMatches)
+        .where(eq(distributionProspectCheckFitMatches.checkFitId, checkFitId));
+    } else {
+      await tx.insert(distributionProspectCheckFits).values({ id: checkFitId, ...values });
+    }
+
     if (matches.length) {
       await tx.insert(distributionProspectCheckFitMatches).values(
         matches.map(match => ({
           id: randomUUID(),
-          checkFitId: id,
+          checkFitId,
           programId: match.programId,
           developmentId: match.developmentId,
           developmentName: match.developmentName,
@@ -270,26 +314,22 @@ export async function createProspectCheckFit(input: {
         })),
       );
     }
+
+    return checkFitId;
   });
 
-  return {
-    id,
+  const record = await getProspectCheckFit({
+    db: input.db,
     actorUserId: input.actorUserId,
-    prospectName: input.checkFit.prospectName.trim(),
-    coApplicantName: input.checkFit.coApplicantName?.trim() || null,
-    grossIncomeMonthly: Math.trunc(input.checkFit.grossIncomeMonthly),
-    coApplicantGrossIncomeMonthly: input.checkFit.coApplicantGrossIncomeMonthly
-      ? Math.trunc(input.checkFit.coApplicantGrossIncomeMonthly)
-      : null,
-    combinedGrossIncomeMonthly,
-    policyVersion: assumptions.policyVersion,
-    assumptions,
-    outputs: { ...outputs, qualifiedDevelopmentCount },
-    matches,
-    lockedAt: null,
-    lockedByDealId: null,
-    createdAt: now,
-  };
+    checkFitId: id,
+  });
+  if (!record) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'The check fit could not be recorded.',
+    });
+  }
+  return record;
 }
 
 function toRecord(row: any, matches: ProspectCheckFitMatch[]): ProspectCheckFitRecord {

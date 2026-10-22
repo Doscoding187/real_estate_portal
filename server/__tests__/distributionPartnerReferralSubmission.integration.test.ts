@@ -1026,6 +1026,24 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     expect(reuseError.message).toContain('already attached to a referral');
   }, INTEGRATION_TIMEOUT_MS);
 
+  it('updates the same check fit instead of recording a duplicate for the same prospect', async () => {
+    const scenario = await seedScenario();
+
+    const first = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+    const second = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+
+    expect(second.id).toBe(first.id);
+
+    const listed = await scenario.caller.distribution.partner.listProspectCheckFits({ limit: 20 });
+    expect(listed.map(record => record.id)).toEqual([first.id]);
+  });
+
   it('refuses a check fit that did not qualify for the selected opportunity', async () => {
     await ensureCanonicalPrimeRate();
     const scenario = await seedScenario();

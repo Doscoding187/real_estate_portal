@@ -330,18 +330,18 @@ export default function PartnerProspectCheckFitPage() {
                       return (
                         <article
                           key={match.developmentId}
-                          className="flex w-[78%] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:w-[calc((100%_-_0.75rem)/2.2)]"
+                          className="flex w-[86%] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:w-[calc((100%_-_1.5rem)/3.15)] lg:w-[calc((100%_-_1.5rem)/3.4)]"
                         >
                           <div className="relative">
                             {imageUrl ? (
                               <img
                                 src={imageUrl}
                                 alt={match.developmentName}
-                                className="h-32 w-full object-cover"
+                                className="h-40 w-full object-cover"
                               />
                             ) : (
-                              <div className="flex h-32 w-full items-center justify-center bg-[#eef4fc]">
-                                <Building2 className="h-7 w-7 text-[#9cc0ee]" />
+                              <div className="flex h-40 w-full items-center justify-center bg-[#eef4fc]">
+                                <Building2 className="h-8 w-8 text-[#9cc0ee]" />
                               </div>
                             )}
                             <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-[#cde9d2] bg-[#f5fcf6] px-2 py-0.5 text-[10.5px] font-medium text-[#2f8f4e]">
