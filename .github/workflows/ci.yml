@@ -501,6 +501,14 @@ jobs:
       - name: Build the client
         run: pnpm build:frontend
 
+      # The journey needs the published geography to be present, not just the
+      # schema. This proves the location API answers for a published suburb
+      # before a browser is started, so a missing fixture is a data failure and
+      # not a page failure.
+      - name: Prove the published location API answers
+        run: >
+          node scripts/provePublishedLocationApi.mjs
+
       - name: Provision isolated CI migration identity
         env:
           DATABASE_URL: ''
