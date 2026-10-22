@@ -1,6 +1,9 @@
 import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { discoveryEngagementService } from '../discoveryEngagementService';
+import {
+  DiscoveryEngagementService,
+  discoveryEngagementService,
+} from '../discoveryEngagementService';
 
 const { recordInteractionMock } = vi.hoisted(() => ({
   recordInteractionMock: vi.fn(),
@@ -130,5 +133,43 @@ describe('discoveryEngagementService', () => {
         feedType: 'recommended',
       }),
     );
+  });
+
+  it('does not forward throttled engagement events to the ranking writer', async () => {
+    const rateLimiter = {
+      check: vi.fn().mockReturnValue({
+        allowed: false as const,
+        reason: 'cooldown' as const,
+        retryAfterMs: 1_000,
+      }),
+    };
+    const service = new DiscoveryEngagementService(rateLimiter);
+
+    await expect(
+      service.handle(
+        {
+          itemId: '9',
+          action: 'view',
+        },
+        {
+          req: {
+            headers: {},
+            ip: '10.0.0.5',
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      success: true,
+      forwarded: false,
+      throttled: true,
+      interactionType: 'view',
+    });
+
+    expect(rateLimiter.check).toHaveBeenCalledWith({
+      actorKey: 'guest:10.0.0.5',
+      contentId: 9,
+      interactionType: 'view',
+    });
+    expect(recordInteractionMock).not.toHaveBeenCalled();
   });
 });

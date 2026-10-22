@@ -2,6 +2,12 @@ import { TRPCError } from '@trpc/server';
 import type { DiscoveryEngagementEvent } from '../../../../shared/discovery/contracts';
 import { exploreInteractionService } from '../../../services/exploreInteractionService';
 import type { FeedType, InteractionType } from '../../../../shared/types';
+import {
+  discoveryEngagementRateLimiter,
+  getDiscoveryEngagementActorKey,
+  type DiscoveryEngagementRateLimiter,
+} from './discoveryEngagementRateLimitService';
+import { getPublicLeadClientIp } from '../../../services/publicLeadRateLimitService';
 
 interface DiscoveryEngagementContext {
   user?: {
@@ -10,6 +16,9 @@ interface DiscoveryEngagementContext {
   req?: {
     headers?: Record<string, string | string[] | undefined>;
     ip?: string;
+    socket?: {
+      remoteAddress?: string;
+    };
   };
 }
 
@@ -32,7 +41,8 @@ function toContentId(itemId: string): number {
   if (!Number.isFinite(parsed) || parsed <= 0) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
-      message: 'Discovery engagement itemId must be a positive numeric string in the legacy adapter',
+      message:
+        'Discovery engagement itemId must be a positive numeric string in the legacy adapter',
     });
   }
   return parsed;
@@ -70,33 +80,51 @@ function buildSessionId(context: DiscoveryEngagementContext, userId?: number): s
   if (userId) return `user-${userId}`;
 
   const explicitSessionHeader = context.req?.headers?.['x-session-id'];
-  const forwardedForHeader = context.req?.headers?.['x-forwarded-for'];
   const userAgentHeader = context.req?.headers?.['user-agent'];
 
   const explicitSessionId = Array.isArray(explicitSessionHeader)
     ? explicitSessionHeader[0]
     : explicitSessionHeader;
-  const forwardedFor = Array.isArray(forwardedForHeader) ? forwardedForHeader[0] : forwardedForHeader;
   const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
 
   const headerSession = toSafeSessionPart(explicitSessionId);
   if (headerSession) return `guest-${headerSession}`;
 
-  const ipPart = toSafeSessionPart(context.req?.ip || forwardedFor) ?? 'unknown-ip';
+  const ipPart = toSafeSessionPart(getPublicLeadClientIp({ req: context.req })) ?? 'unknown-ip';
   const uaPart = toSafeSessionPart(userAgent) ?? 'unknown-agent';
   return `guest-${ipPart}-${uaPart}`;
 }
 
 export class DiscoveryEngagementService {
+  constructor(
+    private readonly rateLimiter: DiscoveryEngagementRateLimiter = discoveryEngagementRateLimiter,
+  ) {}
+
   async handle(input: DiscoveryEngagementEvent, context: DiscoveryEngagementContext = {}) {
     const userId = context.user?.id;
     requireAuthForAction(input.action, userId);
 
     const contentId = toContentId(input.itemId);
+    const interactionType = deriveInteractionType(input.action);
+    const rateLimit = this.rateLimiter.check({
+      actorKey: getDiscoveryEngagementActorKey(context),
+      contentId,
+      interactionType,
+    });
+
+    if (!rateLimit.allowed) {
+      return {
+        success: true,
+        action: input.action,
+        forwarded: false,
+        throttled: true,
+        interactionType,
+      };
+    }
+
     const sessionId = buildSessionId(context, userId);
     const userAgentHeader = context.req?.headers?.['user-agent'];
     const userAgent = Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader;
-    const interactionType = deriveInteractionType(input.action);
 
     await exploreInteractionService.recordInteraction({
       contentId,

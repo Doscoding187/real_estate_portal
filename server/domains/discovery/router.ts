@@ -71,6 +71,9 @@ export const discoveryRouter = router({
       req: {
         headers: ctx.req.headers,
         ip: ctx.req.ip,
+        socket: {
+          remoteAddress: ctx.req.socket?.remoteAddress,
+        },
       },
     });
   }),
