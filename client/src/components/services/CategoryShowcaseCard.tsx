@@ -11,14 +11,16 @@ type CategoryShowcaseCardProps = {
   providerCount: number;
   /** True when the count is the visible cohort rather than the whole market. */
   isPartial?: boolean;
+  /** Optional category photograph. Falls back to the icon plate. */
+  image?: string;
 };
 
 /**
  * A category card in the approved Services visual language.
  *
- * The plate carries the category icon rather than a stock photograph. The
- * platform has no licensed category imagery, and an illustrative tradesperson
- * would misrepresent the real providers behind the category.
+ * Photographs are illustrative category imagery, not a photograph of any one
+ * provider. The icon remains as a stable label cue and as the fallback when no
+ * approved image is available.
  */
 export function CategoryShowcaseCard({
   category,
@@ -26,6 +28,7 @@ export function CategoryShowcaseCard({
   href,
   providerCount,
   isPartial = false,
+  image,
 }: CategoryShowcaseCardProps) {
   const Icon = SERVICE_CATEGORY_ICONS[category];
   const hasProviders = providerCount > 0;
@@ -41,18 +44,34 @@ export function CategoryShowcaseCard({
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#E3EBF0] bg-white transition hover:border-[#168363]/40 hover:shadow-[0_18px_40px_-28px_rgba(2,17,30,0.45)]"
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[linear-gradient(140deg,#071829_0%,#0D2237_55%,#116E54_100%)]">
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span
-            className={`flex h-14 w-14 items-center justify-center rounded-full shadow-[0_8px_24px_-10px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${
-              hasProviders ? 'bg-[#EDF8F6]' : 'bg-white/85'
-            }`}
-          >
-            <Icon
-              className={`h-6 w-6 ${hasProviders ? 'text-[#116E54]' : 'text-[#8A99A6]'}`}
+        {image ? (
+          <>
+            <img
+              src={image}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+              loading="lazy"
+            />
+            <span
+              className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,17,30,0.08)_0%,rgba(2,17,30,0.52)_100%)]"
               aria-hidden="true"
             />
+          </>
+        ) : null}
+        {!image ? (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span
+              className={`flex h-14 w-14 items-center justify-center rounded-full shadow-[0_8px_24px_-10px_rgba(0,0,0,0.55)] transition group-hover:scale-105 ${
+                hasProviders ? 'bg-[#EDF8F6]' : 'bg-white/85'
+              }`}
+            >
+              <Icon
+                className={`h-6 w-6 ${hasProviders ? 'text-[#116E54]' : 'text-[#8A99A6]'}`}
+                aria-hidden="true"
+              />
+            </span>
           </span>
-        </span>
+        ) : null}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4">
         <h3 className="text-[15px] font-bold leading-snug text-[#0B1B2A]">{label}</h3>

@@ -117,11 +117,28 @@ ships:
 5. **Transparency.** A published review count must equal the number of
    published reviews.
 
-**Until that standard is approved and implemented, the platform must not
-display invented ratings, fabricated review counts, star averages, or
-"X reviews" text anywhere in the Services surface.** The approved Services
-trust signal remains the single badge: **Platform verified**, backed by
-canonical partner verification state.
+**MVP implementation (2026-10-22).** The evidence standard is now implemented
+against the existing review and lead tables, without a schema change:
+
+- Authorship is the authenticated `reviewerUserId`.
+- Completion is a `service_leads` row for the same provider and reviewer in a
+  terminal `won` or `lost` state.
+- Aggregation is recomputed inside the submission transaction from published
+  reviews and written back to `service_provider_profiles.averageRating` and
+  `reviewCount`; the values are never accepted from the client.
+- Transparency is preserved because only published reviews are counted.
+- A reviewer may submit one review per provider.
+
+**Remaining gaps before broad launch:** moderation, reporting, and an abuse
+path are not yet implemented. Reviews publish immediately after the terminal
+request check. Until those controls exist, the surface must continue to say
+that reviews are limited to customers with a completed or closed request, and
+must not imply that the platform has independently moderated the wording.
+
+**Until the remaining standard is implemented, the platform must not display
+invented ratings, fabricated review counts, or star averages anywhere in the
+Services surface.** The canonical platform badge remains **Platform verified**,
+backed by partner verification state.
 
 ### 3.4 Explore integration
 
@@ -171,8 +188,11 @@ In scope for the current delivery slice.
 | MVP-3 | A provider detail page presenting services, listed coverage, business details, and one prominent enquiry action | Consumer journey 2 |
 | MVP-4 | A mobile-first treatment across every Services consumer surface | |
 | MVP-5 | Enquiry conversion: a clear, low-friction path from a provider to a request | |
-| MVP-6 | The agent referral handoff exposed on an agent surface where it genuinely helps | Server capability already exists |
+| MVP-6 | The agent referral handoff exposed on an agent surface where it genuinely helps, available with or without Launch Access | Server capability already exists |
 | MVP-7 | A documented provider mini-site content and capability specification | Specification, not build |
+| MVP-8 | Verified-request ratings and reviews with recomputed aggregates | Existing review and lead tables; moderation follow-up |
+| MVP-9 | Price-range and accepting-requests filters plus relevance, rating and name sorts | `service_provider_services`, profile metadata, `directorySearch` |
+| MVP-10 | Provider photos and galleries supplied from provider metadata | Existing `partners.logoUrl` and profile metadata |
 
 ### 4.3 Proposed features requiring implementation
 
@@ -183,9 +203,9 @@ Authority workstream.
 | # | Proposal | Dependency |
 | --- | --- | --- |
 | PROP-1 | Platform-hosted provider mini-site as a distinct surface | Provider content model; imagery; own SEO; own navigation |
-| PROP-2 | Public customer reviews and a rating signal | Section 3.3 evidence standard, then schema, moderation, aggregation |
-| PROP-3 | Price-range and availability filtering in the results rail | Server-side filter support in `directorySearch`; no availability field exists today |
-| PROP-4 | Provider galleries and project imagery | Provider media ownership and storage |
+| PROP-2 | Public customer reviews and a rating signal | **MVP shipped** with terminal-request verification and transactionally recomputed aggregates; moderation, reporting and abuse controls remain |
+| PROP-3 | Price-range and availability filtering in the results rail | **MVP shipped** server-side; availability is a provider-declared `accepting`/`waitlist` metadata value, not a calculated capacity |
+| PROP-4 | Provider galleries and project imagery | **MVP shipped** as provider-supplied gallery URLs in profile metadata and `partners.logoUrl`; a moderated media library remains the durable model |
 | PROP-5 | Explore feed entry for published providers | Section 3.4 boundary; Explore ranking is explicitly out of scope |
 | PROP-6 | Multi-branch providers with a site per branch | Schema change; deferred until requirements are evidenced |
 | PROP-7 | Commercial model — any paid tier, placement, or lead fee | Section 3.1; requires research and Edward's approval |
@@ -209,13 +229,15 @@ Authority workstream.
 - No change to the public directory's eligibility conjunction. A provider
   appears because it is verified, active, published, subscribed, and has a
   service and coverage — not because it paid.
-- No change to the deterministic directory ordering rule. Results are ordered
-  by provider name. The consumer surface must not imply relevance ranking,
-  and must not offer a "most relevant" sort.
+- No unlabelled ordering. The directory exposes explicitly named sorts:
+  `relevance`, `rating`, `newest`, and `name`. `relevance` is deterministic and
+  documented: service-count coverage, declared procurement intent, and profile
+  completeness. The surface must never imply a paid or opaque ranking.
 - No invented ratings, review counts, availability, response times, insurance
   status, qualifications, or years in business. A provider's public surface
   may state only what the provider has actually published and what the
-  platform has actually verified.
+  platform has actually verified. Availability is provider-declared metadata,
+  not a booking capacity calculation.
 - No paid placement, plan, or tier in any consumer or provider surface.
 - No change to the V1 contract by implication. If the delivered UI requires a
   V1 behaviour change, that change is raised as an explicit V1 amendment.
@@ -254,8 +276,9 @@ service data.
 
 ### 6.2 What it must not become
 
-- It must not display ratings, review counts, or any trust signal beyond
-  **Platform verified**, until section 3.3 is satisfied.
+- It must not display ratings or review counts unless they are produced by the
+  section 3.3 verified-request review implementation, and must not add any
+  trust signal beyond **Platform verified** and those computed aggregates.
 - It must not display a plan, price, tier badge, or placement advantage. A
   provider site is a presence, not an advert.
 - It must not expose private provider contact fields to a visitor. The enquiry
@@ -298,8 +321,9 @@ built on an assumption.
    remain fully functional against the existing backend.
 2. Every filter offered on the consumer surface is one the backend actually
    supports. Unimplemented filters are absent, not simulated.
-3. Every trust signal shown is backed by canonical state. No ratings, no
-   fabricated counts.
+3. Every trust signal shown is backed by canonical state. Ratings and review
+   counts come only from the verified-request review implementation; there
+   are no fabricated counts.
 4. The agent referral handoff is reachable from an agent surface and is
    recorded with the correct source surface and intent stage.
 5. The provider mini-site specification is recorded, including what backend
@@ -311,3 +335,6 @@ built on an assumption.
 7. Typecheck, lint, and the Services client and server test suites pass with
    no new failures.
 8. The V1 contract is unchanged.
+9. The MVP records its own limits: review moderation and abuse reporting are
+   not yet implemented, availability is provider-declared, and galleries are
+   provider-supplied URLs rather than a moderated media library.

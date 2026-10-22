@@ -35,6 +35,8 @@ vi.mock('@/features/services/useServicesLocation', () => ({
   }),
 }));
 
+vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
+
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
 import ServicesLocalizedCategoryPage from '../ServicesLocalizedCategoryPage';

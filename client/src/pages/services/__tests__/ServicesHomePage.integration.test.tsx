@@ -13,6 +13,10 @@ const mockProviders = [
     ],
     logoUrl: null,
     moderationTier: null,
+    averageRating: 4.8,
+    reviewCount: 12,
+    acceptingRequests: true,
+    createdAt: '2024-03-01T00:00:00.000Z',
   },
   {
     providerId: 2,
@@ -23,6 +27,10 @@ const mockProviders = [
     locations: [{ suburb: 'Sandton', city: 'Johannesburg', province: 'Gauteng', radiusKm: 50 }],
     logoUrl: null,
     moderationTier: null,
+    averageRating: 0,
+    reviewCount: 0,
+    acceptingRequests: true,
+    createdAt: '2025-01-15T00:00:00.000Z',
   },
 ];
 
@@ -49,6 +57,10 @@ vi.mock('wouter', async () => {
 
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
+vi.mock('@/components/EnhancedNavbar', () => ({
+  EnhancedNavbar: () => <nav aria-label="Main platform navigation" />,
+}));
+
 import ServicesHomePage from '../ServicesHomePage';
 
 describe('ServicesHomePage', () => {
@@ -60,10 +72,10 @@ describe('ServicesHomePage', () => {
     render(<ServicesHomePage />);
 
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'Trusted local service providers for your property and home',
+      /trusted local service providers/i,
     );
     expect(screen.getByRole('combobox', { name: /service category/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. Gauteng, Sandton/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. Sandton, Gauteng/i)).toBeInTheDocument();
   });
 
   it('renders real provider records and the platform verification signal', () => {
@@ -71,7 +83,24 @@ describe('ServicesHomePage', () => {
 
     expect(screen.getAllByText('Cape Plumbing Co').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Gauteng Movers').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Platform verified').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/verified/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders the published rating aggregate without inventing proof for a new provider', () => {
+    render(<ServicesHomePage />);
+
+    expect(screen.getAllByText('4.8').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/12 reviews/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/no published reviews yet/i).length).toBeGreaterThan(0);
+  });
+
+  it('partitions ranked services between the rail and the remaining directory', () => {
+    render(<ServicesHomePage />);
+
+    expect(screen.getByRole('heading', { name: /the rest of the directory/i })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /plumbing & maintenance/i })).toHaveLength(1);
+    expect(screen.getAllByRole('link', { name: /inspections & compliance/i })).toHaveLength(1);
+    expect(screen.queryByText('Start with what you need done')).not.toBeInTheDocument();
   });
 
   it('does not show fabricated customer proof or satisfaction guarantees', () => {
@@ -82,13 +111,9 @@ describe('ServicesHomePage', () => {
     expect(screen.queryByText(/Nomsa K\./i)).not.toBeInTheDocument();
   });
 
-  it('does not present ratings, review counts or paid placement', () => {
+  it('does not present paid placement or subscription pricing', () => {
     render(<ServicesHomePage />);
 
-    // A review count always carries a number next to the word.
-    expect(screen.queryByText(/\d+\s*reviews?/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/\brated\b/i)).not.toBeInTheDocument();
     expect(
       screen.queryByText(/sponsored|featured placement|top provider/i),
     ).not.toBeInTheDocument();

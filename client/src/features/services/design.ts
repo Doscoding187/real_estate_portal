@@ -6,10 +6,10 @@
  * from the approved Services visual blueprint (deep ink navy, a single
  * emerald action green, and a pale mint tint surface).
  *
- * Contract note: nothing here may imply a capability the Services V1
- * contract does not support. There is no rating colour, no "premium" tier
- * colour, and no sponsored-placement treatment, because the platform does not
- * offer ratings, paid placement, or ranked placement.
+ * Contract note: nothing here may imply a capability the Services contract
+ * does not support. There is no "premium" tier colour and no
+ * sponsored-placement treatment, because the platform does not sell placement.
+ * Ratings use the single amber value in the components that render them.
  */
 
 export const SERVICES_PALETTE = {

@@ -27,6 +27,8 @@ vi.mock('wouter', async () => {
   };
 });
 
+vi.mock('@/components/EnhancedNavbar', () => ({ EnhancedNavbar: () => null }));
+
 vi.mock('@/lib/seo', () => ({ applySeo: vi.fn() }));
 
 import ServiceProviderProfilePage from '../ServiceProviderProfilePage';
@@ -38,6 +40,10 @@ function makeProfile(overrides: Record<string, unknown> = {}) {
     headline: 'We do clear property work',
     bio: 'A published provider profile',
     logoUrl: null,
+    gallery: [],
+    averageRating: null,
+    reviewCount: 0,
+    acceptingRequests: false,
     isPublished: true,
     publicationStatus: 'published',
     verificationStatus: 'verified' as const,

@@ -5,9 +5,16 @@ import { SERVICE_CATEGORIES, type ServiceCategory } from '@/features/services/ca
 import { ProviderShowcaseRow } from './ProviderShowcaseCard';
 import type { ProviderDirectoryItem } from './ProviderCard';
 
+export type ServicesSort = 'relevance' | 'rating' | 'name';
+export type ServicesAvailability = 'any' | 'accepting';
+
 export type ServicesResultFilters = {
   category: ServiceCategory;
   location: string;
+  minPrice: string;
+  maxPrice: string;
+  availability: ServicesAvailability;
+  sort: ServicesSort;
 };
 
 type ServicesResultsPanelProps = {
@@ -24,23 +31,16 @@ type ServicesResultsPanelProps = {
   onContact: (providerId: number) => void;
   /** The result count line shown under the heading. */
   summary: string;
-  /** The deterministic ordering note. */
-  orderingNote?: string;
 };
 
 /**
  * The Services discovery surface: a refine rail beside the provider results.
  *
- * Every control here maps to a filter the directory actually supports —
- * service category, listed area, and free text. The approved visual blueprint
- * also shows price range and availability filters. The platform has no
- * availability field and no server-side price filter, so presenting those
- * controls would be a control that silently does nothing. They are recorded
- * as proposed capability in the Services V2 contract instead.
- *
- * Results are ordered by provider name. The Services contract forbids
- * relevance ranking, so the surface states the ordering rather than offering a
- * "most relevant" control that the backend cannot honour.
+ * Every control maps to a filter the directory actually supports. Price is
+ * matched against the provider's published service price range, availability is
+ * the provider's declared enquiry state, and ordering is one of the three
+ * server-side sorts (relevance, rating, or name). The surface never presents a
+ * filter the backend cannot honour.
  */
 export function ServicesResultsPanel({
   filters,
@@ -53,10 +53,16 @@ export function ServicesResultsPanel({
   profileHref,
   onContact,
   summary,
-  orderingNote = 'Ordered by provider name',
 }: ServicesResultsPanelProps) {
   const [draft, setDraft] = useState<ServicesResultFilters>(filters);
   const [isRailOpen, setIsRailOpen] = useState(false);
+
+  const orderingNote =
+    filters.sort === 'rating'
+      ? 'Highest rated first'
+      : filters.sort === 'name'
+        ? 'Ordered by provider name'
+        : 'Most relevant first';
 
   // The URL is the single source of truth for the active filters, so the rail
   // re-syncs whenever the route or query string changes.
@@ -77,7 +83,14 @@ export function ServicesResultsPanel({
         <button
           type="button"
           onClick={() => {
-            const cleared = { category: filters.category, location: '' };
+            const cleared: ServicesResultFilters = {
+              category: filters.category,
+              location: '',
+              minPrice: '',
+              maxPrice: '',
+              availability: 'any',
+              sort: 'relevance',
+            };
             setDraft(cleared);
             onReset();
           }}
@@ -118,6 +131,82 @@ export function ServicesResultsPanel({
             className="w-full bg-transparent text-sm text-[#0B1B2A] outline-none placeholder:text-[#A8B4BF]"
           />
         </div>
+      </label>
+
+      <fieldset>
+        <legend className="text-[12px] font-semibold text-[#4B5C6B]">Price range (ZAR)</legend>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <label className="relative block">
+            <span className="sr-only">Minimum price</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#8A99A6]">
+              R
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={100}
+              value={draft.minPrice}
+              onChange={event =>
+                setDraft(current => ({ ...current, minPrice: event.target.value }))
+              }
+              placeholder="Min"
+              className="h-11 w-full rounded-xl border border-[#E3EBF0] bg-white pl-7 pr-3 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
+            />
+          </label>
+          <label className="relative block">
+            <span className="sr-only">Maximum price</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#8A99A6]">
+              R
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={100}
+              value={draft.maxPrice}
+              onChange={event =>
+                setDraft(current => ({ ...current, maxPrice: event.target.value }))
+              }
+              placeholder="Max"
+              className="h-11 w-full rounded-xl border border-[#E3EBF0] bg-white pl-7 pr-3 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
+            />
+          </label>
+        </div>
+      </fieldset>
+
+      <label className="block">
+        <span className="block text-[12px] font-semibold text-[#4B5C6B]">Availability</span>
+        <select
+          aria-label="Availability"
+          value={draft.availability}
+          onChange={event =>
+            setDraft(current => ({
+              ...current,
+              availability: event.target.value as ServicesAvailability,
+            }))
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-[#E3EBF0] bg-white px-3 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
+        >
+          <option value="any">Any availability</option>
+          <option value="accepting">Accepting requests</option>
+        </select>
+      </label>
+
+      <label className="block">
+        <span className="block text-[12px] font-semibold text-[#4B5C6B]">Sort by</span>
+        <select
+          aria-label="Sort results"
+          value={draft.sort}
+          onChange={event =>
+            setDraft(current => ({ ...current, sort: event.target.value as ServicesSort }))
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-[#E3EBF0] bg-white px-3 text-sm text-[#0B1B2A] outline-none transition focus:border-[#168363]"
+        >
+          <option value="relevance">Most relevant</option>
+          <option value="rating">Highest rated</option>
+          <option value="name">Provider name</option>
+        </select>
       </label>
 
       <div>

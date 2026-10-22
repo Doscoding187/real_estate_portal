@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { ArrowRight, BadgeCheck, MapPin } from 'lucide-react';
+import { ArrowRight, BadgeCheck, MapPin, Star } from 'lucide-react';
 import { getInitials } from './ProviderAvatar';
 import { providerBrandPlate } from '@/features/services/design';
 import type { ProviderDirectoryItem } from './ProviderCard';
@@ -70,13 +70,83 @@ export function ProviderBrandPlate({
   );
 }
 
+export function StarRating({ rating, className = '' }: { rating: number; className?: string }) {
+  const filled = Math.round(Number(rating) || 0);
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 ${className}`}
+      role="img"
+      aria-label={`${Number(rating).toFixed(1)} out of 5 stars`}
+    >
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star
+          key={`star-${index}`}
+          className={`h-3.5 w-3.5 ${
+            index < filled ? 'fill-[#F2B53B] text-[#F2B53B]' : 'fill-transparent text-[#CBD8E0]'
+          }`}
+          aria-hidden="true"
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The published rating for a provider.
+ *
+ * Ratings are only rendered when a provider has at least one published,
+ * verified review. The aggregate is recomputed from the published review set by
+ * the Services server; it is never a client-side estimate.
+ */
+export function ProviderRating({
+  averageRating,
+  reviewCount,
+  className = '',
+}: {
+  averageRating?: number | null;
+  reviewCount?: number | null;
+  className?: string;
+}) {
+  const rating = Number(averageRating || 0);
+  const count = Number(reviewCount || 0);
+  if (count <= 0 || rating <= 0) {
+    return (
+      <p className={`text-[11px] font-medium text-[#8A99A6] ${className}`}>
+        No published reviews yet
+      </p>
+    );
+  }
+  return (
+    <div className={`flex items-center gap-1.5 ${className}`}>
+      <StarRating rating={rating} />
+      <span className="text-[11px] font-semibold text-[#0B1B2A]">{rating.toFixed(1)}</span>
+      <span className="text-[11px] text-[#8A99A6]">
+        ({count} review{count === 1 ? '' : 's'})
+      </span>
+    </div>
+  );
+}
+
+function providerPriceRange(provider: ProviderDirectoryItem): string | null {
+  const prices = (provider.services || [])
+    .map(service => service.minPrice)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+  if (prices.length === 0) return null;
+  return `Quotes from R${Math.round(Math.min(...prices)).toLocaleString('en-ZA')}`;
+}
+
+function providerSince(createdAt?: string | null): string | null {
+  if (!createdAt) return null;
+  const year = new Date(createdAt).getUTCFullYear();
+  return Number.isFinite(year) ? `Listed ${year}` : null;
+}
+
 /**
  * A provider card in the approved Services visual language.
  *
- * Only canonical, published data is shown. There is no rating, no review
- * count, and no availability claim, because the Services contract does not
- * provide them and the platform must not imply a trust signal it cannot
- * evidence.
+ * Every signal shown is canonical: the published services and coverage, the
+ * platform verification state, the recomputed rating aggregate, and the
+ * provider's own photo when one has been supplied.
  */
 export function ProviderShowcaseCard({
   provider,
@@ -91,6 +161,8 @@ export function ProviderShowcaseCard({
     [location?.suburb, location?.city, location?.province].filter(Boolean).join(', ') ||
     'Coverage on request';
   const isVerified = provider.verificationStatus === 'verified';
+  const priceRange = providerPriceRange(provider);
+  const since = providerSince(provider.createdAt);
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#E3EBF0] bg-white transition hover:border-[#168363]/40 hover:shadow-[0_18px_40px_-28px_rgba(2,17,30,0.45)]">
@@ -99,7 +171,7 @@ export function ProviderShowcaseCard({
         logoUrl={provider.logoUrl}
         className="aspect-[16/10] w-full"
       />
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-2.5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <h3 className="text-[15px] font-bold leading-snug text-[#0B1B2A]">
             {provider.companyName}
@@ -107,9 +179,21 @@ export function ProviderShowcaseCard({
           {isVerified && (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#E4F2EC] px-2 py-0.5 text-[10px] font-semibold text-[#116E54]">
               <BadgeCheck className="h-3 w-3" aria-hidden="true" />
-              Platform verified
+              Verified
             </span>
           )}
+        </div>
+
+        <ProviderRating averageRating={provider.averageRating} reviewCount={provider.reviewCount} />
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] font-medium text-[#8A99A6]">
+          {since && <span>{since}</span>}
+          {priceRange && <span>{priceRange}</span>}
+          {provider.acceptingRequests === true ? (
+            <span className="text-[#168363]">Accepting requests</span>
+          ) : provider.acceptingRequests === false ? (
+            <span className="text-[#B45309]">Waitlist</span>
+          ) : null}
         </div>
 
         {provider.headline && (
@@ -195,6 +279,12 @@ export function ProviderShowcaseRow({
             </span>
           )}
         </div>
+
+        <ProviderRating
+          averageRating={provider.averageRating}
+          reviewCount={provider.reviewCount}
+          className="mt-1"
+        />
 
         {headline && (
           <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-[#4B5C6B]">{headline}</p>
