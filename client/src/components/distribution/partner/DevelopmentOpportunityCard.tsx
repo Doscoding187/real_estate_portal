@@ -62,7 +62,7 @@ export default function DevelopmentOpportunityCard({
     marketMode === 'sale' ? getMinimumBrochureQualifyingIncome(item) : null;
   const selectable = variant === 'select';
   const unitTypes = Array.isArray(item.unitTypes) ? item.unitTypes : [];
-  const publishedUnitTypes = unitTypes.filter((unitType: any) => {
+  const publishedUnitTypes = unitTypes.filter(unitType => {
     const unitMode = unitType?.modes?.[marketMode];
     return unitMode ? hasPublishedMode(unitMode) : true;
   });
@@ -83,7 +83,9 @@ export default function DevelopmentOpportunityCard({
   const yardSizeLabel = formatOpportunityMeasureRange(yardSizeRange);
   const priceLabel = modeIsPublished
     ? formatCompactOpportunityModePrice(mode, currencyCode, marketMode === 'rent')
-    : 'Price on request';
+    : selectable
+      ? 'Price on request'
+      : 'Current price not yet published';
 
   return (
     <article
