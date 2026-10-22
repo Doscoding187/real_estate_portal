@@ -91,6 +91,23 @@ export default function DeveloperPlans() {
       toast.error(error.message || 'Launch Access invoice could not be issued');
     },
   });
+  const onlineCheckout = trpc.billing.createOnlineLaunchAccessCheckout.useMutation({
+    onSuccess: result => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = result.checkout.action;
+      Object.entries(result.checkout.fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    },
+    onError: error => toast.error(error.message || 'Online checkout could not be started'),
+  });
 
   const products = catalog?.products || [];
   const currentPlanId = subscription?.commercial?.entitled
@@ -116,6 +133,15 @@ export default function DeveloperPlans() {
     const action = getCommercialActionPresentation(selectedProduct);
     if (action.href) setLocation(action.href);
     setSelectedProduct(null);
+  };
+
+  const payOnline = () => {
+    if (!selectedProduct || selectedProduct.term.kind !== 'paid_launch_access') return;
+    onlineCheckout.mutate({
+      planId: selectedProduct.source.planId,
+      successUrl: `${window.location.origin}/developer/subscription?payment=complete`,
+      cancelUrl: `${window.location.origin}/developer/plans?payment=cancelled`,
+    });
   };
 
   return (
@@ -342,8 +368,18 @@ export default function DeveloperPlans() {
             <Button variant="outline" onClick={() => setSelectedProduct(null)}>
               Cancel
             </Button>
-            <Button onClick={continueWithProduct} disabled={requestLaunchInvoice.isPending}>
-              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Continue'}
+            <Button
+              variant="outline"
+              onClick={continueWithProduct}
+              disabled={requestLaunchInvoice.isPending || onlineCheckout.isPending}
+            >
+              {requestLaunchInvoice.isPending ? 'Requesting invoice…' : 'Use manual EFT'}
+            </Button>
+            <Button
+              onClick={payOnline}
+              disabled={requestLaunchInvoice.isPending || onlineCheckout.isPending}
+            >
+              {onlineCheckout.isPending ? 'Opening checkout…' : 'Pay online'}
             </Button>
           </DialogFooter>
         </DialogContent>

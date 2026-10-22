@@ -45,6 +45,11 @@ export const ENV = {
   resendApiKey: process.env.RESEND_API_KEY ?? '',
   resendFromEmail:
     process.env.RESEND_FROM_EMAIL ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
+  payFastMerchantId: process.env.PAYFAST_MERCHANT_ID ?? '',
+  payFastMerchantKey: process.env.PAYFAST_MERCHANT_KEY ?? '',
+  payFastPassphrase: process.env.PAYFAST_PASSPHRASE ?? '',
+  payFastSandbox: String(process.env.PAYFAST_SANDBOX ?? 'true').toLowerCase() === 'true',
+  payFastNotifyUrl: process.env.PAYFAST_NOTIFY_URL ?? '',
   distributionNetworkEnabled:
     String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? 'true').toLowerCase() === 'true',
 };

@@ -18,6 +18,7 @@ import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeS
 import sitemapRouter from '../routes/sitemap';
 import developmentSupersessionRedirectRouter from '../routes/developmentSupersessionRedirect';
 import agentOnboardingRouter from '../routes/agentOnboarding';
+import paymentsRouter from '../routes/payments';
 import { ENV } from './env';
 import { registerLocalMediaRoutes } from './localMediaRoutes';
 import { createAuthRateLimitStore } from './authRateLimitStore';
@@ -172,6 +173,7 @@ async function startServer() {
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
   registerLocalMediaRoutes(app);
+  app.use('/api/payments', paymentsRouter);
 
   // Force WWW redirect for the main production domain.
   app.use((req, res, next) => {

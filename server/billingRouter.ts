@@ -37,6 +37,7 @@ import {
   type CommercialAudience,
 } from './services/commercialCatalogService';
 import { requireUser } from './_core/requireUser';
+import { createPayFastCheckout, isPayFastConfigured } from './services/payfastService';
 
 const billingCycleSchema = z.enum(['monthly', 'annual']);
 const commercialAudienceSchema = z.enum(COMMERCIAL_AUDIENCES);
@@ -53,6 +54,12 @@ const startManualCheckoutSchema = z.object({
   planId: z.number().int().positive(),
   billingCycle: billingCycleSchema.default('monthly'),
   couponCode: z.string().optional(),
+});
+
+const onlineLaunchCheckoutSchema = z.object({
+  planId: z.number().int().positive().optional(),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
 });
 
 const submitPaymentProofSchema = z.object({
@@ -151,6 +158,62 @@ export const billingRouter = {
   requestDeveloperLaunchAccessInvoice: protectedProcedure.mutation(async ({ ctx }) => {
     return requestDeveloperLaunchAccessInvoice({ user: requireUser(ctx) });
   }),
+
+  createOnlineLaunchAccessCheckout: protectedProcedure
+    .input(onlineLaunchCheckoutSchema.optional())
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      const allowedOrigin = new URL(process.env.APP_URL || 'http://localhost:3009').origin;
+      const safeUrl = (candidate: string | undefined, fallback: string) => {
+        if (!candidate) return fallback;
+        const parsed = new URL(candidate);
+        if (parsed.origin !== allowedOrigin) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Checkout URL origin is not allowed.',
+          });
+        }
+        return parsed.toString();
+      };
+      if (!isPayFastConfigured()) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Online payments are not configured yet.',
+        });
+      }
+      if (!user.email) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'A billing email is required.',
+        });
+      }
+      const result = await requestPaidLaunchAccessInvoice({
+        user,
+        planId: input?.planId,
+        requireEftBankDetails: false,
+      });
+      const defaultPath =
+        user.role === 'developer'
+          ? `/developer/subscription?invoiceId=${result.invoice.id}`
+          : user.role === 'agent'
+            ? `/agent/dashboard?payment=complete&invoiceId=${result.invoice.id}`
+            : `/agency/billing?invoiceId=${result.invoice.id}`;
+      const returnUrl = safeUrl(input?.successUrl, `${allowedOrigin}${defaultPath}`);
+      const cancelUrl = safeUrl(input?.cancelUrl, `${allowedOrigin}${defaultPath}&cancelled=true`);
+      return {
+        invoice: result.invoice,
+        checkout: createPayFastCheckout({
+          invoiceId: result.invoice.id,
+          paymentReference: result.invoice.paymentReference,
+          amountMinor: Number(result.invoice.amountDue),
+          currency: result.invoice.currency,
+          itemName: result.plan.displayName,
+          customer: { email: user.email, name: user.name },
+          returnUrl,
+          cancelUrl,
+        }),
+      };
+    }),
 
   submitDeveloperPaymentProof: protectedProcedure
     .input(submitPaymentProofSchema)

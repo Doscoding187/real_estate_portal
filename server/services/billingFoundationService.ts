@@ -896,6 +896,7 @@ async function getLaunchPlanForOwner(
 export async function requestPaidLaunchAccessInvoice(input: {
   user: BillingUser;
   planId?: number;
+  requireEftBankDetails?: boolean;
 }) {
   const db = await getDb();
   if (!db)
@@ -903,7 +904,7 @@ export async function requestPaidLaunchAccessInvoice(input: {
 
   const owner = await resolveLaunchBillingOwner(db, input.user);
   const bankDetails = getManualEftBankDetails();
-  if (!bankDetails.canIssueInvoices) {
+  if (input.requireEftBankDetails !== false && !bankDetails.canIssueInvoices) {
     throw new TRPCError({
       code: 'PRECONDITION_FAILED',
       message: bankDetails.configurationMessage || 'Manual EFT bank details are not configured.',
@@ -1138,6 +1139,203 @@ export async function requestPaidLaunchAccessInvoice(input: {
       paymentReference,
       reused: false,
     };
+  });
+}
+
+/**
+ * Settles a provider-confirmed once-off payment into the canonical billing
+ * authority. The provider adapter must already have verified authenticity,
+ * amount, currency and provider status before calling this function.
+ */
+export async function settleVerifiedOnlinePayment(input: {
+  provider: 'payfast';
+  providerPaymentId: string;
+  paymentReference: string;
+  amountMinor: number;
+  currency: string;
+  metadata?: Record<string, unknown> | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  if (!input.providerPaymentId || !input.paymentReference) {
+    throw new Error('Provider payment and invoice references are required.');
+  }
+
+  return db.transaction(async tx => {
+    await tx.execute(sql`
+      SELECT id
+      FROM billing_invoices
+      WHERE payment_reference = ${input.paymentReference}
+      FOR UPDATE
+    `);
+    const [invoice] = await tx
+      .select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.paymentReference, input.paymentReference))
+      .limit(1);
+    if (!invoice) throw new Error('Invoice not found for provider payment.');
+
+    const idempotencyKey = `${input.provider}:${input.providerPaymentId}`;
+    const [existingPayment] = await tx
+      .select()
+      .from(billingPayments)
+      .where(eq(billingPayments.idempotencyKey, idempotencyKey))
+      .limit(1);
+    if (existingPayment) return { success: true, idempotent: true, paymentId: existingPayment.id };
+
+    if (invoice.status === 'paid') {
+      throw new Error('Invoice is already paid without a matching provider payment record.');
+    }
+    if (!['issued', 'submitted', 'partially_paid', 'overdue'].includes(invoice.status)) {
+      throw new Error(`Invoice cannot be settled while ${invoice.status}.`);
+    }
+    if (
+      input.currency !== invoice.currency ||
+      Math.round(input.amountMinor) !== invoice.amountDue
+    ) {
+      throw new Error('Provider payment does not match the invoice amount or currency.');
+    }
+
+    const [paymentInsert] = await tx
+      .insert(billingPayments)
+      .values({
+        invoiceId: invoice.id,
+        subscriptionId: invoice.subscriptionId || null,
+        ownerType: invoice.ownerType,
+        ownerId: invoice.ownerId,
+        paymentMethod: 'other',
+        state: 'verified',
+        amount: Math.round(input.amountMinor),
+        currency: input.currency,
+        paymentReference: invoice.paymentReference,
+        paymentDate: nowDb(),
+        reviewedAt: nowDb(),
+        reviewNote: `${input.provider} server-verified payment`,
+        idempotencyKey,
+        metadata: {
+          provider: input.provider,
+          provider_payment_id: input.providerPaymentId,
+          verification: 'server_side_provider_validation',
+          ...(input.metadata || {}),
+        },
+      })
+      .$returningId();
+    const paymentId = Number(paymentInsert.id);
+
+    await tx
+      .update(billingInvoices)
+      .set({
+        status: 'paid',
+        amountPaid: invoice.amountDue,
+        paidAt: nowDb(),
+        metadata: {
+          ...parseJsonRecord(invoice.metadata),
+          payment_provider: input.provider,
+          provider_payment_id: input.providerPaymentId,
+          payment_verified_at: nowDb(),
+        },
+      })
+      .where(eq(billingInvoices.id, invoice.id));
+
+    await activateSubscriptionForPaidInvoice(tx, {
+      invoice: { ...invoice, status: 'paid', amountPaid: invoice.amountDue },
+      actorUserId: invoice.createdBy || undefined,
+      paymentId,
+    });
+
+    await logBillingEvent(tx, {
+      ownerType: invoice.ownerType,
+      ownerId: invoice.ownerId,
+      subscriptionId: invoice.subscriptionId,
+      invoiceId: invoice.id,
+      paymentId,
+      actorUserId: null,
+      eventType: 'online_payment_verified_subscription_activated',
+      message: `${input.provider} verified payment settled for ${invoice.invoiceNumber}.`,
+      afterData: {
+        provider: input.provider,
+        providerPaymentId: input.providerPaymentId,
+        amountMinor: input.amountMinor,
+        currency: input.currency,
+      },
+    });
+
+    return { success: true, idempotent: false, paymentId };
+  });
+}
+
+export async function recordFailedOnlinePayment(input: {
+  provider: 'payfast';
+  providerPaymentId: string;
+  paymentReference: string;
+  amountMinor: number;
+  currency: string;
+  status: string;
+  metadata?: Record<string, unknown> | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return db.transaction(async tx => {
+    await tx.execute(sql`
+      SELECT id
+      FROM billing_invoices
+      WHERE payment_reference = ${input.paymentReference}
+      FOR UPDATE
+    `);
+    const [invoice] = await tx
+      .select()
+      .from(billingInvoices)
+      .where(eq(billingInvoices.paymentReference, input.paymentReference))
+      .limit(1);
+    if (!invoice) throw new Error('Invoice not found for provider payment.');
+
+    const idempotencyKey = `${input.provider}:${input.providerPaymentId}`;
+    const [existingPayment] = await tx
+      .select({ id: billingPayments.id })
+      .from(billingPayments)
+      .where(eq(billingPayments.idempotencyKey, idempotencyKey))
+      .limit(1);
+    if (existingPayment) return { success: true, idempotent: true, paymentId: existingPayment.id };
+
+    const [paymentInsert] = await tx
+      .insert(billingPayments)
+      .values({
+        invoiceId: invoice.id,
+        subscriptionId: invoice.subscriptionId || null,
+        ownerType: invoice.ownerType,
+        ownerId: invoice.ownerId,
+        paymentMethod: 'other',
+        state: 'rejected',
+        amount: Math.max(0, Math.round(input.amountMinor)),
+        currency: input.currency || invoice.currency,
+        paymentReference: invoice.paymentReference,
+        paymentDate: nowDb(),
+        reviewedAt: nowDb(),
+        rejectionReason: `PayFast payment status: ${input.status}`,
+        reviewNote: 'Provider notification was authenticated but did not complete.',
+        idempotencyKey,
+        metadata: {
+          provider: input.provider,
+          provider_payment_id: input.providerPaymentId,
+          verification: 'server_side_provider_validation',
+          ...(input.metadata || {}),
+        },
+      })
+      .$returningId();
+    const paymentId = Number(paymentInsert.id);
+
+    await logBillingEvent(tx, {
+      ownerType: invoice.ownerType,
+      ownerId: invoice.ownerId,
+      subscriptionId: invoice.subscriptionId,
+      invoiceId: invoice.id,
+      paymentId,
+      eventType: 'online_payment_not_completed',
+      message: `PayFast reported ${input.status} for ${invoice.invoiceNumber}.`,
+      afterData: { provider: input.provider, status: input.status },
+    });
+
+    return { success: true, idempotent: false, paymentId };
   });
 }
 
@@ -2093,7 +2291,7 @@ async function activateSubscriptionForPaidInvoice(
   tx: DbOrTx,
   input: {
     invoice: InvoiceRow;
-    actorUserId: number;
+    actorUserId?: number;
     paymentId: number;
   },
 ) {
@@ -2170,7 +2368,7 @@ async function activateSubscriptionForPaidInvoice(
         updatedBy: input.actorUserId,
         metadata: {
           ...metadata,
-          billing_provider: 'manual_eft',
+          billing_provider: String(metadata.billing_provider || 'manual_eft'),
           activated_from_invoice_id: input.invoice.id,
           activated_at: toDbTimestamp(activatedAt),
           activation_period_policy: activationPeriod.reason,
@@ -2596,9 +2794,7 @@ export async function reviewManualPayment(input: {
       await notifyAgentOwner(tx, {
         ownerId: invoice.ownerId,
         type: activationOccurred ? 'payment_approved' : 'partial_payment',
-        title: activationOccurred
-          ? 'Launch Access activated'
-          : 'Partial payment recorded',
+        title: activationOccurred ? 'Launch Access activated' : 'Partial payment recorded',
         content: activationOccurred
           ? `Payment for ${invoice.invoiceNumber} has been verified. Your 90-day Launch Access term is active.`
           : `A partial payment was recorded for ${invoice.invoiceNumber}.`,

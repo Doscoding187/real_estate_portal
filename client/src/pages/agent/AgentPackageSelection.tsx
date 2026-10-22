@@ -349,6 +349,23 @@ export default function AgentPackageSelection() {
     refetchOnMount: true,
   });
   const submitProof = trpc.billing.submitLaunchAccessPaymentProof.useMutation();
+  const onlineCheckout = trpc.billing.createOnlineLaunchAccessCheckout.useMutation({
+    onSuccess: result => {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = result.checkout.action;
+      Object.entries(result.checkout.fields).forEach(([name, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    },
+    onError: error => toast.error(error.message || 'Online checkout could not be started'),
+  });
   const [, setStatus] = useState<AgentOnboardingStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [invoiceResponse, setInvoiceResponse] = useState<AgentInvoiceResponse | null>(null);
@@ -549,6 +566,18 @@ export default function AgentPackageSelection() {
     }
   };
 
+  const handleOnlineCheckout = () => {
+    if (!launchProduct) {
+      toast.error('The Agent Launch Access product is not available.');
+      return;
+    }
+    onlineCheckout.mutate({
+      planId: launchProduct.source.planId,
+      successUrl: `${window.location.origin}/agent/dashboard?payment=complete`,
+      cancelUrl: `${window.location.origin}/agent/select-package?payment=cancelled`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#f7f9fc] text-slate-950">
       <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-[#f7f9fc]/95 backdrop-blur-xl">
@@ -623,7 +652,7 @@ export default function AgentPackageSelection() {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Button
                   className="h-12 flex-1 rounded-2xl"
-                  disabled={isRequestingInvoice}
+                  disabled={isRequestingInvoice || onlineCheckout.isPending}
                   onClick={() => void handleRequestInvoice()}
                 >
                   {isRequestingInvoice
@@ -632,6 +661,14 @@ export default function AgentPackageSelection() {
                       ? 'Refresh invoice'
                       : action.label}{' '}
                   <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </Button>
+                <Button
+                  className="h-12 flex-1 rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
+                  disabled={onlineCheckout.isPending || isRequestingInvoice}
+                  onClick={handleOnlineCheckout}
+                >
+                  {onlineCheckout.isPending ? 'Opening checkout…' : 'Pay online'}
+                  <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Button>
                 <Button
                   variant="outline"

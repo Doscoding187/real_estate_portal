@@ -185,6 +185,14 @@ export function createStateChangingOriginGuard(policy: BrowserSecurityPolicy) {
       return;
     }
 
+    // Provider server notifications do not carry a browser Origin header.
+    // Authenticity is enforced by the PayFast signature and server validation
+    // inside the payment route.
+    if (req.path === '/api/payments/payfast/notify') {
+      next();
+      return;
+    }
+
     const origin = req.get('origin');
     if (isAllowedStateChangingOrigin(policy, origin)) {
       next();
