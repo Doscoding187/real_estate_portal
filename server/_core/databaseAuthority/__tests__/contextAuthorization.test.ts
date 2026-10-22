@@ -299,6 +299,50 @@ describe('immutable resolved database context and operation authorization', () =
     });
   });
 
+  it('registers only the exact Azure MySQL staging target as protected', () => {
+    const identity = fixtureIdentity();
+    const azureTarget =
+      'mysql://staging-user:private@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database';
+    const authority = resolveDatabaseAuthority({
+      operation: 'release-plan',
+      cwd: identity.worktreePath,
+      gitIdentity: identity,
+      explicitDatabaseUrl: azureTarget,
+      credentialClass: 'read-only',
+      processEnv: { NODE_ENV: 'staging', APP_ENV: 'staging' },
+    });
+
+    expect(authority.context.targetClass).toBe('staging');
+    expect(authority.context.targetFingerprint).toBe(
+      'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database',
+    );
+    expect(authority.context.targetFingerprintHash).toBe(
+      'b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced',
+    );
+    expect(() => authorizeDatabaseOperation(authority, { root: process.cwd() })).toThrow(
+      'protected target requires an exact operation and fingerprint approval',
+    );
+
+    for (const unregisteredTarget of [
+      'mysql://staging-user:private@other.mysql.database.azure.com:3306/propertylistify_database',
+      'mysql://staging-user:private@propertylistify-mysql.mysql.database.azure.com:3307/propertylistify_database',
+      'mysql://staging-user:private@propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_staging',
+    ]) {
+      const remote = resolveDatabaseAuthority({
+        operation: 'release-plan',
+        cwd: identity.worktreePath,
+        gitIdentity: identity,
+        explicitDatabaseUrl: unregisteredTarget,
+        credentialClass: 'read-only',
+        processEnv: { NODE_ENV: 'staging', APP_ENV: 'staging' },
+      });
+      expect(remote.context.targetClass).toBe('shared-remote');
+      expect(() => authorizeDatabaseOperation(remote, { root: process.cwd() })).toThrow(
+        'fails closed',
+      );
+    }
+  });
+
   it('prevents a feature worktree from mutating listify_local', () => {
     const identity = fixtureIdentity();
     const authority = resolveDatabaseAuthority({

@@ -18,6 +18,16 @@ const LOCAL_LOOPBACK_PORTS = new Set(['3307']);
 // CI owns its isolated test service separately; the local development service
 // above remains pinned to 127.0.0.1:3307.
 const TEST_LOOPBACK_PORTS = new Set(['3306', '3307']);
+type ProtectedRemoteTargetClass = Extract<DatabaseTargetClass, 'staging' | 'production'>;
+// Protected remote targets are registered by their normalized protocol, host,
+// port, and database identity. Do not replace these entries with hostname
+// patterns or provider-wide rules: an unregistered remote target must remain
+// shared-remote and fail closed under the operation policy.
+const REGISTERED_PROTECTED_REMOTE_TARGETS: Readonly<Record<string, ProtectedRemoteTargetClass>> =
+  Object.freeze({
+    'mysql://propertylistify-mysql.mysql.database.azure.com:3306/propertylistify_database':
+      'staging',
+  });
 const CREDENTIAL_CLASSES = new Set<DatabaseCredentialClass>([
   'runtime',
   'read-only',
@@ -250,7 +260,10 @@ export function resolveDatabaseAuthority(input: {
       targetClass = 'disposable-test';
     }
   } else if (!resolvedLocal) {
-    if (resolvedDatabaseName === 'listify_property_sa') {
+    const registeredTargetClass = REGISTERED_PROTECTED_REMOTE_TARGETS[resolvedTargetFingerprint];
+    if (registeredTargetClass) {
+      targetClass = registeredTargetClass;
+    } else if (resolvedDatabaseName === 'listify_property_sa') {
       targetClass = 'production';
     } else if (resolvedDatabaseName === 'listify_staging') {
       targetClass = 'staging';
