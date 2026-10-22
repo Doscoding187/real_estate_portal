@@ -1,0 +1,76 @@
+B03 governed disposable database rerun (sanitized partial evidence)
+Date: 2026-09-25
+Worktree: /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+Target: listify_wt_b03_payment_activation_contain_eadd9b18ffc9
+Target fingerprint: 366cd1627b12901f6989118c07857d1a470bbd662dc475ad01984dc62b0e37a2
+Manifest digest: 93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc
+Expected migration head: 0094_content_topics_primary_key.sql
+
+The governed local-owner/socket procedure succeeded through target creation.
+The exact target was disposable and worktree-owned. No credential-bearing URL,
+password, or environment contents are recorded here.
+
+Command results, in order:
+
+1. pnpm db:authority:status — passed before creation; exact task worktree and
+   fingerprint resolved. Service was initially stopped and target ownership
+   had not yet been evaluated.
+2. pnpm db:authority:manifest — passed; manifest digest and expected head
+   recorded above.
+3. pnpm db:authority:context — passed; exact worktree ownership matched and
+   credential class was local-owner.
+4. pnpm db:authority:service:start — passed.
+5. pnpm db:authority:service:wait — passed.
+6. pnpm db:authority:service:status — passed; service available at the
+   authority-owned local service fingerprint
+   2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2.
+7. pnpm db:worktree:create — passed; changed=true, target fingerprint matched,
+   ownership key eadd9b18ffc98d1417f931d6.
+8. pnpm db:migrate:plan — passed on a fresh target; acceptedOldHead=null,
+   pending=[], expectedNewHead=0094_content_topics_primary_key.sql, plan ID
+   cbe492e16aac2075b61ceb85, plan digest
+   cbe492e16aac2075b61ceb85cd42e88c2908fbe241adbdc91e9d6c974f4fddf9.
+9. pnpm db:migrate:apply -- --accepted-old-head=none
+   --expected-new-head=0094_content_topics_primary_key.sql — launched and
+   completed. Its console transcript was not retained by the command wrapper.
+   The following read-only migration plan verified the resulting head with no
+   pending migrations: plan ID b060041c43b245e5212428a3, digest
+   b060041c43b245e5212428a3ad0f87fd3d12d21d1b4e4113932797daf10fcc17,
+   acceptedOldHead=0094_content_topics_primary_key.sql, pending=[].
+10. pnpm db:schema:congruency — passed; congruent=true, desired and actual
+    digests both a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9.
+11. pnpm db:reference:prepare — passed; canonical-geography-v2 digest
+    6c3fb68b54fd0db64ea7a67a4b30383a3d6c610babf3e1de1aa531f54827093c;
+    expected and verified counts were 9 provinces, 340 cities, 1089 suburbs.
+12. pnpm db:foundation:prepare — passed; canonical-launch-foundation-v1 digest
+    aaac24d45d655d2702348aa948ff53742358d9c6af95f8dfcbf7da3ab758a780;
+    all three approved products were present with their canonical owner,
+    segment, fixed 90-day term, and configured cents pricing.
+13. pnpm db:scenario:prepare — passed; search-to-lead-scenario-v5 digest
+    a7b62da33e3f416e31728b6306c9b38d46f9b604db9d19b091c98f33ba16165b.
+14. pnpm db:reference:verify — passed with the expected counts and migration
+    head.
+15. pnpm db:foundation:verify — passed; all three approved products and
+    canonical foundation digest verified.
+16. pnpm db:scenario:verify — stopped with exit code 1. Sanitized output:
+
+    > real_estate_portal@1.0.0 db:scenario:verify
+    > tsx scripts/databaseAuthorityCli.ts scenario:verify
+
+    Governed contained scenario fixtures require the test runtime.
+    ELIFECYCLE Command failed with exit code 1.
+
+The failure is explained by the current package script: db:scenario:verify
+invokes plain tsx without setting NODE_ENV=test and APP_ENV=test, while
+server/_core/databaseAuthority/governedContainedScenarioFixture.ts requires
+the resolved runtime mode to be test before issuing its verification
+capability. This is a runner/procedure mismatch, not evidence that
+lifecycle-admin access is unavailable. The exact governed db:worktree:create
+command succeeded using the approved local-owner/socket path.
+
+Per the stop-at-first-unexpected-result instruction, no readiness command,
+authority integration test, retry with altered environment, or cleanup command
+was run after step 16. The service was last observed available before the
+failed verifier. The disposable target remains for a governed continuation;
+cleanup must follow a freshly resolved target and acknowledgement procedure.
+

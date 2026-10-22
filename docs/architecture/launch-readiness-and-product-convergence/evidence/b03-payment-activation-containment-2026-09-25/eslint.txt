@@ -1,0 +1,47 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/server/__tests__/commercial-launch-access-s4.integration.test.ts
+   87:27  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  105:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  136:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  979:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/server/services/__tests__/commercialActivationPolicy.test.ts
+  263:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  438:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/server/services/billingFoundationService.ts
+   110:18  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   168:58  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   170:90  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   569:33  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   570:32  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   571:31  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   598:27  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   621:26  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   638:27  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   657:26  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   675:27  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   709:26  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+   755:30  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+  3041:28  warning  Replace `⏎······.select()⏎······.from(plans)⏎······.where(eq(plans.id,·subscription.planId))⏎······` with `.select().from(plans).where(eq(plans.id,·subscription.planId))`  prettier/prettier
+  3133:28  warning  Replace `⏎······.select()⏎······.from(plans)⏎······.where(eq(plans.id,·subscription.planId))⏎······` with `.select().from(plans).where(eq(plans.id,·subscription.planId))`  prettier/prettier
+  3197:28  warning  Replace `⏎······.select()⏎······.from(plans)⏎······.where(eq(plans.id,·subscription.planId))⏎······` with `.select().from(plans).where(eq(plans.id,·subscription.planId))`  prettier/prettier
+  3291:40  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+  3292:40  warning  Unexpected any. Specify a different type                                                                                                                                    @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/server/services/commercialActivationPolicy.ts
+   74:21  warning  Replace ``${key}·must·be·a·non-empty·release·reference·using·safe·identifier·characters.`` with `⏎······`${key}·must·be·a·non-empty·release·reference·using·safe·identifier·characters.`,⏎····`                        prettier/prettier
+  105:21  warning  Replace ``${PAID_MVP_SALES_OPEN_UNTIL_ENV}·cannot·exceed·the·next·weekday·check·(72·hours·maximum).`` with `⏎······`${PAID_MVP_SALES_OPEN_UNTIL_ENV}·cannot·exceed·the·next·weekday·check·(72·hours·maximum).`,⏎····`  prettier/prettier
+  111:10  warning  Insert `(⏎····`                                                                                                                                                                                                        prettier/prettier
+  112:87  warning  Insert `)⏎··`                                                                                                                                                                                                          prettier/prettier
+  132:17  warning  Insert `⏎·····`                                                                                                                                                                                                        prettier/prettier
+  133:1   warning  Insert `··`                                                                                                                                                                                                            prettier/prettier
+  134:7   warning  Insert `··`                                                                                                                                                                                                            prettier/prettier
+  169:18  warning  Insert `⏎···`                                                                                                                                                                                                          prettier/prettier
+  198:17  warning  Insert `⏎···`                                                                                                                                                                                                          prettier/prettier
+  199:5   warning  Insert `··`                                                                                                                                                                                                            prettier/prettier
+  200:1   warning  Insert `··`                                                                                                                                                                                                            prettier/prettier
+
+✖ 35 problems (0 errors, 35 warnings)
+  0 errors and 14 warnings potentially fixable with the `--fix` option.
+

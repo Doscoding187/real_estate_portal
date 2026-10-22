@@ -1,0 +1,6 @@
+Command: pnpm build
+Exit code: 0
+Tool result: Vite 7.3.1 transformed 4,454 modules and completed the build in
+50.84 seconds.
+Warning: Vite reported that some minified chunks exceed 500 kB. The build
+completed successfully.

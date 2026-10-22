@@ -1,0 +1,43 @@
+B03 governed disposable-target cleanup evidence
+Date: 2026-09-25
+
+Resolved target identity before disposal:
+- Operation context: read-only-connect, runtime mode development.
+- Target: listify_wt_b03_payment_activation_contain_eadd9b18ffc9.
+- Target classification: disposable-worktree.
+- Target fingerprint hash: 366cd1627b12901f6989118c07857d1a470bbd662dc475ad01984dc62b0e37a2.
+- Worktree: /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment.
+- Branch: fix/b03-payment-activation-containment.
+- Worktree ownership matched; ownership key eadd9b18ffc98d1417f931d6.
+- Migration head: 0094_content_topics_primary_key.sql.
+- Incomplete migration attempts: none.
+- Credential class: local-owner. No credential material is recorded.
+
+Fresh disposal acknowledgement:
+- `pnpm db:authority:context` passed and resolved the identity above.
+- `pnpm db:worktree:ack` passed and emitted an operation-specific
+  `database-dispose` acknowledgement for this exact target and fingerprint.
+- The acknowledgement value is redacted and was used only for this disposal.
+
+Disposal:
+- Command: `pnpm db:worktree:dispose -- --ack=<emitted acknowledgement>`.
+- Exit code: 0.
+- Sanitized result: operation=dispose, target fingerprint matched,
+  database name matched, ownership key matched, changed=true.
+
+Authority-owned service shutdown sequence:
+- `pnpm db:authority:service:stop` — exit 0; cleanly stopped through the exact
+  Unix socket within the 30-second bound.
+- `pnpm db:authority:service:recover` — exit 0; cleanly stopped, recovery was
+  a safe no-op.
+- `pnpm db:authority:service:status` — exit 0; service state stopped at
+  127.0.0.1:3307, service fingerprint
+  2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2.
+
+B03 acceptance record:
+- Senior gate: PASS, as reported by senior review.
+- Persisted authority integration: 1 file, 9 passed, 0 failed, 0 skipped.
+- Reviewed tracked diff SHA-256:
+  3e292cce43aafefb20075190bf6064b8e2c22ef1785843873f8dffe43880ea76.
+- B07 independent final security review remains open. B05 remains unstarted.
+

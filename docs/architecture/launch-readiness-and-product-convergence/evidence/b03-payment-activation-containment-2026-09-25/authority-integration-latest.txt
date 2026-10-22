@@ -1,0 +1,26 @@
+Command:
+JWT_SECRET="$(openssl rand -hex 32)" pnpm test:authority -- server/__tests__/commercial-launch-access-s4.integration.test.ts
+
+The randomly generated JWT_SECRET was scoped to this test process and is not
+retained. Session token signing and validation used the real application code.
+
+Sanitized output:
+
+[test:authority] target 366cd1627b12901f (disposable-worktree)
+[ENV] Runtime configuration loaded { nodeEnv: 'test', hasDatabaseUrl: true }
+[Test Setup] SQL migrations ensured for test DB
+[Database] Authorized runtime-connect target 366cd1627b12901f is connected.
+
+ ✓ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (9 tests) 8296ms
+   ✓ rejects unsupported persisted product and owner pairs before commercial writes in production
+   ✓ rejects stale sessions before invoice, approval, and restore mutations in production
+   ✓ runs Agent and Agency request-proof-finance-activation-expiry with owner isolation
+
+ Test Files  1 passed (1)
+ Tests       9 passed (9)
+ Exit code   0
+ Duration    11.88s
+
+Target database: listify_wt_b03_payment_activation_contain_eadd9b18ffc9
+Target fingerprint: 366cd1627b12901f6989118c07857d1a470bbd662dc475ad01984dc62b0e37a2
+Skipped: 0

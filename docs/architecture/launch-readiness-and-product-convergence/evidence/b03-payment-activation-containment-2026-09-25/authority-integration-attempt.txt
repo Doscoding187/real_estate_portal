@@ -1,0 +1,62 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- server/__tests__/commercial-launch-access-s4.integration.test.ts
+
+[test:authority] target 366cd1627b12901f (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+
+stdout | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_b03_payment_activation_contain_eadd9b18ffc9
+
+stdout | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stderr | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[Test Setup] Failed to initialize database: Error: Access denied for user 'listify_app'@'127.0.0.1' to database 'listify_wt_b03_payment_activation_contain_eadd9b18ffc9'
+    at Object.createConnectionPromise [as createConnection] (/home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/mysql2@3.17.0/node_modules/mysql2/promise.js:19:31)
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/vitest.setup.ts:44:44
+    at /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/vitest.setup.ts:170:11
+    at runWithTimeout (file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)
+    at callSuiteHook (file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:964:28)
+    at runSuite (file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1175:35)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at runFiles (file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1262:5)
+    at startTests (file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1271:3)
+    at file:///home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment/node_modules/.pnpm/vitest@2.1.9_@types+node@24.10.13_jsdom@27.4.0_lightningcss@1.30.2_terser@5.46.0/node_modules/vitest/dist/chunks/runBaseTests.3qpJUEJM.js:126:11 {
+  code: 'ER_DBACCESS_DENIED_ERROR',
+  errno: 1044,
+  sqlState: '42000'
+}
+
+ ❯ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (7 tests | 7 skipped) 25ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL |server|  server/__tests__/commercial-launch-access-s4.integration.test.ts [ server/__tests__/commercial-launch-access-s4.integration.test.ts ]
+Error: Access denied for user 'listify_app'@'127.0.0.1' to database 'listify_wt_b03_payment_activation_contain_eadd9b18ffc9'
+ ❯ Object.createConnectionPromise [as createConnection] node_modules/.pnpm/mysql2@3.17.0/node_modules/mysql2/promise.js:19:31
+ ❯ vitest.setup.ts:44:44
+     42|           globalThis.__TEST_SQL_MIGRATIONS_READY__ = (async () => {
+     43|             const lockName = 'vitest_sql_migrations_lock_v1';
+     44|             const connection = await mysql.createConnection(process.en…
+       |                                            ^
+     45|             let acquiredLock = false;
+     46| 
+ ❯ vitest.setup.ts:170:11
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  7 skipped (7)
+   Start at  13:57:06
+   Duration  2.59s (transform 1.04s, setup 102ms, collect 2.08s, tests 25ms, environment 0ms, prepare 75ms)
+
+ ELIFECYCLE  Command failed with exit code 1.

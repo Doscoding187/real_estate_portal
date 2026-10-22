@@ -1,0 +1,20 @@
+Command:
+pnpm exec vitest run server/services/__tests__/commercialActivationPolicy.test.ts server/services/__tests__/commercialTerm.test.ts server/services/__tests__/paidMvpSalesPause.test.ts server/__tests__/commercial-launch-access-s4.contract.test.ts server/__tests__/commercial-launch-access-s4.integration.test.ts --reporter=basic
+
+Result:
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+
+ ✓ |server| server/services/__tests__/commercialTerm.test.ts (12 tests)
+ ✓ |server| server/services/__tests__/commercialActivationPolicy.test.ts (17 tests)
+ ✓ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (9 tests | 8 skipped)
+ ✓ |server| server/__tests__/commercial-launch-access-s4.contract.test.ts (6 tests)
+ ✓ |server| server/services/__tests__/paidMvpSalesPause.test.ts (4 tests)
+
+ Test Files  5 passed (5)
+      Tests  40 passed | 8 skipped (48)
+ Duration  5.64s
+
+The eight skipped cases are the database-backed S4 acceptance cases. The
+ordinary Vitest process reported DATABASE_URL: undefined, so these results do
+not establish persisted mutation containment or the supported lifecycle flows.

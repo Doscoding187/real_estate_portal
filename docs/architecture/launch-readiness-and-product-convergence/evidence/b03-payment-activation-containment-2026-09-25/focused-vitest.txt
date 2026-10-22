@@ -1,0 +1,78 @@
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+
+stdout | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/commercialActivationPolicy.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/commercialTerm.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/commercialTerm.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/commercialTerm.test.ts (11 tests) 2185ms
+stdout | server/services/__tests__/commercialActivationPolicy.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/__tests__/commercial-launch-access-s4.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/services/__tests__/commercialActivationPolicy.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/commercialActivationPolicy.test.ts (17 tests) 83ms
+stdout | server/__tests__/commercial-launch-access-s4.integration.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/__tests__/commercial-launch-access-s4.integration.test.ts (7 tests | 6 skipped) 36ms
+stdout | server/services/__tests__/paidMvpSalesPause.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: undefined
+
+stdout | server/__tests__/commercial-launch-access-s4.contract.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/__tests__/commercial-launch-access-s4.contract.test.ts (6 tests) 1832ms
+stdout | server/services/__tests__/paidMvpSalesPause.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: false,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/paidMvpSalesPause.test.ts
+[Test Setup] Global database connection initialized
+
+ ✓ |server| server/services/__tests__/paidMvpSalesPause.test.ts (4 tests) 20ms
+
+ Test Files  5 passed (5)
+      Tests  39 passed | 6 skipped (45)
+   Start at  12:08:51
+   Duration  7.28s (transform 2.38s, setup 874ms, collect 9.83s, tests 4.16s, environment 1ms, prepare 991ms)
+

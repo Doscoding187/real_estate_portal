@@ -1,0 +1,41 @@
+{
+  "evidence": "synthetic-production-release-guard",
+  "generatedAt": "2026-09-25T11:59:32.157Z",
+  "runtime": {
+    "nodeEnv": "production",
+    "appEnv": "production"
+  },
+  "release": {
+    "mode": "paid_mvp_release",
+    "enabled": true,
+    "enabledProductKeys": [
+      "agent_launch_access",
+      "agency_launch_access",
+      "developer_launch_access"
+    ],
+    "releaseId": "b03-containment-rc-1",
+    "approvalRef": "b03-review-1",
+    "salesPaused": false,
+    "salesOpenUntil": "2026-09-25T12:59:32.157Z"
+  },
+  "genericReadOnlyAvailability": true,
+  "exactProductChecks": [
+    {
+      "productKey": "agent_launch_access",
+      "allowed": true
+    },
+    {
+      "productKey": "agency_launch_access",
+      "allowed": true
+    },
+    {
+      "productKey": "developer_launch_access",
+      "allowed": true
+    }
+  ],
+  "productlessMutation": {
+    "denied": true,
+    "code": "PRECONDITION_FAILED",
+    "message": "Persisted-product mutation requires an approved persisted Paid MVP product and matching owner."
+  }
+}

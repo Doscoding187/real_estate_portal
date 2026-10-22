@@ -1,0 +1,5 @@
+
+> real_estate_portal@1.0.0 check /home/edwardspc/Desktop/Dev/worktrees/property-listify-b03-payment-activation-containment
+> tsc -p tsconfig.check.json --noEmit
+
+Result: PASS (exit 0)

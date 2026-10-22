@@ -1,0 +1,7 @@
+Command:
+pnpm exec eslint server/services/commercialActivationPolicy.ts server/services/billingFoundationService.ts server/services/commercialTerm.ts server/services/__tests__/commercialActivationPolicy.test.ts server/services/__tests__/commercialTerm.test.ts server/__tests__/commercial-launch-access-s4.integration.test.ts --format=stylish
+
+Exit code: 0
+Result: 0 errors, 45 warnings. Warnings are explicit-any and Prettier
+formatting warnings across the six changed TypeScript files. No automatic
+formatting or broad cleanup was applied.
