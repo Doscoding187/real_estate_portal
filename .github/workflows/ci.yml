@@ -459,6 +459,12 @@ jobs:
       - name: Install the browser
         run: pnpm exec playwright install --with-deps chromium
 
+      # The journey runs the application as a test runtime, which serves the
+      # built client rather than the development server. The client is built
+      # here so the journey exercises the same bundle the deployment serves.
+      - name: Build the client
+        run: pnpm build:frontend
+
       - name: Provision isolated CI migration identity
         env:
           DATABASE_URL: ''
@@ -509,6 +515,11 @@ jobs:
       # The geography journey proves the customer can reach a published
       # location and that the retired SRP geography family stays retired.
       - name: Run the geography journey
+        env:
+          # An isolated CI database only resolves its target class in the test
+          # runtime, so the application starts as a test runtime here.
+          PLAYWRIGHT_SERVER_NODE_ENV: test
+          PLAYWRIGHT_SERVER_APP_ENV: test
         run: >
           pnpm exec playwright test
           e2e/routing/neutral-geography-routing.spec.ts

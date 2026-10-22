@@ -62,7 +62,12 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   // In production, the bundled server is in dist/index.js
   // Frontend files are in dist/public
-  const distPath = path.resolve(import.meta.dirname, 'public');
+  let distPath = path.resolve(import.meta.dirname, 'public');
+  if (!fs.existsSync(distPath)) {
+    // Running the server from source, the built client is at the repository's dist/public.
+    const sourceBuildPath = path.resolve(import.meta.dirname, '..', '..', 'dist', 'public');
+    if (fs.existsSync(sourceBuildPath)) distPath = sourceBuildPath;
+  }
 
   if (!fs.existsSync(distPath)) {
     console.error(
