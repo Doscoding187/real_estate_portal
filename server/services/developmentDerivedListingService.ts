@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, ne, or, sql } from 'drizzle-orm';
 import { getDb } from '../db-connection';
 import {
   cataloguePublishers,
@@ -717,7 +717,13 @@ export class DevelopmentDerivedListingService {
 
     const conditions = [publicDevelopmentEligibilityConditions(), eq(unitTypes.isActive, 1)];
     if (filters.requireAvailableStock) {
-      conditions.push(gt(unitTypes.availableUnits, 0), ne(developments.status, 'sold-out'));
+      conditions.push(
+        gt(unitTypes.availableUnits, 0),
+        or(
+          eq(developments.inventoryMode, 'itemized'),
+          ne(developments.status, 'sold-out'),
+        )!,
+      );
     }
 
     const targetTransactionType =
@@ -727,7 +733,22 @@ export class DevelopmentDerivedListingService {
           ? 'for_sale'
           : null;
     if (targetTransactionType) {
-      conditions.push(eq(developments.transactionType, targetTransactionType as any));
+      const modeAvailable =
+        targetTransactionType === 'for_rent'
+          ? unitTypes.availableForRentUnits
+          : unitTypes.availableForSaleUnits;
+      conditions.push(
+        or(
+          and(
+            eq(developments.inventoryMode, 'aggregate'),
+            eq(developments.transactionType, targetTransactionType as any),
+          ),
+          and(
+            eq(developments.inventoryMode, 'itemized'),
+            gt(modeAvailable, 0),
+          ),
+        )!,
+      );
     }
 
     const rows = await db
@@ -738,6 +759,7 @@ export class DevelopmentDerivedListingService {
         developmentStatus: developments.status,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
+        inventoryMode: developments.inventoryMode,
         city: developments.city,
         suburb: developments.suburb,
         province: developments.province,
@@ -789,6 +811,14 @@ export class DevelopmentDerivedListingService {
         auctionStatus: unitTypes.auctionStatus,
         availableUnits: unitTypes.availableUnits,
         totalUnits: unitTypes.totalUnits,
+        releasedForSaleUnits: unitTypes.releasedForSaleUnits,
+        releasedForRentUnits: unitTypes.releasedForRentUnits,
+        availableForSaleUnits: unitTypes.availableForSaleUnits,
+        availableForRentUnits: unitTypes.availableForRentUnits,
+        availableSalePriceFrom: unitTypes.availableSalePriceFrom,
+        availableSalePriceTo: unitTypes.availableSalePriceTo,
+        availableRentPriceFrom: unitTypes.availableRentPriceFrom,
+        availableRentPriceTo: unitTypes.availableRentPriceTo,
         unitBaseMedia: unitTypes.baseMedia,
         unitCreatedAt: unitTypes.createdAt,
       })
@@ -808,7 +838,7 @@ export class DevelopmentDerivedListingService {
         if (filters.requireUnitPhoto && !unitPhoto) return null;
         if (
           filters.requireAvailableStock &&
-          (!(Number(row.availableUnits) > 0) || row.developmentStatus === 'sold-out')
+          !(Number(row.availableUnits) > 0)
         )
           return null;
         if (!isWithinBounds(row, filters.bounds)) {
@@ -856,19 +886,26 @@ export class DevelopmentDerivedListingService {
           return null;
         }
 
-        const listingType = mapTransactionTypeToListingType(row.transactionType);
+        const effectiveTransactionType = targetTransactionType
+          ? targetTransactionType
+          : row.inventoryMode === 'itemized'
+            ? Number(row.availableForSaleUnits || 0) > 0
+              ? 'for_sale'
+              : 'for_rent'
+            : row.transactionType;
+        const listingType = mapTransactionTypeToListingType(effectiveTransactionType);
         const price =
           listingType === 'rent'
-            ? toNumberOrZero(row.monthlyRentFrom)
-            : row.transactionType === 'auction'
+            ? toNumberOrZero(row.inventoryMode === 'itemized' ? row.availableRentPriceFrom : row.monthlyRentFrom)
+            : effectiveTransactionType === 'auction'
               ? toNumberOrZero(row.startingBid)
-              : toNumberOrZero(row.priceFrom ?? row.basePriceFrom);
+              : toNumberOrZero(row.inventoryMode === 'itemized' ? row.availableSalePriceFrom : row.priceFrom ?? row.basePriceFrom);
         const priceTo =
           listingType === 'rent'
-            ? toNumberOrNull(row.monthlyRentTo)
-            : row.transactionType === 'auction'
+            ? toNumberOrNull(row.inventoryMode === 'itemized' ? row.availableRentPriceTo : row.monthlyRentTo)
+            : effectiveTransactionType === 'auction'
               ? null
-              : toNumberOrNull(row.priceTo ?? row.basePriceTo);
+              : toNumberOrNull(row.inventoryMode === 'itemized' ? row.availableSalePriceTo : row.priceTo ?? row.basePriceTo);
 
         if (filters.minPrice !== undefined && price < filters.minPrice) return null;
         if (filters.maxPrice !== undefined && price > filters.maxPrice) return null;
@@ -913,7 +950,20 @@ export class DevelopmentDerivedListingService {
         const title = buildListingTitle(row, propertyType);
         const normalizedFloorSize = floorSize ?? undefined;
         const normalizedErfSize = erfSize ?? undefined;
-        const availableUnits = toNumberOrNull(row.availableUnits) ?? undefined;
+        const availableUnits = toNumberOrNull(
+          row.inventoryMode === 'itemized'
+            ? effectiveTransactionType === 'for_rent'
+              ? row.availableForRentUnits
+              : row.availableForSaleUnits
+            : row.availableUnits,
+        ) ?? undefined;
+        const totalUnits = toNumberOrNull(
+          row.inventoryMode === 'itemized'
+            ? effectiveTransactionType === 'for_rent'
+              ? row.releasedForRentUnits
+              : row.releasedForSaleUnits
+            : row.totalUnits,
+        ) ?? undefined;
         const rankingScore = computeOrganicRankingScore({
           listedDate,
           title,
@@ -945,7 +995,7 @@ export class DevelopmentDerivedListingService {
           province: row.province,
           propertyType,
           listingType,
-          transactionType: String(row.transactionType || 'for_sale') as
+          transactionType: String(effectiveTransactionType || 'for_sale') as
             | 'for_sale'
             | 'for_rent'
             | 'auction',
@@ -964,7 +1014,7 @@ export class DevelopmentDerivedListingService {
             : [],
           badges: [stageBadge].filter(Boolean) as string[],
           availableUnits,
-          totalUnits: toNumberOrNull(row.totalUnits) ?? undefined,
+          totalUnits,
           completionDate: row.completionDate || null,
           listedDate,
           latitude: toNumberOrNull(row.latitude) ?? undefined,

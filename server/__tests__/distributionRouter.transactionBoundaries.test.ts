@@ -114,22 +114,22 @@ describe('distributionRouter transactional boundaries', () => {
     expect(adminUpdate).toContain("eventType: 'override'");
   });
 
-  it('keeps referrer submitDeal writes inside a single transaction', () => {
+  it('keeps referral submission behind the paused, evidence-backed intake route', () => {
     const referrerSection = section(
       'const referrerDistributionRouter = router({',
       'const developerDistributionRouter = router({',
     );
-    const submitDealSection = section('submitDeal: protectedProcedure', 'advanceDealStage: protectedProcedure');
-    expect(submitDealSection).toContain('await db.transaction(async tx => {');
-    expect(submitDealSection).toContain('.insert(distributionDeals)');
-    expect(submitDealSection).toContain('.update(distributionDeals)');
-    expect(submitDealSection).toContain('.insert(distributionDealEvents)');
-    expect(submitDealSection).toContain('await assertDevelopmentSubmissionEligible({');
-    expect(submitDealSection.indexOf('await assertDevelopmentSubmissionEligible({')).toBeLessThan(
-      submitDealSection.indexOf('const managerUserId = await getPrimaryManagerUserIdForProgram'),
+    const submitReferralSection = section(
+      'submitReferral: protectedProcedure',
+      'listMyReferrals: protectedProcedure',
     );
-    expect(referrerSection).toContain("submittedVia: 'referrer.submitDeal'");
-    expect(source).not.toContain('if (insertedDealId > 0)');
+    expect(submitReferralSection).toContain('intakeSessionUuid: z.string().uuid()');
+    expect(submitReferralSection).toContain('assertDistributionReferralIntakeReady();');
+    expect(
+      submitReferralSection.indexOf('assertDistributionReferralIntakeReady();'),
+    ).toBeLessThan(submitReferralSection.indexOf('return await createReferralDeal('));
+    expect(referrerSection).not.toContain('submitDeal: protectedProcedure');
+    expect(referrerSection).not.toContain("submittedVia: 'referrer.submitDeal'");
   });
 
   it('keeps referrer cancellation stage transition atomic', () => {
@@ -234,7 +234,6 @@ describe('distribution.admin.setProgramReferralEnabled readiness gating', () => 
       brandPartnershipStatus: 'active',
       developmentAccessStatus: 'included',
       submissionAllowed: true,
-      legacyFallbackUsed: false,
     });
     mockSummarizeDistributionBlockers.mockReturnValue({
       accessBlockers: [],

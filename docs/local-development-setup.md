@@ -40,6 +40,7 @@ Optional service groups:
 - Email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `EMAIL_FROM`, `VITE_USE_MOCK_EMAILS`
 - Payments: `STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
 - Uploads/storage: `MEDIA_STORAGE_ADAPTER` (`local` by default in development; `s3` in production), optional `MEDIA_LOCAL_STORAGE_DIR`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`, `AWS_S3_BUCKET`, `CLOUDFRONT_URL`, `VITE_CLOUDFRONT_URL`, `MAX_IMAGE_SIZE_MB`
+- Developer partner resources: `DEVELOPER_RESOURCE_STORAGE_ADAPTER`, `DEVELOPER_RESOURCE_PRIVATE_STORAGE_DIR`, `DEVELOPER_RESOURCE_S3_BUCKET`, `DEVELOPER_RESOURCE_S3_REGION`, `DEVELOPER_RESOURCE_S3_PREFIX`, `DEVELOPER_RESOURCE_AWS_ACCESS_KEY_ID`, `DEVELOPER_RESOURCE_AWS_SECRET_ACCESS_KEY`
 - Video: `ENABLE_VIDEO_PIPELINE`, `MEDIACONVERT_ENDPOINT`, `MEDIACONVERT_ROLE_ARN`
 - Maps/places: `GOOGLE_MAPS_API_KEY`, `VITE_GOOGLE_MAPS_API_KEY`, `GOOGLE_PLACES_API_KEY`, `GOOGLE_GEOCODING_API_KEY`, `GOOGLE_STREET_VIEW_API_KEY`, `GOOGLE_PLACES_COUNTRY_RESTRICTION`
 - Redis/cache: `REDIS_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `REDIS_DB`
@@ -58,10 +59,14 @@ API_URL, APP_ENV, APP_URL, AUTOCOMPLETE_CACHE_TTL_SECONDS, AUTOCOMPLETE_DEBOUNCE
 AWS_ACCESS_KEY_ID, AWS_REGION, AWS_S3_BUCKET, AWS_SECRET_ACCESS_KEY, BASE_URL,
 BUILD_TIME, BUILT_IN_FORGE_API_KEY, BUILT_IN_FORGE_API_URL, CI, CLOUDFRONT_URL,
 COMMIT_SHA, CONTENTFUL_API_KEY, CONTENTFUL_SPACE_ID, DATABASE_URL, DB_HOST,
-DB_NAME, DEV, DISTRIBUTION_AFFORDABILITY_INTEREST_RATE_ANNUAL,
+DB_NAME, DEV, DEVELOPER_RESOURCE_AWS_ACCESS_KEY_ID,
+DEVELOPER_RESOURCE_AWS_SECRET_ACCESS_KEY, DEVELOPER_RESOURCE_PRIVATE_STORAGE_DIR,
+DEVELOPER_RESOURCE_S3_BUCKET, DEVELOPER_RESOURCE_S3_PREFIX, DEVELOPER_RESOURCE_S3_REGION,
+DEVELOPER_RESOURCE_STORAGE_ADAPTER, DISTRIBUTION_AFFORDABILITY_INTEREST_RATE_ANNUAL,
 DISTRIBUTION_AFFORDABILITY_LOW_CONFIDENCE_INCOME,
 DISTRIBUTION_AFFORDABILITY_MAX_REPAYMENT_RATIO, DISTRIBUTION_AFFORDABILITY_TERM_MONTHS,
-EMAIL_FROM, ENABLE_VIDEO_PIPELINE, FEATURE_DISTRIBUTION_NETWORK, FRONTEND_URL,
+EMAIL_FROM, ENABLE_VIDEO_PIPELINE, FEATURE_DISTRIBUTION_NETWORK,
+FEATURE_DISTRIBUTION_SELECTED_TEAM_QUEUE, FRONTEND_URL,
 GITHUB_SHA, GOOGLE_GEOCODING_API_KEY, GOOGLE_MAPS_API_KEY, GOOGLE_PLACES_API_KEY,
 GOOGLE_PLACES_COUNTRY_RESTRICTION, GOOGLE_STREET_VIEW_API_KEY, JWT_SECRET,
 MAX_IMAGE_SIZE_MB, MEDIA_RULES_PATH, MEDIACONVERT_ENDPOINT, MEDIACONVERT_ROLE_ARN,
@@ -98,6 +103,18 @@ Database Authority data rule:
   Database Authority.
 - Canonical geography and Search-to-Lead data are prepared through their
   operation-specific adapters; do not use ad hoc SQL or legacy seeds.
+
+## Private Developer Sales Resources
+
+The local default stores newly uploaded partner-resource copies in a private
+directory separate from public media. Set
+`DEVELOPER_RESOURCE_PRIVATE_STORAGE_DIR` only to an absolute path; do not point
+it at a public-media directory. Hosted runtimes must use
+`DEVELOPER_RESOURCE_STORAGE_ADAPTER=s3`, a dedicated private bucket, region
+`af-south-1`, and the dedicated resource credentials shown in the environment
+templates. The application checks that all four S3 Block Public Access settings
+are enabled before each storage operation. Existing public attachment URLs are
+not copied or revoked automatically; the workspace uploads a separate copy.
 
 ## First-Time Setup
 
@@ -357,26 +374,32 @@ Manual acceptance path:
 The fixture is restricted to the exact disposable worktree database; it does
 not access `listify_local`, staging, or production.
 
-2. Open `http://localhost:3009/login`.
+### Distribution Network partner workspace preview
 
-3. Log in as `referrer@listify.local` with your configured local demo password.
+The governed local-journey fixture creates `referrer@listify.local` with an
+active local Distribution identity. Prepare and verify it only after the exact
+worktree database has the current schema:
 
-4. Visit `http://localhost:3009/distribution/partner/overview`.
+```bash
+pnpm db:local-journey:prepare
+pnpm db:local-journey:verify
+pnpm local:journeys
+```
 
-5. Check:
+Open `http://localhost:5180` and use **Show local demo passwords** to obtain
+the machine-local password. Then sign in at `http://localhost:3009/login` and
+visit `http://localhost:3009/distribution/partner/developments` and select
+**Explore programs**.
 
-- dashboard modules show available opportunities, buyers needing action, recent next steps, and reward progress
-- submit mode shows `[LOCAL DEMO] Hillside Gardens`
-- explore mode shows `[LOCAL DEMO] River Quarter` and `[LOCAL DEMO] Mandate Locked Estate` with non-submit labels/messages
-- buyer referral wizard shows required documents and saves local draft state while typing
-- referral detail page shows buyer status, assigned manager, document progress, and payout/reward progress
-- blocked opportunity messages are friendly and do not expose internal policy wording
-
-6. Log in as `agent@listify.local` to test the agency/agent referral path.
-
-7. Log in as `developer@listify.local` to inspect assigned referrals and manager/developer flows.
-
-8. Log in as `admin@listify.local` to inspect development readiness, documents, commissions, and access setup.
+This fixture adds one synthetic, publisher-scoped Distribution opportunity for
+the Preview Residences. Its program is active for exploration, but referral
+intake and submission remain disabled. The view shows Developer-owned current
+marketable sale/rent stock and partner-visible contacts. The fixture itself
+does not seed referrals or buyer details. This retained local database also
+has a clearly labeled synthetic site-map PDF for partner-download review; a
+fresh worktree will not contain that extra file unless it is uploaded through
+the Developer resource workflow. The retired sample names and accounts in the
+older scenario above are not created by this fixture.
 
 ## Running The App Locally
 

@@ -40,7 +40,6 @@ function buildEvaluation(
       nextAction: 'submit_referral',
       friendlyMessage: 'Ready for buyer referrals.',
     },
-    legacyFallbackUsed: false,
     ...overrides,
   };
 }

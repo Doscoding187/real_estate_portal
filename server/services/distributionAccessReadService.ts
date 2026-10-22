@@ -1,8 +1,12 @@
 import { TRPCError } from '@trpc/server';
-import { and, eq, like, or, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, type SQL } from 'drizzle-orm';
 
-import { cataloguePublishers, developments } from '../../drizzle/schema';
+import { cataloguePublishers, distributionDevelopmentAccess } from '../../drizzle/schema';
 import { getDb } from '../db';
+import {
+  listDevelopmentSalesWorkspaceReferences,
+  type DevelopmentSalesWorkspaceReference,
+} from './developmentSalesWorkspaceService';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,
@@ -30,12 +34,13 @@ function buildInventoryStateCounts(): InventoryStateCounts {
 }
 
 async function listLinkedDevelopmentIdsForBrand(db: DbHandle, cataloguePublisherId: number) {
-  const rows = await db
-    .select({ developmentId: developments.id })
-    .from(developments)
-    .where(eq(developments.cataloguePublisherId, cataloguePublisherId));
-
-  return rows.map(row => Number(row.developmentId)).filter(Boolean);
+  const references: Awaited<ReturnType<typeof listDevelopmentSalesWorkspaceReferences>> = [];
+  for (let offset = 0; ; offset += 100) {
+    const page = await listDevelopmentSalesWorkspaceReferences({ publisherId: cataloguePublisherId, limit: 100, offset });
+    references.push(...page);
+    if (page.length < 100) break;
+  }
+  return references.map(reference => reference.developmentId);
 }
 
 export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublisherId: number) {
@@ -101,25 +106,12 @@ export async function getBrandPartnershipDetails(db: DbHandle, cataloguePublishe
           ? []
           : [`brand_partnership_${entity.status}`]
         : ['missing_brand_partnership_row'],
-      legacyFallbackUsed: evaluations.some(evaluation => evaluation.legacyFallbackUsed),
     },
   };
 }
 
 export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: number) {
-  const [development] = await db
-    .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      isPublished: developments.isPublished,
-      approvalStatus: developments.approvalStatus,
-    })
-    .from(developments)
-    .where(eq(developments.id, developmentId))
-    .limit(1);
+  const [development] = await listDevelopmentSalesWorkspaceReferences({ developmentIds: [developmentId], limit: 1 });
 
   if (!development) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
@@ -127,15 +119,13 @@ export async function getDevelopmentAccessDetails(db: DbHandle, developmentId: n
 
   return {
     development: {
-      id: Number(development.id),
-      name: String(development.name || ''),
+      id: development.developmentId,
+      name: development.displayName,
       city: development.city || null,
       province: development.province || null,
-      cataloguePublisherId: development.cataloguePublisherId
-        ? Number(development.cataloguePublisherId)
-        : null,
-      isPublished: Number(development.isPublished || 0) === 1,
-      approvalStatus: development.approvalStatus || null,
+      cataloguePublisherId: development.publisherId,
+      isPublished: development.isPublished,
+      approvalStatus: development.approvalStatus,
     },
     entity: await getDevelopmentAccessByDevelopmentId(db, developmentId),
     evaluation: await evaluateDevelopmentDistributionAccess({
@@ -159,67 +149,68 @@ export async function listDevelopmentAccessDetails(
   },
 ) {
   const conditions: SQL[] = [];
-
   if (typeof filters.cataloguePublisherId === 'number') {
-    conditions.push(
-      eq(developments.cataloguePublisherId, filters.cataloguePublisherId),
-    );
+    conditions.push(eq(distributionDevelopmentAccess.cataloguePublisherId, filters.cataloguePublisherId));
   }
-
-  const search = filters.search?.trim();
-  if (search) {
-    conditions.push(
-      or(
-        like(developments.name, `%${search}%`),
-        like(developments.city, `%${search}%`),
-        like(developments.province, `%${search}%`),
-      )!,
-    );
+  if (filters.accessStatus?.length) {
+    conditions.push(inArray(distributionDevelopmentAccess.status, filters.accessStatus));
   }
-
-  const rows = await db
+  const accessRows = await db
     .select({
-      id: developments.id,
-      name: developments.name,
-      city: developments.city,
-      province: developments.province,
-      cataloguePublisherId: developments.cataloguePublisherId,
-      isPublished: developments.isPublished,
-      approvalStatus: developments.approvalStatus,
-      status: developments.status,
-      updatedAt: developments.updatedAt,
+      developmentId: distributionDevelopmentAccess.developmentId,
     })
-    .from(developments)
+    .from(distributionDevelopmentAccess)
     .where(conditions.length ? and(...conditions) : undefined)
-    .limit(filters.limit ?? 200);
+    .limit(Math.min(200, filters.limit ?? 200));
+  const ids: number[] = Array.from(
+    new Set<number>(accessRows.map(row => Number(row.developmentId))),
+  );
+  if (!ids.length) return [];
+  const referencePages: DevelopmentSalesWorkspaceReference[][] = await Promise.all(
+    Array.from({ length: Math.ceil(ids.length / 100) }, (_, page) =>
+      listDevelopmentSalesWorkspaceReferences({
+        developmentIds: ids.slice(page * 100, (page + 1) * 100),
+        limit: 100,
+      }),
+    ),
+  );
+  const references = referencePages.flat();
+  const referenceById = new Map<number, DevelopmentSalesWorkspaceReference>(
+    references.map(reference => [reference.developmentId, reference] as const),
+  );
+  const search = filters.search?.trim().toLowerCase();
 
+  const candidates = ids.flatMap(developmentId => {
+    const row = referenceById.get(developmentId);
+    if (!row) return [];
+    if (search && ![row.displayName, row.name, row.city, row.province].some(value => value.toLowerCase().includes(search))) return [];
+    return [{ developmentId, row }];
+  });
   const evaluated = await Promise.all(
-    rows.map(async row => {
+    candidates.map(async ({ developmentId, row }) => {
       const evaluation = await evaluateDevelopmentDistributionAccess({
         db,
-        developmentId: Number(row.id),
+        developmentId,
         actor: { role: 'admin' },
         channel: 'admin_catalog',
       });
 
       return {
         development: {
-          id: Number(row.id),
-          name: String(row.name || ''),
+          id: row.developmentId,
+          name: row.displayName,
           city: row.city || null,
           province: row.province || null,
-          cataloguePublisherId: row.cataloguePublisherId
-            ? Number(row.cataloguePublisherId)
-            : null,
-          isPublished: Number(row.isPublished || 0) === 1,
-          approvalStatus: row.approvalStatus || null,
-          status: row.status || null,
-          updatedAt: row.updatedAt || null,
+          cataloguePublisherId: row.publisherId,
+          isPublished: row.isPublished,
+          approvalStatus: row.approvalStatus,
+          status: row.lifecycle,
+          updatedAt: row.updatedAt,
         },
         partnership: evaluation.cataloguePublisherId
           ? await getBrandPartnershipByPublisherId(db, evaluation.cataloguePublisherId)
           : null,
-        access: await getDevelopmentAccessByDevelopmentId(db, Number(row.id)),
+        access: await getDevelopmentAccessByDevelopmentId(db, developmentId),
         evaluation,
       };
     }),

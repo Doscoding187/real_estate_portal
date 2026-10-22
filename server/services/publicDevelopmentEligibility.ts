@@ -3,6 +3,8 @@ import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
 import {
   cataloguePublishers,
   billableAccounts,
+  developmentInventoryItems,
+  developmentPhases,
   developmentSupersessions,
   developments,
   developerOrganisations,
@@ -193,15 +195,28 @@ export function publicDevelopmentEligibilityConditions(): SQL {
     WHERE ${unitTypes.developmentId} = ${developments.id}
       AND ${unitTypes.isActive} = 1
   )`;
+  const marketableItemizedUnitTypeExists = sql`EXISTS (
+    SELECT 1
+    FROM ${developmentInventoryItems}
+    INNER JOIN ${developmentPhases}
+      ON ${developmentPhases.id} = ${developmentInventoryItems.phaseId}
+    INNER JOIN ${unitTypes}
+      ON ${unitTypes.id} = ${developmentInventoryItems.unitTypeId}
+    WHERE ${developmentInventoryItems.developmentId} = ${developments.id}
+      AND ${developmentPhases.status} = 'selling'
+      AND ${developmentPhases.archivedAt} IS NULL
+      AND ${developmentInventoryItems.status} = 'available'
+      AND ${unitTypes.isActive} = 1
+  )`;
 
   return and(
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
     ne(developments.developmentType, 'commercial'),
     isLandVerticalAvailable() ? undefined : ne(developments.developmentType, 'land'),
-    sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,
+    sql`${developments.transactionType} IN ('for_sale', 'for_rent')`,
     publisherExists,
-    sql`(${developments.developmentType} = 'land' OR ${activeUnitTypeExists})`,
+    sql`(${developments.developmentType} = 'land' OR (${developments.inventoryMode} = 'aggregate' AND ${activeUnitTypeExists}) OR (${developments.inventoryMode} = 'itemized' AND ${marketableItemizedUnitTypeExists}))`,
     sql`NOT EXISTS (
       SELECT 1
       FROM ${developmentSupersessions}

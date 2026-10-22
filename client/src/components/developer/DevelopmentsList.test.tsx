@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   home: {
     developments: [
       {
+        market: { status: 'selling', transactionType: 'for_sale' },
         identity: {
           id: 41,
           name: 'Harbour View',
@@ -22,6 +23,7 @@ const state = vi.hoisted(() => ({
         nextAction: null,
       },
       {
+        market: { status: 'sold-out', transactionType: 'for_sale' },
         identity: {
           id: 42,
           name: 'Ridge Park',
@@ -35,6 +37,7 @@ const state = vi.hoisted(() => ({
         nextAction: null,
       },
       {
+        market: { status: 'launching-soon', transactionType: 'for_rent' },
         identity: {
           id: 43,
           name: 'Cedar Mews',
@@ -88,7 +91,7 @@ describe('Developer developments list filters', () => {
     ['available', 'Harbour View', 'Ridge Park'],
     ['attention', 'Ridge Park', 'Harbour View'],
   ])('shows only developments matching the %s filter', (filter, shown, hidden) => {
-    state.location = `/developer/developments?filter=${filter}`;
+    state.location = `/developer/developments?view=all&filter=${filter}`;
 
     render(<DevelopmentsList />);
 

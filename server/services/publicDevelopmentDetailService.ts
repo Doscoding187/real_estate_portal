@@ -83,33 +83,38 @@ function finiteNumber(value: unknown): number | null {
 
 function buildSalesMetrics(
   publicFacts: PublicDevelopmentDetail['publicFacts'],
-  units: readonly Record<string, unknown>[],
+  inventoryMode: 'aggregate' | 'itemized' | undefined,
 ) {
   if (publicFacts.totalUnits === null || publicFacts.availableUnits === null) return null;
   if (publicFacts.totalUnits <= 0) return null;
 
-  const reservedUnits = units.reduce((sum, unit) => {
-    const total = finiteNumber(unit.totalUnits);
-    const reserved = finiteNumber(unit.reservedUnits);
-    if (total === null || reserved === null) return sum;
-    return sum + Math.min(Math.max(Math.round(reserved), 0), Math.max(Math.round(total), 0));
-  }, 0);
-  const soldUnits = Math.max(
-    publicFacts.totalUnits - publicFacts.availableUnits - reservedUnits,
+  const reservedUnits = publicFacts.unitTypes.reduce(
+    (sum, unit) => sum + Math.max(0, Math.round(Number(unit.reservedUnits || 0))),
     0,
   );
+  const soldUnits =
+    inventoryMode === 'itemized'
+      ? publicFacts.unitTypes.reduce(
+          (sum, unit) => sum + Math.max(0, Math.round(Number(unit.soldUnits || 0))),
+          0,
+        )
+      : null;
 
   return {
     totalUnits: publicFacts.totalUnits,
     availableUnits: publicFacts.availableUnits,
     reservedUnits,
     soldUnits,
-    soldPct: Math.round((soldUnits / publicFacts.totalUnits) * 100),
+    soldPct:
+      soldUnits === null ? null : Math.round((soldUnits / publicFacts.totalUnits) * 100),
   };
 }
 
 export class PublicDevelopmentDetailService {
-  async getBySlugOrId(slugOrId: string): Promise<PublicDevelopmentDetail | null> {
+  async getBySlugOrId(
+    slugOrId: string,
+    transactionTypeOverride?: 'for_sale' | 'for_rent',
+  ): Promise<PublicDevelopmentDetail | null> {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
 
@@ -148,6 +153,7 @@ export class PublicDevelopmentDetailService {
         structuralType: developments.structuralType,
         floors: developments.floors,
         transactionType: developments.transactionType,
+        inventoryMode: developments.inventoryMode,
         marketingRole: developments.marketingRole,
         launchDate: developments.launchDate,
         completionDate: developments.completionDate,
@@ -199,6 +205,7 @@ export class PublicDevelopmentDetailService {
         row.developmentType as PublicDevelopmentProjectionDevelopment['developmentType'],
       transactionType:
         row.transactionType as PublicDevelopmentProjectionDevelopment['transactionType'],
+      inventoryMode: row.inventoryMode as PublicDevelopmentProjectionDevelopment['inventoryMode'],
       status: row.status as PublicDevelopmentProjectionDevelopment['status'],
       nature: row.nature as PublicDevelopmentProjectionDevelopment['nature'],
       launchDate: (row.launchDate as string | null) ?? null,
@@ -246,9 +253,24 @@ export class PublicDevelopmentDetailService {
       totalUnits: unit.totalUnits,
       availableUnits: unit.availableUnits,
       reservedUnits: unit.reservedUnits,
+      releasedForSaleUnits: unit.releasedForSaleUnits,
+      releasedForRentUnits: unit.releasedForRentUnits,
+      availableForSaleUnits: unit.availableForSaleUnits,
+      availableForRentUnits: unit.availableForRentUnits,
+      availableSalePriceFrom: unit.availableSalePriceFrom,
+      availableSalePriceTo: unit.availableSalePriceTo,
+      availableRentPriceFrom: unit.availableRentPriceFrom,
+      availableRentPriceTo: unit.availableRentPriceTo,
+      reservedForSaleUnits: unit.reservedForSaleUnits,
+      reservedForRentUnits: unit.reservedForRentUnits,
+      soldForSaleUnits: unit.soldForSaleUnits,
     }));
 
-    const publicFacts = projectPublicDevelopmentFacts(development, projectionUnits);
+    const publicFacts = projectPublicDevelopmentFacts(
+      development,
+      projectionUnits,
+      transactionTypeOverride,
+    );
     if (!publicFacts) return null;
 
     // Developer Digital Presence bridge: count this organisation's publicly
@@ -268,8 +290,10 @@ export class PublicDevelopmentDetailService {
       publisherPublishedDevelopmentCount = Number(countRow?.total ?? 0);
     }
 
-    const detailUnits = units.map((unit, index) => {
-      const publicUnit = publicFacts.unitTypes[index];
+    const publicUnitById = new Map(publicFacts.unitTypes.map(unit => [String(unit.id), unit]));
+    const detailUnits = units.flatMap(unit => {
+      const publicUnit = publicUnitById.get(String(unit.id));
+      if (!publicUnit) return [];
       const baseMedia = normalizeMediaObject(unit.baseMedia);
       const gallery =
         baseMedia && typeof baseMedia === 'object' && Array.isArray((baseMedia as any).gallery)
@@ -310,11 +334,7 @@ export class PublicDevelopmentDetailService {
         availableUnits: publicUnit.availableUnits,
         // Clamped like the shared projection so a corrupted row can never
         // publish reserved stock that exceeds total units.
-        reservedUnits: (() => {
-          const total = publicUnit.totalUnits ?? 0;
-          const reserved = Math.max(0, Math.round(Number(unit.reservedUnits ?? 0)) || 0);
-          return total > 0 ? Math.min(reserved, total) : 0;
-        })(),
+        reservedUnits: publicUnit.reservedUnits ?? 0,
         availabilityState: publicUnit.availabilityState,
         baseFeatures: unit.baseFeatures ?? null,
         baseFinishes: unit.baseFinishes ?? null,
@@ -323,7 +343,7 @@ export class PublicDevelopmentDetailService {
         publicFacts: publicUnit,
       };
 
-      return detailUnit;
+      return [detailUnit];
     });
 
     const latitude = normalizeCoordinate(row.latitude);
@@ -356,7 +376,7 @@ export class PublicDevelopmentDetailService {
       cataloguePublisherId: publicFacts.publisher.id,
       publisherPublishedDevelopmentCount,
       unitTypes: detailUnits,
-      salesMetrics: buildSalesMetrics(publicFacts, units),
+      salesMetrics: buildSalesMetrics(publicFacts, development.inventoryMode),
     };
 
     return detail;

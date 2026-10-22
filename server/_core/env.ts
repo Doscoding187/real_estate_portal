@@ -47,4 +47,9 @@ export const ENV = {
     process.env.RESEND_FROM_EMAIL ?? process.env.EMAIL_FROM ?? 'onboarding@resend.dev',
   distributionNetworkEnabled:
     String(process.env.FEATURE_DISTRIBUTION_NETWORK ?? 'true').toLowerCase() === 'true',
+  // The selected practitioner queue has new schema and access paths. Keep it
+  // independently disabled until its migrations are applied and reviewed.
+  distributionSelectedTeamQueueEnabled:
+    String(process.env.FEATURE_DISTRIBUTION_SELECTED_TEAM_QUEUE ?? 'false').toLowerCase() ===
+    'true',
 };

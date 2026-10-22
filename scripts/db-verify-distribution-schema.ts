@@ -36,9 +36,20 @@ const REQUIRED_COLUMNS: Array<{ table: string; column: string }> = [
   { table: 'distribution_deal_events', column: 'metadata' },
   { table: 'development_documents', column: 'visibility' },
   { table: 'application_requirements', column: 'provider' },
-  { table: 'application_requirements', column: 'linked_development_document_id' },
   { table: 'deal_requirement_statuses', column: 'status' },
   { table: 'deal_requirement_statuses', column: 'requirement_id' },
+];
+
+const RETIRED_COLUMNS: Array<{ table: string; column: string }> = [
+  { table: 'application_requirements', column: 'linked_development_document_id' },
+  { table: 'deal_requirement_statuses', column: 'linked_development_document_id' },
+];
+const RETIRED_ENUM_VALUES: Array<{ table: string; column: string; value: string }> = [
+  {
+    table: 'development_required_documents',
+    column: 'category',
+    value: 'developer_document',
+  },
 ];
 
 async function main() {
@@ -68,6 +79,26 @@ async function main() {
       )) as [any[]];
       if (rows.length === 0) {
         failures.push(`Missing column: ${check.table}.${check.column}`);
+      }
+    }
+
+    for (const check of RETIRED_COLUMNS) {
+      const [rows] = (await connection.query(
+        'SHOW COLUMNS FROM ?? LIKE ?',
+        [check.table, check.column],
+      )) as [any[]];
+      if (rows.length > 0) {
+        failures.push(`Retired column still exists: ${check.table}.${check.column}`);
+      }
+    }
+
+    for (const check of RETIRED_ENUM_VALUES) {
+      const [rows] = (await connection.query(
+        'SHOW COLUMNS FROM ?? LIKE ?',
+        [check.table, check.column],
+      )) as [Array<{ Type?: string }>];
+      if (String(rows[0]?.Type || '').includes(check.value)) {
+        failures.push(`Retired enum value remains: ${check.table}.${check.column}.${check.value}`);
       }
     }
   } finally {

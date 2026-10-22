@@ -155,6 +155,9 @@ const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
+const SelectedTeamLeadQueuePage = lazy(
+  () => import('./pages/distribution/SelectedTeamLeadQueuePage'),
+);
 const ManagerDevelopmentOpsPage = lazy(
   () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
 );
@@ -239,6 +242,10 @@ function Router() {
           </Route>
 
           {/* Resolve public brand slugs before entering the authenticated developer workspace. */}
+          <Route
+            path="/developer/developments/:developmentId/inventory"
+            component={DeveloperRouteBoundary}
+          />
           <Route path="/developer/developments/:developmentId" component={DeveloperRouteBoundary} />
           <Route path="/developer/:rest*" component={DeveloperRouteBoundary} />
 
@@ -618,6 +625,7 @@ function Router() {
             <Redirect to="/distribution/manager/developments" />
           </Route>
           <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager/lead-queue" component={SelectedTeamLeadQueuePage} />
           <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
           <Route
             path="/distribution/manager/developments/:developmentId"

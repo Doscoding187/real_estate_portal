@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import {
   ArrowRight,
   Check,
   ChevronDown,
-  Mail,
   MapPin,
   Clock,
   Unlock,
@@ -32,7 +31,7 @@ const PARTNER_LABELS: Record<Exclude<PartnerType, ''>, string> = {
   independent_agent: 'Independent Property Agent',
   small_brokerage: 'Small Brokerage',
   referral_partner: 'Referral Partner',
-  individual: 'Individual With Qualified Buyer',
+  individual: 'Individual Referrer',
 };
 
 const INTENT_LABELS: Record<Exclude<BuyerIntent, ''>, string> = {
@@ -53,6 +52,7 @@ interface Props {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ReferralApplyForm({ onClose, interestedDevId, developments }: Props) {
+  const [, setLocation] = useLocation();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState<FormState>({
     fullName: '',
@@ -113,13 +113,6 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
     }, 300);
   };
 
-  const handleExploreOpportunities = () => {
-    handleClose();
-    setTimeout(() => {
-      document.getElementById('available-developments')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 350);
-  };
-
   // ─── Select field helper ─────────────────────────────────────────────────
 
   const SelectField = ({
@@ -176,39 +169,38 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
           </div>
 
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Application Submitted</h2>
-          <p className="text-sm text-slate-600 max-w-xs mb-8">
-            We review every application manually. You'll receive access details by email once
-            approved.
+          <p className="text-sm text-slate-600 max-w-sm mb-8">
+            Your application is in review. You can browse public developments while it is
+            reviewed. Access approval requires a verified Property Listify account with this email
+            and acceptance of the current Terms.
           </p>
 
           <div className="w-full space-y-3 mb-8 max-w-md">
             <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-left">
-              <Mail className="h-4 w-4 shrink-0 text-blue-600" />
-              <p className="text-sm text-slate-700 font-medium">Confirmation email on its way</p>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-left">
               <Clock className="h-4 w-4 shrink-0 text-amber-500" />
-              <p className="text-sm text-slate-700 font-medium">Review typically within 24–48 hours</p>
+              <p className="text-sm text-slate-700 font-medium">Your application is waiting for review</p>
             </div>
             <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-left">
               <Unlock className="h-4 w-4 shrink-0 text-emerald-600" />
               <p className="text-sm text-slate-700 font-medium">
-                Access email will contain your login link
+                Access requires a verified account and accepted Terms
               </p>
             </div>
           </div>
 
           <p className="text-xs text-slate-500 mb-6 italic">
-            If you already have a buyer, keep their details ready — you'll need them to submit
-            your first referral.
+            For a buyer referral, first give the prospect the required information and permission
+            documents, and obtain signed evidence before entering their details.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
             <Button
               className="flex-1 bg-blue-600 text-base h-12 text-white hover:bg-blue-700 shadow-md"
-              onClick={handleExploreOpportunities}
+              onClick={() =>
+                setLocation('/login?mode=register&next=%2Fdistribution-network')
+              }
             >
-              Explore Opportunities
+              Create or Verify Account
             </Button>
             <Button variant="outline" className="flex-1 border-slate-300 h-12 text-base" onClick={handleClose}>
               Close & Keep Reading
@@ -228,11 +220,11 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
               <X className="h-5 w-5" />
             </button>
             <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-blue-500/20 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-300">
-              Referral Network
+              Distribution Network
             </div>
-            <h2 className="text-2xl font-bold text-white">Join the Referral Network</h2>
+            <h2 className="text-2xl font-bold text-white">Join the Distribution Network</h2>
             <p className="mt-1.5 text-sm text-slate-400">
-              Takes 2 minutes. No buyer required to apply.
+              Tell us a little about yourself. You can apply without a buyer or property-sales experience.
             </p>
           </div>
 
@@ -241,7 +233,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
             <div className="flex items-center gap-2 border-b border-slate-100 bg-blue-50 px-6 py-3 sm:px-8">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-blue-600" />
               <p className="text-xs text-slate-700">
-                Applying to refer buyers for{' '}
+                Interested in opportunities for{' '}
                 <strong className="font-semibold text-slate-900">{interestedDev.name}</strong>
                 {(interestedDev.suburb || interestedDev.city) && (
                   <span className="text-slate-500">
@@ -306,7 +298,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
                 <option value="independent_agent">Independent Property Agent</option>
                 <option value="small_brokerage">Small Brokerage</option>
                 <option value="referral_partner">Referral Partner</option>
-                <option value="individual">Individual With Qualified Buyer</option>
+                <option value="individual">Individual Referrer</option>
               </SelectField>
 
               <SelectField
@@ -324,7 +316,7 @@ export function ReferralApplyForm({ onClose, interestedDevId, developments }: Pr
             {/* CTA row */}
             <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 mt-2 border-t border-slate-100">
               <Link
-                href="/login"
+                href="/distribution-network/login"
                 className="text-sm font-medium text-blue-600 hover:text-blue-800 text-center sm:text-left"
                 onClick={handleClose}
               >

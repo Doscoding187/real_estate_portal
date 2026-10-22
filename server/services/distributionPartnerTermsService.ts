@@ -1,89 +1,114 @@
-import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
-  cataloguePublishers,
-  developments,
+  distributionBrandPartnerships,
   distributionDevelopmentAccess,
   distributionPrograms,
-  unitTypes,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
-import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
+import {
+  listDevelopmentSalesWorkspaceReferences,
+  type DevelopmentSalesWorkspaceReference,
+} from './developmentSalesWorkspaceService';
+import {
+  getDevelopmentSalesProjection,
+  type DevelopmentSalesProjection,
+} from './developmentSalesProjectionService';
+import {
+  listPartnerAccessibleDevelopmentIds,
+  type DistributionPartnerActor,
+} from './distributionPartnerProgramAccessService';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
 
-type ListPartnerProgramTermsInput = {
+type PartnerMode = 'sale' | 'rent';
+type DeveloperMode = 'for_sale' | 'for_rent';
+type PartnerProgramTermsInput = {
+  actor: DistributionPartnerActor;
   cataloguePublisherId?: number;
   developmentIds?: number[];
+  /** Kept for older internal callers; partner reads always require active access. */
   includeDisabled?: boolean;
 };
 
-type BrochureConfig = {
-  headline?: string | null;
-  description?: string | null;
-  highlightBullets?: string[];
-  amenityLabels?: string[];
-  heroImageUrl?: string | null;
-  contactName?: string | null;
-  contactPhone?: string | null;
-  contactEmail?: string | null;
+type ProjectedMode = {
+  availableCount: number;
+  priceFrom: number;
+  priceTo: number;
+  priceBasis: 'purchase_price' | 'monthly_rent';
 };
 
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
-  city?: string | null;
-  province?: string | null;
-  suburb?: string | null;
-  address?: string | null;
-  description?: string | null;
-  amenities?: string | null;
-  features?: unknown;
+  developmentFactsAvailable: true;
+  marketStatus: 'launching-soon' | 'selling' | 'sold-out';
+  city: string;
+  province: string;
+  suburb: null;
+  address: null;
+  description: string | null;
+  amenities: null;
+  features: null;
+  transactionModes: PartnerMode[];
+  referralModes: PartnerMode[];
+  phaseScope: DevelopmentSalesProjection['inventory']['phaseScope'];
+  phases: DevelopmentSalesProjection['inventory']['phases'];
+  pricingByMode: {
+    sale: ProjectedMode | null;
+    rent: ProjectedMode | null;
+  };
   priceFrom: number | null;
   priceTo: number | null;
   imageUrl: string | null;
-  brochure: BrochureConfig;
-  brand: {
-    cataloguePublisherId: number;
-    brandName: string;
-    logoUrl: string | null;
-    publicContactEmail: string | null;
-  } | null;
+  campaign: {
+    tagline: string | null;
+    images: string[];
+    revision: string;
+    observedAt: string;
+  };
+  brand: { cataloguePublisherId: number; brandName: string } | null;
   program: {
     programId: number;
     isActive: boolean;
     isReferralEnabled: boolean;
+    submissionAllowed: boolean;
     tierAccessPolicy: string | null;
-    commissionModel: 'flat_percentage' | 'flat_amount' | string;
+    commissionModel: string;
     defaultCommissionPercent: number | null;
     defaultCommissionAmount: number | null;
+    referrerCommissionType: string | null;
+    referrerCommissionValue: number | null;
+    referrerCommissionBasis: string | null;
     currencyCode: string | null;
     payoutMilestone: string | null;
     payoutMilestoneNotes: string | null;
   };
   unitTypes: Array<{
+    id: string;
     name: string;
+    description: string | null;
     bedrooms: number | null;
     bathrooms: number | null;
-    unitSize: number | null;
-    priceFrom: number | null;
-    priceTo: number | null;
+    size: number | null;
+    imageUrl: string | null;
+    modes: Partial<Record<PartnerMode, ProjectedMode>>;
   }>;
+  teamContacts: DevelopmentSalesProjection['contacts'];
   requiredDocuments: Array<{
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    category: 'developer_document' | 'client_required_document';
-    templateFileUrl: string | null;
-    templateFileName: string | null;
+    category: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
   }>;
+  /** Downloadable resources can only be fetched through the actor-authorized Distribution command. */
   sourceDocuments: Array<{
-    templateId: number;
-    documentCode: string;
-    documentLabel: string;
-    fileUrl: string | null;
-    fileName: string | null;
-    sortOrder: number;
+    id: number;
+    title: string;
+    documentType: string;
+    category: string;
+    version: number;
+    downloadable: boolean;
   }>;
   computed: {
     commissionDisplay: string;
@@ -92,218 +117,132 @@ export type PartnerProgramTermsItem = {
   };
   opportunity: {
     status: 'ready' | 'pending_setup' | 'blocked';
+    distributionActive: true;
+    partnerEntitled: true;
+    campaignVisibility: 'visible';
+    openForReferral: boolean;
+    marketability: 'marketable';
     reasonCodes: string[];
-    nextAction: 'submit_referral' | 'upload_docs' | 'contact_manager' | 'not_available';
+    nextAction: 'submit_referral' | 'contact_manager';
     friendlyMessage: string;
   };
 };
 
-function boolFromTinyInt(value: unknown) {
+function numberOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function booleanValue(value: unknown): boolean {
   return Number(value || 0) === 1;
 }
 
-function toNumberOrNull(value: unknown) {
-  if (value === null || typeof value === 'undefined') return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
+function toPartnerMode(mode: DeveloperMode): PartnerMode {
+  return mode === 'for_sale' ? 'sale' : 'rent';
 }
 
-function toPositiveNumberOrNull(value: unknown) {
-  const numeric = toNumberOrNull(value);
-  if (numeric === null || numeric <= 0) return null;
-  return numeric;
+function visibleModes(projection: DevelopmentSalesProjection): PartnerMode[] {
+  return (Object.keys(projection.inventory.modes) as DeveloperMode[])
+    .filter(mode => {
+      const value = projection.inventory.modes[mode];
+      return Boolean(value && value.availableCount > 0 && value.priceFrom > 0 && value.priceTo >= value.priceFrom);
+    })
+    .map(toPartnerMode);
 }
 
-function extractHeroImageUrl(rawImages: unknown): string | null {
-  if (!rawImages) return null;
-
-  const normalize = (value: unknown): string | null => {
-    if (!value || typeof value !== 'object') return null;
-    const candidate =
-      (value as any).url || (value as any).src || (value as any).imageUrl || (value as any).key;
-    return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : null;
-  };
-
-  const fromList = (list: unknown[]): string | null => {
-    const hero = list.find(entry => {
-      if (!entry || typeof entry !== 'object') return false;
-      const category = String((entry as any).category || '').toLowerCase();
-      return category === 'hero' || category === 'featured';
-    });
-    return (
-      normalize(hero) ||
-      normalize(list[0]) ||
-      (typeof list[0] === 'string' ? String(list[0]) : null)
-    );
-  };
-
-  if (Array.isArray(rawImages)) {
-    return fromList(rawImages);
-  }
-
-  if (typeof rawImages === 'string') {
-    const trimmed = rawImages.trim();
-    if (!trimmed) return null;
-    if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) {
-      if (trimmed.includes(',')) {
-        return (
-          trimmed
-            .split(',')
-            .map(item => item.trim())
-            .find(Boolean) || null
-        );
-      }
-      return trimmed;
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return fromList(parsed);
-      return normalize(parsed);
-    } catch {
-      return null;
-    }
-  }
-
-  return normalize(rawImages);
+function mapMode(value: ProjectedMode | undefined): ProjectedMode | null {
+  return value && value.availableCount > 0 ? value : null;
 }
 
-function normalizeCommissionModel(
-  value: unknown,
-): PartnerProgramTermsItem['program']['commissionModel'] {
-  const model = value ? String(value) : '';
-  if (model === 'fixed_amount') return 'flat_amount';
-  if (!model) return 'flat_amount';
-  return model as PartnerProgramTermsItem['program']['commissionModel'];
-}
-
-function mapPayoutMilestoneLabel(value: string | null) {
-  if (!value) return null;
-  switch (value) {
-    case 'attorney_instruction':
-      return 'Paid after attorney instruction';
-    case 'attorney_signing':
-      return 'Paid after attorney signing';
-    case 'bond_approval':
-      return 'Paid after bond approval';
-    case 'transfer_registration':
-      return 'Paid after transfer registration';
-    case 'occupation':
-      return 'Paid after occupation';
-    case 'custom':
-      return 'Paid according to custom milestone';
-    default:
-      return 'Payout rules not configured';
-  }
-}
-
-function formatCurrencyAmount(amount: number, currencyCode: string) {
-  const rounded = Math.round(amount);
-  if (currencyCode === 'ZAR') {
-    return `R${rounded.toLocaleString('en-ZA')}`;
-  }
-  return `${currencyCode} ${rounded.toLocaleString('en-US')}`;
-}
-
-function buildCommissionDisplay(input: {
-  commissionModel: string;
-  defaultCommissionPercent: number | null;
-  defaultCommissionAmount: number | null;
+function commissionDisplay(input: {
   currencyCode: string | null;
+  commissionType: string | null;
+  commissionValue: number | null;
+  commissionBasis: string | null;
+  commissionModel: string;
+  defaultPercent: number | null;
+  defaultAmount: number | null;
 }) {
-  if (!input.currencyCode) {
-    return 'Commission not configured';
+  const basis = input.commissionBasis ? ` on ${input.commissionBasis.replace(/_/g, ' ')}` : '';
+  if (input.commissionType === 'percentage' && input.commissionValue !== null) {
+    return `${input.commissionValue}% referral payout${basis}`;
   }
+  if (input.commissionType === 'flat' && input.commissionValue !== null) {
+    const currency = input.currencyCode === 'ZAR' ? 'R' : `${input.currencyCode || ''} `;
+    return `${currency}${Math.round(input.commissionValue).toLocaleString('en-ZA')} referral payout`;
+  }
+  if (input.commissionModel === 'flat_percentage' && input.defaultPercent !== null) {
+    return `${input.defaultPercent}% referral payout; basis requires confirmation`;
+  }
+  if (input.commissionModel === 'fixed_amount' && input.defaultAmount !== null) {
+    const currency = input.currencyCode === 'ZAR' ? 'R' : `${input.currencyCode || ''} `;
+    return `${currency}${Math.round(input.defaultAmount).toLocaleString('en-ZA')} referral payout`;
+  }
+  return 'Referral payout terms require confirmation';
+}
 
-  if (input.commissionModel === 'flat_percentage') {
-    if (!input.defaultCommissionPercent || input.defaultCommissionPercent <= 0) {
-      return 'Commission not configured';
+function payoutDisplay(milestone: string | null, notes: string | null) {
+  const normalizedNotes = String(notes || '').trim();
+  if (normalizedNotes) return normalizedNotes;
+  if (!milestone) return 'Payout milestone not configured';
+  return `Paid after ${milestone.replace(/_/g, ' ')}`;
+}
+
+function mapUnitTypes(projection: DevelopmentSalesProjection): PartnerProgramTermsItem['unitTypes'] {
+  return projection.inventory.unitTypes.map(unitType => {
+    const modes: Partial<Record<PartnerMode, ProjectedMode>> = {};
+    for (const mode of ['for_sale', 'for_rent'] as const) {
+      const projected = unitType.modes[mode];
+      if (projected?.availableCount && projected.priceFrom > 0 && projected.priceTo >= projected.priceFrom) {
+        modes[toPartnerMode(mode)] = projected;
+      }
     }
-    return `${input.defaultCommissionPercent}% referral fee`;
-  }
-
-  if (input.commissionModel === 'flat_amount') {
-    if (!input.defaultCommissionAmount || input.defaultCommissionAmount <= 0) {
-      return 'Commission not configured';
-    }
-    return `${formatCurrencyAmount(input.defaultCommissionAmount, input.currencyCode)} referral fee`;
-  }
-
-  return 'Commission not configured';
+    return {
+      id: unitType.id,
+      name: unitType.name,
+      description: unitType.description,
+      bedrooms: unitType.bedrooms,
+      bathrooms: unitType.bathrooms,
+      size: unitType.size,
+      imageUrl: unitType.imageUrl,
+      modes,
+    };
+  }).filter(unitType => Object.keys(unitType.modes).length > 0);
 }
 
-function buildPayoutDisplay(payoutMilestone: string | null, payoutMilestoneNotes: string | null) {
-  const label = mapPayoutMilestoneLabel(payoutMilestone);
-  if (!label) {
-    return 'Payout rules not configured';
-  }
-
-  const notes = (payoutMilestoneNotes || '').trim();
-  return notes ? `${label} (${notes})` : label;
-}
-
-function buildRequiredDocsSummary(requiredDocuments: PartnerProgramTermsItem['requiredDocuments']) {
-  const requiredCount = requiredDocuments.filter(document => document.isRequired).length;
-  if (!requiredCount) {
-    return 'No required documents configured';
-  }
-  return `${requiredCount} required document${requiredCount === 1 ? '' : 's'}`;
-}
-
-function withConditions(conditions: SQL[]) {
-  if (conditions.length === 0) {
-    return sql`1 = 1`;
-  }
-  if (conditions.length === 1) {
-    return conditions[0];
-  }
-  return and(...conditions) as SQL;
+async function loadWorkspaceReferences(developmentIds: number[]) {
+  const uniqueIds = [...new Set(developmentIds)];
+  const batches = Array.from({ length: Math.ceil(uniqueIds.length / 100) }, (_, page) =>
+    uniqueIds.slice(page * 100, (page + 1) * 100),
+  );
+  return (await Promise.all(
+    batches.map(developmentIdsInBatch =>
+      listDevelopmentSalesWorkspaceReferences({
+        developmentIds: developmentIdsInBatch,
+        limit: 100,
+      }),
+    ),
+  )).flat();
 }
 
 export async function listPartnerProgramTerms(
-  input: ListPartnerProgramTermsInput,
+  input: PartnerProgramTermsInput,
 ): Promise<{ items: PartnerProgramTermsItem[] }> {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
+  if (input.developmentIds?.length === 0) return { items: [] };
 
-  const includeDisabled = Boolean(input.includeDisabled);
-  const conditions: SQL[] = [];
+  const accessibleIds = await listPartnerAccessibleDevelopmentIds({
+    db,
+    actor: input.actor,
+    requestedDevelopmentIds: input.developmentIds,
+  });
+  if (!accessibleIds.length) return { items: [] };
 
-  if (typeof input.cataloguePublisherId === 'number') {
-    conditions.push(eq(developments.cataloguePublisherId, input.cataloguePublisherId));
-  }
-
-  if (input.developmentIds?.length) {
-    conditions.push(inArray(developments.id, input.developmentIds));
-  }
-
-  if (!includeDisabled) {
-    conditions.push(eq(distributionPrograms.isActive, 1));
-    conditions.push(eq(distributionPrograms.isReferralEnabled, 1));
-  } else {
-    conditions.push(
-      or(
-        sql`${distributionPrograms.id} IS NOT NULL`,
-        inArray(distributionDevelopmentAccess.status, ['included', 'listed']),
-      ) as SQL,
-    );
-  }
-
-  const selectPartnerRows = async () => {
-    const selectFields: Record<string, any> = {
-      developmentId: developments.id,
-      developmentName: developments.name,
-      suburb: developments.suburb,
-      city: developments.city,
-      province: developments.province,
-      address: developments.address,
-      description: developments.description,
-      amenities: developments.amenities,
-      features: developments.features,
-      developmentPriceFrom: developments.priceFrom,
-      developmentPriceTo: developments.priceTo,
-      developmentImages: developments.images,
-      cataloguePublisherId: developments.cataloguePublisherId,
+  const programRows = await db
+    .select({
+      developmentId: distributionPrograms.developmentId,
       programId: distributionPrograms.id,
       isActive: distributionPrograms.isActive,
       isReferralEnabled: distributionPrograms.isReferralEnabled,
@@ -311,340 +250,201 @@ export async function listPartnerProgramTerms(
       commissionModel: distributionPrograms.commissionModel,
       defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
       defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+      referrerCommissionType: distributionPrograms.referrerCommissionType,
+      referrerCommissionValue: distributionPrograms.referrerCommissionValue,
+      referrerCommissionBasis: distributionPrograms.referrerCommissionBasis,
       currencyCode: distributionPrograms.currencyCode,
       payoutMilestone: distributionPrograms.payoutMilestone,
       payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
       accessStatus: distributionDevelopmentAccess.status,
       submissionAllowed: distributionDevelopmentAccess.submissionAllowed,
-    };
-
-    selectFields.brochureConfigJson = distributionDevelopmentAccess.brochureConfigJson;
-
-    return (await db
-      .select(selectFields)
-      .from(developments)
-      .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
-      .leftJoin(
-        distributionDevelopmentAccess,
-        eq(distributionDevelopmentAccess.developmentId, developments.id),
-      )
-      .where(withConditions(conditions))
-      .orderBy(developments.province, developments.city, developments.name)) as Array<
-      Record<string, any>
-    >;
-  };
-
-  const rows = await selectPartnerRows();
-
-  if (!rows.length) {
-    return { items: [] };
-  }
-
-  const developmentIds: number[] = Array.from(
-    new Set(rows.map(row => Number(row.developmentId)).filter(value => Number.isFinite(value))),
-  );
-  const cataloguePublisherIds: number[] = Array.from(
-    new Set(
-      rows
-        .map(row => Number(row.cataloguePublisherId || 0))
-        .filter((value): value is number => Number.isFinite(value) && value > 0),
-    ),
-  );
-
-  const brandRows = cataloguePublisherIds.length
-    ? await db
-        .select({
-          id: cataloguePublishers.id,
-          brandName: cataloguePublishers.name,
-          logoUrl: cataloguePublishers.logoUrl,
-          publicContactEmail: cataloguePublishers.publicContactEmail,
-        })
-        .from(cataloguePublishers)
-        .where(inArray(cataloguePublishers.id, cataloguePublisherIds))
-    : [];
-
-  const brandById = new Map<
-    number,
-    { id: number; brandName: string; logoUrl: string | null; publicContactEmail: string | null }
-  >();
-  for (const row of brandRows) {
-    brandById.set(Number(row.id), {
-      id: Number(row.id),
-      brandName: String(row.brandName || ''),
-      logoUrl: row.logoUrl || null,
-      publicContactEmail: row.publicContactEmail || null,
-    });
-  }
-
-  const docsByDevelopmentId = new Map<number, PartnerProgramTermsItem['requiredDocuments']>();
-  const sourceDocsByDevelopmentId = new Map<number, PartnerProgramTermsItem['sourceDocuments']>();
-  for (const developmentId of developmentIds) {
-    const templates = await listDevelopmentRequiredDocumentsOrEmpty(db, developmentId);
-    docsByDevelopmentId.set(
-      developmentId,
-      templates
-        .filter(template => template.isActive && template.isRequired)
-        .map(template => ({
-          templateId: Number(template.id),
-          documentCode: String(template.documentCode),
-          documentLabel: String(template.documentLabel || ''),
-          category: template.category,
-          templateFileUrl: template.templateFileUrl || null,
-          templateFileName: template.templateFileName || null,
-          isRequired: Boolean(template.isRequired),
-          sortOrder: Number(template.sortOrder || 0),
-        })),
+      excludedByMandate: distributionDevelopmentAccess.excludedByMandate,
+      excludedByExclusivity: distributionDevelopmentAccess.excludedByExclusivity,
+      publisherId: distributionDevelopmentAccess.cataloguePublisherId,
+      partnershipStatus: distributionBrandPartnerships.status,
+    })
+    .from(distributionPrograms)
+    .innerJoin(
+      distributionDevelopmentAccess,
+      eq(distributionDevelopmentAccess.developmentId, distributionPrograms.developmentId),
+    )
+    .innerJoin(
+      distributionBrandPartnerships,
+      eq(distributionBrandPartnerships.id, distributionDevelopmentAccess.brandPartnershipId),
+    )
+    .where(
+      and(
+        inArray(distributionPrograms.developmentId, accessibleIds),
+        eq(distributionPrograms.isActive, 1),
+        eq(distributionDevelopmentAccess.status, 'included'),
+        eq(distributionDevelopmentAccess.excludedByMandate, 0),
+        eq(distributionDevelopmentAccess.excludedByExclusivity, 0),
+        eq(distributionBrandPartnerships.status, 'active'),
+      ),
     );
-    sourceDocsByDevelopmentId.set(
-      developmentId,
-      templates
-        .filter(
-          template =>
-            template.isActive && template.category === 'developer_document' && !template.isRequired,
-        )
-        .map(template => ({
-          templateId: Number(template.id),
-          documentCode: String(template.documentCode),
-          documentLabel: String(template.documentLabel || ''),
-          fileUrl: template.templateFileUrl || null,
-          fileName: template.templateFileName || null,
-          sortOrder: Number(template.sortOrder || 0),
-        })),
-    );
-  }
 
-  const unitRows = developmentIds.length
-    ? await db
-        .select({
-          developmentId: unitTypes.developmentId,
-          name: unitTypes.name,
-          displayOrder: unitTypes.displayOrder,
-          bedrooms: unitTypes.bedrooms,
-          bathrooms: unitTypes.bathrooms,
-          unitSize: unitTypes.unitSize,
-          priceFrom: unitTypes.priceFrom,
-          priceTo: unitTypes.priceTo,
-          basePriceFrom: unitTypes.basePriceFrom,
-          basePriceTo: unitTypes.basePriceTo,
-        })
-        .from(unitTypes)
-        .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
-        .orderBy(unitTypes.displayOrder, unitTypes.name)
-    : [];
+  if (!programRows.length) return { items: [] };
 
-  const unitPriceRangeByDevelopment = new Map<
-    number,
-    {
-      priceFrom: number | null;
-      priceTo: number | null;
-    }
-  >();
-  const unitTypesByDevelopment = new Map<
-    number,
-    Array<{
-      name: string;
-      bedrooms: number | null;
-      bathrooms: number | null;
-      unitSize: number | null;
-      priceFrom: number | null;
-      priceTo: number | null;
-    }>
-  >();
-
-  for (const row of unitRows) {
-    const developmentId = Number(row.developmentId || 0);
-    if (!developmentId) continue;
-    const unitName = String(row.name || '').trim();
-    const unitPriceFrom =
-      toPositiveNumberOrNull(row.priceFrom) ?? toPositiveNumberOrNull(row.basePriceFrom);
-    const fallbackTo =
-      toPositiveNumberOrNull(row.priceTo) ?? toPositiveNumberOrNull(row.basePriceTo);
-    const unitPriceTo = fallbackTo ?? unitPriceFrom;
-    if (unitPriceFrom === null && unitPriceTo === null) continue;
-
-    const current = unitPriceRangeByDevelopment.get(developmentId) || {
-      priceFrom: null,
-      priceTo: null,
-    };
-
-    const nextMin =
-      unitPriceFrom === null
-        ? current.priceFrom
-        : current.priceFrom === null
-          ? unitPriceFrom
-          : Math.min(current.priceFrom, unitPriceFrom);
-    const nextMax =
-      unitPriceTo === null
-        ? current.priceTo
-        : current.priceTo === null
-          ? unitPriceTo
-          : Math.max(current.priceTo, unitPriceTo);
-
-    unitPriceRangeByDevelopment.set(developmentId, {
-      priceFrom: nextMin,
-      priceTo: nextMax,
-    });
-
-    if (unitName) {
-      const currentUnitTypes = unitTypesByDevelopment.get(developmentId) || [];
-      const existingIndex = currentUnitTypes.findIndex(item => item.name === unitName);
-      if (existingIndex >= 0) {
-        const existing = currentUnitTypes[existingIndex];
-        currentUnitTypes[existingIndex] = {
-          name: unitName,
-          bedrooms: existing.bedrooms ?? toNumberOrNull(row.bedrooms),
-          bathrooms: existing.bathrooms ?? toNumberOrNull(row.bathrooms),
-          unitSize: existing.unitSize ?? toNumberOrNull(row.unitSize),
-          priceFrom:
-            existing.priceFrom === null
-              ? unitPriceFrom
-              : unitPriceFrom === null
-                ? existing.priceFrom
-                : Math.min(existing.priceFrom, unitPriceFrom),
-          priceTo:
-            existing.priceTo === null
-              ? unitPriceTo
-              : unitPriceTo === null
-                ? existing.priceTo
-                : Math.max(existing.priceTo, unitPriceTo),
-        };
-      } else {
-        currentUnitTypes.push({
-          name: unitName,
-          bedrooms: toNumberOrNull(row.bedrooms),
-          bathrooms: toNumberOrNull(row.bathrooms),
-          unitSize: toNumberOrNull(row.unitSize),
-          priceFrom: unitPriceFrom,
-          priceTo: unitPriceTo,
-        });
+  const references = await loadWorkspaceReferences(programRows.map(row => Number(row.developmentId)));
+  const referenceById = new Map<number, DevelopmentSalesWorkspaceReference>(
+    references.map(reference => [reference.developmentId, reference]),
+  );
+  const projections = await Promise.all(
+    programRows.map(async row => {
+      const developmentId = Number(row.developmentId);
+      const reference = referenceById.get(developmentId);
+      if (!reference || (input.cataloguePublisherId && reference.publisherId !== input.cataloguePublisherId)) {
+        return null;
       }
-      unitTypesByDevelopment.set(developmentId, currentUnitTypes);
-    }
-  }
-
-  const items: PartnerProgramTermsItem[] = rows.map(row => {
-    const developmentId = Number(row.developmentId);
-    const commissionModel = normalizeCommissionModel(row.commissionModel);
-    const defaultCommissionPercent = toNumberOrNull(row.defaultCommissionPercent);
-    const defaultCommissionAmount = toNumberOrNull(row.defaultCommissionAmount);
-    const currencyCode = row.currencyCode ? String(row.currencyCode) : null;
-    const payoutMilestone = row.payoutMilestone ? String(row.payoutMilestone) : null;
-    const payoutMilestoneNotes = row.payoutMilestoneNotes ? String(row.payoutMilestoneNotes) : null;
-
-    const requiredDocuments = docsByDevelopmentId.get(developmentId) || [];
-    const primaryBrandId = Number(row.cataloguePublisherId || 0);
-    const brandRecord = primaryBrandId ? brandById.get(primaryBrandId) : null;
-    const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
-    const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
-    const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
-    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
-    const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
-    const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
-    const priceTo =
-      priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
-    const brochureConfig =
-      row.brochureConfigJson && typeof row.brochureConfigJson === 'object'
-        ? (row.brochureConfigJson as BrochureConfig)
-        : {};
-
-    return {
-      developmentId,
-      developmentName:
-        String(brochureConfig.headline || '').trim() ||
-        String(row.developmentName || `Development #${developmentId}`),
-      suburb: row.suburb || null,
-      city: row.city || null,
-      province: row.province || null,
-      address: row.address || null,
-      description: brochureConfig.description?.trim() || row.description || null,
-      amenities: brochureConfig.amenityLabels?.length
-        ? brochureConfig.amenityLabels
-        : row.amenities || null,
-      features: brochureConfig.highlightBullets?.length
-        ? brochureConfig.highlightBullets
-        : row.features || null,
-      priceFrom: priceFrom ?? null,
-      priceTo: priceTo ?? null,
-      imageUrl: brochureConfig.heroImageUrl?.trim() || extractHeroImageUrl(row.developmentImages),
-      brochure: brochureConfig,
-      brand: brandRecord
-        ? {
-            cataloguePublisherId: brandRecord.id,
-            brandName: brandRecord.brandName,
-            logoUrl: brandRecord.logoUrl,
-            publicContactEmail: brandRecord.publicContactEmail,
-          }
-        : null,
-      program: {
-        programId: Number(row.programId || 0),
-        isActive:
-          boolFromTinyInt(row.isActive) ||
-          (row.accessStatus ? String(row.accessStatus) !== 'excluded' : false),
-        isReferralEnabled:
-          boolFromTinyInt(row.isReferralEnabled) || boolFromTinyInt(row.submissionAllowed),
-        tierAccessPolicy: row.tierAccessPolicy ? String(row.tierAccessPolicy) : null,
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
-        currencyCode,
-        payoutMilestone,
-        payoutMilestoneNotes,
-      },
-      unitTypes: unitTypesByDevelopment.get(developmentId) || [],
-      requiredDocuments,
-      sourceDocuments: sourceDocsByDevelopmentId.get(developmentId) || [],
-      computed: {
-        commissionDisplay: buildCommissionDisplay({
-          commissionModel,
-          defaultCommissionPercent,
-          defaultCommissionAmount,
-          currencyCode,
-        }),
-        payoutDisplay: buildPayoutDisplay(payoutMilestone, payoutMilestoneNotes),
-        requiredDocsSummary: buildRequiredDocsSummary(requiredDocuments),
-      },
-      opportunity: {
-        status: 'blocked',
-        reasonCodes: ['NOT_AVAILABLE'],
-        nextAction: 'not_available',
-        friendlyMessage: 'This opportunity is not accepting referrals right now.',
-      },
-    };
-  });
-
-  const evaluatedItems = await Promise.all(
-    items.map(async item => {
-      try {
-        const evaluation = await evaluateDevelopmentDistributionAccess({
-          db,
-          developmentId: item.developmentId,
-          actor: { role: 'referrer' },
-          channel: 'submission',
-        });
-        return {
-          ...item,
-          opportunity: evaluation.opportunity,
-          program: {
-            ...item.program,
-            isActive: evaluation.programActive,
-            isReferralEnabled: evaluation.referralEnabled,
-          },
-        };
-      } catch {
-        return item;
+      const projection = await getDevelopmentSalesProjection(developmentId);
+      if (
+        !projection ||
+        !projection.campaign.visible ||
+        projection.publisherId === null ||
+        projection.publisherId !== reference.publisherId ||
+        projection.publisherId !== Number(row.publisherId || 0) ||
+        projection.inventory.phaseScope === 'unscoped-hidden' ||
+        visibleModes(projection).length === 0
+      ) {
+        return null;
       }
+      return { row, reference, projection };
     }),
   );
 
-  return {
-    items: evaluatedItems,
-  };
+  const items: PartnerProgramTermsItem[] = [];
+  for (const candidate of projections) {
+    if (!candidate) continue;
+    const { row, reference, projection } = candidate;
+    const modes = visibleModes(projection);
+    const sale = mapMode(projection.inventory.modes.for_sale);
+    const rent = mapMode(projection.inventory.modes.for_rent);
+    const requiredDocuments = (await listDevelopmentRequiredDocumentsOrEmpty(db, reference.developmentId))
+      .filter(document => document.isActive)
+      .map(document => ({
+        templateId: document.id,
+        documentCode: document.documentCode,
+        documentLabel: document.documentLabel,
+        category: 'client_required_document' as const,
+        isRequired: document.isRequired,
+        sortOrder: document.sortOrder,
+      }));
+    const programIsActive = booleanValue(row.isActive) && row.accessStatus === 'included' && row.partnershipStatus === 'active';
+    const openForReferral =
+      programIsActive && booleanValue(row.isReferralEnabled) && booleanValue(row.submissionAllowed);
+    const hasFlatRentalPayout =
+      (row.referrerCommissionType === 'flat' && (numberOrNull(row.referrerCommissionValue) || 0) > 0) ||
+      (row.commissionModel === 'fixed_amount' && (numberOrNull(row.defaultCommissionAmount) || 0) > 0);
+    const referralModes = openForReferral
+      ? modes.filter(mode => mode === 'sale' || hasFlatRentalPayout)
+      : [];
+    const refs = commissionDisplay({
+      currencyCode: row.currencyCode || null,
+      commissionType: row.referrerCommissionType || null,
+      commissionValue: numberOrNull(row.referrerCommissionValue),
+      commissionBasis: row.referrerCommissionBasis || null,
+      commissionModel: String(row.commissionModel || ''),
+      defaultPercent: numberOrNull(row.defaultCommissionPercent),
+      defaultAmount: numberOrNull(row.defaultCommissionAmount),
+    });
+    const singleMode = modes.length === 1 ? modes[0] : null;
+    const singlePrice = singleMode === 'sale' ? sale : singleMode === 'rent' ? rent : null;
+    const requiredCount = requiredDocuments.filter(document => document.isRequired).length;
+
+    items.push({
+      developmentId: reference.developmentId,
+      developmentName: projection.campaign.name,
+      developmentFactsAvailable: true,
+      marketStatus: projection.campaign.lifecycle,
+      city: projection.campaign.city,
+      province: projection.campaign.province,
+      suburb: null,
+      address: null,
+      description: projection.campaign.description,
+      amenities: null,
+      features: null,
+      transactionModes: modes,
+      referralModes,
+      phaseScope: projection.inventory.phaseScope,
+      phases: projection.inventory.phases,
+      pricingByMode: { sale, rent },
+      priceFrom: singlePrice?.priceFrom ?? null,
+      priceTo: singlePrice?.priceTo ?? null,
+      imageUrl: projection.campaign.images[0] || null,
+      campaign: {
+        tagline: projection.campaign.tagline,
+        images: projection.campaign.images,
+        revision: projection.revision,
+        observedAt: projection.observedAt,
+      },
+      brand: reference.publisherId && reference.publisherName
+        ? { cataloguePublisherId: reference.publisherId, brandName: reference.publisherName }
+        : null,
+      program: {
+        programId: Number(row.programId),
+        isActive: programIsActive,
+        isReferralEnabled: booleanValue(row.isReferralEnabled),
+        submissionAllowed: booleanValue(row.submissionAllowed),
+        tierAccessPolicy: row.tierAccessPolicy || null,
+        commissionModel: String(row.commissionModel || ''),
+        defaultCommissionPercent: numberOrNull(row.defaultCommissionPercent),
+        defaultCommissionAmount: numberOrNull(row.defaultCommissionAmount),
+        referrerCommissionType: row.referrerCommissionType || null,
+        referrerCommissionValue: numberOrNull(row.referrerCommissionValue),
+        referrerCommissionBasis: row.referrerCommissionBasis || null,
+        currencyCode: row.currencyCode || null,
+        payoutMilestone: row.payoutMilestone || null,
+        payoutMilestoneNotes: row.payoutMilestoneNotes || null,
+      },
+      unitTypes: mapUnitTypes(projection),
+      teamContacts: projection.contacts,
+      requiredDocuments,
+      sourceDocuments: projection.resources.map(resource => ({
+        id: resource.id,
+        title: resource.title,
+        documentType: resource.documentType,
+        category: resource.category,
+        version: resource.version,
+        downloadable: resource.downloadable,
+      })),
+      computed: {
+        commissionDisplay: refs,
+        payoutDisplay: payoutDisplay(row.payoutMilestone || null, row.payoutMilestoneNotes || null),
+        requiredDocsSummary: requiredCount
+          ? `${requiredCount} required document${requiredCount === 1 ? '' : 's'}`
+          : 'No required documents configured',
+      },
+      opportunity: {
+        status: openForReferral && referralModes.length > 0 ? 'ready' : 'pending_setup',
+        distributionActive: true,
+        partnerEntitled: true,
+        campaignVisibility: 'visible',
+        openForReferral,
+        marketability: 'marketable',
+        reasonCodes: !openForReferral
+          ? ['REFERRALS_PAUSED']
+          : referralModes.length === 0
+            ? ['PAYOUT_TERMS_NOT_CONFIGURED_FOR_AVAILABLE_MODES']
+            : [],
+        nextAction: openForReferral && referralModes.length > 0 ? 'submit_referral' : 'contact_manager',
+        friendlyMessage: !openForReferral
+          ? 'This program is visible, but referral intake is paused. Contact the program manager.'
+          : referralModes.length === 0
+            ? 'Marketable inventory is available, but referral payout terms are not configured for it.'
+            : referralModes.length < modes.length
+              ? 'Sale referrals are open. Rental referrals need a configured flat payout before they can be submitted.'
+              : 'Current released inventory is available for this referral program.',
+      },
+    });
+  }
+
+  return { items };
 }
 
-export async function getPartnerProgramTermsByDevelopmentId(developmentId: number) {
-  const result = await listPartnerProgramTerms({
-    developmentIds: [developmentId],
-    includeDisabled: false,
-  });
+export async function getPartnerProgramTermsByDevelopmentId(
+  developmentId: number,
+  actor: DistributionPartnerActor,
+) {
+  const result = await listPartnerProgramTerms({ actor, developmentIds: [developmentId] });
   return result.items.find(item => item.developmentId === developmentId) || null;
 }

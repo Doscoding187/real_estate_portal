@@ -23,7 +23,7 @@ import {
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const LOCAL_JOURNEY_VERSION = 'local-journey-preview-v1';
+export const LOCAL_JOURNEY_VERSION = 'local-journey-preview-v4';
 export const LOCAL_JOURNEY_USERS = Object.freeze([
   {
     id: 996004,
@@ -46,11 +46,35 @@ export const LOCAL_JOURNEY_USERS = Object.freeze([
     lastName: 'Pending',
     slug: 'local-agent-payment-pending',
   },
+  {
+    id: 996007,
+    email: 'referrer@listify.local',
+    firstName: 'Lindiwe',
+    lastName: 'Referral Demo',
+    slug: 'local-distribution-referrer',
+  },
 ]);
+const LOCAL_DISTRIBUTION_PARTNER = Object.freeze({
+  userId: 996007,
+  email: 'referrer@listify.local',
+  identityType: 'referrer' as const,
+  displayName: 'Local Distribution Partner',
+});
+const LOCAL_DISTRIBUTION_OPPORTUNITY = Object.freeze({
+  developmentId: 996001,
+  cataloguePublisherId: 996001,
+  developmentName: 'The Preview Residences',
+  accessPolicy: 'open',
+  isReferralEnabled: false,
+  submissionAllowed: false,
+  partnerAccessConfigured: true,
+});
 const LEGAL_BUNDLE_ID = 'local-journey-synthetic-v1';
 export const LOCAL_JOURNEY_DIGEST = stableDigest({
   version: LOCAL_JOURNEY_VERSION,
   users: LOCAL_JOURNEY_USERS,
+  distributionPartner: LOCAL_DISTRIBUTION_PARTNER,
+  distributionOpportunity: LOCAL_DISTRIBUTION_OPPORTUNITY,
   legalBundleId: LEGAL_BUNDLE_ID,
   purchaseTerms: 'terms-payment-notice-2026-10-13.2.txt',
   privacy: 'privacy.txt',
@@ -61,6 +85,140 @@ type Input = {
   decision: AuthorizedDatabaseOperation;
   connection: AuthoritySqlConnection;
 };
+
+async function ensurePausedLocalOpportunity(input: Input, prepare: boolean) {
+  const developmentRows = await queryRows(
+    input.connection,
+    'SELECT id, name, catalogue_publisher_id FROM developments WHERE id = ?',
+    [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+  );
+  if (
+    developmentRows.length !== 1 ||
+    Number(developmentRows[0].id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId ||
+    developmentRows[0].name !== LOCAL_DISTRIBUTION_OPPORTUNITY.developmentName ||
+    Number(developmentRows[0].catalogue_publisher_id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId
+  ) {
+    throw new Error('The local partner preview requires the verified Homepage Preview development.');
+  }
+
+  let partnershipRows = await queryRows(
+    input.connection,
+    'SELECT id, status, catalogue_publisher_id FROM distribution_brand_partnerships WHERE catalogue_publisher_id = ?',
+    [LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId],
+  );
+  if (partnershipRows.length === 0 && prepare) {
+    await input.connection.execute(
+      `INSERT INTO distribution_brand_partnerships
+        (catalogue_publisher_id, status, partnered_at, reason_code, notes)
+       VALUES (?, 'active', NOW(), 'LOCAL_PREVIEW', 'Synthetic local partner preview; no commercial relationship is implied.')`,
+      [LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId],
+    );
+    partnershipRows = await queryRows(
+      input.connection,
+      'SELECT id, status, catalogue_publisher_id FROM distribution_brand_partnerships WHERE catalogue_publisher_id = ?',
+      [LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId],
+    );
+  }
+  if (
+    partnershipRows.length !== 1 ||
+    partnershipRows[0].status !== 'active' ||
+    Number(partnershipRows[0].catalogue_publisher_id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId
+  ) {
+    throw new Error('The local Distribution partnership is missing or conflicts with the preview contract.');
+  }
+  const partnershipId = Number(partnershipRows[0].id);
+
+  let programRows = await queryRows(
+    input.connection,
+    `SELECT id, development_id, is_active, is_referral_enabled, tier_access_policy,
+            commission_model, default_commission_percent, default_commission_amount, currency_code
+       FROM distribution_programs WHERE development_id = ?`,
+    [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+  );
+  if (programRows.length === 0 && prepare) {
+    await input.connection.execute(
+      `INSERT INTO distribution_programs
+        (development_id, is_active, is_referral_enabled, commission_model,
+         tier_access_policy, currency_code)
+       VALUES (?, 1, 0, 'flat_percentage', 'open', 'ZAR')`,
+      [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+    );
+    programRows = await queryRows(
+      input.connection,
+      `SELECT id, development_id, is_active, is_referral_enabled, tier_access_policy,
+              commission_model, default_commission_percent, default_commission_amount, currency_code
+         FROM distribution_programs WHERE development_id = ?`,
+      [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+    );
+  }
+  if (
+    programRows.length !== 1 ||
+    Number(programRows[0].development_id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId ||
+    Number(programRows[0].is_active) !== 1 ||
+    Number(programRows[0].is_referral_enabled) !== 0 ||
+    programRows[0].tier_access_policy !== LOCAL_DISTRIBUTION_OPPORTUNITY.accessPolicy ||
+    programRows[0].commission_model !== 'flat_percentage' ||
+    programRows[0].default_commission_percent !== null ||
+    programRows[0].default_commission_amount !== null ||
+    programRows[0].currency_code !== 'ZAR'
+  ) {
+    throw new Error('The local Distribution program is missing or conflicts with paused-intake preview rules.');
+  }
+  const programId = Number(programRows[0].id);
+
+  let accessRows = await queryRows(
+    input.connection,
+    `SELECT development_id, brand_partnership_id, status, submission_allowed,
+            excluded_by_mandate, excluded_by_exclusivity, catalogue_publisher_id
+       FROM distribution_development_access WHERE development_id = ?`,
+    [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+  );
+  if (accessRows.length === 0 && prepare) {
+    await input.connection.execute(
+      `INSERT INTO distribution_development_access
+        (development_id, brand_partnership_id, status, submission_allowed,
+         excluded_by_mandate, excluded_by_exclusivity, reason_code, notes,
+         catalogue_publisher_id)
+       VALUES (?, ?, 'included', 0, 0, 0, 'LOCAL_PREVIEW',
+         'Synthetic local partner preview; referral submission remains disabled.', ?)`,
+      [
+        LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId,
+        partnershipId,
+        LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId,
+      ],
+    );
+    accessRows = await queryRows(
+      input.connection,
+      `SELECT development_id, brand_partnership_id, status, submission_allowed,
+              excluded_by_mandate, excluded_by_exclusivity, catalogue_publisher_id
+         FROM distribution_development_access WHERE development_id = ?`,
+      [LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId],
+    );
+  }
+  if (
+    accessRows.length !== 1 ||
+    Number(accessRows[0].development_id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId ||
+    Number(accessRows[0].brand_partnership_id) !== partnershipId ||
+    accessRows[0].status !== 'included' ||
+    Number(accessRows[0].submission_allowed) !== 0 ||
+    Number(accessRows[0].excluded_by_mandate) !== 0 ||
+    Number(accessRows[0].excluded_by_exclusivity) !== 0 ||
+    Number(accessRows[0].catalogue_publisher_id) !== LOCAL_DISTRIBUTION_OPPORTUNITY.cataloguePublisherId
+  ) {
+    throw new Error('The local Distribution development access is missing or conflicts with paused-intake preview rules.');
+  }
+
+  return {
+    developmentId: LOCAL_DISTRIBUTION_OPPORTUNITY.developmentId,
+    developmentName: LOCAL_DISTRIBUTION_OPPORTUNITY.developmentName,
+    programId,
+    programActive: true,
+    partnerAccessConfigured: LOCAL_DISTRIBUTION_OPPORTUNITY.partnerAccessConfigured,
+    developerProjectionControlsVisibility: true,
+    referralIntakeEnabled: false,
+    partnerSubmissionAllowed: false,
+  };
+}
 
 // Reuse the established manual-preview guard: exact owned worktree on 127.0.0.1:3307.
 export const assertLocalJourneyTarget = assertHomepageJourneyPreviewTarget;
@@ -137,6 +295,20 @@ async function inspect(input: Input, password: string) {
     );
     accounts.push({ email: user.email, userId: user.id, ...progress[0] });
   }
+  const distributionIdentities = await queryRows(
+    input.connection,
+    'SELECT user_id, identity_type, active, display_name FROM distribution_identities WHERE user_id = ? AND identity_type = ?',
+    [LOCAL_DISTRIBUTION_PARTNER.userId, LOCAL_DISTRIBUTION_PARTNER.identityType],
+  );
+  if (
+    distributionIdentities.length !== 1 ||
+    Number(distributionIdentities[0].user_id) !== LOCAL_DISTRIBUTION_PARTNER.userId ||
+    Number(distributionIdentities[0].active) !== 1 ||
+    distributionIdentities[0].display_name !== LOCAL_DISTRIBUTION_PARTNER.displayName
+  ) {
+    throw new Error('Local Distribution partner identity missing or conflicting.');
+  }
+  const distributionOpportunity = await ensurePausedLocalOpportunity(input, false);
   const content = localLegalContent(input.authority.context.repository.root);
   const releases = await queryRows(
     input.connection,
@@ -164,7 +336,19 @@ async function inspect(input: Input, password: string) {
     Number(release.format_version) !== 1
   )
     throw new Error('Local synthetic legal fixture conflicts.');
-  return { accounts, legalBundleId: LEGAL_BUNDLE_ID, syntheticOnly: true, progressPreserved: true };
+  return {
+    accounts,
+    distributionIdentity: {
+      userId: LOCAL_DISTRIBUTION_PARTNER.userId,
+      email: LOCAL_DISTRIBUTION_PARTNER.email,
+      identityType: LOCAL_DISTRIBUTION_PARTNER.identityType,
+      active: true,
+    },
+    distributionOpportunity,
+    legalBundleId: LEGAL_BUNDLE_ID,
+    syntheticOnly: true,
+    progressPreserved: true,
+  };
 }
 
 async function run(input: Input, prepare: boolean) {
@@ -231,6 +415,21 @@ async function run(input: Input, prepare: boolean) {
             [user.id],
           );
       }
+      const distributionIdentities = await queryRows(
+        input.connection,
+        'SELECT user_id FROM distribution_identities WHERE user_id = ? AND identity_type = ?',
+        [LOCAL_DISTRIBUTION_PARTNER.userId, LOCAL_DISTRIBUTION_PARTNER.identityType],
+      );
+      if (distributionIdentities.length === 0)
+        await input.connection.execute(
+          'INSERT INTO distribution_identities (user_id, identity_type, active, display_name) VALUES (?, ?, 1, ?)',
+          [
+            LOCAL_DISTRIBUTION_PARTNER.userId,
+            LOCAL_DISTRIBUTION_PARTNER.identityType,
+            LOCAL_DISTRIBUTION_PARTNER.displayName,
+          ],
+        );
+      await ensurePausedLocalOpportunity(input, true);
       const content = localLegalContent(input.authority.context.repository.root);
       const releases = await queryRows(
         input.connection,

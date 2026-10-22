@@ -101,22 +101,8 @@ describe('PartnerSubmitReferralPage', () => {
                 documentLabel: 'Buyer ID document',
                 category: 'client_required_document',
               },
-              {
-                templateId: 2,
-                documentLabel: 'Developer sale agreement',
-                category: 'developer_document',
-                templateFileUrl: 'https://example.com/sale-agreement.pdf',
-                templateFileName: 'sale-agreement.pdf',
-              },
             ],
-            sourceDocuments: [
-              {
-                templateId: 3,
-                documentLabel: 'Unit / house plans',
-                fileUrl: 'https://example.com/plans.pdf',
-                fileName: 'plans.pdf',
-              },
-            ],
+            sourceDocuments: [],
             opportunity: {
               status: 'ready',
               reasonCodes: [],

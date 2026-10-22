@@ -147,6 +147,7 @@ type DevelopmentRow = {
   province: string;
   developmentType: PublicDevelopmentSearchDevelopmentType;
   transactionType: 'for_sale' | 'for_rent' | 'auction';
+  inventoryMode: 'aggregate' | 'itemized';
   status: PublicDevelopmentSearchStatus;
   nature: 'new' | 'phase' | 'extension' | 'redevelopment';
   completionDate: string | null;
@@ -197,6 +198,17 @@ type UnitRow = {
   totalUnits: number | null;
   availableUnits: number | null;
   reservedUnits: number | null;
+  releasedForSaleUnits: number;
+  releasedForRentUnits: number;
+  availableForSaleUnits: number;
+  availableForRentUnits: number;
+  availableSalePriceFrom: string | number | null;
+  availableSalePriceTo: string | number | null;
+  availableRentPriceFrom: string | number | null;
+  availableRentPriceTo: string | number | null;
+  reservedForSaleUnits: number;
+  reservedForRentUnits: number;
+  soldForSaleUnits: number;
   displayOrder: number | null;
   unitSize?: number | null;
   yardSize?: number | null;
@@ -604,6 +616,7 @@ function developmentFiltersFromInput(
 function itemFromRows(
   development: DevelopmentRow,
   units: readonly UnitRow[],
+  transactionTypeOverride?: 'for_sale' | 'for_rent',
 ): PublicDevelopmentSearchItem | null {
   const projectionDevelopment: PublicDevelopmentProjectionDevelopment = {
     ...development,
@@ -615,7 +628,7 @@ function itemFromRows(
     name: unit.name,
   }));
 
-  return projectPublicDevelopmentFacts(projectionDevelopment, projectionUnits);
+  return projectPublicDevelopmentFacts(projectionDevelopment, projectionUnits, transactionTypeOverride);
 }
 
 function emptyResult(
@@ -660,9 +673,6 @@ export class PublicDevelopmentSearchService {
     if (!db) throw new Error('Database not available');
 
     const conditions: SQL[] = [publicDevelopmentEligibilityConditions()];
-    if (input.transactionType) {
-      conditions.push(eq(developments.transactionType, input.transactionType));
-    }
     if (input.developmentType)
       conditions.push(eq(developments.developmentType, input.developmentType));
     if (input.developmentStatus) conditions.push(eq(developments.status, input.developmentStatus));
@@ -682,6 +692,7 @@ export class PublicDevelopmentSearchService {
         province: developments.province,
         developmentType: developments.developmentType,
         transactionType: developments.transactionType,
+        inventoryMode: developments.inventoryMode,
         status: developments.status,
         nature: developments.nature,
         completionDate: developments.completionDate,
@@ -722,6 +733,17 @@ export class PublicDevelopmentSearchService {
             totalUnits: unitTypes.totalUnits,
             availableUnits: unitTypes.availableUnits,
             reservedUnits: unitTypes.reservedUnits,
+            releasedForSaleUnits: unitTypes.releasedForSaleUnits,
+            releasedForRentUnits: unitTypes.releasedForRentUnits,
+            availableForSaleUnits: unitTypes.availableForSaleUnits,
+            availableForRentUnits: unitTypes.availableForRentUnits,
+            availableSalePriceFrom: unitTypes.availableSalePriceFrom,
+            availableSalePriceTo: unitTypes.availableSalePriceTo,
+            availableRentPriceFrom: unitTypes.availableRentPriceFrom,
+            availableRentPriceTo: unitTypes.availableRentPriceTo,
+            reservedForSaleUnits: unitTypes.reservedForSaleUnits,
+            reservedForRentUnits: unitTypes.reservedForRentUnits,
+            soldForSaleUnits: unitTypes.soldForSaleUnits,
             displayOrder: unitTypes.displayOrder,
           })
           .from(unitTypes)
@@ -737,9 +759,32 @@ export class PublicDevelopmentSearchService {
       unitsByDevelopment.set(developmentId, existing);
     }
 
-    const items = rows
-      .map(row => itemFromRows(row, unitsByDevelopment.get(Number(row.id)) || []))
-      .filter((item): item is PublicDevelopmentSearchItem => Boolean(item));
+    const items = rows.flatMap(row => {
+      const unitRowsForDevelopment = unitsByDevelopment.get(Number(row.id)) || [];
+      if (row.inventoryMode === 'aggregate') {
+        if (input.transactionType && row.transactionType !== input.transactionType) return [];
+        const item = itemFromRows(row, unitRowsForDevelopment);
+        return item ? [item] : [];
+      }
+
+      const saleAvailable = unitRowsForDevelopment.reduce(
+        (sum, unit) => sum + Number(unit.availableForSaleUnits || 0),
+        0,
+      );
+      const rentAvailable = unitRowsForDevelopment.reduce(
+        (sum, unit) => sum + Number(unit.availableForRentUnits || 0),
+        0,
+      );
+      if (saleAvailable === 0 && rentAvailable === 0) return [];
+      const requestedMode = input.transactionType;
+      if (requestedMode === 'for_sale' && saleAvailable === 0) return [];
+      if (requestedMode === 'for_rent' && rentAvailable === 0) return [];
+      const effectiveMode =
+        requestedMode ??
+        (saleAvailable > 0 || rentAvailable === 0 ? 'for_sale' : 'for_rent');
+      const item = itemFromRows(row, unitRowsForDevelopment, effectiveMode);
+      return item ? [item] : [];
+    });
     const developmentFilters = developmentFiltersFromInput(input);
     const filtered = filterPublicDevelopmentSearchItems(items, developmentFilters);
     const unpricedHiddenCount = countUnpricedHiddenByPriceFilter(items, developmentFilters);

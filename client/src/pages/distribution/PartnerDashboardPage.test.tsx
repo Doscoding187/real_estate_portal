@@ -296,14 +296,15 @@ describe('PartnerDashboardPage', () => {
     expect(openSpy.mock.calls[0]?.[0]).toContain('wa.me');
   });
 
-  it('renders the engagement lanes and opportunity reward actions', () => {
+  it('renders the engagement lanes and program-defined payout details', () => {
     render(<PartnerDashboardPage />);
 
     expect(screen.getByText('Find Opportunity')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Match Buyer' })).toBeInTheDocument();
-    expect(screen.getByText('Track Earnings')).toBeInTheDocument();
+    expect(screen.getAllByText('Referral Payout Records')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Open Referral Payouts' })).toBeInTheDocument();
     expect(screen.getByText('Open Sales Inventory')).toBeInTheDocument();
-    expect(screen.getAllByText(/R 25\s000/)).not.toHaveLength(0);
+    expect(screen.getAllByText(/Configured referral payout: R 25\s000/)).not.toHaveLength(0);
   });
 
   it('shows five opportunity cards and keeps the final card as view all opportunities', () => {

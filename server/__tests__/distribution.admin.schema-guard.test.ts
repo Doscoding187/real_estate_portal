@@ -298,17 +298,15 @@ describe('distribution admin schema guards', () => {
         developmentId: 77,
         documents: [
           {
-            category: 'developer_document',
             documentCode: 'custom',
-            documentLabel: 'Price Structure',
+            documentLabel: 'Process document',
             isRequired: true,
             sortOrder: 0,
             isActive: true,
           },
           {
-            category: 'developer_document',
             documentCode: 'custom',
-            documentLabel: 'Price Structure',
+            documentLabel: 'Process document',
             isRequired: true,
             sortOrder: 1,
             isActive: true,

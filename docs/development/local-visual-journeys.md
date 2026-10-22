@@ -15,6 +15,7 @@ The start page's **Show local demo passwords** panel reads only the existing mac
 | `local-agent@listify.local` | Fresh independent agent, no invoice or paid term seeded. Finish setup, request an invoice, then select **I’ve paid**. |
 | `payment-agent@listify.local` | Invoice and payment notice under review after the local rehearsal; access remains locked. |
 | `journey-agent@listify.local` | Independent agent used for the recorded walkthrough. Its actual local progress is retained. |
+| `referrer@listify.local` | Local Distribution partner identity. Open `/distribution/partner/developments` and choose **Explore programs** to see the synthetic Preview Residences opportunity, Developer-owned sale/rent availability, partner-visible contacts, and the retained local preview site map. Referrals are paused; no referrals or buyer details are seeded. |
 | `home-preview-agent@listify.local` | Agency-associated agent with published sample homes and fixture access. |
 | `home-preview-agency@listify.local` | Sample agency and inventory. |
 | `home-preview-developer@listify.local` | Sample developer organisation, development and unit. |
@@ -62,11 +63,18 @@ Captured messages and screenshots stay in the ignored `.private/local-journey/` 
 ## Recorded verification, 13 October 2026
 
 - Fresh canonical database established through migration `0114_user_legal_acceptances.sql`; schema congruent and application readiness ready.
-- Homepage fixture prepared and verified: sale/rental properties, agency/agent/developer workspaces and development/unit.
 - Signed-in independent agent requested its own invoice, accepted the displayed purchase, and submitted a notice with no attachment. The operator queue showed the correct invoice/reference, claimed date, payer and pending state.
 - Browser finance review rejected a wrong bank reference. A matching synthetic local review fully settled the invoice and activated exactly one 90-day term. Canonical readback retained the operator, invoice, amount, timestamp, reconciliation note and approval event.
 - Repeated fixture preparation retained the exercised invoice/term and left the fresh agent without an invoice or term. A third account then requested its own invoice and submitted a no-file notice through the real UI; it remains under review.
 - Local captured email distinguished invoice issued, pending notice and access activation. Public detail loaded local listing images. A sample public enquiry was saved and displayed in the approved representative’s lead pipeline.
 - Source checks: 763 Database Authority cases, 16 billing/runtime cases and 21 client cases passed; application typecheck passed; changed-source lint had zero errors (existing warnings remain).
 
-These are local demo results. Production installation, hosted customer acceptance, provider delivery and the remaining hosted verification have not been completed by this work. The next visual review is the agent's property creation → moderation → publication → enquiry workflow using this retained demo.
+These are local demo results. Production installation, hosted customer acceptance, provider delivery and the remaining hosted verification have not been completed by this work.
+
+## Developer–Distribution flow verification, 17 October 2026
+
+- Prepared and verified local-journey preview v4 on the exact disposable worktree database. It includes one synthetic, publisher-scoped Distribution opportunity for Preview Residences, with referral intake and submission disabled.
+- In the Developer workspace, released a phase and selected ten sale units plus one rental unit. The public development view showed the separate sale and monthly-rent availability.
+- In the partner workspace, the Explore programs view showed those marketable modes and the partner-visible site manager. Referral submission remained disabled, and no referral or buyer record was created.
+- Opened the program requirements panel and downloaded the synthetic `[LOCAL DEMO ONLY] Preview site map` PDF through the protected partner route. The downloaded bytes matched the uploaded file. No referral was submitted, so no terms snapshot was persisted.
+- `pnpm check` and `git diff --check` passed. The local visual journey server was stopped; the disposable database and synthetic preview data remain available.

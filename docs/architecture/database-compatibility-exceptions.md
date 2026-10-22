@@ -780,3 +780,21 @@ Failure and observability behavior: the canonical migration runner verifies mani
 Automated evidence: repository reachability census, zero-row count on the exact disposable target, migration manifest and schema-congruency checks, and feed ranking contract coverage.
 Expiry or objective removal condition: none; retain this record as historical evidence. Any future paid-placement design begins with a new canonical authority.
 Removal workstream: P8 Explore commercial authority.
+
+## DBX-PRELAUNCH-RETIRE-DISTRIBUTION-DEVELOPER-DOCUMENT-LINKS-2026-10-17-Edward
+
+Exception ID: DBX-PRELAUNCH-RETIRE-DISTRIBUTION-DEVELOPER-DOCUMENT-LINKS-2026-10-17-Edward
+Status: approved exceptional migration
+Owner: Property Listify senior product engineering
+Approved by Edward on: 2026-10-17, through the explicit pre-launch direction to supersede legacy implementation without preserving obsolete behavior or data
+Business reason: remove the retired Distribution-owned copy of Developer sales-resource metadata and the cross-engine links after Developer resource sharing and delivery moved to the Developer Engine.
+Canonical authority: Developer Engine owns development sales resources and their share decision; Distribution owns referral-process document requirements and evidence.
+Exact files: `server/migrations/0133_distribution_retire_developer_document_rows.sql`, `server/migrations/0134_distribution_retire_developer_document_category.sql`, `server/migrations/0135_distribution_remove_application_requirement_developer_document_link.sql`, `server/migrations/0136_distribution_remove_deal_requirement_developer_document_link.sql`, `drizzle/schema/distribution.ts`, `server/migrations/manifest.json`, `docs/database-authority/migration-tree-authority.json`, and `scripts/db-verify-distribution-schema.ts`.
+Tables and columns: rows in `development_required_documents` with category `developer_document`; `development_required_documents.category`; `application_requirements.linked_development_document_id`; and `deal_requirement_statuses.linked_development_document_id`.
+Data disposition: delete only obsolete `developer_document` requirement rows. Preserve Developer-owned document records and stored files. The exact disposable integration target contained zero rows in the retired category before apply; nullable link values are obsolete association metadata and are removed with their columns.
+Permitted read direction: no runtime reads or writes; the retired fields may be inspected only by migration preflight and schema verification.
+Permitted write direction: the canonical migration runner only, on the exact task-owned disposable worktree target during this workstream. This record does not authorize a hosted, staging, production, Railway, or TiDB apply.
+Failure and observability behavior: each data or schema transition is a separate sequenced migration. Any checksum, parent, target, ownership, lock, execution, or schema-congruency failure blocks continuation and remains visible in the durable migration attempt ledger.
+Automated evidence: repository runtime census, exact-target zero-row inspection, manifest and migration-tree validation, generated schema inventory, schema congruency, and Distribution retired-column/enum verification.
+Expiry or objective removal condition: the exceptional operation is complete after migrations 0133–0136 reach the canonical head and the exact disposable target passes schema congruency and Distribution schema verification; retain this entry as historical retirement evidence.
+Removal workstream: Developer–Distribution resource-boundary closure.
