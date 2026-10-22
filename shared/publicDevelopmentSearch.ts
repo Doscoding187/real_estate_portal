@@ -23,6 +23,8 @@ export interface PublicDevelopmentSearchUnit {
   priceTo: number | null;
   availableUnits: number | null;
   totalUnits: number | null;
+  reservedUnits?: number | null;
+  soldUnits?: number | null;
   availabilityState: PublicDevelopmentSearchAvailabilityState;
 }
 
@@ -52,6 +54,7 @@ export interface PublicDevelopmentSearchItem {
   province: string;
   developmentType: PublicDevelopmentSearchDevelopmentType;
   transactionType: 'for_sale' | 'for_rent';
+  transactionModes?: Array<'for_sale' | 'for_rent'>;
   status: PublicDevelopmentSearchStatus;
   nature: 'new' | 'phase' | 'extension' | 'redevelopment';
   completionDate: string | null;
@@ -68,6 +71,8 @@ export interface PublicDevelopmentSearchItem {
   availableUnitTypeCount: number;
   availableUnits: number | null;
   totalUnits: number | null;
+  reservedUnits?: number | null;
+  soldUnits?: number | null;
   availabilityState: PublicDevelopmentSearchAvailabilityState;
 }
 
@@ -120,7 +125,7 @@ export interface PublicDevelopmentDetail extends PublicDevelopmentSearchItem {
     totalUnits: number;
     availableUnits: number;
     reservedUnits: number;
-    soldUnits: number;
+    soldUnits: number | null;
     soldPct: number | null;
   } | null;
 }
@@ -143,6 +148,7 @@ export interface PublicDevelopmentProjectionDevelopment {
   province: string;
   developmentType: PublicDevelopmentSearchDevelopmentType;
   transactionType: 'for_sale' | 'for_rent' | 'auction';
+  inventoryMode?: 'aggregate' | 'itemized';
   status: PublicDevelopmentSearchStatus;
   nature: 'new' | 'phase' | 'extension' | 'redevelopment';
   launchDate?: string | null;
@@ -179,6 +185,17 @@ export interface PublicDevelopmentProjectionUnit {
   totalUnits?: unknown;
   availableUnits?: unknown;
   reservedUnits?: unknown;
+  releasedForSaleUnits?: unknown;
+  releasedForRentUnits?: unknown;
+  availableForSaleUnits?: unknown;
+  availableForRentUnits?: unknown;
+  availableSalePriceFrom?: unknown;
+  availableSalePriceTo?: unknown;
+  availableRentPriceFrom?: unknown;
+  availableRentPriceTo?: unknown;
+  reservedForSaleUnits?: unknown;
+  reservedForRentUnits?: unknown;
+  soldForSaleUnits?: unknown;
 }
 
 function projectionFiniteNumber(value: unknown): number | null {
@@ -240,8 +257,44 @@ function projectionHighlights(value: unknown): string[] {
 export function projectPublicDevelopmentFacts(
   development: PublicDevelopmentProjectionDevelopment,
   units: readonly PublicDevelopmentProjectionUnit[],
+  transactionTypeOverride?: 'for_sale' | 'for_rent',
 ): PublicDevelopmentSearchItem | null {
-  if (development.transactionType !== 'for_sale' && development.transactionType !== 'for_rent') {
+  const itemized = development.inventoryMode === 'itemized';
+  const saleAvailability = units.reduce(
+    (sum, unit) => sum + (projectionFiniteNumber(unit.availableForSaleUnits) ?? 0),
+    0,
+  );
+  const rentAvailability = units.reduce(
+    (sum, unit) => sum + (projectionFiniteNumber(unit.availableForRentUnits) ?? 0),
+    0,
+  );
+  const transactionModes: Array<'for_sale' | 'for_rent'> = itemized
+    ? [
+        ...(saleAvailability > 0 ? (['for_sale'] as const) : []),
+        ...(rentAvailability > 0 ? (['for_rent'] as const) : []),
+      ]
+    : development.transactionType === 'for_sale' || development.transactionType === 'for_rent'
+      ? [development.transactionType]
+      : [];
+  const transactionType =
+    transactionTypeOverride ??
+    (itemized
+      ? saleAvailability > 0
+        ? 'for_sale'
+        : rentAvailability > 0
+          ? 'for_rent'
+          : null
+      : development.transactionType === 'for_sale' || development.transactionType === 'for_rent'
+      ? development.transactionType
+      : saleAvailability > 0
+        ? 'for_sale'
+        : rentAvailability > 0
+          ? 'for_rent'
+          : 'for_sale');
+  if (itemized && transactionTypeOverride && !transactionModes.includes(transactionTypeOverride)) {
+    return null;
+  }
+  if (!transactionType) {
     return null;
   }
 
@@ -255,19 +308,53 @@ export function projectPublicDevelopmentFacts(
   }
   const publisherAuthorityKind = development.publisherAuthorityKind;
 
-  const projectedUnits = units.map(unit => {
+  const projectedUnits = units
+    .map(unit => {
     const priceFromValue =
-      development.transactionType === 'for_rent' ? unit.monthlyRentFrom : unit.basePriceFrom;
+      transactionType === 'for_rent'
+        ? itemized
+          ? unit.availableRentPriceFrom
+          : unit.monthlyRentFrom
+        : itemized
+          ? unit.availableSalePriceFrom
+          : unit.basePriceFrom;
     const priceToValue =
-      development.transactionType === 'for_rent' ? unit.monthlyRentTo : unit.basePriceTo;
+      transactionType === 'for_rent'
+        ? itemized
+          ? unit.availableRentPriceTo
+          : unit.monthlyRentTo
+        : itemized
+          ? unit.availableSalePriceTo
+          : unit.basePriceTo;
     const priceFromNumber = projectionFiniteNumber(priceFromValue);
     const priceToNumber = projectionFiniteNumber(priceToValue);
     const priceFrom = priceFromNumber !== null && priceFromNumber > 0 ? priceFromNumber : null;
     const priceTo = priceToNumber !== null && priceToNumber > 0 ? priceToNumber : priceFrom;
 
-    const totalRaw = projectionFiniteNumber(unit.totalUnits);
-    const availableRaw = projectionFiniteNumber(unit.availableUnits);
-    const reservedRaw = projectionFiniteNumber(unit.reservedUnits);
+    const totalRaw = projectionFiniteNumber(
+      itemized
+        ? transactionType === 'for_rent'
+          ? unit.releasedForRentUnits
+          : unit.releasedForSaleUnits
+        : unit.totalUnits,
+    );
+    const availableRaw = projectionFiniteNumber(
+      itemized
+        ? transactionType === 'for_rent'
+          ? unit.availableForRentUnits
+          : unit.availableForSaleUnits
+        : unit.availableUnits,
+    );
+    const reservedRaw = projectionFiniteNumber(
+      itemized
+        ? transactionType === 'for_rent'
+          ? unit.reservedForRentUnits
+          : unit.reservedForSaleUnits
+        : unit.reservedUnits,
+    );
+    const soldRaw = projectionFiniteNumber(
+      itemized && transactionType === 'for_sale' ? unit.soldForSaleUnits : null,
+    );
     const inventoryKnown = totalRaw !== null && availableRaw !== null;
     const totalUnits = totalRaw === null ? null : Math.round(Math.max(0, totalRaw));
     const reservedUnits =
@@ -292,6 +379,8 @@ export function projectPublicDevelopmentFacts(
       priceTo,
       availableUnits,
       totalUnits,
+      soldUnits: soldRaw === null ? null : Math.max(0, Math.round(soldRaw)),
+      reservedUnits,
       availabilityState: !inventoryKnown
         ? ('not_stated' as const)
         : availableUnits !== null && availableUnits > 0
@@ -299,7 +388,8 @@ export function projectPublicDevelopmentFacts(
           : ('sold_out' as const),
       __inventoryKnown: inventoryKnown,
     };
-  });
+  })
+    .filter(unit => !itemized || (unit.totalUnits !== null && unit.totalUnits > 0));
 
   const publicUnits = projectedUnits.map(({ __inventoryKnown: _inventoryKnown, ...unit }) => unit);
   const pricedUnits = publicUnits.filter(unit => unit.priceFrom !== null && unit.priceFrom > 0);
@@ -334,7 +424,8 @@ export function projectPublicDevelopmentFacts(
     suburb: development.suburb,
     province: development.province,
     developmentType: development.developmentType,
-    transactionType: development.transactionType,
+    transactionType,
+    transactionModes,
     status: development.status,
     nature: development.nature,
     completionDate: development.completionDate,

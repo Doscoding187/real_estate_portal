@@ -277,6 +277,7 @@ export default function DevelopmentQualificationPage() {
       leadSource: 'development_full_qualification',
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
       sourceSurface: 'development_qualification_page',
+      distributionSearchContextToken: urlParams?.get('dnctx') || undefined,
       utmSource: urlParams?.get('utm_source') || undefined,
       utmMedium: urlParams?.get('utm_medium') || undefined,
       utmCampaign: urlParams?.get('utm_campaign') || undefined,

@@ -95,15 +95,19 @@ export function evaluatePayoutMilestone(
     case 'custom':
       return {
         supported: false,
-        satisfied: true,
-        blockers: [],
+        satisfied: false,
+        blockers: [
+          `Payout milestone "${payoutMilestone}" requires manual review and a documented administrator confirmation.`,
+        ],
       };
 
     default:
       return {
-        supported: true,
+        supported: false,
         satisfied: false,
-        blockers: [`Unsupported payout milestone "${payoutMilestone}".`],
+        blockers: [
+          `Unsupported payout milestone "${payoutMilestone}" requires manual review and a documented administrator confirmation.`,
+        ],
       };
   }
 }

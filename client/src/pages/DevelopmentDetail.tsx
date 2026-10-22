@@ -670,6 +670,7 @@ export default function DevelopmentDetail() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [quickIncome, setQuickIncome] = useState('');
   const [quickDeposit, setQuickDeposit] = useState('');
+  const [requestedTransactionType, setRequestedTransactionType] = useState<'for_sale' | 'for_rent' | undefined>();
   const [leadDialogOpen, setLeadDialogOpen] = useState(false);
   const [leadDialogMode, setLeadDialogMode] = useState<
     'brochure' | 'contact' | 'qualification' | 'info'
@@ -796,10 +797,14 @@ export default function DevelopmentDetail() {
   };
 
   // Fetch real development by slug or ID
-  const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
-    { slugOrId: slug || '' },
+  const { data: dev, isLoading, isFetching } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
+    { slugOrId: slug || '', transactionType: requestedTransactionType },
     { enabled: !!slug },
   );
+
+  useEffect(() => {
+    setRequestedTransactionType(undefined);
+  }, [slug]);
 
   const amenityList = normalizeAmenities(dev?.amenities);
   const amenityGroups = buildAmenityGroups(amenityList);
@@ -1386,6 +1391,26 @@ export default function DevelopmentDetail() {
                     />
                   </div>
                 </section>
+
+                {(publicFacts.transactionModes?.length ?? 0) > 1 ? (
+                  <section className="rounded-xl border border-slate-200 bg-white p-4" aria-label="Choose how to browse this development">
+                    <p className="mb-3 text-sm font-semibold text-slate-900">Available market options</p>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Transaction mode">
+                      {(publicFacts.transactionModes ?? []).map(mode => (
+                        <Button
+                          key={mode}
+                          type="button"
+                          variant={publicFacts.transactionType === mode ? 'default' : 'outline'}
+                          aria-pressed={publicFacts.transactionType === mode}
+                          disabled={isFetching}
+                          onClick={() => setRequestedTransactionType(mode)}
+                        >
+                          {mode === 'for_sale' ? 'Homes for sale' : 'Homes for rent'}
+                        </Button>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
 
                 {/* Overview Card */}
                 <DevelopmentOverviewCard

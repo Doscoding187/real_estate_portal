@@ -21,6 +21,7 @@ import { stopHostedDatabaseReadinessMonitor } from './hostedDatabaseReadinessMon
 import { getDistributionSchemaReadinessSnapshot } from '../services/runtimeSchemaCapabilities';
 import { savedSearchDeliveryScheduler } from '../services/savedSearchDeliveryScheduler';
 import { commercialTermNoticeScheduler } from '../services/commercialTermNoticeScheduler';
+import { distributionReferralEvidenceRetentionScheduler } from '../services/distributionReferralEvidenceRetentionScheduler';
 import sitemapRouter from '../routes/sitemap';
 import developmentSupersessionRedirectRouter from '../routes/developmentSupersessionRedirect';
 import agentOnboardingRouter from '../routes/agentOnboarding';
@@ -289,7 +290,11 @@ async function startServer() {
   if (shuttingDown) return;
   await commercialTermNoticeScheduler.start();
   if (shuttingDown) return;
+  const distributionEvidenceRetentionStatus =
+    await distributionReferralEvidenceRetentionScheduler.start();
+  if (shuttingDown) return;
   console.log('[SavedSearchScheduler] Startup status', savedSearchSchedulerStatus);
+  console.log('[DistributionEvidenceRetention] Startup status', distributionEvidenceRetentionStatus);
 
   if (process.env.NODE_ENV === 'development' && process.env.SKIP_FRONTEND !== 'true') {
     console.log('[Server] Using Vite development server');
@@ -354,6 +359,9 @@ async function shutdown(signal: string): Promise<void> {
     const commercialDrain = attempt('commercial scheduler', () =>
       commercialTermNoticeScheduler.stop(),
     );
+    const distributionEvidenceDrain = attempt('Distribution evidence retention scheduler', () =>
+      distributionReferralEvidenceRetentionScheduler.stop(),
+    );
     const server = activeServer;
     const wasListening = Boolean(server?.listening);
     const httpDrain = attempt('HTTP server', () => {
@@ -366,13 +374,15 @@ async function shutdown(signal: string): Promise<void> {
     // server uses the awaited graceful close above to drain existing requests.
     if (!wasListening) listenerCancellation.abort();
     await startup;
-    const [httpStopped, savedStopped, commercialStopped] = await Promise.all([
+    const [httpStopped, savedStopped, commercialStopped, distributionEvidenceStopped] = await Promise.all([
       httpDrain,
       savedDrain,
       commercialDrain,
+      distributionEvidenceDrain,
     ]);
     const readinessStopped = await attempt('readiness monitor', stopHostedDatabaseReadinessMonitor);
-    consumersDrained = httpStopped && savedStopped && commercialStopped && readinessStopped;
+    consumersDrained =
+      httpStopped && savedStopped && commercialStopped && distributionEvidenceStopped && readinessStopped;
 
     await attempt('auth rate-limit store', async () => {
       await activeAuthStore?.shutdown();

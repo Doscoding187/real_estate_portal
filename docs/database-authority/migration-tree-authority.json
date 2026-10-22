@@ -1344,6 +1344,112 @@
       ]
     },
     {
+      "path": "server/migrations/0116_development_inventory_mode.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the Developer-owned aggregate or itemized inventory authority flag."
+    },
+    {
+      "path": "server/migrations/0117_development_inventory_items.sql",
+      "classification": "canonical active",
+      "purpose": "Adds canonical itemized development allocations with phase, unit type, market mode, price, and lifecycle state."
+    },
+    {
+      "path": "server/migrations/0118_unit_type_inventory_mode_projections.sql",
+      "classification": "canonical active",
+      "purpose": "Adds separate aggregate sale and rental availability projections for unit types."
+    },
+    {
+      "path": "server/migrations/0119_unit_type_transaction_mode_projections.sql",
+      "classification": "canonical active",
+      "purpose": "Adds released and reserved aggregate counts by sale and rental mode."
+    },
+    {
+      "path": "server/migrations/0120_unit_type_sold_inventory_projections.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the sold-for-sale aggregate count."
+    },
+    {
+      "path": "server/migrations/0121_unit_type_available_inventory_prices.sql",
+      "classification": "canonical active",
+      "purpose": "Adds current sale and rental asking-price projections for available stock."
+    },
+    {
+      "path": "server/migrations/0122_development_inventory_allocation_notes.sql",
+      "classification": "canonical active",
+      "purpose": "Adds Developer-only operational notes to itemized inventory allocations."
+    },
+    {
+      "path": "server/migrations/0123_development_team_contacts.sql",
+      "classification": "canonical active",
+      "purpose": "Adds Developer-owned, phase-scoped partner-visible sales contacts."
+    },
+    {
+      "path": "server/migrations/0124_development_phase_archival.sql",
+      "classification": "canonical active",
+      "purpose": "Adds the Developer phase archive state used to exclude archived inventory from marketable projections."
+    },
+    {
+      "path": "server/migrations/0125_distribution_selected_practitioners.sql",
+      "classification": "canonical active",
+      "purpose": "Adds curated selected-practitioner membership independently of general partner referral access.",
+      "approvedFiles": [
+        "server/migrations/0125_distribution_selected_practitioners.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0126_distribution_listing_lead_queue.sql",
+      "classification": "canonical active",
+      "purpose": "Adds durable manager-assigned listing lead work items while leaving primary publisher custody in lead_deliveries.",
+      "approvedFiles": [
+        "server/migrations/0126_distribution_listing_lead_queue.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0127_distribution_listing_lead_queue_events.sql",
+      "classification": "canonical active",
+      "purpose": "Adds append-only queue assignment and closure history for the selected practitioner team.",
+      "approvedFiles": [
+        "server/migrations/0127_distribution_listing_lead_queue_events.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0128_distribution_referral_intake_policy_releases.sql",
+      "classification": "canonical active",
+      "purpose": "Stores versioned program-specific referral intake policy drafts and immutable published releases.",
+      "approvedFiles": [
+        "server/migrations/0128_distribution_referral_intake_policy_releases.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0129_distribution_referral_intake_sessions.sql",
+      "classification": "canonical active",
+      "purpose": "Pins private referral intake sessions to the exact published policy version and records a bounded draft expiry.",
+      "approvedFiles": [
+        "server/migrations/0129_distribution_referral_intake_sessions.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0130_distribution_referral_intake_evidence.sql",
+      "classification": "canonical active",
+      "purpose": "Stores private evidence metadata, review state, retention deadlines, and retryable deletion work without prospect contact details.",
+      "approvedFiles": [
+        "server/migrations/0130_distribution_referral_intake_evidence.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0131_distribution_referral_intake_events.sql",
+      "classification": "canonical active",
+      "purpose": "Adds append-only, PII-free audit events for referral intake and evidence lifecycle transitions.",
+      "approvedFiles": [
+        "server/migrations/0131_distribution_referral_intake_events.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0132_distribution_referral_projection_terms.sql",
+      "classification": "canonical active",
+      "purpose": "Persists the requested sale or rent mode, Developer projection revision, and immutable Distribution terms snapshot on each new referral."
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

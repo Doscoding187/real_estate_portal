@@ -36,11 +36,11 @@ function IndependentGrowthPlan({ onNavigate }: { onNavigate: (path: string) => v
     },
     {
       icon: Share2,
-      title: 'Expand your opportunity mix',
+      title: 'Open the Distribution Network',
       description:
-        'Match qualified buyers with current developer referral opportunities and retain the buyer file in your workspace.',
-      label: 'Explore Referrals',
-      href: '/agent/referrals',
+        'Apply for separate Distribution access from your Agent Dashboard, then follow referrals with one Property Listify login.',
+      label: 'Open Distribution Network',
+      href: '/distribution/partner/overview',
     },
   ];
 

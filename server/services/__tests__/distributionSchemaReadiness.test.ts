@@ -22,19 +22,24 @@ describe('distribution schema readiness requirements', () => {
     );
   });
 
-  it('defines the required development brand-link and program fields for catalog listing', () => {
+  it('uses Distribution fields for catalog readiness without requiring Developer tables', () => {
     const labels = getDistributionSchemaRequirementLabels(
       'distribution.admin.listDevelopmentCatalog',
     );
 
     expect(labels).toEqual(
       expect.arrayContaining([
-        'developments.catalogue_publisher_id',
-        'catalogue_publishers.name',
         'distribution_brand_partnerships.catalogue_publisher_id',
         'distribution_programs.development_id',
         'distribution_programs.payout_milestone',
         'distribution_programs.currency_code',
+      ]),
+    );
+    expect(labels).not.toEqual(
+      expect.arrayContaining([
+        'developments.catalogue_publisher_id',
+        'catalogue_publishers.name',
+        'unit_types.development_id',
       ]),
     );
     expect(labels).not.toContain('distribution_development_access.brochure_config_json');

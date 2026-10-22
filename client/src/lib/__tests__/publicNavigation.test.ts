@@ -365,7 +365,7 @@ describe('public navigation authority', () => {
     [{ role: 'service_provider' }, '/service/profile'],
 
     [{ role: 'visitor', hasReferrerIdentity: true }, '/distribution/partner/overview'],
-    [{ role: 'referrer' }, '/distribution/partner/overview'],
+    [{ role: 'referrer' }, '/user/dashboard'],
     [{ role: 'visitor' }, '/user/dashboard'],
   ])('uses canonical login completion routing for %s', (user, href) => {
     expect(getLoginRedirectPath(user, null)).toBe(href);

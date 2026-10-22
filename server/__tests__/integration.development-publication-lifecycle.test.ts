@@ -340,6 +340,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
     const result = await ownerCaller.developer.updateUnitAvailability({
       developmentId,
       unitTypeId: unit.id,
+      expectedAvailableUnits: 8,
       availableUnits: 7,
       reason: 'Reconciled available stock after confirming a contracted unit.',
     });
@@ -379,6 +380,7 @@ describeWithDb('Developer development publication lifecycle integration', () => 
       callerFor(otherDeveloper.userId, 'property_developer').developer.updateUnitAvailability({
         developmentId,
         unitTypeId: unit.id,
+        expectedAvailableUnits: 7,
         availableUnits: 6,
         reason: 'Attempted update by a developer outside this development.',
       }),

@@ -21,7 +21,7 @@ describe('PLE-6B canonical listing location migration', () => {
       statementPolicy: 'approved-exception',
       approvalReference: 'DBX-TIDB-INCREMENTAL-DDL-SEQUENCING-2026-09-04-Edward',
     });
-    expect(manifest.expectedHead.filename).toBe('0115_non_geographic_place_search_eligibility.sql');
+    expect(manifest.expectedHead.filename).toBe('0132_distribution_referral_projection_terms.sql');
   });
 
   it('contains only additive DDL and the approved location invariants', () => {

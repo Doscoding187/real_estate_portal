@@ -44,9 +44,13 @@ export default function Dashboard() {
     enabled:
       isAuthenticated &&
       user?.role !== 'super_admin' &&
+      user?.role !== 'admin' &&
       user?.role !== 'property_developer' &&
-      user?.role !== 'agency_admin',
+      user?.role !== 'agency_admin' &&
+      user?.role !== 'agent' &&
+      user?.role !== 'service_provider',
     retry: false,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: false,
   });
 
@@ -67,7 +71,7 @@ export default function Dashboard() {
     return null;
   }
 
-  if (referrerStatusQuery.data?.hasAccess) {
+  if (referrerStatusQuery.data?.hasIdentity && !referrerStatusQuery.isFetching) {
     setLocation('/distribution/partner/overview');
     return null;
   }

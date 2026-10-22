@@ -527,6 +527,21 @@ export function CommercialAgentPackageSelection({
               Review the public Agent product page{' '}
               <ExternalLink className="h-4 w-4" aria-hidden="true" />
             </a>
+            <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50/70 p-5">
+              <p className="text-sm font-semibold text-slate-900">Distribution Network access</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                You can apply with this same Property Listify account before choosing an Agent plan.
+                Distribution membership is approved separately and does not require an agent
+                subscription.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 border-blue-200 bg-white"
+                onClick={() => setLocation('/distribution/partner/overview')}
+              >
+                Open Distribution Network <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
           </section>
 
           <section>

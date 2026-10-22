@@ -86,6 +86,10 @@ export type DeveloperOperatingDevelopmentSummary = {
       province: string;
     };
   };
+  market: {
+    status: (typeof developments.$inferSelect)['status'];
+    transactionType: (typeof developments.$inferSelect)['transactionType'] | 'mixed';
+  };
   lifecycle: {
     state: DevelopmentHomeLifecycleState;
     approvalStatus: (typeof developments.$inferSelect)['approvalStatus'];
@@ -167,6 +171,7 @@ type DevelopmentOperatingRow = Pick<
   | 'city'
   | 'province'
   | 'transactionType'
+  | 'status'
   | 'approvalStatus'
   | 'isPublished'
   | 'publishedAt'
@@ -401,6 +406,11 @@ export function buildDevelopmentOperatingSummary(input: {
         province: input.development.province,
       },
     },
+    market: {
+      status: input.development.status,
+      transactionType:
+        inventory.transactionModes.length > 1 ? 'mixed' : inventory.transactionModes[0] || input.development.transactionType,
+    },
     lifecycle: {
       state: lifecycleState,
       approvalStatus: input.development.approvalStatus,
@@ -585,6 +595,7 @@ async function loadDevelopmentRows(
     city: developments.city,
     province: developments.province,
     transactionType: developments.transactionType,
+    status: developments.status,
     approvalStatus: developments.approvalStatus,
     isPublished: developments.isPublished,
     publishedAt: developments.publishedAt,

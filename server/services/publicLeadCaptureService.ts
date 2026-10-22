@@ -53,6 +53,9 @@ import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
 import { resolvePublicCommercialLeadCustody } from './commercialOfficeService';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
+import { verifyDistributionSearchContextToken } from './distributionSearchContextTokenService';
+import { enqueueDistributionListingLeadInTransaction } from './distributionListingLeadQueueService';
+import { ENV } from '../_core/env';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
   isCommercialMarketingPropertyType,
@@ -97,6 +100,8 @@ export interface PublicLeadCaptureInput {
   source?: string;
   sourceSurface?: string;
   leadSource?: string;
+  /** Signed context returned only with a canonical development unit Search Results card. */
+  distributionSearchContextToken?: string;
   referrerUrl?: string;
   utmSource?: string;
   utmMedium?: string;
@@ -1562,6 +1567,31 @@ function deliveryInputForResolved(
   };
 }
 
+function distributionQueueSourceForLead(
+  input: PublicLeadCaptureInput,
+  resolved: ResolvedLeadOwnership,
+): 'platform_published_listing' | 'pilot_search_results_unit' | null {
+  if (!ENV.distributionNetworkEnabled || !ENV.distributionSelectedTeamQueueEnabled) return null;
+  if (resolved.supplyOrigin !== 'platform_curated') return null;
+  if (resolved.propertyId) return 'platform_published_listing';
+
+  const developmentId = positiveId(resolved.developmentId);
+  const unitTypeId = String(input.unitId || '').trim();
+  const token = String(input.distributionSearchContextToken || '').trim();
+  if (!developmentId || !unitTypeId || !token) return null;
+
+  try {
+    const context = verifyDistributionSearchContextToken(token);
+    if (context.developmentId === developmentId && context.unitTypeId === unitTypeId) {
+      return 'pilot_search_results_unit';
+    }
+  } catch {
+    // Missing, malformed, forged, or expired context falls back to the
+    // platform's ordinary manual developer handoff.
+  }
+  return null;
+}
+
 function messageForResolution(resolved: ResolvedLeadOwnership): string {
   if (resolved.sharedLivingContext?.ownerUserId) {
     return 'Your enquiry has been recorded in the responsible lister’s secure Shared Living inbox.';
@@ -1639,17 +1669,28 @@ async function recoverExistingLead(
       });
   }
   const existingDelivery = await getLeadDeliverySnapshot({ leadId: Number(existing.id), database });
-  if (!existingDelivery.current) {
-    const replayResolved = await resolveLeadOwnership(input);
+  const replayResolved = await resolveLeadOwnership(input);
+  const replayQueueSource = distributionQueueSourceForLead(input, replayResolved);
+  if (!existingDelivery.current || replayQueueSource) {
     const replayStatus = initialDeliveryStatus(replayResolved);
     await database.transaction(async (tx: any) => {
       await tx.execute(sql`SELECT id FROM leads WHERE id = ${Number(existing.id)} FOR UPDATE`);
-      await createLeadDeliveryInTransaction(
-        tx,
-        deliveryInputForResolved(Number(existing.id), replayResolved, replayStatus),
-      );
+      if (!existingDelivery.current) {
+        await createLeadDeliveryInTransaction(
+          tx,
+          deliveryInputForResolved(Number(existing.id), replayResolved, replayStatus),
+        );
+      }
+      if (replayQueueSource) {
+        await enqueueDistributionListingLeadInTransaction(tx, {
+          leadId: Number(existing.id),
+          source: replayQueueSource,
+        });
+      }
     });
-    durableLead = (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
+    if (!existingDelivery.current) {
+      durableLead = (await findLeadByCaptureRequestId(database, input.captureRequestId)) || existing;
+    }
   }
 
   return resultForExistingLead(database, durableLead);
@@ -1677,6 +1718,7 @@ export async function capturePublicLead(
   }
 
   const resolved = await resolveLeadOwnership(input);
+  const distributionQueueSource = distributionQueueSourceForLead(input, resolved);
   const leadType = coerceLeadType(input.leadType);
   const deliveryStatus = initialDeliveryStatus(resolved);
   const route: PublicLeadCaptureResult['route'] =
@@ -1740,6 +1782,12 @@ export async function capturePublicLead(
         tx,
         deliveryInputForResolved(leadId, resolved, deliveryStatus),
       );
+      if (distributionQueueSource) {
+        await enqueueDistributionListingLeadInTransaction(tx, {
+          leadId,
+          source: distributionQueueSource,
+        });
+      }
       if (resolved.commercialContext)
         await tx.insert(commercialLeadContexts).values({
           leadId: Number(insertResult.insertId),

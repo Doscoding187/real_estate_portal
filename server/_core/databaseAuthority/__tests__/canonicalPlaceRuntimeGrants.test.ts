@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as schema from '../../../../drizzle/schema';
 import { normalizedDesiredSchema } from '../schemaCongruency';
 import {
@@ -8,7 +10,15 @@ import {
   PlaceRuntimeGrantFailure,
 } from '../canonicalPlaceRuntimeGrants';
 
-const plan = canonicalPlaceRuntimeGrantPlan();
+const HISTORICAL_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  'fixtures/pre-b15-grant-model',
+);
+const ORIGINAL_CWD = process.cwd();
+beforeEach(() => process.chdir(HISTORICAL_ROOT));
+afterEach(() => process.chdir(ORIGINAL_CWD));
+
+const plan = canonicalPlaceRuntimeGrantPlan(HISTORICAL_ROOT);
 const asRows = (statements: readonly string[]) => [
   statements.map(statement => ({
     grant: statement.replace('`propertyImages`', '`propertyimages`'),
@@ -29,14 +39,10 @@ function fixture() {
 
 describe('canonical Place runtime grant release', () => {
   it('pins the accepted model and grants reads on exactly seven new tables, with only coverage writes', () => {
-    // The old protected grant release remains bound to its exact pre-B15 model.
-    const {
-      legalReleases: _releases,
-      legalActiveRelease: _pointer,
-      userLegalAcceptances: _acceptances,
-      ...historicalSchema
-    } = schema;
-    expect(normalizedDesiredSchema(historicalSchema).digest).toBe(plan.expectedModelDigest);
+    // The old protected grant release remains bound to its historical inventory.
+    expect(plan.expectedModelDigest).toBe(
+      'a3567c76721b8c3526c83287478ce51284aa102b365435c3daf28dc6bac99b97',
+    );
     expect(normalizedDesiredSchema(schema).digest).not.toBe(plan.expectedModelDigest);
     expect(plan.after.join(' ')).not.toMatch(
       /legal_releases|legal_active_release|user_legal_acceptances/,

@@ -24,6 +24,7 @@ import { LandPublicLayout } from './components/land/LandPublicLayout';
 import Home from './pages/Home';
 import { RequireRole } from '@/components/RequireRole';
 import AgencySetupAccountBoundary from '@/components/AgencySetupAccountBoundary';
+import { DistributionPartnerIdentityGate } from '@/components/referral/DistributionPartnerIdentityGate';
 
 // Stable element identity so RequireRole's effect does not re-run per render.
 const AGENCY_SETUP_ROLE_MISMATCH_FALLBACK = <AgencySetupAccountBoundary />;
@@ -46,7 +47,6 @@ const AgentLeads = lazy(() => import('./pages/AgentLeads'));
 const AgentCanvassing = lazy(() => import('./pages/agent/AgentCanvassing'));
 const AgentMarketingHub = lazy(() => import('./pages/agent/AgentMarketingHub'));
 const AgentEarnings = lazy(() => import('./pages/agent/AgentEarnings'));
-const AgentReferrals = lazy(() => import('./pages/agent/AgentReferrals'));
 const AgentAnalytics = lazy(() => import('./pages/AgentAnalytics'));
 const AgentProductivity = lazy(() => import('./pages/agent/AgentProductivity'));
 const AgentTrainingSupport = lazy(() => import('./pages/agent/AgentTrainingSupport'));
@@ -154,6 +154,9 @@ const RoleSelection = lazy(() => import('./pages/RoleSelection'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
+);
+const SelectedTeamLeadQueuePage = lazy(
+  () => import('./pages/distribution/SelectedTeamLeadQueuePage'),
 );
 const ManagerDevelopmentOpsPage = lazy(
   () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
@@ -386,7 +389,7 @@ function Router() {
           </Route>
           <Route path="/agent/referrals">
             <RequireRole role="agent" unauthenticatedAuthEntry="signin">
-              <AgentReferrals />
+              <Redirect to="/distribution/partner/overview" />
             </RequireRole>
           </Route>
           <Route path="/agents/:slug/properties" component={AgentMicrosite} />
@@ -618,6 +621,7 @@ function Router() {
             <Redirect to="/distribution/manager/developments" />
           </Route>
           <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager/lead-queue" component={SelectedTeamLeadQueuePage} />
           <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
           <Route
             path="/distribution/manager/developments/:developmentId"
@@ -629,22 +633,44 @@ function Router() {
             <Redirect to="/distribution/partner/overview" />
           </Route>
           <Route path="/distribution/partner/overview" component={PartnerDashboardPage} />
-          <Route path="/distribution/partner/developments" component={PartnerDevelopmentsPage} />
-          <Route
-            path="/distribution/partner/accelerator"
-            component={PartnerReferralAcceleratorPage}
-          />
-          <Route path="/partner/referrals/accelerator" component={PartnerReferralAcceleratorPage} />
-          <Route path="/distribution/partner/submit" component={PartnerSubmitReferralPage} />
-          <Route path="/distribution/partner/referrals" component={PartnerMyReferralsPage} />
-          <Route path="/distribution/partner/commissions" component={PartnerCommissionsPage} />
-          <Route
-            path="/distribution/partner/referrals/:dealId"
-            component={PartnerReferralDetailPage}
-          />
+          <Route path="/distribution/partner/developments">
+            <DistributionPartnerIdentityGate>
+              <PartnerDevelopmentsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/accelerator">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralAcceleratorPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/partner/referrals/accelerator">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralAcceleratorPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/submit">
+            <DistributionPartnerIdentityGate>
+              <PartnerSubmitReferralPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/referrals">
+            <DistributionPartnerIdentityGate>
+              <PartnerMyReferralsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/commissions">
+            <DistributionPartnerIdentityGate>
+              <PartnerCommissionsPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
+          <Route path="/distribution/partner/referrals/:dealId">
+            <DistributionPartnerIdentityGate>
+              <PartnerReferralDetailPage />
+            </DistributionPartnerIdentityGate>
+          </Route>
           <Route path="/distribution-network/apply" component={DistributionReferralApplyPage} />
           <Route path="/distribution-network/login">
-            <Redirect to="/login?next=/distribution/partner/developments" />
+            <Redirect to="/login?next=/distribution/partner/overview" />
           </Route>
           <Route path="/distribution-network" component={DistributionNetworkPublicPage} />
           <Route path="/referral/apply">

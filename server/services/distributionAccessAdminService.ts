@@ -1,9 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq, sql } from 'drizzle-orm';
 
-import { developments, distributionDevelopmentAccess } from '../../drizzle/schema';
+import { distributionDevelopmentAccess } from '../../drizzle/schema';
 import { logAudit } from '../_core/auditLog';
 import { getDb } from '../db';
+import { getDevelopmentSalesWorkspaceReference } from './developmentSalesWorkspaceService';
 import {
   evaluateDevelopmentDistributionAccess,
   type DevelopmentDistributionAccessEvaluation,
@@ -116,20 +117,12 @@ async function forceChildSubmissionOffForInactivePartnership(
 }
 
 async function resolveDevelopmentBrandContext(db: DbHandle, developmentId: number) {
-  const [development] = await db
-    .select({
-      id: developments.id,
-      cataloguePublisherId: developments.cataloguePublisherId,
-    })
-    .from(developments)
-    .where(eq(developments.id, developmentId))
-    .limit(1);
-
+  const development = await getDevelopmentSalesWorkspaceReference(developmentId);
   if (!development) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
 
-  const cataloguePublisherId = Number(development.cataloguePublisherId || 0) || null;
+  const cataloguePublisherId = development.publisherId;
   if (!cataloguePublisherId) {
     throw new TRPCError({
       code: 'BAD_REQUEST',
@@ -146,7 +139,7 @@ async function resolveDevelopmentBrandContext(db: DbHandle, developmentId: numbe
   }
 
   return {
-    developmentId: Number(development.id),
+    developmentId: development.developmentId,
     cataloguePublisherId: cataloguePublisherId,
     partnership,
   };

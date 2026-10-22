@@ -353,7 +353,7 @@ describe('canonical migration manifest', () => {
     expect(tidbSequenced.map(entry => entry.statementCount)).toEqual([
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
-    expect(manifest.expectedHead.filename).toBe('0115_non_geographic_place_search_eligibility.sql');
+    expect(manifest.expectedHead.filename).toBe('0132_distribution_referral_projection_terms.sql');
   });
 
   it('plans the identity-and-custody migration chain from the integrated 0007 head', () => {
@@ -369,11 +369,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0115_non_geographic_place_search_eligibility.sql',
+      expectedNewHead: '0132_distribution_referral_projection_terms.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(108);
+    expect(plan.pending).toHaveLength(125);
       expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -483,8 +483,25 @@ describe('canonical migration manifest', () => {
       '0113_legal_active_release.sql',
       '0114_user_legal_acceptances.sql',
       '0115_non_geographic_place_search_eligibility.sql',
+      '0116_development_inventory_mode.sql',
+      '0117_development_inventory_items.sql',
+      '0118_unit_type_inventory_mode_projections.sql',
+      '0119_unit_type_transaction_mode_projections.sql',
+      '0120_unit_type_sold_inventory_projections.sql',
+      '0121_unit_type_available_inventory_prices.sql',
+      '0122_development_inventory_allocation_notes.sql',
+      '0123_development_team_contacts.sql',
+      '0124_development_phase_archival.sql',
+      '0125_distribution_selected_practitioners.sql',
+      '0126_distribution_listing_lead_queue.sql',
+      '0127_distribution_listing_lead_queue_events.sql',
+      '0128_distribution_referral_intake_policy_releases.sql',
+      '0129_distribution_referral_intake_sessions.sql',
+      '0130_distribution_referral_intake_evidence.sql',
+      '0131_distribution_referral_intake_events.sql',
+      '0132_distribution_referral_projection_terms.sql',
       ]);
-    expect(plan.expectedNewHead).toBe('0115_non_geographic_place_search_eligibility.sql');
+    expect(plan.expectedNewHead).toBe('0132_distribution_referral_projection_terms.sql');
   });
 
   it('accepts an isolated 0000 -> 0001 -> 0002 progression in ancestry order', () => {

@@ -6,7 +6,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 
 type ProgramTermsItem = {
   developmentName: string;
@@ -14,19 +13,17 @@ type ProgramTermsItem = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    category?: 'developer_document' | 'client_required_document';
-    templateFileUrl?: string | null;
-    templateFileName?: string | null;
+    category?: 'client_required_document';
     isRequired: boolean;
     sortOrder: number;
   }>;
   sourceDocuments?: Array<{
-    templateId: number;
-    documentCode: string;
-    documentLabel: string;
-    fileUrl?: string | null;
-    fileName?: string | null;
-    sortOrder: number;
+    id: number;
+    title: string;
+    documentType: string;
+    category: string;
+    version: number;
+    downloadable: boolean;
   }>;
 };
 
@@ -46,7 +43,7 @@ export function ProgramRequirementsDialog({
     return Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
   });
   const sourceDocuments = [...(item.sourceDocuments || [])].sort(
-    (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0),
+    (a, b) => a.title.localeCompare(b.title) || a.id - b.id,
   );
 
   return (
@@ -55,8 +52,8 @@ export function ProgramRequirementsDialog({
         <DialogHeader>
           <DialogTitle>{item.developmentName} Requirements</DialogTitle>
           <DialogDescription>
-            Application documents are what the buyer must provide. Supporting files are what you can
-            share with the buyer before submitting.
+            Program requirements describe what the buyer must provide. Developer resources appear
+            only when the Developer Engine enables them for partner sharing.
           </DialogDescription>
         </DialogHeader>
 
@@ -66,7 +63,7 @@ export function ProgramRequirementsDialog({
               <div>
                 <p className="text-sm font-semibold text-slate-900">Supporting pack</p>
                 <p className="text-xs text-slate-500">
-                  Plans, maps, specifications, price lists, and other buyer-facing files.
+                  Plans, price lists, and other resources explicitly shared with partners by the developer.
                 </p>
               </div>
               <Badge variant="secondary">
@@ -76,29 +73,23 @@ export function ProgramRequirementsDialog({
             <div className="mt-2 space-y-2">
               {sourceDocuments.map(document => (
                 <div
-                  key={document.templateId}
+                  key={document.id}
                   className="flex items-center justify-between gap-2 rounded border bg-slate-50 p-2"
                 >
                   <div>
-                    <p className="font-medium">{document.documentLabel}</p>
+                    <p className="font-medium">{document.title}</p>
                     <p className="text-xs text-slate-500">
-                      {document.fileName || 'File pending upload'}
+                      {document.documentType} · version {document.version}
                     </p>
                   </div>
-                  {document.fileUrl ? (
-                    <Button asChild size="sm" variant="outline">
-                      <a href={document.fileUrl} target="_blank" rel="noreferrer">
-                        Open
-                      </a>
-                    </Button>
-                  ) : (
-                    <Badge variant="secondary">Pending</Badge>
-                  )}
+                  <Badge variant="secondary">
+                    {document.downloadable ? 'Shared resource' : 'Information only'}
+                  </Badge>
                 </div>
               ))}
               {!sourceDocuments.length ? (
                 <p className="rounded border border-dashed p-3 text-sm text-slate-500">
-                  No supporting files have been uploaded for this development yet.
+                  Developer shared resources are not connected yet.
                 </p>
               ) : null}
             </div>
@@ -109,7 +100,8 @@ export function ProgramRequirementsDialog({
               <div>
                 <p className="text-sm font-semibold text-slate-900">Application documents</p>
                 <p className="text-xs text-slate-500">
-                  These are the buyer documents needed for qualification and payout progress.
+                  These are the buyer documents listed for this program's application and any
+                  configured payout checks.
                 </p>
               </div>
               <Badge variant="secondary">
@@ -125,21 +117,8 @@ export function ProgramRequirementsDialog({
               <div>
                   <p className="font-medium">{document.documentLabel}</p>
                   <p className="text-xs text-slate-500">
-                    {document.category === 'developer_document'
-                      ? 'Download, sign, and re-upload'
-                      : document.documentCode}
+                    {document.documentCode}
                   </p>
-                {document.templateFileUrl ? (
-                  <a
-                    href={document.templateFileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-blue-600 hover:underline"
-                  >
-                    Download document
-                    {document.templateFileName ? ` (${document.templateFileName})` : ''}
-                  </a>
-                ) : null}
               </div>
               <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                 {document.isRequired ? 'Required' : 'Optional'}

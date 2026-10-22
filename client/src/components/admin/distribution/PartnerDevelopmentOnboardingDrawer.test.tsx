@@ -17,7 +17,6 @@ const {
   mockOnboardDevelopmentToPartnerNetworkUseMutation,
   mockGetBrandOnboardingPresetUseQuery,
   mockSetBrandOnboardingPresetUseMutation,
-  mockUploadPresignUseMutation,
   mockUseUtils,
   mockInvalidateReadiness,
   mockInvalidateDocs,
@@ -35,7 +34,6 @@ const {
   mockOnboardDevelopmentToPartnerNetworkUseMutation: vi.fn(),
   mockGetBrandOnboardingPresetUseQuery: vi.fn(),
   mockSetBrandOnboardingPresetUseMutation: vi.fn(),
-  mockUploadPresignUseMutation: vi.fn(),
   mockUseUtils: vi.fn(),
   mockInvalidateReadiness: vi.fn(),
   mockInvalidateDocs: vi.fn(),
@@ -81,11 +79,6 @@ vi.mock('@/lib/trpc', () => ({
         setBrandOnboardingPreset: {
           useMutation: () => mockSetBrandOnboardingPresetUseMutation(),
         },
-      },
-    },
-    upload: {
-      presign: {
-        useMutation: () => mockUploadPresignUseMutation(),
       },
     },
   },
@@ -185,13 +178,6 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       mutateAsync: vi.fn().mockResolvedValue({ success: true }),
       isPending: false,
     });
-    mockUploadPresignUseMutation.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({
-        url: 'https://example-upload-url.test',
-        publicUrl: 'https://cdn.example.com/distribution-doc.pdf',
-      }),
-      isPending: false,
-    });
   });
 
   it('renders readiness chips from readiness.state', () => {
@@ -206,7 +192,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
     expect(screen.getByText('Application docs: Ready')).toBeInTheDocument();
   });
 
-  it('separates developer and client document configuration sections', () => {
+  it('shows only Distribution-owned referral-process document configuration', () => {
     mockGetDevelopmentRequiredDocumentsUseQuery.mockReturnValue({
       data: [
         {
@@ -217,16 +203,6 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           documentLabel: 'Bank Statements',
           isRequired: true,
           sortOrder: 0,
-          isActive: true,
-        },
-        {
-          id: 2,
-          developmentId: 1001,
-          category: 'developer_document',
-          documentCode: 'custom',
-          documentLabel: 'House Plan',
-          isRequired: true,
-          sortOrder: 1,
           isActive: true,
         },
       ],
@@ -257,10 +233,9 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       />,
     );
 
-    expect(screen.getByText('Development Application Documents')).toBeInTheDocument();
-    expect(screen.getByText('Supporting Documents')).toBeInTheDocument();
-    expect(screen.getByText('Buyer Application Documents')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('House Plan')).toBeInTheDocument();
+    expect(screen.getByText('Referral Process Documents')).toBeInTheDocument();
+    expect(screen.queryByText('Development Application Documents')).not.toBeInTheDocument();
+    expect(screen.queryByText('Supporting Documents')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('Bank Statements')).toBeInTheDocument();
   });
 
@@ -310,17 +285,14 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
           developmentId: 1001,
           documents: expect.arrayContaining([
             expect.objectContaining({
-              category: 'client_required_document',
               documentCode: 'proof_of_income',
               documentLabel: 'Latest payslip or proof of income',
             }),
             expect.objectContaining({
-              category: 'client_required_document',
               documentCode: 'bank_statement',
               documentLabel: '3 months bank statements',
             }),
             expect.objectContaining({
-              category: 'client_required_document',
               documentCode: 'pre_approval',
               documentLabel: 'Bond pre-approval',
               isRequired: true,
@@ -958,9 +930,8 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
       primaryManagerUserId: 22,
       documents: [
         {
-          category: 'developer_document',
           documentCode: 'custom',
-          documentLabel: 'Price Structure',
+          documentLabel: 'Credit approval',
           isRequired: true,
           isActive: true,
           sortOrder: 0,
@@ -1040,8 +1011,7 @@ describe('PartnerDevelopmentOnboardingDrawer UI', () => {
         expect.objectContaining({
           documents: [
             expect.objectContaining({
-              category: 'developer_document',
-              documentLabel: 'Price Structure',
+              documentLabel: 'Credit approval',
               documentCode: 'custom',
             }),
           ],

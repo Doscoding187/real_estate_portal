@@ -1188,14 +1188,21 @@ export function getCanonicalAccountDestination(user: PublicNavigationUser): stri
   if (role === 'agency_admin') return '/agency/overview';
   if (role === 'agent') return '/agent/dashboard';
   if (role === 'service_provider') return '/service/profile';
-  if (user.hasReferrerIdentity || role === 'referrer') {
+  if (user.hasReferrerIdentity) {
     return '/distribution/partner/overview';
   }
   return '/user/dashboard';
 }
 
 export function getLoginRedirectPath(user: PublicNavigationUser, nextPath: unknown): string {
-  return getSafeNextPath(nextPath) ?? getCanonicalAccountDestination(user) ?? '/user/dashboard';
+  const safeNextPath = getSafeNextPath(nextPath);
+  const isAgent = normalizeRole(user?.role) === 'agent';
+  const isDistributionNext =
+    safeNextPath?.startsWith('/distribution/partner') || safeNextPath === '/agent/referrals';
+  if (isAgent && isDistributionNext) {
+    return '/agent/dashboard';
+  }
+  return safeNextPath ?? getCanonicalAccountDestination(user) ?? '/user/dashboard';
 }
 
 export function getAccountDisplayName(user: PublicNavigationUser) {

@@ -120,6 +120,7 @@ export function FinalisationPhase({
 
   const [showConfirmPublish, setShowConfirmPublish] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [inventoryChangeReason, setInventoryChangeReason] = useState('');
   const [activePreviewTab, setActivePreviewTab] = useState<'desktop' | 'mobile'>('desktop');
   const utils = trpc.useUtils();
 
@@ -317,6 +318,7 @@ export function FinalisationPhase({
           data: {
             ...payload,
             cataloguePublisherId: publisherId,
+            inventoryChangeReason: inventoryChangeReason.trim() || undefined,
           },
         });
         developmentId = editingId;
@@ -325,7 +327,10 @@ export function FinalisationPhase({
         // UPDATE OPERATION
         await updateDevelopment.mutateAsync({
           id: editingId,
-          data: payload,
+          data: {
+            ...payload,
+            inventoryChangeReason: inventoryChangeReason.trim() || undefined,
+          },
         });
         developmentId = editingId;
         toast.success('Development saved successfully!');
@@ -993,6 +998,19 @@ export function FinalisationPhase({
               <AlertTitle className="text-blue-900">Passed Validation</AlertTitle>
               <AlertDescription>{finalisationCopy.validationDescription}</AlertDescription>
             </Alert>
+            {editingId ? (
+              <label className="mt-4 block space-y-1 text-sm font-medium text-slate-800">
+                Reason for shared price range changes <span className="font-normal text-slate-500">(required only when changing a unit type’s sale or rental range)</span>
+                <textarea
+                  value={inventoryChangeReason}
+                  onChange={event => setInventoryChangeReason(event.target.value)}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="For example: updated the Type A range after the approved specification and current market review"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 font-normal"
+                />
+              </label>
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmPublish(false)}>

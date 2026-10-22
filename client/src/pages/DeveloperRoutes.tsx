@@ -24,6 +24,7 @@ import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 import { lazy, Suspense } from 'react';
 const MyDrafts = lazy(() => import('@/pages/developer/MyDrafts'));
 const ProjectLibrary = lazy(() => import('@/pages/developer/ProjectLibrary'));
+const InventoryWorkspace = lazy(() => import('@/pages/developer/InventoryWorkspace'));
 
 const getRoleHomePath = (role?: string | null) => {
   switch (role) {
@@ -185,6 +186,11 @@ export default function DeveloperRoutes() {
         {/* Developments */}
         <Route path="/developer/developments/new">
           <Redirect to="/developer/create-development" />
+        </Route>
+        <Route path="/developer/developments/:developmentId/inventory">
+          <Suspense fallback={<LoadingSpinner />}>
+            <InventoryWorkspace />
+          </Suspense>
         </Route>
         <Route path="/developer/developments/:developmentId" component={DevelopmentHome} />
         <Route path="/developer/developments" component={DevelopmentsList} />
