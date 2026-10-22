@@ -64,7 +64,8 @@ describe('canonical Service Partner client identity authority', () => {
     expect(providerCard).not.toContain('moderationTier');
     expect(providerCard).not.toContain('subscriptionTier');
     expect(providerCard).not.toContain('radiusKm');
-    expect(profilePage).not.toContain('StarRating');
+    expect(profilePage).toContain('ProviderRating');
+    expect(profilePage).not.toMatch(/function\s+StarRating/);
   });
 
   it('uses the persisted lead contract for result rendering', () => {
