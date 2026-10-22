@@ -17,6 +17,33 @@ export type IntentStage =
   | 'general';
 
 export type SourceSurface = 'directory' | 'explore' | 'journey_injection' | 'agent_dashboard';
+export type ServiceRequestSourceSurface = Exclude<SourceSurface, 'explore'>;
+
+export type ServiceRequestContext = {
+  suburb?: string | null;
+  city?: string | null;
+  province?: string | null;
+  propertyId?: string | number | null;
+  listingId?: string | number | null;
+  developmentId?: string | number | null;
+  intentStage?: string | null;
+  sourceSurface?: string | null;
+  sourceDetail?: string | null;
+  reasonKey?: string | null;
+};
+
+const SERVICE_REQUEST_CONTEXT_KEYS = [
+  'suburb',
+  'city',
+  'province',
+  'propertyId',
+  'listingId',
+  'developmentId',
+  'intentStage',
+  'sourceSurface',
+  'sourceDetail',
+  'reasonKey',
+] as const;
 
 export type ServiceCategoryMeta = {
   value: ServiceCategory;
@@ -45,7 +72,7 @@ export const SERVICE_CATEGORIES: ServiceCategoryMeta[] = [
     value: 'moving',
     label: 'Moving Services',
     shortLabel: 'Moving',
-    subtitle: 'Pack, move, store, and relocate with vetted teams.',
+    subtitle: 'Pack, move, store, and relocate with a provider that lists your area.',
     icon: 'Truck',
   },
   {
@@ -82,16 +109,16 @@ export const CATEGORY_BY_VALUE: Record<ServiceCategory, ServiceCategoryMeta> =
 
 export const TRUST_STEPS = [
   {
-    title: 'Share Project Details',
-    description: 'Tell us what service you need, where, and your timeline.',
+    title: 'Choose a service',
+    description: 'Start with the property task you need help with.',
   },
   {
-    title: 'Match With Local Pros',
-    description: 'We rank providers by fit, trust score, and service area.',
+    title: 'Check listed coverage',
+    description: 'See the service and coverage each provider has published.',
   },
   {
-    title: 'Compare Quotes',
-    description: 'Choose the provider that matches your budget and scope.',
+    title: 'Send one clear request',
+    description: 'Share your project details with the provider you choose.',
   },
 ];
 
@@ -164,6 +191,62 @@ export function toServiceCategorySlug(category: ServiceCategory) {
   return String(category).replace(/_/g, '-');
 }
 
+function setServiceRequestContext(params: URLSearchParams, context: ServiceRequestContext) {
+  for (const key of SERVICE_REQUEST_CONTEXT_KEYS) {
+    const value = context[key];
+    if (value !== undefined && value !== null && String(value).trim()) {
+      params.set(key, String(value));
+    }
+  }
+}
+
+export function serviceRequestContextFromSearch(search: string): ServiceRequestContext {
+  const params = new URLSearchParams(search);
+  const context: ServiceRequestContext = {};
+  for (const key of SERVICE_REQUEST_CONTEXT_KEYS) {
+    const value = params.get(key);
+    if (value !== null) context[key] = value;
+  }
+  return context;
+}
+
+export function buildServiceRequestPath(
+  category: ServiceCategory,
+  providerId: number,
+  serviceCode: string,
+  context: ServiceRequestContext = {},
+) {
+  const params = new URLSearchParams();
+  params.set('providerId', String(providerId));
+  if (serviceCode) params.set('serviceCode', serviceCode);
+  setServiceRequestContext(params, context);
+  return `/services/request/${toServiceCategorySlug(category)}?${params.toString()}`;
+}
+
+export function buildProviderProfilePath(
+  slug: string,
+  search = '',
+  context: ServiceRequestContext = {},
+) {
+  const params = new URLSearchParams(search);
+  for (const key of SERVICE_REQUEST_CONTEXT_KEYS) {
+    params.delete(key);
+  }
+  setServiceRequestContext(params, context);
+  const query = params.toString();
+  return `/services/provider/${encodeURIComponent(slug)}${query ? `?${query}` : ''}`;
+}
+
+export function buildServiceCategoryPath(
+  category: ServiceCategory,
+  context: ServiceRequestContext = {},
+) {
+  const params = new URLSearchParams();
+  setServiceRequestContext(params, context);
+  const query = params.toString();
+  return `/services/${toServiceCategorySlug(category)}${query ? `?${query}` : ''}`;
+}
+
 export function serviceCategoryFromSlug(slug: string): ServiceCategory | null {
   const normalized = slugifyLocationSegment(slug).replace(/-/g, '_');
   return isServiceCategory(normalized) ? (normalized as ServiceCategory) : null;
@@ -197,9 +280,7 @@ export function providerIdFromSlug(slug: string): number | null {
 
   const providerId = Number.parseInt(rawProviderId, 10);
 
-  return Number.isInteger(providerId) && providerId > 0
-    ? providerId
-    : null;
+  return Number.isSafeInteger(providerId) && providerId > 0 ? providerId : null;
 }
 
 export const SA_PROVINCES = [
@@ -215,6 +296,34 @@ export const SA_PROVINCES = [
 ] as const;
 
 export type SAProvince = (typeof SA_PROVINCES)[number];
+
+function canonicalProvince(value: string) {
+  return SA_PROVINCES.find(province => province.toLowerCase() === value.toLowerCase()) || value;
+}
+
+export function parseServiceLocationInput(value: string) {
+  const parts = value
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 3) {
+    return { suburb: parts[0], city: parts[1], province: canonicalProvince(parts[2]) };
+  }
+  if (parts.length === 2) {
+    if (SA_PROVINCES.some(province => province.toLowerCase() === parts[1].toLowerCase())) {
+      return { suburb: '', city: parts[0], province: canonicalProvince(parts[1]) };
+    }
+    return { suburb: parts[0], city: parts[1], province: '' };
+  }
+  if (parts.length === 1) {
+    if (SA_PROVINCES.some(province => province.toLowerCase() === parts[0].toLowerCase())) {
+      return { suburb: '', city: '', province: canonicalProvince(parts[0]) };
+    }
+    return { suburb: '', city: parts[0], province: '' };
+  }
+  return { suburb: '', city: '', province: '' };
+}
 
 /**
  * Formats a ZAR price range as "R{min} – R{max}" with whole-number formatting.

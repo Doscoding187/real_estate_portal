@@ -9,7 +9,7 @@ type ServiceTopicConfig = {
   title: string;
   description: string;
   categoryHref: string;
-  requestHref: string;
+  browseHref: string;
   sections: Array<{ title: string; body: string }>;
 };
 
@@ -20,7 +20,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
     description:
       'Find finance and bond support for buying property, comparing loan options, and preparing a stronger application.',
     categoryHref: '/services/finance-legal',
-    requestHref: '/services/request/finance_legal',
+    browseHref: '/services/finance-legal',
     sections: [
       {
         title: 'Bond application support',
@@ -42,7 +42,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
     description:
       'Find valuation support for sellers, landlords, investors, and homeowners preparing to price a property.',
     categoryHref: '/services/finance-legal',
-    requestHref: '/services/request/finance_legal',
+    browseHref: '/services/finance-legal',
     sections: [
       {
         title: 'Seller pricing support',
@@ -54,7 +54,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
       },
       {
         title: 'Future report layer',
-        body: 'The page can later connect to property reports, sold-price context, and agent valuation workflows.',
+        body: 'The provider can assess the property context and next steps with the requester.',
       },
     ],
   },
@@ -64,7 +64,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
     description:
       'Find conveyancers, legal advisors, compliance specialists, and document support for property transactions.',
     categoryHref: '/services/finance-legal',
-    requestHref: '/services/request/finance_legal',
+    browseHref: '/services/finance-legal',
     sections: [
       {
         title: 'Conveyancing and transfer',
@@ -86,7 +86,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
     description:
       'Find insurance providers for buildings cover, household contents, investment properties, and ownership changes.',
     categoryHref: '/services/insurance',
-    requestHref: '/services/request/insurance',
+    browseHref: '/services/insurance',
     sections: [
       {
         title: 'Cover for buyers',
@@ -108,7 +108,7 @@ export const SERVICE_TOPIC_PAGES: Record<string, ServiceTopicConfig> = {
     description:
       'Find interior design, decorating, staging, and styling support for homes, rentals, and properties preparing for sale.',
     categoryHref: '/services/home-improvement',
-    requestHref: '/services/request/home_improvement',
+    browseHref: '/services/home-improvement',
     sections: [
       {
         title: 'Move-in improvements',
@@ -154,8 +154,8 @@ export function ServiceTopicPage({ topic }: { topic: ServiceTopicConfig }) {
               {topic.description}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href={topic.requestHref}>
-                <Button className="w-full sm:w-auto">Request matches</Button>
+              <Link href={topic.browseHref}>
+                <Button className="w-full sm:w-auto">Browse providers to request</Button>
               </Link>
               <Link href={topic.categoryHref}>
                 <Button variant="outline" className="w-full sm:w-auto">
