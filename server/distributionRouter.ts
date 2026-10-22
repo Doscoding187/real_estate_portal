@@ -12,6 +12,7 @@ import {
   DISTRIBUTION_IDENTITY_TYPE_VALUES,
   cataloguePublishers,
   developments,
+  developmentDocuments,
   developmentRequiredDocuments,
   distributionAgentAccess,
   distributionAgentTiers,
@@ -720,6 +721,18 @@ async function assertPartnerTermsAccess(db: any, user: { id: number; role: strin
     code: 'FORBIDDEN',
     message: 'Partner program terms are available to partner and agent accounts only.',
   });
+}
+
+function normalizePartnerResourceUrl(value: unknown): string | null {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return raw.startsWith('/') && !raw.startsWith('//') ? raw : null;
+  }
 }
 
 async function getActiveAgentAccessForProgram(db: any, programId: number, agentId: number) {
@@ -5996,6 +6009,73 @@ const managerDistributionRouter = router({
 });
 
 const partnerDistributionRouter = router({
+  listDevelopmentResources: protectedProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      await assertPartnerTermsAccess(db, ctx.user!);
+
+      const partnerTerms = await listPartnerProgramTerms({
+        developmentIds: [input.developmentId],
+        includeDisabled: true,
+      });
+      const development = partnerTerms.items.find(
+        item => item.developmentId === input.developmentId,
+      );
+      if (!development) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Development resources not found.' });
+      }
+
+      const rows = await db
+        .select({
+          id: developmentDocuments.id,
+          title: developmentDocuments.title,
+          documentType: developmentDocuments.documentType,
+          category: developmentDocuments.category,
+          fileUrl: developmentDocuments.fileUrl,
+          mimeType: developmentDocuments.mimeType,
+          fileSizeBytes: developmentDocuments.fileSizeBytes,
+          version: developmentDocuments.version,
+          updatedAt: developmentDocuments.updatedAt,
+        })
+        .from(developmentDocuments)
+        .where(
+          and(
+            eq(developmentDocuments.developmentId, input.developmentId),
+            eq(developmentDocuments.isActive, 1),
+            eq(developmentDocuments.downloadable, 1),
+            inArray(developmentDocuments.visibility, ['public', 'referrer']),
+            isNull(developmentDocuments.replacedByDocumentId),
+          ),
+        )
+        .orderBy(desc(developmentDocuments.updatedAt), desc(developmentDocuments.id))
+        .limit(100);
+
+      return {
+        developmentId: input.developmentId,
+        documents: rows.flatMap(row => {
+          const fileUrl = normalizePartnerResourceUrl(row.fileUrl);
+          if (!fileUrl) return [];
+          return [
+            {
+              id: Number(row.id),
+              title: String(row.title || ''),
+              documentType: row.documentType,
+              category: row.category,
+              fileUrl,
+              mimeType: row.mimeType || null,
+              fileSizeBytes: row.fileSizeBytes ?? null,
+              version: Number(row.version || 1),
+              updatedAt: row.updatedAt,
+            },
+          ];
+        }),
+      };
+    }),
+
   createAffordabilityAssessment: protectedProcedure
     .input(
       z.object({

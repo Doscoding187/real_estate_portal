@@ -18,6 +18,7 @@ import {
   type PublicSearchQueryBoundary,
 } from './searchAreaQueryBoundary';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
 import { buildDevelopmentCardHighlights } from '../../shared/listing-highlight-registry';
 import { hasHomePropertyPhoto } from '../../shared/homePropertyPhoto';
 
@@ -715,7 +716,11 @@ export class DevelopmentDerivedListingService {
       throw new Error('Database unavailable');
     }
 
-    const conditions = [publicDevelopmentEligibilityConditions(), eq(unitTypes.isActive, 1)];
+    const conditions = [
+      publicDevelopmentEligibilityConditions(),
+      eq(unitTypes.isActive, 1),
+      unphasedSellingUnitTypeScope(),
+    ];
     if (filters.requireAvailableStock) {
       conditions.push(gt(unitTypes.availableUnits, 0), ne(developments.status, 'sold-out'));
     }

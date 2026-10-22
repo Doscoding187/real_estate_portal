@@ -16,6 +16,7 @@ import {
 import { getDb } from '../db-connection';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
 
 function parseSlugOrId(input: string): { isId: boolean; value: string | number } {
   const trimmed = input.trim();
@@ -229,7 +230,13 @@ export class PublicDevelopmentDetailService {
     const units = (await db
       .select()
       .from(unitTypes)
-      .where(and(eq(unitTypes.developmentId, Number(row.id)), eq(unitTypes.isActive, 1)))
+      .where(
+        and(
+          eq(unitTypes.developmentId, Number(row.id)),
+          eq(unitTypes.isActive, 1),
+          unphasedSellingUnitTypeScope(),
+        ),
+      )
       .orderBy(unitTypes.displayOrder, unitTypes.id)) as Array<Record<string, unknown>>;
 
     const projectionUnits: PublicDevelopmentProjectionUnit[] = units.map(unit => ({

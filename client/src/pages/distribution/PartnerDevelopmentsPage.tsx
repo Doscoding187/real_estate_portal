@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import {
+  Archive,
   Check,
   Download,
   ExternalLink,
+  FileText,
   Home,
   Loader2,
+  Mail,
   MapPin,
+  Phone,
   Search,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -98,9 +102,21 @@ function getBuyerProfile(item: any) {
 }
 
 function getOpportunityLabel(item: any) {
+  if (item.portfolioState === 'archived') return 'Archived';
   if (item.opportunity?.status === 'ready') return 'Open for buyers';
   if (item.opportunity?.status === 'pending_setup') return 'Opening soon';
   return 'Not accepting referrals yet';
+}
+
+function formatPhaseStatus(status: string) {
+  return status.replace(/_/g, ' ').replace(/^\w/, value => value.toUpperCase());
+}
+
+function formatResourceUpdatedAt(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function estimateMonthlyInstallment(price: number | null | undefined) {
@@ -373,10 +389,12 @@ export default function PartnerDevelopmentsPage() {
   const [selectedProvince, setSelectedProvince] = useState<string>(ALL_FILTER_VALUE);
   const [selectedCity, setSelectedCity] = useState<string>(ALL_FILTER_VALUE);
   const [viewMode, setViewMode] = useState<typeof VIEW_MODE_SUBMIT | typeof VIEW_MODE_EXPLORE>(
-    VIEW_MODE_SUBMIT,
+    VIEW_MODE_EXPLORE,
   );
+  const [portfolioView, setPortfolioView] = useState<'current' | 'archived'>('current');
   const [searchText, setSearchText] = useState('');
   const [brochureItem, setBrochureItem] = useState<any | null>(null);
+  const [workspaceItem, setWorkspaceItem] = useState<any | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -387,6 +405,10 @@ export default function PartnerDevelopmentsPage() {
     { includeDisabled: true },
     { enabled: isAuthenticated, retry: false },
   );
+  const workspaceResourcesQuery = trpc.distribution.partner.listDevelopmentResources.useQuery(
+    { developmentId: Number(workspaceItem?.developmentId || 0) },
+    { enabled: isAuthenticated && Boolean(workspaceItem), retry: false },
+  );
 
   const allItems = termsQuery.data?.items || [];
   const modeItems = useMemo(
@@ -395,6 +417,13 @@ export default function PartnerDevelopmentsPage() {
         ? allItems.filter(item => item.opportunity?.status === 'ready')
         : allItems,
     [allItems, viewMode],
+  );
+  const portfolioItems = useMemo(
+    () =>
+      portfolioView === 'archived'
+        ? allItems.filter(item => item.portfolioState === 'archived')
+        : modeItems.filter(item => item.portfolioState !== 'archived'),
+    [allItems, modeItems, portfolioView],
   );
 
   const brandOptions = useMemo(() => {
@@ -410,25 +439,25 @@ export default function PartnerDevelopmentsPage() {
 
   const provinceOptions = useMemo(
     () =>
-      Array.from(new Set(modeItems.map(item => item.province).filter(Boolean) as string[])).sort(
-        (a, b) => a.localeCompare(b),
-      ),
-    [modeItems],
+      Array.from(
+        new Set(portfolioItems.map(item => item.province).filter(Boolean) as string[]),
+      ).sort((a, b) => a.localeCompare(b)),
+    [portfolioItems],
   );
 
   const cityOptions = useMemo(() => {
     const baseItems =
       selectedProvince === ALL_FILTER_VALUE
-        ? modeItems
-        : modeItems.filter(item => String(item.province || '') === selectedProvince);
+        ? portfolioItems
+        : portfolioItems.filter(item => String(item.province || '') === selectedProvince);
     return Array.from(new Set(baseItems.map(item => item.city).filter(Boolean) as string[])).sort(
       (a, b) => a.localeCompare(b),
     );
-  }, [modeItems, selectedProvince]);
+  }, [portfolioItems, selectedProvince]);
 
   const filteredItems = useMemo(() => {
     const needle = searchText.trim().toLowerCase();
-    return modeItems.filter(item => {
+    return portfolioItems.filter(item => {
       if (
         selectedBrandId !== ALL_FILTER_VALUE &&
         Number(item.brand?.cataloguePublisherId || 0) !== Number(selectedBrandId)
@@ -451,7 +480,7 @@ export default function PartnerDevelopmentsPage() {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [modeItems, searchText, selectedBrandId, selectedProvince, selectedCity]);
+  }, [portfolioItems, searchText, selectedBrandId, selectedProvince, selectedCity]);
 
   const topDevelopments = useMemo(() => filteredItems.slice(0, 10), [filteredItems]);
 
@@ -495,11 +524,11 @@ export default function PartnerDevelopmentsPage() {
       <main className="mx-auto w-full max-w-[1420px] px-4 pb-10 pt-6 md:px-7">
         <section className="overflow-hidden rounded-lg border border-primary/15 bg-white shadow-sm">
           <div className="bg-gradient-to-br from-[var(--brand-blue)] via-[var(--info)] to-[var(--brand-blue-hover)] px-5 py-5 text-white md:px-6">
-            <p className="text-[10px] font-semibold uppercase text-blue-100">Referrer Workspace</p>
-            <h1 className="mt-1 text-[28px] font-semibold text-white">Available Opportunities</h1>
+            <p className="text-[10px] font-semibold uppercase text-blue-100">Partner Workspace</p>
+            <h1 className="mt-1 text-[28px] font-semibold text-white">Development Workspace</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-5 text-[#ece6da]">
-              Use Submit mode for opportunities accepting buyers now, or Explore mode for what is
-              coming.
+              Find active developments, the right sales contact, and partner-ready materials.
+              Submit a buyer when referrals are open.
             </p>
           </div>
 
@@ -526,6 +555,38 @@ export default function PartnerDevelopmentsPage() {
             >
               Explore mode
             </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 border-b border-primary/15 px-5 py-3 md:px-6">
+            <span className="mr-1 text-[11px] font-semibold text-muted-foreground">Portfolio</span>
+            <button
+              type="button"
+              aria-pressed={portfolioView === 'current'}
+              className={`rounded-md border px-3 py-2 text-[12px] font-semibold ${
+                portfolioView === 'current'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-primary/15 bg-white text-foreground'
+              }`}
+              onClick={() => setPortfolioView('current')}
+            >
+              Current developments
+            </button>
+            <button
+              type="button"
+              aria-pressed={portfolioView === 'archived'}
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-2 text-[12px] font-semibold ${
+                portfolioView === 'archived'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-primary/15 bg-white text-foreground'
+              }`}
+              onClick={() => setPortfolioView('archived')}
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
+            </button>
+            <p className="basis-full text-[10px] text-muted-foreground md:basis-auto">
+              Sold-out or completed developments are kept here.
+            </p>
           </div>
 
           <div className="grid gap-2 border-b border-primary/15 px-5 py-4 md:grid-cols-4 md:px-6">
@@ -652,6 +713,29 @@ export default function PartnerDevelopmentsPage() {
                 {item.brand?.brandName ? (
                   <p className="text-[10px] text-muted-foreground">{item.brand.brandName}</p>
                 ) : null}
+                {Array.isArray(item.phases) && item.phases.length ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {item.phases.map((phase: any) => (
+                      <span
+                        key={phase.id}
+                        className="rounded border border-primary/10 bg-primary/5 px-2 py-1 text-[9px] text-foreground"
+                      >
+                        {phase.name}: {formatPhaseStatus(phase.status)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {item.brochure?.contactName ? (
+                  <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    Development sales contact: {item.brochure.contactName}
+                  </p>
+                ) : item.brand?.publicContactEmail ? (
+                  <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    Development sales contact available
+                  </p>
+                ) : null}
 
                 <p className="font-mono text-[14px] font-semibold text-foreground">
                   {formatCurrencyRange(item.priceFrom, item.priceTo)}
@@ -721,20 +805,39 @@ export default function PartnerDevelopmentsPage() {
                     Open Brochure
                   </Button>
                   <Button
+                    variant="outline"
                     size="sm"
-                    variant={item.opportunity?.status === 'ready' ? 'conversion' : 'secondary'}
-                    className="text-[11px]"
-                    disabled={item.opportunity?.status !== 'ready'}
+                    onClick={() => setWorkspaceItem(item)}
+                    className="border-primary/15 text-[11px]"
+                  >
+                    <FileText className="mr-1 h-3.5 w-3.5" />
+                    Contacts &amp; resources
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={
+                      item.portfolioState !== 'archived' && item.opportunity?.status === 'ready'
+                        ? 'conversion'
+                        : 'secondary'
+                    }
+                    className="col-span-2 text-[11px]"
+                    disabled={
+                      item.portfolioState === 'archived' || item.opportunity?.status !== 'ready'
+                    }
                     onClick={() =>
                       setLocation(
                         `/distribution/partner/submit?developmentId=${item.developmentId}`,
                       )
                     }
                   >
-                    {item.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Not open yet'}
+                    {item.portfolioState === 'archived'
+                      ? 'Archived'
+                      : item.opportunity?.status === 'ready'
+                        ? 'Submit Buyer'
+                        : 'Not open yet'}
                   </Button>
                 </div>
-                {item.opportunity?.status !== 'ready' ? (
+                {item.portfolioState !== 'archived' && item.opportunity?.status !== 'ready' ? (
                   <p className="rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] text-amber-800">
                     {item.opportunity?.friendlyMessage || 'Referral submissions are not open yet.'}
                   </p>
@@ -951,6 +1054,146 @@ export default function PartnerDevelopmentsPage() {
                 >
                   {brochureItem.opportunity?.status === 'ready' ? 'Submit Buyer' : 'Not open yet'}
                 </Button>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(workspaceItem)} onOpenChange={open => !open && setWorkspaceItem(null)}>
+        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-2xl">
+          {workspaceItem ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{workspaceItem.developmentName}</DialogTitle>
+                <DialogDescription>
+                  Development contacts, phases, and material shared with partner sales teams.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5">
+                <section className="rounded-lg border border-primary/10 bg-primary/5 p-4">
+                  <div className="flex items-center gap-2 text-[12px] font-semibold text-foreground">
+                    <Phone className="h-4 w-4" />
+                    Development sales contact
+                  </div>
+                  {workspaceItem.brochure?.contactName ||
+                  workspaceItem.brochure?.contactPhone ||
+                  workspaceItem.brochure?.contactEmail ||
+                  workspaceItem.brand?.publicContactEmail ? (
+                    <div className="mt-3 space-y-2 text-[12px]">
+                      {workspaceItem.brochure?.contactName ? (
+                        <p className="font-medium text-foreground">
+                          {workspaceItem.brochure.contactName}
+                        </p>
+                      ) : null}
+                      {workspaceItem.brochure?.contactPhone ? (
+                        <a
+                          href={`tel:${workspaceItem.brochure.contactPhone}`}
+                          className="flex w-fit items-center gap-2 text-primary hover:underline"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                          {workspaceItem.brochure.contactPhone}
+                        </a>
+                      ) : null}
+                      {workspaceItem.brochure?.contactEmail ||
+                      workspaceItem.brand?.publicContactEmail ? (
+                        <a
+                          href={`mailto:${workspaceItem.brochure?.contactEmail || workspaceItem.brand?.publicContactEmail}`}
+                          className="flex w-fit items-center gap-2 text-primary hover:underline"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          {workspaceItem.brochure?.contactEmail ||
+                            workspaceItem.brand?.publicContactEmail}
+                        </a>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[12px] text-muted-foreground">
+                      No external sales contact has been configured for this development.
+                    </p>
+                  )}
+                  <p className="mt-3 text-[10px] text-muted-foreground">
+                    This is the development sales contact configured for partner terms. It may not
+                    be the site manager.
+                  </p>
+                </section>
+
+                <section>
+                  <h3 className="text-[12px] font-semibold text-foreground">Phases</h3>
+                  {Array.isArray(workspaceItem.phases) && workspaceItem.phases.length ? (
+                    <ul className="mt-2 space-y-2">
+                      {workspaceItem.phases.map((phase: any) => (
+                        <li
+                          key={phase.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                        >
+                          <span className="text-[12px] font-medium text-foreground">
+                            {phase.name}
+                          </span>
+                          <span className="shrink-0 rounded bg-primary/5 px-2 py-1 text-[10px] text-muted-foreground">
+                            {formatPhaseStatus(phase.status)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-[12px] text-muted-foreground">
+                      Phase details have not been added.
+                    </p>
+                  )}
+                </section>
+
+                <section>
+                  <h3 className="text-[12px] font-semibold text-foreground">Partner resources</h3>
+                  {workspaceResourcesQuery.isLoading ? (
+                    <div className="mt-3 flex items-center gap-2 text-[12px] text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading resources…
+                    </div>
+                  ) : workspaceResourcesQuery.error ? (
+                    <p className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-[12px] text-red-800">
+                      {workspaceResourcesQuery.error.message}
+                    </p>
+                  ) : workspaceResourcesQuery.data?.documents?.length ? (
+                    <ul className="mt-2 space-y-2">
+                      {workspaceResourcesQuery.data.documents.map(document => {
+                        const updatedAt = formatResourceUpdatedAt(document.updatedAt);
+                        return (
+                          <li
+                            key={document.id}
+                            className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2"
+                          >
+                            <div className="flex min-w-0 items-start gap-2">
+                              <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                              <div className="min-w-0">
+                                <p className="truncate text-[12px] font-medium text-foreground">
+                                  {document.title}
+                                </p>
+                                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                                  {formatPhaseStatus(document.documentType)}
+                                  {updatedAt ? ` · Updated ${updatedAt}` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <a
+                              href={document.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                            >
+                              Open <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 rounded-md border border-dashed border-border px-3 py-4 text-[12px] text-muted-foreground">
+                      No current partner-visible resources are available for this development.
+                    </p>
+                  )}
+                </section>
               </div>
             </>
           ) : null}

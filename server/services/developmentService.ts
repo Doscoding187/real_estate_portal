@@ -18,6 +18,7 @@ import {
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
 import { assertDevelopmentPublicTransitionAllowed } from './developmentSupersessionPolicy';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
 import { developerIdentityService } from './developerIdentityService';
 import { AuditActions } from '../_core/auditLog';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
@@ -913,6 +914,16 @@ export async function listPublicDevelopments(options: {
     .offset(offset);
 
   const developmentIds = results.map((d: any) => Number(d.id)).filter(Boolean);
+  const phaseDevelopmentIds = developmentIds.length
+    ? new Set(
+        (
+          await db
+            .select({ developmentId: developmentPhases.developmentId })
+            .from(developmentPhases)
+            .where(inArray(developmentPhases.developmentId, developmentIds))
+        ).map(row => Number(row.developmentId)),
+      )
+    : new Set<number>();
   const unitRows =
     developmentIds.length > 0
       ? await db
@@ -931,7 +942,13 @@ export async function listPublicDevelopments(options: {
           })
           .from(unitTypes)
           .leftJoin(developments, eq(unitTypes.developmentId, developments.id))
-          .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+          .where(
+            and(
+              inArray(unitTypes.developmentId, developmentIds),
+              eq(unitTypes.isActive, 1),
+              unphasedSellingUnitTypeScope(),
+            ),
+          )
           .orderBy(unitTypes.displayOrder, unitTypes.basePriceFrom)
       : [];
 
@@ -991,6 +1008,8 @@ export async function listPublicDevelopments(options: {
       .filter((price): price is number => price != null);
     const derivedPriceFrom = pricedFrom.length ? Math.min(...pricedFrom) : null;
     const derivedPriceTo = pricedTo.length ? Math.max(...pricedTo) : null;
+    const canUseDevelopmentPriceFallback =
+      !phaseDevelopmentIds.has(Number(d.id)) && d.status === 'selling';
 
     return {
       ...d,
@@ -1007,8 +1026,8 @@ export async function listPublicDevelopments(options: {
         d.referrerCommissionValue != null ? Number(d.referrerCommissionValue) : null,
       referrerCommissionAmount:
         d.defaultCommissionAmount != null ? Number(d.defaultCommissionAmount) : null,
-      priceFrom: derivedPriceFrom ?? d.priceFrom ?? null,
-      priceTo: derivedPriceTo ?? d.priceTo ?? null,
+      priceFrom: derivedPriceFrom ?? (canUseDevelopmentPriceFallback ? d.priceFrom : null),
+      priceTo: derivedPriceTo ?? (canUseDevelopmentPriceFallback ? d.priceTo : null),
       configurations,
       unitTypes: configurations,
     };

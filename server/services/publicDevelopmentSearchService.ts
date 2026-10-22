@@ -33,6 +33,7 @@ import { getDb } from '../db-connection';
 import { buildDevelopmentRootPath } from './developmentRouteAuthority';
 import { locationResolver, type ResolvedLocation } from './locationResolverService';
 import { publicDevelopmentEligibilityConditions } from './publicDevelopmentEligibility';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
 import {
   buildCanonicalLocationQueryBoundary,
   buildSearchAreaQueryBoundary,
@@ -725,7 +726,13 @@ export class PublicDevelopmentSearchService {
             displayOrder: unitTypes.displayOrder,
           })
           .from(unitTypes)
-          .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+          .where(
+            and(
+              inArray(unitTypes.developmentId, developmentIds),
+              eq(unitTypes.isActive, 1),
+              unphasedSellingUnitTypeScope(),
+            ),
+          )
           .orderBy(unitTypes.displayOrder, unitTypes.id)) as UnitRow[])
       : [];
 

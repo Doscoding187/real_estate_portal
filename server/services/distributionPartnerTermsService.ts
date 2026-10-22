@@ -2,6 +2,7 @@ import { and, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import {
   cataloguePublishers,
   developments,
+  developmentPhases,
   distributionDevelopmentAccess,
   distributionPrograms,
   unitTypes,
@@ -9,11 +10,14 @@ import {
 import { getDb } from '../db';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
+import { resolveDevelopmentPortfolioState } from './developmentPortfolioState';
 
 type ListPartnerProgramTermsInput = {
   cataloguePublisherId?: number;
   developmentIds?: number[];
   includeDisabled?: boolean;
+  includeUnreleased?: boolean;
 };
 
 type BrochureConfig = {
@@ -30,6 +34,14 @@ type BrochureConfig = {
 export type PartnerProgramTermsItem = {
   developmentId: number;
   developmentName: string;
+  developmentStatus: 'launching-soon' | 'selling' | 'sold-out';
+  portfolioState: 'current' | 'archived' | 'unreleased';
+  phases: Array<{
+    id: number;
+    name: string;
+    phaseNumber: number;
+    status: 'planning' | 'pre_launch' | 'selling' | 'sold_out' | 'completed';
+  }>;
   city?: string | null;
   province?: string | null;
   suburb?: string | null;
@@ -293,6 +305,7 @@ export async function listPartnerProgramTerms(
     const selectFields: Record<string, any> = {
       developmentId: developments.id,
       developmentName: developments.name,
+      developmentStatus: developments.status,
       suburb: developments.suburb,
       city: developments.city,
       province: developments.province,
@@ -343,6 +356,32 @@ export async function listPartnerProgramTerms(
   const developmentIds: number[] = Array.from(
     new Set(rows.map(row => Number(row.developmentId)).filter(value => Number.isFinite(value))),
   );
+
+  const phaseRows = developmentIds.length
+    ? await db
+        .select({
+          id: developmentPhases.id,
+          developmentId: developmentPhases.developmentId,
+          name: developmentPhases.name,
+          phaseNumber: developmentPhases.phaseNumber,
+          status: developmentPhases.status,
+        })
+        .from(developmentPhases)
+        .where(inArray(developmentPhases.developmentId, developmentIds))
+        .orderBy(developmentPhases.phaseNumber, developmentPhases.id)
+    : [];
+  const phasesByDevelopmentId = new Map<number, PartnerProgramTermsItem['phases']>();
+  for (const row of phaseRows) {
+    const developmentId = Number(row.developmentId);
+    const phases = phasesByDevelopmentId.get(developmentId) || [];
+    phases.push({
+      id: Number(row.id),
+      name: String(row.name || ''),
+      phaseNumber: Number(row.phaseNumber || 0),
+      status: row.status,
+    });
+    phasesByDevelopmentId.set(developmentId, phases);
+  }
   const cataloguePublisherIds: number[] = Array.from(
     new Set(
       rows
@@ -428,7 +467,13 @@ export async function listPartnerProgramTerms(
           basePriceTo: unitTypes.basePriceTo,
         })
         .from(unitTypes)
-        .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+        .where(
+          and(
+            inArray(unitTypes.developmentId, developmentIds),
+            eq(unitTypes.isActive, 1),
+            unphasedSellingUnitTypeScope(),
+          ),
+        )
         .orderBy(unitTypes.displayOrder, unitTypes.name)
     : [];
 
@@ -524,6 +569,16 @@ export async function listPartnerProgramTerms(
 
   const items: PartnerProgramTermsItem[] = rows.map(row => {
     const developmentId = Number(row.developmentId);
+    const phases = phasesByDevelopmentId.get(developmentId) || [];
+    const developmentStatus = row.developmentStatus as PartnerProgramTermsItem['developmentStatus'];
+    const portfolioState = resolveDevelopmentPortfolioState(
+      developmentStatus,
+      phases.map(phase => phase.status),
+    );
+    const isArchived = portfolioState === 'archived';
+    const partnerVisiblePhases = isArchived
+      ? phases.filter(phase => phase.status === 'sold_out' || phase.status === 'completed')
+      : phases.filter(phase => phase.status === 'selling');
     const commissionModel = normalizeCommissionModel(row.commissionModel);
     const defaultCommissionPercent = toNumberOrNull(row.defaultCommissionPercent);
     const defaultCommissionAmount = toNumberOrNull(row.defaultCommissionAmount);
@@ -537,8 +592,13 @@ export async function listPartnerProgramTerms(
     const unitPriceRange = unitPriceRangeByDevelopment.get(developmentId);
     const developmentPriceFrom = toPositiveNumberOrNull(row.developmentPriceFrom);
     const developmentPriceTo = toPositiveNumberOrNull(row.developmentPriceTo);
-    const priceFrom = unitPriceRange?.priceFrom ?? developmentPriceFrom;
-    const fallbackPriceTo = developmentPriceTo ?? developmentPriceFrom;
+    const canUseDevelopmentPriceFallback =
+      !phases.length && developmentStatus === 'selling';
+    const priceFrom =
+      unitPriceRange?.priceFrom ?? (canUseDevelopmentPriceFallback ? developmentPriceFrom : null);
+    const fallbackPriceTo = canUseDevelopmentPriceFallback
+      ? developmentPriceTo ?? developmentPriceFrom
+      : null;
     const rawPriceTo = unitPriceRange?.priceTo ?? fallbackPriceTo ?? priceFrom;
     const priceTo =
       priceFrom !== null && rawPriceTo !== null && rawPriceTo < priceFrom ? priceFrom : rawPriceTo;
@@ -552,6 +612,9 @@ export async function listPartnerProgramTerms(
       developmentName:
         String(brochureConfig.headline || '').trim() ||
         String(row.developmentName || `Development #${developmentId}`),
+      developmentStatus,
+      portfolioState,
+      phases: partnerVisiblePhases,
       suburb: row.suburb || null,
       city: row.city || null,
       province: row.province || null,
@@ -637,7 +700,9 @@ export async function listPartnerProgramTerms(
   );
 
   return {
-    items: evaluatedItems,
+    items: input.includeUnreleased
+      ? evaluatedItems
+      : evaluatedItems.filter(item => item.portfolioState !== 'unreleased'),
   };
 }
 
@@ -645,6 +710,7 @@ export async function getPartnerProgramTermsByDevelopmentId(developmentId: numbe
   const result = await listPartnerProgramTerms({
     developmentIds: [developmentId],
     includeDisabled: false,
+    includeUnreleased: true,
   });
   return result.items.find(item => item.developmentId === developmentId) || null;
 }

@@ -2,14 +2,19 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerDevelopmentsPage from './PartnerDevelopmentsPage';
 
-const { mockUseAuth, mockUseLocation, mockSetLocation, mockListProgramTermsQuery } = vi.hoisted(
-  () => ({
-    mockUseAuth: vi.fn(),
-    mockUseLocation: vi.fn(),
-    mockSetLocation: vi.fn(),
-    mockListProgramTermsQuery: vi.fn(),
-  }),
-);
+const {
+  mockUseAuth,
+  mockUseLocation,
+  mockSetLocation,
+  mockListProgramTermsQuery,
+  mockListDevelopmentResourcesQuery,
+} = vi.hoisted(() => ({
+  mockUseAuth: vi.fn(),
+  mockUseLocation: vi.fn(),
+  mockSetLocation: vi.fn(),
+  mockListProgramTermsQuery: vi.fn(),
+  mockListDevelopmentResourcesQuery: vi.fn(),
+}));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
   useAuth: () => mockUseAuth(),
@@ -33,6 +38,9 @@ vi.mock('@/lib/trpc', () => ({
       partner: {
         listProgramTerms: {
           useQuery: (...args: unknown[]) => mockListProgramTermsQuery(...args),
+        },
+        listDevelopmentResources: {
+          useQuery: (...args: unknown[]) => mockListDevelopmentResourcesQuery(...args),
         },
       },
     },
@@ -109,6 +117,11 @@ describe('PartnerDevelopmentsPage', () => {
           },
         ],
       },
+    });
+    mockListDevelopmentResourcesQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: { documents: [] },
     });
   });
 

@@ -8,6 +8,7 @@ import {
   developerOrganisationMemberships,
   developmentSupersessions,
   developments,
+  developmentPhases,
   distributionManagerAssignments,
   distributionPrograms,
   DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES,
@@ -23,6 +24,7 @@ import {
 } from './distributionAccessRepository';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { resolveDevelopmentPortfolioState } from './developmentPortfolioState';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -48,6 +50,8 @@ export type DevelopmentDistributionAccessEvaluation = {
   developmentAccessId: number | null;
   developmentAccessStatus: DevelopmentAccessStatus | null;
   developmentVisible: boolean;
+  developmentArchived: boolean;
+  developmentReleased: boolean;
   brandPartnered: boolean;
   developmentIncluded: boolean;
   submissionAllowed: boolean;
@@ -142,6 +146,8 @@ function buildReasons(input: {
   partnership: DistributionBrandPartnershipRow | null;
   access: DistributionDevelopmentAccessRow | null;
   developmentVisible: boolean;
+  developmentArchived: boolean;
+  developmentReleased: boolean;
   programExists: boolean;
   programActive: boolean;
   referralEnabled: boolean;
@@ -153,6 +159,8 @@ function buildReasons(input: {
 
   if (!input.cataloguePublisherId) reasons.push('missing_catalogue_publisher_link');
   if (!input.developmentVisible) reasons.push('development_not_visible');
+  if (input.developmentArchived) reasons.push('development_archived');
+  else if (!input.developmentReleased) reasons.push('phase_not_released');
 
   if (!input.partnership) {
     reasons.push('missing_brand_partnership_row');
@@ -199,6 +207,14 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     development_not_visible: {
       code: 'DEVELOPMENT_NOT_AVAILABLE',
       message: 'This opportunity is not available for referrals yet.',
+    },
+    development_archived: {
+      code: 'DEVELOPMENT_ARCHIVED',
+      message: 'This development has no current or upcoming phases accepting referrals.',
+    },
+    phase_not_released: {
+      code: 'PHASE_NOT_RELEASED',
+      message: 'No phase is released for partner sales yet.',
     },
     missing_brand_partnership_row: {
       code: 'NETWORK_SETUP_PENDING',
@@ -359,6 +375,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const [development] = await input.db
     .select({
       id: developments.id,
+      status: developments.status,
       cataloguePublisherId: developments.cataloguePublisherId,
       developmentType: developments.developmentType,
       isPublished: developments.isPublished,
@@ -395,10 +412,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
       )`,
     })
     .from(developments)
-    .leftJoin(
-      cataloguePublishers,
-      eq(developments.cataloguePublisherId, cataloguePublishers.id),
-    )
+    .leftJoin(cataloguePublishers, eq(developments.cataloguePublisherId, cataloguePublishers.id))
     .leftJoin(
       developerOrganisations,
       eq(cataloguePublishers.developerOrganisationId, developerOrganisations.id),
@@ -410,15 +424,25 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found.' });
   }
 
-  const cataloguePublisherId =
-    Number(development.cataloguePublisherId || 0) ||
-    null;
+  const phaseRows = await input.db
+    .select({ status: developmentPhases.status })
+    .from(developmentPhases)
+    .where(eq(developmentPhases.developmentId, Number(development.id)));
+  const portfolioState = resolveDevelopmentPortfolioState(
+    development.status,
+    phaseRows.map(phase => phase.status),
+  );
+  const developmentReleased = portfolioState === 'current';
+  const developmentArchived = portfolioState === 'archived';
+
+  const cataloguePublisherId = Number(development.cataloguePublisherId || 0) || null;
   const commercialAccess =
-    development.brand?.authorityKind === 'developer_first_party' &&
-    development.organisation?.id
-      ? (await getDeveloperPublicationAccess(Number(development.organisation.id), {
-          db: input.db,
-        })).eligible
+    development.brand?.authorityKind === 'developer_first_party' && development.organisation?.id
+      ? (
+          await getDeveloperPublicationAccess(Number(development.organisation.id), {
+            db: input.db,
+          })
+        ).eligible
       : true;
   const publicEligibility = evaluatePublicDevelopmentEligibility({
     development: {
@@ -545,23 +569,27 @@ export async function evaluateDevelopmentDistributionAccess(input: {
   const fallbackReason =
     !partnership || !access ? (fallback.fallbackReason as string | null) : null;
 
-  const inventoryState = deriveInventoryState({
-    developmentVisible,
-    brandPartnershipStatus,
-    developmentAccessStatus,
-    submissionAllowed,
-    readinessReady: readiness.canEnable,
-    programActive,
-    referralEnabled,
-    excludedByMandate,
-    excludedByExclusivity,
-  });
+  const inventoryState = developmentArchived || !developmentReleased
+    ? 'hidden'
+    : deriveInventoryState({
+        developmentVisible,
+        brandPartnershipStatus,
+        developmentAccessStatus,
+        submissionAllowed,
+        readinessReady: readiness.canEnable,
+        programActive,
+        referralEnabled,
+        excludedByMandate,
+        excludedByExclusivity,
+      });
 
   const reasons = buildReasons({
     cataloguePublisherId,
     partnership,
     access,
     developmentVisible,
+    developmentArchived,
+    developmentReleased,
     programExists,
     programActive,
     referralEnabled,
@@ -582,6 +610,8 @@ export async function evaluateDevelopmentDistributionAccess(input: {
     developmentAccessId: access ? Number(access.id) : null,
     developmentAccessStatus,
     developmentVisible,
+    developmentArchived,
+    developmentReleased,
     brandPartnered: brandPartnershipStatus === 'active',
     developmentIncluded: developmentAccessStatus === 'included',
     submissionAllowed,
@@ -617,6 +647,8 @@ export function summarizeDistributionBlockers(
       reason === 'excluded_by_exclusivity' ||
       reason === 'submission_not_allowed' ||
       reason === 'development_not_visible' ||
+      reason === 'development_archived' ||
+      reason === 'phase_not_released' ||
       reason === 'missing_catalogue_publisher_link' ||
       reason.startsWith('legacy_fallback_'),
   );

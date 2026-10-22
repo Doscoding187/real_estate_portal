@@ -24,6 +24,7 @@ import {
 import { cataloguePublisherService } from './cataloguePublisherService';
 import { recordAgentOsEventForAgentId } from './agentOsEventService';
 import { getOrCreateProspectIdentity, recordProspectLeadAction } from './prospectJourneyService';
+import { unphasedSellingUnitTypeScope } from './unphasedSellingUnitTypeScope';
 import {
   createLeadDeliveryInTransaction,
   getLeadDeliverySnapshot,
@@ -1142,7 +1143,7 @@ export async function resolveLeadOwnership(
         isActive: unitTypes.isActive,
       })
       .from(unitTypes)
-      .where(eq(unitTypes.id, input.unitId))
+      .where(and(eq(unitTypes.id, input.unitId), unphasedSellingUnitTypeScope()))
       .limit(1);
 
     if (!unit || Number(unit.developmentId) !== developmentId || Number(unit.isActive || 0) !== 1) {
