@@ -638,6 +638,10 @@ export const unitTypes = mysqlTable(
     developmentId: int('development_id')
       .notNull()
       .references(() => developments.id, { onDelete: 'cascade' }),
+    // Whole unit-type groups may be assigned to one phase. NULL remains the
+    // existing development-level inventory authority; only the dedicated
+    // phase workflow may change this relationship.
+    phaseId: int('phase_id').references(() => developmentPhases.id, { onDelete: 'restrict' }),
     name: varchar({ length: 255 }).notNull(),
     bedrooms: int().notNull(),
     bathrooms: decimal({ precision: 3, scale: 1 }).notNull(),
@@ -713,6 +717,7 @@ export const unitTypes = mysqlTable(
   },
   table => [
     index('idx_unit_types_development_id').on(table.developmentId),
+    index('idx_unit_types_phase_id').on(table.phaseId),
     index('idx_unit_types_price_range').on(table.basePriceFrom, table.basePriceTo),
     index('idx_unit_types_bedrooms_bathrooms').on(table.bedrooms, table.bathrooms),
     index('idx_unit_types_display_order').on(table.displayOrder),

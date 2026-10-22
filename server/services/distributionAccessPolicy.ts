@@ -23,6 +23,7 @@ import {
 } from './distributionAccessRepository';
 import { evaluatePublicDevelopmentEligibility } from './publicDevelopmentEligibility';
 import { getDeveloperPublicationAccess } from './developerPublicationAccess';
+import { marketableDevelopmentUnitTypeCondition } from './developmentPhaseVisibility';
 
 type DbHandle = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -380,6 +381,7 @@ export async function evaluateDevelopmentDistributionAccess(input: {
         FROM unit_types
         WHERE development_id = ${developments.id}
           AND is_active = 1
+          AND ${marketableDevelopmentUnitTypeCondition()}
       )`,
       activeOperatorCount: sql<number>`(
         SELECT COUNT(*)

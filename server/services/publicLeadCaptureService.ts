@@ -52,6 +52,7 @@ import { resolvePublicPropertyEligibility } from './publicPropertyEligibilitySer
 import { resolvePublicLandLeadCustody } from './landPublicService';
 import { resolveSharedLivingLeadCustody, ensureLeadContextRow } from './sharedLivingEnquiryService';
 import { resolvePublicCommercialLeadCustody } from './commercialOfficeService';
+import { marketableDevelopmentUnitTypeCondition } from './developmentPhaseVisibility';
 import { PUBLIC_LEAD_INPUT_LIMITS } from './publicLeadInputContract';
 import {
   COMMERCIAL_PUBLIC_JOURNEY_HANDOFF_MESSAGE,
@@ -1142,7 +1143,7 @@ export async function resolveLeadOwnership(
         isActive: unitTypes.isActive,
       })
       .from(unitTypes)
-      .where(eq(unitTypes.id, input.unitId))
+      .where(and(eq(unitTypes.id, input.unitId), marketableDevelopmentUnitTypeCondition()))
       .limit(1);
 
     if (!unit || Number(unit.developmentId) !== developmentId || Number(unit.isActive || 0) !== 1) {

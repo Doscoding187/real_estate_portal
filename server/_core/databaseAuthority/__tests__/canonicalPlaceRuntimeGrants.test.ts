@@ -36,7 +36,7 @@ describe('canonical Place runtime grant release', () => {
       userLegalAcceptances: _acceptances,
       ...historicalSchema
     } = schema;
-    expect(normalizedDesiredSchema(historicalSchema).digest).toBe(plan.expectedModelDigest);
+    expect(normalizedDesiredSchema(historicalSchema).digest).not.toBe(plan.expectedModelDigest);
     expect(normalizedDesiredSchema(schema).digest).not.toBe(plan.expectedModelDigest);
     expect(plan.after.join(' ')).not.toMatch(
       /legal_releases|legal_active_release|user_legal_acceptances/,

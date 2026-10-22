@@ -4,6 +4,7 @@ import { properties } from '../../drizzle/schema/listings';
 import { developments, unitTypes } from '../../drizzle/schema/developments';
 import { provinces, cities, suburbs, locations } from '../../drizzle/schema/locations';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
+import { marketableDevelopmentUnitTypeCondition } from './developmentPhaseVisibility';
 
 export interface CityInsights {
   cityName: string;
@@ -110,6 +111,7 @@ class PriceInsightsService {
         WHERE ${unitTypes.isActive} = 1 
           AND ${developments.status} IN ('selling', 'now-selling', 'launching-soon')
           AND ${unitTypes.basePriceFrom} > 0
+          AND ${marketableDevelopmentUnitTypeCondition()}
       )
     `;
   }

@@ -9,6 +9,7 @@ import {
 import { getDb } from '../db';
 import { evaluateDevelopmentDistributionAccess } from './distributionAccessPolicy';
 import { listDevelopmentRequiredDocumentsOrEmpty } from './distributionRequiredDocumentsService';
+import { marketableDevelopmentUnitTypeCondition } from './developmentPhaseVisibility';
 
 type ListPartnerProgramTermsInput = {
   cataloguePublisherId?: number;
@@ -428,7 +429,13 @@ export async function listPartnerProgramTerms(
           basePriceTo: unitTypes.basePriceTo,
         })
         .from(unitTypes)
-        .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+        .where(
+          and(
+            inArray(unitTypes.developmentId, developmentIds),
+            eq(unitTypes.isActive, 1),
+            marketableDevelopmentUnitTypeCondition(),
+          ),
+        )
         .orderBy(unitTypes.displayOrder, unitTypes.name)
     : [];
 

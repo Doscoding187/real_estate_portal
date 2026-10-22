@@ -1344,6 +1344,30 @@
       ]
     },
     {
+      "path": "server/migrations/0116_unit_types_phase_id.sql",
+      "classification": "canonical active",
+      "purpose": "Add the canonical nullable phase assignment to development unit types; null preserves development-level inventory behavior.",
+      "approvedFiles": [
+        "server/migrations/0116_unit_types_phase_id.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0117_unit_types_phase_id_index.sql",
+      "classification": "canonical active",
+      "purpose": "Index phase-linked development inventory for phase workspace and release visibility queries.",
+      "approvedFiles": [
+        "server/migrations/0117_unit_types_phase_id_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0118_unit_types_phase_id_fk.sql",
+      "classification": "canonical active",
+      "purpose": "Restrict deletion of a development phase while canonical unit-type inventory is assigned to it.",
+      "approvedFiles": [
+        "server/migrations/0118_unit_types_phase_id_fk.sql"
+      ]
+    },
+    {
       "path": "server/migrations/_archived/**",
       "classification": "archived historical",
       "purpose": "Historical evidence only; the runner must never discover it.",

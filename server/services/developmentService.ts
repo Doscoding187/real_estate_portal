@@ -151,7 +151,14 @@ function rejectPhaseArrayWrite(data: CreateDevelopmentData): void {
   throw new TRPCError({
     code: 'PRECONDITION_FAILED',
     message:
-      'Non-empty phase arrays cannot be saved through development create or update. Phase and release management is not connected to the current inventory authority, so no phase changes were applied.',
+      'Phase arrays cannot be saved through development create or update. Use the phase inventory workspace so phase assignments cannot replace inventory.',
+  });
+}
+
+async function rejectLegacyPhaseMutation(..._args: any[]): Promise<any> {
+  throw new TRPCError({
+    code: 'PRECONDITION_FAILED',
+    message: 'Use the developer phase inventory workspace to prepare or release a phase.',
   });
 }
 
@@ -2040,7 +2047,10 @@ export async function updateDevelopment(
         if (unitTypesData.length === 0) {
           console.warn('[updateDevelopment] Empty unitTypes - deleting all existing unit types');
         }
-        await persistUnitTypes(writeDb, id, unitTypesData);
+        await persistUnitTypes(writeDb, id, unitTypesData, {
+          allowInventoryQuantityChanges:
+            !current || current.approvalStatus !== 'approved' || Number(current.isPublished) !== 1,
+        });
       } else {
         console.warn('[updateDevelopment] unitTypes is not an array:', typeof unitTypesData);
       }
@@ -2323,6 +2333,7 @@ export async function persistUnitTypes(
   db: any,
   developmentId: number,
   unitTypesData: any[],
+  options: { allowInventoryQuantityChanges?: boolean } = {},
 ): Promise<void> {
   console.log(
     `[persistUnitTypes] Processing ${unitTypesData?.length ?? 0} units for development ${developmentId}`,
@@ -2349,9 +2360,46 @@ export async function persistUnitTypes(
   }
 
   const existingUnits = await db
-    .select({ id: unitTypes.id })
+    .select({
+      id: unitTypes.id,
+      phaseId: unitTypes.phaseId,
+      totalUnits: unitTypes.totalUnits,
+      availableUnits: unitTypes.availableUnits,
+      reservedUnits: unitTypes.reservedUnits,
+    })
     .from(unitTypes)
-    .where(eq(unitTypes.developmentId, developmentId));
+    .where(eq(unitTypes.developmentId, developmentId))
+    .for('update');
+
+  const existingUnitById = new Map<string, (typeof existingUnits)[number]>(
+    existingUnits.map((unit: any) => [String(unit.id), unit]),
+  );
+  const isProtectedInventory = (unit: (typeof existingUnits)[number]) => {
+    const total = Number(unit.totalUnits ?? 0);
+    const available = Number(unit.availableUnits ?? 0);
+    const reserved = Number(unit.reservedUnits ?? 0);
+    const invalid =
+      !Number.isSafeInteger(total) ||
+      !Number.isSafeInteger(available) ||
+      !Number.isSafeInteger(reserved) ||
+      total < 0 ||
+      available < 0 ||
+      reserved < 0 ||
+      available + reserved > total;
+    return unit.phaseId !== null || reserved > 0 || total - available - reserved > 0 || invalid;
+  };
+  const assertNoProtectedInventoryDeletion = (ids: string[]) => {
+    const protectedUnit = ids
+      .map(id => existingUnitById.get(id))
+      .find((unit): unit is (typeof existingUnits)[number] => Boolean(unit && isProtectedInventory(unit)));
+    if (protectedUnit) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'This edit would remove phase-linked, reserved, or unclassified inventory. Keep the inventory record and use its dedicated workflow.',
+      });
+    }
+  };
 
   // IMPORTANT: unitTypes.id type must be string/uuid(36) in your DB for this to work.
   // If unitTypes.id is INT auto_increment, tell me and I'll rewrite this to use numbers + insertId.
@@ -2361,6 +2409,7 @@ export async function persistUnitTypes(
 
   if (unitTypesData.length === 0) {
     if (existingIds.size > 0) {
+      assertNoProtectedInventoryDeletion(Array.from(existingIds));
       console.log(`[persistUnitTypes] Empty array payload - deleting ${existingIds.size} units`);
       await db.delete(unitTypes).where(eq(unitTypes.developmentId, developmentId));
     }
@@ -2386,6 +2435,7 @@ export async function persistUnitTypes(
       id => !matchingIncomingIds.has(id),
     );
     if (idsToDelete.length > 0) {
+      assertNoProtectedInventoryDeletion(idsToDelete);
       console.log(`[persistUnitTypes] Deleting ${idsToDelete.length} units:`, idsToDelete);
       await db
         .delete(unitTypes)
@@ -2405,6 +2455,7 @@ export async function persistUnitTypes(
   for (const unit of normalizedIncoming) {
     const isNewUnit = !unit.normalizedId || !existingIds.has(unit.normalizedId);
     const unitId = isNewUnit ? randomUUID() : unit.normalizedId!;
+    const existingUnit = isNewUnit ? null : existingUnitById.get(unitId) || null;
 
     if (unitId.length > 36) {
       throw new Error(
@@ -2435,9 +2486,105 @@ export async function persistUnitTypes(
       return asDecimalOrNull(unit.priceTo);
     })();
 
-    const totalUnits = Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
-    const availableUnits = Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
-    const reservedUnits = Math.max(0, sanitizeInt((unit as any).reservedUnits) ?? 0);
+    const totalUnits =
+      existingUnit && unit.totalUnits === undefined
+        ? Number(existingUnit.totalUnits ?? 0)
+        : Math.max(0, sanitizeInt(unit.totalUnits) ?? 0);
+    const availableUnits =
+      existingUnit && unit.availableUnits === undefined
+        ? Number(existingUnit.availableUnits ?? 0)
+        : Math.max(0, sanitizeInt(unit.availableUnits) ?? 0);
+    const rawReservedUnits = (unit as any).reservedUnits;
+    const hasIncomingReservedUnits =
+      rawReservedUnits !== undefined && rawReservedUnits !== null && rawReservedUnits !== '';
+    const parsedIncomingReservedUnits = hasIncomingReservedUnits
+      ? sanitizeInt(rawReservedUnits)
+      : null;
+    if (hasIncomingReservedUnits && parsedIncomingReservedUnits === null) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Reserved units must be a whole number.' });
+    }
+
+    const persistedReservedUnits = Number(existingUnit?.reservedUnits ?? 0);
+    if (hasIncomingReservedUnits && parsedIncomingReservedUnits !== persistedReservedUnits) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Reserved units are not editable through the development editor.',
+      });
+    }
+    const reservedUnits = existingUnit ? persistedReservedUnits : 0;
+
+    const rawPhaseId =
+      (unit as any).phaseId !== undefined ? (unit as any).phaseId : (unit as any).phase_id;
+    if (rawPhaseId !== undefined) {
+      const incomingPhaseId =
+        rawPhaseId === null || rawPhaseId === '' ? null : Number(rawPhaseId);
+      const persistedPhaseId = existingUnit?.phaseId ?? null;
+      if (
+        (incomingPhaseId !== null && !Number.isSafeInteger(incomingPhaseId)) ||
+        incomingPhaseId !== persistedPhaseId
+      ) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Phase assignments can only be changed in the phase inventory workspace.',
+        });
+      }
+    }
+
+    if (existingUnit) {
+      const existingTotal = Number(existingUnit.totalUnits ?? 0);
+      const existingAvailable = Number(existingUnit.availableUnits ?? 0);
+      const existingUnclassified = existingTotal - existingAvailable - persistedReservedUnits;
+      const existingCountsInvalid =
+        !Number.isSafeInteger(existingTotal) ||
+        !Number.isSafeInteger(existingAvailable) ||
+        !Number.isSafeInteger(persistedReservedUnits) ||
+        existingTotal < 0 ||
+        existingAvailable < 0 ||
+        persistedReservedUnits < 0 ||
+        existingAvailable + persistedReservedUnits > existingTotal;
+      const countsChanged =
+        totalUnits !== existingTotal ||
+        availableUnits !== existingAvailable ||
+        reservedUnits !== persistedReservedUnits;
+      const phaseLinked = existingUnit.phaseId !== null;
+      const inventoryHasNonAvailableUnits = persistedReservedUnits > 0 || existingUnclassified > 0;
+
+      if (existingCountsInvalid && countsChanged) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'This unit type has invalid persisted inventory and must be reconciled first.',
+        });
+      }
+      if (
+        countsChanged &&
+        (phaseLinked || inventoryHasNonAvailableUnits || options.allowInventoryQuantityChanges === false)
+      ) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            options.allowInventoryQuantityChanges === false
+              ? 'Live inventory counts must be changed through the reasoned availability action.'
+              : 'Counts for phase-linked, reserved, or unclassified inventory cannot be changed through aggregate development edits.',
+        });
+      }
+    } else if (reservedUnits !== 0) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'New unit types cannot begin with reserved inventory.',
+      });
+    }
+
+    if (
+      !existingUnit &&
+      options.allowInventoryQuantityChanges === false &&
+      (totalUnits > 0 || availableUnits > 0)
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'New live inventory must be prepared outside the aggregate development editor.',
+      });
+    }
+
     if (availableUnits + reservedUnits > totalUnits) {
       const unitName = String(unit.label || unit.name || unitId).trim() || 'Unnamed Unit';
       throw new TRPCError({
@@ -2713,105 +2860,6 @@ async function getDevelopmentsByDeveloperId(developerProfileId: number) {
       brochures: parseJsonField(dev.brochures),
     };
   });
-}
-
-async function createPhase(developmentId: number, developerId: number, data: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  // (optional but recommended) ownership check: dev must own the development
-  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
-  if (!devProfile)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
-
-  const [owned] = await db
-    .select({ id: developments.id })
-    .from(developments)
-    .where(
-      and(
-        eq(developments.id, developmentId),
-        eq(developments.cataloguePublisherId, devProfile.publisherId),
-      ),
-    )
-    .limit(1);
-
-  if (!owned) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Unauthorized: you do not own this development',
-    });
-  }
-
-  // IMPORTANT: developmentPhases.id is INT auto_increment -> never pass id
-  const { id, ...safe } = data || {};
-
-  const [result] = await db.insert(developmentPhases).values({
-    ...safe,
-    developmentId,
-    createdAt: mysqlDateTime(),
-  });
-
-  const [created] = await db
-    .select()
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, Number(result.insertId)))
-    .limit(1);
-
-  return created;
-}
-
-async function updatePhase(phaseId: number, developerId: number, data: any) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const idNum = Number(phaseId);
-  if (!Number.isFinite(idNum)) {
-    throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid phaseId' });
-  }
-
-  // (optional but recommended) ownership check via phase -> development -> developer
-  const devProfile = await developerIdentityService.getDeveloperByUserId(developerId);
-  if (!devProfile)
-    throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer profile not found' });
-
-  const [phaseRow] = await db
-    .select({ developmentId: developmentPhases.developmentId })
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, idNum))
-    .limit(1);
-
-  if (!phaseRow) throw new TRPCError({ code: 'NOT_FOUND', message: 'Phase not found' });
-
-  const [owned] = await db
-    .select({ id: developments.id })
-    .from(developments)
-    .where(
-      and(
-        eq(developments.id, Number(phaseRow.developmentId)),
-        eq(developments.cataloguePublisherId, devProfile.publisherId),
-      ),
-    )
-    .limit(1);
-
-  if (!owned) {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Unauthorized: you do not own this development',
-    });
-  }
-
-  // IMPORTANT: never allow id changes
-  const { id, ...safe } = data || {};
-
-  await db.update(developmentPhases).set(safe).where(eq(developmentPhases.id, idNum));
-
-  const [updated] = await db
-    .select()
-    .from(developmentPhases)
-    .where(eq(developmentPhases.id, idNum))
-    .limit(1);
-
-  return updated;
 }
 
 async function publishDevelopment(
@@ -4043,8 +4091,8 @@ export const developmentService = {
   getDevelopmentById,
   getDevelopmentsByDeveloperId,
   getDeveloperDevelopments: getDevelopmentsByDeveloperId,
-  createPhase,
-  updatePhase,
+  createPhase: rejectLegacyPhaseMutation,
+  updatePhase: rejectLegacyPhaseMutation,
   deleteDevelopment,
   publishDevelopment,
   submitPlatformCuratedDevelopment,

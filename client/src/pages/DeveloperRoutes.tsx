@@ -18,6 +18,7 @@ import CreateDevelopment from '@/pages/CreateDevelopment';
 import DeveloperPlans from '@/pages/DeveloperPlans';
 import DeveloperPublisherPage from '@/pages/DeveloperPublisherPage';
 import DevelopmentHome from '@/pages/developer/DevelopmentHome';
+import DevelopmentPhaseWorkspace from '@/pages/developer/DevelopmentPhaseWorkspace';
 import { isPublicDeveloperProfilePath } from '@/lib/developerRouteBoundary';
 
 // Lazy load drafts page if needed, or import directly
@@ -185,6 +186,10 @@ export default function DeveloperRoutes() {
         <Route path="/developer/developments/new">
           <Redirect to="/developer/create-development" />
         </Route>
+        <Route
+          path="/developer/developments/:developmentId/phases"
+          component={DevelopmentPhaseWorkspace}
+        />
         <Route path="/developer/developments/:developmentId" component={DevelopmentHome} />
         <Route path="/developer/developments" component={DevelopmentsList} />
         <Route path="/developer/create-development" component={CreateDevelopment} />

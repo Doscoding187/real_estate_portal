@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0115_non_geographic_place_search_eligibility.sql",
+  "expectedHead": "0118_unit_types_phase_id_fk.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1213,6 +1213,36 @@
       "parentChecksum": "44bd9e23779fefee710eb90da832261dc0ade2b51649a4b59fdefe675dd1d3a4",
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 116,
+      "filename": "0116_unit_types_phase_id.sql",
+      "checksum": "c5ed77e9145287191161efaf8dcbe11c620db6a058ac411abc6dcd44a73cb43b",
+      "parent": "0115_non_geographic_place_search_eligibility.sql",
+      "parentChecksum": "53c65883b900d639d1ea989041386a4d4fea28e7a9a7b35579a52c449e9d649c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 117,
+      "filename": "0117_unit_types_phase_id_index.sql",
+      "checksum": "2582780ea74099ef82a4279237ef78794396ab35b6bc37c658007ec06263db76",
+      "parent": "0116_unit_types_phase_id.sql",
+      "parentChecksum": "c5ed77e9145287191161efaf8dcbe11c620db6a058ac411abc6dcd44a73cb43b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 118,
+      "filename": "0118_unit_types_phase_id_fk.sql",
+      "checksum": "d575ce3b4b94bdf266905a75e9dd31b5cc9d0cb8f7f99ad6e61178a1c97872db",
+      "parent": "0117_unit_types_phase_id_index.sql",
+      "parentChecksum": "2582780ea74099ef82a4279237ef78794396ab35b6bc37c658007ec06263db76",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
     }
   ]

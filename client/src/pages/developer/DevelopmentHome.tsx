@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
-import { ArrowLeft, ExternalLink, Pencil, Users } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Layers, Pencil, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -281,6 +281,13 @@ export default function DevelopmentHome() {
           <Button onClick={openEditor}>
             <Pencil className="mr-2 h-4 w-4" />
             Edit development
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setLocation(`/developer/developments/${development.id}/phases`)}
+          >
+            <Layers className="mr-2 h-4 w-4" />
+            Phase inventory
           </Button>
           <Button variant="outline" onClick={() => openLeads()}>
             <Users className="mr-2 h-4 w-4" />

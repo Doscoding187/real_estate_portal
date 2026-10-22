@@ -17,6 +17,11 @@ import { getPublisherById } from './services/cataloguePublisherService';
 import { cataloguePublisherService } from './services/cataloguePublisherService';
 import { developerIdentityService } from './services/developerIdentityService';
 import {
+  getPhaseReleaseWorkspace,
+  prepareDevelopmentPhase,
+  releaseDevelopmentPhase,
+} from './services/developerPhaseReleaseService';
+import {
   calculateAffordabilityCompanion,
   matchUnitsToAffordability,
 } from './services/affordabilityCompanion';
@@ -120,6 +125,29 @@ export const UpdateUnitAvailabilityInputSchema = z.object({
   availableUnits: z.number().int().min(0),
   reason: z.string().trim().min(10).max(500),
 });
+
+export const PhaseReleaseWorkspaceInputSchema = z
+  .object({ developmentId: z.number().int().positive() })
+  .strict();
+
+export const PrepareDevelopmentPhaseInputSchema = z
+  .object({
+    developmentId: z.number().int().positive(),
+    name: z.string().trim().min(1).max(255),
+    phaseNumber: z.number().int().positive(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    launchDate: z.string().nullable().optional(),
+    completionDate: z.string().nullable().optional(),
+    unitTypeIds: z.array(z.string().uuid()).min(1).max(100),
+  })
+  .strict();
+
+export const ReleaseDevelopmentPhaseInputSchema = z
+  .object({
+    developmentId: z.number().int().positive(),
+    phaseId: z.number().int().positive(),
+  })
+  .strict();
 
 export const DeveloperOperatingHomeInputSchema = z
   .object({
@@ -1948,6 +1976,36 @@ export const developerRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Development not found' });
       }
       return dev;
+    }),
+
+  getPhaseReleaseWorkspace: protectedProcedure
+    .input(PhaseReleaseWorkspaceInputSchema)
+    .query(async ({ ctx, input }) => {
+      const identity = await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      if (identity.mode !== 'developer') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer access is required.' });
+      }
+      return getPhaseReleaseWorkspace(input.developmentId, identity.cataloguePublisherId);
+    }),
+
+  prepareDevelopmentPhase: protectedProcedure
+    .input(PrepareDevelopmentPhaseInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const identity = await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      if (identity.mode !== 'developer') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer access is required.' });
+      }
+      return prepareDevelopmentPhase(input, requireUser(ctx).id, identity.cataloguePublisherId);
+    }),
+
+  releaseDevelopmentPhase: protectedProcedure
+    .input(ReleaseDevelopmentPhaseInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const identity = await resolveOperatingIdentity(ctx, { mode: 'developer' });
+      if (identity.mode !== 'developer') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Developer access is required.' });
+      }
+      return releaseDevelopmentPhase(input, requireUser(ctx).id, identity.cataloguePublisherId);
     }),
 
   getOperatingHome: protectedProcedure

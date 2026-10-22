@@ -57,6 +57,7 @@ import {
   getProgramActivationReadiness,
 } from './services/distributionProgramService';
 import { getProgramReadinessByDevelopmentId } from './services/distributionProgramReadinessService';
+import { marketableDevelopmentUnitTypeCondition } from './services/developmentPhaseVisibility';
 import {
   assertDealPayoutReady,
   getDealChecklist,
@@ -1729,7 +1730,12 @@ const adminDistributionRouter = router({
               unitIsActive: unitTypes.isActive,
             })
             .from(unitTypes)
-            .where(inArray(unitTypes.developmentId, developmentIds))
+            .where(
+              and(
+                inArray(unitTypes.developmentId, developmentIds),
+                marketableDevelopmentUnitTypeCondition(),
+              ),
+            )
             .orderBy(unitTypes.displayOrder, unitTypes.name)
         : [];
 
@@ -6449,7 +6455,13 @@ const referrerDistributionRouter = router({
               isActive: unitTypes.isActive,
             })
             .from(unitTypes)
-            .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
+            .where(
+              and(
+                inArray(unitTypes.developmentId, developmentIds),
+                eq(unitTypes.isActive, 1),
+                marketableDevelopmentUnitTypeCondition(),
+              ),
+            )
             .orderBy(unitTypes.displayOrder, unitTypes.name)
         : [];
 
