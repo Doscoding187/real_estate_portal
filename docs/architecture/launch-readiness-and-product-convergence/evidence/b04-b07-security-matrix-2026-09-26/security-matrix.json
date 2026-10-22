@@ -1,0 +1,87 @@
+{
+  "review": "B04/B07 candidate verification",
+  "date": "2026-09-26",
+  "updatedDate": "2026-09-27",
+  "disposition": "return for senior acceptance",
+  "source": {
+    "branch": "verify/b04-b07-security-matrix-b5a347",
+    "head": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "headTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "candidateImplementationTree": "2600386978a46b29f371c230f05511c81be2465f",
+    "priorCandidateImplementationTree": "b39b7474142ea94296cabc2bc4febc9446b72351",
+    "acceptedB03SixFileDiffSha256": "3e292cce43aafefb20075190bf6064b8e2c22ef1785843873f8dffe43880ea76",
+    "acceptedB05TestDiffSha256": "1e210e5e348576d82663136a2fa2f215f9def31a1fe364dcddf6298072bfd754",
+    "acceptedCombinedEightFileDiffSha256": "926086a2e3cf68e9edc1c3d0969717352af6feb42c0d5c91f01c5970b129a711",
+    "acceptedB06SpecSha256": "2ce67a21dc05c0bcb9cae67ea8001dbe7a594c71cc48d92f06db57dfb17944d7",
+    "priorAcceptedBaseToCandidateDiffSha256": "ff1ca3c2c63842c53c7050d43ef12b02625822925eaa13513fb0bd8828ff187d",
+    "priorSixFileVerificationDiffSha256": "04af5b71791155f3dd9615caf8b1a18caf3857639b80257921d5493492b699ab",
+    "currentSevenFileSourceDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "roleSessionAuditTestSha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28"
+  },
+  "databaseAuthority": {
+    "databaseName": "listify_wt_b04_b07_security_matrix_b5a347_843c043861ee",
+    "targetFingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd",
+    "ownershipKey": "843c043861ee049d73764e0f",
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "schemaDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "scenario": "search-to-lead-v5",
+    "scenarioDigest": "a7b62da33e3f416e31728b6306c9b38d46f9b604db9d19b091c98f33ba16165b",
+    "readiness": "applicationReady=true",
+    "disposed": true,
+    "localService": "stopped"
+  },
+  "focusedRoleSessionRun": {
+    "runDate": "2026-09-27",
+    "targetLifecycle": "recreated after prior governed disposal; same worktree-derived identity",
+    "databaseName": "listify_wt_b04_b07_security_matrix_b5a347_843c043861ee",
+    "targetFingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd",
+    "ownershipKey": "843c043861ee049d73764e0f",
+    "localServiceFingerprint": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "migrationPlanId": "eccda9275fb6c6337b04201e",
+    "migrationPlanDigest": "eccda9275fb6c6337b04201e7979e3ed3b7a520ccf525f4b929343237e75bc9a",
+    "acceptedOldHead": null,
+    "migrationHead": "0094_content_topics_primary_key.sql",
+    "schemaCongruent": true,
+    "schemaDigest": "a8ca8cf34bb3627594eab1b722b85115c6460225a0165db7992228a8547798e9",
+    "referenceAndFoundationFixtures": "not prepared; no unrelated administrator fixture was removed or changed",
+    "searchToLeadScenario": "not prepared for this focused role-authority test",
+    "applicationReadiness": "status not-ready because canonical foundation data was not prepared; location-discovery readiness was not run",
+    "result": { "filesPassed": 1, "testsPassed": 5, "failed": 0, "durationSeconds": 6.4 },
+    "caseEvidence": "role-session-audit-cases.json",
+    "cleanup": { "targetDisposed": true, "localService": "stopped", "recovery": "clean no-op" }
+  },
+  "results": {
+    "b04Browser": { "passed": 2, "failed": 0 },
+    "prepaymentBrowser": { "passed": 10, "failed": 0 },
+    "b05CompatibilityBrowser": { "passed": 1, "failed": 0 },
+    "b04Client": { "filesPassed": 9, "testsPassed": 38 },
+    "b04Authority": { "filesPassed": 7, "testsPassed": 23 },
+    "b07DirectApiMatrix": { "runDate": "2026-09-26", "filesPassed": 11, "testsPassed": 99 },
+    "b07RoleSessionAuditFocused": {
+      "filesPassed": 1,
+      "testsPassed": 5,
+      "failed": 0,
+      "command": "pnpm test:authority -- --no-file-parallelism server/__tests__/integration.b07-role-session-audit.test.ts --reporter=verbose",
+      "caseEvidence": "role-session-audit-cases.json"
+    },
+    "privateProofIntegration": { "filesPassed": 1, "testsPassed": 2 },
+    "policyAndContainment": { "filesPassed": 6, "testsPassed": 55 },
+    "pleAdjacentSmoke": {
+      "runDate": "2026-09-26",
+      "passed": 0,
+      "failed": 1,
+      "notRun": 9,
+      "classification": "fixture/config expectation mismatch before registration or journey writes",
+      "followUp": "separate B16 test/configuration follow-up; does not invalidate B04 refresh or dedicated B05 journey"
+    },
+    "typecheck": "passed",
+    "lint": { "errors": 0, "warnings": 13409 },
+    "build": "passed"
+  },
+  "limits": [
+    "Local email, media, Redis and MySQL substitutes do not establish hosted provider readiness.",
+    "PLE pre-payment label expectation conflicts with its explicit Agency product selector; PLE source was left unchanged.",
+    "Historical Gauteng-selection failure remains unattributed per B06 acceptance.",
+    "No B16 integration, merge, deployment, or production activation was performed."
+  ]
+}

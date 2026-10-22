@@ -1,0 +1,213 @@
+{
+  "evidenceVersion": 1,
+  "observedDate": "2026-09-27",
+  "observationWindowUtc": {
+    "initialProbe": "2026-09-27T09:10:29Z",
+    "readinessRetry": "2026-09-27T09:11:45Z",
+    "apiVersion": "2026-09-27T09:12:24Z",
+    "dnsRefresh": "2026-09-27T09:13:23Z"
+  },
+  "sourceContract": {
+    "worktree": "/home/edwardspc/Desktop/Dev/property-listify-main/.worktrees/property-listify-b12-hosted-runtime",
+    "branch": "feat/b12-hosted-runtime",
+    "head": "bb1a5d7af53b7f62f5aa9ea7ae9068f59cd87854",
+    "tree": "d41a3594787f2cda74c9245cb3ce16de166a6a2a",
+    "contractSha256": "eb15737fdeec545bff6f543169ca400aef020ed50b0a61ed366a0708a6941941",
+    "b16CandidateContractSha256": "2daf8dc3e1966ff34be7d75fad33e4d3d6f7fe5dac4c23ff44aef43895042687"
+  },
+  "method": {
+    "httpMethod": "GET",
+    "authenticationSent": false,
+    "clientVantage": "single local diagnostic runner network",
+    "dnsTool": "dig +noall +answer",
+    "tlsVerification": "system trust and hostname verification enabled",
+    "userAgent": "B12-read-only-public-diagnostic/1.0",
+    "responseBodiesRetained": false,
+    "bodyEvidence": "SHA-256 and sanitized status/version fields only",
+    "providerConsoleAccess": false,
+    "directDatabaseConnection": false,
+    "configurationChanges": false
+  },
+  "dns": {
+    "propertylistifysa.co.za": {
+      "responseCode": "NOERROR",
+      "A": ["216.198.79.1", "156.155.252.32"],
+      "AAAA": [],
+      "CNAME": []
+    },
+    "www.propertylistifysa.co.za": {
+      "responseCode": "NOERROR",
+      "CNAME": "5aecd61ed70ac639.vercel-dns-017.com.",
+      "A": ["64.29.17.1", "216.198.79.1"],
+      "AAAA": []
+    },
+    "api.propertylistifysa.co.za": {
+      "responseCode": "NOERROR",
+      "CNAME": "2qnvuemx.up.railway.app.",
+      "A": ["69.46.46.98"],
+      "AAAA": []
+    },
+    "staging.propertylistifysa.co.za": {
+      "responseCode": "NXDOMAIN",
+      "A": [],
+      "AAAA": [],
+      "CNAME": []
+    },
+    "api-staging.propertylistifysa.co.za": {
+      "responseCode": "NXDOMAIN",
+      "A": [],
+      "AAAA": [],
+      "CNAME": []
+    }
+  },
+  "tls": {
+    "propertylistifysa.co.za": {
+      "status": "failed",
+      "remoteAddress": "156.155.252.32",
+      "curlExitCode": 60,
+      "failure": "certificate subjectAltName does not match apex hostname"
+    },
+    "www.propertylistifysa.co.za": {
+      "status": "verified",
+      "subjectAltNamesForHost": true,
+      "notBefore": "Aug 19 00:28:36 2026 GMT",
+      "notAfter": "Nov 17 00:28:35 2026 GMT"
+    },
+    "api.propertylistifysa.co.za": {
+      "status": "verified",
+      "subjectAltNamesForHost": true,
+      "notBefore": "Sep 26 14:56:46 2026 GMT",
+      "notAfter": "Dec 25 14:56:45 2026 GMT"
+    },
+    "staging.propertylistifysa.co.za": { "status": "not-tested-dns-unresolved" },
+    "api-staging.propertylistifysa.co.za": { "status": "not-tested-dns-unresolved" }
+  },
+  "http": [
+    {
+      "url": "https://propertylistifysa.co.za/",
+      "status": "no-http-response",
+      "curlExitCode": 60,
+      "failure": "TLS hostname verification failed before HTTP"
+    },
+    {
+      "url": "https://www.propertylistifysa.co.za/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bodyBytes": 3781,
+      "bodySha256": "ef26f08bd9566dec5093e4e36f2eaa40bce6fa31efc48cb1d04894fd2b7de11f"
+    },
+    {
+      "url": "https://www.propertylistifysa.co.za/version.json",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bodyBytes": 3781,
+      "bodySha256": "ef26f08bd9566dec5093e4e36f2eaa40bce6fa31efc48cb1d04894fd2b7de11f",
+      "identity": "HTML fallback; frontend SHA unavailable"
+    },
+    {
+      "url": "https://www.propertylistifysa.co.za/robots.txt",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bodyBytes": 167,
+      "bodySha256": "c69abac20180bd79be9a8fa563700942c89cc2c0187aa6da2cd7351ab1540278",
+      "xRobotsTag": null,
+      "directives": [
+        "User-agent: *",
+        "Allow: /",
+        "Disallow: /admin",
+        "Disallow: /dashboard",
+        "Disallow: /api/",
+        "Disallow: /auth/",
+        "Sitemap: https://www.propertylistifysa.co.za/sitemap.xml"
+      ]
+    },
+    {
+      "url": "https://www.propertylistifysa.co.za/sitemap.xml",
+      "status": 200,
+      "contentType": "application/xml; charset=utf-8",
+      "bodyBytes": 843,
+      "bodySha256": "e51e7d00f82b000bb7c527dfbd0fce78edc161055ae893e75784ca5936300c58",
+      "xRobotsTag": null
+    },
+    {
+      "url": "https://api.propertylistifysa.co.za/api/health",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bodyBytes": 122,
+      "bodySha256": "beb86ee272c37262bf22e74161dbd8525568768eb8fdc07e1e3229be8a7c13f7",
+      "ok": true,
+      "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+    },
+    {
+      "url": "https://api.propertylistifysa.co.za/api/readiness",
+      "initialRequest": { "timeoutSeconds": 10, "outcome": "timeout" },
+      "boundedRetry": {
+        "observedAtUtc": "2026-09-27T09:11:45Z",
+        "timeoutSeconds": 30,
+        "status": 503,
+        "contentType": "application/json; charset=utf-8",
+        "bodyBytes": 5741,
+        "bodySha256": "ba48d603ec436d73b791b3c105a8723b428c75d40a99728c900d4c6f6825139a",
+        "ok": false,
+        "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+        "sanitizedLayerStates": {
+          "processLiveness": "ready",
+          "serviceAvailable": "ready",
+          "targetConnectivity": "ready",
+          "targetOwned": "not-ready",
+          "schemaMigrated": "not-ready",
+          "migrationHead": "not-ready",
+          "incompleteAttemptState": "not-ready",
+          "schemaCongruent": "not-ready",
+          "structuralSchema": "not-ready",
+          "commercialReferenceData": "not-ready",
+          "release": "not-ready",
+          "application": "not-ready",
+          "canonicalReferenceData": "not-evaluated",
+          "acceptanceScenario": "not-evaluated",
+          "browserJourney": "not-evaluated",
+          "consumerApi": "not-evaluated",
+          "fullDiagnostics": "not-evaluated",
+          "requiredData": "not-required"
+        },
+        "sanitizedProviderStates": {
+          "authRateLimit": "ok",
+          "cache": "ok",
+          "s3": "ok"
+        }
+      }
+    },
+    {
+      "url": "https://api.propertylistifysa.co.za/api/version",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "bodyBytes": 89,
+      "bodySha256": "6352dbc541656da18a36ce98bbc023d455724a22417b5a63157aa81b3a151f39",
+      "environment": "production",
+      "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9"
+    },
+    {
+      "url": "https://staging.propertylistifysa.co.za/*",
+      "status": "not-tested-dns-unresolved"
+    },
+    {
+      "url": "https://api-staging.propertylistifysa.co.za/*",
+      "status": "not-tested-dns-unresolved"
+    }
+  ],
+  "conclusion": {
+    "productionApiLiveness": "pass",
+    "productionApiIdentity": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+    "productionApiReadiness": "fail-http-503",
+    "productionFrontendIdentity": "unavailable-version-json-serves-html",
+    "productionApexTls": "fail-hostname-mismatch",
+    "stagingDns": "NXDOMAIN-for-both-hosts",
+    "hostedReadiness": "open"
+  },
+  "limits": [
+    "The public probe used one client network vantage and did not test proxy trust or rate-limit identity.",
+    "No provider dashboard/configuration, authenticated browser session, direct database target, Redis, S3, email worker, lead job, or scheduler was inspected.",
+    "The 503 response exposes readiness layer state but does not replace B08 read-only database authority evidence.",
+    "No DNS, provider, database, application, or production setting was changed."
+  ]
+}

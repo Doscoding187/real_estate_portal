@@ -1,0 +1,7 @@
+1e7e88252945b41ebd720712a053cd9fd5c4fe0f30d84a2002d50ac9b74457d8  b15-founder-approval-candidate-2026-09-27-v0.4.md
+05c67f7d4e31a0fc6bc182e697f055bd560c00b50f89969c5ef1170c23f4a2a6  b15-copy-approval-preparation-2026-09-27-v0.6.md
+71419a969e6452dbe7d9ea42aa0f0dbb00c675a1781f76decb8256a1014045e2  b09-founder-data-scope-preliminary-dispositions-2026-09-27.md
+10eba08aa0a5438558e2e66334dc45de5463b0ce62e60142e5aa261fd11decbb  b09-database-authority-preflight-2026-09-27.json
+aaea4f53b3fd518b230d16289deb41d0685bfa39bf5593b76ed8e2884c9406bd  b09-read-only-census-authorization-packet-2026-09-27.md
+f36cca381cbfa4662221b7f0205f73e35abb6bed3645ff85468db2c53ff2aab7  b16-integration-review-packet-2026-09-27.md
+51d558f392ab185a0f4baa477e0f08ef586465e49b6662cf0e316ace1968f624  b16-integration-review-manifest-2026-09-27.json

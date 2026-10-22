@@ -1,15 +1,26 @@
 # B15 founder review: legal, payment and disclosure
 
-Status: Edward's proposed final wording is prepared for factual completion and
-approval. Customer-facing Terms and Privacy are still placeholder pages in
-`client/src/pages/NavLandingPage.tsx`; `/terms` and `/privacy` resolve to them.
-This packet does not close B15 or authorize payment collection.
+Status: B15 remains open. Edward accepted review copy
+`B15-FOUNDER-REVIEW-0.3` as the updated draft; its founder-confirmed operating
+schedule is now reflected in the B14 procedure. Customer-facing Terms and
+Privacy are still placeholder pages in `client/src/pages/NavLandingPage.tsx`;
+`/terms` and `/privacy` resolve to them. This packet does not close B15 or
+authorize payment collection.
 
-The [Edward approval candidate](evidence/b15-founder-approval-candidate-2026-09-24.md)
-contains the proposed payment disclosure, Terms and Privacy notice. It carries
-the approved V1 operator assignment: Edward alone owns legal/release approval,
-finance and support; daily weekday checks; pause new sales, invoices and
-payment activation for an absence longer than one business day. The older
+The [current Edward review copy v0.3](evidence/b15-founder-approval-candidate-2026-09-27-v0.3.md)
+contains the proposed payment disclosure, Terms and Privacy notice. Its exact
+SHA-256 is `d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368`.
+The earlier [approval candidate](evidence/b15-founder-approval-candidate-2026-09-24.md)
+is retained as source history. The current copy carries the approved V1
+operator assignment: Edward alone owns legal/release approval, finance and
+support; monitoring is Monday–Friday, 09:00–17:00 South Africa time, excluding
+South African public holidays; off-period requests are handled in the next
+operating period; planned absence uses a sales pause. The [B14 procedure](19-first-customer-operating-procedure.md)
+now aligns finance checks, bounded sales windows and pause/resumption to that
+schedule (SHA-256 `80545f1092297fb0bf7d634ed54005be45326d49bc634f0fa3d3a610d73b3acf`);
+the required operating rehearsal remains open. See the [B14 implementation
+evidence](evidence/b14-schedule-reconciliation-implementation-2026-09-27.md)
+and its checksum list for the reviewed proposal and source identities. The older
 [working draft](evidence/b15-customer-copy-review-draft-2026-09-24.md) is
 superseded for review. The candidate is not yet suitable for publication
 because the factual fields below are unresolved.
@@ -32,12 +43,14 @@ because the factual fields below are unresolved.
 Edward must provide or approve the following in one resolved version of the
 Terms, Privacy and invoice/payment text:
 
-1. Registered and legal-service address and monitored public support/privacy
-   mailbox. These remain founder-confirmation facts. The EFT payee is already
-   confirmed as **Property Listify (Pty) Ltd**. Do not publish a bank account
-   number in this repository. Edward does not currently offer a V1 public
-   support telephone; verify whether a company disclosure telephone is
-   required for this electronic offer before payment publication.
+1. Business/customer-facing address and privacy-request handling route remain
+   pending founder confirmation. The EFT payee is **Property Listify (Pty)
+   Ltd**. Do not publish a bank account number in this repository. Edward has
+   confirmed WhatsApp Support at `078 555 8542` for messages; it is not a
+   dedicated voice line and no immediate response is promised. Verify whether
+   and how it satisfies any required public business telephone disclosure
+   before payment publication. Do not infer that the support email handles
+   privacy requests; there is no separate public privacy mailbox.
 2. Scope of service and customer eligibility for Agent, Agency and Developer;
    customer content and moderation rules; attribution and lead handling;
    suspension/expiry; dispute route and governing contact.
@@ -61,10 +74,13 @@ Terms, Privacy and invoice/payment text:
 The government-published [Electronic Communications and Transactions Act,
 section 43](https://www.gov.za/sites/default/files/gcis_document/201409/a25-02.pdf)
 lists a physical address and telephone among disclosures for a covered
-electronic offer. The founder has not supplied either for publication; the
-application of that provision and any lawful alternative must be resolved
-before taking payment. A South African legal/accounting review is prudent,
-while Edward remains the named V1 approver. Primary references are the
+electronic offer. The business/customer-facing address remains pending.
+Edward supplied WhatsApp Support number `078 555 8542` for messages; it is not
+a dedicated voice line. Whether that number satisfies any applicable
+telephone-disclosure requirement, and the application of the provision or any
+lawful alternative, must be resolved before taking payment. A South African
+legal/accounting review is prudent, while Edward remains the named V1 approver.
+Primary references are the
 [Electronic Communications and Transactions Act](https://www.gov.za/documents/electronic-communications-and-transactions-act),
 the [Consumer Protection Act](https://www.gov.za/documents/consumer-protection-act),
 and [POPIA](https://www.gov.za/documents/protection-personal-information-act).

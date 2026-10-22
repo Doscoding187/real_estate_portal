@@ -1,0 +1,55 @@
+{
+  "evidenceVersion": 1,
+  "date": "2026-09-27",
+  "classification": "sanitized local Database Authority preflight; not source-system or hosted evidence",
+  "source": {
+    "worktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27",
+    "branch": "docs/b15-founder-privacy-input-2026-09-27",
+    "head": "a05868c66f493e3cbc972a119074c91a10797777",
+    "headTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "acceptedProductRuntimeTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "productRuntimeChanged": false
+  },
+  "toolchain": {
+    "command": "pnpm install --frozen-lockfile",
+    "exitCode": 0,
+    "lockfileChanged": false,
+    "pinnedTsxVersion": "4.21.0"
+  },
+  "authority": {
+    "command": "pnpm db:authority:status",
+    "exitCode": 0,
+    "version": 3,
+    "manifestDigest": "93d871e6f8760477f460b8821685d71d212374eb86ddd53bc6e2ccfc30608efc",
+    "expectedManifestHead": "0094_content_topics_primary_key.sql",
+    "runtimeMode": "development",
+    "targetClass": "disposable-worktree",
+    "targetFingerprintSha256": "339d7923f89f6571fba282918d80f0ca30efbaf943a9f2d98bccc8a128d5e3a1",
+    "credentialClass": "local-owner",
+    "registeredWorktreeOwnership": "exact",
+    "localDatabaseServiceAvailability": "database-unreachable",
+    "localServiceFingerprintSha256": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+    "migrationLedger": "head-not-evaluated",
+    "incompleteAttempts": "attempts-not-evaluated",
+    "schemaMigration": "not-evaluated",
+    "schemaCongruency": "not-evaluated",
+    "referenceData": "not-evaluated",
+    "launchAccessFoundation": "not-evaluated",
+    "acceptanceScenario": "not-evaluated"
+  },
+  "actions": {
+    "databaseProvisioned": false,
+    "serviceStarted": false,
+    "databaseMutated": false,
+    "connectionToHistoricalOrProtectedSourceAttempted": false,
+    "sourceDataInspected": false,
+    "providerAccessed": false,
+    "sourceSpecificAuthorizationProvided": false
+  },
+  "limits": [
+    "The resolved target is this registered worktree's disposable local identity only; it is not a candidate source identity.",
+    "The local database service was unreachable, so ledger and schema state were not evaluated.",
+    "This result establishes neither hosted readiness nor any source system's authority or availability.",
+    "Credential-bearing paths, target URLs and environment values are intentionally omitted."
+  ]
+}

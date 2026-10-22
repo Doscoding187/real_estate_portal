@@ -1,0 +1,326 @@
+{
+  "manifestVersion": 1,
+  "updatedDate": "2026-09-27",
+  "reviewStatus": "B16 remains open; accepted source composition and PLE correction preserved; B15 v0.4 incorporates founder-supplied address and MVP privacy decisions; B14 documentation accepted and operational rehearsal remains open",
+  "scope": "B09 read-only census authorization preparation and local Database Authority preflight, B15 founder privacy/address input, B14 rehearsal status, B12 diagnostic evidence, and accepted B16 source composition; documentation and local preflight only; no source database operation, provisioning, provider operation, publication, merge, deployment, or production activation",
+  "reviewWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b16-no-spend-convergence",
+    "branch": "prep/b16-converged-candidate",
+    "headBeforeEvidence": "f3f99f806ea9ae6be3132e093ce1cf1a6f185a32",
+    "treeBeforeEvidence": "b5a3475633ea330469507551574c7e61a73b0900"
+  },
+  "seniorAcceptance": {
+    "date": "2026-09-27",
+    "workstreams": [
+      "B03",
+      "B04",
+      "B05",
+      "B06",
+      "B07"
+    ],
+    "scope": "accepted within each reviewed scope; hosted readiness remains open"
+  },
+  "acceptedCandidateIdentities": {
+    "composedBaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "b03SixFilePatchSha256": "3e292cce43aafefb20075190bf6064b8e2c22ef1785843873f8dffe43880ea76",
+    "b05TestPatchSha256": "1e210e5e348576d82663136a2fa2f215f9def31a1fe364dcddf6298072bfd754",
+    "b03B05B06EightFileCompositionSha256": "926086a2e3cf68e9edc1c3d0969717352af6feb42c0d5c91f01c5970b129a711",
+    "b06SpecSha256": "2ce67a21dc05c0bcb9cae67ea8001dbe7a594c71cc48d92f06db57dfb17944d7",
+    "b07AcceptedTree": "2600386978a46b29f371c230f05511c81be2465f",
+    "b07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "b07RoleSessionTestSha256": "6b69d0beb855f700e2d0e79bad30927673c67d256842279cb871c11c066f4c28"
+  },
+  "currentEvidenceRefresh": {
+    "taskOwnedWorktree": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27",
+    "branch": "docs/b15-founder-privacy-input-2026-09-27",
+    "head": "a05868c66f493e3cbc972a119074c91a10797777",
+    "headTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "acceptedProductRuntimeTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "productRuntimeChanged": false
+  },
+  "sourceComposition": {
+    "acceptedB03B05B06BaseTree": "b5a3475633ea330469507551574c7e61a73b0900",
+    "acceptedB07SevenFileDiffSha256": "aeea344252f553d0f05babe0958f2d1a441acfc6e97c05dcbfab7c7b088a672c",
+    "acceptedB03ThroughB07TreeBeforePleCorrection": "2600386978a46b29f371c230f05511c81be2465f",
+    "testedCandidateTreeAfterPleCorrection": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "pleSpecSha256": "0cc29dad31dd47d26b862c2a44ae3711e1436a42321019b42161f462c7675d7c",
+    "pleConfigSha256": "49b48ae4b07da3ca62e1966fa575752c85761c6adacc023f8d7b556ba527dc39",
+    "compositionMethod": "B16-owned branch created at the accepted B03/B05/B06 base commit; the exact accepted B07 seven-file diff was hash-verified and applied locally. No source was merged to main or deployed."
+  },
+  "b04B07Evidence": {
+    "priorDirectApiMatrix": {
+      "date": "2026-09-26",
+      "filesPassed": 11,
+      "testsPassed": 99,
+      "rerunForRoleTestCorrection": false
+    },
+    "focusedRoleSessionRerun": {
+      "date": "2026-09-27",
+      "filesPassed": 1,
+      "testsPassed": 5,
+      "failed": 0
+    },
+    "b04JoinedBrowser": {
+      "passed": 2,
+      "failed": 0
+    },
+    "b05DedicatedAgencyJourney": {
+      "passed": 1,
+      "failed": 0
+    },
+    "b06DeveloperJourney": {
+      "passedSteps": 370,
+      "authorityTestsPassed": 31
+    },
+    "pleSmoke": {
+      "date": "2026-09-26",
+      "passed": 0,
+      "failed": 1,
+      "notRun": 9,
+      "followUp": "historical failure retained; the fixture/test expectation mismatch was corrected and the complete journey rerun under Database Authority",
+      "currentRerun": {
+        "date": "2026-09-27",
+        "evidence": "b16-ple-browser-journey-2026-09-27.json",
+        "command": "pnpm test:browser:authority -- --config=playwright.ple-agency-operating.config.ts",
+        "passed": 10,
+        "failed": 0,
+        "notRun": 0,
+        "testedCandidateTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+        "targetFingerprintSha256": "af8dc5d6cb434ff5e3abcd89eb43518a4b58017d407a729e2a26df6a168408e8",
+        "migrationHead": "0094_content_topics_primary_key.sql",
+        "targetDisposed": true,
+        "localServiceStopped": true
+      }
+    },
+    "currentEvidenceChecksums": {
+      "reviewPacket": "2cdf36a7ea1e29f894d1aa522eae750915dff2d114a8c2424161c819546dd727",
+      "securityMatrix": "d585cd7db57817c6190d9cf10d7fb89569009e3dfe37d62f4738896aefc36995",
+      "roleSessionCases": "4329fb5d0ecd80e9a56670d4c31d062ff5b62859cc4c4c155602d31ca1c37d57"
+    },
+    "databaseCleanup": {
+      "targetFingerprintSha256": "9db48aa2c8f2962e9fa34c579157f92f8ab6816ecec6a8035dd3fb715f4f11fd",
+      "disposed": true,
+      "localServiceStopped": true
+    }
+  },
+  "b15Copy": {
+    "priorAcceptedReviewCopy": {
+      "version": "B15-FOUNDER-REVIEW-0.3",
+      "sha256": "d2925868819a8614b95eee3cd7b3aebf437bbde084681c1b83f055d33165c368",
+      "preserved": true
+    },
+    "currentReviewCopy": "b15-founder-approval-candidate-2026-09-27-v0.4.md",
+    "currentReviewCopyVersion": "B15-FOUNDER-REVIEW-0.4",
+    "currentReviewCopySha256": "1e7e88252945b41ebd720712a053cd9fd5c4fe0f30d84a2002d50ac9b74457d8",
+    "factsRegister": "b15-copy-approval-preparation-2026-09-27-v0.6.md",
+    "factsRegisterSha256": "05c67f7d4e31a0fc6bc182e697f055bd560c00b50f89969c5ef1170c23f4a2a6",
+    "currentPacket": "b16-integration-review-packet-2026-09-27.md",
+    "currentPacketSha256": "f36cca381cbfa4662221b7f0205f73e35abb6bed3645ff85468db2c53ff2aab7",
+    "evidenceChecksumList": "b15-b16-founder-input-sha256-2026-09-27-v0.6.txt",
+    "status": "review draft only; not approved or publishable; formal-service suitability, Information Officer registration evidence, company disclosures, provider/retention/cookie schedules, exact approval, rendering and collection/marketing-consent proof remain open"
+  },
+  "founderConfirmedB15Inputs": {
+    "date": "2026-09-27",
+    "legalName": "Property Listify (Pty) Ltd.",
+    "vatStatus": "Not VAT registered — founder-confirmed; VAT is not charged",
+    "vatConfirmationLimit": "Founder confirmation is not independent accountant, SARS, or other professional verification",
+    "generalEnquiries": "info@propertylistifysa.co.za",
+    "customerSupport": "support@propertylistifysa.co.za",
+    "mvpBillingPaymentEnquiries": "Route through existing customer-support contact; no separate public billing mailbox",
+    "whatsAppSupport": "078 555 8542; messages only; founder-managed support",
+    "supportModelLimit": "No staffed call centre, dedicated voice line, or immediate WhatsApp response is promised",
+    "supportAndBillingPaymentMonitoring": "Monday-Friday, 09:00-17:00 South Africa time, excluding South African public holidays",
+    "outsideOperatingHoursHandling": "Requests may be submitted anytime; requests received outside operating hours are monitored and answered during the next operating period",
+    "futureSupportHoursExpansionCommitted": false,
+    "customerFacingBusinessAddress": "96 Jorissen Street, Braamfontein",
+    "formalCorrespondenceLegalServiceSuitability": "Pending confirmation; address was supplied for customer-facing business use only until suitability is confirmed",
+    "privacyRequestRoute": "support@propertylistifysa.co.za; subject line “Privacy Request”",
+    "privacyComplaints": "May first be submitted through support; this does not restrict the right to approach the Information Regulator",
+    "separatePublicPrivacyMailbox": false,
+    "informationPrivacyResponsibilityOwner": "Edward / Founder unless delegated",
+    "informationOfficerRegistration": {
+      "status": "unverified",
+      "completeClaimMade": false,
+      "absenceClaimMade": false,
+      "finding": "No company-specific certificate or authenticated verification evidence was provided or verified in this work; this is not a finding that registration is absent",
+      "verificationReferences": [
+        "https://eservices.inforegulator.org.za/",
+        "https://eservices.inforegulator.org.za/search/qr.aspx"
+      ],
+      "checkedDate": "2026-09-27"
+    },
+    "accountingReviewOwner": "Edward / Founder unless delegated",
+    "legalPrivacyReviewOwner": "Edward / Founder unless delegated",
+    "independentProfessionalReviewClaimed": false,
+    "founderPrivacyDecisions": [
+      "Limit processing to accounts, professional/provider verification, listings/platform services, enquiries/leads, payments/billing, customer support, security/fraud prevention, and applicable legal/compliance requirements",
+      "Do not sell users personal information",
+      "Share with production service providers only as required to operate; identify actual providers/categories, locations, and safeguards from accepted production configuration",
+      "Provide routes for access, correction, deletion where no longer authorised or required to retain, objection where applicable, and withdrawal of consent where processing depends on consent",
+      "Privacy complaints can first use support without restricting approach to the Information Regulator",
+      "Keep optional marketing consent separate from required account/service acceptance and provide appropriate electronic-marketing opt-out",
+      "Disclose necessary authentication/security/session cookies; exclude advertising/behavioural-tracking cookies from MVP; identify and handle optional analytics actually present",
+      "Require applicable Terms acceptance and make Privacy Notice available at collection; keep marketing consent separate",
+      "Do not retain personal information indefinitely; use purpose/category retention, applicable statutory periods for finance/tax/legal records, and delete/de-identify other data when purpose and lawful basis end",
+      "Reconcile category-level retention/disposal schedule to B09 governed source census"
+    ],
+    "unresolvedPublicationFields": [
+      "formal correspondence/legal-service suitability of supplied address",
+      "public telephone disclosure sufficiency for WhatsApp message number",
+      "place of registration and required office-bearer disclosures",
+      "company-specific Information Officer registration evidence/status",
+      "actual accepted-production provider names/categories, locations and safeguards",
+      "category-level retention/disposal schedule reconciled with B09",
+      "cookies, browser storage, external requests and optional analytics in exact production artifact",
+      "Terms/Privacy versions and effective dates, point-of-collection/consent implementation proof, and exact Edward approval"
+    ]
+  },
+  "b09SourceDataCensus": {
+    "status": "founder-accountable-owner-and-preliminary-dispositions-recorded; source-census-and-final-disposition-open",
+    "accountableOwner": "Edward / Founder, Property Listify (Pty) Ltd",
+    "founderInputDate": "2026-09-27",
+    "founderInputEvidence": "b09-founder-data-scope-preliminary-dispositions-2026-09-27.md",
+    "founderInputSha256": "71419a969e6452dbe7d9ea42aa0f0dbb00c675a1781f76decb8256a1014045e2",
+    "authorityFinding": "No source system is verified authoritative. Historical or prior production use alone is insufficient; current source-specific evidence is required.",
+    "candidateSystemsAndProvenance": {
+      "tidbRailwayProductionCandidate": {
+        "status": "historical-candidate; current source identity and B09 authority require revalidation",
+        "instanceId": "10492391619114516879",
+        "database": "listify_property_sa",
+        "lastObservedTargetFingerprintSha256": "68f2582a6dc7af8c54cf6f31a396e8abe4c4030696c923b0ea3b1679ba6f5b5e",
+        "observedDate": "2026-09-24",
+        "evidence": "docs/database-authority/evidence/b08-tidb-v1-candidate-2026-09-24.json"
+      },
+      "mediaStorageCandidate": {
+        "status": "prior configured public-media bucket; exact bucket identity and current binding unavailable",
+        "evidence": "docs/architecture/launch-readiness-and-product-convergence/evidence/b11-private-proof-readiness-2026-09-24.md"
+      },
+      "azureMySql": {
+        "status": "established target; not evidenced as B09 source; Railway cutover deferred",
+        "targetFingerprintSha256": "b23d640cdf242812e80a28d10bc4079a3ff0b48a05173a392b9af47853495ced",
+        "evidence": "docs/database-authority/evidence/b08-founder-spend-gate-2026-09-24.json"
+      },
+      "otherProviders": "unresolved; no exact target identities supplied"
+    },
+    "sourceSpecificReadOnlyAuthorization": {
+      "status": "not-provided",
+      "requiredBefore": "any B09 source census execution or historical-source access",
+      "sourceAccessPerformed": false
+    },
+    "censusAuthorizationRequest": {
+      "evidence": "b09-read-only-census-authorization-packet-2026-09-27.md",
+      "sha256": "aaea4f53b3fd518b230d16289deb41d0685bfa39bf5593b76ed8e2884c9406bd",
+      "status": "prepared; pending Edward source approval, Database Authority operation approval, and supported census runner",
+      "supportedCensusRunnerIdentified": false
+    },
+    "authorityPreflight": {
+      "command": "pnpm db:authority:status",
+      "exitCode": 0,
+      "result": "local worktree disposable target resolved; local service unreachable; ledger and schema not evaluated",
+      "targetClass": "disposable-worktree",
+      "targetFingerprintSha256": "339d7923f89f6571fba282918d80f0ca30efbaf943a9f2d98bccc8a128d5e3a1",
+      "worktreeOwnership": "exact",
+      "localServiceFingerprintSha256": "2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2",
+      "databaseProvisioned": false,
+      "databaseConnectionAttempted": false,
+      "sourceDataInspected": false,
+      "sanitizedEvidence": "b09-database-authority-preflight-2026-09-27.json",
+      "sanitizedEvidenceSha256": "10eba08aa0a5438558e2e66334dc45de5463b0ce62e60142e5aa261fd11decbb",
+      "historicalInitialToolingFailure": "tsx unavailable and node_modules missing; resolved by pinned frozen install"
+    },
+    "censusExecuted": false,
+    "finalDispositionApproved": false,
+    "destructiveActionAuthorized": false,
+    "preliminaryDispositionClasses": [
+      "Retain/transfer founder and administrator identity and required launch-authority configuration where needed",
+      "Transfer only verified real, current, launch-required Agent, Agency/member, and Developer accounts",
+      "Dispose historical test/demo/synthetic/disposable identities unless a specific accepted test/evidence need requires preservation",
+      "Transfer verified current launch-required production-quality listings/developments; dispose test/sample/synthetic listings/developments",
+      "Retain/transfer real customer enquiries/leads with continuing value or obligations; dispose synthetic/test enquiries/leads",
+      "Retain/transfer or archive real commercial/payment/invoice/proof records per accounting, audit, and legal duties; dispose synthetic records unless retained engineering/audit evidence is required",
+      "Retain audit/security/history with continuing evidentiary/compliance/recovery value by transfer or archive",
+      "Dispose transient session/cache/temporary/test data unless an accepted operational dependency requires it",
+      "Transfer media with verified retained legitimate parent records; dispose verified orphaned/synthetic/test media",
+      "Defer uncertain ownership, purpose, provenance, or continuing need for explicit review"
+    ],
+    "requiredDecision": "After authorized, source-specific read-only census establishes actual data/source locations, authority, provenance, ownership, current and real/test status, launch/legal/accounting/support/security/recovery requirements, and media parent relationships, Edward must approve final transfer/retain/archive/dispose/defer dispositions and B15 retention scope.",
+    "searchedScope": "B16 checked-in launch-convergence evidence; B08 database-source and Azure records; B11 private-proof readiness; named B09/source-data artifacts; and Edward founder input on 2026-09-27",
+    "finding": "Founder accountability and preliminary category dispositions are recorded. Historical TiDB and public-media candidates have provenance but current source identity/authority is unverified; Azure is an established target with cutover deferred. The local authority preflight passes only for its disposable worktree target. No supported B09 census runner or source-specific authorization exists, and no accepted census or final disposition establishes launch data scope."
+  },
+  "b12Diagnostics": {
+    "worktreeHead": "bb1a5d7af53b7f62f5aa9ea7ae9068f59cd87854",
+    "worktreeTree": "d41a3594787f2cda74c9245cb3ce16de166a6a2a",
+    "latestRecordedObservationDate": "2026-09-27",
+    "publicDiagnostics": {
+      "evidence": "b12-public-diagnostics-2026-09-27.json",
+      "apiBuildSha": "4e012b3044628fc06da7489c0055e9ce01bdc8d9",
+      "apiHealthHttp": 200,
+      "apiReadinessHttp": 503,
+      "frontendVersionJsonContentType": "text/html; charset=utf-8",
+      "apexTlsHostnameVerified": false,
+      "stagingDns": "NXDOMAIN-for-both-hosts",
+      "providerConfigurationRead": false,
+      "stagingRehearsalPerformed": false
+    },
+    "databaseAuthorityPreflight": {
+      "date": "2026-09-27",
+      "commandsExitCodeZero": [
+        "pnpm db:authority:status",
+        "pnpm db:authority:manifest",
+        "pnpm db:authority:context"
+      ],
+      "targetClass": "disposable-worktree",
+      "targetFingerprintSha256": "ed89dd57652eff4df661f663e83ba9c40003d156f82b1f812045cec42a3fd814",
+      "manifestDigest": "595cb5f15235d473ee71eda7105fa802dfac2650242b950021e4dce62e091e6b",
+      "expectedHead": "0092_transactional_email_attempts.sql",
+      "localServiceAvailability": "database-unreachable",
+      "migrationLedgerAndSchemaEvaluated": false,
+      "sanitizedEvidence": "b12-database-authority-preflight-2026-09-27.json",
+      "hostedEvidence": false,
+      "targetMutated": false
+    },
+    "status": "public DNS/TLS/HTTP refreshed; provider configuration and staging proof remain open",
+    "providerOrDnsChanges": false
+  },
+  "remainingLimits": [
+    "B15 v0.4 is an internal review draft only; address formal-service suitability, company disclosures, WhatsApp telephone-disclosure sufficiency, Information Officer registration evidence, support operation, provider/retention/cookie schedules, exact approval and rendered/consent proof remain open.",
+    "Information Officer registration status is unverified; no claim of completion or absence is made without company-specific evidence.",
+    "B14 documentation is accepted, but ordinary-weekend, extended-holiday, missed-check and pause/resumption operational rehearsals remain open.",
+    "B12 current hosted diagnostics and staging proof are open; production no-spend boundaries remain in force.",
+    "The historical B06 Gauteng-selection failure remains unattributed.",
+    "B09 accountable owner and preliminary founder dispositions are recorded, but source-specific read-only authorization, usable Authority preflight, governed census, and Edward-approved final disposition are outstanding; launch data scope is not established.",
+    "Local email, media, Redis and MySQL substitutes do not establish hosted-provider readiness.",
+    "B16 remains open pending B09 census/final disposition, B15 acceptance, final candidate verification and deployment containment; B14 operational rehearsal remains separately open; B08 cutover, merge, deployment and production activation were not performed."
+  ],
+  "b14ScheduleAlignment": {
+    "status": "documentation-accepted-operational-rehearsal-open",
+    "confirmedSchedule": "Monday-Friday, 09:00-17:00 South Africa time, excluding South African public holidays",
+    "procedureSha256": "80545f1092297fb0bf7d634ed54005be45326d49bc634f0fa3d3a610d73b3acf",
+    "reviewedProposalSha256": "5a6857e5c41c79f0e0d62cd8fd54850dfd8c425652b8c064930d65781dbc613a",
+    "procedureAlignment": "Finance checks and activation target use operating periods; weekday-specific deadline and 72-hour maximum are retained; sales may pause when next attended check exceeds limit; paid access/pending records persist; finance activation is blocked until return-time triage/reconciliation and controlled resumption",
+    "requiredRehearsals": [
+      "ordinary weekends",
+      "extended holiday closures",
+      "missed checks",
+      "pause and controlled resumption"
+    ],
+    "b14ProcedureModified": true,
+    "rehearsalClaimed": false,
+    "statusLimit": "B14 documentation implementation accepted; operational acceptance remains open"
+  },
+  "b15PrivacyInputWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-privacy-input-2026-09-27",
+    "branch": "docs/b15-founder-privacy-input-2026-09-27",
+    "head": "a05868c66f493e3cbc972a119074c91a10797777",
+    "headTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "productRuntimeChanged": false,
+    "scope": "B15 review copy/facts register and B16 decision packet documentation only"
+  },
+  "priorFounderCopyRefreshWorktree": {
+    "path": "/home/edwardspc/Desktop/Dev/worktrees/property-listify-b15-founder-facts-refresh",
+    "branch": "docs/b15-founder-facts-refresh",
+    "head": "005eea36d71b238b7b744d23b9425489d592b1e2",
+    "baseTree": "b21f454e215d8b02129e4daa14ba6f8d338406d1",
+    "productRuntimeSourceChanged": false
+  }
+}
