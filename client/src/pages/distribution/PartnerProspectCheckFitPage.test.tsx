@@ -5,6 +5,7 @@ import PartnerProspectCheckFitPage from './PartnerProspectCheckFitPage';
 const {
   mockListProspectCheckFits,
   mockGetProspectDocumentPacks,
+  mockListEligibleDevelopments,
   mockInvalidate,
   mockCreateProspectCheckFit,
   mockMutateAsync,
@@ -14,6 +15,7 @@ const {
 } = vi.hoisted(() => ({
   mockListProspectCheckFits: vi.fn(),
   mockGetProspectDocumentPacks: vi.fn(),
+  mockListEligibleDevelopments: vi.fn(),
   mockInvalidate: vi.fn(),
   mockCreateProspectCheckFit: vi.fn(),
   mockMutateAsync: vi.fn(),
@@ -57,6 +59,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         getProspectDocumentPacks: {
           useQuery: (...args: unknown[]) => mockGetProspectDocumentPacks(...args),
+        },
+        listEligibleDevelopmentsForSubmission: {
+          useQuery: (...args: unknown[]) => mockListEligibleDevelopments(...args),
         },
         createProspectCheckFit: {
           useMutation: (options?: { onSuccess?: (value: any) => void }) => ({
@@ -129,6 +134,7 @@ describe('PartnerProspectCheckFitPage', () => {
     vi.clearAllMocks();
     mockListProspectCheckFits.mockReturnValue({ data: [] });
     mockGetProspectDocumentPacks.mockReturnValue({ data: [] });
+    mockListEligibleDevelopments.mockReturnValue({ data: { items: [] } });
     mockMutateAsync.mockResolvedValue(qualifyingCheckFit);
   });
 
@@ -235,36 +241,37 @@ describe('PartnerProspectCheckFitPage', () => {
     expect(screen.getByText(/May qualify/)).toBeInTheDocument();
   });
 
-  it('shows the next step with the documents to download and sign', async () => {
+  it('shows each qualifying development as a card with its image and details', async () => {
     mockListProspectCheckFits.mockReturnValue({ data: [qualifyingCheckFit] });
-    mockGetProspectDocumentPacks.mockReturnValue({
-      data: [
-        {
-          developmentId: 42,
-          downloads: [
-            {
-              key: 'required_document_9',
-              label: 'Client info sheet',
-              url: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
-              instructions: 'Complete it and upload the signed copy.',
-            },
-          ],
-          uploads: [
-            { evidenceType: 'identity_document', label: 'Identity document', instructions: null },
-          ],
-          signatureMethod: 'Signed electronic acknowledgement',
-        },
-      ],
+    mockListEligibleDevelopments.mockReturnValue({
+      data: {
+        items: [
+          {
+            developmentId: 42,
+            developmentName: 'Soweto Ridge',
+            imageUrl: 'https://cdn.example/soweto-ridge.jpg',
+            city: 'Soweto',
+            province: 'Gauteng',
+            campaign: { developmentType: 'residential' },
+            inventory: { modes: { sale: { availableCount: 4 } } },
+          },
+        ],
+      },
     });
 
     render(<PartnerProspectCheckFitPage />);
 
-    expect(await screen.findByText('Next step')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Download Client info sheet' })).toHaveAttribute(
-      'href',
-      '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
-    );
-    expect(screen.getByText('Upload: Identity document')).toBeInTheDocument();
+    expect(await screen.findByText('Soweto Ridge')).toBeInTheDocument();
+    const image = screen.getByAltText('Soweto Ridge');
+    expect(image).toHaveAttribute('src', 'https://cdn.example/soweto-ridge.jpg');
+    expect(screen.getByText('Residential')).toBeInTheDocument();
+    expect(screen.getByText(/4 homes available/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Qualifies for units from about R\s*1[\s\u00a0]*200[\s\u00a0]*000/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Refer this development/ }),
+    ).toBeInTheDocument();
   });
 
   it('says plainly when the prospect does not qualify for any opportunity', () => {
