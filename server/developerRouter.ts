@@ -7,6 +7,9 @@ import { ENV } from './_core/env';
 import { EmailService } from './_core/emailService';
 import { developerSubscriptionService } from './services/developerSubscriptionService';
 import { developmentService } from './services/developmentService';
+import * as developerInventoryService from './services/developerInventoryService';
+import * as developmentTeamContactService from './services/developmentTeamContactService';
+import * as developmentSalesResourceService from './services/developmentSalesResourceService';
 import { publicDevelopmentSearchService } from './services/publicDevelopmentSearchService';
 import { searchPublicLand } from './services/landPublicService';
 import { isLandVerticalAvailable } from '../shared/landLaunchPolicy';
@@ -117,6 +120,7 @@ export const DevelopmentHomeInputSchema = z
 export const UpdateUnitAvailabilityInputSchema = z.object({
   developmentId: z.number().int().positive(),
   unitTypeId: z.string().min(1).max(36),
+  expectedAvailableUnits: z.number().int().min(0),
   availableUnits: z.number().int().min(0),
   reason: z.string().trim().min(10).max(500),
 });
@@ -187,6 +191,7 @@ type DevelopmentHomeIdentityRow = Pick<
   | 'city'
   | 'province'
   | 'transactionType'
+  | 'inventoryMode'
   | 'approvalStatus'
   | 'isPublished'
   | 'publishedAt'
@@ -1312,9 +1317,9 @@ export const developerRouter = router({
     }),
 
   getPublicDevelopmentBySlug: publicProcedure
-    .input(z.object({ slugOrId: z.string().min(1) }))
+    .input(z.object({ slugOrId: z.string().min(1), transactionType: z.enum(['for_sale', 'for_rent']).optional() }))
     .query(async ({ input }) => {
-      return await developmentService.getPublicDevelopmentBySlug(input.slugOrId);
+      return await developmentService.getPublicDevelopmentBySlug(input.slugOrId, input.transactionType);
     }),
 
   listPublicDevelopments: publicProcedure
@@ -1366,6 +1371,7 @@ export const developerRouter = router({
         utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
         sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
         leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+        distributionSearchContextToken: z.string().max(2000).trim().optional(),
         captureRequestId: z
           .string()
           .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
@@ -1425,6 +1431,7 @@ export const developerRouter = router({
         sourceSurface: input.sourceSurface || 'development_detail',
         leadSource: input.leadSource || 'development_detail',
         referrerUrl: input.referrerUrl,
+        distributionSearchContextToken: input.distributionSearchContextToken,
         utmSource: input.utmSource,
         utmMedium: input.utmMedium,
         utmCampaign: input.utmCampaign,
@@ -1930,10 +1937,377 @@ export const developerRouter = router({
         input.developmentId,
         input.unitTypeId,
         requireUser(ctx).id,
+        input.expectedAvailableUnits,
         input.availableUnits,
         input.reason,
       );
     }),
+
+  prepareDevelopmentPhase: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseNumber: z.number().int().min(1).max(100_000),
+        name: z.string().trim().min(2).max(255),
+        description: z.string().trim().max(2_000).nullable().optional(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.prepareDevelopmentPhase({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  getInventoryWorkspace: protectedProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) =>
+      developerInventoryService.getDeveloperInventoryWorkspace(
+        input.developmentId,
+        requireUser(ctx).id,
+      ),
+    ),
+
+  getInventoryItemHistory: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) =>
+      developerInventoryService.getInventoryItemHistory({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  getDevelopmentTeamContacts: protectedProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) =>
+      developmentTeamContactService.getDevelopmentTeamContacts(
+        input.developmentId,
+        requireUser(ctx).id,
+      ),
+    ),
+
+  getDevelopmentSalesResources: protectedProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) =>
+      developmentSalesResourceService.getDevelopmentSalesResources({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  shareDevelopmentSalesResource: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        fileUrl: z.string().trim().min(1).max(2048),
+        documentLabel: z.string().trim().min(2).max(160),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developmentSalesResourceService.shareDevelopmentSalesResource({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  unshareDevelopmentSalesResource: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        resourceId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developmentSalesResourceService.unshareDevelopmentSalesResource({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  saveDevelopmentTeamContact: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        contactId: z.number().int().positive().nullable().optional(),
+        phaseId: z.number().int().positive().nullable().optional(),
+        roleTitle: z.string().trim().min(2).max(100),
+        displayName: z.string().trim().min(2).max(255),
+        organizationName: z.string().trim().max(255).nullable().optional(),
+        email: z.string().trim().max(320).nullable().optional(),
+        phone: z.string().trim().max(50).nullable().optional(),
+        responsibility: z.string().trim().max(1000).nullable().optional(),
+        visibleToPartners: z.boolean(),
+        isActive: z.boolean(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developmentTeamContactService.saveDevelopmentTeamContact({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  prepareItemizedInventory: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+        sourceSystem: z.string().trim().min(1).max(100),
+        items: z
+          .array(
+            z.object({
+              phaseId: z.number().int().positive(),
+              unitTypeId: z.string().trim().min(1).max(36),
+              internalIdentifier: z.string().trim().min(1).max(100),
+              publicIdentifier: z.string().trim().max(100).nullable().optional(),
+              allocationNotes: z.string().trim().max(1000).nullable().optional(),
+              transactionType: z.enum(['for_sale', 'for_rent']),
+              status: z.enum(developerInventoryService.DEVELOPMENT_INVENTORY_STATUSES).default('planned'),
+              salePrice: z
+                .string()
+                .regex(/^\d{1,13}(\.\d{1,2})?$/)
+                .nullable()
+                .optional(),
+              rentPrice: z
+                .string()
+                .regex(/^\d{1,13}(\.\d{1,2})?$/)
+                .nullable()
+                .optional(),
+            }),
+          )
+          .min(1)
+          .max(5000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.prepareItemizedInventory({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  addPlannedInventoryItems: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+        sourceSystem: z.string().trim().min(1).max(100),
+        items: z
+          .array(
+            z.object({
+              phaseId: z.number().int().positive(),
+              unitTypeId: z.string().trim().min(1).max(36),
+              internalIdentifier: z.string().trim().min(1).max(100),
+              publicIdentifier: z.string().trim().max(100).nullable().optional(),
+              allocationNotes: z.string().trim().max(1000).nullable().optional(),
+              transactionType: z.enum(['for_sale', 'for_rent']),
+              status: z.enum(developerInventoryService.DEVELOPMENT_INVENTORY_STATUSES).default('planned'),
+              salePrice: z.string().regex(/^\d{1,13}(\.\d{1,2})?$/).nullable().optional(),
+              rentPrice: z.string().regex(/^\d{1,13}(\.\d{1,2})?$/).nullable().optional(),
+            }),
+          )
+          .min(1)
+          .max(5000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.addPlannedInventoryItems({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  releaseDevelopmentPhase: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseId: z.number().int().positive(),
+        expectedStatus: z.enum(['planning', 'pre_launch']),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.releaseDevelopmentPhase({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  archiveDevelopmentPhase: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.archiveDevelopmentPhase({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  reopenDevelopmentPhase: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.reopenDevelopmentPhase({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  releaseInventoryBatch: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        phaseId: z.number().int().positive(),
+        reason: z.string().trim().min(10).max(500),
+        items: z
+          .array(
+            z.object({
+              id: z.number().int().positive(),
+              expectedVersionId: z.number().int().positive(),
+            }),
+          )
+          .min(1)
+          .max(200),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.releaseInventoryBatch({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  transitionInventoryItemStatus: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        expectedStatus: z.enum(developerInventoryService.DEVELOPMENT_INVENTORY_STATUSES),
+        nextStatus: z.enum(developerInventoryService.DEVELOPMENT_INVENTORY_STATUSES),
+        reason: z.string().trim().min(10).max(500),
+        sourceSystem: z.string().trim().min(1).max(100),
+        sourceReference: z.string().trim().max(160).nullable().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.transitionInventoryItemStatus({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  resolveInventoryLegalHold: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        returnTo: z.enum(['available', 'planned', 'withdrawn']),
+        reason: z.string().trim().min(10).max(500),
+        clearanceSourceSystem: z.string().trim().min(1).max(100),
+        clearanceReference: z.string().trim().min(1).max(160),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.resolveInventoryLegalHold({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  changeInventoryTransactionMode: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        transactionType: z.enum(['for_sale', 'for_rent']),
+        price: z.number().positive().nullable().optional(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.changeInventoryTransactionMode({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  updateInventoryItemPrice: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        transactionType: z.enum(['for_sale', 'for_rent']),
+        price: z.number().positive().nullable(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.updateInventoryItemPrice({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  updateInventoryItemDetails: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        allocationNotes: z.string().trim().max(1000).nullable(),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.updateInventoryItemDetails({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
+
+  returnLeasedInventoryToMarket: protectedProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        itemId: z.number().int().positive(),
+        expectedVersionId: z.number().int().positive(),
+        transactionType: z.enum(['for_sale', 'for_rent']),
+        price: z.number().positive().nullable().optional(),
+        leaseEndConfirmed: z.literal(true),
+        sourceSystem: z.string().trim().min(1).max(100),
+        leaseEndReference: z.string().trim().min(1).max(160),
+        reason: z.string().trim().min(10).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) =>
+      developerInventoryService.returnLeasedInventoryToMarket({
+        ...input,
+        userId: requireUser(ctx).id,
+      }),
+    ),
 
   getDevelopment: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -1990,6 +2364,7 @@ export const developerRouter = router({
         city: developments.city,
         province: developments.province,
         transactionType: developments.transactionType,
+        inventoryMode: developments.inventoryMode,
         approvalStatus: developments.approvalStatus,
         isPublished: developments.isPublished,
         publishedAt: developments.publishedAt,
@@ -2203,6 +2578,7 @@ export const developerRouter = router({
             province: row.province,
           },
           transactionType: row.transactionType,
+          inventoryMode: row.inventoryMode,
           approvalStatus: row.approvalStatus,
           isPublished,
           publishedAt: row.publishedAt,
@@ -2261,6 +2637,8 @@ export const developerRouter = router({
       city: development.identity.location.city,
       province: development.identity.location.province,
       images: development.identity.imageUrl ? [development.identity.imageUrl] : [],
+      status: development.market.status,
+      transactionType: development.market.transactionType,
       approvalStatus: development.lifecycle.approvalStatus,
       isPublished: development.lifecycle.isPublished ? 1 : 0,
       publishedAt: development.lifecycle.publishedAt,
@@ -2271,7 +2649,10 @@ export const developerRouter = router({
       attention: development.attention,
       nextAction: development.nextAction,
       rejectionReason: development.lifecycle.latestReview?.feedback ?? null,
-      priceFrom: development.inventory.pricing.from,
+      priceFrom:
+        development.inventory.pricing.kind === 'mixed'
+          ? null
+          : development.inventory.pricing.from,
     }));
   }),
 

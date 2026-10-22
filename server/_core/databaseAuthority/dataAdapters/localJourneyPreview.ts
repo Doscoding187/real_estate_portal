@@ -23,7 +23,7 @@ import {
   resolveCentralLocalEnvironment,
 } from '../../../../scripts/localEnvironmentAuthority';
 
-export const LOCAL_JOURNEY_VERSION = 'local-journey-preview-v1';
+export const LOCAL_JOURNEY_VERSION = 'local-journey-preview-v2';
 export const LOCAL_JOURNEY_USERS = Object.freeze([
   {
     id: 996004,
@@ -46,11 +46,25 @@ export const LOCAL_JOURNEY_USERS = Object.freeze([
     lastName: 'Pending',
     slug: 'local-agent-payment-pending',
   },
+  {
+    id: 996007,
+    email: 'referrer@listify.local',
+    firstName: 'Lindiwe',
+    lastName: 'Referral Demo',
+    slug: 'local-distribution-referrer',
+  },
 ]);
+const LOCAL_DISTRIBUTION_PARTNER = Object.freeze({
+  userId: 996007,
+  email: 'referrer@listify.local',
+  identityType: 'referrer' as const,
+  displayName: 'Local Distribution Partner',
+});
 const LEGAL_BUNDLE_ID = 'local-journey-synthetic-v1';
 export const LOCAL_JOURNEY_DIGEST = stableDigest({
   version: LOCAL_JOURNEY_VERSION,
   users: LOCAL_JOURNEY_USERS,
+  distributionPartner: LOCAL_DISTRIBUTION_PARTNER,
   legalBundleId: LEGAL_BUNDLE_ID,
   purchaseTerms: 'terms-payment-notice-2026-10-13.2.txt',
   privacy: 'privacy.txt',
@@ -137,6 +151,19 @@ async function inspect(input: Input, password: string) {
     );
     accounts.push({ email: user.email, userId: user.id, ...progress[0] });
   }
+  const distributionIdentities = await queryRows(
+    input.connection,
+    'SELECT user_id, identity_type, active, display_name FROM distribution_identities WHERE user_id = ? AND identity_type = ?',
+    [LOCAL_DISTRIBUTION_PARTNER.userId, LOCAL_DISTRIBUTION_PARTNER.identityType],
+  );
+  if (
+    distributionIdentities.length !== 1 ||
+    Number(distributionIdentities[0].user_id) !== LOCAL_DISTRIBUTION_PARTNER.userId ||
+    Number(distributionIdentities[0].active) !== 1 ||
+    distributionIdentities[0].display_name !== LOCAL_DISTRIBUTION_PARTNER.displayName
+  ) {
+    throw new Error('Local Distribution partner identity missing or conflicting.');
+  }
   const content = localLegalContent(input.authority.context.repository.root);
   const releases = await queryRows(
     input.connection,
@@ -164,7 +191,18 @@ async function inspect(input: Input, password: string) {
     Number(release.format_version) !== 1
   )
     throw new Error('Local synthetic legal fixture conflicts.');
-  return { accounts, legalBundleId: LEGAL_BUNDLE_ID, syntheticOnly: true, progressPreserved: true };
+  return {
+    accounts,
+    distributionIdentity: {
+      userId: LOCAL_DISTRIBUTION_PARTNER.userId,
+      email: LOCAL_DISTRIBUTION_PARTNER.email,
+      identityType: LOCAL_DISTRIBUTION_PARTNER.identityType,
+      active: true,
+    },
+    legalBundleId: LEGAL_BUNDLE_ID,
+    syntheticOnly: true,
+    progressPreserved: true,
+  };
 }
 
 async function run(input: Input, prepare: boolean) {
@@ -231,6 +269,20 @@ async function run(input: Input, prepare: boolean) {
             [user.id],
           );
       }
+      const distributionIdentities = await queryRows(
+        input.connection,
+        'SELECT user_id FROM distribution_identities WHERE user_id = ? AND identity_type = ?',
+        [LOCAL_DISTRIBUTION_PARTNER.userId, LOCAL_DISTRIBUTION_PARTNER.identityType],
+      );
+      if (distributionIdentities.length === 0)
+        await input.connection.execute(
+          'INSERT INTO distribution_identities (user_id, identity_type, active, display_name) VALUES (?, ?, 1, ?)',
+          [
+            LOCAL_DISTRIBUTION_PARTNER.userId,
+            LOCAL_DISTRIBUTION_PARTNER.identityType,
+            LOCAL_DISTRIBUTION_PARTNER.displayName,
+          ],
+        );
       const content = localLegalContent(input.authority.context.repository.root);
       const releases = await queryRows(
         input.connection,

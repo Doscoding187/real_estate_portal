@@ -3,10 +3,9 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
-import { Card, CardContent } from '@/components/ui/card';
+import { ReferralIntakePausedCard } from '@/components/distribution/partner/ReferralIntakePausedCard';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   ArrowRight,
   CheckCircle2,
@@ -18,56 +17,16 @@ import {
   Loader2,
 } from 'lucide-react';
 
-type PrequalFormValues = {
-  grossIncomeMonthly: string;
-  deductionsMonthly: string;
-  depositAmount: string;
-  area: string;
-};
-
-type AcceleratorAssessment = {
-  assessmentId: string;
-  outputs: {
-    maxMonthlyRepayment: number;
-    purchasePrice: number;
-    confidenceLabel: string;
-  };
-};
-
-type AcceleratorMatchSnapshot = {
-  matchSnapshotId: string;
-  matches: Array<{
-    developmentId: number;
-    developmentName: string;
-    area: string;
-    logoUrl?: string | null;
-    unitOptions?: Array<{
-      unitTypeId?: string | null;
-      unitName?: string;
-      priceFrom?: number;
-      priceTo?: number;
-      fitRatio?: number;
-    }>;
-    purchasePrice: number;
-    bestFitRatio: number;
-  }>;
-};
-
 type AccessStockRow = {
   developmentId: number;
   developmentName: string;
   location: string;
-  priceFrom: number | null;
-  priceTo: number | null;
-  commissionAmount: number;
+  saleMode: { availableCount: number; priceFrom: number; priceTo: number } | null;
+  rentMode: { availableCount: number; priceFrom: number; priceTo: number } | null;
+  currencyCode: string;
   commissionDisplay: string;
-  commissionModel: string | null;
-  defaultCommissionPercent: number | null;
-  defaultCommissionAmount: number | null;
   payoutDisplay: string;
-  buyerProfile: string;
   imageUrl: string | null;
-  badge: 'Hot' | 'High demand' | 'Fast payout';
 };
 
 type AttentionItem = {
@@ -79,49 +38,32 @@ type AttentionItem = {
   onClick: () => void;
 };
 
-const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
-
-const DEFAULT_PREQUAL_FORM: PrequalFormValues = {
-  grossIncomeMonthly: '',
-  deductionsMonthly: '0',
-  depositAmount: '0',
-  area: '',
-};
-
-function formatCurrency(value: number | null | undefined, abbreviated = false) {
+function formatCurrency(value: number | null | undefined, currencyCode = 'ZAR', abbreviated = false) {
   const numeric = Number(value || 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 'Price unavailable';
   if (abbreviated && Math.abs(numeric) >= 1000) {
-    return `R ${Math.round(numeric / 1000)}k`;
+    return `${currencyCode === 'ZAR' ? 'R' : `${currencyCode} `}${Math.round(numeric / 1000)}k`;
   }
-  return `R ${numeric.toLocaleString('en-ZA')}`;
+  return `${currencyCode === 'ZAR' ? 'R' : `${currencyCode} `}${numeric.toLocaleString('en-ZA')}`;
 }
 
-function formatCurrencyRange(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
-  const from = Number(priceFrom || 0);
-  const to = Number(priceTo || 0);
-  const hasFrom = Number.isFinite(from) && from > 0;
-  const hasTo = Number.isFinite(to) && to > 0;
-  if (hasFrom && hasTo) {
-    if (Math.abs(from - to) <= 1) return formatCurrency(from);
-    return `${formatCurrency(from)} - ${formatCurrency(to)}`;
+function formatModePrice(
+  mode: { availableCount: number; priceFrom: number; priceTo: number } | null,
+  currencyCode: string,
+  rental = false,
+) {
+  if (
+    !mode ||
+    mode.availableCount <= 0 ||
+    mode.priceFrom <= 0 ||
+    mode.priceTo < mode.priceFrom
+  ) {
+    return 'Unavailable';
   }
-  if (hasFrom) return `From ${formatCurrency(from)}`;
-  if (hasTo) return `Up to ${formatCurrency(to)}`;
-  return 'Price not configured';
-}
-
-function pickRepresentativePrice(priceFrom: number | null | undefined, priceTo: number | null | undefined) {
-  const from = Number(priceFrom || 0);
-  const to = Number(priceTo || 0);
-  if (Number.isFinite(from) && from > 0) return from;
-  if (Number.isFinite(to) && to > 0) return to;
-  return 0;
-}
-
-function parseMoneyInt(value: string, fallbackValue = 0) {
-  const parsed = Number(String(value || '').replace(/[^0-9.-]/g, ''));
-  if (!Number.isFinite(parsed)) return fallbackValue;
-  return Math.max(0, Math.round(parsed));
+  const from = formatCurrency(mode.priceFrom, currencyCode);
+  const to = mode.priceTo === mode.priceFrom ? null : formatCurrency(mode.priceTo, currencyCode);
+  const range = to ? `${from} - ${to}` : from;
+  return rental ? `${range} / month` : range;
 }
 
 function toDate(value: unknown): Date | null {
@@ -167,42 +109,19 @@ function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
-function getMatchConfidence(bestFitRatio: number): 'Strong' | 'Medium' | 'Low' {
-  if (bestFitRatio >= 0.85) return 'Strong';
-  if (bestFitRatio >= 0.65) return 'Medium';
-  return 'Low';
-}
+function getCommissionDisplay(item: any) {
+  const computed = String(item?.computed?.commissionDisplay || '').trim();
+  if (computed) return computed;
 
-function computeCommissionAmount(input: {
-  commissionModel?: string | null;
-  defaultCommissionPercent?: number | null;
-  defaultCommissionAmount?: number | null;
-  purchasePrice?: number | null;
-}) {
-  const model = String(input.commissionModel || '');
-  const purchasePrice = Number(input.purchasePrice || 0);
-  if (model === 'flat_amount') {
-    return Math.max(0, Number(input.defaultCommissionAmount || 0));
+  const program = item?.program || item;
+  const model = String(program?.commissionModel || '');
+  if (model === 'flat_amount' && Number(program?.defaultCommissionAmount || 0) > 0) {
+    return `Configured referral payout: ${formatCurrency(Number(program.defaultCommissionAmount))}`;
   }
-  if (model === 'flat_percentage') {
-    const percent = Number(input.defaultCommissionPercent || 0);
-    if (percent > 0 && purchasePrice > 0) {
-      return Math.round((purchasePrice * percent) / 100);
-    }
+  if (model === 'flat_percentage' && Number(program?.defaultCommissionPercent || 0) > 0) {
+    return `${Number(program.defaultCommissionPercent)}% referral payout; calculation basis is not configured`;
   }
-  return 0;
-}
-
-function getCommissionDisplay(input: {
-  amount: number;
-  commissionModel?: string | null;
-  defaultCommissionPercent?: number | null;
-}) {
-  if (input.amount > 0) return formatCurrency(input.amount);
-  if (String(input.commissionModel || '') === 'flat_percentage' && Number(input.defaultCommissionPercent || 0) > 0) {
-    return `${Number(input.defaultCommissionPercent)}% referral reward`;
-  }
-  return 'Reward configured';
+  return 'Referral payout terms not configured';
 }
 
 function getPayoutDisplay(item: any) {
@@ -211,47 +130,13 @@ function getPayoutDisplay(item: any) {
   const notes = String(item?.program?.payoutMilestoneNotes || item?.payoutMilestoneNotes || '').trim();
   if (notes) return notes;
   const milestone = String(item?.program?.payoutMilestone || item?.payoutMilestone || '').replace(/_/g, ' ');
-  if (milestone) return `Paid after ${milestone}`;
-  return 'Paid after qualifying sale milestone';
-}
-
-function getBuyerProfile(priceFrom: number | null | undefined, priceTo: number | null | undefined, location: string) {
-  const representativePrice = pickRepresentativePrice(priceFrom, priceTo);
-  if (representativePrice >= 1800000) return `Upscale buyer in ${location}`;
-  if (representativePrice >= 1200000) return `Family or investor buyer in ${location}`;
-  if (representativePrice > 0) return `First-time or value buyer in ${location}`;
-  return `Buyer looking in ${location}`;
-}
-
-function buildWhatsAppShareMessage(
-  matches: AcceleratorMatchSnapshot['matches'],
-  maxPurchase: number,
-) {
-  const summary = matches
-    .slice(0, 3)
-    .map(
-      match =>
-        `- ${match.developmentName} (${match.area || 'N/A'}) - From ${formatCurrency(match.purchasePrice)}`,
-    )
-    .join('\n');
-
-  return [
-    'Hi! Based on your financials, here are developments you may qualify for:',
-    '',
-    summary || '- No matching developments yet',
-    '',
-    `Max purchase power: ${formatCurrency(maxPurchase)}`,
-    '',
-    "Let's set up a viewing.",
-  ].join('\n');
+  if (milestone) return `Configured milestone: ${milestone}`;
+  return 'Payout terms not configured';
 }
 
 export default function PartnerDashboardPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
-
-  const [prequalValues, setPrequalValues] = useState<PrequalFormValues>(DEFAULT_PREQUAL_FORM);
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -264,20 +149,8 @@ export default function PartnerDashboardPage() {
     refetchOnWindowFocus: false,
   });
 
-  const myAccessQuery = trpc.distribution.referrer.myAccess.useQuery(
-    { includePaused: true, includeRevoked: false },
-    {
-      enabled: isAuthenticated,
-      retry: false,
-    },
-  );
-  const eligibleDevelopmentsQuery =
-    trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(undefined, {
-      enabled: isAuthenticated,
-      retry: false,
-    });
   const programTermsQuery = trpc.distribution.partner.listProgramTerms.useQuery(
-    { includeDisabled: true },
+    undefined,
     {
       enabled: isAuthenticated,
       retry: false,
@@ -316,38 +189,6 @@ export default function PartnerDashboardPage() {
     },
   );
 
-  const createAssessmentMutation =
-    trpc.distribution.partner.createAffordabilityAssessment.useMutation({
-      onSuccess: result => setAssessmentId(String(result.assessmentId)),
-    });
-
-  const normalizedAssessmentId = assessmentId || ZERO_UUID;
-
-  const assessmentQuery = trpc.distribution.partner.getAffordabilityAssessment.useQuery(
-    { assessmentId: normalizedAssessmentId },
-    {
-      enabled: Boolean(assessmentId),
-      retry: false,
-    },
-  );
-
-  const matchesQuery = trpc.distribution.partner.getAffordabilityMatches.useQuery(
-    { assessmentId: normalizedAssessmentId },
-    {
-      enabled: false,
-      retry: false,
-    },
-  );
-
-  const assessment = (assessmentQuery.data || null) as AcceleratorAssessment | null;
-  const matchSnapshot = (matchesQuery.data || null) as AcceleratorMatchSnapshot | null;
-  const matches = matchSnapshot?.matches || [];
-
-  useEffect(() => {
-    if (!assessmentId) return;
-    void matchesQuery.refetch();
-  }, [assessmentId]);
-
   const pipelineDeals = pipelineQuery.data?.deals || [];
   const stageOrder = pipelineQuery.data?.stageOrder || [];
   const stageCounts = (pipelineQuery.data?.stageCounts || {}) as Record<string, number>;
@@ -374,43 +215,20 @@ export default function PartnerDashboardPage() {
     }, 0);
   }, [stageCounts]);
 
-  const pendingIncome = useMemo(() => {
-    return (commissionsQuery.data || []).reduce((sum, row: any) => {
-      const status = String(row.entryStatus || '').toLowerCase();
-      return status === 'pending' ? sum + Number(row.commissionAmount || 0) : sum;
-    }, 0);
-  }, [commissionsQuery.data]);
-
-  const approvedIncome = useMemo(() => {
-    return (commissionsQuery.data || []).reduce((sum, row: any) => {
-      const status = String(row.entryStatus || '').toLowerCase();
-      return status === 'approved' ? sum + Number(row.commissionAmount || 0) : sum;
-    }, 0);
-  }, [commissionsQuery.data]);
-
-  const paidIncome = useMemo(() => {
-    return (commissionsQuery.data || []).reduce((sum, row: any) => {
-      const status = String(row.entryStatus || '').toLowerCase();
-      return status === 'paid' ? sum + Number(row.commissionAmount || 0) : sum;
-    }, 0);
-  }, [commissionsQuery.data]);
-
-  const totalIncomePipeline = pendingIncome + approvedIncome + paidIncome;
-
-  const averageCommissionAmount = useMemo(() => {
-    const rows = commissionsQuery.data || [];
-    if (!rows.length) return 25000;
-    const sum = rows.reduce((total, row: any) => total + Number(row.commissionAmount || 0), 0);
-    return Math.max(0, Math.round(sum / rows.length));
-  }, [commissionsQuery.data]);
-
-  const potentialIncome = activeDealsCount * averageCommissionAmount;
-
-  const paidDealsCount = Number(stageCounts.commission_paid || 0);
-  const unlockTargetDeals = 3;
-  const unlockProgress = Math.max(0, Math.min(1, paidDealsCount / unlockTargetDeals));
-  const unlockDealsRemaining = Math.max(0, unlockTargetDeals - paidDealsCount);
-  const nextUnlockAmount = averageCommissionAmount;
+  const commissionStatusCounts = useMemo(
+    () =>
+      (commissionsQuery.data || []).reduce(
+        (counts: Record<'pending' | 'approved' | 'paid', number>, row: any) => {
+          const status = String(row.entryStatus || '').toLowerCase();
+          if (status === 'pending' || status === 'approved' || status === 'paid') {
+            counts[status] += 1;
+          }
+          return counts;
+        },
+        { pending: 0, approved: 0, paid: 0 },
+      ),
+    [commissionsQuery.data],
+  );
 
   const applicationOrBeyondCount = useMemo(() => {
     const convertedStages = new Set([
@@ -448,172 +266,41 @@ export default function PartnerDashboardPage() {
 
   const stockRows = useMemo<AccessStockRow[]>(() => {
     const grouped = new Map<number, AccessStockRow>();
-    for (const row of myAccessQuery.data || []) {
-      if (row?.isReferralEnabled === false) continue;
-      if (row?.tierEligible === false) continue;
-      const developmentId = Number(row.developmentId);
-      if (!grouped.has(developmentId)) {
-        const unitTypeFloor = Array.isArray(row.unitTypes)
-          ? row.unitTypes
-              .map((unit: any) => Number(unit?.priceFrom || 0))
-              .filter((price: number) => Number.isFinite(price) && price > 0)
-              .sort((a: number, b: number) => a - b)[0]
-          : null;
-        const unitTypeCeiling = Array.isArray(row.unitTypes)
-          ? row.unitTypes
-              .map((unit: any) => Number(unit?.priceTo || unit?.priceFrom || 0))
-              .filter((price: number) => Number.isFinite(price) && price > 0)
-              .sort((a: number, b: number) => b - a)[0]
-          : null;
-        const priceFromRaw = Number(unitTypeFloor || row.priceFrom || 0);
-        const priceToRaw = Number(unitTypeCeiling || row.priceTo || priceFromRaw || 0);
-        const priceFrom = Number.isFinite(priceFromRaw) && priceFromRaw > 0 ? priceFromRaw : null;
-        const priceTo = Number.isFinite(priceToRaw) && priceToRaw > 0 ? priceToRaw : priceFrom;
-        const location = [row.city, row.province].filter(Boolean).join(' - ') || 'Location unavailable';
-        const commissionModel = row.commissionModel ? String(row.commissionModel) : null;
-        const defaultCommissionPercent =
-          row.defaultCommissionPercent == null ? null : Number(row.defaultCommissionPercent);
-        const defaultCommissionAmount =
-          row.defaultCommissionAmount == null ? null : Number(row.defaultCommissionAmount);
-        const commissionAmount = computeCommissionAmount({
-          commissionModel,
-          defaultCommissionPercent,
-          defaultCommissionAmount,
-          purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
-        });
-        const commissionDisplay = getCommissionDisplay({
-          amount: commissionAmount,
-          commissionModel,
-          defaultCommissionPercent,
-        });
-
-        let badge: 'Hot' | 'High demand' | 'Fast payout' = 'High demand';
-        if (commissionAmount >= 30000) badge = 'Hot';
-        if (commissionAmount >= 18000 && commissionAmount < 30000) badge = 'Fast payout';
-
-        grouped.set(developmentId, {
-          developmentId,
-          developmentName: row.developmentName || 'Development',
-          location,
-          priceFrom,
-          priceTo,
-          commissionAmount,
-          commissionDisplay,
-          commissionModel,
-          defaultCommissionPercent,
-          defaultCommissionAmount,
-          payoutDisplay: getPayoutDisplay(row),
-          buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
-          imageUrl: row.imageUrl ? String(row.imageUrl) : null,
-          badge,
-        });
-      }
-    }
-
-    for (const item of eligibleDevelopmentsQuery.data?.items || []) {
-      if (item.opportunity?.status && item.opportunity.status !== 'ready') continue;
-      const developmentId = Number(item.developmentId || 0);
-      if (!developmentId || grouped.has(developmentId)) continue;
-      const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
-      const defaultCommissionPercent =
-        item.program?.defaultCommissionPercent == null
-          ? null
-          : Number(item.program.defaultCommissionPercent);
-      const defaultCommissionAmount =
-        item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
-      const priceFrom = item.priceFrom ? Number(item.priceFrom) : null;
-      const priceTo = item.priceTo ? Number(item.priceTo) : priceFrom;
+    const addItem = (item: any) => {
+      const developmentId = Number(item?.developmentId || 0);
+      if (!developmentId || grouped.has(developmentId)) return;
+      if (!item.opportunity?.openForReferral || item.opportunity.marketability !== 'marketable') return;
+      const rawSaleMode = item.inventory?.modes?.sale || null;
+      const rawRentMode = item.inventory?.modes?.rent || null;
+      const saleMode = rawSaleMode?.availableCount > 0 ? rawSaleMode : null;
+      const rentMode = rawRentMode?.availableCount > 0 ? rawRentMode : null;
+      if (!saleMode && !rentMode) return;
       const location = [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable';
-      const commissionAmount = computeCommissionAmount({
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
-        purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
-      });
-      const commissionDisplay = getCommissionDisplay({
-        amount: commissionAmount,
-        commissionModel,
-        defaultCommissionPercent,
-      });
+
       grouped.set(developmentId, {
         developmentId,
         developmentName: item.developmentName || 'Development',
         location,
-        priceFrom,
-        priceTo,
-        commissionAmount,
-        commissionDisplay,
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
+        saleMode,
+        rentMode,
+        currencyCode: item.program?.currencyCode || 'ZAR',
+        commissionDisplay: getCommissionDisplay(item),
         payoutDisplay: getPayoutDisplay(item),
-        buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
         imageUrl: item.imageUrl ? String(item.imageUrl) : null,
-        badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
       });
-    }
+    };
 
     for (const item of programTermsQuery.data?.items || []) {
-      if (item.opportunity?.status !== 'ready') continue;
-      const developmentId = Number(item.developmentId || 0);
-      if (!developmentId || grouped.has(developmentId)) continue;
-      const commissionModel = item.program?.commissionModel ? String(item.program.commissionModel) : null;
-      const defaultCommissionPercent =
-        item.program?.defaultCommissionPercent == null
-          ? null
-          : Number(item.program.defaultCommissionPercent);
-      const defaultCommissionAmount =
-        item.program?.defaultCommissionAmount == null ? null : Number(item.program.defaultCommissionAmount);
-      const priceFrom = item.priceFrom ? Number(item.priceFrom) : null;
-      const priceTo = item.priceTo ? Number(item.priceTo) : priceFrom;
-      const location = [item.city, item.province].filter(Boolean).join(' - ') || 'Location unavailable';
-      const commissionAmount = computeCommissionAmount({
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
-        purchasePrice: pickRepresentativePrice(priceFrom, priceTo),
-      });
-      const commissionDisplay = getCommissionDisplay({
-        amount: commissionAmount,
-        commissionModel,
-        defaultCommissionPercent,
-      });
-
-      grouped.set(developmentId, {
-        developmentId,
-        developmentName: item.developmentName || 'Development',
-        location,
-        priceFrom,
-        priceTo,
-        commissionAmount,
-        commissionDisplay,
-        commissionModel,
-        defaultCommissionPercent,
-        defaultCommissionAmount,
-        payoutDisplay: getPayoutDisplay(item),
-        buyerProfile: getBuyerProfile(priceFrom, priceTo, location),
-        imageUrl: item.imageUrl ? String(item.imageUrl) : null,
-        badge: commissionAmount >= 18000 ? 'Fast payout' : 'High demand',
-      });
+      addItem(item);
     }
 
-    return Array.from(grouped.values()).sort(
-      (a, b) =>
-        Number(b.commissionAmount || 0) - Number(a.commissionAmount || 0) ||
-        a.developmentName.localeCompare(b.developmentName),
+    return Array.from(grouped.values()).sort((a, b) =>
+      a.developmentName.localeCompare(b.developmentName),
     );
-  }, [eligibleDevelopmentsQuery.data?.items, myAccessQuery.data, programTermsQuery.data?.items]);
+  }, [programTermsQuery.data?.items]);
 
   const visibleStock = stockRows.slice(0, 5);
   const hiddenStockCount = Math.max(0, stockRows.length - visibleStock.length);
-  const stockByDevelopmentId = useMemo(() => {
-    const map = new Map<number, AccessStockRow>();
-    for (const row of stockRows) {
-      map.set(Number(row.developmentId), row);
-    }
-    return map;
-  }, [stockRows]);
-
   const activePipelineStage = useMemo(() => {
     const ranked = stageOrder
       .map((stage: string) => ({ stage, count: Number(stageCounts[stage] || 0) }))
@@ -678,7 +365,17 @@ export default function PartnerDashboardPage() {
         id: `stock-${topStock.developmentId}`,
         urgency: 'info',
         title: `High opportunity - ${topStock.developmentName}`,
-        detail: `${formatCurrencyRange(topStock.priceFrom, topStock.priceTo)} - Reward ${topStock.commissionDisplay}`,
+        detail: [
+          topStock.saleMode
+            ? `Sale ${topStock.saleMode.availableCount} · ${formatModePrice(topStock.saleMode, topStock.currencyCode)}`
+            : null,
+          topStock.rentMode
+            ? `Rent ${topStock.rentMode.availableCount} · ${formatModePrice(topStock.rentMode, topStock.currencyCode, true)}`
+            : null,
+          topStock.commissionDisplay,
+        ]
+          .filter(Boolean)
+          .join(' · '),
         timeLabel: 'Today',
         onClick: () => setLocation('/distribution/partner/developments'),
       });
@@ -688,10 +385,10 @@ export default function PartnerDashboardPage() {
       items.push({
         id: 'empty',
         urgency: 'info',
-        title: 'Match your first buyer',
-        detail: 'Input buyer affordability and generate matching opportunities.',
+        title: 'Referral intake paused',
+        detail: 'View the status of the secure document-first workflow.',
         timeLabel: '-',
-        onClick: () => setLocation('/distribution/partner/accelerator'),
+        onClick: () => setLocation('/distribution/partner/submit'),
       });
     }
 
@@ -701,7 +398,6 @@ export default function PartnerDashboardPage() {
   const showLoadingState =
     loading ||
     statusQuery.isLoading ||
-    myAccessQuery.isLoading ||
     programTermsQuery.isLoading ||
     pipelineQuery.isLoading ||
     referralsQuery.isLoading ||
@@ -736,7 +432,8 @@ export default function PartnerDashboardPage() {
                 My Buyer Referral Hub
               </h1>
               <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#dbeafe]">
-                Add a buyer, see where they fit, and track every next step to payout.
+                Browse available programs and follow existing buyer referrals and payout records.
+                New referral intake is paused while the secure document-first flow is prepared.
               </p>
             </div>
               <div className="mt-6 flex flex-wrap gap-2">
@@ -746,7 +443,7 @@ export default function PartnerDashboardPage() {
                 onClick={() => setLocation('/distribution/partner/submit')}
               >
                   <UsersRound className="mr-2 h-4 w-4" />
-                Submit Buyer
+                Referral Intake Status
               </Button>
               <Button
                   variant="outline"
@@ -756,7 +453,7 @@ export default function PartnerDashboardPage() {
                 }
               >
                   <Search className="mr-2 h-4 w-4" />
-                Match Buyer
+                Intake Steps
               </Button>
               </div>
             </div>
@@ -764,26 +461,25 @@ export default function PartnerDashboardPage() {
             <div className="rounded-lg border border-white/20 bg-white/12 p-4 shadow-sm backdrop-blur">
               <p className="text-[11px] font-semibold uppercase text-blue-100">Today at a glance</p>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <HeroMetric icon={<Home className="h-4 w-4" />} label="Can refer today" value={String(stockRows.length)} />
+                <HeroMetric icon={<Home className="h-4 w-4" />} label="Open opportunities" value={String(stockRows.length)} />
                 <HeroMetric icon={<UsersRound className="h-4 w-4" />} label="My buyers" value={String(activeDealsCount)} />
-                <HeroMetric icon={<WalletCards className="h-4 w-4" />} label="Potential reward" value={formatCurrency(potentialIncome, true)} />
+                <HeroMetric icon={<WalletCards className="h-4 w-4" />} label="Recent referral payouts recorded as paid" value={String(commissionStatusCounts.paid)} />
                 <HeroMetric icon={<CheckCircle2 className="h-4 w-4" />} label="Docs needed" value={String(pendingDocReferrals.length)} tone="amber" />
               </div>
               <div className="mt-4 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-[12px] text-[#eff6ff]">
-                {attentionItems[0]?.title || 'You are ready to submit your next buyer.'}
+                {attentionItems[0]?.title || 'Referral intake is paused while secure documents are prepared.'}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
-          <KpiCell label="Available Opportunities" value={String(stockRows.length)} note="Can accept buyers" tone="blue" />
+        <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <KpiCell label="Open Opportunities" value={String(stockRows.length)} note="Current sale or rental stock" tone="blue" />
           <KpiCell label="My Buyers" value={String(activeDealsCount)} note="In progress" tone="teal" />
           <KpiCell label="Documents Needed" value={String(pendingDocReferrals.length)} note="Action needed" tone="orange" />
           <KpiCell label="Needs Attention" value={String(atRiskReferrals.length)} note="Past next step" tone="red" />
-          <KpiCell label="Pending Reward" value={formatCurrency(pendingIncome, true)} note="Awaiting approval" tone="amber" />
-          <KpiCell label="Paid Reward" value={formatCurrency(paidIncome, true)} note="This quarter" tone="green" />
-          <KpiCell label="Potential Reward" value={formatCurrency(potentialIncome, true)} note="From active buyers" tone="purple" />
+          <KpiCell label="Recent Pending Payouts" value={String(commissionStatusCounts.pending)} note="See recorded program terms" tone="amber" />
+          <KpiCell label="Recent Paid Payouts" value={String(commissionStatusCounts.paid)} note="Recorded as paid" tone="green" />
         </section>
 
         <section className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -794,17 +490,27 @@ export default function PartnerDashboardPage() {
               </span>
               <div>
                 <h2 className="text-[15px] font-semibold text-foreground">Find Opportunity</h2>
-                <p className="text-[12px] text-muted-foreground">What can I refer today?</p>
+                <p className="text-[12px] text-muted-foreground">Current opportunities and marketable stock</p>
               </div>
             </div>
             {visibleStock[0] ? (
               <div className="space-y-3">
                 <div>
                   <p className="text-[14px] font-semibold text-foreground">{visibleStock[0].developmentName}</p>
-                  <p className="mt-1 text-[12px] text-muted-foreground">{visibleStock[0].buyerProfile}</p>
+                  <p className="mt-1 text-[12px] text-muted-foreground">{visibleStock[0].location}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Sale: {visibleStock[0].saleMode
+                      ? `${visibleStock[0].saleMode.availableCount} · ${formatModePrice(visibleStock[0].saleMode, visibleStock[0].currencyCode)}`
+                      : 'Unavailable'}
+                  </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Rent: {visibleStock[0].rentMode
+                      ? `${visibleStock[0].rentMode.availableCount} · ${formatModePrice(visibleStock[0].rentMode, visibleStock[0].currencyCode, true)}`
+                      : 'Unavailable'}
+                  </p>
                 </div>
                 <div className="rounded-md border border-[#eef2f7] bg-[#f8fafc] p-3">
-                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Estimated reward</p>
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Program referral payout terms</p>
                   <p className="mt-1 text-[16px] font-semibold text-[#f28c00]">{visibleStock[0].commissionDisplay}</p>
                   <p className="mt-1 text-[11px] text-muted-foreground">{visibleStock[0].payoutDisplay}</p>
                 </div>
@@ -813,7 +519,7 @@ export default function PartnerDashboardPage() {
                   className="w-full"
                   onClick={() => setLocation('/distribution/partner/developments')}
                 >
-                  Open Sales Inventory
+                  View opportunities
                 </Button>
               </div>
             ) : (
@@ -823,30 +529,28 @@ export default function PartnerDashboardPage() {
 
           <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
-              <span className="rounded-md bg-[#dcfce7] p-2 text-[#059669]">
+              <span className="rounded-md bg-[#fff7cc] p-2 text-[#a16207]">
                 <Search className="h-4 w-4" />
               </span>
               <div>
-                <h2 className="text-[15px] font-semibold text-foreground">Match Buyer</h2>
-                <p className="text-[12px] text-muted-foreground">Who fits which development?</p>
+                <h2 className="text-[15px] font-semibold text-foreground">Referral intake</h2>
+                <p className="text-[12px] text-muted-foreground">Permission and ID evidence first</p>
               </div>
             </div>
             <p className="text-[13px] text-muted-foreground">
-              Run buying power once, then submit directly into the best-fit opportunity with the
-              assessment attached.
+              Prospect details and affordability cannot be saved until the signed documents and
+              private evidence steps are ready.
             </p>
-            <div className="mt-4 rounded-md border border-[#eef2f7] bg-[#f8fafc] p-3">
-              <p className="text-[10px] font-semibold uppercase text-muted-foreground">Current matcher</p>
-              <p className="mt-1 text-[13px] font-semibold text-foreground">
-                {matches.length ? `${matches.length} matched development${matches.length === 1 ? '' : 's'}` : 'Ready for next buyer'}
-              </p>
+            <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[10px] font-semibold uppercase text-amber-800">Current status</p>
+              <p className="mt-1 text-[13px] font-semibold text-amber-900">Intake is paused</p>
             </div>
             <Button
-              variant="conversion"
-              className="mt-4 w-full rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
-              onClick={() => document.getElementById('prequal-engine')?.scrollIntoView({ behavior: 'smooth' })}
+              variant="outline"
+              className="mt-4 w-full"
+              onClick={() => setLocation('/distribution/partner/submit')}
             >
-              Pre-Qualify Buyer
+              View referral intake status
             </Button>
           </Card>
 
@@ -856,14 +560,14 @@ export default function PartnerDashboardPage() {
                 <WalletCards className="h-4 w-4" />
               </span>
               <div>
-                <h2 className="text-[15px] font-semibold text-foreground">Track Earnings</h2>
-                <p className="text-[12px] text-muted-foreground">What money is moving?</p>
+                <h2 className="text-[15px] font-semibold text-foreground">Referral Payout Records</h2>
+                <p className="text-[12px] text-muted-foreground">Follow the program's recorded payment steps.</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <EarningCell label="Pending" value={formatCurrency(pendingIncome, true)} valueClassName="text-[#9a6500]" />
-              <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-primary" />
-              <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
+              <StatusCountCell label="Pending payouts" value={String(commissionStatusCounts.pending)} valueClassName="text-[#9a6500]" />
+              <StatusCountCell label="Approved payouts" value={String(commissionStatusCounts.approved)} valueClassName="text-primary" />
+              <StatusCountCell label="Paid payouts" value={String(commissionStatusCounts.paid)} valueClassName="text-[#1a7a40]" />
             </div>
             <div className="mt-4 rounded-md border border-[#bfdbfe] bg-[#eaf4ff] p-3">
               <p className="text-[10px] font-semibold uppercase text-muted-foreground">Needs action</p>
@@ -891,8 +595,10 @@ export default function PartnerDashboardPage() {
         <section className="mt-5 rounded-lg border border-[#dbe5f3] bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-[17px] font-semibold text-foreground">What Can I Refer Today?</h3>
-              <p className="mt-1 text-[12px] text-muted-foreground">Ready opportunities your buyers can be submitted to now.</p>
+              <h3 className="text-[17px] font-semibold text-foreground">Current Opportunities</h3>
+              <p className="mt-1 text-[12px] text-muted-foreground">
+                Open Distribution programs with current sale or rental stock. Referral intake is paused.
+              </p>
             </div>
             <button
               type="button"
@@ -909,18 +615,7 @@ export default function PartnerDashboardPage() {
                 key={row.developmentId}
                 className="overflow-hidden rounded-lg border border-[#dbe5f3] bg-white transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-[#fff7cc] to-[#ffedd5]">
-                  <span
-                    className={`absolute left-3 top-3 rounded px-2 py-1 text-[9px] font-bold uppercase text-white ${
-                      row.badge === 'Hot'
-                        ? 'bg-[#ef4444]'
-                        : row.badge === 'Fast payout'
-                          ? 'bg-[#10b981]'
-                          : 'bg-[#f59e0b]'
-                    }`}
-                  >
-                    {row.badge}
-                  </span>
+              <div className="relative flex h-32 items-center justify-center bg-gradient-to-br from-[#fff7cc] to-[#ffedd5]">
                   {row.imageUrl ? (
                     <img
                       src={row.imageUrl}
@@ -939,21 +634,27 @@ export default function PartnerDashboardPage() {
 
                     <div className="mt-4 grid gap-3">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Price range</p>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Sale availability</p>
                         <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
-                          {formatCurrencyRange(row.priceFrom, row.priceTo)}
+                          {row.saleMode
+                            ? `${row.saleMode.availableCount} available · ${formatModePrice(row.saleMode, row.currencyCode)}`
+                            : 'Unavailable'}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Referral reward</p>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Rental availability</p>
+                        <p className="mt-1 font-mono text-[15px] font-semibold text-foreground">
+                          {row.rentMode
+                            ? `${row.rentMode.availableCount} available · ${formatModePrice(row.rentMode, row.currencyCode, true)}`
+                            : 'Unavailable'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Program referral payout terms</p>
                         <p className="mt-1 text-[13px] font-semibold text-[#f28c00]">{row.commissionDisplay}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Best buyer</p>
-                        <p className="mt-1 text-[12px] text-foreground">{row.buyerProfile}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout trigger</p>
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground">Payout milestone</p>
                         <p className="mt-1 text-[12px] text-foreground">{row.payoutDisplay}</p>
                       </div>
                     </div>
@@ -964,16 +665,16 @@ export default function PartnerDashboardPage() {
                       onClick={() => setLocation('/distribution/partner/developments')}
                       className="rounded-md border border-[#dbe5f3] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] hover:bg-[#f8fafc]"
                     >
-                      Sales Pack
+                  Opportunity details
                     </button>
                     <button
                       type="button"
                       onClick={() =>
-                        setLocation(`/distribution/partner/submit?developmentId=${row.developmentId}`)
+                        setLocation('/distribution/partner/developments')
                       }
                       className="rounded-md bg-[#ff9500] px-3 py-2 text-[12px] font-semibold text-white hover:bg-[#f08a00]"
                     >
-                      Submit Buyer
+                      Choose referral mode
                     </button>
                   </div>
                 </div>
@@ -993,228 +694,15 @@ export default function PartnerDashboardPage() {
               </span>
               <span className="mt-2 block text-[11px] text-[#475569]">
                 {hiddenStockCount > 0
-                  ? `${hiddenStockCount} more development${hiddenStockCount === 1 ? '' : 's'} waiting in the sales inventory.`
-                  : 'Open the full sales inventory, brochures, and submit-ready opportunities.'}
+                  ? `${hiddenStockCount} more ${hiddenStockCount === 1 ? 'partner opportunity' : 'partner opportunities'} available to explore.`
+                  : 'View partner-accessible opportunities and their current marketable stock.'}
               </span>
             </button>
           </div>
         </section>
 
-        <section id="prequal-engine" className="mt-5 overflow-hidden rounded-lg border border-[#dbe5f3] bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-4 border-b border-[#eef2f7] bg-white px-6 py-5">
-            <div>
-              <h2 className="text-[16px] font-semibold text-foreground">Help Me Match My Buyer</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Find what your buyer can afford and match them to ready opportunities.
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-3 py-1 text-[10px] font-semibold uppercase text-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              Core Feature
-            </span>
-          </div>
-
-          <div className="grid md:grid-cols-2">
-            <div className="border-r border-[#eef2f7] p-6">
-              <label className="mb-4 block">
-                <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                  Gross income monthly (required)
-                </span>
-                <Input
-                  placeholder="Gross income monthly (required)"
-                  value={prequalValues.grossIncomeMonthly}
-                  onChange={event =>
-                    setPrequalValues(current => ({ ...current, grossIncomeMonthly: event.target.value }))
-                  }
-                  inputMode="numeric"
-                  className="border-[#e5edf7] bg-[#f8fafc]"
-                />
-              </label>
-
-              <div className="mb-4 grid gap-3 md:grid-cols-2">
-                <label>
-                  <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                    Monthly expenses
-                  </span>
-                  <Input
-                    placeholder="e.g. 18 000"
-                    value={prequalValues.deductionsMonthly}
-                    onChange={event =>
-                      setPrequalValues(current => ({ ...current, deductionsMonthly: event.target.value }))
-                    }
-                    inputMode="numeric"
-                    className="border-[#e5edf7] bg-[#f8fafc]"
-                  />
-                </label>
-                <label>
-                  <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                    Deposit available
-                  </span>
-                  <Input
-                    placeholder="Optional"
-                    value={prequalValues.depositAmount}
-                    onChange={event =>
-                      setPrequalValues(current => ({ ...current, depositAmount: event.target.value }))
-                    }
-                    inputMode="numeric"
-                    className="border-[#e5edf7] bg-[#f8fafc]"
-                  />
-                </label>
-              </div>
-
-              <label className="mb-4 block">
-                <span className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
-                  Preferred area
-                </span>
-                <Input
-                  placeholder="e.g. Midrand, Centurion, Fourways"
-                  value={prequalValues.area}
-                  onChange={event => setPrequalValues(current => ({ ...current, area: event.target.value }))}
-                  className="border-[#e5edf7] bg-[#f8fafc]"
-                />
-              </label>
-
-              <Button
-                variant="conversion"
-                className="w-full rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
-                disabled={createAssessmentMutation.isPending}
-                onClick={() => {
-                  const grossIncomeMonthly = parseMoneyInt(prequalValues.grossIncomeMonthly, 0);
-                  if (grossIncomeMonthly <= 0) return;
-
-                  setAssessmentId(null);
-                  createAssessmentMutation.mutate({
-                    grossIncomeMonthly,
-                    deductionsMonthly: parseMoneyInt(prequalValues.deductionsMonthly, 0),
-                    depositAmount: parseMoneyInt(prequalValues.depositAmount, 0),
-                    locationFilter: prequalValues.area.trim()
-                      ? { city: prequalValues.area.trim() }
-                      : undefined,
-                  });
-                }}
-              >
-                {createAssessmentMutation.isPending ? 'Calculating...' : 'Run Pre-Qualification'}
-              </Button>
-            </div>
-
-            <div className="bg-[#f8fbff] p-6">
-              <p className="mb-3 text-[10px] font-semibold uppercase text-muted-foreground">
-                Buyer Fit Matches
-              </p>
-
-              {!assessment ? (
-                <div className="flex min-h-[220px] flex-col items-center justify-center text-center text-[12px] text-muted-foreground">
-                  Enter buyer details and run pre-qualification to see matching stock, fit reasons,
-                  and estimated reward.
-                </div>
-              ) : (
-                <div>
-                  <div className="mb-3 rounded-md border border-[#e5edf7] bg-white p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      Buyer can afford up to{' '}
-                      <span className="font-mono font-semibold text-foreground">
-                        {formatCurrency(assessment.outputs.purchasePrice)}
-                      </span>
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      Max repayment: {formatCurrency(assessment.outputs.maxMonthlyRepayment)} -{' '}
-                      {assessment.outputs.confidenceLabel}
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="conversion"
-                      className="mt-2 rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
-                      disabled={matchesQuery.isFetching}
-                      onClick={() => {
-                        if (!assessmentId) return;
-                        void matchesQuery.refetch();
-                      }}
-                    >
-                      {matchesQuery.isFetching ? 'Finding matches...' : 'Get Matched Developments'}
-                    </Button>
-                  </div>
-
-                  {matches.slice(0, 3).map(match => {
-                    const confidence = getMatchConfidence(match.bestFitRatio);
-                    const unitPriceFrom = Number(match.unitOptions?.[0]?.priceFrom || 0);
-                    const displayPrice = unitPriceFrom > 0 ? unitPriceFrom : Number(match.purchasePrice || 0);
-                    const linkedStock = stockByDevelopmentId.get(Number(match.developmentId));
-                    const commissionAmount = computeCommissionAmount({
-                      commissionModel: linkedStock?.commissionModel,
-                      defaultCommissionPercent: linkedStock?.defaultCommissionPercent,
-                      defaultCommissionAmount: linkedStock?.defaultCommissionAmount,
-                      purchasePrice: displayPrice,
-                    });
-                    return (
-                      <div key={match.developmentId} className="mb-2 rounded-md border border-[#e5edf7] bg-white p-3">
-                        <p className="text-[13px] font-semibold text-foreground">{match.developmentName}</p>
-                        <p className="text-[11px] text-muted-foreground">{match.area || 'N/A'}</p>
-                        <div className="mt-2 flex items-center justify-between">
-                          <p className="font-mono text-[13px] font-semibold text-foreground">
-                            {formatCurrency(displayPrice)}
-                          </p>
-                          <span
-                            className={
-                              confidence === 'Strong'
-                                ? 'rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success'
-                                : confidence === 'Medium'
-                                  ? 'rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold text-warning'
-                                  : 'rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted-foreground'
-                            }
-                          >
-                            {confidence} match
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[11px] font-semibold text-[#f28c00]">
-                          Est. reward: {getCommissionDisplay({
-                            amount: commissionAmount,
-                            commissionModel: linkedStock?.commissionModel,
-                            defaultCommissionPercent: linkedStock?.defaultCommissionPercent,
-                          })}
-                        </p>
-                        <p className="mt-1 text-[11px] text-muted-foreground">
-                          Fit reason: {confidence.toLowerCase()} affordability fit
-                          {linkedStock?.buyerProfile ? ` for ${linkedStock.buyerProfile.toLowerCase()}` : ''}.
-                        </p>
-                        <div className="mt-2 flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="conversion"
-                            className="rounded-md bg-[#ff9500] text-white hover:bg-[#f08a00]"
-                            onClick={() =>
-                              setLocation(
-                                `/distribution/partner/submit?developmentId=${match.developmentId}&assessmentId=${assessmentId}`,
-                              )
-                            }
-                          >
-                            Submit Buyer
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-md border-border text-foreground"
-                            onClick={() => {
-                              const message = buildWhatsAppShareMessage(matches, assessment.outputs.purchasePrice);
-                              const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                              window.open(url, '_blank', 'noopener,noreferrer');
-                            }}
-                          >
-                            Share via WhatsApp
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {matches.length > 0 ? (
-                    <div className="mt-2 border-t border-border pt-2 text-[11px] text-muted-foreground">
-                      Max affordability: {formatCurrency(assessment.outputs.purchasePrice)}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          </div>
+        <section id="prequal-engine" className="mt-5">
+          <ReferralIntakePausedCard />
         </section>
 
         <section className="mt-5">
@@ -1231,7 +719,7 @@ export default function PartnerDashboardPage() {
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
               <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Can Refer Today</p>
+                <p className="text-[9px] font-semibold uppercase tracking-[0.07em] text-muted-foreground">Open Opportunities</p>
                 <p className="mt-1 font-mono text-[17px] font-semibold text-foreground">{stockRows.length}</p>
               </div>
               <div className="rounded-md border border-[#bfdbfe] bg-[#eaf4ff] px-3 py-2">
@@ -1315,36 +803,23 @@ export default function PartnerDashboardPage() {
           </Card>
 
           <Card className="border-[#dbe5f3] bg-white p-5 shadow-sm">
-            <h3 className="text-[13px] font-semibold text-foreground">Referral Reward Progress</h3>
-            <div className="mt-3 rounded-md border border-[#bfdbfe] bg-[#dcebff] p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#334155]">
-                Total referral reward pipeline
-              </p>
-              <p className="mt-1 font-mono text-[30px] font-semibold text-foreground">
-                {formatCurrency(totalIncomePipeline)}
-              </p>
-              <p className="text-[11px] text-muted-foreground">{new Date().getFullYear()} reward pipeline</p>
-            </div>
-
+            <h3 className="text-[13px] font-semibold text-foreground">Referral Payout Records</h3>
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              Amounts, conditions, and payment references are shown in your referral payout records from
+              recorded program terms.
+            </p>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <EarningCell label="Pending" value={formatCurrency(pendingIncome, true)} valueClassName="text-[#9a6500]" />
-              <EarningCell label="Approved" value={formatCurrency(approvedIncome, true)} valueClassName="text-primary" />
-              <EarningCell label="Paid" value={formatCurrency(paidIncome, true)} valueClassName="text-[#1a7a40]" />
+              <StatusCountCell label="Pending payouts" value={String(commissionStatusCounts.pending)} valueClassName="text-[#9a6500]" />
+              <StatusCountCell label="Approved payouts" value={String(commissionStatusCounts.approved)} valueClassName="text-primary" />
+              <StatusCountCell label="Paid payouts" value={String(commissionStatusCounts.paid)} valueClassName="text-[#1a7a40]" />
             </div>
-
-            <div className="mt-4 rounded-md border border-[#fde68a] bg-[#fff7cc] p-3">
-              <p className="text-[11px] font-semibold text-foreground">Next payout unlock</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Move {unlockDealsRemaining} more buyer{unlockDealsRemaining === 1 ? '' : 's'} forward to unlock approximately{' '}
-                <strong className="text-[#f28c00]">{formatCurrency(nextUnlockAmount)}</strong>
-              </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded bg-[#fde68a]">
-                <div
-                  className="h-full rounded bg-[#f59e0b]"
-                  style={{ width: `${Math.round(unlockProgress * 100)}%` }}
-                />
-              </div>
-            </div>
+            <Button
+              variant="outline"
+              className="mt-4 w-full"
+              onClick={() => setLocation('/distribution/partner/commissions')}
+            >
+              Open Referral Payouts
+            </Button>
           </Card>
         </section>
 
@@ -1447,7 +922,7 @@ function HeroMetric({
   );
 }
 
-function EarningCell({
+function StatusCountCell({
   label,
   value,
   valueClassName,

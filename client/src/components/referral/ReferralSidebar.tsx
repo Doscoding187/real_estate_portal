@@ -31,7 +31,7 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Accelerator', href: '/distribution/partner/accelerator', icon: Compass },
   { label: 'Submit Referral', href: '/distribution/partner/submit', icon: FilePlus2 },
   { label: 'My Referrals', href: '/distribution/partner/referrals', icon: Send },
-  { label: 'Commissions', href: '/distribution/partner/commissions', icon: DollarSign },
+  { label: 'Referral Payouts', href: '/distribution/partner/commissions', icon: DollarSign },
 ];
 
 const REFERRAL_ALIASES = new Set(['/referrer/dashboard', '/distribution/partner']);

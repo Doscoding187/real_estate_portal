@@ -34,13 +34,19 @@ type ReferralOpportunity = {
   suburb?: string | null;
   city?: string | null;
   province?: string | null;
-  priceFrom?: number | null;
-  priceTo?: number | null;
+  inventory?: {
+  modes?: {
+      sale?: { availableCount: number; priceFrom: number; priceTo: number };
+      rent?: { availableCount: number; priceFrom: number; priceTo: number };
+    };
+  };
   computed?: {
     commissionDisplay?: string | null;
   } | null;
   opportunity?: {
     status?: string | null;
+    openForReferral?: boolean;
+    marketability?: 'marketable' | 'not_marketable';
   } | null;
 };
 
@@ -67,23 +73,21 @@ function formatCurrency(value: number | null | undefined) {
   return `R ${Math.round(amount).toLocaleString('en-ZA')}`;
 }
 
-function formatPriceRange(
-  priceFrom: number | null | undefined,
-  priceTo: number | null | undefined,
+function formatModePrice(
+  mode: { availableCount: number; priceFrom: number; priceTo: number } | undefined,
+  rental = false,
 ) {
-  const from = Number(priceFrom || 0);
-  const to = Number(priceTo || 0);
-  const hasFrom = Number.isFinite(from) && from > 0;
-  const hasTo = Number.isFinite(to) && to > 0;
-
-  if (hasFrom && hasTo) {
-    return Math.abs(from - to) <= 1
-      ? formatCurrency(from)
-      : `${formatCurrency(from)} – ${formatCurrency(to)}`;
+  if (
+    !mode ||
+    mode.availableCount <= 0 ||
+    mode.priceFrom <= 0 ||
+    mode.priceTo < mode.priceFrom
+  ) {
+    return 'Unavailable';
   }
-  if (hasFrom) return `From ${formatCurrency(from)}`;
-  if (hasTo) return `Up to ${formatCurrency(to)}`;
-  return 'Price on request';
+  const from = formatCurrency(mode.priceFrom);
+  const range = mode.priceTo === mode.priceFrom ? from : `${from} – ${formatCurrency(mode.priceTo)}`;
+  return rental ? `${range} / month` : range;
 }
 
 function titleCase(value: string | null | undefined) {
@@ -179,7 +183,22 @@ export default function AgentReferrals() {
 
   const opportunities: ReferralOpportunity[] = opportunitiesQuery.data?.items || [];
   const submittedReferrals: SubmittedReferral[] = referralsQuery.data?.items || [];
-  const readyOpportunities = opportunities.filter(item => item.opportunity?.status === 'ready');
+  const readyOpportunities = opportunities.filter(
+    item =>
+      item.opportunity?.openForReferral === true &&
+      item.opportunity.marketability === 'marketable' &&
+      Boolean(
+        [item.inventory?.modes?.sale, item.inventory?.modes?.rent].some(
+        mode =>
+          Boolean(
+            mode &&
+              mode.availableCount > 0 &&
+              mode.priceFrom > 0 &&
+              mode.priceTo >= mode.priceFrom,
+          ),
+        ),
+      ),
+  );
   const documentFollowUps = submittedReferrals.filter(
     item =>
       Number(item.docProgress?.requiredCount || 0) >
@@ -261,8 +280,8 @@ export default function AgentReferrals() {
               </Badge>
             </div>
             <p className={cn(agentPageStyles.subtitle, 'mt-1 max-w-2xl')}>
-              Match qualified buyers with live developer opportunities, submit a referral and keep
-              the resulting buyer file visible from your workspace.
+              Explore current developer opportunities and follow existing buyer referrals. New
+              referral intake is paused while the secure document-first workflow is prepared.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -278,7 +297,7 @@ export default function AgentReferrals() {
               className={agentPageStyles.primaryButton}
               onClick={() => setLocation('/distribution/partner/submit')}
             >
-              Submit referral
+              Referral intake status
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
@@ -368,6 +387,8 @@ export default function AgentReferrals() {
                           ]
                             .filter(Boolean)
                             .join(', ');
+                          const saleMode = opportunity.inventory?.modes?.sale;
+                          const rentMode = opportunity.inventory?.modes?.rent;
                           return (
                             <article
                               key={opportunity.developmentId}
@@ -380,7 +401,7 @@ export default function AgentReferrals() {
                                       {opportunity.developmentName}
                                     </h3>
                                     <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
-                                      Open for buyers
+                                      Open for referral
                                     </Badge>
                                   </div>
                                   {location ? (
@@ -391,25 +412,56 @@ export default function AgentReferrals() {
                                   ) : null}
                                   <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
                                     <span className="font-medium text-slate-700">
-                                      {formatPriceRange(opportunity.priceFrom, opportunity.priceTo)}
+                                      Sale: {saleMode
+                                        ? `${saleMode.availableCount} · ${formatModePrice(saleMode)}`
+                                        : 'Unavailable'}
+                                    </span>
+                                    <span className="font-medium text-slate-700">
+                                      Rent: {rentMode
+                                        ? `${rentMode.availableCount} · ${formatModePrice(rentMode, true)}`
+                                        : 'Unavailable'}
                                     </span>
                                     <span className="font-medium text-emerald-700">
                                       {getRewardDisplay(opportunity)}
                                     </span>
                                   </div>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  className="shrink-0"
-                                  onClick={() =>
-                                    setLocation(
-                                      `/distribution/partner/submit?developmentId=${Number(opportunity.developmentId)}`,
-                                    )
-                                  }
-                                >
-                                  Submit buyer
-                                  <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                                </Button>
+                                <div className="flex shrink-0 flex-wrap gap-2">
+                                  <Button
+                                    size="sm"
+                                    disabled={
+                                      !saleMode ||
+                                      saleMode.availableCount <= 0 ||
+                                      saleMode.priceFrom <= 0 ||
+                                      saleMode.priceTo < saleMode.priceFrom
+                                    }
+                                    onClick={() =>
+                                      setLocation(
+                                        `/distribution/partner/submit?developmentId=${Number(opportunity.developmentId)}&marketMode=sale`,
+                                      )
+                                    }
+                                  >
+                                    Refer buyer
+                                    <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={
+                                      !rentMode ||
+                                      rentMode.availableCount <= 0 ||
+                                      rentMode.priceFrom <= 0 ||
+                                      rentMode.priceTo < rentMode.priceFrom
+                                    }
+                                    onClick={() =>
+                                      setLocation(
+                                        `/distribution/partner/submit?developmentId=${Number(opportunity.developmentId)}&marketMode=rent`,
+                                      )
+                                    }
+                                  >
+                                    Refer renter
+                                  </Button>
+                                </div>
                               </div>
                             </article>
                           );

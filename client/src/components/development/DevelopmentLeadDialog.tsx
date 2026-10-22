@@ -377,6 +377,7 @@ export function DevelopmentLeadDialog({
       leadSource: copy.leadSource,
       sourceSurface: ctaLocation || 'development_detail',
       referrerUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+      distributionSearchContextToken: urlParams?.get('dnctx') || undefined,
       utmSource: urlParams?.get('utm_source') || undefined,
       utmMedium: urlParams?.get('utm_medium') || undefined,
       utmCampaign: urlParams?.get('utm_campaign') || undefined,

@@ -477,9 +477,14 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     expect(persistedRow?.id).toBeTruthy();
   });
 
-  it('computes payout readiness true when all required docs are verified', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+  it('computes payout readiness when required docs and the configured milestone are verified', async () => {
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+      payoutMilestone: 'bond_approval',
+    });
     const caller = buildCaller(seed.managerUserId);
+    await setDealStage(seed.dealId, 'bond_approved');
 
     for (const templateId of seed.templateIds) {
       await caller.distribution.manager.updateDealDocumentStatus({
@@ -570,7 +575,11 @@ describeWithDb('distribution.manager deal checklist integration', () => {
   });
 
   it('blocks manager transition to commission_pending until payout readiness is satisfied', async () => {
-    const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 2 });
+    const seed = await seedChecklistScenario({
+      includePrimaryAssignment: true,
+      requiredDocsCount: 2,
+      payoutMilestone: 'bond_approval',
+    });
     const caller = buildCaller(seed.managerUserId);
     await setDealStage(seed.dealId, 'bond_approved');
 
@@ -602,7 +611,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
     });
   });
 
-  it('blocks admin transition to commission_paid unless forced when payout readiness is missing', async () => {
+  it('requires commission settlement with a payment reference instead of a direct paid-stage override', async () => {
     const seed = await seedChecklistScenario({ includePrimaryAssignment: true, requiredDocsCount: 1 });
     const adminCaller = buildCaller(seed.managerUserId, 'super_admin');
     await setDealStage(seed.dealId, 'commission_pending');
@@ -613,7 +622,7 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         toStage: 'commission_paid',
       }),
     ).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
+      code: 'BAD_REQUEST',
     });
 
     await expect(
@@ -634,9 +643,10 @@ describeWithDb('distribution.manager deal checklist integration', () => {
         force: true,
         notes: 'Manual payout override approved by ops lead.',
       }),
-    ).resolves.toMatchObject({
-      success: true,
-      stage: 'commission_paid',
+    ).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message:
+        'Mark the commission entry paid with its payment reference; that action advances the deal to commission_paid.',
     });
   });
 

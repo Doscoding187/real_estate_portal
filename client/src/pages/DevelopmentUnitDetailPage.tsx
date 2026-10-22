@@ -488,6 +488,10 @@ export default function DevelopmentUnitDetailPage() {
     if (!development || !selectedUnit) return;
     const query = new URLSearchParams();
     query.set('unit', toUnitRouteKey(selectedUnit));
+    const distributionSearchContext = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : '',
+    ).get('dnctx');
+    if (distributionSearchContext) query.set('dnctx', distributionSearchContext);
     const qualificationPath = withSearchReturn(
       `/development/${development.slug}/qualification?${query.toString()}`,
     );

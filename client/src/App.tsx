@@ -155,6 +155,9 @@ const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const DistributionManagerDashboard = lazy(
   () => import('./pages/distribution/DistributionManagerDashboard'),
 );
+const SelectedTeamLeadQueuePage = lazy(
+  () => import('./pages/distribution/SelectedTeamLeadQueuePage'),
+);
 const ManagerDevelopmentOpsPage = lazy(
   () => import('./pages/distribution/ManagerDevelopmentOpsPage'),
 );
@@ -618,6 +621,7 @@ function Router() {
             <Redirect to="/distribution/manager/developments" />
           </Route>
           <Route path="/distribution/manager/legacy" component={DistributionManagerDashboard} />
+          <Route path="/distribution/manager/lead-queue" component={SelectedTeamLeadQueuePage} />
           <Route path="/distribution/manager/developments" component={ManagerDevelopmentOpsPage} />
           <Route
             path="/distribution/manager/developments/:developmentId"

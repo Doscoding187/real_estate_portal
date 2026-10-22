@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
-import { applicationRequirements, dealRequirementStatuses, developmentDocuments, distributionDeals } from '../../drizzle/schema';
+import { applicationRequirements, dealRequirementStatuses, distributionDeals } from '../../drizzle/schema';
 import { getDb } from '../db';
 
 export type DealRequirementStatus =
@@ -11,7 +11,7 @@ export type DealRequirementStatus =
   | 'rejected'
   | 'waived';
 
-export type DealRequirementStatusSource = 'user_upload' | 'manager_review' | 'linked_development_document';
+export type DealRequirementStatusSource = 'user_upload' | 'manager_review';
 
 export type TransitionActorRole = 'referrer' | 'manager' | 'developer_admin' | 'system';
 
@@ -125,7 +125,6 @@ export async function transitionDealRequirementStatus(
       .select({
         id: applicationRequirements.id,
         developmentId: applicationRequirements.developmentId,
-        linkedDevelopmentDocumentId: applicationRequirements.linkedDevelopmentDocumentId,
       })
       .from(applicationRequirements)
       .where(eq(applicationRequirements.id, input.requirementId))
@@ -160,10 +159,6 @@ export async function transitionDealRequirementStatus(
       uploadedFileStorageKey: input.uploadedFileStorageKey ?? null,
       uploadedFileUrl: input.uploadedFileUrl ?? null,
       uploadedFileName: input.uploadedFileName ?? null,
-      linkedDevelopmentDocumentId:
-        input.source === 'linked_development_document'
-          ? (requirement.linkedDevelopmentDocumentId ?? null)
-          : null,
       submittedBy:
         input.toStatus === 'uploaded' || input.toStatus === 'pending_review' ? (input.actorUserId ?? null) : null,
       submittedAt: input.toStatus === 'uploaded' || input.toStatus === 'pending_review' ? timestamp : null,
@@ -194,41 +189,5 @@ export async function transitionDealRequirementStatus(
       fromStatus,
       toStatus: input.toStatus,
     };
-  });
-}
-
-export async function autoVerifyRequirementFromLinkedDevelopmentDocument(input: {
-  dealId: number;
-  requirementId: number;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  const [requirement] = await db
-    .select({
-      linkedDevelopmentDocumentId: applicationRequirements.linkedDevelopmentDocumentId,
-    })
-    .from(applicationRequirements)
-    .where(eq(applicationRequirements.id, input.requirementId))
-    .limit(1);
-
-  if (!requirement?.linkedDevelopmentDocumentId) return null;
-
-  const [asset] = await db
-    .select({ id: developmentDocuments.id, isActive: developmentDocuments.isActive })
-    .from(developmentDocuments)
-    .where(eq(developmentDocuments.id, Number(requirement.linkedDevelopmentDocumentId)))
-    .limit(1);
-
-  if (!asset || Number(asset.isActive) !== 1) return null;
-
-  return transitionDealRequirementStatus({
-    dealId: input.dealId,
-    requirementId: input.requirementId,
-    toStatus: 'verified',
-    actorUserId: null,
-    actorRole: 'system',
-    source: 'linked_development_document',
-    notes: 'AUTO_VERIFIED: linked_development_document',
   });
 }

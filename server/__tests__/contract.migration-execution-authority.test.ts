@@ -494,8 +494,11 @@ describe('migration execution authority', () => {
         '0113_legal_active_release.sql',
         '0114_user_legal_acceptances.sql',
         '0115_non_geographic_place_search_eligibility.sql',
+        '0116_distribution_selected_practitioners.sql',
+        '0117_distribution_listing_lead_queue.sql',
+        '0118_distribution_listing_lead_queue_events.sql',
     ]);
-    expect(executionManifest.expectedHead).toBe('0115_non_geographic_place_search_eligibility.sql');
+    expect(executionManifest.expectedHead).toBe('0118_distribution_listing_lead_queue_events.sql');
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);
     expect(executionManifest.historyTable).toBe('sql_migration_history');

@@ -39,6 +39,104 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+const saleMode = {
+  availableCount: 5,
+  priceFrom: 1_000_000,
+  priceTo: 1_500_000,
+  priceBasis: 'purchase_price' as const,
+};
+const rentMode = {
+  availableCount: 3,
+  priceFrom: 12_000,
+  priceTo: 16_000,
+  priceBasis: 'monthly_rent' as const,
+};
+
+const partnerItem = {
+  developmentId: 101,
+  developmentName: 'Hillside Gardens',
+  city: 'Johannesburg',
+  province: 'Gauteng',
+  campaign: {
+    visible: true,
+    lifecycle: 'selling',
+    name: 'Hillside Gardens',
+    tagline: 'Modern homes near local schools',
+    description: 'Secure estate living close to schools, retail, and transport.',
+    developmentType: 'residential',
+    city: 'Johannesburg',
+    province: 'Gauteng',
+    images: [],
+  },
+  inventory: {
+    phaseScope: 'phase-released',
+    modes: { sale: saleMode, rent: rentMode },
+  },
+  contacts: [
+    {
+      id: 1,
+      phaseId: null,
+      phaseName: null,
+      roleTitle: 'Sales contact',
+      displayName: 'Nomsa Example',
+      organizationName: 'Hillside Sales',
+      email: 'sales@example.test',
+      phone: '071 000 0000',
+      responsibility: null,
+    },
+  ],
+  programPromotion: {
+    headline: 'Limited launch offer',
+    description: 'Ask the partner manager about current terms.',
+    highlightBullets: ['New homes near schools'],
+  },
+  program: {
+    isActive: true,
+    currencyCode: 'ZAR',
+    commissionModel: 'flat_percentage',
+    defaultCommissionPercent: 1.5,
+    defaultCommissionAmount: null,
+    payoutMilestone: 'bond_approval',
+    payoutMilestoneNotes: null,
+  },
+  computed: {
+    commissionDisplay: '1.5% referral payout',
+    payoutDisplay: 'Paid after bond approval',
+  },
+  opportunity: {
+    status: 'ready',
+    distributionActive: true,
+    partnerEntitled: true,
+    campaignVisibility: 'visible',
+    openForReferral: true,
+    marketability: 'marketable',
+    friendlyMessage: 'Ready for buyer referrals.',
+  },
+  requiredDocuments: [
+    {
+      templateId: 1,
+      documentCode: 'id_document',
+      documentLabel: 'Buyer ID document',
+      category: 'client_required_document' as const,
+      isRequired: true,
+      sortOrder: 1,
+    },
+  ],
+  sourceDocuments: [],
+  unitTypes: [
+    {
+      id: 'unit-type-1',
+      name: '2 Bed',
+      description: null,
+      bedrooms: 2,
+      bathrooms: 1,
+      size: 62,
+      imageUrl: null,
+      modes: { sale: saleMode, rent: rentMode },
+    },
+  ],
+};
+
 describe('PartnerDevelopmentsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -47,100 +145,30 @@ describe('PartnerDevelopmentsPage', () => {
     mockListProgramTermsQuery.mockReturnValue({
       isLoading: false,
       error: null,
-      data: {
-        items: [
-          {
-            developmentId: 101,
-            developmentName: 'Hillside Gardens',
-            city: 'Johannesburg',
-            suburb: 'Fourways',
-            province: 'Gauteng',
-            description: 'Secure estate living close to schools, retail, and transport.',
-            priceFrom: 1000000,
-            priceTo: 1500000,
-            brand: {
-              cataloguePublisherId: 1,
-              brandName: 'Ubuntu Homes',
-              publicContactEmail: 'sales@ubuntu.example',
-            },
-            brochure: {
-              contactName: 'Nomsa',
-              contactPhone: '071 000 0000',
-              contactEmail: 'nomsa@ubuntu.example',
-            },
-            features: ['Close to schools', 'Secure estate'],
-            amenities: ['Fibre ready'],
-            program: {
-              commissionModel: 'flat_percentage',
-              defaultCommissionPercent: 1.5,
-              defaultCommissionAmount: null,
-              payoutMilestone: 'bond_approval',
-              payoutMilestoneNotes: null,
-            },
-            computed: {
-              commissionDisplay: 'R 0',
-              payoutDisplay: 'Paid after bond approval',
-            },
-            opportunity: {
-              status: 'ready',
-              friendlyMessage: 'Ready for buyer referrals.',
-            },
-            requiredDocuments: [
-              { templateId: 1, documentLabel: 'Buyer ID document', isRequired: true },
-            ],
-            sourceDocuments: [
-              {
-                templateId: 2,
-                documentLabel: 'Brochure',
-                fileUrl: 'https://example.com/brochure.pdf',
-                fileName: 'brochure.pdf',
-              },
-            ],
-            unitTypes: [
-              {
-                name: '2 Bed',
-                bedrooms: 2,
-                bathrooms: 1,
-                unitSize: 62,
-                priceFrom: 1000000,
-                priceTo: 1200000,
-              },
-            ],
-          },
-        ],
-      },
+      data: { items: [partnerItem] },
     });
   });
 
-  it('shows sales inventory reward, payout, brochure, and submit actions', () => {
+  it('shows separate current sale and rental availability with mode-specific referral actions', () => {
     render(<PartnerDevelopmentsPage />);
 
-    expect(screen.getByText('Estimated reward')).toBeInTheDocument();
-    expect(screen.getAllByText(/R 15\s000 estimated reward/)).not.toHaveLength(0);
-    expect(screen.getByText('Paid after bond approval')).toBeInTheDocument();
-    expect(screen.getByText(/Best buyer:/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit Buyer' })).toBeEnabled();
-    expect(screen.queryByText(/^R 0$/)).not.toBeInTheDocument();
+    expect(screen.getByText('Hillside Gardens')).toBeInTheDocument();
+    expect(screen.getByText('Sale availability')).toBeInTheDocument();
+    expect(screen.getByText('Rental availability')).toBeInTheDocument();
+    expect(screen.getByText(/5 available/)).toBeInTheDocument();
+    expect(screen.getByText(/3 available/)).toBeInTheDocument();
+    expect(screen.getByText('1.5% referral payout')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refer a buyer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Refer a renter' })).toBeEnabled();
+    expect(screen.getByText(/Developer contacts shared with partners/)).toBeInTheDocument();
   });
 
-  it('opens a buyer-facing development brochure', () => {
+  it('keeps Developer resource links empty and shows Distribution process requirements', () => {
     render(<PartnerDevelopmentsPage />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Brochure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Program process and requirements' }));
 
-    expect(screen.getAllByText('Hillside Gardens')).not.toHaveLength(0);
-    expect(screen.getAllByText(/Fourways \| Johannesburg \| Gauteng/)).not.toHaveLength(0);
-    expect(screen.getByText(/Secure estate living close to schools/)).toBeInTheDocument();
-    expect(screen.getAllByText('Close To Schools')).not.toHaveLength(0);
-    expect(screen.getAllByText('Secure Estate')).not.toHaveLength(0);
-    expect(screen.getByText('62m2 2 bed 1 bath')).toBeInTheDocument();
-    expect(screen.getByText('R 1 000 000 - R 1 200 000')).toBeInTheDocument();
-    expect(screen.getAllByText('Estimated Bond Payment')).not.toHaveLength(0);
-    expect(screen.getAllByText('Qualifying income')).not.toHaveLength(0);
-    expect(screen.queryByText('Contact Nomsa')).not.toBeInTheDocument();
-    expect(screen.getByText('Print / Download PDF')).toBeInTheDocument();
-    expect(screen.queryByText('Referral Reward')).not.toBeInTheDocument();
-    expect(screen.queryByText('Application Documents')).not.toBeInTheDocument();
-    expect(screen.queryByText('Buyer ID document')).not.toBeInTheDocument();
+    expect(screen.getByText('Developer shared resources are not connected yet.')).toBeInTheDocument();
+    expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
   });
 });

@@ -50,6 +50,10 @@ vi.mock('@/lib/trpc', () => ({
   },
 }));
 
+vi.mock('./DevelopmentTeamContacts', () => ({
+  default: () => null,
+}));
+
 import DevelopmentHome from './DevelopmentHome';
 
 function homeData(overrides: Record<string, unknown> = {}) {
@@ -265,6 +269,7 @@ describe('DevelopmentHome Slice 2 Market Readiness', () => {
     expect(updateUnitAvailabilityMutationMock.mutate).toHaveBeenCalledWith({
       developmentId: 42,
       unitTypeId: 'unit-type-1',
+      expectedAvailableUnits: 4,
       availableUnits: 3,
       reason: 'Reconciled phase one availability after a confirmed sale.',
     });

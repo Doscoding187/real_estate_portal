@@ -15,6 +15,7 @@ The start page's **Show local demo passwords** panel reads only the existing mac
 | `local-agent@listify.local` | Fresh independent agent, no invoice or paid term seeded. Finish setup, request an invoice, then select **I’ve paid**. |
 | `payment-agent@listify.local` | Invoice and payment notice under review after the local rehearsal; access remains locked. |
 | `journey-agent@listify.local` | Independent agent used for the recorded walkthrough. Its actual local progress is retained. |
+| `referrer@listify.local` | Local Distribution partner identity. Open `/distribution/partner/overview` to review empty and paused states; no programs, referrals, or buyer details are seeded. |
 | `home-preview-agent@listify.local` | Agency-associated agent with published sample homes and fixture access. |
 | `home-preview-agency@listify.local` | Sample agency and inventory. |
 | `home-preview-developer@listify.local` | Sample developer organisation, development and unit. |

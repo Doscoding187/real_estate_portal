@@ -135,13 +135,7 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
   });
 
   /**
-   * Property 35: Phase Status Transitions Are Valid
-   * Feature: developer-lead-management, Property 35
-   * Validates: Requirements 15.4
-   *
-   * For any phase status update, the new status should be one of the valid values
-   * (planning, pre_launch, selling, sold out, completed), and invalid status values
-   * should be rejected.
+   * Phase lifecycle changes must use the audited developer workspace action.
    */
   it.prop(
     [
@@ -149,7 +143,7 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
       fc.constantFrom('planning', 'pre_launch', 'selling', 'sold_out', 'completed'),
     ],
     { numRuns: 20 },
-  )('Property 35: Phase status transitions are valid', async (userId, newStatus) => {
+  )('generic phase updates cannot bypass the audited release action', async (userId, newStatus) => {
     if (skipTests) return;
 
     let developerContext: DeveloperTestContext | null = null;
@@ -172,23 +166,20 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
         name: 'Phase 1',
         phaseNumber: 1,
         status: 'planning',
+        reason: 'Preparing the first phase for controlled release.',
       });
 
-      // Update phase status
-      const updatedPhase = await developmentService.updatePhase(phase.id, developer.userId, {
-        status: newStatus,
-      });
+      await expect(
+        developmentService.updatePhase(phase.id, developer.userId, { status: newStatus }),
+      ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
 
-      // Property: Status should be one of the valid values
-      const validStatuses = ['planning', 'pre_launch', 'selling', 'sold_out', 'completed'];
-      expect(validStatuses).toContain(updatedPhase.status);
-
-      // Property: Status should match the requested status
-      expect(updatedPhase.status).toBe(newStatus);
-
-      // Property: Other phase properties should remain unchanged
-      expect(updatedPhase.name).toBe(phase.name);
-      expect(updatedPhase.phaseNumber).toBe(phase.phaseNumber);
+      const developmentWithPhases = await developmentService.getDevelopmentWithPhases(
+        development.id,
+      );
+      const persistedPhase = developmentWithPhases?.phases.find(
+        (candidate: { id: number }) => candidate.id === phase.id,
+      );
+      expect(persistedPhase?.status).toBe('planning');
     } finally {
       // Cleanup
       if (developerContext) {
@@ -220,17 +211,14 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
           province: 'Test Province',
         });
 
-        // Create phase
-        const phase = await developmentService.createPhase(development.id, developer.userId, {
-          name: 'Phase 1',
-          phaseNumber: 1,
-          status: 'planning',
-        });
-
-        // Attempt to update with invalid status should fail
-        // (This would be caught by TypeScript/Zod validation in actual API calls)
-        const validStatuses = ['planning', 'pre_launch', 'selling', 'sold_out', 'completed'];
-        expect(validStatuses).toContain(phase.status);
+        await expect(
+          developmentService.createPhase(development.id, developer.userId, {
+            name: 'Phase 1',
+            phaseNumber: 1,
+            status: 'not-a-phase-state',
+            reason: 'Preparing the first phase for controlled release.',
+          }),
+        ).rejects.toMatchObject({ code: 'PRECONDITION_FAILED' });
       } finally {
         // Cleanup
         if (developerContext) {
@@ -337,6 +325,7 @@ describe('Development Service - Property Tests', { timeout: 30000 }, () => {
         name: 'Phase 1',
         phaseNumber: 1,
         status: 'planning',
+        reason: 'Preparing the first phase for controlled release.',
       });
 
       await developmentService.updateDevelopment(development.id, developer.userId, { phases: [] });
