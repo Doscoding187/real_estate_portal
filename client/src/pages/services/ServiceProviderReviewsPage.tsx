@@ -183,6 +183,11 @@ export default function ServiceProviderReviewsPage() {
         <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-10 md:px-6 md:py-12 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section className="space-y-3">
             <h2 className="text-lg font-bold">Published reviews</h2>
+            {reportMessage && (
+              <div className="rounded-2xl border border-[#E3EBF0] bg-white p-3 text-[13px] leading-6 text-[#0B1B2A]">
+                {reportMessage}
+              </div>
+            )}
             {reviews.length === 0 && (
               <div className="rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
                 No published reviews for this provider yet. Approved reviews appear after a
@@ -386,12 +391,6 @@ export default function ServiceProviderReviewsPage() {
             {submitMessage && (
               <div className="rounded-2xl border border-[#D8EDE7] bg-[#EDF8F6] p-4 text-[13px] leading-6 text-[#0B1B2A]">
                 {submitMessage}
-              </div>
-            )}
-
-            {reportMessage && (
-              <div className="rounded-2xl border border-[#E3EBF0] bg-white p-4 text-[13px] leading-6 text-[#0B1B2A]">
-                {reportMessage}
               </div>
             )}
           </aside>
