@@ -238,12 +238,15 @@ export default function PartnerProspectCheckFitPage() {
             <CardHeader>
               <CardTitle>Result</CardTitle>
               <CardDescription>
-                {activeCheckFit.prospectName ? `${activeCheckFit.prospectName} · ` : ''}
-                {activeCheckFit.coApplicantName
-                  ? `${activeCheckFit.coApplicantName} · `
-                  : ''}
-                Based on a combined gross monthly income of{' '}
-                {formatAmount(activeCheckFit.outputs.combinedGrossIncomeMonthly)}.
+                {[
+                  activeCheckFit.prospectName,
+                  activeCheckFit.coApplicantName,
+                ]
+                  .filter(Boolean)
+                  .join(' and ') || 'This check fit'}
+                {' — '}
+                {activeCheckFit.assumptions.jointAssessment ? 'combined ' : ''}gross monthly income
+                of {formatAmount(activeCheckFit.outputs.combinedGrossIncomeMonthly)}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -309,7 +312,12 @@ export default function PartnerProspectCheckFitPage() {
                   <p className="text-sm font-medium text-foreground">
                     Developments this prospect may qualify for
                   </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div
+                    role="region"
+                    aria-label="Developments the prospect may qualify for"
+                    tabIndex={0}
+                    className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1"
+                  >
                     {qualifiedMatches.map(match => {
                       const item = catalogueItemByDevelopmentId.get(match.developmentId);
                       const imageUrl = item?.imageUrl || null;
@@ -322,41 +330,41 @@ export default function PartnerProspectCheckFitPage() {
                       return (
                         <article
                           key={match.developmentId}
-                          className="flex flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm"
+                          className="flex w-[78%] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:w-[calc((100%_-_0.75rem)/2.2)]"
                         >
                           <div className="relative">
                             {imageUrl ? (
                               <img
                                 src={imageUrl}
                                 alt={match.developmentName}
-                                className="h-40 w-full object-cover"
+                                className="h-32 w-full object-cover"
                               />
                             ) : (
-                              <div className="flex h-40 w-full items-center justify-center bg-[#eef4fc]">
-                                <Building2 className="h-8 w-8 text-[#9cc0ee]" />
+                              <div className="flex h-32 w-full items-center justify-center bg-[#eef4fc]">
+                                <Building2 className="h-7 w-7 text-[#9cc0ee]" />
                               </div>
                             )}
-                            <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-[#cde9d2] bg-[#f5fcf6] px-2.5 py-1 text-[11px] font-medium text-[#2f8f4e]">
+                            <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full border border-[#cde9d2] bg-[#f5fcf6] px-2 py-0.5 text-[10.5px] font-medium text-[#2f8f4e]">
                               <Users className="h-3 w-3" />
                               May qualify
                             </span>
                           </div>
 
-                          <div className="flex flex-1 flex-col p-4">
-                            <h3 className="text-[16px] font-semibold leading-snug text-[#0b1c3f]">
+                          <div className="flex flex-1 flex-col p-3">
+                            <h3 className="text-[14px] font-semibold leading-snug text-[#0b1c3f]">
                               {match.developmentName}
                             </h3>
-                            <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
-                              <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            <p className="mt-1 flex items-center gap-1 text-[11.5px] text-muted-foreground">
+                              <MapPin className="h-3 w-3 shrink-0" />
                               {[match.city, match.province].filter(Boolean).join(', ') ||
                                 'Location to be confirmed'}
                             </p>
 
                             {developmentType || availableCount ? (
-                              <div className="mt-2 flex flex-wrap items-center gap-3 text-[12.5px] text-muted-foreground">
+                              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11.5px] text-muted-foreground">
                                 {developmentType ? (
-                                  <span className="inline-flex items-center gap-1.5">
-                                    <Building2 className="h-3.5 w-3.5" /> {developmentType}
+                                  <span className="inline-flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" /> {developmentType}
                                   </span>
                                 ) : null}
                                 {availableCount ? (
@@ -367,15 +375,16 @@ export default function PartnerProspectCheckFitPage() {
                               </div>
                             ) : null}
 
-                            <p className="mt-3 text-[17px] font-bold text-[#0b1c3f]">
-                              Qualifies for units from about {formatAmount(match.entryPrice)}
+                            <p className="mt-2 text-[14px] font-bold text-[#0b1c3f]">
+                              Qualifies from about {formatAmount(match.entryPrice)}
                             </p>
-                            <p className="mt-1 text-[12px] text-muted-foreground">
-                              Based on the income you entered, before any deposit is considered.
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              Before any deposit is considered.
                             </p>
 
                             <Button
-                              className="mt-4 w-full"
+                              size="sm"
+                              className="mt-3 w-full"
                               onClick={() =>
                                 setLocation(
                                   `/distribution/partner/submit?developmentId=${match.developmentId}&marketMode=sale&checkFitId=${activeCheckFit.id}`,
@@ -383,7 +392,7 @@ export default function PartnerProspectCheckFitPage() {
                               }
                             >
                               Refer this development
-                              <ArrowRight className="ml-2 h-4 w-4" />
+                              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </article>
@@ -420,7 +429,7 @@ export default function PartnerProspectCheckFitPage() {
           </Card>
         ) : null}
 
-        {checkFits.length ? (
+        {checkFits.length > 1 ? (
           <Card>
             <CardHeader>
               <CardTitle>Your check fits</CardTitle>
@@ -446,9 +455,11 @@ export default function PartnerProspectCheckFitPage() {
                     </span>
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {record.lockedByDealId
-                      ? 'Attached to a referral'
-                      : `${record.outputs.qualifiedDevelopmentCount} in reach`}
+                    {record.id === activeCheckFit?.id
+                      ? 'Shown above'
+                      : record.lockedByDealId
+                        ? 'Attached to a referral'
+                        : `${record.outputs.qualifiedDevelopmentCount} in reach`}
                   </span>
                 </button>
               ))}
