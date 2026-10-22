@@ -30,6 +30,10 @@ import {
   markReferralIntakeSubmitted,
 } from './distributionReferralIntakeWorkflowService';
 import { parseDistributionDealDocumentReference } from './distributionReferralEvidenceStorage';
+import {
+  attachProspectCheckFitToDeal,
+  readProspectCheckFitForSubmission,
+} from './distributionProspectCheckFitService';
 
 const DUPLICATE_WINDOW_DAYS = 30;
 
@@ -256,6 +260,7 @@ export async function createReferralDeal(
     notes?: string | null;
     clientReference?: string | null;
     assessmentId?: string | null;
+    checkFitId?: string | null;
   },
 ) {
   if (String(input.assessmentId || '').trim()) requireApprovedAffordabilityModel();
@@ -270,6 +275,17 @@ export async function createReferralDeal(
     developmentId: input.developmentId,
   });
   await assertPartnerDevelopmentReferralOpen({ db, developmentId: input.developmentId });
+
+  const checkFitId = String(input.checkFitId || '').trim();
+  const checkFit = checkFitId
+    ? await readProspectCheckFitForSubmission({
+        db,
+        actorUserId: input.actorUserId,
+        checkFitId,
+        developmentId: input.developmentId,
+      })
+    : null;
+
   const [distributionProgram] = await db
     .select({ programId: distributionPrograms.id })
     .from(distributionPrograms)
@@ -393,6 +409,20 @@ export async function createReferralDeal(
       commissionStatus: 'not_ready',
       attributionLockedAt: sql`CURRENT_TIMESTAMP`,
       attributionLockedBy: input.actorUserId,
+      ...(checkFit
+        ? {
+            prospectCheckFitId: checkFit.record.id,
+            affordabilityPurchasePrice: checkFit.record.outputs.estimatedPurchasePrice,
+            affordabilityAssumptionsJson: {
+              policyVersion: checkFit.record.policyVersion,
+              prospectName: checkFit.record.prospectName,
+              coApplicantName: checkFit.record.coApplicantName,
+              assumptions: checkFit.record.assumptions,
+              outputs: checkFit.record.outputs,
+              qualifiedDevelopmentCount: checkFit.record.outputs.qualifiedDevelopmentCount,
+            } as any,
+          }
+        : {}),
     });
 
     const dealId = Number((insertDealResult as any).insertId || 0);
@@ -401,6 +431,21 @@ export async function createReferralDeal(
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to create referral deal.',
       });
+    }
+
+    if (checkFit) {
+      const locked = await attachProspectCheckFitToDeal({
+        tx,
+        actorUserId: input.actorUserId,
+        checkFitId: checkFit.record.id,
+        dealId,
+      });
+      if (!locked) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'This check fit is already attached to a referral.',
+        });
+      }
     }
 
     await tx.insert(distributionDealEvents).values({
@@ -417,6 +462,13 @@ export async function createReferralDeal(
         marketMode: input.marketMode,
         developerProjectionRevision: developerProjection.revision,
         referralTermsSnapshotDigest: referralTermsSnapshot.digest,
+        ...(checkFit
+          ? {
+              prospectCheckFitId: checkFit.record.id,
+              prospectCheckFitPolicyVersion: checkFit.record.policyVersion,
+              estimatedPurchasePrice: checkFit.record.outputs.estimatedPurchasePrice,
+            }
+          : {}),
       } as any,
       notes: input.notes ?? null,
     });

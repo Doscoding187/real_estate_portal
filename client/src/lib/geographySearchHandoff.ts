@@ -3,7 +3,9 @@ import { normalizeLocationKey } from './locationUtils';
 import {
   encodeCanonicalLocationId,
   parseCanonicalLocationId,
+  parseCanonicalLocationIdentity,
 } from '../../../shared/locationAuthority';
+import { isCanonicalPlaceId } from '../../../shared/placeAuthority';
 import { isFactualGeographyId } from '../../../shared/factualRuntimeGeographyBridge';
 import {
   normalizeTransactionalResultState,
@@ -27,6 +29,13 @@ export interface GeographySearchContext {
 }
 
 export interface CanonicalSearchLocation {
+  /**
+   * The search scope.
+   *
+   * A place the published projection still carries carries the runtime scope, so a city search
+   * still covers its suburbs. A place it does not carry carries the Place Authority identity,
+   * and the scope kind is the level the authority asserted.
+   */
   scope: SearchScopeMember;
   context: GeographySearchContext;
   factualLocationId?: string;
@@ -120,47 +129,83 @@ export function createCanonicalSearchLocation(
     | 'id'
     | 'canonicalLocationId'
     | 'factualLocationId'
+    | 'runtimeLocationId'
     | 'type'
     | 'provinceSlug'
     | 'citySlug'
     | 'slug'
   >,
 ): CanonicalSearchLocation | undefined {
-  const parsed = parseCanonicalLocationId(location.canonicalLocationId || location.id);
-  if (!parsed) return undefined;
+  if (location.type === 'area') return undefined;
 
-  const expectedLevel =
-    location.type === 'province' ? 'province' : location.type === 'city' ? 'city' : 'suburb';
-  if (location.type === 'area' || parsed.level !== expectedLevel) return undefined;
+  // A place the published projection still carries keeps the runtime query handle, so a city
+  // search still covers its suburbs exactly as it did before the Place Authority took over
+  // discovery. A selection that still carries a runtime identity is used as it is.
+  const runtimeHandle =
+    location.runtimeLocationId ??
+    (parseCanonicalLocationId(location.canonicalLocationId || location.id)
+      ? location.canonicalLocationId || location.id
+      : undefined);
+  if (runtimeHandle) {
+    const parsed = parseCanonicalLocationId(runtimeHandle);
+    if (!parsed) return undefined;
+    const expectedLevel =
+      location.type === 'province' ? 'province' : location.type === 'city' ? 'city' : 'suburb';
+    if (parsed.level !== expectedLevel) return undefined;
 
-  const canonicalLocationId = encodeCanonicalLocationId(parsed.level, parsed.id);
-  if (parsed.level === 'province') {
+    const canonicalLocationId = encodeCanonicalLocationId(parsed.level, parsed.id);
+    const durable = location.factualLocationId ? { factualLocationId: location.factualLocationId } : {};
+    if (parsed.level === 'province') {
+      return {
+        scope: { kind: 'province', canonicalLocationId },
+        context: { province: location.provinceSlug || location.slug },
+        ...durable,
+      };
+    }
+    if (parsed.level === 'city') {
+      return {
+        scope: { kind: 'metro_city', canonicalLocationId },
+        context: {
+          province: location.provinceSlug,
+          city: location.citySlug || location.slug,
+        },
+        ...durable,
+      };
+    }
     return {
-      scope: { kind: 'province', canonicalLocationId },
-      context: { province: location.provinceSlug || location.slug },
-      ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
-    };
-  }
-
-  if (parsed.level === 'city') {
-    return {
-      scope: { kind: 'metro_city', canonicalLocationId },
+      scope: { kind: 'locality', canonicalLocationId },
       context: {
         province: location.provinceSlug,
-        city: location.citySlug || location.slug,
+        city: location.citySlug,
+        suburb: location.slug,
       },
-      ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
+      ...durable,
     };
   }
 
+  // A place the published projection does not carry is searched through the Place Authority.
+  // The identity does not carry a level, so the scope kind is the level the authority asserted.
+  const identity = parseCanonicalLocationIdentity(location.canonicalLocationId || location.id);
+  if (!identity || identity.kind !== 'place') return undefined;
+  if (location.type === 'province') {
+    return {
+      scope: { kind: 'province', canonicalLocationId: identity.placeId },
+      context: { province: location.provinceSlug || location.slug },
+    };
+  }
+  if (location.type === 'city') {
+    return {
+      scope: { kind: 'metro_city', canonicalLocationId: identity.placeId },
+      context: { province: location.provinceSlug, city: location.citySlug || location.slug },
+    };
+  }
   return {
-    scope: { kind: 'locality', canonicalLocationId },
+    scope: { kind: 'locality', canonicalLocationId: identity.placeId },
     context: {
       province: location.provinceSlug,
       city: location.citySlug,
       suburb: location.slug,
     },
-    ...(location.factualLocationId ? { factualLocationId: location.factualLocationId } : {}),
   };
 }
 
@@ -232,7 +277,22 @@ export function buildTransactionalGeographyHref(
   }
 
   const geography: SearchIntent['geography'] = { level: 'country' };
-  if (scope?.kind === 'province') {
+  const placeScopeId =
+    scope &&
+    scope.kind !== 'search_area' &&
+    scope.kind !== 'multi_location' &&
+    isCanonicalPlaceId(scope.canonicalLocationId)
+      ? scope.canonicalLocationId
+      : undefined;
+  if (placeScopeId) {
+    // A place the published projection does not carry is searched through the Place Authority.
+    // One authority per request: a Place identity never travels with a runtime scope.
+    if (input.factualLocationId) return undefined;
+    // One authority per request: the Place identity travels alone. The published slugs are
+    // display context and stay on the selection, not in the search criteria.
+    geography.level = 'canonical_place';
+    geography.canonicalPlaceId = placeScopeId;
+  } else if (scope?.kind === 'province') {
     geography.level = 'province';
     geography.locationId = scope.canonicalLocationId;
     Object.assign(geography, contextForScope(scope, input.context));

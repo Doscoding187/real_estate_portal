@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0143_distribution_deal_document_delivery_file_reference.sql",
+  "expectedHead": "0148_distribution_prospect_check_fit_prospect_names.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1502,6 +1502,57 @@
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 144,
+      "filename": "0144_distribution_prospect_check_fits.sql",
+      "checksum": "773a0ecd1781caad456463a190e535bb4cbeec137965239deb25ca1342982738",
+      "parent": "0143_distribution_deal_document_delivery_file_reference.sql",
+      "parentChecksum": "7d9a0d146b5e1e0657c2ab836cd9a28612b4615aea7423aa4678f9ded7b01a6b",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 145,
+      "filename": "0145_distribution_prospect_check_fit_matches.sql",
+      "checksum": "5a3c30fb7b735ad153505f2a243ac473968f037dfc434bf9357c5e6a81d6f587",
+      "parent": "0144_distribution_prospect_check_fits.sql",
+      "parentChecksum": "773a0ecd1781caad456463a190e535bb4cbeec137965239deb25ca1342982738",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 146,
+      "filename": "0146_distribution_deal_prospect_check_fit_reference.sql",
+      "checksum": "f9d85c9c6d91c25e669f1cbd80402729fb40c601ca12a148abe9ccb7a5406863",
+      "parent": "0145_distribution_prospect_check_fit_matches.sql",
+      "parentChecksum": "5a3c30fb7b735ad153505f2a243ac473968f037dfc434bf9357c5e6a81d6f587",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 147,
+      "filename": "0147_distribution_deal_prospect_check_fit_foreign_key.sql",
+      "checksum": "544fcc4ab018a02e7e0431cedc33c7a68ba7aebcad1feec0debfc9a3ca201975",
+      "parent": "0146_distribution_deal_prospect_check_fit_reference.sql",
+      "parentChecksum": "f9d85c9c6d91c25e669f1cbd80402729fb40c601ca12a148abe9ccb7a5406863",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 148,
+      "filename": "0148_distribution_prospect_check_fit_prospect_names.sql",
+      "checksum": "5e19dc561a84653e72f878f3dcd33e3f603c9a5db2215e647838b13b14fc452a",
+      "parent": "0147_distribution_deal_prospect_check_fit_foreign_key.sql",
+      "parentChecksum": "544fcc4ab018a02e7e0431cedc33c7a68ba7aebcad1feec0debfc9a3ca201975",
+      "kind": "exceptional",
+      "statementPolicy": "approved-exception",
+      "requiredReferenceDataVersion": null,
+      "approvalReference": "Edward approval of the referrer prospect check fit prospect names, 2026-10-21; migration authoring and disposable worktree verification"
     }
   ]
 }

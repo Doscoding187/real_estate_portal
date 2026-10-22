@@ -20,6 +20,7 @@ const intakeDocumentSchema = z.object({
     .min(1)
     .max(40_000)
     .refine(value => value.trim().length > 0, 'Document text cannot be blank.'),
+  downloadUrl: z.string().trim().max(2048).nullable().optional(),
 });
 
 const intakeRecipientSchema = z.object({

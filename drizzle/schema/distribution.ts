@@ -803,6 +803,70 @@ export const distributionAgentTiers = mysqlTable(
   ],
 );
 
+export const distributionProspectCheckFits = mysqlTable(
+  'distribution_prospect_check_fits',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    actorUserId: int('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    prospectName: varchar('prospect_name', { length: 200 }),
+    grossIncomeMonthly: int('gross_income_monthly').notNull(),
+    coApplicantGrossIncomeMonthly: int('co_applicant_gross_income_monthly'),
+    combinedGrossIncomeMonthly: int('combined_gross_income_monthly').notNull(),
+    policyVersion: varchar('policy_version', { length: 64 }).notNull(),
+    assumptionsJson: json('assumptions_json')
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    outputsJson: json('outputs_json')
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    lockedAt: timestamp('locked_at', { mode: 'string' }),
+    lockedByDealId: int('locked_by_deal_id'),
+    lockedByUserId: int('locked_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+    coApplicantName: varchar('co_applicant_name', { length: 200 }),
+  },
+  table => [
+    index('idx_distribution_prospect_check_fits_actor').on(table.actorUserId),
+    index('idx_distribution_prospect_check_fits_created_at').on(table.createdAt),
+    index('idx_distribution_prospect_check_fits_locked_at').on(table.lockedAt),
+    index('idx_distribution_prospect_check_fits_locked_deal').on(table.lockedByDealId),
+  ],
+);
+
+export const distributionProspectCheckFitMatches = mysqlTable(
+  'distribution_prospect_check_fit_matches',
+  {
+    id: varchar({ length: 36 }).primaryKey(),
+    checkFitId: varchar('check_fit_id', { length: 36 })
+      .notNull()
+      .references(() => distributionProspectCheckFits.id, { onDelete: 'cascade' }),
+    programId: int('program_id')
+      .notNull()
+      .references(() => distributionPrograms.id, { onDelete: 'cascade' }),
+    developmentId: int('development_id')
+      .notNull()
+      .references(() => developments.id, { onDelete: 'cascade' }),
+    developmentName: varchar('development_name', { length: 255 }).notNull(),
+    city: varchar('city', { length: 120 }),
+    province: varchar('province', { length: 120 }),
+    entryPrice: int('entry_price').notNull(),
+    currencyCode: varchar('currency_code', { length: 10 }).default('ZAR').notNull(),
+    qualified: tinyint('qualified').default(0).notNull(),
+    matchRank: int('match_rank').notNull(),
+    observedAt: timestamp('observed_at', { mode: 'string' }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_distribution_prospect_check_fit_matches_check_fit').on(table.checkFitId),
+    index('idx_distribution_prospect_check_fit_matches_development').on(table.developmentId),
+    index('idx_distribution_prospect_check_fit_matches_program').on(table.programId),
+    index('idx_distribution_prospect_check_fit_matches_qualified').on(table.checkFitId, table.qualified),
+  ],
+);
+
 export const distributionDeals = mysqlTable(
   'distribution_deals',
   {
@@ -899,6 +963,10 @@ export const distributionDeals = mysqlTable(
       Record<string, unknown>
     >(),
     referralTermsSnapshotDigest: varchar('referral_terms_snapshot_digest', { length: 64 }),
+    prospectCheckFitId: varchar('prospect_check_fit_id', { length: 36 }).references(
+      () => distributionProspectCheckFits.id,
+      { onDelete: 'set null' },
+    ),
   },
   table => [
     unique('ux_distribution_deal_external_ref').on(table.externalRef),
@@ -915,6 +983,7 @@ export const distributionDeals = mysqlTable(
     index('idx_distribution_deals_affordability_snapshot').on(table.affordabilityMatchSnapshotId),
     index('idx_distribution_deals_deal_amount').on(table.dealAmount),
     index('idx_distribution_deals_platform_amount').on(table.platformAmount),
+    index('idx_distribution_deals_prospect_check_fit').on(table.prospectCheckFitId),
   ],
 );
 

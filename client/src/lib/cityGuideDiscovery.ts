@@ -4,7 +4,7 @@ import type {
 } from '@shared/searchDiscovery';
 import type { CityGuideContent } from '@shared/cityGuideContent';
 import type { LocationNode } from '@/types/location';
-import { buildLocationDiscoveryPath } from './locationDiscovery';
+import { isPublishedPathConsistent } from './locationDiscovery';
 
 export function guidePlaceNode(result: CanonicalLocationDiscoveryResult): LocationNode {
   return {
@@ -20,23 +20,33 @@ export function guidePlaceNode(result: CanonicalLocationDiscoveryResult): Locati
     provinceSlug: result.provinceSlug,
     citySlug: result.citySlug,
     parentCanonicalLocationId: result.parentCanonicalLocationId,
+    canonicalPath: result.canonicalPath,
+    ...(result.runtimeLocationId ? { runtimeLocationId: result.runtimeLocationId } : {}),
   };
 }
+
+/**
+ * The places a city guide may offer.
+ *
+ * A city guide owns one published city scope, and a suburb belongs to it when
+ * the published path names that city. The comparison is on the published city
+ * scope, not on a runtime parent handle, because the Place Authority asserts a
+ * municipality edge and does not always carry the town-cluster edge.
+ */
 export function cityGuideChoices(
   results: readonly SearchDiscoveryResult[],
   guide: Pick<CityGuideContent, 'provinceSlug'>,
-  cityId?: number,
+  citySlug?: string,
 ) {
   return results
     .filter(
       (result): result is CanonicalLocationDiscoveryResult =>
         result.kind === 'canonical_location' &&
         result.provinceSlug === guide.provinceSlug &&
-        (cityId === undefined ||
-          (result.factualLevel === 'suburb' &&
-            result.parentCanonicalLocationId === `city:${cityId}`)),
+        (citySlug === undefined ||
+          (result.factualLevel === 'suburb' && result.citySlug === citySlug)),
     )
-    .filter(result => buildLocationDiscoveryPath(guidePlaceNode(result)) === result.canonicalPath);
+    .filter(result => isPublishedPathConsistent(guidePlaceNode(result)));
 }
 export function exactGuidePlace(
   results: readonly SearchDiscoveryResult[],

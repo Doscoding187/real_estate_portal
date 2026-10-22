@@ -1,0 +1,23 @@
+CREATE TABLE `distribution_prospect_check_fit_matches` (
+  `id` varchar(36) NOT NULL,
+  `check_fit_id` varchar(36) NOT NULL,
+  `program_id` int NOT NULL,
+  `development_id` int NOT NULL,
+  `development_name` varchar(255) NOT NULL,
+  `city` varchar(120),
+  `province` varchar(120),
+  `entry_price` int NOT NULL,
+  `currency_code` varchar(10) NOT NULL DEFAULT 'ZAR',
+  `qualified` tinyint NOT NULL DEFAULT 0,
+  `match_rank` int NOT NULL,
+  `observed_at` timestamp NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT (now()),
+  CONSTRAINT `distribution_prospect_check_fit_matches_id` PRIMARY KEY (`id`),
+  KEY `idx_distribution_prospect_check_fit_matches_check_fit` (`check_fit_id`),
+  KEY `idx_distribution_prospect_check_fit_matches_development` (`development_id`),
+  KEY `idx_distribution_prospect_check_fit_matches_program` (`program_id`),
+  KEY `idx_distribution_prospect_check_fit_matches_qualified` (`check_fit_id`,`qualified`),
+  CONSTRAINT `distribution_prospect_check_fit_matches_check_fit_id_fk` FOREIGN KEY (`check_fit_id`) REFERENCES `distribution_prospect_check_fits` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `distribution_prospect_check_fit_matches_program_id_fk` FOREIGN KEY (`program_id`) REFERENCES `distribution_programs` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `distribution_prospect_check_fit_matches_development_id_fk` FOREIGN KEY (`development_id`) REFERENCES `developments` (`id`) ON DELETE CASCADE
+);

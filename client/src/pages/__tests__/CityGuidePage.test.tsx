@@ -10,7 +10,10 @@ vi.mock('@/lib/trpc', () => ({
       getCityData: { useQuery: cityQuery },
       getHeroCampaign: { useQuery: () => ({ data: null }) },
     },
-    location: { searchDiscoverySuggestions: { useQuery: () => ({ data: [] }) } },
+    location: {
+      searchDiscoverySuggestions: { useQuery: () => ({ data: [] }) },
+      placeSuggestions: { useQuery: () => ({ data: [] }) },
+    },
   },
 }));
 import CityGuidePage from '../CityGuidePage';

@@ -4,12 +4,8 @@ import {
   ArrowRight,
   Building2,
   Calculator,
-  Camera,
-  CheckCircle2,
-  FileText,
   Info,
   Loader2,
-  MapPin,
   Search,
   ShieldCheck,
 } from 'lucide-react';
@@ -18,16 +14,11 @@ import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
 import { DevelopmentUnitsDialog } from '@/components/distribution/partner/DevelopmentUnitsDialog';
 import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
-import {
-  formatBrochureCurrency,
-  getMinimumBrochureQualifyingIncome,
-} from '@/lib/distributionBrochure';
+import DevelopmentOpportunityCard from '@/components/distribution/partner/DevelopmentOpportunityCard';
 import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
-  formatDevelopmentTypeLabel,
-  formatOpportunityModePrice,
   hasPublishedMode,
   type OpportunityModeProjection,
 } from '@/lib/distributionOpportunityFormat';
@@ -47,10 +38,18 @@ function bedroomFilterValue(value: string | undefined): DistributionBedroomFilte
   return numeric === 1 || numeric === 2 || numeric === 3 ? numeric : null;
 }
 
-function bedroomMatchesFilter(bedrooms: number | null, label: string, filter: DistributionBedroomFilter) {
+function bedroomMatchesFilter(
+  bedrooms: number | null,
+  label: string,
+  filter: DistributionBedroomFilter,
+) {
   if (filter === 'studio') return bedrooms === 0 || /studio|bachelor/i.test(label);
-  if (filter === '4+') return (bedrooms !== null && bedrooms >= 4) || /[4-9](\s*bed|\s*br)/i.test(label);
-  return bedrooms === filter || new RegExp(`(?:^|\\D)${filter}\\s*(?:bed(?:room)?s?|br)(?:\\D|$)`, 'i').test(label);
+  if (filter === '4+')
+    return (bedrooms !== null && bedrooms >= 4) || /[4-9](\s*bed|\s*br)/i.test(label);
+  return (
+    bedrooms === filter ||
+    new RegExp(`(?:^|\\D)${filter}\\s*(?:bed(?:room)?s?|br)(?:\\D|$)`, 'i').test(label)
+  );
 }
 
 export default function PartnerDevelopmentsPage() {
@@ -78,9 +77,7 @@ export default function PartnerDevelopmentsPage() {
   const allItems = termsQuery.data?.items || [];
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const selectedBand = DISTRIBUTION_PRICE_BANDS[marketMode].find(
-      band => band.key === priceBand,
-    );
+    const selectedBand = DISTRIBUTION_PRICE_BANDS[marketMode].find(band => band.key === priceBand);
     const hasPriceBand = Boolean(selectedBand && selectedBand.key !== 'any');
     const selectedBedrooms = bedroomFilterValue(bedroomFilter);
 
@@ -109,7 +106,11 @@ export default function PartnerDevelopmentsPage() {
         );
         if (unitsWithMode.length) {
           return unitsWithMode.some((unitType: any) =>
-            bedroomMatchesFilter(unitType.bedrooms ?? null, String(unitType.name || ''), selectedBedrooms),
+            bedroomMatchesFilter(
+              unitType.bedrooms ?? null,
+              String(unitType.name || ''),
+              selectedBedrooms,
+            ),
           );
         }
       }
@@ -221,7 +222,9 @@ export default function PartnerDevelopmentsPage() {
                 className="mt-1.5 h-10 w-full rounded-lg border border-border bg-white px-3 text-sm font-normal text-foreground"
               >
                 {DISTRIBUTION_PRICE_BANDS[marketMode].map(band => (
-                  <option key={band.key} value={band.key}>{band.label}</option>
+                  <option key={band.key} value={band.key}>
+                    {band.label}
+                  </option>
                 ))}
               </select>
             </label>
@@ -235,7 +238,9 @@ export default function PartnerDevelopmentsPage() {
               >
                 <option value="">Any</option>
                 {DISTRIBUTION_BEDROOM_FILTERS.map(option => (
-                  <option key={option.label} value={String(option.key)}>{option.label}</option>
+                  <option key={option.label} value={String(option.key)}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </label>
@@ -254,7 +259,9 @@ export default function PartnerDevelopmentsPage() {
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
             <p>
-              <span className="font-semibold text-[#0b1c3f]">Browse first — no prospect details needed.</span>{' '}
+              <span className="font-semibold text-[#0b1c3f]">
+                Browse first — no prospect details needed.
+              </span>{' '}
               Explore the properties available to your account before sharing anyone's personal
               details.
             </p>
@@ -262,7 +269,9 @@ export default function PartnerDevelopmentsPage() {
           <div className="flex items-start gap-3">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
             <p>
-              <span className="font-semibold text-[#0b1c3f]">Availability and referral eligibility are checked separately.</span>{' '}
+              <span className="font-semibold text-[#0b1c3f]">
+                Availability and referral eligibility are checked separately.
+              </span>{' '}
               Some developments may be visible but not yet open for referral with your partner
               access.
             </p>
@@ -304,165 +313,15 @@ export default function PartnerDevelopmentsPage() {
                   tabIndex={0}
                   className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1"
                 >
-                  {sortedItems.map((item: any) => {
-                    const mode = item.inventory?.modes?.[marketMode] as
-                      | OpportunityModeProjection
-                      | undefined;
-                    const modeIsPublished = hasPublishedMode(mode);
-                    const currencyCode = item.program?.currencyCode || 'ZAR';
-                    const openForReferral = Boolean(item.opportunity?.openForReferral);
-                    const developmentType = formatDevelopmentTypeLabel(
-                      item.campaign?.developmentType,
-                    );
-                    const imageCount = Array.isArray(item.campaign?.images)
-                      ? item.campaign.images.length
-                      : 0;
-                    const description = item.campaign?.description || item.campaign?.tagline;
-                    const minimumQualifyingIncome =
-                      marketMode === 'sale' ? getMinimumBrochureQualifyingIncome(item) : null;
-
-                    return (
-                      <article
-                        key={item.developmentId}
-                        className="flex w-[86%] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm sm:w-[calc((100%_-_1.5rem)/2.3)] xl:w-[calc((100%_-_1.5rem)/3_+_6px)]"
-                      >
-                        <div className="relative">
-                          {item.imageUrl ? (
-                            <img
-                              src={item.imageUrl}
-                              alt={item.developmentName}
-                              className="h-40 w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-40 w-full items-center justify-center bg-[#eef4fc]">
-                              <Building2 className="h-8 w-8 text-[#9cc0ee]" />
-                            </div>
-                          )}
-                          <span
-                            className={cn(
-                              'absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium',
-                              modeIsPublished
-                                ? 'border-[#cde9d2] bg-[#f5fcf6] text-[#2f8f4e]'
-                                : 'border-border bg-white/95 text-muted-foreground',
-                            )}
-                          >
-                            {modeIsPublished ? (
-                              <CheckCircle2 className="h-3 w-3" />
-                            ) : (
-                              <Info className="h-3 w-3" />
-                            )}
-                            {modeIsPublished ? 'Available to explore' : 'Awaiting availability'}
-                          </span>
-                          {imageCount > 1 ? (
-                            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
-                              <Camera className="h-3 w-3" /> {imageCount}
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="flex flex-1 flex-col p-4">
-                          <h2 className="text-[16px] font-semibold leading-snug text-[#0b1c3f]">
-                            {item.developmentName}
-                          </h2>
-                          <p className="mt-1 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            {[item.city, item.province].filter(Boolean).join(', ') ||
-                              'Location to be confirmed'}
-                          </p>
-
-                          {developmentType || modeIsPublished ? (
-                            <div className="mt-2 flex flex-wrap items-center gap-3 text-[12.5px] text-muted-foreground">
-                              {developmentType ? (
-                                <span className="inline-flex items-center gap-1.5">
-                                  <Building2 className="h-3.5 w-3.5" /> {developmentType}
-                                </span>
-                              ) : null}
-                              {modeIsPublished ? (
-                                <span>
-                                  {mode.availableCount}{' '}
-                                  {marketMode === 'sale' ? 'home' : 'rental'}
-                                  {mode.availableCount === 1 ? '' : 's'} available
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : null}
-
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <p
-                              className={cn(
-                                'text-[17px] font-bold text-[#0b1c3f]',
-                                !modeIsPublished && 'text-[13px] font-medium text-muted-foreground',
-                              )}
-                            >
-                              {modeIsPublished
-                                ? formatOpportunityModePrice(mode, currencyCode, marketMode === 'rent')
-                                : 'Current price not yet published'}
-                            </p>
-                            {modeIsPublished ? (
-                              <span className="rounded-full border border-[#cfe0f8] bg-[#eff5fe] px-2 py-0.5 text-[11px] font-medium text-[#33507e]">
-                                {marketMode === 'sale' ? 'Sale' : 'Rent'}
-                              </span>
-                            ) : null}
-                          </div>
-
-                          {minimumQualifyingIncome ? (
-                            <p
-                              className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-5 text-[#33507e]"
-                              title="Indicative only: a 240-month bond at the SARB prime rate (platform settings) with repayments at 30% of gross monthly income. Not a lender decision."
-                            >
-                              <Calculator className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1d6fe3]" />
-                              <span>
-                                Minimum qualifying income{' '}
-                                <span className="font-semibold text-[#0b1c3f]">
-                                  {formatBrochureCurrency(minimumQualifyingIncome)}
-                                </span>
-                              </span>
-                            </p>
-                          ) : null}
-
-                          {description ? (
-                            <p className="mt-2 line-clamp-3 text-[13px] leading-5 text-muted-foreground">
-                              {description}
-                            </p>
-                          ) : null}
-
-                          <p
-                            className={cn(
-                              'mt-3 flex items-start gap-1.5 text-[12px] leading-5',
-                              openForReferral ? 'text-[#2f8f4e]' : 'text-muted-foreground',
-                            )}
-                            title={item.opportunity?.friendlyMessage || undefined}
-                          >
-                            {openForReferral ? (
-                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            ) : (
-                              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            )}
-                            {openForReferral
-                              ? 'Open for referral'
-                              : 'Referral access: check programme'}
-                          </p>
-
-                          <div className="mt-auto flex items-center gap-1.5 border-t border-border pt-3">
-                            <Button
-                              variant="outline"
-                              className="flex-1 whitespace-nowrap px-2.5 text-[13px]"
-                              onClick={() => setUnitsItem(item)}
-                            >
-                              View details <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="whitespace-nowrap px-2.5 text-[13px]"
-                              onClick={() => setBrochureItem(item)}
-                            >
-                              <FileText className="mr-1 h-3.5 w-3.5" /> Brochure
-                            </Button>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                  {sortedItems.map((item: any) => (
+                    <DevelopmentOpportunityCard
+                      key={item.developmentId}
+                      item={item}
+                      marketMode={marketMode}
+                      onViewDetails={setUnitsItem}
+                      onDownloadBrochure={setBrochureItem}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="rounded-xl border border-border bg-white p-8 text-center shadow-sm">
@@ -492,7 +351,10 @@ export default function PartnerDevelopmentsPage() {
               )}
             </div>
 
-            <aside id="check-fit" className="h-fit rounded-xl border border-border bg-white p-4 shadow-sm">
+            <aside
+              id="check-fit"
+              className="h-fit rounded-xl border border-border bg-white p-4 shadow-sm"
+            >
               <div className="flex items-center gap-2">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e7f0fd] text-[#1d6fe3]">
                   <Calculator className="h-4 w-4" />
@@ -500,62 +362,28 @@ export default function PartnerDevelopmentsPage() {
                 <p className="text-[14px] font-semibold text-[#0b1c3f]">Check fit (optional)</p>
               </div>
               <p className="mt-2 text-[12.5px] leading-5 text-muted-foreground">
-                Get a preliminary estimate to see what might be within reach. This is not a lender
-                decision.
+                Run a check fit on the prospect's gross income to see which current opportunities
+                they may reach. This is not a lender decision.
               </p>
-              <div className="mt-3 space-y-3">
-                <label className="block">
-                  <span className="text-[12px] font-medium text-muted-foreground">Monthly income</span>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="e.g. R 25,000"
-                    aria-label="Monthly income"
-                    className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[12px] font-medium text-muted-foreground">Deposit (optional)</span>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="e.g. R 100,000"
-                    aria-label="Deposit"
-                    className="mt-1.5 h-10 w-full cursor-not-allowed rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
-                  />
-                </label>
-                <div>
-                  <span className="text-[12px] font-medium text-muted-foreground">Looking to</span>
-                  <div className="mt-1.5 grid h-10 grid-cols-2 items-center rounded-lg border border-border bg-surface p-1">
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed rounded-md bg-white text-[13px] font-semibold text-[#0b1c3f] shadow-sm"
-                    >
-                      Buy
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed text-[13px] font-medium text-muted-foreground"
-                    >
-                      Rent
-                    </button>
-                  </div>
-                </div>
-              </div>
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
                 <p className="text-[12px] leading-5 text-[#33507e]">
-                  Preliminary affordability is not active yet. Browse by listed price, area, and
-                  bedrooms while the approved assessment model is pending. This is not a lender
-                  decision.
+                  The check fit asks for gross monthly income only. The prospect's identity,
+                  documents and consent are collected in the referral step that follows.
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 className="mt-3 w-full border-[#9cc0ee] text-[#1d6fe3]"
+                onClick={() => setLocation('/distribution/partner/prospect-check-fit')}
+              >
+                I have a prospect
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full border-[#9cc0ee] text-[#1d6fe3]"
                 onClick={() => setLocation('/distribution/partner/how-it-works')}
               >
                 Learn more

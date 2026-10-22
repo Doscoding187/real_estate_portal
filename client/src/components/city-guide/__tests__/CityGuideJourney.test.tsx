@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { lookup } = vi.hoisted(() => ({ lookup: vi.fn() }));
 vi.mock('@/lib/trpc', () => ({
-  trpc: { location: { searchDiscoverySuggestions: { useQuery: lookup } } },
+  trpc: { location: { placeSuggestions: { useQuery: lookup } } },
 }));
 import { CityGuideJourney, CitySuburbFinder } from '../CityGuideJourney';
 import { getCityGuideContent } from '@shared/cityGuideContent';
@@ -18,7 +18,7 @@ const city = {
 };
 const emmarentia = {
   kind: 'canonical_location',
-  canonicalLocationId: 'suburb:278',
+  canonicalLocationId: 'pl-place-01-2b1c0e5d3f4a5b6c7d8e9f01',
   label: 'Emmarentia',
   factualLevel: 'suburb',
   searchScopeKind: 'locality',
@@ -26,20 +26,18 @@ const emmarentia = {
   provinceSlug: 'gauteng',
   citySlug: 'johannesburg',
   suburbSlug: 'emmarentia',
-  parentCanonicalLocationId: 'city:1',
   canonicalPath: '/gauteng/johannesburg/emmarentia',
   source: 'canonical_geography',
 };
 const rosebank = {
   kind: 'canonical_location',
-  canonicalLocationId: 'city:258',
+  canonicalLocationId: 'pl-place-01-3c2d1f6e4a5b6c7d8e9f012',
   label: 'Rosebank',
   factualLevel: 'city',
   searchScopeKind: 'metro_city',
   display: { typeLabel: 'Town', contextLabel: 'City of Johannesburg' },
   provinceSlug: 'gauteng',
   citySlug: 'rosebank',
-  parentCanonicalLocationId: 'province:3',
   canonicalPath: '/gauteng/rosebank',
   source: 'canonical_geography',
 };
@@ -77,18 +75,22 @@ describe('City guide journey continuity', () => {
       screen.getByRole('link', { name: 'Search rentals' }).getAttribute('href')!,
       'http://localhost',
     );
-    expect(url.searchParams.get('locationId')).toBe('suburb:278');
+    expect(url.searchParams.get('canonicalPlaceId')).toBe('pl-place-01-2b1c0e5d3f4a5b6c7d8e9f01');
     expect(url.searchParams.getAll('locationIds')).toEqual([]);
   });
   it('labels separate town results and retains their identity on selection', async () => {
     lookup.mockReturnValue({ data: [rosebank] });
     const onSelect = vi.fn();
-    render(<CitySuburbFinder guide={guide} cityId={1} label="Find an area" onSelect={onSelect} />);
+    render(<CitySuburbFinder guide={guide} citySlug="johannesburg" label="Find an area" onSelect={onSelect} />);
     fireEvent.change(screen.getByLabelText('Find an area'), { target: { value: 'Rosebank' } });
     await screen.findByText('Separate places in Gauteng');
     fireEvent.click(screen.getByRole('button', { name: /Rosebank Town/ }));
     expect(onSelect).toHaveBeenCalledWith(
-      expect.objectContaining({ canonicalLocationId: 'city:258', type: 'city', slug: 'rosebank' }),
+      expect.objectContaining({
+        canonicalLocationId: 'pl-place-01-3c2d1f6e4a5b6c7d8e9f012',
+        type: 'city',
+        slug: 'rosebank',
+      }),
     );
   });
   it('keeps Land handoff to exactly one authority', () => {
@@ -104,7 +106,7 @@ describe('City guide journey continuity', () => {
   });
   it('distinguishes failed location search from no matches', async () => {
     lookup.mockReturnValue({ isError: true, refetch: vi.fn() });
-    render(<CitySuburbFinder guide={guide} cityId={1} label="Find an area" onSelect={vi.fn()} />);
+    render(<CitySuburbFinder guide={guide} citySlug="johannesburg" label="Find an area" onSelect={vi.fn()} />);
     fireEvent.change(screen.getByLabelText('Find an area'), { target: { value: 'Rosebank' } });
     expect(await screen.findByRole('alert')).toHaveTextContent('Suburb search is unavailable');
     expect(screen.queryByText(/No matching area/)).not.toBeInTheDocument();

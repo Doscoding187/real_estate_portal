@@ -18,6 +18,15 @@ type DealChecklist = {
   payoutMilestone: string | null;
   payoutMilestoneNotes?: string | null;
   currencyCode: string | null;
+  qualification?: {
+    checkFitId: string | null;
+    policyVersion: string | null;
+    prospectName?: string | null;
+    coApplicantName?: string | null;
+    estimatedPurchasePrice: number | null;
+    assumptions: Record<string, unknown> | null;
+    outputs: Record<string, unknown> | null;
+  } | null;
   commissionSummary: {
     commissionModel: string | null;
     defaultCommissionPercent: number | null;
@@ -187,6 +196,58 @@ export function ManagerDealChecklistPanel({
           </div>
         </CardContent>
       </Card>
+
+      {checklist.qualification ? (
+        <Card className="border-sky-200">
+          <CardHeader>
+            <CardTitle>Referrer check fit</CardTitle>
+            <CardDescription>
+              The pre-qualification the referrer recorded before submitting this referral. It is an
+              estimate on the referrer's own statement, not a credit decision and not a final
+              affordability assessment.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 text-sm md:grid-cols-3">
+            <div>
+              <p className="text-xs text-slate-500">Indicative purchase price</p>
+              <p className="font-medium">
+                {checklist.qualification.estimatedPurchasePrice == null
+                  ? 'Not recorded'
+                  : `${checklist.currencyCode || 'ZAR'} ${Math.round(
+                      checklist.qualification.estimatedPurchasePrice,
+                    ).toLocaleString('en-ZA')}`}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Prospect as recorded by the referrer</p>
+              <p className="font-medium">
+                {[checklist.qualification.prospectName, checklist.qualification.coApplicantName]
+                  .filter(Boolean)
+                  .join(' and ') || 'Not recorded'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Combined gross monthly income</p>
+              <p className="font-medium">
+                {Number(checklist.qualification.outputs?.combinedGrossIncomeMonthly || 0).toLocaleString(
+                  'en-ZA',
+                )}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Assumptions</p>
+              <p className="font-medium">
+                {Number(checklist.qualification.assumptions?.annualInterestRate || 0)}% ·{' '}
+                {Number(checklist.qualification.assumptions?.termMonths || 0)} months ·{' '}
+                {Math.round(
+                  Number(checklist.qualification.assumptions?.repaymentAllowanceRatio || 0) * 100,
+                )}
+                % of gross
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <p className="rounded border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
         Files are stored in private Distribution storage and are available only to authorized

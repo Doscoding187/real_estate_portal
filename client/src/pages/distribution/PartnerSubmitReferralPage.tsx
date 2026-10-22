@@ -5,11 +5,26 @@ import { trpc } from '@/lib/trpc';
 import { cn } from '@/lib/utils';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
 import { ReferralIntakePausedCard } from '@/components/distribution/partner/ReferralIntakePausedCard';
+import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
+import DevelopmentOpportunityCard from '@/components/distribution/partner/DevelopmentOpportunityCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { CheckCircle2, FileCheck2, Info, Loader2, Send, ShieldCheck } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  FileText,
+  Info,
+  Loader2,
+  MapPin,
+  Search,
+  Send,
+  ShieldCheck,
+} from 'lucide-react';
+import { DISTRIBUTION_PRICE_BANDS } from '@shared/distributionOpportunityMatching';
 
 type MarketMode = 'sale' | 'rent';
 type IntakeEvidenceType =
@@ -18,21 +33,50 @@ type IntakeEvidenceType =
   | 'identity_document'
   | 'credit_authorization';
 
-const REQUIRED_EVIDENCE: Array<{ type: IntakeEvidenceType; title: string; instructions: string }> = [
+type PackDownload = {
+  key: string;
+  label: string;
+  url: string;
+  instructions: string | null;
+  category: 'consent' | 'privacy_notice' | 'information_sheet' | 'other';
+  developmentId: number;
+};
+
+const REQUIRED_EVIDENCE: Array<{ type: IntakeEvidenceType; title: string; instructions: string }> =
+  [
+    {
+      type: 'sharing_permission',
+      title: 'Permission to share their details',
+      instructions: 'Ask the person to read and sign the permission form.',
+    },
+    {
+      type: 'privacy_notice',
+      title: 'Privacy notice acknowledgement',
+      instructions: 'Share the privacy notice and upload the signed acknowledgement.',
+    },
+    {
+      type: 'identity_document',
+      title: 'Identity document',
+      instructions: 'Upload their ID or another document accepted for this opportunity.',
+    },
+  ];
+
+const WIZARD_STEPS = [
   {
-    type: 'sharing_permission',
-    title: 'Permission to share their details',
-    instructions: 'Ask the person to read and sign the permission form.',
+    title: 'Choose developments',
+    description: 'Select the developments you want to share with your prospect.',
   },
   {
-    type: 'privacy_notice',
-    title: 'Privacy notice acknowledgement',
-    instructions: 'Share the privacy notice and upload the signed acknowledgement.',
+    title: 'Prepare documents',
+    description: 'Download and complete the required documents.',
   },
   {
-    type: 'identity_document',
-    title: 'Identity document',
-    instructions: 'Upload their ID or another document accepted for this opportunity.',
+    title: 'Submit introduction',
+    description: 'Send the completed referral with your prospect’s details.',
+  },
+  {
+    title: 'Manager-led progress',
+    description: 'Our team will follow up and keep you updated.',
   },
 ];
 
@@ -55,7 +99,8 @@ function formatPrice(mode: any, marketMode: MarketMode) {
     return 'Unavailable';
   }
   const from = `R${Math.round(mode.priceFrom).toLocaleString('en-ZA')}`;
-  const to = mode.priceTo === mode.priceFrom ? null : `R${Math.round(mode.priceTo).toLocaleString('en-ZA')}`;
+  const to =
+    mode.priceTo === mode.priceFrom ? null : `R${Math.round(mode.priceTo).toLocaleString('en-ZA')}`;
   const range = to ? `${from} – ${to}` : from;
   return marketMode === 'rent' ? `${range} / month` : range;
 }
@@ -82,11 +127,53 @@ function StepHeading({
   );
 }
 
+function WizardStepper({ currentStep }: { currentStep: number }) {
+  return (
+    <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {WIZARD_STEPS.map((step, index) => {
+        const stepNumber = index + 1;
+        const active = stepNumber === currentStep;
+        const done = stepNumber < currentStep;
+        return (
+          <li key={step.title} className="flex items-start gap-3">
+            <span
+              className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold',
+                active
+                  ? 'bg-[#1d6fe3] text-white'
+                  : done
+                    ? 'bg-[#e7f0fd] text-[#1d6fe3]'
+                    : 'border border-border bg-white text-muted-foreground',
+              )}
+            >
+              {done ? <CheckCircle2 className="h-4 w-4" /> : stepNumber}
+            </span>
+            <div className="min-w-0">
+              <p
+                className={cn(
+                  'text-[13.5px] font-semibold',
+                  active ? 'text-[#0b1c3f]' : 'text-muted-foreground',
+                )}
+              >
+                {step.title}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
+                {step.description}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function PartnerSubmitReferralPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [developmentId, setDevelopmentId] = useState<number | null>(null);
-  const [marketMode, setMarketMode] = useState<MarketMode | null>(null);
+  const [marketMode, setMarketMode] = useState<MarketMode>('sale');
+  const [checkFitId, setCheckFitId] = useState<string | null>(null);
   const [sessionUuid, setSessionUuid] = useState<string | null>(null);
   const [confirmedPermission, setConfirmedPermission] = useState(false);
   const [confirmedPrivacyNotice, setConfirmedPrivacyNotice] = useState(false);
@@ -96,6 +183,12 @@ export default function PartnerSubmitReferralPage() {
   const [buyerNotes, setBuyerNotes] = useState('');
   const [clientReference, setClientReference] = useState('');
   const [eligibilityError, setEligibilityError] = useState('');
+  const [sharedDevelopmentIds, setSharedDevelopmentIds] = useState<number[]>([]);
+  const [search, setSearch] = useState('');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [priceFilter, setPriceFilter] = useState<string>('any');
+  const [brochureItem, setBrochureItem] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) setLocation('/login');
@@ -105,8 +198,13 @@ export default function PartnerSubmitReferralPage() {
     const params = new URLSearchParams(window.location.search);
     const requestedDevelopmentId = Number(params.get('developmentId') || 0);
     const requestedMode = params.get('marketMode');
-    if (requestedDevelopmentId > 0) setDevelopmentId(requestedDevelopmentId);
+    const requestedCheckFitId = params.get('checkFitId');
+    if (requestedDevelopmentId > 0) {
+      setDevelopmentId(requestedDevelopmentId);
+      setSharedDevelopmentIds([requestedDevelopmentId]);
+    }
     if (requestedMode === 'sale' || requestedMode === 'rent') setMarketMode(requestedMode);
+    if (requestedCheckFitId) setCheckFitId(requestedCheckFitId);
   }, []);
 
   const programsQuery = trpc.distribution.partner.listEligibleDevelopmentsForSubmission.useQuery(
@@ -125,36 +223,101 @@ export default function PartnerSubmitReferralPage() {
       setSessionUuid(null);
       return;
     }
-    if (!developmentId || !eligibleDevelopments.some(item => Number(item.developmentId) === developmentId)) {
+    if (
+      !developmentId ||
+      !eligibleDevelopments.some(item => Number(item.developmentId) === developmentId)
+    ) {
       setDevelopmentId(Number(eligibleDevelopments[0].developmentId));
       setSessionUuid(null);
     }
   }, [developmentId, eligibleDevelopments]);
 
-  const selectedDevelopment = eligibleDevelopments.find(
-    item => Number(item.developmentId) === Number(developmentId || 0),
-  ) || null;
-  const selectedModeProjection = marketMode
-    ? selectedDevelopment?.inventory?.modes?.[marketMode === 'sale' ? 'for_sale' : 'for_rent']
-    : null;
+  const selectedDevelopment =
+    eligibleDevelopments.find(item => Number(item.developmentId) === Number(developmentId || 0)) ||
+    null;
+  const selectedModeProjection = selectedDevelopment?.inventory?.modes?.[marketMode] || null;
 
-  useEffect(() => {
-    if (marketMode && selectedDevelopment && !selectedDevelopment.inventory?.modes?.[
-      marketMode === 'sale' ? 'for_sale' : 'for_rent'
-    ]) {
-      setMarketMode(null);
+  const locationOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const item of eligibleDevelopments) {
+      const city = String(item.city || '').trim();
+      if (city) values.add(city);
     }
-  }, [marketMode, selectedDevelopment]);
+    return Array.from(values).sort();
+  }, [eligibleDevelopments]);
+
+  const typeOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const item of eligibleDevelopments) {
+      const type = String(item.campaign?.developmentType || '').trim();
+      if (type) values.add(type);
+    }
+    return Array.from(values).sort();
+  }, [eligibleDevelopments]);
+
+  const visibleDevelopments = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return eligibleDevelopments.filter(item => {
+      if (term) {
+        const haystack = [item.developmentName, item.city, item.province]
+          .map(value => String(value || '').toLowerCase())
+          .join(' ');
+        if (!haystack.includes(term)) return false;
+      }
+      if (locationFilter !== 'all' && String(item.city || '') !== locationFilter) return false;
+      if (typeFilter !== 'all' && String(item.campaign?.developmentType || '') !== typeFilter) {
+        return false;
+      }
+      if (priceFilter !== 'any') {
+        const band = (DISTRIBUTION_PRICE_BANDS[marketMode] || []).find(
+          candidate => candidate.key === priceFilter,
+        );
+        const mode = item.inventory?.modes?.[marketMode];
+        const priceFrom = Number(mode?.priceFrom || 0);
+        const priceTo = Number(mode?.priceTo || 0);
+        if (!band || !priceFrom) return false;
+        if (band.minPrice && priceTo && priceTo < band.minPrice) return false;
+        if (band.maxPrice && priceFrom > band.maxPrice) return false;
+      }
+      return true;
+    });
+  }, [eligibleDevelopments, locationFilter, marketMode, priceFilter, search, typeFilter]);
+
+  const sharedDevelopments = useMemo(
+    () =>
+      eligibleDevelopments.filter(item =>
+        sharedDevelopmentIds.includes(Number(item.developmentId)),
+      ),
+    [eligibleDevelopments, sharedDevelopmentIds],
+  );
 
   const requirementsQuery = trpc.distribution.partner.getReferralIntakeRequirements.useQuery(
     { developmentId: Number(developmentId || 0) },
-    { enabled: isAuthenticated && Boolean(developmentId) && selectedDevelopment?.opportunity?.openForReferral === true, retry: false },
+    {
+      enabled:
+        isAuthenticated &&
+        Boolean(developmentId) &&
+        selectedDevelopment?.opportunity?.openForReferral === true,
+      retry: false,
+    },
   );
   const sessionQuery = trpc.distribution.partner.getReferralIntakeSession.useQuery(
     { sessionUuid: sessionUuid || '00000000-0000-0000-0000-000000000000' },
     { enabled: isAuthenticated && Boolean(sessionUuid), retry: false, refetchOnWindowFocus: false },
   );
   const utils = trpc.useUtils();
+
+  const documentPackQuery = trpc.distribution.partner.getProspectDocumentPacks.useQuery(
+    { developmentIds: sharedDevelopmentIds },
+    { enabled: isAuthenticated && sharedDevelopmentIds.length > 0, retry: false },
+  );
+  const documentDownloads = ((documentPackQuery.data || []) as any[]).flatMap(
+    pack => (pack.downloads || []) as PackDownload[],
+  );
+  const informationSheetDownloads = documentDownloads.filter(
+    download => download.category === 'information_sheet',
+  );
+  const consentDownloads = documentDownloads.filter(download => download.category === 'consent');
 
   const startSessionMutation = trpc.distribution.partner.createReferralIntakeSession.useMutation({
     onSuccess: result => {
@@ -164,13 +327,17 @@ export default function PartnerSubmitReferralPage() {
     onError: error => toast.error(error.message || 'Could not start the referral steps.'),
   });
 
-  const uploadEvidenceMutation = trpc.distribution.partner.uploadReferralIntakeEvidence.useMutation({
-    onSuccess: async (_result, variables) => {
-      await utils.distribution.partner.getReferralIntakeSession.invalidate({ sessionUuid: variables.sessionUuid });
-      toast.success('Document added.');
+  const uploadEvidenceMutation = trpc.distribution.partner.uploadReferralIntakeEvidence.useMutation(
+    {
+      onSuccess: async (_result, variables) => {
+        await utils.distribution.partner.getReferralIntakeSession.invalidate({
+          sessionUuid: variables.sessionUuid,
+        });
+        toast.success('Document added.');
+      },
+      onError: error => toast.error(error.message || 'Could not upload this document.'),
     },
-    onError: error => toast.error(error.message || 'Could not upload this document.'),
-  });
+  );
 
   const submitReferralMutation = trpc.distribution.partner.submitReferral.useMutation({
     onSuccess: result => {
@@ -185,6 +352,7 @@ export default function PartnerSubmitReferralPage() {
   const session = sessionQuery.data;
   const uploadedTypes = new Set((session?.evidence || []).map(item => item.evidenceType));
   const intakeComplete = session?.requiredEvidenceComplete === true;
+  const currentStep = !sessionUuid ? 1 : intakeComplete ? 3 : 2;
 
   async function uploadEvidence(evidenceType: IntakeEvidenceType, file?: File) {
     if (!sessionUuid || !file) return;
@@ -206,6 +374,13 @@ export default function PartnerSubmitReferralPage() {
     }
   }
 
+  function toggleSharedDevelopment(item: any) {
+    const id = Number(item.developmentId);
+    setSharedDevelopmentIds(current =>
+      current.includes(id) ? current.filter(value => value !== id) : [...current, id],
+    );
+  }
+
   if (loading || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
@@ -218,36 +393,16 @@ export default function PartnerSubmitReferralPage() {
     <ReferralAppShell>
       <main className="mx-auto w-full max-w-[1180px] space-y-6 px-4 pb-10 pt-7 md:px-7">
         <section>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#cfe0f8] bg-[#eff5fe] px-3 py-1 text-[12px] font-medium text-[#1d6fe3]">
-            <Send className="h-3.5 w-3.5" /> Start a referral
-          </span>
-          <h1 className="mt-3 text-[30px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
-            Introduce someone to a property opportunity
+          <h1 className="text-[26px] font-bold leading-tight tracking-[-0.02em] text-[#0b1c3f]">
+            Introduce a prospect to property opportunities
           </h1>
-          <p className="mt-2 max-w-3xl text-[15px] leading-6 text-muted-foreground">
-            We’ll guide you through permission and documents first. Once those are ready, you can
-            share their details and follow the introduction from My deals.
+          <p className="mt-2 max-w-3xl text-[14px] leading-6 text-muted-foreground">
+            Share selected developments with your prospect. You’ll provide the documents, and
+            they’ll choose their preferred option. Our team will handle the rest.
           </p>
         </section>
 
-        <section className="grid gap-4 rounded-xl border border-[#cfe0f8] bg-[#eff5fe] p-5 text-[12.5px] leading-5 text-[#33507e] md:grid-cols-2 md:p-6">
-          <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
-            <p>
-              <span className="font-semibold text-[#0b1c3f]">Permission and documents come first.</span>{' '}
-              The steps below ask for the person’s agreement and signed documents before any contact
-              details are shared.
-            </p>
-          </div>
-          <div className="flex items-start gap-3">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
-            <p>
-              <span className="font-semibold text-[#0b1c3f]">Nothing is shared until they agree.</span>{' '}
-              You can stop at any step. Documents are stored with the referral only for the
-              responsible team to review.
-            </p>
-          </div>
-        </section>
+        <WizardStepper currentStep={currentStep} />
 
         {programsQuery.isLoading ? (
           <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
@@ -257,214 +412,599 @@ export default function PartnerSubmitReferralPage() {
           <ReferralIntakePausedCard />
         ) : (
           <>
-            <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
-              <StepHeading
-                step={1}
-                title="Choose an opportunity and market"
-                description="Choose the option and whether the person wants to buy or rent. Prices and availability are checked again when you send the introduction."
-              />
-              <div className="mt-4 space-y-3">
-                <select
-                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-                  value={developmentId || ''}
-                  onChange={event => {
-                    setDevelopmentId(Number(event.target.value));
-                    setSessionUuid(null);
-                    setMarketMode(null);
-                  }}
-                >
-                  {eligibleDevelopments.map(item => (
-                    <option key={item.developmentId} value={item.developmentId}>{item.developmentName}</option>
-                  ))}
-                </select>
-                {selectedDevelopment ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {(['sale', 'rent'] as const).map(mode => {
-                      const projection = selectedDevelopment.inventory?.modes?.[mode === 'sale' ? 'for_sale' : 'for_rent'];
-                      const available = Boolean(projection && projection.availableCount > 0);
-                      return (
-                        <button
-                          key={mode}
-                          type="button"
-                          disabled={!available}
-                          onClick={() => setMarketMode(mode)}
-                          className={cn(
-                            'rounded-xl border p-3.5 text-left transition',
-                            marketMode === mode
-                              ? 'border-[#1d6fe3] bg-[#eff5fe]'
-                              : 'border-border bg-white hover:border-[#9cc0ee]',
-                            !available && 'cursor-not-allowed opacity-50',
-                          )}
-                        >
-                          <span className="block text-sm font-semibold text-[#0b1c3f]">{mode === 'sale' ? 'Buy' : 'Rent'}</span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {available ? `${projection.availableCount} available · ${formatPrice(projection, mode)}` : 'Not currently available'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
+            <section className="rounded-xl border border-[#cfe0f8] bg-[#eff5fe] p-4 text-[13px] leading-5 text-[#33507e]">
+              <div className="flex items-start gap-2">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1d6fe3]" />
+                <p>
+                  <span className="font-semibold text-[#0b1c3f]">
+                    You can select multiple developments.
+                  </span>{' '}
+                  Your prospect will review the options and make their final choice.
+                </p>
               </div>
             </section>
 
-            {!selectedDevelopment?.opportunity?.openForReferral ? (
-              <ReferralIntakePausedCard />
-            ) : requirementsQuery.isLoading ? (
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading the documents for this opportunity…
-              </div>
-            ) : requirementsQuery.isError || !requirementsQuery.data ? (
-              <ReferralIntakePausedCard />
-            ) : !sessionUuid ? (
-              <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
-                <StepHeading
-                  step={2}
-                  title="Confirm the prospect has seen the documents"
-                  description="Review these documents with the person. We’ll ask for their contact details after the signed documents and ID are added."
-                />
-                <div className="mt-4 space-y-4">
-                  {[requirementsQuery.data.sharingPermissionDocument, requirementsQuery.data.privacyNoticeDocument].map(document => (
-                    <section key={`${document.title}-${document.version}`} className="rounded-lg border border-border p-3.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-[#0b1c3f]">{document.title} · version {document.version}</p>
-                        <Button type="button" size="sm" variant="outline" onClick={() => window.print()}>Print</Button>
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">{document.content}</p>
-                    </section>
+            <section className="rounded-xl border border-border bg-white p-4 shadow-sm md:p-5">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-medium text-muted-foreground">Looking to</span>
+                <div className="flex rounded-lg border border-border bg-surface p-1">
+                  {(['sale', 'rent'] as const).map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setMarketMode(mode)}
+                      className={cn(
+                        'rounded-md px-3 py-1 text-[13px] font-medium',
+                        marketMode === mode
+                          ? 'bg-white text-[#0b1c3f] shadow-sm'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {mode === 'sale' ? 'Buy' : 'Rent'}
+                    </button>
                   ))}
-                  <div className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-xs leading-5 text-[#33507e]">
-                    <p><strong className="text-[#0b1c3f]">Why their details are shared:</strong> {requirementsQuery.data.sharingPurpose}</p>
-                    <p className="mt-1"><strong className="text-[#0b1c3f]">Who will receive them:</strong> {requirementsQuery.data.namedRecipients.map(recipient => `${recipient.name} · ${recipient.organization} (${recipient.role})`).join('; ')}</p>
-                    <p className="mt-1"><strong className="text-[#0b1c3f]">How to sign:</strong> {requirementsQuery.data.signatureMethod}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    placeholder="Search developments…"
+                    value={search}
+                    onChange={event => setSearch(event.target.value)}
+                  />
+                </div>
+                <select
+                  aria-label="Location"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={locationFilter}
+                  onChange={event => setLocationFilter(event.target.value)}
+                >
+                  <option value="all">All locations</option>
+                  {locationOptions.map(location => (
+                    <option key={location} value={location}>
+                      {location}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Property type"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={typeFilter}
+                  onChange={event => setTypeFilter(event.target.value)}
+                >
+                  <option value="all">All types</option>
+                  {typeOptions.map(type => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Price range"
+                  className="h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                  value={priceFilter}
+                  onChange={event => setPriceFilter(event.target.value)}
+                >
+                  {(DISTRIBUTION_PRICE_BANDS[marketMode] || []).map(band => (
+                    <option key={band.key} value={band.key}>
+                      {band.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleDevelopments.map((item: any) => (
+                  <DevelopmentOpportunityCard
+                    key={item.developmentId}
+                    item={item}
+                    marketMode={marketMode}
+                    variant="select"
+                    selected={sharedDevelopmentIds.includes(Number(item.developmentId))}
+                    onToggleSelected={toggleSharedDevelopment}
+                    onDownloadBrochure={setBrochureItem}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+              <div className="flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#e7f0fd] text-[#1d6fe3]">
+                  <FileText className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="text-[16px] font-semibold text-[#0b1c3f]">Documents to prepare</h2>
+                  <p className="mt-0.5 text-[12.5px] leading-5 text-muted-foreground">
+                    Download the required documents below. Complete them with your prospect’s
+                    details, before submitting the referral.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3.5">
+                  <FileText className="h-5 w-5 shrink-0 text-[#ef4444]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#0b1c3f]">Development brochures</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Showcases the development, pricing, floor plans and key features.
+                    </p>
                   </div>
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" checked={confirmedPermission} onChange={event => setConfirmedPermission(event.target.checked)} className="mt-1" />
-                    <span>The person agreed to share their details for this introduction and signed the permission form.</span>
-                  </label>
-                  <label className="flex items-start gap-2 text-sm">
-                    <input type="checkbox" checked={confirmedPrivacyNotice} onChange={event => setConfirmedPrivacyNotice(event.target.checked)} className="mt-1" />
-                    <span>I shared the privacy notice and explained who will receive their details.</span>
-                  </label>
+                  <span className="text-xs font-medium text-[#1d6fe3]">
+                    {sharedDevelopmentIds.length} selected
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#9cc0ee]" /> Required
+                  </span>
                   <Button
-                    variant="conversion"
-                    disabled={!marketMode || !selectedModeProjection || !confirmedPermission || !confirmedPrivacyNotice || startSessionMutation.isPending}
-                    onClick={() => startSessionMutation.mutate({
-                      developmentId: Number(developmentId),
-                      confirmedPermission: true,
-                      confirmedPrivacyNotice: true,
-                    })}
+                    variant="outline"
+                    size="sm"
+                    disabled={!sharedDevelopments.length}
+                    onClick={() => setBrochureItem(sharedDevelopments[0] || null)}
                   >
-                    {startSessionMutation.isPending ? 'Starting…' : 'Continue to add documents'}
+                    <Download className="mr-1.5 h-3.5 w-3.5" /> Download
                   </Button>
                 </div>
-              </section>
-            ) : (
-              <>
-                <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
-                  <StepHeading
-                    step={3}
-                    title="Add the signed documents"
-                    description="These documents confirm permission and identity. They are stored with the referral for the responsible team to review."
-                  />
-                  <div className="mt-4 space-y-4">
-                    {REQUIRED_EVIDENCE.map(item => {
-                      const uploaded = uploadedTypes.has(item.type);
-                      return (
-                        <div key={item.type} className="flex flex-col gap-3 rounded-lg border border-border p-3.5 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="flex items-center gap-2 text-sm font-semibold text-[#0b1c3f]">
-                              {uploaded ? <CheckCircle2 className="h-4 w-4 text-[#2f8f4e]" /> : <FileCheck2 className="h-4 w-4 text-muted-foreground" />}
-                              {item.title}
+
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3.5">
+                  <FileCheck2 className="h-5 w-5 shrink-0 text-[#1d6fe3]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#0b1c3f]">
+                      Prospect information sheet
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Captures key details about your prospect and their requirements.
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-[#1d6fe3]">
+                    {informationSheetDownloads.length
+                      ? `${informationSheetDownloads.length} file${
+                          informationSheetDownloads.length === 1 ? '' : 's'
+                        }`
+                      : 'Not published yet'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#9cc0ee]" /> Required
+                  </span>
+                  {informationSheetDownloads.map(download => (
+                    <Button
+                      key={download.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.open(download.url, '_blank', 'noopener');
+                      }}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Download
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border p-3.5">
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-[#7c3aed]" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-[#0b1c3f]">POPIA consent form</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Authorises us to share the prospect’s information with the relevant developer.
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-[#1d6fe3]">
+                    {consentDownloads.length
+                      ? `${consentDownloads.length} file${consentDownloads.length === 1 ? '' : 's'}`
+                      : 'Not published yet'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#9cc0ee]" /> Required
+                  </span>
+                  {consentDownloads.map(download => (
+                    <Button
+                      key={download.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.open(download.url, '_blank', 'noopener');
+                      }}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" /> Download
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3 text-xs leading-5 text-[#33507e]">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1d6fe3]" />
+                <span>
+                  Your prospect’s details are only shared after valid consent is received and all
+                  required documents have been submitted.
+                </span>
+              </p>
+
+              <div className="mt-4 flex justify-end">
+                <Button
+                  variant="conversion"
+                  disabled={!sharedDevelopmentIds.length}
+                  onClick={() => {
+                    const first = sharedDevelopmentIds[0];
+                    if (first && first !== developmentId) {
+                      setDevelopmentId(first);
+                      setSessionUuid(null);
+                    }
+                    document
+                      .getElementById('prepare-documents')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                >
+                  Continue to document checklist
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </section>
+
+            <div id="prepare-documents" className="space-y-4">
+              {sessionUuid ? (
+                requirementsQuery.isLoading ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading the documents for this
+                    opportunity…
+                  </div>
+                ) : requirementsQuery.isError || !requirementsQuery.data ? (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                    {requirementsQuery.error?.message ||
+                      'The documents for this opportunity could not be loaded.'}
+                  </div>
+                ) : (
+                  <>
+                    <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                      <StepHeading
+                        step={2}
+                        title="Add the signed documents"
+                        description="Upload the signed consent form, the completed information sheet and the prospect’s ID copy."
+                      />
+                      <div className="mt-4 space-y-4">
+                        {REQUIRED_EVIDENCE.map(item => {
+                          const uploaded = uploadedTypes.has(item.type);
+                          return (
+                            <div
+                              key={item.type}
+                              className="flex flex-col gap-3 rounded-lg border border-border p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div>
+                                <p className="flex items-center gap-2 text-sm font-semibold text-[#0b1c3f]">
+                                  {uploaded ? (
+                                    <CheckCircle2 className="h-4 w-4 text-[#2f8f4e]" />
+                                  ) : (
+                                    <FileCheck2 className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                  {item.title}
+                                </p>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  {item.instructions}
+                                </p>
+                              </div>
+                              <Input
+                                type="file"
+                                accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(
+                                  ',',
+                                )}
+                                disabled={uploadEvidenceMutation.isPending}
+                                onChange={event => {
+                                  const file = event.currentTarget.files?.[0];
+                                  void uploadEvidence(item.type, file);
+                                  event.currentTarget.value = '';
+                                }}
+                                className="max-w-sm"
+                              />
+                            </div>
+                          );
+                        })}
+                        {requirementsQuery.data.creditReport.enabled ? (
+                          <div className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-3.5 text-sm">
+                            <p className="font-semibold text-[#b07a1e]">
+                              Credit checks need separate permission
                             </p>
-                            <p className="mt-1 text-xs text-muted-foreground">{item.instructions}</p>
+                            <p className="mt-1 text-xs text-[#b07a1e]">
+                              This introduction does not request a credit report. If a later step
+                              needs one, the person must separately sign the authorization for{' '}
+                              {requirementsQuery.data.creditReport.providerName}.
+                            </p>
+                            <p className="mt-2 whitespace-pre-wrap text-xs text-[#b07a1e]">
+                              {requirementsQuery.data.creditReport.authorizationDocument?.content}
+                            </p>
+                            <label className="mt-3 block text-xs font-medium text-[#b07a1e]">
+                              Add the signed authorization (optional for this introduction)
+                              <Input
+                                type="file"
+                                accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(
+                                  ',',
+                                )}
+                                className="mt-2 bg-white"
+                                disabled={uploadEvidenceMutation.isPending}
+                                onChange={event => {
+                                  const file = event.currentTarget.files?.[0];
+                                  void uploadEvidence('credit_authorization', file);
+                                  event.currentTarget.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                        ) : null}
+                        {intakeComplete ? (
+                          <p className="rounded-lg border border-[#cde9d2] bg-[#f5fcf6] p-3.5 text-sm text-[#2f8f4e]">
+                            The required documents are ready. You can now add the person’s contact
+                            details below.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            Add all three required documents to continue.
+                          </p>
+                        )}
+                      </div>
+                    </section>
+
+                    {intakeComplete ? (
+                      <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                        <StepHeading
+                          step={3}
+                          title="Submit the introduction"
+                          description="The team responsible for this opportunity will use these details to follow up. You can track recorded updates in My deals."
+                        />
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-lg border border-border bg-surface p-3.5 text-sm">
+                            <p className="font-semibold text-[#0b1c3f]">
+                              {selectedDevelopment?.developmentName}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {marketMode
+                                ? `${marketMode === 'sale' ? 'Sale' : 'Rental'} · ${formatPrice(selectedModeProjection, marketMode)}`
+                                : 'Choose sale or rental above'}
+                            </p>
                           </div>
                           <Input
-                            type="file"
-                            accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(',')}
-                            disabled={uploadEvidenceMutation.isPending}
-                            onChange={event => {
-                              const file = event.currentTarget.files?.[0];
-                              void uploadEvidence(item.type, file);
-                              event.currentTarget.value = '';
-                            }}
-                            className="max-w-sm"
+                            placeholder="Full name"
+                            autoComplete="off"
+                            value={buyerName}
+                            onChange={event => setBuyerName(event.target.value)}
                           />
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <Input
+                              placeholder="Phone number"
+                              autoComplete="off"
+                              value={buyerPhone}
+                              onChange={event => setBuyerPhone(event.target.value)}
+                            />
+                            <Input
+                              placeholder="Email address"
+                              type="email"
+                              autoComplete="off"
+                              value={buyerEmail}
+                              onChange={event => setBuyerEmail(event.target.value)}
+                            />
+                          </div>
+                          <Input
+                            placeholder="Your reference (optional)"
+                            autoComplete="off"
+                            value={clientReference}
+                            onChange={event => setClientReference(event.target.value)}
+                          />
+                          <Textarea
+                            placeholder="Anything you’d like the team to know? Don’t include ID or financial account numbers."
+                            rows={4}
+                            value={buyerNotes}
+                            onChange={event => setBuyerNotes(event.target.value)}
+                          />
+                          {eligibilityError ? (
+                            <p
+                              role="alert"
+                              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                            >
+                              {eligibilityError}
+                            </p>
+                          ) : null}
+                          <Button
+                            variant="conversion"
+                            className="w-full"
+                            disabled={
+                              submitReferralMutation.isPending ||
+                              !developmentId ||
+                              !marketMode ||
+                              !selectedModeProjection ||
+                              (!buyerName.trim() && !buyerPhone.trim() && !buyerEmail.trim())
+                            }
+                            onClick={() => {
+                              setEligibilityError('');
+                              submitReferralMutation.mutate({
+                                developmentId: Number(developmentId),
+                                marketMode: marketMode!,
+                                intakeSessionUuid: sessionUuid!,
+                                buyerName: buyerName.trim() || undefined,
+                                buyerPhone: buyerPhone.trim() || undefined,
+                                buyerEmail: buyerEmail.trim() || undefined,
+                                notes: buyerNotes.trim() || undefined,
+                                clientReference: clientReference.trim() || undefined,
+                                checkFitId: checkFitId || undefined,
+                              });
+                            }}
+                          >
+                            {submitReferralMutation.isPending ? 'Sending…' : 'Send introduction'}
+                          </Button>
                         </div>
-                      );
-                    })}
-                    {requirementsQuery.data.creditReport.enabled ? (
-                      <div className="rounded-lg border border-[#f5d9a8] bg-[#fffbf2] p-3.5 text-sm">
-                        <p className="font-semibold text-[#b07a1e]">Credit checks need separate permission</p>
-                        <p className="mt-1 text-xs text-[#b07a1e]">This introduction does not request a credit report. If a later step needs one, the person must separately sign the authorization for {requirementsQuery.data.creditReport.providerName}.</p>
-                        <p className="mt-2 whitespace-pre-wrap text-xs text-[#b07a1e]">{requirementsQuery.data.creditReport.authorizationDocument?.content}</p>
-                        <label className="mt-3 block text-xs font-medium text-[#b07a1e]">Add the signed authorization (optional for this introduction)
-                          <Input type="file" accept={requirementsQuery.data.identityEvidence.allowedMimeTypes.join(',')} className="mt-2 bg-white" disabled={uploadEvidenceMutation.isPending} onChange={event => { const file = event.currentTarget.files?.[0]; void uploadEvidence('credit_authorization', file); event.currentTarget.value = ''; }} />
+                      </section>
+                    ) : null}
+                  </>
+                )
+              ) : requirementsQuery.isLoading ? (
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading the documents for this
+                  opportunity…
+                </div>
+              ) : requirementsQuery.isError || !requirementsQuery.data ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+                  {requirementsQuery.error?.message ||
+                    'The documents for this opportunity could not be loaded.'}
+                </div>
+              ) : (
+                <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                  <StepHeading
+                    step={2}
+                    title="Prepare the documents"
+                    description="Start the document checklist for the opportunity the prospect chose, then confirm the person has seen the documents."
+                  />
+                  <div className="mt-4 space-y-4">
+                    <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
+                      <StepHeading
+                        step={2}
+                        title="Prepare the documents"
+                        description="Download the documents for the prospect, review them with the person, and confirm below. We’ll ask for their contact details after the signed documents and ID are added."
+                      />
+                      <div className="mt-4 space-y-4">
+                        {sharedDevelopmentIds.length > 1 ? (
+                          <div className="rounded-lg border border-border p-3.5">
+                            <p className="text-sm font-semibold text-[#0b1c3f]">
+                              Which development did the prospect choose?
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              The referral is submitted for the development the prospect picked. The
+                              other options stay with them.
+                            </p>
+                            <select
+                              aria-label="Chosen development"
+                              className="mt-2 h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+                              value={String(developmentId || '')}
+                              onChange={event => {
+                                setDevelopmentId(Number(event.target.value));
+                                setSessionUuid(null);
+                              }}
+                            >
+                              {sharedDevelopments.map(item => (
+                                <option key={item.developmentId} value={item.developmentId}>
+                                  {item.developmentName}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+
+                        {[
+                          requirementsQuery.data.sharingPermissionDocument,
+                          requirementsQuery.data.privacyNoticeDocument,
+                        ].map(document => (
+                          <section
+                            key={`${document.title}-${document.version}`}
+                            className="rounded-lg border border-border p-3.5"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-semibold text-[#0b1c3f]">
+                                {document.title} · version {document.version}
+                              </p>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.print()}
+                              >
+                                Print
+                              </Button>
+                            </div>
+                            <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                              {document.content}
+                            </p>
+                          </section>
+                        ))}
+                        <div className="rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5 text-xs leading-5 text-[#33507e]">
+                          <p>
+                            <strong className="text-[#0b1c3f]">
+                              Why their details are shared:
+                            </strong>{' '}
+                            {requirementsQuery.data.sharingPurpose}
+                          </p>
+                          <p className="mt-1">
+                            <strong className="text-[#0b1c3f]">Who will receive them:</strong>{' '}
+                            {requirementsQuery.data.namedRecipients
+                              .map(
+                                recipient =>
+                                  `${recipient.name} · ${recipient.organization} (${recipient.role})`,
+                              )
+                              .join('; ')}
+                          </p>
+                          <p className="mt-1">
+                            <strong className="text-[#0b1c3f]">How to sign:</strong>{' '}
+                            {requirementsQuery.data.signatureMethod}
+                          </p>
+                        </div>
+                        <label className="flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={confirmedPermission}
+                            onChange={event => setConfirmedPermission(event.target.checked)}
+                            className="mt-1"
+                          />
+                          <span>
+                            The person agreed to share their details for this introduction and
+                            signed the permission form.
+                          </span>
+                        </label>
+                        <label className="flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={confirmedPrivacyNotice}
+                            onChange={event => setConfirmedPrivacyNotice(event.target.checked)}
+                            className="mt-1"
+                          />
+                          <span>
+                            I shared the privacy notice and explained who will receive their
+                            details.
+                          </span>
                         </label>
                       </div>
-                    ) : null}
-                    {intakeComplete ? (
-                      <p className="rounded-lg border border-[#cde9d2] bg-[#f5fcf6] p-3.5 text-sm text-[#2f8f4e]">The required documents are ready. You can now add the person’s contact details below.</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Add all three required documents to continue.</p>
-                    )}
+                    </section>
+                    <div className="rounded-lg border border-border p-3.5 text-sm">
+                      <p className="font-semibold text-[#0b1c3f]">
+                        {selectedDevelopment?.developmentName || 'Choose a development above'}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selectedDevelopment
+                          ? `${marketMode === 'sale' ? 'Sale' : 'Rental'} · ${formatPrice(selectedModeProjection, marketMode)}`
+                          : 'Select the development the prospect chose.'}
+                      </p>
+                    </div>
+                    <Button
+                      variant="conversion"
+                      disabled={
+                        !marketMode ||
+                        !selectedModeProjection ||
+                        !confirmedPermission ||
+                        !confirmedPrivacyNotice ||
+                        startSessionMutation.isPending
+                      }
+                      onClick={() =>
+                        startSessionMutation.mutate({
+                          developmentId: Number(developmentId),
+                          confirmedPermission: true,
+                          confirmedPrivacyNotice: true,
+                        })
+                      }
+                    >
+                      {startSessionMutation.isPending ? 'Starting…' : 'Continue to add documents'}
+                    </Button>
                   </div>
                 </section>
-
-                {intakeComplete ? (
-                  <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
-                    <StepHeading
-                      step={4}
-                      title="Add their contact details"
-                      description="The team responsible for this opportunity will use these details to follow up. You can track recorded updates in My deals."
-                    />
-                    <div className="mt-4 space-y-3">
-                      <div className="rounded-lg border border-border bg-surface p-3.5 text-sm">
-                        <p className="font-semibold text-[#0b1c3f]">{selectedDevelopment?.developmentName}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{marketMode ? `${marketMode === 'sale' ? 'Sale' : 'Rental'} · ${formatPrice(selectedModeProjection, marketMode)}` : 'Choose sale or rental above'}</p>
-                      </div>
-                      <Input placeholder="Full name" autoComplete="off" value={buyerName} onChange={event => setBuyerName(event.target.value)} />
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Input placeholder="Phone number" autoComplete="off" value={buyerPhone} onChange={event => setBuyerPhone(event.target.value)} />
-                        <Input placeholder="Email address" type="email" autoComplete="off" value={buyerEmail} onChange={event => setBuyerEmail(event.target.value)} />
-                      </div>
-                      <Input placeholder="Your reference (optional)" autoComplete="off" value={clientReference} onChange={event => setClientReference(event.target.value)} />
-                      <Textarea placeholder="Anything you’d like the team to know? Don’t include ID or financial account numbers." rows={4} value={buyerNotes} onChange={event => setBuyerNotes(event.target.value)} />
-                      {eligibilityError ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{eligibilityError}</p> : null}
-                      <Button
-                        variant="conversion"
-                        className="w-full"
-                        disabled={
-                          submitReferralMutation.isPending ||
-                          !developmentId ||
-                          !marketMode ||
-                          !selectedModeProjection ||
-                          (!buyerName.trim() && !buyerPhone.trim() && !buyerEmail.trim())
-                        }
-                        onClick={() => {
-                          setEligibilityError('');
-                          submitReferralMutation.mutate({
-                            developmentId: Number(developmentId),
-                            marketMode: marketMode!,
-                            intakeSessionUuid: sessionUuid!,
-                            buyerName: buyerName.trim() || undefined,
-                            buyerPhone: buyerPhone.trim() || undefined,
-                            buyerEmail: buyerEmail.trim() || undefined,
-                            notes: buyerNotes.trim() || undefined,
-                            clientReference: clientReference.trim() || undefined,
-                          });
-                        }}
-                      >
-                        {submitReferralMutation.isPending ? 'Sending…' : 'Send introduction'}
-                      </Button>
-                    </div>
-                  </section>
-                ) : null}
-              </>
-            )}
+              )}
+            </div>
           </>
         )}
       </main>
+
+      <DevelopmentBrochureDialog
+        open={Boolean(brochureItem)}
+        onOpenChange={open => {
+          if (!open) setBrochureItem(null);
+        }}
+        item={brochureItem}
+      />
     </ReferralAppShell>
   );
 }

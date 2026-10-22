@@ -522,9 +522,14 @@ describe('migration execution authority', () => {
         '0141_distribution_deal_required_document_fk_restrict.sql',
         '0142_distribution_deal_document_deliveries_sequenced.sql',
         '0143_distribution_deal_document_delivery_file_reference.sql',
+        '0144_distribution_prospect_check_fits.sql',
+        '0145_distribution_prospect_check_fit_matches.sql',
+        '0146_distribution_deal_prospect_check_fit_reference.sql',
+        '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
+        '0148_distribution_prospect_check_fit_prospect_names.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0143_distribution_deal_document_delivery_file_reference.sql',
+      '0148_distribution_prospect_check_fit_prospect_names.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

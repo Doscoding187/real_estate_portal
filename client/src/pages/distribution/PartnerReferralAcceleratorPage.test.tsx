@@ -31,14 +31,21 @@ describe('PartnerReferralAcceleratorPage', () => {
     mockUseLocation.mockReturnValue(['/distribution/partner/accelerator', mockSetLocation]);
   });
 
-  it('explains that income-based estimates are not ready and keeps the retired calculator out', () => {
+  it('sends the referrer to the check fit and keeps the retired calculator out', () => {
     render(<PartnerReferralAcceleratorPage />);
 
-    expect(screen.getByText('Income-based estimates are not ready yet')).toBeInTheDocument();
-    expect(screen.getByText(/finalizing the assumptions behind purchase estimates/i)).toBeInTheDocument();
-    expect(screen.getByText(/does not mean a lender will approve them/i)).toBeInTheDocument();
+    expect(screen.getByText('Check what a prospect can reach')).toBeInTheDocument();
+    expect(screen.getAllByText(/final affordability assessment/i).length).toBeGreaterThan(0);
     expect(screen.queryByText('Set Gross Income')).not.toBeInTheDocument();
     expect(screen.queryByText('Calculate Snapshot')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'I have a prospect' }));
+
+    expect(mockSetLocation).toHaveBeenCalledWith('/distribution/partner/prospect-check-fit');
+  });
+
+  it('keeps browsing by listed price available', () => {
+    render(<PartnerReferralAcceleratorPage />);
 
     fireEvent.click(screen.getByRole('button', { name: /Find property opportunities/ }));
 

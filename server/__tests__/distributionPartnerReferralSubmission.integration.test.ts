@@ -25,9 +25,12 @@ import {
   distributionReferralIntakeEvents,
   distributionReferralIntakePolicyReleases,
   distributionReferralIntakeSessions,
+  distributionProspectCheckFits,
+  platformSettings,
   unitTypes,
   users,
 } from '../../drizzle/schema';
+import { CANONICAL_PLATFORM_SETTINGS } from '../_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
 import { cataloguePublisherService } from '../services/cataloguePublisherService';
 import {
   upsertBrandPartnership,
@@ -58,6 +61,7 @@ const createdState = {
   intakePolicyReleaseIds: [] as number[],
   intakeSessionUuids: [] as string[],
   requiredDocumentIds: [] as number[],
+  platformSettingKeys: [] as string[],
 };
 
 function uniqueIds(values: number[]) {
@@ -272,6 +276,8 @@ async function insertRequiredDocument(developmentId: number) {
     isRequired: 1,
     isActive: 1,
     sortOrder: 1,
+    templateFileUrl: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
+    templateFileName: 'CLIENT INFO SHEET.pdf',
   });
 
   const documentId = Number((insertResult as any).insertId || 0);
@@ -285,6 +291,7 @@ function buildPolicyConfiguration() {
       version: '1.0',
       title: 'Prospect sharing permission',
       content: 'The prospect agrees that their details may be shared with the developer.',
+      downloadUrl: '/api/local-media/object?key=properties%2Fdraft-1%2Fpopia-consent.pdf',
     },
     privacyNoticeDocument: {
       version: '1.0',
@@ -385,6 +392,29 @@ async function completeIntake(input: {
   }
 
   return session.sessionUuid;
+}
+
+async function ensureCanonicalPrimeRate() {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+
+  const [existing] = await db
+    .select({ id: platformSettings.id })
+    .from(platformSettings)
+    .where(eq(platformSettings.settingKey, 'sarb_prime_rate'))
+    .limit(1);
+  if (existing) return;
+
+  const seed = CANONICAL_PLATFORM_SETTINGS.find(setting => setting.settingKey === 'sarb_prime_rate');
+  if (!seed) throw new Error('Canonical prime rate seed missing');
+  await db.insert(platformSettings).values({
+    settingKey: seed.settingKey,
+    settingValue: seed.settingValue,
+    description: seed.description,
+    category: seed.category,
+    isPublic: seed.isPublic,
+  });
+  createdState.platformSettingKeys.push(seed.settingKey);
 }
 
 async function seedScenario(input?: {
@@ -540,6 +570,10 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       await db.delete(users).where(inArray(users.id, userIds));
     }
 
+    for (const settingKey of uniqueStringIds(createdState.platformSettingKeys)) {
+      await db.delete(platformSettings).where(eq(platformSettings.settingKey, settingKey));
+    }
+
     createdState.userIds = [];
     createdState.cataloguePublisherIds = [];
     createdState.developmentIds = [];
@@ -552,6 +586,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.intakePolicyReleaseIds = [];
     createdState.intakeSessionUuids = [];
     createdState.requiredDocumentIds = [];
+    createdState.platformSettingKeys = [];
   });
 
   it('blocks submission when the program is inactive or referrals are disabled', async () => {
@@ -848,5 +883,188 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
 
     expect(actorADealIds).toContain(Number(actorADeal.dealId));
     expect(actorADealIds).not.toContain(Number(actorBDeal.dealId));
+  }, INTEGRATION_TIMEOUT_MS);
+  it('gives the referrer the prospect documents to download and sign', async () => {
+    const scenario = await seedScenario();
+
+    const packs = await scenario.caller.distribution.partner.getProspectDocumentPacks({
+      developmentIds: [scenario.developmentId],
+    });
+
+    expect(packs).toHaveLength(1);
+    expect(packs[0].downloads.map(download => download.label)).toEqual(
+      expect.arrayContaining(['Prospect sharing permission', 'Buyer ID document']),
+    );
+    expect(
+      packs[0].downloads.find(download => download.label === 'Buyer ID document')?.url,
+    ).toContain('client-info-sheet.pdf');
+    expect(packs[0].uploads.map(upload => upload.evidenceType)).toEqual([
+      'sharing_permission',
+      'privacy_notice',
+      'identity_document',
+    ]);
+  });
+
+  it('records a prospect check fit and names the developments the prospect qualifies for', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+
+    expect(checkFit.policyVersion).toBe('prospect_check_fit_v1');
+    expect(checkFit.prospectName).toBe('Thandi Mokoena');
+    expect(checkFit.assumptions).toMatchObject({
+      termMonths: 240,
+      repaymentAllowanceRatio: 0.3,
+      applicantCount: 1,
+      jointAssessment: false,
+      approvalReference: 'EDWARD-CHECKFIT-MODEL-2026-10-21',
+    });
+    expect(checkFit.outputs).toMatchObject({
+      combinedGrossIncomeMonthly: 50000,
+      repaymentAllowanceMonthly: 15000,
+      estimatedPurchasePrice: 1502434,
+    });
+
+    const match = checkFit.matches.find(
+      candidate => candidate.developmentId === scenario.developmentId,
+    );
+    expect(match).toMatchObject({
+      qualified: true,
+      entryPrice: 1000000,
+      developmentName: expect.any(String),
+    });
+    expect(checkFit.outputs.qualifiedDevelopmentCount).toBeGreaterThan(0);
+
+    const stored = await scenario.caller.distribution.partner.listProspectCheckFits({ limit: 10 });
+    expect(stored.map(record => record.id)).toContain(checkFit.id);
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('assesses a joint application as one combined income', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 30000,
+      coApplicantName: 'Sipho Mokoena',
+      coApplicantGrossIncomeMonthly: 20000,
+    });
+
+    expect(checkFit.prospectName).toBe('Thandi Mokoena');
+    expect(checkFit.coApplicantName).toBe('Sipho Mokoena');
+    expect(checkFit.assumptions).toMatchObject({ applicantCount: 2, jointAssessment: true });
+    expect(checkFit.outputs).toMatchObject({
+      combinedGrossIncomeMonthly: 50000,
+      repaymentAllowanceMonthly: 15000,
+      estimatedPurchasePrice: 1502434,
+    });
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('attaches the prospect check fit to the referral and locks it to that referral', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+
+    const result = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
+      buyerName: 'Checked Buyer',
+      buyerEmail: `checked-${Date.now()}@example.com`,
+      checkFitId: checkFit.id,
+    });
+    createdState.dealIds.push(Number(result.dealId));
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [deal] = await db
+      .select({
+        prospectCheckFitId: distributionDeals.prospectCheckFitId,
+        affordabilityPurchasePrice: distributionDeals.affordabilityPurchasePrice,
+      })
+      .from(distributionDeals)
+      .where(eq(distributionDeals.id, Number(result.dealId)))
+      .limit(1);
+    expect(deal?.prospectCheckFitId).toBe(checkFit.id);
+    expect(deal?.affordabilityPurchasePrice).toBe(1502434);
+
+    const [locked] = await db
+      .select({
+        lockedAt: distributionProspectCheckFits.lockedAt,
+        lockedByDealId: distributionProspectCheckFits.lockedByDealId,
+      })
+      .from(distributionProspectCheckFits)
+      .where(eq(distributionProspectCheckFits.id, checkFit.id))
+      .limit(1);
+    expect(locked?.lockedAt).toBeTruthy();
+    expect(Number(locked?.lockedByDealId)).toBe(Number(result.dealId));
+
+    const secondIntakeSessionUuid = await completeIntake({
+      caller: scenario.caller,
+      developmentId: scenario.developmentId,
+    });
+    const reuseError = (await scenario.caller.distribution.partner
+      .submitReferral({
+        developmentId: scenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: secondIntakeSessionUuid,
+        buyerName: 'Second Buyer',
+        buyerEmail: `second-${Date.now()}@example.com`,
+        checkFitId: checkFit.id,
+      })
+      .catch(error => error)) as TRPCError;
+
+    expect(reuseError).toBeInstanceOf(TRPCError);
+    expect(reuseError.code).toBe('PRECONDITION_FAILED');
+    expect(reuseError.message).toContain('already attached to a referral');
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('updates the same check fit instead of recording a duplicate for the same prospect', async () => {
+    const scenario = await seedScenario();
+
+    const first = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+    const second = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Thandi Mokoena',
+      grossIncomeMonthly: 50000,
+    });
+
+    expect(second.id).toBe(first.id);
+
+    const listed = await scenario.caller.distribution.partner.listProspectCheckFits({ limit: 20 });
+    expect(listed.map(record => record.id)).toEqual([first.id]);
+  });
+
+  it('refuses a check fit that did not qualify for the selected opportunity', async () => {
+    await ensureCanonicalPrimeRate();
+    const scenario = await seedScenario();
+    const checkFit = await scenario.caller.distribution.partner.createProspectCheckFit({
+      prospectName: 'Nomvula Sibiya',
+      grossIncomeMonthly: 10000,
+    });
+
+    const error = (await scenario.caller.distribution.partner
+      .submitReferral({
+        developmentId: scenario.developmentId,
+        marketMode: 'sale',
+        intakeSessionUuid: scenario.intakeSessionUuid,
+        buyerName: 'Unqualified Buyer',
+        buyerEmail: `unqualified-${Date.now()}@example.com`,
+        checkFitId: checkFit.id,
+      })
+      .catch(error => error)) as TRPCError;
+
+    expect(error).toBeInstanceOf(TRPCError);
+    expect(error.code).toBe('PRECONDITION_FAILED');
+    expect(error.message).toContain('did not qualify');
   }, INTEGRATION_TIMEOUT_MS);
 });

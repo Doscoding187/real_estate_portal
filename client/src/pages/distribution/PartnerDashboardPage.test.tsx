@@ -93,14 +93,15 @@ describe('PartnerDashboardPage', () => {
     expect(screen.getByText('Based on programme terms')).toBeInTheDocument();
   });
 
-  it('keeps preliminary affordability disabled and truthful', () => {
+  it('sends the referrer to the live check fit instead of a disabled panel', () => {
     render(<PartnerDashboardPage />);
 
-    expect(screen.getByLabelText('Monthly income')).toBeDisabled();
-    expect(screen.getByLabelText('Deposit')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Buy' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Rent' })).toBeDisabled();
-    expect(screen.getByText(/Preliminary affordability is not active yet/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Monthly income')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Deposit')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'I have a prospect' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/gross monthly income only/)).toBeInTheDocument();
   });
 
   it('surfaces recorded activity without inventing states', () => {

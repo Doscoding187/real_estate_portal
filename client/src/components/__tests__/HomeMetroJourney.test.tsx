@@ -14,7 +14,10 @@ const { navigate, lookup, current } = vi.hoisted(() => ({
 vi.mock('wouter', () => ({ useLocation: () => ['/', navigate] }));
 vi.mock('@/lib/trpc', () => ({
   trpc: {
-    location: { searchDiscoverySuggestions: { useQuery: (...args: unknown[]) => lookup(...args) } },
+    location: {
+      searchDiscoverySuggestions: { useQuery: (...args: unknown[]) => lookup(...args) },
+      placeSuggestions: { useQuery: (...args: unknown[]) => lookup(...args) },
+    },
   },
 }));
 vi.mock('@/components/LocationAutosuggest', () => ({
