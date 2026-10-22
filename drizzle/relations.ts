@@ -91,6 +91,7 @@ import {
   strategicPlanningPeriods,
   strategicPlanningObjectives,
   strategicPlanningTargets,
+  strategicPlanningCommitments,
 } from './schema/index';
 
 export const activitiesRelations = relations(activities, ({ one }) => ({
@@ -1211,7 +1212,18 @@ export const strategicPlanningObjectivesRelations = relations(
       references: [users.id],
       relationName: 'spp_obj_updatedBy_userId',
     }),
-    targets: many(strategicPlanningTargets),
+  targets: many(strategicPlanningTargets),
+    commitments: many(strategicPlanningCommitments),
+  }),
+);
+
+export const strategicPlanningCommitmentsRelations = relations(
+  strategicPlanningCommitments,
+  ({ one }) => ({
+    objective: one(strategicPlanningObjectives, { fields: [strategicPlanningCommitments.objectiveId], references: [strategicPlanningObjectives.id] }),
+    owner_user: one(users, { fields: [strategicPlanningCommitments.ownerUserId], references: [users.id], relationName: 'spc_owner_userId' }),
+    createdBy_user: one(users, { fields: [strategicPlanningCommitments.createdByUserId], references: [users.id], relationName: 'spc_createdBy_userId' }),
+    updatedBy_user: one(users, { fields: [strategicPlanningCommitments.updatedByUserId], references: [users.id], relationName: 'spc_updatedBy_userId' }),
   }),
 );
 

@@ -604,91 +604,14 @@ export async function activateObjective(id: number, actorUserId: number) {
   });
 }
 
-export async function completeObjective(id: number, actorUserId: number) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  return db.transaction(async (tx) => {
-    await verifySuperAdmin(tx, actorUserId);
-
-    const [existing] = await tx
-      .select()
-      .from(strategicPlanningObjectives)
-      .where(eq(strategicPlanningObjectives.id, id))
-      .for('update');
-
-    if (!existing) throw new Error('Objective not found');
-    assertValidTransition(existing.status, 'completed');
-
-    await tx
-      .update(strategicPlanningObjectives)
-      .set({ status: 'completed', updatedByUserId: actorUserId })
-      .where(eq(strategicPlanningObjectives.id, id));
-
-    const afterRow = await tx
-      .select()
-      .from(strategicPlanningObjectives)
-      .where(eq(strategicPlanningObjectives.id, id))
-      .limit(1);
-
-    await logManagerialAudit({
-      executor: tx,
-      actorUserId,
-      action: AuditActions.STRATEGIC_OBJECTIVE_COMPLETE,
-      targetType: 'strategic_planning_objective',
-      targetId: id,
-      beforeData: existing,
-      afterData: afterRow,
-    });
-
-    return afterRow;
-  });
+export async function completeObjective(id: number, actorUserId: number, resolutions: import('./founderExecutionOrchestrationService').CommitmentResolution[] = []) {
+  const { closeObjective } = await import('./founderExecutionOrchestrationService');
+  return closeObjective(id, actorUserId, { status: 'completed', resolutions });
 }
 
 export async function cancelObjective(id: number, actorUserId: number, reason: string) {
-  const db = await getDb();
-  if (!db) throw new Error('Database not available');
-
-  if (!reason || reason.trim().length === 0) {
-    throw new Error('Cancellation reason is required');
-  }
-
-  return db.transaction(async (tx) => {
-    await verifySuperAdmin(tx, actorUserId);
-
-    const [existing] = await tx
-      .select()
-      .from(strategicPlanningObjectives)
-      .where(eq(strategicPlanningObjectives.id, id))
-      .for('update');
-
-    if (!existing) throw new Error('Objective not found');
-    assertValidTransition(existing.status, 'cancelled');
-
-    await tx
-      .update(strategicPlanningObjectives)
-      .set({ status: 'cancelled', updatedByUserId: actorUserId })
-      .where(eq(strategicPlanningObjectives.id, id));
-
-    const afterRow = await tx
-      .select()
-      .from(strategicPlanningObjectives)
-      .where(eq(strategicPlanningObjectives.id, id))
-      .limit(1);
-
-    await logManagerialAudit({
-      executor: tx,
-      actorUserId,
-      action: AuditActions.STRATEGIC_OBJECTIVE_CANCEL,
-      targetType: 'strategic_planning_objective',
-      targetId: id,
-      beforeData: existing,
-      afterData: afterRow,
-      metadata: { reason: reason.trim() },
-    });
-
-    return afterRow;
-  });
+  const { closeObjective } = await import('./founderExecutionOrchestrationService');
+  return closeObjective(id, actorUserId, { status: 'cancelled', reason });
 }
 
 // ─── Target Functions ────────────────────────────────────────────

@@ -124,6 +124,7 @@ import { sharedLivingRouter } from './sharedLivingRouter';
 import { homeMarketInsightsRouter } from './homeMarketInsightsRouter';
 import { founderRouter } from './founderRouter';
 import { strategicPlanningRouter } from './strategicPlanningRouter';
+import { strategicCommitmentRouter } from './strategicCommitmentRouter';
 
 const appRouterConfig = {
   system: systemRouter,
@@ -178,6 +179,7 @@ const appRouterConfig = {
   discovery: discoveryRouter,
   founder: founderRouter,
   strategicPlanning: strategicPlanningRouter,
+  strategicCommitments: strategicCommitmentRouter,
 
   propertyResults: propertyResultsRouter,
 

@@ -23,6 +23,7 @@ export * from './land';
 export * from './commercial';
 export * from './sharedLiving';
 export * from './strategicPlanning';
+export * from './strategicCommitments';
 
 // Type helpers (schema surface)
 import type { users, auditLogs } from './core';

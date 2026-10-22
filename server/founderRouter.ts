@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { router, superAdminProcedure } from './_core/trpc';
+import { listStrategicWorkForToday } from './services/strategicCommitmentService';
 import { getDb } from './db';
 import {
   getPlatformAnalytics,
@@ -50,6 +51,9 @@ const LEAD_PIPELINE_ORDER = [
  * super_admin-only.
  */
 export const founderRouter = router({
+  getStrategicCommitments: superAdminProcedure.query(async () => {
+    try { return { items: await listStrategicWorkForToday() }; } catch { return { items: [] }; }
+  }),
   /**
    * Cockpit: platform snapshot with real metrics from existing analytics.
    *

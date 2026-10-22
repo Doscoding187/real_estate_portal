@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0068_add_strategic_planning_targets.sql",
+  "expectedHead": "0069_add_strategic_planning_commitments.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -705,6 +705,16 @@
       "checksum": "fc16818450c13813052fc091e643eb385eeb3d96410564552dfb7dc35e6b3038",
       "parent": "0067_add_strategic_planning_objectives.sql",
       "parentChecksum": "70bff1651728262670cf9898cfd8b618afaa619d655b30d5937e3c9095075d7d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 69,
+      "filename": "0069_add_strategic_planning_commitments.sql",
+      "checksum": "73804ae4ce06d65e7535bc0e0d4ec9d0d0f1a2278e59294e0e256ac64dfe8da5",
+      "parent": "0068_add_strategic_planning_targets.sql",
+      "parentChecksum": "fc16818450c13813052fc091e643eb385eeb3d96410564552dfb7dc35e6b3038",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

@@ -1091,6 +1091,11 @@
       "path": "server/migrations/0068_add_strategic_planning_targets.sql",
       "classification": "canonical active",
       "purpose": "Strategic Planning: creates measurable strategic targets linked to objectives and planning periods."
+    },
+    {
+      "path": "server/migrations/0069_add_strategic_planning_commitments.sql",
+      "classification": "canonical active",
+      "purpose": "Founder execution: creates accountable commitments linked to active strategic objectives."
     }
   ],
   "prohibitedPaths": [

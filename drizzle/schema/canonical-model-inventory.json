@@ -3,12 +3,12 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "4a0de960e3dc6190a6e28f531d574bd4a63e32b49cad214dd1f6bd9166dce79d",
+  "structuralDigest": "fbf6b2c988a8de32a4b512934aab68c94070d53023eb678cbaa79ec277439c72",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
   ],
-  "tableCount": 219,
+  "tableCount": 220,
   "tables": [
     "activities",
     "affordability_assessments",
@@ -213,6 +213,7 @@
     "sl_space_specifications",
     "sl_spaces",
     "sl_verifications",
+    "strategic_planning_commitments",
     "strategic_planning_objectives",
     "strategic_planning_periods",
     "strategic_planning_targets",

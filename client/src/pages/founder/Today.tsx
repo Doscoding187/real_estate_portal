@@ -73,6 +73,7 @@ export default function Today() {
     trpc.founder.getAttentionCandidates.useQuery();
   const { data: metrics, isLoading: metricsLoading } =
     trpc.founder.getDashboardMetrics.useQuery();
+  const { data: strategicWork } = trpc.founder.getStrategicCommitments.useQuery();
 
   const items = attentionData?.items ?? [];
   const topPriorities = items.slice(0, 3);
@@ -143,6 +144,14 @@ export default function Today() {
 
       {/* Main content: priorities + right column */}
       <div className="flex gap-6 items-start">
+        {(strategicWork?.items?.length ?? 0) > 0 ? (
+          <Card className="mb-6 w-full">
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold">Strategic Commitments</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {strategicWork!.items.slice(0, 5).map((entry: any) => <div key={entry.commitment.id} className="flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm"><span className="font-medium text-slate-800">{entry.commitment.title}</span><span className="text-xs text-slate-500">{entry.commitment.status === 'in_progress' ? 'In progress' : 'Open'}{entry.commitment.dueDate ? ` · due ${entry.commitment.dueDate}` : ''}</span></div>)}
+            </CardContent>
+          </Card>
+        ) : null}
         {/* Priorities — main area */}
         <div className={`flex-1 min-w-0 ${selected ? 'lg:max-w-[60%]' : ''}`}>
           <Card>
