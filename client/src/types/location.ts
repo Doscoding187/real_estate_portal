@@ -4,6 +4,14 @@ export interface LocationNode {
   canonicalLocationId?: string;
   /** Durable factual identity retained when the runtime row is only a handle. */
   factualLocationId?: string;
+  /**
+   * The runtime query handle for a place the published projection still carries.
+   *
+   * The public search execution resolves a city scope through the published projection, so a
+   * published place keeps that handle for the scope it is selected into. It is absent for every
+   * place the projection does not carry.
+   */
+  runtimeLocationId?: string;
   /** Factual type guides UI clarification; it does not change the runtime identity. */
   factualType?: string;
   slug: string; // URL-safe slug

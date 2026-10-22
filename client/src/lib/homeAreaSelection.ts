@@ -1,7 +1,7 @@
 import type { LocationNode } from '@/types/location';
 import type { SearchDiscoveryResult } from '@shared/searchDiscovery';
 import { isSearchAreaId, type SearchJourneyId } from '@shared/searchScope';
-import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import { parseCanonicalLocationIdentity } from '@shared/locationAuthority';
 import type { HomeAreaSelection } from '@/contexts/HomeSearchContext';
 import { hasCanonicalLocationIdentity } from '@/lib/locationDiscovery';
 
@@ -49,14 +49,14 @@ export function homeAreaFromDiscovery(
     )
   )
     return null;
-  const parsed = parseCanonicalLocationId(result.canonicalLocationId);
-  if (!parsed || parsed.level !== result.factualLevel) return null;
+  const identity = parseCanonicalLocationIdentity(result.canonicalLocationId);
+  if (!identity) return null;
+  const level = result.factualLevel;
+  // A runtime handle carries its own level. A Place Authority identity does not,
+  // so the level the authority returned is the level it asserts.
+  if (identity.kind === 'runtime' && identity.level !== level) return null;
   const slug =
-    parsed.level === 'suburb'
-      ? result.suburbSlug
-      : parsed.level === 'city'
-        ? result.citySlug
-        : result.provinceSlug;
+    level === 'suburb' ? result.suburbSlug : level === 'city' ? result.citySlug : result.provinceSlug;
   if (!slug) return null;
   const location: LocationNode = {
     id: result.canonicalLocationId,
@@ -65,11 +65,12 @@ export function homeAreaFromDiscovery(
     factualType: result.factualType,
     name: result.label,
     slug,
-    type: parsed.level,
+    type: level,
     provinceSlug: result.provinceSlug,
     citySlug: result.citySlug,
     parentCanonicalLocationId: result.parentCanonicalLocationId,
     canonicalPath: result.canonicalPath,
+    ...(result.runtimeLocationId ? { runtimeLocationId: result.runtimeLocationId } : {}),
     selectionTypeLabel: result.display.typeLabel,
     selectionContextLabel: result.display.contextLabel,
   };

@@ -60,7 +60,7 @@ import {
   buildConsumerJourneyUrl,
   LAND_PUBLIC_CLASSIFICATION_OPTIONS,
 } from '@/lib/consumerJourneyRouter';
-import { parseCanonicalLocationId } from '@shared/locationAuthority';
+import { parseCanonicalLocationIdentity } from '@shared/locationAuthority';
 import {
   COMMERCIAL_AVAILABILITY_OPTIONS,
   COMMERCIAL_BUDGET_OPTIONS,
@@ -545,8 +545,8 @@ export function EnhancedHero({
   )
     ? (journey as SearchJourneyId)
     : undefined;
-  const { data: serverDiscoverySuggestions } = trpc.location.searchDiscoverySuggestions.useQuery(
-    { query: searchQuery, limit: 6, journey: discoveryJourney },
+  const { data: serverDiscoverySuggestions } = trpc.location.placeSuggestions.useQuery(
+    { query: searchQuery, limit: 6 },
     {
       enabled: VITE_SEARCH_DISCOVERY_AUTOSUGGEST_ENABLED === '1' && searchQuery.trim().length >= 2,
     },
@@ -894,22 +894,23 @@ export function EnhancedHero({
                       ]);
                       return;
                     }
-                    const parsed = parseCanonicalLocationId(suggestion.canonicalLocationId);
-                    if (!parsed) return;
+                    const identity = parseCanonicalLocationIdentity(
+                      suggestion.canonicalLocationId,
+                    );
+                    if (!identity) return;
                     selectCanonicalLocation({
                       id: suggestion.canonicalLocationId,
                       canonicalLocationId: suggestion.canonicalLocationId,
                       factualType: suggestion.factualType,
                       name: suggestion.label,
                       slug: suggestion.suburbSlug || suggestion.citySlug || suggestion.provinceSlug,
-                      type:
-                        parsed.level === 'province'
-                          ? 'province'
-                          : parsed.level === 'city'
-                            ? 'city'
-                            : 'suburb',
+                      type: suggestion.factualLevel,
                       provinceSlug: suggestion.provinceSlug,
                       citySlug: suggestion.citySlug,
+                      canonicalPath: suggestion.canonicalPath,
+                      ...(suggestion.runtimeLocationId
+                        ? { runtimeLocationId: suggestion.runtimeLocationId }
+                        : {}),
                       ...(suggestion.factualLocationId
                         ? { factualLocationId: suggestion.factualLocationId }
                         : {}),

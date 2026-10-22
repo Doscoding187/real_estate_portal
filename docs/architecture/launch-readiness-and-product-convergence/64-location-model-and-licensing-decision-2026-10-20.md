@@ -210,3 +210,44 @@ The platform still has two geography _implementations_. This packet decides the 
 ladder, the status rule and the licensing resolution, and it makes the retirement mechanical
 rather than aspirational. The projection tables are still in service until the consumers in
 packet 63 move. That is the remaining execution, and it is recorded there, not here.
+
+## The second-source gate is removed for search — founder direction 2026-10-20
+
+Edward's direction: a place that OpenStreetMap records, with a traceable source, a supported
+type, supported spatial confidence and no unresolved boundary conflict, should be usable. A
+second gazetteer listing it is a confidence signal, not a ticket every place must hold first.
+
+The release policy changed accordingly, from `admitted-national-non-osm-only-v1` to
+`admitted-national-traceable-sources-v2`. The protected release now includes the OpenStreetMap
+derived places, and it reports the set of them separately, so the decision is auditable and a
+later correction can find every affected record.
+
+**What did not change.**
+
+- Per-row attribution and provenance. Every released place keeps its licence notice and its
+  source record, so an OpenStreetMap-derived place remains attributable.
+- **Publication as a public guide page stays stricter than search.** The place's own
+  `publication_eligible` still requires a released and verified identity, so these places
+  become selectable and searchable without becoming indexable pages.
+- No source-quality, spatial-confidence or boundary-conflict check was relaxed. The change is
+  about one rule only: the absence of a second gazetteer listing.
+
+**Coverage effect, measured on the disposable target.**
+
+|                                    | Before          | After      |
+| ---------------------------------- | --------------- | ---------- |
+| Places released                    | 16,944          | **17,664** |
+| Places searchable                  | 16,224          | **16,944** |
+| Places publishable as a guide page | 68 per province | unchanged  |
+| Gauteng places searchable          | 714             | **1,434**  |
+
+**The licence position that remains open.** The OpenStreetMap tail is a small, non-systematic
+part of a collection that is 16,472 permissively-licensed places. That is the fact the written
+opinion should test, together with whether combining them in one collection is a collective
+database under the ODbL. Until that opinion is held, this is a founder decision on the release
+policy, recorded here and in the release evidence, and not a settled legal position.
+
+The alternative that avoids the question entirely is to not hold a browsable OpenStreetMap
+gazetteer and to resolve a location at the moment an agent lists a property instead. That
+design also delivers the coverage, and it is the pattern the OpenStreetMap Foundation's own
+geocoding guidance blesses. It is the next design option, not the one taken here.

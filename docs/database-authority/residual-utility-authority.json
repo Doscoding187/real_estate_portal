@@ -64,7 +64,8 @@
     "supportedReplacements": [
       "scripts/db-contract-verify.ts",
       "scripts/db-verify-distribution-schema.ts",
-      "scripts/local-db.sh"
+      "scripts/local-db.sh",
+      "scripts/verify-national-place-search.ts"
     ],
     "localTestLifecycle": [
       "docker/mysql-local/init/01-create-local-databases.sql",
@@ -316,7 +317,7 @@
         "scripts/quick-check.ts"
       ]
     },
-    "guardedOperationalSurfaceCountAtClosure": 122,
+    "guardedOperationalSurfaceCountAtClosure": 123,
     "operationalSurfaceDefinition": "A current source path within the guard boundary that has direct database-client, execution, SQL mutation/inspection, or ambient-target capability signals. Historical documentation, ordinary runtime data access, migrations, tests and non-capable authority files are not counted as operational surfaces."
   },
   "policy": {

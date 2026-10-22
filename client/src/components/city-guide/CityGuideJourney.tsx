@@ -28,12 +28,12 @@ import { getPublicHeroJourney } from '@/lib/publicNavigation';
 
 export function CitySuburbFinder({
   guide,
-  cityId,
+  citySlug,
   onSelect,
   label,
 }: {
   guide: CityGuideContent;
-  cityId?: number;
+  citySlug?: string;
   onSelect: (place: LocationNode) => void;
   label: string;
 }) {
@@ -45,14 +45,14 @@ export function CitySuburbFinder({
     const timer = setTimeout(() => setDebounced(query.trim()), 180);
     return () => clearTimeout(timer);
   }, [query]);
-  const lookup = trpc.location.searchDiscoverySuggestions.useQuery(
+  const lookup = trpc.location.placeSuggestions.useQuery(
     { query: debounced, limit: 20 },
-    { enabled: cityId !== undefined && debounced.length >= 2, retry: false, staleTime: 600000 },
+    { enabled: citySlug !== undefined && debounced.length >= 2, retry: false, staleTime: 600000 },
   );
   const pending = query.trim() !== debounced || lookup.isFetching;
-  const local = cityGuideChoices(lookup.data || [], guide, cityId);
+  const local = cityGuideChoices(lookup.data || [], guide, citySlug);
   const separate = cityGuideChoices(lookup.data || [], guide).filter(
-    place => place.factualLevel === 'city' && place.canonicalLocationId !== `city:${cityId}`,
+    place => place.factualLevel === 'city' && place.citySlug !== citySlug,
   );
   const groups = [
     { label: `Suburbs in ${guide.name}`, places: local },
@@ -77,7 +77,7 @@ export function CitySuburbFinder({
           type="search"
           placeholder="Enter a suburb or place name"
           value={query}
-          disabled={cityId === undefined}
+          disabled={citySlug === undefined}
           onFocus={() => setOpen(true)}
           onChange={e => {
             setQuery(e.target.value);
@@ -229,7 +229,7 @@ export function CityGuideJourney({
         <div>
           <CitySuburbFinder
             guide={guide}
-            cityId={city ? Number(city.canonicalLocationId?.split(':')[1]) : undefined}
+            citySlug={city?.slug}
             label={`Choose an area to explore`}
             onSelect={setPlace}
           />
