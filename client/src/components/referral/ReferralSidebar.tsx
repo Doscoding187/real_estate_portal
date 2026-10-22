@@ -13,6 +13,7 @@ import {
   Home,
   LogOut,
   Search,
+  Send,
 } from 'lucide-react';
 
 type ReferralSidebarProps = {
@@ -30,6 +31,7 @@ const WORKSPACE_LINKS: ReadonlyArray<Omit<NavItem, 'badge'>> = [
   { label: 'Overview', href: '/distribution/partner/overview', icon: Home },
   { label: 'Find opportunities', href: '/distribution/partner/developments', icon: Search },
   { label: 'I have a prospect', href: '/distribution/partner/prospect-check-fit', icon: Calculator },
+  { label: 'Submit a referral', href: '/distribution/partner/submit', icon: Send },
   { label: 'My deals', href: '/distribution/partner/referrals', icon: FileText },
   { label: 'Referral payouts', href: '/distribution/partner/payouts', icon: CreditCard },
   { label: 'How it works', href: '/distribution/partner/how-it-works', icon: CircleHelp },
