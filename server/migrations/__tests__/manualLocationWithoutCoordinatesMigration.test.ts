@@ -25,7 +25,6 @@ describe('PLE-6C manual location without coordinates migration', () => {
     });
     expect(manifest.expectedHead.filename).toBe(
       '0151_service_provider_review_reports_sequenced.sql',
-      '0152_service_provider_review_reports_review_index.sql',
     );
   });
 

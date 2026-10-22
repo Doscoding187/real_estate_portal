@@ -23,7 +23,6 @@ describe('PLE-6B canonical listing location migration', () => {
     });
     expect(manifest.expectedHead.filename).toBe(
       '0151_service_provider_review_reports_sequenced.sql',
-      '0152_service_provider_review_reports_review_index.sql',
     );
   });
 
