@@ -329,10 +329,39 @@ export default function PartnerSubmitReferralPage() {
               <section className="rounded-xl border border-border bg-white p-5 shadow-sm md:p-6">
                 <StepHeading
                   step={2}
-                  title="Confirm the prospect has seen the documents"
-                  description="Review these documents with the person. We’ll ask for their contact details after the signed documents and ID are added."
+                  title="Get the documents, then confirm the prospect has seen them"
+                  description="Download the documents for the prospect, review them with the person, and confirm below. We’ll ask for their contact details after the signed documents and ID are added."
                 />
                 <div className="mt-4 space-y-4">
+                  {documentPack && documentPack.downloads.length ? (
+                    <div className="mt-4 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5">
+                      <p className="text-sm font-semibold text-[#0b1c3f]">
+                        Download these for the prospect
+                      </p>
+                      <p className="mt-1 text-xs text-[#33507e]">
+                        Give the prospect these documents, let them complete and sign them, then upload
+                        the signed copies below. The referral is only sent once the required documents
+                        are in, and it then appears in My deals.
+                      </p>
+                      <ul className="mt-2 space-y-1">
+                        {documentPack.downloads.map(download => (
+                          <li key={download.key} className="text-xs">
+                            <a
+                              href={download.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-[#1d6fe3] underline"
+                            >
+                              Download {download.label}
+                            </a>
+                            {download.instructions ? (
+                              <span className="ml-1 text-[#33507e]">{download.instructions}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                   {[requirementsQuery.data.sharingPermissionDocument, requirementsQuery.data.privacyNoticeDocument].map(document => (
                     <section key={`${document.title}-${document.version}`} className="rounded-lg border border-border p-3.5">
                       <div className="flex items-center justify-between gap-3">
@@ -376,35 +405,6 @@ export default function PartnerSubmitReferralPage() {
                     title="Add the signed documents"
                     description="These documents confirm permission and identity. They are stored with the referral for the responsible team to review."
                   />
-                  {documentPack && documentPack.downloads.length ? (
-                    <div className="mt-4 rounded-lg border border-[#cfe0f8] bg-[#eff5fe] p-3.5">
-                      <p className="text-sm font-semibold text-[#0b1c3f]">
-                        Download these for the prospect
-                      </p>
-                      <p className="mt-1 text-xs text-[#33507e]">
-                        Give the prospect these documents, let them complete and sign them, then upload
-                        the signed copies below. The referral is only sent once the required documents
-                        are in, and it then appears in My deals.
-                      </p>
-                      <ul className="mt-2 space-y-1">
-                        {documentPack.downloads.map(download => (
-                          <li key={download.key} className="text-xs">
-                            <a
-                              href={download.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-medium text-[#1d6fe3] underline"
-                            >
-                              Download {download.label}
-                            </a>
-                            {download.instructions ? (
-                              <span className="ml-1 text-[#33507e]">{download.instructions}</span>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
                   <div className="mt-4 space-y-4">
                     {REQUIRED_EVIDENCE.map(item => {
                       const uploaded = uploadedTypes.has(item.type);

@@ -79,7 +79,23 @@ vi.mock('@/lib/trpc', () => ({
           useMutation: (opts: unknown) => mockUploadEvidence(opts),
         },
         getProspectDocumentPacks: {
-          useQuery: () => ({ data: [] }),
+          useQuery: () => ({
+            data: [
+              {
+                developmentId: 101,
+                downloads: [
+                  {
+                    key: 'required_document_1',
+                    label: 'Client info sheet',
+                    url: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
+                    instructions: 'Complete it and upload the signed copy.',
+                  },
+                ],
+                uploads: [],
+                signatureMethod: 'Signed electronic acknowledgement',
+              },
+            ],
+          }),
         },
         submitReferral: {
           useMutation: (opts: unknown) => mockSubmitReferral(opts),
@@ -218,7 +234,9 @@ describe('PartnerSubmitReferralPage', () => {
     const rendered = render(<PartnerSubmitReferralPage />);
 
     expect(screen.getByText('Choose an opportunity and market')).toBeInTheDocument();
-    expect(screen.getByText('Confirm the prospect has seen the documents')).toBeInTheDocument();
+    expect(
+      screen.getByText('Get the documents, then confirm the prospect has seen them'),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
@@ -275,6 +293,15 @@ describe('PartnerSubmitReferralPage', () => {
     expect(state.lastSubmitPayload).toMatchObject({
       checkFitId: '11111111-1111-4111-8111-111111111111',
     });
+  });
+
+  it('offers the prospect documents to download before the documents are confirmed', () => {
+    state.sessionStarted = true;
+
+    render(<PartnerSubmitReferralPage />);
+
+    expect(screen.getByText('Download these for the prospect')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Download/ })).toBeInTheDocument();
   });
 
   it('shows the server message when submission is blocked, then follows the deal on success', () => {
