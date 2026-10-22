@@ -92,6 +92,10 @@ temp/
 # Temporary output files
 *_output.txt
 verification_*.txt
+lint-output.txt
+tsc.out.txt
+tsc.after-rootfix.txt
+tsc.phaseC.txt
 
 # Local SQL scratch
 *.session.sql
