@@ -1,6 +1,6 @@
-# B06 Developer paid MVP revalidation
+# B06 Developer paid MVP revalidation — historical pre-composition run
 
-Status: current B06 evidence returned for senior review; B06 remains review-pending. This addendum applies only to the candidate below. The earlier `1b937bb6` run and its worktree/evidence remain historical and untouched.
+Status: historical verification evidence for B06 commit `96b6746c7bd4945975055dc755dc1968e8cd989e` only. It does not verify the newly composed source in this worktree. The accepted B03/B05 worktree patches were added after these browser and regression runs; their composition is recorded separately in [`source-composition.md`](source-composition.md). Fresh composed-source verification is recorded in [`composed-source-verification.md`](composed-source-verification.md), with the complete sanitized browser report in [`browser-composed-report.sanitized.json`](browser-composed-report.sanitized.json). Current B06 remains OPEN pending senior review. The earlier `1b937bb6` run and its worktree/evidence remain historical and untouched.
 
 ## Source and target identity
 
@@ -8,10 +8,9 @@ Status: current B06 evidence returned for senior review; B06 remains review-pend
 | --- | --- |
 | Accepted source candidate | `5e4fe9244441e4138a836bc084c8d1e01881bc99` |
 | Source candidate tree | `b664ab9c1c6bb59fe68e6a476603aab792ca30c` |
-| B03 accepted corrections in ancestry | `b80d917ea3b790ae25651ffbe30752bc88d8e107`; `f4839b0ae8f9fad043da2bb4fbb6754662c8778f` |
-| B05 accepted correction identities in ancestry | direct harness/invitation correction `4a5f985a214c629c027c12c6cc1fb30702d310ab`; accepted reviewed candidate `e8974ec34b919ceab37bdbd7e7379f96f3abce99` |
-| Historical B05 baseline (not the accepted correction) | `e8b813917268d9a707ecb31e8261be5a585c8c18` |
-| Tested B06 overlay | The accepted base above plus the sole changed source path, `e2e/b06/developer-paid-mvp.spec.ts` (exact tested file SHA-256 in `SHA256SUMS`) |
+| Historical tested B06 commit / tree | `96b6746c7bd4945975055dc755dc1968e8cd989e` / `c18ef2835005637324d949edec5f1374e44b5b45` |
+| Historical tested B06 overlay | The accepted base above plus `e2e/b06/developer-paid-mvp.spec.ts` (exact tested file SHA-256 in `SHA256SUMS`) |
+| B03/B05 accepted corrections | Those were uncommitted accepted worktree diffs and were not included in this historical run. Their exact source file lists and diff hashes are recorded in `source-composition.md`; commit ancestry alone is not used as proof of those patches. |
 | Task branch / worktree | `feat/b06-developer-paid-mvp-5e4fe924` / `/home/edwardspc/Desktop/Dev/worktrees/property-listify-b06-developer-paid-mvp-5e4fe924` |
 | Database | `listify_wt_b06_developer_paid_mvp_5e4fe92_31389aa66242` (disposable-worktree) |
 | Database ownership key | `31389aa662427b0cec274291` |
@@ -19,7 +18,7 @@ Status: current B06 evidence returned for senior review; B06 remains review-pend
 | Local Database Authority service fingerprint | `2425e54d0472ee5b308127a7c63380733f077ec7531767d6dba21a2c2a9177f2` |
 | Manifest head | `0094_content_topics_primary_key.sql`, manifest SHA-256 `0645a178f556e24fa170d41b07a8ac73cff4e9404beedf1660a2bf54e72b4124` |
 
-The accepted candidate was checked for the named B03/B05 ancestors and relevant correction paths before target provisioning. The candidate also contains the accepted 0094 manifest head. The distinct B05 profile-setup issue was not reopened and is not attributed to `e8974ec`.
+The historical run used the source candidate and 0094 manifest head shown above. The separately accepted B03/B05 worktree patches were composed into B06 only after this run; none of the test results below apply to that composition. The distinct B05 profile-setup issue was not reopened or attributed to an ancestor commit.
 
 ## Controlled setup
 
@@ -101,6 +100,9 @@ The only implementation change is the B06 browser spec: journey diagnostics, nam
 
 ## Evidence files
 
-- `browser-initial-report.sanitized.json` — complete initial passing browser report with all nested steps and the initial run's diagnostics.
-- `browser-final-report.sanitized.json` — complete current passing browser report with all nested steps and the 17 sanitized diagnostic events.
-- `SHA256SUMS` — checksums for the shared reports and this addendum.
+- `browser-initial-report.sanitized.json` — complete historical passing browser report with all nested steps and the initial run's diagnostics.
+- `browser-final-report.sanitized.json` — complete historical passing browser report with all nested steps and the 17 sanitized diagnostic events.
+- `browser-composed-report.sanitized.json` — complete sanitized report for the fresh composed-source pass.
+- `composed-source-verification.md` — current source, target, browser, regression, diagnosis, and acceptance evidence.
+- `source-composition.md` — exact accepted B03/B05 source composition proof.
+- `SHA256SUMS` — checksums for the historical and current sanitized reports, source proof, packet, and covered source files.

@@ -63,9 +63,9 @@ function toBillingOwnerType(value: string): BillingOwnerType {
 }
 /**
  * Resolve the bounded activation gate from the persisted commercial plan.
- * Approved Launch Access terms get their exact product key; legacy and
- * deferred terms deliberately fall through to the product-less gate, which
- * remains closed in normal runtimes.
+ * Approved Launch Access terms get their exact product key. Legacy and
+ * deferred terms fall through to the product-less guard, which a paid release
+ * rejects even when another Launch Access product is enabled.
  */
 function requireSubscriptionCommercialActivation(
   operation: string,
@@ -2006,8 +2006,8 @@ function getCommercialProductKeyFromInvoice(invoice: InvoiceRow): string {
 
 /**
  * Existing recurring agency billing proof workflow. Launch Access uses the
- * shared owner-scoped function above, while this path deliberately continues
- * to accept canonical recurring agency invoices.
+ * shared owner-scoped function above. The recurring path remains available to
+ * governed test fixtures, while a paid release rejects its product-less gate.
  */
 export async function submitAgencyPaymentProof(input: LaunchPaymentProofInput) {
   requireAnyPaidMvpLaunchAccessActivation('Payment-proof submission');
@@ -2598,9 +2598,8 @@ export async function reviewManualPayment(input: {
       });
     } else {
       // Preserve the existing owner-scoped recurring billing contract for
-      // controlled regression fixtures. Normal runtime remains gated by the
-      // generic commercial activation policy, so this does not release a
-      // deferred recurring product.
+      // controlled regression fixtures. A paid release rejects this
+      // product-less branch, so it cannot activate a deferred recurring plan.
       requireCommercialActivation('Payment review');
     }
     const reviewedAt = nowDb();

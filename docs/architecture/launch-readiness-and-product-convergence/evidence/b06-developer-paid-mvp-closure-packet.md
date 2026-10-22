@@ -1,11 +1,13 @@
 # B06 Developer Paid MVP Closure Packet
 
+> **Historical packet only.** This packet describes its recorded historical branch, source, and run; it does not prove inclusion of the accepted uncommitted B03/B05 patches or the current composed source. Fresh composed-source verification has passed, and current B06 remains **OPEN pending senior review**. See [current verification](b06-developer-paid-mvp-revalidation-5e4fe924/composed-source-verification.md) and [source composition proof](b06-developer-paid-mvp-revalidation-5e4fe924/source-composition.md) for current evidence and exact patch hashes.
+
 > **Senior review 2026-09-25:** EVIDENCE INCOMPLETE: B10 records a later Developer browser crash; current complete proof is required.
 > Current authority: [central register](../03-launch-register.md#paid-mvp-working-disposition--2026-09-25). The packet below preserves its original execution claims.
 
 ## A. Status
 
-**B06 — EVIDENCE PASS — REVIEW PENDING.**
+**Historical run only — EVIDENCE PASS — REVIEW PENDING. Current composed-source verification passed; B06 remains OPEN pending senior review.**
 
 The six B06 launch-critical findings are corrected and the joined Developer paid-value journey passes through real mounted application paths. The final commit identity is supplied in the delivery handoff after this packet is committed, avoiding a recursive self-reference.
 
