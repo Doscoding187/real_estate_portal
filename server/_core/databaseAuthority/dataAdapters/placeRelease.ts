@@ -250,7 +250,7 @@ export function loadPlaceReleaseCandidate(root = process.cwd()) {
       while (!provinceIds.has(cursor)) {
         if (visited.has(cursor) || visited.size >= 8 || !parents.has(cursor))
           throw new Error(
-            `Place release refused: ${p.place_id} lacks a bounded province parent after licensing hold.`,
+            `Place release refused: ${p.place_id} lacks a bounded province parent.`,
           );
         visited.add(cursor);
         cursor = parents.get(cursor)!;

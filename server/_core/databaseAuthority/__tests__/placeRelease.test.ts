@@ -68,6 +68,10 @@ vi.mock('../dataAdapters/canonicalPlaces', () => ({
     }));
     const relationships = places
       .filter(p => p.place_id !== rootId)
+      // The broken-parent case removes the edge, because the release policy no longer holds a
+      // place for its licence. The guard protects against a missing parent whatever the
+      // reason, so the guard is exercised against a missing parent.
+      .filter(p => !(controls.heldParent && p.place_id === localId))
       .map(p => ({
         from_place_id: p.place_id,
         to_place_id: rootId,
@@ -227,7 +231,7 @@ describe('governed national production Place reference release', () => {
     ).rejects.toThrow(/unregistered licensing/);
     expect(f.statements).toEqual([]);
   });
-  it('pins all provinces, holds OSM-only authority and dependent rows without altering admitted fields', () => {
+  it('pins all provinces, releases OSM-only places with their attribution, and refuses a place without a province parent', () => {
     const p = loadPlaceReleaseCandidate();
     expect(p.pins.map(p => p.territoryId)).toEqual(
       loadPlaceAdmissionTerritoryRegistry(process.cwd()).registry.territories.map(
@@ -235,18 +239,27 @@ describe('governed national production Place reference release', () => {
       ),
     );
     expect(p.provinceIds).toHaveLength(9);
-    expect(p.heldPlaceIds).toHaveLength(1);
+    // The release policy admits a traceable OSM-only place for search, so nothing is held.
+    expect(p.heldPlaceIds).toHaveLength(0);
     expect(p.heldRows).toEqual({
-      place: 1,
-      place_name: 1,
-      place_relationship: 1,
-      place_evidence: 1,
-      place_external_mapping: 1,
+      place: 0,
+      place_name: 0,
+      place_relationship: 0,
+      place_evidence: 0,
+      place_external_mapping: 0,
     });
+    // The OSM-only place is released, and its licence classification and its attribution
+    // survive the release.
+    const osmOnly = p.desired.place.filter(
+      row => row.licensing_classification === 'osm_only_odbl_provisional',
+    );
+    expect(osmOnly).toHaveLength(1);
+    expect(osmOnly[0].search_eligible).toBe(1);
     expect(p.desired.place.every(p => p.publication_eligible === 0)).toBe(true);
+    // No relationship widens a search scope, whatever the licence.
     expect(p.desired.place_relationship.every(p => p.search_scope_authorized === 0)).toBe(true);
     controls.heldParent = true;
-    expect(() => loadPlaceReleaseCandidate()).toThrow(/province roots|parent after licensing hold/);
+    expect(() => loadPlaceReleaseCandidate()).toThrow(/province roots|lacks a bounded province parent/);
   });
   it('plans only reads, atomically applies and verifies, then repeats with zero inserts', async () => {
     const f = fixture();
@@ -262,7 +275,7 @@ describe('governed national production Place reference release', () => {
       expectedPlanDigest: p.planDigest!,
     });
     expect(a.pendingRows).toBe(0);
-    expect(f.snapshot.place).toHaveLength(18);
+    expect(f.snapshot.place).toHaveLength(19);
     const inserts = f.statements.filter(s => s.startsWith('INSERT')).length;
     const next = await releaseCanonicalPlaces({
       ...authority('release-reference-plan'),
