@@ -67,13 +67,13 @@ describe('PartnerCommissionsPage', () => {
     });
   });
 
-  it('uses reward language while showing payout states', () => {
+  it('uses referral payout language while showing recorded payment states', () => {
     render(<PartnerCommissionsPage />);
 
-    expect(screen.getByText('Rewards')).toBeInTheDocument();
-    expect(screen.getByText('Reward Snapshot')).toBeInTheDocument();
-    expect(screen.getByText('Reward Entries')).toBeInTheDocument();
+    expect(screen.getByText('Referral Payouts')).toBeInTheDocument();
+    expect(screen.getByText('Recorded Payout Summary')).toBeInTheDocument();
+    expect(screen.getByText('Referral Payout Records')).toBeInTheDocument();
     expect(screen.getAllByText(/R 24\s000/)).not.toHaveLength(0);
-    expect(screen.getByText('Pays at: Bond Approved')).toBeInTheDocument();
+    expect(screen.getByText('Recorded payout stage: Bond Approved')).toBeInTheDocument();
   });
 });

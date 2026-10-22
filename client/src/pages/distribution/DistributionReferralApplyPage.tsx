@@ -16,7 +16,7 @@ const partnerTypeLabels: Record<Exclude<PartnerType, ''>, string> = {
   independent_agent: 'Independent Property Agent',
   small_brokerage: 'Small Brokerage',
   referral_partner: 'Referral Partner',
-  individual: 'Individual With Qualified Buyer',
+  individual: 'Individual Referrer',
 };
 
 export default function DistributionReferralApplyPage() {
@@ -79,8 +79,8 @@ export default function DistributionReferralApplyPage() {
   return (
     <>
       <SEOHead
-        title="Join | Distribution Referral Network"
-        description="Join the Distribution Referral Network and get access to approved developments with referral payout tracking."
+        title="Join | Property Listify Distribution Network"
+        description="Apply to participate in Property Listify's Distribution Network. Access and any referral payout depend on approval and active program terms."
         canonicalUrl="/distribution-network/apply"
         ogType="website"
       />
@@ -198,7 +198,7 @@ export default function DistributionReferralApplyPage() {
                             <option value="independent_agent">Independent Property Agent</option>
                             <option value="small_brokerage">Small Brokerage</option>
                             <option value="referral_partner">Referral Partner</option>
-                            <option value="individual">Individual With Qualified Buyer</option>
+                            <option value="individual">Individual Referrer</option>
                           </select>
                         </div>
                       </div>

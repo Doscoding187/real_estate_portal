@@ -77,7 +77,7 @@ describe('distribution payout milestone evaluation', () => {
     });
   });
 
-  it('leaves unsupported milestones on manual fallback', () => {
+  it('does not treat unsupported milestones as payout-ready without manual confirmation', () => {
     expect(
       evaluatePayoutMilestone({
         payoutMilestone: 'attorney_signing',
@@ -86,8 +86,10 @@ describe('distribution payout milestone evaluation', () => {
       }),
     ).toMatchObject({
       supported: false,
-      satisfied: true,
-      blockers: [],
+      satisfied: false,
+      blockers: [
+        'Payout milestone "attorney_signing" requires manual review and a documented administrator confirmation.',
+      ],
     });
 
     expect(
@@ -98,8 +100,10 @@ describe('distribution payout milestone evaluation', () => {
       }),
     ).toMatchObject({
       supported: false,
-      satisfied: true,
-      blockers: [],
+      satisfied: false,
+      blockers: [
+        'Payout milestone "custom" requires manual review and a documented administrator confirmation.',
+      ],
     });
   });
 });

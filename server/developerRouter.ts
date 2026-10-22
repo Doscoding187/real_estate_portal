@@ -1366,6 +1366,7 @@ export const developerRouter = router({
         utmCampaign: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.utm).trim().optional(),
         sourceSurface: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
         leadSource: z.string().max(PUBLIC_LEAD_INPUT_LIMITS.source).trim().optional(),
+        distributionSearchContextToken: z.string().max(2000).trim().optional(),
         captureRequestId: z
           .string()
           .max(PUBLIC_LEAD_INPUT_LIMITS.captureRequestId)
@@ -1425,6 +1426,7 @@ export const developerRouter = router({
         sourceSurface: input.sourceSurface || 'development_detail',
         leadSource: input.leadSource || 'development_detail',
         referrerUrl: input.referrerUrl,
+        distributionSearchContextToken: input.distributionSearchContextToken,
         utmSource: input.utmSource,
         utmMedium: input.utmMedium,
         utmCampaign: input.utmCampaign,

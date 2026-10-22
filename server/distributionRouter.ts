@@ -1,7 +1,7 @@
 import { findVerifiedRegistrationAccount } from './services/registrationLegalAcceptanceService';
 import { requireUser } from './_core/requireUser';
 import { TRPCError } from '@trpc/server';
-import { and, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   DISTRIBUTION_BRAND_PARTNERSHIP_STATUS_VALUES,
@@ -10,6 +10,10 @@ import {
   DISTRIBUTION_TIER_VALUES,
   DISTRIBUTION_VIEWING_STATUS_VALUES,
   DISTRIBUTION_IDENTITY_TYPE_VALUES,
+  distributionListingLeadQueue,
+  distributionListingLeadQueueEvents,
+  distributionSelectedPractitioners,
+  agents,
   cataloguePublishers,
   developments,
   developmentRequiredDocuments,
@@ -27,6 +31,9 @@ import {
   distributionViewings,
   distributionViewingValidations,
   platformTeamRegistrations,
+  leads,
+  notifications,
+  properties,
   unitTypes,
   users,
 } from '../drizzle/schema';
@@ -48,10 +55,14 @@ import {
   listDevelopmentAccessDetails,
 } from './services/distributionAccessReadService';
 import {
-  assertDevelopmentSubmissionEligible,
   evaluateDevelopmentDistributionAccess,
   summarizeDistributionBlockers,
 } from './services/distributionAccessPolicy';
+import {
+  assertPartnerDevelopmentProgramAccess,
+  assertPartnerDevelopmentReferralOpen,
+  listPartnerAccessibleDevelopmentIds,
+} from './services/distributionPartnerProgramAccessService';
 import {
   ensureDistributionProgramForDevelopment,
   getProgramActivationReadiness,
@@ -67,6 +78,13 @@ import {
   getPartnerProgramTermsByDevelopmentId,
   listPartnerProgramTerms,
 } from './services/distributionPartnerTermsService';
+import {
+  assertDistributionReferralIntakeReady,
+  getDistributionReferralIntakePolicy,
+  publishDistributionReferralIntakePolicy,
+  saveDistributionReferralIntakePolicyDraft,
+} from './services/distributionReferralIntakePolicy';
+import { distributionReferralIntakePolicyDraftSchema } from '../shared/distributionReferralIntake';
 import {
   createReferralDeal,
   getMyReferralDeal,
@@ -91,6 +109,7 @@ import {
   verifyDistributionManagerInviteToken,
 } from './services/distributionManagerInviteTokenService';
 import {
+  DISTRIBUTION_PROCESS_DOCUMENT_CODES,
   isMissingRequiredDocumentsSchemaError,
   listDevelopmentRequiredDocumentsOrEmpty,
 } from './services/distributionRequiredDocumentsService';
@@ -104,7 +123,7 @@ const DISTRIBUTION_SUBMODULES = [
   {
     slug: 'partner-developments',
     title: 'Partner Developments',
-    description: 'Referral-enabled developments, fee model, and access configuration.',
+    description: 'Referral-enabled developments, payout terms, and access configuration.',
   },
   {
     slug: 'distribution-managers',
@@ -128,8 +147,8 @@ const DISTRIBUTION_SUBMODULES = [
   },
   {
     slug: 'commission-incentives',
-    title: "Finder's Fee Operations",
-    description: "Finder's fee triggers, payout states, and incentive signals.",
+    title: 'Referral Payout Operations',
+    description: 'Referral payout triggers, payment states, and incentive records.',
   },
 ] as const;
 
@@ -316,6 +335,17 @@ function assertDistributionEnabled() {
   }
 }
 
+function assertSelectedTeamQueueEnabled() {
+  assertDistributionEnabled();
+  if (!ENV.distributionSelectedTeamQueueEnabled) {
+    throw new TRPCError({
+      code: 'PRECONDITION_FAILED',
+      message:
+        'The selected practitioner lead queue is not enabled. Apply and verify its database migrations before setting FEATURE_DISTRIBUTION_SELECTED_TEAM_QUEUE=true.',
+    });
+  }
+}
+
 const DISTRIBUTION_SCHEMA_ERROR_CODES = new Set([
   'ER_NO_SUCH_TABLE',
   'ER_BAD_FIELD_ERROR',
@@ -376,7 +406,10 @@ function isDistributionSchemaError(error: unknown) {
   );
 }
 
-async function runDistributionDbOperation<T>(operation: string, runner: () => Promise<T>): Promise<T> {
+async function runDistributionDbOperation<T>(
+  operation: string,
+  runner: () => Promise<T>,
+): Promise<T> {
   try {
     return await runner();
   } catch (error) {
@@ -487,10 +520,7 @@ function extractFirstImageUrl(rawImages: unknown) {
   return null;
 }
 
-function requireAdminOverrideNotes(
-  rawNotes: string | null | undefined,
-  message: string,
-): string {
+function requireAdminOverrideNotes(rawNotes: string | null | undefined, message: string): string {
   const normalizedNotes = rawNotes?.trim() || '';
   if (!normalizedNotes) {
     throw new TRPCError({
@@ -519,13 +549,9 @@ type DevelopmentRequiredDocumentCode =
   | 'proof_of_income'
   | 'bank_statement'
   | 'pre_approval'
-  | 'signed_offer_to_purchase'
-  | 'sale_agreement'
-  | 'attorney_instruction_letter'
-  | 'transfer_documents'
   | 'custom';
 
-type DevelopmentDocumentCategory = 'developer_document' | 'client_required_document';
+type DevelopmentDocumentCategory = 'client_required_document';
 
 type RequiredDocumentTemplateSeed = {
   category: DevelopmentDocumentCategory;
@@ -538,9 +564,7 @@ function normalizeRequiredDocumentLabel(value: string) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-function getDefaultOnboardingRequiredDocuments(
-  publisherName?: string | null,
-): RequiredDocumentTemplateSeed[] {
+function getDefaultOnboardingRequiredDocuments(): RequiredDocumentTemplateSeed[] {
   const templates: RequiredDocumentTemplateSeed[] = [
     {
       category: 'client_required_document',
@@ -568,55 +592,34 @@ function getDefaultOnboardingRequiredDocuments(
     },
   ];
 
-  const normalizedBrandName = String(publisherName || '').trim().toLowerCase();
-  if (normalizedBrandName.includes('cosmopolitan')) {
-    templates.push(
-      {
-        category: 'developer_document',
-        documentCode: 'custom',
-        documentLabel: 'Price Structure',
-        isRequired: true,
-      },
-      {
-        category: 'developer_document',
-        documentCode: 'custom',
-        documentLabel: 'House Plan',
-        isRequired: true,
-      },
-      {
-        category: 'developer_document',
-        documentCode: 'custom',
-        documentLabel: 'NCA Form',
-        isRequired: true,
-      },
-      {
-        category: 'developer_document',
-        documentCode: 'custom',
-        documentLabel: 'POPIA Form (EUF)',
-        isRequired: true,
-      },
-    );
-  }
-
   return templates;
 }
 
 async function seedDevelopmentRequiredDocumentsIfEmpty(input: {
   db: any;
   developmentId: number;
-  publisherName?: string | null;
 }) {
   const [existingRow] = await input.db
     .select({ id: developmentRequiredDocuments.id })
     .from(developmentRequiredDocuments)
-    .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
+    .where(
+      and(
+        eq(developmentRequiredDocuments.developmentId, input.developmentId),
+        eq(developmentRequiredDocuments.category, 'client_required_document'),
+        inArray(
+          developmentRequiredDocuments.documentCode,
+          [...DISTRIBUTION_PROCESS_DOCUMENT_CODES],
+        ),
+        eq(developmentRequiredDocuments.isActive, 1),
+      ),
+    )
     .limit(1);
 
   if (existingRow?.id) {
     return { seeded: false as const, count: 0 };
   }
 
-  const templates = getDefaultOnboardingRequiredDocuments(input.publisherName);
+  const templates = getDefaultOnboardingRequiredDocuments();
   if (!templates.length) {
     return { seeded: false as const, count: 0 };
   }
@@ -720,25 +723,6 @@ async function assertPartnerTermsAccess(db: any, user: { id: number; role: strin
     code: 'FORBIDDEN',
     message: 'Partner program terms are available to partner and agent accounts only.',
   });
-}
-
-async function getActiveAgentAccessForProgram(db: any, programId: number, agentId: number) {
-  const [access] = await db
-    .select({
-      id: distributionAgentAccess.id,
-      minTierRequired: distributionAgentAccess.minTierRequired,
-      accessStatus: distributionAgentAccess.accessStatus,
-    })
-    .from(distributionAgentAccess)
-    .where(
-      and(
-        eq(distributionAgentAccess.programId, programId),
-        eq(distributionAgentAccess.agentId, agentId),
-      ),
-    )
-    .limit(1);
-
-  return access || null;
 }
 
 async function getPrimaryManagerUserIdForProgram(db: any, programId: number) {
@@ -1051,7 +1035,6 @@ type DealTimelineDealRow = {
   id: number;
   programId: number;
   developmentId: number;
-  developmentName: string;
   buyerName: string;
   buyerEmail: string | null;
   buyerPhone: string | null;
@@ -1319,11 +1302,6 @@ const developmentBrochureConfigSchema = z.object({
   headline: z.string().trim().max(120).nullable().optional(),
   description: z.string().trim().max(900).nullable().optional(),
   highlightBullets: z.array(z.string().trim().min(1).max(140)).max(8).default([]),
-  amenityLabels: z.array(z.string().trim().min(1).max(80)).max(8).default([]),
-  heroImageUrl: z.string().trim().url().max(2048).nullable().optional(),
-  contactName: z.string().trim().max(120).nullable().optional(),
-  contactPhone: z.string().trim().max(50).nullable().optional(),
-  contactEmail: z.string().trim().email().max(320).nullable().optional(),
 });
 
 const getBrandPartnershipInput = z.object({
@@ -1595,6 +1573,116 @@ async function getActiveManagerProgramIdsForUser(db: any, userId: number) {
 }
 
 const adminDistributionRouter = router({
+  listSelectedPractitioners: superAdminProcedure
+    .input(z.object({ includeInactive: z.boolean().default(true) }).optional())
+    .query(async ({ input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.selectedPractitioners');
+
+      const [agentsRows, memberships] = await Promise.all([
+        db
+          .select({
+            agentId: agents.id,
+            userId: agents.userId,
+            firstName: agents.firstName,
+            lastName: agents.lastName,
+            displayName: agents.displayName,
+            email: users.email,
+          })
+          .from(agents)
+          .innerJoin(users, eq(agents.userId, users.id))
+          .where(withConditions([eq(agents.status, 'approved'), eq(users.role, 'agent')]))
+          .orderBy(agents.displayName)
+          .limit(500),
+        db.select().from(distributionSelectedPractitioners),
+      ]);
+      const membershipByAgentId = new Map(
+        memberships.map((membership: any) => [Number(membership.agentId), membership]),
+      );
+
+      return agentsRows
+        .map((agent: any) => {
+          const membership = membershipByAgentId.get(Number(agent.agentId)) as any;
+          return {
+            ...agent,
+            displayName:
+              String(agent.displayName || '').trim() ||
+              [agent.firstName, agent.lastName].filter(Boolean).join(' '),
+            membershipStatus: membership?.status || null,
+            membershipId: membership ? Number(membership.id) : null,
+          };
+        })
+        .filter((agent: any) =>
+          input?.includeInactive === false ? agent.membershipStatus === 'active' : true,
+        );
+    }),
+
+  setSelectedPractitionerStatus: superAdminProcedure
+    .input(
+      z.object({
+        agentId: z.number().int().positive(),
+        status: z.enum(['active', 'paused', 'revoked']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionSchemaReady('distribution.selectedPractitioners');
+
+      const [agent] = await db
+        .select({ id: agents.id, userId: agents.userId })
+        .from(agents)
+        .innerJoin(users, eq(agents.userId, users.id))
+        .where(
+          and(eq(agents.id, input.agentId), eq(agents.status, 'approved'), eq(users.role, 'agent')),
+        )
+        .limit(1);
+      if (!agent) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Only an approved agent account can join the selected practitioner team.',
+        });
+      }
+
+      if (input.status === 'active') {
+        const [profileCount] = await db
+          .select({ count: sql<number>`COUNT(*)` })
+          .from(agents)
+          .where(eq(agents.userId, Number(agent.userId)));
+        if (Number(profileCount?.count || 0) !== 1) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message:
+              'This account has multiple agent profiles. Resolve the duplicate profiles before adding it to the selected practitioner team.',
+          });
+        }
+      }
+
+      const changedAt = normalizeDateForSql(new Date());
+      await db
+        .insert(distributionSelectedPractitioners)
+        .values({
+          agentId: Number(agent.id),
+          status: input.status,
+          addedByUserId: ctx.user!.id,
+          statusChangedByUserId: ctx.user!.id,
+          statusChangedAt: changedAt,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            status: input.status,
+            statusChangedByUserId: ctx.user!.id,
+            statusChangedAt: changedAt,
+            updatedAt: changedAt,
+          },
+        });
+
+      return { success: true, agentId: input.agentId, status: input.status };
+    }),
+
   listPrograms: superAdminProcedure.query(async () => {
     assertDistributionEnabled();
     return await listProgramsForAdmin();
@@ -1614,370 +1702,369 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.listDevelopmentCatalog', async () => {
-        await assertDistributionSchemaReady('distribution.admin.listDevelopmentCatalog');
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation(
+        'distribution.admin.listDevelopmentCatalog',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.listDevelopmentCatalog');
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
 
-      const search = input?.search?.trim().toLowerCase() || '';
-      const cataloguePublisherId = input?.cataloguePublisherId;
-      const includeUnpublished = input?.includeUnpublished ?? false;
-      const onlyPublisherLinked = input?.onlyPublisherLinked ?? true;
-      const limit = input?.limit ?? 200;
+          const search = input?.search?.trim().toLowerCase() || '';
+          const cataloguePublisherId = input?.cataloguePublisherId;
+          const includeUnpublished = input?.includeUnpublished ?? false;
+          const onlyPublisherLinked = input?.onlyPublisherLinked ?? true;
+          const limit = input?.limit ?? 200;
 
-      const conditions: SQL[] = [];
-      if (!includeUnpublished) {
-        conditions.push(eq(developments.isPublished, 1));
-        conditions.push(eq(developments.approvalStatus, 'approved'));
-      }
-      if (onlyPublisherLinked) {
-        conditions.push(sql`${developments.cataloguePublisherId} IS NOT NULL`);
-      }
-      if (typeof cataloguePublisherId === 'number') {
-        conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
-      }
+          const conditions: SQL[] = [];
+          if (!includeUnpublished) {
+            conditions.push(eq(developments.isPublished, 1));
+            conditions.push(eq(developments.approvalStatus, 'approved'));
+          }
+          if (onlyPublisherLinked) {
+            conditions.push(sql`${developments.cataloguePublisherId} IS NOT NULL`);
+          }
+          if (typeof cataloguePublisherId === 'number') {
+            conditions.push(eq(developments.cataloguePublisherId, cataloguePublisherId));
+          }
 
-      if (search) {
-        const term = `%${search}%`;
-        conditions.push(
-          sql`(
+          if (search) {
+            const term = `%${search}%`;
+            conditions.push(
+              sql`(
             LOWER(COALESCE(${developments.name}, '')) LIKE ${term}
             OR LOWER(COALESCE(${developments.city}, '')) LIKE ${term}
             OR LOWER(COALESCE(${developments.province}, '')) LIKE ${term}
             OR LOWER(COALESCE(${cataloguePublishers.name}, '')) LIKE ${term}
           )`,
-        );
-      }
+            );
+          }
 
-      let rows = await db
-        .select({
-          developmentId: developments.id,
-          developmentName: developments.name,
-          cataloguePublisherId: developments.cataloguePublisherId,
-          publisherName: cataloguePublishers.name,
-          city: developments.city,
-          province: developments.province,
-          developmentStatus: developments.status,
-          approvalStatus: developments.approvalStatus,
-          isPublished: developments.isPublished,
-          developmentImages: developments.images,
-          developmentPriceFrom: developments.priceFrom,
-          developmentPriceTo: developments.priceTo,
-          developmentUpdatedAt: developments.updatedAt,
-          programId: distributionPrograms.id,
-          programIsActive: distributionPrograms.isActive,
-          isReferralEnabled: distributionPrograms.isReferralEnabled,
-          commissionModel: distributionPrograms.commissionModel,
-          defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-          defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-          tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-          payoutMilestone: distributionPrograms.payoutMilestone,
-          payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
-          currencyCode: distributionPrograms.currencyCode,
-          programUpdatedAt: distributionPrograms.updatedAt,
-        })
-        .from(developments)
-        .leftJoin(
-          cataloguePublishers,
-          eq(developments.cataloguePublisherId, cataloguePublishers.id),
-        )
-        .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
-        .where(withConditions(conditions))
-        .orderBy(desc(developments.updatedAt))
-        .limit(limit);
-
-      const developmentIds: number[] = Array.from(
-        new Set(rows.map(row => Number(row.developmentId)).filter(Boolean)),
-      );
-      const linkedPublisherIds: number[] = Array.from(
-        new Set(
-          rows
-            .flatMap(row => [
-              Number(row.cataloguePublisherId || 0),
-            ])
-            .filter(Boolean),
-        ),
-      );
-      const programIds: number[] = Array.from(
-        new Set(rows.map(row => Number(row.programId || 0)).filter(Boolean)),
-      );
-
-      const brandDirectory =
-        linkedPublisherIds.length > 0
-          ? new Map<number, string>(
-              (
-                await db
-                  .select({
-                    id: cataloguePublishers.id,
-                    brandName: cataloguePublishers.name,
-                  })
-                  .from(cataloguePublishers)
-                  .where(inArray(cataloguePublishers.id, linkedPublisherIds))
-              ).map(row => [Number(row.id), String(row.brandName || '')]),
+          let rows = await db
+            .select({
+              developmentId: developments.id,
+              developmentName: developments.name,
+              cataloguePublisherId: developments.cataloguePublisherId,
+              publisherName: cataloguePublishers.name,
+              city: developments.city,
+              province: developments.province,
+              developmentStatus: developments.status,
+              approvalStatus: developments.approvalStatus,
+              isPublished: developments.isPublished,
+              developmentImages: developments.images,
+              developmentPriceFrom: developments.priceFrom,
+              developmentPriceTo: developments.priceTo,
+              developmentUpdatedAt: developments.updatedAt,
+              programId: distributionPrograms.id,
+              programIsActive: distributionPrograms.isActive,
+              isReferralEnabled: distributionPrograms.isReferralEnabled,
+              commissionModel: distributionPrograms.commissionModel,
+              defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
+              defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
+              tierAccessPolicy: distributionPrograms.tierAccessPolicy,
+              payoutMilestone: distributionPrograms.payoutMilestone,
+              payoutMilestoneNotes: distributionPrograms.payoutMilestoneNotes,
+              currencyCode: distributionPrograms.currencyCode,
+              programUpdatedAt: distributionPrograms.updatedAt,
+            })
+            .from(developments)
+            .leftJoin(
+              cataloguePublishers,
+              eq(developments.cataloguePublisherId, cataloguePublishers.id),
             )
-          : new Map<number, string>();
+            .leftJoin(distributionPrograms, eq(distributionPrograms.developmentId, developments.id))
+            .where(withConditions(conditions))
+            .orderBy(desc(developments.updatedAt))
+            .limit(limit);
 
-      const unitRows = developmentIds.length
-        ? await db
-            .select({
-              developmentId: unitTypes.developmentId,
-              unitTypeName: unitTypes.name,
-              unitPriceFrom: unitTypes.priceFrom,
-              unitPriceTo: unitTypes.priceTo,
-              unitBasePriceFrom: unitTypes.basePriceFrom,
-              unitBasePriceTo: unitTypes.basePriceTo,
-              unitIsActive: unitTypes.isActive,
-            })
-            .from(unitTypes)
-            .where(inArray(unitTypes.developmentId, developmentIds))
-            .orderBy(unitTypes.displayOrder, unitTypes.name)
-        : [];
+          const developmentIds: number[] = Array.from(
+            new Set(rows.map(row => Number(row.developmentId)).filter(Boolean)),
+          );
+          const linkedPublisherIds: number[] = Array.from(
+            new Set(rows.flatMap(row => [Number(row.cataloguePublisherId || 0)]).filter(Boolean)),
+          );
+          const programIds: number[] = Array.from(
+            new Set(rows.map(row => Number(row.programId || 0)).filter(Boolean)),
+          );
 
-      const managerRows = developmentIds.length
-        ? await db
-            .select({
-              developmentId: distributionManagerAssignments.developmentId,
-              assignmentId: distributionManagerAssignments.id,
-              managerUserId: distributionManagerAssignments.managerUserId,
-              isPrimary: distributionManagerAssignments.isPrimary,
-              isActive: distributionManagerAssignments.isActive,
-              workloadCapacity: distributionManagerAssignments.workloadCapacity,
-              timezone: distributionManagerAssignments.timezone,
-              assignedAt: distributionManagerAssignments.assignedAt,
-              managerName: users.name,
-              managerFirstName: users.firstName,
-              managerLastName: users.lastName,
-              managerEmail: users.email,
-            })
-            .from(distributionManagerAssignments)
-            .innerJoin(users, eq(distributionManagerAssignments.managerUserId, users.id))
-            .where(inArray(distributionManagerAssignments.developmentId, developmentIds))
-            .orderBy(desc(distributionManagerAssignments.assignedAt))
-        : [];
+          const brandDirectory =
+            linkedPublisherIds.length > 0
+              ? new Map<number, string>(
+                  (
+                    await db
+                      .select({
+                        id: cataloguePublishers.id,
+                        brandName: cataloguePublishers.name,
+                      })
+                      .from(cataloguePublishers)
+                      .where(inArray(cataloguePublishers.id, linkedPublisherIds))
+                  ).map(row => [Number(row.id), String(row.brandName || '')]),
+                )
+              : new Map<number, string>();
 
-      const unitSummaryByDevelopment = new Map<
-        number,
-        {
-          priceFrom: number | null;
-          priceTo: number | null;
-          unitTypes: Array<{
-            name: string;
-            isActive: boolean;
-            priceFrom: number | null;
-            priceTo: number | null;
-          }>;
-        }
-      >();
+          const unitRows = developmentIds.length
+            ? await db
+                .select({
+                  developmentId: unitTypes.developmentId,
+                  unitTypeName: unitTypes.name,
+                  unitPriceFrom: unitTypes.priceFrom,
+                  unitPriceTo: unitTypes.priceTo,
+                  unitBasePriceFrom: unitTypes.basePriceFrom,
+                  unitBasePriceTo: unitTypes.basePriceTo,
+                  unitIsActive: unitTypes.isActive,
+                })
+                .from(unitTypes)
+                .where(inArray(unitTypes.developmentId, developmentIds))
+                .orderBy(unitTypes.displayOrder, unitTypes.name)
+            : [];
 
-      for (const row of unitRows) {
-        const developmentId = Number(row.developmentId);
-        const current =
-          unitSummaryByDevelopment.get(developmentId) ||
-          ({
-            priceFrom: null,
-            priceTo: null,
-            unitTypes: [],
-          } as const);
+          const managerRows = developmentIds.length
+            ? await db
+                .select({
+                  developmentId: distributionManagerAssignments.developmentId,
+                  assignmentId: distributionManagerAssignments.id,
+                  managerUserId: distributionManagerAssignments.managerUserId,
+                  isPrimary: distributionManagerAssignments.isPrimary,
+                  isActive: distributionManagerAssignments.isActive,
+                  workloadCapacity: distributionManagerAssignments.workloadCapacity,
+                  timezone: distributionManagerAssignments.timezone,
+                  assignedAt: distributionManagerAssignments.assignedAt,
+                  managerName: users.name,
+                  managerFirstName: users.firstName,
+                  managerLastName: users.lastName,
+                  managerEmail: users.email,
+                })
+                .from(distributionManagerAssignments)
+                .innerJoin(users, eq(distributionManagerAssignments.managerUserId, users.id))
+                .where(inArray(distributionManagerAssignments.developmentId, developmentIds))
+                .orderBy(desc(distributionManagerAssignments.assignedAt))
+            : [];
 
-        const unitPriceFrom =
-          toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.unitBasePriceFrom);
-        const unitPriceTo =
-          toNumberOrNull(row.unitPriceTo) ?? toNumberOrNull(row.unitBasePriceTo) ?? unitPriceFrom;
-
-        const nextMin =
-          current.priceFrom === null
-            ? unitPriceFrom
-            : unitPriceFrom === null
-              ? current.priceFrom
-              : Math.min(current.priceFrom, unitPriceFrom);
-        const nextMax =
-          current.priceTo === null
-            ? unitPriceTo
-            : unitPriceTo === null
-              ? current.priceTo
-              : Math.max(current.priceTo, unitPriceTo);
-
-        const next = {
-          priceFrom: nextMin,
-          priceTo: nextMax,
-          unitTypes: [
-            ...current.unitTypes,
+          const unitSummaryByDevelopment = new Map<
+            number,
             {
-              name: String(row.unitTypeName || 'Unit'),
-              isActive: boolFromTinyInt(row.unitIsActive),
-              priceFrom: unitPriceFrom,
-              priceTo: unitPriceTo,
-            },
-          ],
-        };
-        unitSummaryByDevelopment.set(developmentId, next);
-      }
+              priceFrom: number | null;
+              priceTo: number | null;
+              unitTypes: Array<{
+                name: string;
+                isActive: boolean;
+                priceFrom: number | null;
+                priceTo: number | null;
+              }>;
+            }
+          >();
 
-      const managerByDevelopment = new Map<
-        number,
-        {
-          hasPrimaryManager: boolean;
-          assignments: Array<{
-            assignmentId: number;
-            managerUserId: number;
-            managerDisplayName: string | null;
-            managerEmail: string | null;
-            isPrimary: boolean;
-            isActive: boolean;
-            workloadCapacity: number;
-            timezone: string | null;
-            assignedAt: string;
-          }>;
-        }
-      >();
-      for (const row of managerRows) {
-        const developmentId = Number(row.developmentId);
-        const current =
-          managerByDevelopment.get(developmentId) ||
-          ({
-            hasPrimaryManager: false,
-            assignments: [],
-          } as const);
-        const isPrimary = boolFromTinyInt(row.isPrimary);
-        const isActive = boolFromTinyInt(row.isActive);
-        const next = {
-          hasPrimaryManager: current.hasPrimaryManager || (isPrimary && isActive),
-          assignments: [
-            ...current.assignments,
+          for (const row of unitRows) {
+            const developmentId = Number(row.developmentId);
+            const current =
+              unitSummaryByDevelopment.get(developmentId) ||
+              ({
+                priceFrom: null,
+                priceTo: null,
+                unitTypes: [],
+              } as const);
+
+            const unitPriceFrom =
+              toNumberOrNull(row.unitPriceFrom) ?? toNumberOrNull(row.unitBasePriceFrom);
+            const unitPriceTo =
+              toNumberOrNull(row.unitPriceTo) ??
+              toNumberOrNull(row.unitBasePriceTo) ??
+              unitPriceFrom;
+
+            const nextMin =
+              current.priceFrom === null
+                ? unitPriceFrom
+                : unitPriceFrom === null
+                  ? current.priceFrom
+                  : Math.min(current.priceFrom, unitPriceFrom);
+            const nextMax =
+              current.priceTo === null
+                ? unitPriceTo
+                : unitPriceTo === null
+                  ? current.priceTo
+                  : Math.max(current.priceTo, unitPriceTo);
+
+            const next = {
+              priceFrom: nextMin,
+              priceTo: nextMax,
+              unitTypes: [
+                ...current.unitTypes,
+                {
+                  name: String(row.unitTypeName || 'Unit'),
+                  isActive: boolFromTinyInt(row.unitIsActive),
+                  priceFrom: unitPriceFrom,
+                  priceTo: unitPriceTo,
+                },
+              ],
+            };
+            unitSummaryByDevelopment.set(developmentId, next);
+          }
+
+          const managerByDevelopment = new Map<
+            number,
             {
-              assignmentId: Number(row.assignmentId),
-              managerUserId: Number(row.managerUserId),
-              managerDisplayName: formatUserDisplayName({
-                name: row.managerName,
-                firstName: row.managerFirstName,
-                lastName: row.managerLastName,
-                email: row.managerEmail,
-              }),
-              managerEmail: row.managerEmail,
-              isPrimary,
-              isActive,
-              workloadCapacity: Number(row.workloadCapacity || 0),
-              timezone: row.timezone || null,
-              assignedAt: row.assignedAt,
-            },
-          ],
-        };
-        managerByDevelopment.set(developmentId, next);
-      }
+              hasPrimaryManager: boolean;
+              assignments: Array<{
+                assignmentId: number;
+                managerUserId: number;
+                managerDisplayName: string | null;
+                managerEmail: string | null;
+                isPrimary: boolean;
+                isActive: boolean;
+                workloadCapacity: number;
+                timezone: string | null;
+                assignedAt: string;
+              }>;
+            }
+          >();
+          for (const row of managerRows) {
+            const developmentId = Number(row.developmentId);
+            const current =
+              managerByDevelopment.get(developmentId) ||
+              ({
+                hasPrimaryManager: false,
+                assignments: [],
+              } as const);
+            const isPrimary = boolFromTinyInt(row.isPrimary);
+            const isActive = boolFromTinyInt(row.isActive);
+            const next = {
+              hasPrimaryManager: current.hasPrimaryManager || (isPrimary && isActive),
+              assignments: [
+                ...current.assignments,
+                {
+                  assignmentId: Number(row.assignmentId),
+                  managerUserId: Number(row.managerUserId),
+                  managerDisplayName: formatUserDisplayName({
+                    name: row.managerName,
+                    firstName: row.managerFirstName,
+                    lastName: row.managerLastName,
+                    email: row.managerEmail,
+                  }),
+                  managerEmail: row.managerEmail,
+                  isPrimary,
+                  isActive,
+                  workloadCapacity: Number(row.workloadCapacity || 0),
+                  timezone: row.timezone || null,
+                  assignedAt: row.assignedAt,
+                },
+              ],
+            };
+            managerByDevelopment.set(developmentId, next);
+          }
 
-      const catalogRows = rows.map(row => {
-        const developmentId = Number(row.developmentId);
-        const published = boolFromTinyInt(row.isPublished);
-        const unitSummary = unitSummaryByDevelopment.get(developmentId);
-        const fallbackPriceFrom = toNumberOrNull(row.developmentPriceFrom);
-        const fallbackPriceTo = toNumberOrNull(row.developmentPriceTo);
-        const priceFrom = unitSummary?.priceFrom ?? fallbackPriceFrom;
-        const priceTo = unitSummary?.priceTo ?? fallbackPriceTo;
-        const hasProgram = Boolean(row.programId);
-        const programId = Number(row.programId || 0);
-        const managerInfo = managerByDevelopment.get(developmentId);
-        const hasPrimaryManager = Boolean(managerInfo?.hasPrimaryManager);
+          const catalogRows = rows.map(row => {
+            const developmentId = Number(row.developmentId);
+            const published = boolFromTinyInt(row.isPublished);
+            const unitSummary = unitSummaryByDevelopment.get(developmentId);
+            const fallbackPriceFrom = toNumberOrNull(row.developmentPriceFrom);
+            const fallbackPriceTo = toNumberOrNull(row.developmentPriceTo);
+            const priceFrom = unitSummary?.priceFrom ?? fallbackPriceFrom;
+            const priceTo = unitSummary?.priceTo ?? fallbackPriceTo;
+            const hasProgram = Boolean(row.programId);
+            const programId = Number(row.programId || 0);
+            const managerInfo = managerByDevelopment.get(developmentId);
+            const hasPrimaryManager = Boolean(managerInfo?.hasPrimaryManager);
 
-        const activationReadiness = hasProgram
-          ? getProgramActivationReadiness({
-              commissionModel: row.commissionModel as
-                | 'flat_percentage'
-                | 'tiered_percentage'
-                | 'fixed_amount'
-                | 'hybrid',
-              defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
-              defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
-              tierAccessPolicy: row.tierAccessPolicy as 'open' | 'restricted' | 'invite_only',
-              payoutMilestone: row.payoutMilestone as
-                | 'attorney_instruction'
-                | 'attorney_signing'
-                | 'bond_approval'
-                | 'transfer_registration'
-                | 'occupation'
-                | 'custom',
-              currencyCode: row.currencyCode ? String(row.currencyCode) : null,
-              hasPrimaryManager,
-            })
-          : null;
+            const activationReadiness = hasProgram
+              ? getProgramActivationReadiness({
+                  commissionModel: row.commissionModel as
+                    | 'flat_percentage'
+                    | 'tiered_percentage'
+                    | 'fixed_amount'
+                    | 'hybrid',
+                  defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
+                  defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
+                  tierAccessPolicy: row.tierAccessPolicy as 'open' | 'restricted' | 'invite_only',
+                  payoutMilestone: row.payoutMilestone as
+                    | 'attorney_instruction'
+                    | 'attorney_signing'
+                    | 'bond_approval'
+                    | 'transfer_registration'
+                    | 'occupation'
+                    | 'custom',
+                  currencyCode: row.currencyCode ? String(row.currencyCode) : null,
+                  hasPrimaryManager,
+                })
+              : null;
 
-        const networkStatus = hasProgram
-          ? boolFromTinyInt(row.isReferralEnabled)
-            ? 'in_network_enabled'
-            : 'in_network_disabled'
-          : 'not_in_network';
+            const networkStatus = hasProgram
+              ? boolFromTinyInt(row.isReferralEnabled)
+                ? 'in_network_enabled'
+                : 'in_network_disabled'
+              : 'not_in_network';
 
-        return {
-          developmentId,
-          developmentName: row.developmentName,
-          cataloguePublisherId: row.cataloguePublisherId
-            ? Number(row.cataloguePublisherId)
-            : null,
-          publisherName:
-            (row.cataloguePublisherId
-              ? brandDirectory.get(Number(row.cataloguePublisherId))
-              : null) ||
-            row.publisherName ||
-            null,
-          city: row.city,
-          province: row.province,
-          imageUrl: extractFirstImageUrl(row.developmentImages),
-          isPublished: published,
-          approvalStatus: row.approvalStatus,
-          developmentStatus: row.developmentStatus,
-          publishedEligible: published && row.approvalStatus === 'approved',
-          priceFrom,
-          priceTo,
-          unitTypes: unitSummary?.unitTypes || [],
-          networkStatus,
-          program: hasProgram
-            ? {
-                id: programId,
-                isActive: boolFromTinyInt(row.programIsActive),
-                isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
-                commissionModel: row.commissionModel,
-                defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
-                defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
-                tierAccessPolicy: row.tierAccessPolicy,
-                payoutMilestone: row.payoutMilestone,
-                payoutMilestoneNotes: row.payoutMilestoneNotes,
-                currencyCode: row.currencyCode,
-                updatedAt: row.programUpdatedAt,
-                hasPrimaryManager,
-                managerAssignments: managerInfo?.assignments || [],
-                activationReadiness,
-              }
-            : null,
-          developmentUpdatedAt: row.developmentUpdatedAt,
-        };
-      });
-
-      return await Promise.all(
-        catalogRows.map(async row => {
-          const evaluation = await evaluateDevelopmentDistributionAccess({
-            db,
-            developmentId: Number(row.developmentId),
-            actor: { role: 'admin' },
-            channel: 'admin_catalog',
+            return {
+              developmentId,
+              developmentName: row.developmentName,
+              cataloguePublisherId: row.cataloguePublisherId
+                ? Number(row.cataloguePublisherId)
+                : null,
+              publisherName:
+                (row.cataloguePublisherId
+                  ? brandDirectory.get(Number(row.cataloguePublisherId))
+                  : null) ||
+                row.publisherName ||
+                null,
+              city: row.city,
+              province: row.province,
+              imageUrl: extractFirstImageUrl(row.developmentImages),
+              isPublished: published,
+              approvalStatus: row.approvalStatus,
+              developmentStatus: row.developmentStatus,
+              publishedEligible: published && row.approvalStatus === 'approved',
+              priceFrom,
+              priceTo,
+              unitTypes: unitSummary?.unitTypes || [],
+              networkStatus,
+              program: hasProgram
+                ? {
+                    id: programId,
+                    isActive: boolFromTinyInt(row.programIsActive),
+                    isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
+                    commissionModel: row.commissionModel,
+                    defaultCommissionPercent: toNumberOrNull(row.defaultCommissionPercent),
+                    defaultCommissionAmount: toNumberOrNull(row.defaultCommissionAmount),
+                    tierAccessPolicy: row.tierAccessPolicy,
+                    payoutMilestone: row.payoutMilestone,
+                    payoutMilestoneNotes: row.payoutMilestoneNotes,
+                    currencyCode: row.currencyCode,
+                    updatedAt: row.programUpdatedAt,
+                    hasPrimaryManager,
+                    managerAssignments: managerInfo?.assignments || [],
+                    activationReadiness,
+                  }
+                : null,
+              developmentUpdatedAt: row.developmentUpdatedAt,
+            };
           });
 
-          return {
-            ...row,
-            partnershipStatus: evaluation.brandPartnershipStatus,
-            accessStatus: evaluation.developmentAccessStatus,
-            inventoryState: evaluation.inventoryState,
-            submissionAllowed: evaluation.submissionAllowed,
-            excludedByMandate: evaluation.excludedByMandate,
-            excludedByExclusivity: evaluation.excludedByExclusivity,
-            submitReady: evaluation.submitReady,
-            reasons: evaluation.reasons,
-            legacyFallbackUsed: evaluation.legacyFallbackUsed,
-            readiness: evaluation.readiness,
-            brandPartnered: evaluation.brandPartnered,
-            developmentIncluded: evaluation.developmentIncluded,
-          };
-        }),
+          return await Promise.all(
+            catalogRows.map(async row => {
+              const evaluation = await evaluateDevelopmentDistributionAccess({
+                db,
+                developmentId: Number(row.developmentId),
+                actor: { role: 'admin' },
+                channel: 'admin_catalog',
+              });
+
+              return {
+                ...row,
+                partnershipStatus: evaluation.brandPartnershipStatus,
+                accessStatus: evaluation.developmentAccessStatus,
+                inventoryState: evaluation.inventoryState,
+                submissionAllowed: evaluation.submissionAllowed,
+                excludedByMandate: evaluation.excludedByMandate,
+                excludedByExclusivity: evaluation.excludedByExclusivity,
+                submitReady: evaluation.submitReady,
+                reasons: evaluation.reasons,
+                legacyFallbackUsed: evaluation.legacyFallbackUsed,
+                readiness: evaluation.readiness,
+                brandPartnered: evaluation.brandPartnered,
+                developmentIncluded: evaluation.developmentIncluded,
+              };
+            }),
+          );
+        },
       );
-      });
     }),
 
   debugBrandDevelopments: superAdminProcedure
@@ -2013,9 +2100,7 @@ const adminDistributionRouter = router({
           unpublishedOrUnapproved: sql<number>`SUM(CASE WHEN NOT (${developments.isPublished} = 1 AND ${developments.approvalStatus} = 'approved') THEN 1 ELSE 0 END)`,
         })
         .from(developments)
-        .where(
-          eq(developments.cataloguePublisherId, input.cataloguePublisherId),
-        );
+        .where(eq(developments.cataloguePublisherId, input.cataloguePublisherId));
 
       const samples = await db
         .select({
@@ -2029,9 +2114,7 @@ const adminDistributionRouter = router({
           updatedAt: developments.updatedAt,
         })
         .from(developments)
-        .where(
-          eq(developments.cataloguePublisherId, input.cataloguePublisherId),
-        )
+        .where(eq(developments.cataloguePublisherId, input.cataloguePublisherId))
         .orderBy(desc(developments.updatedAt))
         .limit(20);
 
@@ -2245,14 +2328,6 @@ const adminDistributionRouter = router({
               .map(value => value.trim())
               .filter(Boolean)
               .slice(0, 8),
-            amenityLabels: input.brochureConfig.amenityLabels
-              .map(value => value.trim())
-              .filter(Boolean)
-              .slice(0, 8),
-            heroImageUrl: input.brochureConfig.heroImageUrl?.trim() || null,
-            contactName: input.brochureConfig.contactName?.trim() || null,
-            contactPhone: input.brochureConfig.contactPhone?.trim() || null,
-            contactEmail: input.brochureConfig.contactEmail?.trim() || null,
           };
 
           await db
@@ -2347,15 +2422,6 @@ const adminDistributionRouter = router({
                 });
               }
 
-              const [publisher] = await tx
-                .select({
-                  id: cataloguePublishers.id,
-                  brandName: cataloguePublishers.name,
-                })
-                .from(cataloguePublishers)
-                .where(eq(cataloguePublishers.id, cataloguePublisherId))
-                .limit(1);
-
               const partnershipResult = await upsertBrandPartnershipWithAudit({
                 db: tx as any,
                 actorUserId: ctx.user.id,
@@ -2415,7 +2481,6 @@ const adminDistributionRouter = router({
               const seededDocs = await seedDevelopmentRequiredDocumentsIfEmpty({
                 db: tx as any,
                 developmentId: input.developmentId,
-                publisherName: publisher?.brandName || null,
               });
 
               return {
@@ -2586,6 +2651,8 @@ const adminDistributionRouter = router({
           };
         }
 
+        await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
+
         const accessEvaluation = await evaluateDevelopmentDistributionAccess({
           db,
           developmentId: input.developmentId,
@@ -2650,7 +2717,67 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
+      await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
       return await getProgramReadinessByDevelopmentId(input.developmentId);
+    }),
+
+  getReferralIntakePolicy: superAdminProcedure
+    .input(z.object({ developmentId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      assertDistributionEnabled();
+      return await runDistributionDbOperation(
+        'distribution.admin.manageReferralIntakePolicy',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
+          return await getDistributionReferralIntakePolicy(input.developmentId);
+        },
+      );
+    }),
+
+  saveReferralIntakePolicyDraft: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        releaseId: z.number().int().positive().optional(),
+        expectedConfigurationDigest: z.string().length(64).optional(),
+        configuration: distributionReferralIntakePolicyDraftSchema,
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      return await runDistributionDbOperation(
+        'distribution.admin.manageReferralIntakePolicy',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
+          return await saveDistributionReferralIntakePolicyDraft({
+            ...input,
+            actorUserId: ctx.user.id,
+          });
+        },
+      );
+    }),
+
+  publishReferralIntakePolicy: superAdminProcedure
+    .input(
+      z.object({
+        developmentId: z.number().int().positive(),
+        releaseId: z.number().int().positive(),
+        expectedConfigurationDigest: z.string().length(64),
+        approvalReference: z.string().trim().min(2).max(180),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertDistributionEnabled();
+      return await runDistributionDbOperation(
+        'distribution.admin.manageReferralIntakePolicy',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
+          return await publishDistributionReferralIntakePolicy({
+            ...input,
+            actorUserId: ctx.user.id,
+          });
+        },
+      );
     }),
 
   getDevelopmentRequiredDocuments: superAdminProcedure
@@ -2676,24 +2803,15 @@ const adminDistributionRouter = router({
         documents: z.array(
           z.object({
             id: z.number().int().positive().optional(),
-            category: z.enum(['developer_document', 'client_required_document']).default(
-              'client_required_document',
-            ),
             documentCode: z.enum([
               'id_document',
               'proof_of_address',
               'proof_of_income',
               'bank_statement',
               'pre_approval',
-              'signed_offer_to_purchase',
-              'sale_agreement',
-              'attorney_instruction_letter',
-              'transfer_documents',
               'custom',
             ]),
             documentLabel: z.string().trim().min(2).max(160),
-            templateFileUrl: z.string().trim().url().max(2048).nullable().optional(),
-            templateFileName: z.string().trim().max(255).nullable().optional(),
             isRequired: z.boolean().default(true),
             sortOrder: z.number().int().min(0).default(0),
             isActive: z.boolean().default(true),
@@ -2706,11 +2824,9 @@ const adminDistributionRouter = router({
 
       const normalizedDocuments = input.documents.map((document, index) => ({
         id: document.id,
-        category: document.category,
+        category: 'client_required_document' as const,
         documentCode: document.documentCode,
         documentLabel: normalizeRequiredDocumentLabel(document.documentLabel),
-        templateFileUrl: document.templateFileUrl?.trim() || null,
-        templateFileName: document.templateFileName?.trim() || null,
         isRequired: document.isRequired,
         sortOrder: typeof document.sortOrder === 'number' ? document.sortOrder : index,
         isActive: document.isActive,
@@ -2719,8 +2835,9 @@ const adminDistributionRouter = router({
       const duplicateStandardCode = normalizedDocuments.find((document, index) => {
         if (document.documentCode === 'custom') return false;
         return (
-          normalizedDocuments.findIndex(candidate => candidate.documentCode === document.documentCode) !==
-          index
+          normalizedDocuments.findIndex(
+            candidate => candidate.documentCode === document.documentCode,
+          ) !== index
         );
       });
       if (duplicateStandardCode) {
@@ -2754,11 +2871,7 @@ const adminDistributionRouter = router({
         developmentId: number;
         documentCode: string;
         documentLabel: string;
-        category: 'developer_document' | 'client_required_document';
-        templateFileUrl: string | null;
-        templateFileName: string | null;
-        templateUploadedAt: string | null;
-        templateUploadedBy: number | null;
+        category: 'client_required_document';
         isRequired: boolean;
         sortOrder: number;
         isActive: boolean;
@@ -2784,18 +2897,10 @@ const adminDistributionRouter = router({
                   documentCode: document.documentCode,
                   documentLabel: document.documentLabel,
                   category: document.category,
-                  templateFileUrl:
-                    document.category === 'developer_document' ? document.templateFileUrl : null,
-                  templateFileName:
-                    document.category === 'developer_document' ? document.templateFileName : null,
-                  templateUploadedAt:
-                    document.category === 'developer_document' && document.templateFileUrl
-                      ? sql`CURRENT_TIMESTAMP`
-                      : null,
-                  templateUploadedBy:
-                    document.category === 'developer_document' && document.templateFileUrl
-                      ? null
-                      : null,
+                  templateFileUrl: null,
+                  templateFileName: null,
+                  templateUploadedAt: null,
+                  templateUploadedBy: null,
                   isRequired: document.isRequired ? 1 : 0,
                   sortOrder: document.sortOrder,
                   isActive: document.isActive ? 1 : 0,
@@ -2814,18 +2919,10 @@ const adminDistributionRouter = router({
               documentCode: document.documentCode,
               documentLabel: document.documentLabel,
               category: document.category,
-              templateFileUrl:
-                document.category === 'developer_document' ? document.templateFileUrl : null,
-              templateFileName:
-                document.category === 'developer_document' ? document.templateFileName : null,
-              templateUploadedAt:
-                document.category === 'developer_document' && document.templateFileUrl
-                  ? sql`CURRENT_TIMESTAMP`
-                  : null,
-              templateUploadedBy:
-                document.category === 'developer_document' && document.templateFileUrl
-                  ? null
-                  : null,
+              templateFileUrl: null,
+              templateFileName: null,
+              templateUploadedAt: null,
+              templateUploadedBy: null,
               isRequired: document.isRequired ? 1 : 0,
               sortOrder: document.sortOrder,
               isActive: document.isActive ? 1 : 0,
@@ -2844,45 +2941,32 @@ const adminDistributionRouter = router({
               .where(inArray(developmentRequiredDocuments.id, idsToDeactivate));
           }
 
-            const rows = await tx
-              .select({
-                id: developmentRequiredDocuments.id,
-                developmentId: developmentRequiredDocuments.developmentId,
-                documentCode: developmentRequiredDocuments.documentCode,
-                documentLabel: developmentRequiredDocuments.documentLabel,
-                category: developmentRequiredDocuments.category,
-                templateFileUrl: developmentRequiredDocuments.templateFileUrl,
-                templateFileName: developmentRequiredDocuments.templateFileName,
-                templateUploadedAt: developmentRequiredDocuments.templateUploadedAt,
-                templateUploadedBy: developmentRequiredDocuments.templateUploadedBy,
-                isRequired: developmentRequiredDocuments.isRequired,
-                sortOrder: developmentRequiredDocuments.sortOrder,
-                isActive: developmentRequiredDocuments.isActive,
-              })
-              .from(developmentRequiredDocuments)
-              .where(eq(developmentRequiredDocuments.developmentId, input.developmentId))
-              .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
+          const rows = await tx
+            .select({
+              id: developmentRequiredDocuments.id,
+              developmentId: developmentRequiredDocuments.developmentId,
+              documentCode: developmentRequiredDocuments.documentCode,
+              documentLabel: developmentRequiredDocuments.documentLabel,
+              category: developmentRequiredDocuments.category,
+              isRequired: developmentRequiredDocuments.isRequired,
+              sortOrder: developmentRequiredDocuments.sortOrder,
+              isActive: developmentRequiredDocuments.isActive,
+            })
+            .from(developmentRequiredDocuments)
+            .where(
+              and(
+                eq(developmentRequiredDocuments.developmentId, input.developmentId),
+                eq(developmentRequiredDocuments.category, 'client_required_document'),
+              ),
+            )
+            .orderBy(developmentRequiredDocuments.sortOrder, developmentRequiredDocuments.id);
 
           return rows.map(row => ({
             id: Number(row.id),
             developmentId: Number(row.developmentId),
             documentCode: String(row.documentCode),
             documentLabel: String(row.documentLabel || ''),
-            category:
-              String(row.category || 'client_required_document') === 'developer_document'
-                ? 'developer_document'
-                : 'client_required_document',
-            templateFileUrl:
-              typeof row.templateFileUrl === 'string' && row.templateFileUrl.trim()
-                ? row.templateFileUrl.trim()
-                : null,
-            templateFileName:
-              typeof row.templateFileName === 'string' && row.templateFileName.trim()
-                ? row.templateFileName.trim()
-                : null,
-            templateUploadedAt: row.templateUploadedAt || null,
-            templateUploadedBy:
-              typeof row.templateUploadedBy === 'number' ? Number(row.templateUploadedBy) : null,
+            category: 'client_required_document' as const,
             isRequired: boolFromTinyInt(row.isRequired),
             sortOrder: Number(row.sortOrder || 0),
             isActive: boolFromTinyInt(row.isActive),
@@ -2923,6 +3007,10 @@ const adminDistributionRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution program not found.' });
       }
 
+      if (input.isActive) {
+        await assertDistributionSchemaReady('distribution.admin.manageReferralIntakePolicy');
+      }
+
       await db
         .update(distributionPrograms)
         .set({
@@ -2931,10 +3019,11 @@ const adminDistributionRouter = router({
         })
         .where(eq(distributionPrograms.id, input.programId));
 
-      const warnings =
-        input.isActive === true
-          ? (await getProgramReadinessByDevelopmentId(Number(program.developmentId))).blockers
-          : [];
+      let warnings: Array<{ code: string; message: string }> = [];
+      if (input.isActive) {
+        warnings = (await getProgramReadinessByDevelopmentId(Number(program.developmentId)))
+          .blockers;
+      }
 
       return {
         success: true,
@@ -3568,82 +3657,85 @@ const adminDistributionRouter = router({
     )
     .query(async ({ input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.listTeamRegistrations', async () => {
-        await assertDistributionSchemaReady('distribution.admin.listTeamRegistrations');
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation(
+        'distribution.admin.listTeamRegistrations',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.listTeamRegistrations');
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
 
-      const conditions: SQL[] = [];
-      if (input?.status) {
-        conditions.push(eq(platformTeamRegistrations.status, input.status));
-      }
-      if (input?.requestedArea) {
-        conditions.push(eq(platformTeamRegistrations.requestedArea, input.requestedArea));
-      }
+          const conditions: SQL[] = [];
+          if (input?.status) {
+            conditions.push(eq(platformTeamRegistrations.status, input.status));
+          }
+          if (input?.requestedArea) {
+            conditions.push(eq(platformTeamRegistrations.requestedArea, input.requestedArea));
+          }
 
-      const rows = await db
-        .select({
-          id: platformTeamRegistrations.id,
-          fullName: platformTeamRegistrations.fullName,
-          email: platformTeamRegistrations.email,
-          phone: platformTeamRegistrations.phone,
-          company: platformTeamRegistrations.company,
-          currentRole: platformTeamRegistrations.currentRole,
-          requestedArea: platformTeamRegistrations.requestedArea,
-          notes: platformTeamRegistrations.notes,
-          status: platformTeamRegistrations.status,
-          userId: platformTeamRegistrations.userId,
-          reviewedBy: platformTeamRegistrations.reviewedBy,
-          reviewedAt: platformTeamRegistrations.reviewedAt,
-          reviewNotes: platformTeamRegistrations.reviewNotes,
-          createdAt: platformTeamRegistrations.createdAt,
-          updatedAt: platformTeamRegistrations.updatedAt,
-        })
-        .from(platformTeamRegistrations)
-        .where(withConditions(conditions))
-        .orderBy(desc(platformTeamRegistrations.createdAt))
-        .limit(input?.limit ?? 200);
+          const rows = await db
+            .select({
+              id: platformTeamRegistrations.id,
+              fullName: platformTeamRegistrations.fullName,
+              email: platformTeamRegistrations.email,
+              phone: platformTeamRegistrations.phone,
+              company: platformTeamRegistrations.company,
+              currentRole: platformTeamRegistrations.currentRole,
+              requestedArea: platformTeamRegistrations.requestedArea,
+              notes: platformTeamRegistrations.notes,
+              status: platformTeamRegistrations.status,
+              userId: platformTeamRegistrations.userId,
+              reviewedBy: platformTeamRegistrations.reviewedBy,
+              reviewedAt: platformTeamRegistrations.reviewedAt,
+              reviewNotes: platformTeamRegistrations.reviewNotes,
+              createdAt: platformTeamRegistrations.createdAt,
+              updatedAt: platformTeamRegistrations.updatedAt,
+            })
+            .from(platformTeamRegistrations)
+            .where(withConditions(conditions))
+            .orderBy(desc(platformTeamRegistrations.createdAt))
+            .limit(input?.limit ?? 200);
 
-      const directory = await getUserDirectoryByIds(
-        db,
-        rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
-      );
-
-      const registrationUserIds: number[] = Array.from(
-        new Set<number>(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
-      );
-      const managerIdentityByUserId = new Map<number, boolean>();
-      if (registrationUserIds.length) {
-        const identityRows = await db
-          .select({
-            userId: distributionIdentities.userId,
-            active: distributionIdentities.active,
-          })
-          .from(distributionIdentities)
-          .where(
-            and(
-              inArray(distributionIdentities.userId, registrationUserIds),
-              eq(distributionIdentities.identityType, 'manager'),
-            ),
+          const directory = await getUserDirectoryByIds(
+            db,
+            rows.flatMap(row => [Number(row.userId || 0), Number(row.reviewedBy || 0)]),
           );
-        for (const row of identityRows) {
-          managerIdentityByUserId.set(Number(row.userId), boolFromTinyInt(row.active));
-        }
-      }
 
-      return rows.map(row => ({
-        ...row,
-        userDisplayName: row.userId
-          ? (directory.get(Number(row.userId))?.displayName ?? null)
-          : null,
-        reviewedByDisplayName: row.reviewedBy
-          ? (directory.get(Number(row.reviewedBy))?.displayName ?? null)
-          : null,
-        managerAccessActive: row.userId
-          ? (managerIdentityByUserId.get(Number(row.userId)) ?? null)
-          : null,
-      }));
-      });
+          const registrationUserIds: number[] = Array.from(
+            new Set<number>(rows.map(row => Number(row.userId || 0)).filter(id => id > 0)),
+          );
+          const managerIdentityByUserId = new Map<number, boolean>();
+          if (registrationUserIds.length) {
+            const identityRows = await db
+              .select({
+                userId: distributionIdentities.userId,
+                active: distributionIdentities.active,
+              })
+              .from(distributionIdentities)
+              .where(
+                and(
+                  inArray(distributionIdentities.userId, registrationUserIds),
+                  eq(distributionIdentities.identityType, 'manager'),
+                ),
+              );
+            for (const row of identityRows) {
+              managerIdentityByUserId.set(Number(row.userId), boolFromTinyInt(row.active));
+            }
+          }
+
+          return rows.map(row => ({
+            ...row,
+            userDisplayName: row.userId
+              ? (directory.get(Number(row.userId))?.displayName ?? null)
+              : null,
+            reviewedByDisplayName: row.reviewedBy
+              ? (directory.get(Number(row.reviewedBy))?.displayName ?? null)
+              : null,
+            managerAccessActive: row.userId
+              ? (managerIdentityByUserId.get(Number(row.userId)) ?? null)
+              : null,
+          }));
+        },
+      );
     }),
 
   reviewTeamRegistration: superAdminProcedure
@@ -3790,65 +3882,68 @@ const adminDistributionRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       assertDistributionEnabled();
-      return await runDistributionDbOperation('distribution.admin.createManagerInvite', async () => {
-        await assertDistributionSchemaReady('distribution.admin.createManagerInvite');
-        const db = await getDb();
-        if (!db) throw new Error('Database not available');
+      return await runDistributionDbOperation(
+        'distribution.admin.createManagerInvite',
+        async () => {
+          await assertDistributionSchemaReady('distribution.admin.createManagerInvite');
+          const db = await getDb();
+          if (!db) throw new Error('Database not available');
 
-        const normalizedEmail = input.email.trim().toLowerCase();
-        const [existingPending] = await db
-          .select({
-            id: platformTeamRegistrations.id,
-            email: platformTeamRegistrations.email,
-            status: platformTeamRegistrations.status,
-          })
-          .from(platformTeamRegistrations)
-          .where(
-            and(
-              eq(platformTeamRegistrations.email, normalizedEmail),
-              eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
-              eq(platformTeamRegistrations.status, 'pending'),
-            ),
-          )
-          .limit(1);
+          const normalizedEmail = input.email.trim().toLowerCase();
+          const [existingPending] = await db
+            .select({
+              id: platformTeamRegistrations.id,
+              email: platformTeamRegistrations.email,
+              status: platformTeamRegistrations.status,
+            })
+            .from(platformTeamRegistrations)
+            .where(
+              and(
+                eq(platformTeamRegistrations.email, normalizedEmail),
+                eq(platformTeamRegistrations.requestedArea, 'distribution_manager'),
+                eq(platformTeamRegistrations.status, 'pending'),
+              ),
+            )
+            .limit(1);
 
-        const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
-          .filter(Boolean)
-          .join('\n');
+          const baseNotes = [input.notes?.trim(), `Invited by user #${ctx.user.id}`]
+            .filter(Boolean)
+            .join('\n');
 
-        if (existingPending) {
-          return {
-            success: true,
-            mode: 'existing_pending' as const,
-            registrationId: Number(existingPending.id),
-            email: normalizedEmail,
-            inviteUrl: issueManagerInviteUrl({
+          if (existingPending) {
+            return {
+              success: true,
+              mode: 'existing_pending' as const,
               registrationId: Number(existingPending.id),
               email: normalizedEmail,
-            }),
+              inviteUrl: issueManagerInviteUrl({
+                registrationId: Number(existingPending.id),
+                email: normalizedEmail,
+              }),
+            };
+          }
+
+          const [insertResult] = await db.insert(platformTeamRegistrations).values({
+            fullName: input.fullName.trim(),
+            email: normalizedEmail,
+            phone: input.phone?.trim() || null,
+            company: input.company?.trim() || null,
+            currentRole: input.currentRole?.trim() || null,
+            requestedArea: 'distribution_manager',
+            notes: baseNotes || null,
+            status: 'pending',
+          });
+
+          const registrationId = Number((insertResult as any).insertId || 0);
+          return {
+            success: true,
+            mode: 'created' as const,
+            registrationId,
+            email: normalizedEmail,
+            inviteUrl: issueManagerInviteUrl({ registrationId, email: normalizedEmail }),
           };
-        }
-
-        const [insertResult] = await db.insert(platformTeamRegistrations).values({
-          fullName: input.fullName.trim(),
-          email: normalizedEmail,
-          phone: input.phone?.trim() || null,
-          company: input.company?.trim() || null,
-          currentRole: input.currentRole?.trim() || null,
-          requestedArea: 'distribution_manager',
-          notes: baseNotes || null,
-          status: 'pending',
-        });
-
-        const registrationId = Number((insertResult as any).insertId || 0);
-        return {
-          success: true,
-          mode: 'created' as const,
-          registrationId,
-          email: normalizedEmail,
-          inviteUrl: issueManagerInviteUrl({ registrationId, email: normalizedEmail }),
-        };
-      });
+        },
+      );
     }),
 
   resendManagerInvite: superAdminProcedure
@@ -4323,7 +4418,6 @@ const adminDistributionRouter = router({
           id: distributionAgentAccess.id,
           programId: distributionAgentAccess.programId,
           developmentId: distributionAgentAccess.developmentId,
-          developmentName: developments.name,
           agentId: distributionAgentAccess.agentId,
           minTierRequired: distributionAgentAccess.minTierRequired,
           accessStatus: distributionAgentAccess.accessStatus,
@@ -4339,7 +4433,6 @@ const adminDistributionRouter = router({
           distributionPrograms,
           eq(distributionAgentAccess.programId, distributionPrograms.id),
         )
-        .innerJoin(developments, eq(distributionAgentAccess.developmentId, developments.id))
         .where(withConditions(conditions))
         .orderBy(desc(distributionAgentAccess.updatedAt))
         .limit(input.limit);
@@ -4415,6 +4508,14 @@ const adminDistributionRouter = router({
         };
       }
 
+      if (toStage === 'commission_paid') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Mark the commission entry paid with its payment reference; that action advances the deal to commission_paid.',
+        });
+      }
+
       const isAllowed =
         input.force || toStage === 'cancelled' || isForwardStageTransition(fromStage, toStage);
 
@@ -4430,7 +4531,7 @@ const adminDistributionRouter = router({
         deal.commissionTriggerStage as 'contract_signed' | 'bond_approved',
       );
 
-      if (!input.force && (toStage === 'commission_pending' || toStage === 'commission_paid')) {
+      if (!input.force && toStage === 'commission_pending') {
         await assertDealPayoutReady(Number(deal.id), ctx.user.id, {
           skipAssignmentCheck: true,
         });
@@ -4441,7 +4542,7 @@ const adminDistributionRouter = router({
         commissionStatus,
       };
 
-      if (toStage === 'cancelled' || toStage === 'commission_paid') {
+      if (toStage === 'cancelled') {
         updatePayload.closedAt = sql`CURRENT_TIMESTAMP`;
       } else if (input.force && deal.closedAt) {
         updatePayload.closedAt = null;
@@ -4681,6 +4782,9 @@ const adminDistributionRouter = router({
       }
 
       const nextStatus = input.entryStatus;
+      const normalizedPaymentReference =
+        typeof input.paymentReference === 'string' ? input.paymentReference.trim() : null;
+      let manualPayoutMilestoneOverride = false;
       const updatePayload: Record<string, unknown> = {
         entryStatus: nextStatus,
       };
@@ -4693,28 +4797,62 @@ const adminDistributionRouter = router({
         updatePayload.paidAt = null;
         updatePayload.paidBy = null;
         if (typeof input.paymentReference !== 'undefined') {
-          updatePayload.paymentReference = input.paymentReference;
+          updatePayload.paymentReference = normalizedPaymentReference;
         } else {
           updatePayload.paymentReference = null;
         }
       } else if (nextStatus === 'paid') {
+        const paymentReference =
+          normalizedPaymentReference || String(entry.paymentReference || '').trim();
+        if (!paymentReference || /^DIST-PAYOUT-\d+$/i.test(paymentReference)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'A real payment or receipt reference is required before marking a commission paid.',
+          });
+        }
+        if (entry.entryStatus !== 'paid') {
+          if (!['commission_pending', 'commission_paid'].includes(String(deal.currentStage))) {
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message:
+                'A commission can be marked paid only after its deal reaches commission pending.',
+            });
+          }
+
+          const checklist = await getDealChecklist(Number(deal.id), ctx.user.id, {
+            skipAssignmentCheck: true,
+          });
+          const milestoneBlocksAutomaticPayment =
+            checklist.computed.payoutMilestoneSupported && !checklist.computed.payoutReady;
+          if (!checklist.computed.allRequiredVerified || milestoneBlocksAutomaticPayment) {
+            const blockers = checklist.computed.blockers.join(', ') || 'unknown blockers';
+            throw new TRPCError({
+              code: 'PRECONDITION_FAILED',
+              message: `Commission payout is blocked: ${blockers}.`,
+            });
+          }
+          // Unsupported program milestones may be settled only through this
+          // super-admin override, with verified required documents and the
+          // justification note recorded above.
+          manualPayoutMilestoneOverride = !checklist.computed.payoutMilestoneSupported;
+        }
         updatePayload.approvedAt = entry.approvedAt ?? sql`CURRENT_TIMESTAMP`;
         updatePayload.approvedBy = entry.approvedBy ?? ctx.user.id;
         updatePayload.paidAt = sql`CURRENT_TIMESTAMP`;
         updatePayload.paidBy = ctx.user.id;
-        updatePayload.paymentReference =
-          input.paymentReference ?? entry.paymentReference ?? `DIST-PAYOUT-${entry.id}`;
+        updatePayload.paymentReference = paymentReference;
       } else if (nextStatus === 'pending') {
         updatePayload.paidAt = null;
         updatePayload.paidBy = null;
         if (typeof input.paymentReference !== 'undefined') {
-          updatePayload.paymentReference = input.paymentReference;
+          updatePayload.paymentReference = normalizedPaymentReference;
         } else {
           updatePayload.paymentReference = null;
         }
       } else if (nextStatus === 'cancelled') {
         if (typeof input.paymentReference !== 'undefined') {
-          updatePayload.paymentReference = input.paymentReference;
+          updatePayload.paymentReference = normalizedPaymentReference;
         }
       }
 
@@ -4774,6 +4912,8 @@ const adminDistributionRouter = router({
             nextEntryStatus: nextStatus,
             previousDealCommissionStatus: deal.commissionStatus,
             nextDealCommissionStatus,
+            paymentReference: nextStatus === 'paid' ? updatePayload.paymentReference : null,
+            manualPayoutMilestoneOverride,
           } as any,
           notes: normalizedNotes,
         });
@@ -4791,6 +4931,404 @@ const adminDistributionRouter = router({
 });
 
 const managerDistributionRouter = router({
+  listSelectedTeamPractitioners: protectedProcedure.query(async ({ ctx }) => {
+    assertSelectedTeamQueueEnabled();
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    await assertDistributionIdentity(db, ctx.user!, 'manager');
+    await assertDistributionSchemaReady('distribution.selectedPractitioners');
+
+    const rows = await db
+      .select({
+        agentId: agents.id,
+        userId: agents.userId,
+        displayName: agents.displayName,
+        firstName: agents.firstName,
+        lastName: agents.lastName,
+        email: users.email,
+      })
+      .from(distributionSelectedPractitioners)
+      .innerJoin(agents, eq(distributionSelectedPractitioners.agentId, agents.id))
+      .innerJoin(users, eq(agents.userId, users.id))
+      .where(
+        and(
+          eq(distributionSelectedPractitioners.status, 'active'),
+          eq(agents.status, 'approved'),
+          eq(users.role, 'agent'),
+        ),
+      )
+      .orderBy(agents.displayName);
+    const userIds: number[] = Array.from(
+      new Set<number>(
+        rows
+          .map(row => Number(row.userId))
+          .filter(userId => Number.isSafeInteger(userId) && userId > 0),
+      ),
+    );
+    if (!userIds.length) return [];
+    const profileCounts = await db
+      .select({ userId: agents.userId, count: sql<number>`COUNT(*)` })
+      .from(agents)
+      .where(inArray(agents.userId, userIds))
+      .groupBy(agents.userId);
+    const unambiguousUserIds = new Set(
+      profileCounts.filter(row => Number(row.count) === 1).map(row => Number(row.userId)),
+    );
+    return rows.filter(row => unambiguousUserIds.has(Number(row.userId)));
+  }),
+
+  listSelectedTeamLeadQueue: protectedProcedure
+    .input(
+      z.object({
+        status: z.enum(['open', 'closed']).default('open'),
+        limit: z.number().int().min(1).max(300).default(100),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+      await assertDistributionSchemaReady('distribution.listingLeadQueue');
+
+      const rows = await db
+        .select({
+          queueItemId: distributionListingLeadQueue.id,
+          source: distributionListingLeadQueue.source,
+          queueStatus: distributionListingLeadQueue.status,
+          assignedAgentId: distributionListingLeadQueue.assignedAgentId,
+          assignedAt: distributionListingLeadQueue.assignedAt,
+          closeReason: distributionListingLeadQueue.closeReason,
+          createdAt: distributionListingLeadQueue.createdAt,
+          leadId: leads.id,
+          leadName: leads.name,
+          leadEmail: leads.email,
+          leadPhone: leads.phone,
+          leadMessage: leads.message,
+          leadStatus: leads.status,
+          leadCreatedAt: leads.createdAt,
+          propertyId: leads.propertyId,
+          propertyTitle: properties.title,
+          developmentId: leads.developmentId,
+          unitId: leads.unitId,
+          unitName: leads.unitName,
+          assignedAgentDisplayName: agents.displayName,
+          assignedAgentFirstName: agents.firstName,
+          assignedAgentLastName: agents.lastName,
+        })
+        .from(distributionListingLeadQueue)
+        .innerJoin(leads, eq(distributionListingLeadQueue.leadId, leads.id))
+        .leftJoin(properties, eq(leads.propertyId, properties.id))
+        .leftJoin(agents, eq(distributionListingLeadQueue.assignedAgentId, agents.id))
+        .where(eq(distributionListingLeadQueue.status, input.status))
+        .orderBy(asc(distributionListingLeadQueue.createdAt))
+        .limit(input.limit);
+
+      return rows.map(row => ({
+        ...row,
+        developmentName:
+          row.developmentId == null ? null : `Development #${row.developmentId}`,
+        assignedAgentName:
+          String(row.assignedAgentDisplayName || '').trim() ||
+          [row.assignedAgentFirstName, row.assignedAgentLastName].filter(Boolean).join(' ') ||
+          null,
+      }));
+    }),
+
+  listSelectedTeamLeadQueueEvents: protectedProcedure
+    .input(z.object({ queueItemId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+      await assertDistributionSchemaReady('distribution.listingLeadQueue');
+
+      const rows = await db
+        .select({
+          id: distributionListingLeadQueueEvents.id,
+          eventType: distributionListingLeadQueueEvents.eventType,
+          actorUserId: distributionListingLeadQueueEvents.actorUserId,
+          actorName: users.name,
+          actorFirstName: users.firstName,
+          actorLastName: users.lastName,
+          fromAgentId: distributionListingLeadQueueEvents.fromAgentId,
+          toAgentId: distributionListingLeadQueueEvents.toAgentId,
+          note: distributionListingLeadQueueEvents.note,
+          createdAt: distributionListingLeadQueueEvents.createdAt,
+        })
+        .from(distributionListingLeadQueueEvents)
+        .leftJoin(users, eq(distributionListingLeadQueueEvents.actorUserId, users.id))
+        .where(eq(distributionListingLeadQueueEvents.queueItemId, input.queueItemId))
+        .orderBy(
+          asc(distributionListingLeadQueueEvents.createdAt),
+          asc(distributionListingLeadQueueEvents.id),
+        );
+      return rows.map(row => ({
+        ...row,
+        actorDisplayName: formatUserDisplayName({
+          name: row.actorName,
+          firstName: row.actorFirstName,
+          lastName: row.actorLastName,
+          email: null,
+        }),
+      }));
+    }),
+
+  assignSelectedTeamLead: protectedProcedure
+    .input(
+      z.object({
+        queueItemId: z.number().int().positive(),
+        agentId: z.number().int().positive().nullable(),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+      await assertDistributionSchemaReady('distribution.listingLeadQueue');
+
+      return await db.transaction(async (tx: any) => {
+        await tx.execute(
+          sql`SELECT id FROM distribution_listing_lead_queue WHERE id = ${input.queueItemId} FOR UPDATE`,
+        );
+        const [item] = await tx
+          .select({
+            id: distributionListingLeadQueue.id,
+            leadId: distributionListingLeadQueue.leadId,
+            status: distributionListingLeadQueue.status,
+            assignedAgentId: distributionListingLeadQueue.assignedAgentId,
+          })
+          .from(distributionListingLeadQueue)
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId))
+          .limit(1);
+        if (!item) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution queue item not found.' });
+        }
+        if (item.status !== 'open') {
+          throw new TRPCError({ code: 'CONFLICT', message: 'This queue item is no longer open.' });
+        }
+
+        const previousAgentId = item.assignedAgentId == null ? null : Number(item.assignedAgentId);
+        const nextAgentId = input.agentId == null ? null : Number(input.agentId);
+        if (nextAgentId === previousAgentId) {
+          return { success: true, queueItemId: input.queueItemId, agentId: nextAgentId };
+        }
+
+        if (nextAgentId !== null) {
+          const [member] = await tx
+            .select({ agentId: agents.id, userId: agents.userId })
+            .from(distributionSelectedPractitioners)
+            .innerJoin(agents, eq(distributionSelectedPractitioners.agentId, agents.id))
+            .innerJoin(users, eq(agents.userId, users.id))
+            .where(
+              and(
+                eq(distributionSelectedPractitioners.agentId, nextAgentId),
+                eq(distributionSelectedPractitioners.status, 'active'),
+                eq(agents.status, 'approved'),
+                eq(users.role, 'agent'),
+              ),
+            )
+            .limit(1);
+          if (!member) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Choose an active practitioner from the selected team.',
+            });
+          }
+          const [profileCount] = await tx
+            .select({ count: sql<number>`COUNT(*)` })
+            .from(agents)
+            .where(eq(agents.userId, Number(member.userId)));
+          if (Number(profileCount?.count || 0) !== 1) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message:
+                'This account has multiple agent profiles and cannot access the assigned agent workspace reliably.',
+            });
+          }
+        }
+
+        const eventType =
+          previousAgentId === null
+            ? 'assigned'
+            : nextAgentId === null
+              ? 'unassigned'
+              : 'reassigned';
+        const assignedAt = nextAgentId === null ? null : normalizeDateForSql(new Date());
+        await tx
+          .update(distributionListingLeadQueue)
+          .set({
+            assignedAgentId: nextAgentId,
+            assignedByUserId: nextAgentId === null ? null : ctx.user!.id,
+            assignedAt,
+            updatedAt: normalizeDateForSql(new Date()),
+          })
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId));
+        await tx.insert(distributionListingLeadQueueEvents).values({
+          queueItemId: input.queueItemId,
+          eventType,
+          actorUserId: ctx.user!.id,
+          fromAgentId: previousAgentId,
+          toAgentId: nextAgentId,
+          note: input.note?.trim() || null,
+        });
+        if (nextAgentId !== null) {
+          const [member] = await tx
+            .select({ userId: agents.userId })
+            .from(agents)
+            .where(eq(agents.id, nextAgentId))
+            .limit(1);
+          if (member?.userId) {
+            await tx.insert(notifications).values({
+              userId: Number(member.userId),
+              type: 'lead_assigned',
+              title: 'New selected team lead assigned',
+              content: 'A Property Listify enquiry is ready in your agent leads workspace.',
+              data: JSON.stringify({
+                leadId: Number(item.leadId),
+                queueItemId: input.queueItemId,
+                actionUrl: '/agent/leads',
+              }),
+              isRead: 0,
+            });
+          }
+        }
+
+        return { success: true, queueItemId: input.queueItemId, agentId: nextAgentId };
+      });
+    }),
+
+  closeSelectedTeamLeadQueueItem: protectedProcedure
+    .input(
+      z.object({
+        queueItemId: z.number().int().positive(),
+        reason: z.string().trim().min(3).max(1000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+      await assertDistributionSchemaReady('distribution.listingLeadQueue');
+
+      return await db.transaction(async (tx: any) => {
+        await tx.execute(
+          sql`SELECT id FROM distribution_listing_lead_queue WHERE id = ${input.queueItemId} FOR UPDATE`,
+        );
+        const [item] = await tx
+          .select({
+            id: distributionListingLeadQueue.id,
+            status: distributionListingLeadQueue.status,
+          })
+          .from(distributionListingLeadQueue)
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId))
+          .limit(1);
+        if (!item) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution queue item not found.' });
+        }
+        if (item.status !== 'open') {
+          throw new TRPCError({ code: 'CONFLICT', message: 'This queue item is no longer open.' });
+        }
+
+        const closedAt = normalizeDateForSql(new Date());
+        await tx
+          .update(distributionListingLeadQueue)
+          .set({
+            status: 'closed',
+            closedByUserId: ctx.user!.id,
+            closedAt,
+            closeReason: input.reason.trim(),
+            updatedAt: closedAt,
+          })
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId));
+        await tx.insert(distributionListingLeadQueueEvents).values({
+          queueItemId: input.queueItemId,
+          eventType: 'closed',
+          actorUserId: ctx.user!.id,
+          fromAgentId: null,
+          toAgentId: null,
+          note: input.reason.trim(),
+        });
+        return { success: true, queueItemId: input.queueItemId, status: 'closed' as const };
+      });
+    }),
+
+  reopenSelectedTeamLeadQueueItem: protectedProcedure
+    .input(
+      z.object({
+        queueItemId: z.number().int().positive(),
+        note: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      assertSelectedTeamQueueEnabled();
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      await assertDistributionIdentity(db, ctx.user!, 'manager');
+      await assertDistributionSchemaReady('distribution.listingLeadQueue');
+
+      return await db.transaction(async (tx: any) => {
+        await tx.execute(
+          sql`SELECT id FROM distribution_listing_lead_queue WHERE id = ${input.queueItemId} FOR UPDATE`,
+        );
+        const [item] = await tx
+          .select({
+            id: distributionListingLeadQueue.id,
+            status: distributionListingLeadQueue.status,
+            assignedAgentId: distributionListingLeadQueue.assignedAgentId,
+          })
+          .from(distributionListingLeadQueue)
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId))
+          .limit(1);
+        if (!item) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Distribution queue item not found.' });
+        }
+        if (item.status !== 'closed') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Only a closed queue item can be reopened.',
+          });
+        }
+
+        const reopenedAt = normalizeDateForSql(new Date());
+        await tx
+          .update(distributionListingLeadQueue)
+          .set({
+            status: 'open',
+            assignedAgentId: null,
+            assignedByUserId: null,
+            assignedAt: null,
+            closedByUserId: null,
+            closedAt: null,
+            closeReason: null,
+            updatedAt: reopenedAt,
+          })
+          .where(eq(distributionListingLeadQueue.id, input.queueItemId));
+        await tx.insert(distributionListingLeadQueueEvents).values({
+          queueItemId: input.queueItemId,
+          eventType: 'reopened',
+          actorUserId: ctx.user!.id,
+          fromAgentId: item.assignedAgentId == null ? null : Number(item.assignedAgentId),
+          toAgentId: null,
+          note:
+            [
+              item.assignedAgentId == null
+                ? null
+                : `Returned from practitioner #${item.assignedAgentId}.`,
+              input.note?.trim() || null,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .slice(0, 1000) || null,
+        });
+        return { success: true, queueItemId: input.queueItemId, status: 'open' as const };
+      });
+    }),
+
   myAssignments: protectedProcedure.query(async ({ ctx }) => {
     assertDistributionEnabled();
     const db = await getDb();
@@ -4810,7 +5348,6 @@ const managerDistributionRouter = router({
         managerUserId: distributionManagerAssignments.managerUserId,
         programId: distributionPrograms.id,
         developmentId: distributionManagerAssignments.developmentId,
-        developmentName: developments.name,
         isPrimary: distributionManagerAssignments.isPrimary,
         workloadCapacity: distributionManagerAssignments.workloadCapacity,
         timezone: distributionManagerAssignments.timezone,
@@ -4822,12 +5359,12 @@ const managerDistributionRouter = router({
         distributionPrograms,
         eq(distributionManagerAssignments.developmentId, distributionPrograms.developmentId),
       )
-      .innerJoin(developments, eq(distributionManagerAssignments.developmentId, developments.id))
       .where(withConditions(conditions))
       .orderBy(desc(distributionManagerAssignments.assignedAt));
 
     return rows.map(row => ({
       ...row,
+      developmentName: `Development #${row.developmentId}`,
       isPrimary: boolFromTinyInt(row.isPrimary),
       isActive: boolFromTinyInt(row.isActive),
     }));
@@ -4847,22 +5384,18 @@ const managerDistributionRouter = router({
     const rows = await db
       .select({
         developmentId: distributionManagerAssignments.developmentId,
-        developmentName: developments.name,
-        city: developments.city,
-        province: developments.province,
         assignedAt: distributionManagerAssignments.assignedAt,
         isPrimary: distributionManagerAssignments.isPrimary,
       })
       .from(distributionManagerAssignments)
-      .innerJoin(developments, eq(distributionManagerAssignments.developmentId, developments.id))
       .where(withConditions(conditions))
       .orderBy(desc(distributionManagerAssignments.assignedAt));
 
     return rows.map(row => ({
       developmentId: Number(row.developmentId),
-      developmentName: String(row.developmentName || `Development #${row.developmentId}`),
-      city: row.city || null,
-      province: row.province || null,
+      developmentName: `Development #${row.developmentId}`,
+      city: null,
+      province: null,
       assignedAt: row.assignedAt,
       isPrimary: boolFromTinyInt(row.isPrimary),
     }));
@@ -5086,7 +5619,6 @@ const managerDistributionRouter = router({
           id: distributionAgentAccess.id,
           programId: distributionAgentAccess.programId,
           developmentId: distributionAgentAccess.developmentId,
-          developmentName: developments.name,
           agentId: distributionAgentAccess.agentId,
           minTierRequired: distributionAgentAccess.minTierRequired,
           accessStatus: distributionAgentAccess.accessStatus,
@@ -5100,7 +5632,6 @@ const managerDistributionRouter = router({
           distributionPrograms,
           eq(distributionAgentAccess.programId, distributionPrograms.id),
         )
-        .innerJoin(developments, eq(distributionAgentAccess.developmentId, developments.id))
         .where(withConditions(conditions))
         .orderBy(desc(distributionAgentAccess.updatedAt))
         .limit(input.limit);
@@ -5116,6 +5647,7 @@ const managerDistributionRouter = router({
 
         return {
           ...row,
+          developmentName: `Development #${row.developmentId}`,
           agentDisplayName: user?.displayName || `Referrer #${row.agentId}`,
           agentEmail: user?.email || null,
           minTierRequired,
@@ -5189,7 +5721,6 @@ const managerDistributionRouter = router({
           dealId: distributionViewings.dealId,
           programId: distributionViewings.programId,
           developmentId: distributionViewings.developmentId,
-          developmentName: developments.name,
           agentId: distributionViewings.agentId,
           managerUserId: distributionViewings.managerUserId,
           managerName: users.name,
@@ -5212,7 +5743,6 @@ const managerDistributionRouter = router({
         })
         .from(distributionViewings)
         .innerJoin(distributionDeals, eq(distributionViewings.dealId, distributionDeals.id))
-        .innerJoin(developments, eq(distributionViewings.developmentId, developments.id))
         .innerJoin(users, eq(distributionViewings.managerUserId, users.id))
         .where(withConditions(conditions))
         .orderBy(sql`${distributionViewings.scheduledStartAt} asc`)
@@ -5225,6 +5755,7 @@ const managerDistributionRouter = router({
 
       return rows.map(row => ({
         ...row,
+        developmentName: `Development #${row.developmentId}`,
         agentDisplayName:
           userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
         agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
@@ -5440,7 +5971,6 @@ const managerDistributionRouter = router({
           dealId: distributionDeals.id,
           programId: distributionDeals.programId,
           developmentId: distributionDeals.developmentId,
-          developmentName: developments.name,
           agentId: distributionDeals.agentId,
           buyerName: distributionDeals.buyerName,
           buyerEmail: distributionDeals.buyerEmail,
@@ -5451,7 +5981,6 @@ const managerDistributionRouter = router({
           updatedAt: distributionDeals.updatedAt,
         })
         .from(distributionDeals)
-        .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
         .where(withConditions(conditions))
         .orderBy(desc(distributionDeals.updatedAt))
         .limit(input.limit);
@@ -5474,6 +6003,7 @@ const managerDistributionRouter = router({
 
           return {
             ...deal,
+            developmentName: `Development #${deal.developmentId}`,
             agentDisplayName: userDirectory.get(Number(deal.agentId))?.displayName || null,
             agentEmail: userDirectory.get(Number(deal.agentId))?.email || null,
             validationStatus,
@@ -5630,12 +6160,12 @@ const managerDistributionRouter = router({
       conditions.push(eq(distributionDeals.currentStage, input.stage));
     }
 
-      if (ctx.user!.role !== 'super_admin') {
-        conditions.push(eq(distributionDeals.managerUserId, ctx.user!.id));
-        if (typeof input.developmentId === 'number') {
-          await assertManagerScope(db, ctx.user!.id, {
-            developmentId: input.developmentId,
-          });
+    if (ctx.user!.role !== 'super_admin') {
+      conditions.push(eq(distributionDeals.managerUserId, ctx.user!.id));
+      if (typeof input.developmentId === 'number') {
+        await assertManagerScope(db, ctx.user!.id, {
+          developmentId: input.developmentId,
+        });
       } else {
         const scopedProgramIds = await getActiveManagerProgramIdsForUser(db, ctx.user!.id);
         if (!scopedProgramIds.length) {
@@ -5650,7 +6180,6 @@ const managerDistributionRouter = router({
       .select({
         id: distributionDeals.id,
         developmentId: distributionDeals.developmentId,
-        developmentName: developments.name,
         agentId: distributionDeals.agentId,
         buyerName: distributionDeals.buyerName,
         buyerEmail: distributionDeals.buyerEmail,
@@ -5660,7 +6189,6 @@ const managerDistributionRouter = router({
         updatedAt: distributionDeals.updatedAt,
       })
       .from(distributionDeals)
-      .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
       .where(withConditions(conditions))
       .orderBy(desc(distributionDeals.updatedAt))
       .limit(input.limit);
@@ -5677,6 +6205,7 @@ const managerDistributionRouter = router({
 
     return rows.map(row => ({
       ...row,
+      developmentName: `Development #${row.developmentId}`,
       agentDisplayName:
         userDirectory.get(Number(row.agentId))?.displayName || `Referrer #${row.agentId}`,
       agentEmail: userDirectory.get(Number(row.agentId))?.email || null,
@@ -5716,7 +6245,6 @@ const managerDistributionRouter = router({
           id: distributionDeals.id,
           programId: distributionDeals.programId,
           developmentId: distributionDeals.developmentId,
-          developmentName: developments.name,
           buyerName: distributionDeals.buyerName,
           buyerEmail: distributionDeals.buyerEmail,
           buyerPhone: distributionDeals.buyerPhone,
@@ -5733,7 +6261,6 @@ const managerDistributionRouter = router({
           managerEmail: users.email,
         })
         .from(distributionDeals)
-        .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
         .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
         .where(eq(distributionDeals.id, input.dealId))
         .limit(1);
@@ -6008,6 +6535,7 @@ const partnerDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDistributionReferralIntakeReady();
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
@@ -6114,6 +6642,7 @@ const partnerDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDistributionReferralIntakeReady();
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
@@ -6145,6 +6674,10 @@ const partnerDistributionRouter = router({
       await assertPartnerTermsAccess(db, ctx.user!);
 
       return await listPartnerProgramTerms({
+        actor: {
+          userId: Number(ctx.user!.id),
+          role: String(ctx.user!.role || ''),
+        },
         cataloguePublisherId: input?.cataloguePublisherId,
         includeDisabled: input?.includeUnavailable ?? false,
       });
@@ -6168,6 +6701,10 @@ const partnerDistributionRouter = router({
       await assertPartnerTermsAccess(db, ctx.user!);
 
       return await listPartnerProgramTerms({
+        actor: {
+          userId: Number(ctx.user!.id),
+          role: String(ctx.user!.role || ''),
+        },
         cataloguePublisherId: input?.cataloguePublisherId,
         developmentIds: input?.developmentIds,
         includeDisabled: input?.includeDisabled ?? false,
@@ -6178,6 +6715,7 @@ const partnerDistributionRouter = router({
     .input(
       z.object({
         developmentId: z.number().int().positive(),
+        marketMode: z.enum(['sale', 'rent']),
         assessmentId: z.string().uuid().optional(),
         buyerName: z.string().trim().max(200).optional(),
         buyerPhone: z.string().trim().max(50).optional(),
@@ -6187,16 +6725,27 @@ const partnerDistributionRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      assertDistributionReferralIntakeReady();
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
       await assertPartnerTermsAccess(db, ctx.user!);
 
+      await assertPartnerDevelopmentProgramAccess({
+        db,
+        actor: {
+          userId: Number(ctx.user!.id),
+          role: String(ctx.user!.role || ''),
+        },
+        developmentId: input.developmentId,
+      });
+
       return await createReferralDeal({
         actorUserId: Number(ctx.user!.id),
         actorRole: String(ctx.user!.role || ''),
         developmentId: input.developmentId,
+        marketMode: input.marketMode,
         buyerName: input.buyerName ?? null,
         buyerPhone: input.buyerPhone ?? null,
         buyerEmail: input.buyerEmail ?? null,
@@ -6295,7 +6844,10 @@ const partnerDistributionRouter = router({
 
       await assertPartnerTermsAccess(db, ctx.user!);
 
-      const item = await getPartnerProgramTermsByDevelopmentId(input.developmentId);
+      const item = await getPartnerProgramTermsByDevelopmentId(input.developmentId, {
+        userId: Number(ctx.user!.id),
+        role: String(ctx.user!.role || ''),
+      });
       if (!item) {
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -6320,7 +6872,11 @@ const referrerDistributionRouter = router({
     }
 
     const agentId = Number(ctx.user!.id);
-    const hasIdentity = await hasActiveDistributionIdentity(db, agentId, 'referrer');
+    const role = String(ctx.user!.role || '');
+    const hasIdentity =
+      role === 'agent' ||
+      role === 'agency_admin' ||
+      (await hasActiveDistributionIdentity(db, agentId, 'referrer'));
     if (!hasIdentity) {
       return {
         hasIdentity: false,
@@ -6329,22 +6885,11 @@ const referrerDistributionRouter = router({
       };
     }
 
-    const [accessCountRow] = await db
-      .select({ count: sql<number>`COUNT(*)` })
-      .from(distributionAgentAccess)
-      .innerJoin(
-        distributionPrograms,
-        eq(distributionAgentAccess.programId, distributionPrograms.id),
-      )
-      .where(
-        and(
-          eq(distributionAgentAccess.agentId, agentId),
-          eq(distributionPrograms.isActive, 1),
-          sql`${distributionAgentAccess.accessStatus} <> 'revoked'`,
-        ),
-      );
-
-    const accessCount = Number(accessCountRow?.count || 0);
+    const accessibleDevelopmentIds = await listPartnerAccessibleDevelopmentIds({
+      db,
+      actor: { userId: agentId, role },
+    });
+    const accessCount = accessibleDevelopmentIds.length;
     return {
       hasIdentity: true,
       hasAccess: accessCount > 0,
@@ -6361,160 +6906,51 @@ const referrerDistributionRouter = router({
         })
         .optional(),
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx }) => {
       assertDistributionEnabled();
       const db = await getDb();
       if (!db) throw new Error('Database not available');
 
       await assertDistributionIdentity(db, ctx.user!, 'referrer');
       const agentId = Number(ctx.user!.id);
-
-      const includePaused = input?.includePaused ?? true;
-      const includeRevoked = input?.includeRevoked ?? false;
-
-      const conditions: SQL[] = [
-        eq(distributionAgentAccess.agentId, agentId),
-        eq(distributionPrograms.isActive, 1),
-      ];
-
-      if (!includeRevoked) {
-        conditions.push(sql`${distributionAgentAccess.accessStatus} <> 'revoked'`);
-      }
-
-      if (!includePaused) {
-        conditions.push(eq(distributionAgentAccess.accessStatus, 'active'));
-      }
-
-      const rows = await db
-        .select({
-          id: distributionAgentAccess.id,
-          programId: distributionAgentAccess.programId,
-          developmentId: distributionAgentAccess.developmentId,
-          developmentName: developments.name,
-          suburb: developments.suburb,
-          city: developments.city,
-          province: developments.province,
-          address: developments.address,
-          description: developments.description,
-          amenities: developments.amenities,
-          features: developments.features,
-          developmentImages: developments.images,
-          developmentStatus: developments.status,
-          priceFrom: developments.priceFrom,
-          priceTo: developments.priceTo,
-          minTierRequired: distributionAgentAccess.minTierRequired,
-          accessStatus: distributionAgentAccess.accessStatus,
-          notes: distributionAgentAccess.notes,
-          grantedAt: distributionAgentAccess.grantedAt,
-          revokedAt: distributionAgentAccess.revokedAt,
-          programIsActive: distributionPrograms.isActive,
-          isReferralEnabled: distributionPrograms.isReferralEnabled,
-          commissionModel: distributionPrograms.commissionModel,
-          defaultCommissionPercent: distributionPrograms.defaultCommissionPercent,
-          defaultCommissionAmount: distributionPrograms.defaultCommissionAmount,
-          tierAccessPolicy: distributionPrograms.tierAccessPolicy,
-        })
-        .from(distributionAgentAccess)
-        .innerJoin(
-          distributionPrograms,
-          eq(distributionAgentAccess.programId, distributionPrograms.id),
-        )
-        .innerJoin(developments, eq(distributionAgentAccess.developmentId, developments.id))
-        .where(withConditions(conditions))
-        .orderBy(desc(distributionAgentAccess.updatedAt));
-
-      const tierByAgentId = await getCurrentTierByAgentIds(db, [agentId]);
-      const currentTier = (tierByAgentId.get(agentId) || null) as DistributionTier | null;
-      const developmentIds: number[] = Array.from(
-        new Set(
-          rows
-            .map(row => Number(row.developmentId))
-            .filter(value => Number.isFinite(value) && value > 0),
-        ),
-      );
-      const unitTypeRows = developmentIds.length
-        ? await db
-            .select({
-              developmentId: unitTypes.developmentId,
-              name: unitTypes.name,
-              displayOrder: unitTypes.displayOrder,
-              bedrooms: unitTypes.bedrooms,
-              bathrooms: unitTypes.bathrooms,
-              unitSize: unitTypes.unitSize,
-              yardSize: unitTypes.yardSize,
-              priceFrom: unitTypes.priceFrom,
-              priceTo: unitTypes.priceTo,
-              basePriceFrom: unitTypes.basePriceFrom,
-              basePriceTo: unitTypes.basePriceTo,
-              isActive: unitTypes.isActive,
-            })
-            .from(unitTypes)
-            .where(and(inArray(unitTypes.developmentId, developmentIds), eq(unitTypes.isActive, 1)))
-            .orderBy(unitTypes.displayOrder, unitTypes.name)
-        : [];
-
-      const unitTypesByDevelopment = new Map<
-        number,
-        Array<{
-          name: string;
-          isActive: boolean;
-          bedrooms: number | null;
-          bathrooms: number | null;
-          unitSize: number | null;
-          yardSize: number | null;
-          priceFrom: number | null;
-          priceTo: number | null;
-        }>
-      >();
-      for (const row of unitTypeRows) {
-        const developmentId = Number(row.developmentId);
-        const current = unitTypesByDevelopment.get(developmentId) || [];
-        const name = String(row.name || '').trim();
-        if (!name) continue;
-        const resolvedPriceFrom =
-          toNumberOrNull(row.priceFrom) ?? toNumberOrNull(row.basePriceFrom) ?? null;
-        const resolvedPriceTo =
-          toNumberOrNull(row.priceTo) ??
-          toNumberOrNull(row.basePriceTo) ??
-          resolvedPriceFrom ??
-          null;
-        current.push({
-          name,
-          isActive: boolFromTinyInt(row.isActive),
-          bedrooms: toNumberOrNull(row.bedrooms),
-          bathrooms: toNumberOrNull(row.bathrooms),
-          unitSize: toNumberOrNull(row.unitSize),
-          yardSize: toNumberOrNull(row.yardSize),
-          priceFrom: resolvedPriceFrom,
-          priceTo: resolvedPriceTo,
-        });
-        unitTypesByDevelopment.set(developmentId, current);
-      }
-
-      return rows.map(row => {
-        const minTierRequired = row.minTierRequired as DistributionTier;
-        const developmentId = Number(row.developmentId);
-
-        return {
-          ...row,
-          agentId,
-          currentTier,
-          minTierRequired,
-          tierEligible: isTierEligible(currentTier, minTierRequired),
-          programIsActive: boolFromTinyInt(row.programIsActive),
-          isReferralEnabled: boolFromTinyInt(row.isReferralEnabled),
-          suburb: row.suburb || null,
-          address: row.address || null,
-          description: row.description || null,
-          amenities: row.amenities || null,
-          features: row.features || null,
-          imageUrl: extractFirstImageUrl(row.developmentImages),
-          developmentStatus: row.developmentStatus || null,
-          unitTypes: unitTypesByDevelopment.get(developmentId) || [],
-          priceFrom: row.priceFrom ? Number(row.priceFrom) : null,
-          priceTo: row.priceTo ? Number(row.priceTo) : null,
-        };
+      // Paused/revoked grants and grants below the actor's tier are omitted from this
+      // partner-facing list, even when a legacy caller requests them.
+      const { items } = await listPartnerProgramTerms({
+        actor: { userId: agentId, role: String(ctx.user!.role || '') },
       });
+      const currentTier =
+        (await getCurrentTierByAgentIds(db, [agentId])).get(agentId) || null;
+
+      return items.map(item => ({
+        id: null,
+        programId: item.program.programId,
+        developmentId: item.developmentId,
+        developmentName: item.developmentName,
+        developmentFactsAvailable: item.developmentFactsAvailable,
+        suburb: null,
+        city: null,
+        province: null,
+        address: null,
+        description: null,
+        amenities: null,
+        features: null,
+        developmentStatus: null,
+        imageUrl: null,
+        unitTypes: [],
+        priceFrom: null,
+        priceTo: null,
+        agentId,
+        currentTier,
+        minTierRequired: null,
+        accessStatus: 'active',
+        tierEligible: true,
+        programIsActive: item.program.isActive,
+        isReferralEnabled: item.program.isReferralEnabled,
+        commissionModel: item.program.commissionModel,
+        defaultCommissionPercent: item.program.defaultCommissionPercent,
+        defaultCommissionAmount: item.program.defaultCommissionAmount,
+        tierAccessPolicy: item.program.tierAccessPolicy,
+      }));
     }),
 
   myViewings: protectedProcedure
@@ -6552,7 +6988,6 @@ const referrerDistributionRouter = router({
           dealId: distributionViewings.dealId,
           programId: distributionViewings.programId,
           developmentId: distributionViewings.developmentId,
-          developmentName: developments.name,
           managerUserId: distributionViewings.managerUserId,
           managerName: users.name,
           managerFirstName: users.firstName,
@@ -6573,7 +7008,6 @@ const referrerDistributionRouter = router({
         })
         .from(distributionViewings)
         .innerJoin(distributionDeals, eq(distributionViewings.dealId, distributionDeals.id))
-        .innerJoin(developments, eq(distributionViewings.developmentId, developments.id))
         .innerJoin(users, eq(distributionViewings.managerUserId, users.id))
         .where(withConditions(conditions))
         .orderBy(sql`${distributionViewings.scheduledStartAt} asc`)
@@ -6590,6 +7024,7 @@ const referrerDistributionRouter = router({
 
         return {
           ...row,
+          developmentName: `Development #${row.developmentId}`,
           managerDisplayName: formatUserDisplayName({
             name: row.managerName,
             firstName: row.managerFirstName,
@@ -6719,6 +7154,7 @@ const referrerDistributionRouter = router({
     .input(
       z.object({
         programId: z.number().int().positive(),
+        marketMode: z.enum(['sale', 'rent']),
         buyerName: z.string().trim().min(2).max(200),
         buyerEmail: z.string().email().max(320).nullable().optional(),
         buyerPhone: z.string().trim().max(50).nullable().optional(),
@@ -6774,28 +7210,25 @@ const referrerDistributionRouter = router({
         });
       }
 
-      const access = await getActiveAgentAccessForProgram(db, input.programId, agentId);
-      if (!access || access.accessStatus !== 'active') {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not have active distribution access to this program.',
-        });
-      }
-
-      const currentTier = (await getCurrentTierByAgentIds(db, [agentId])).get(agentId) || null;
-      const minTierRequired = access.minTierRequired as DistributionTier;
-      if (!isTierEligible(currentTier as DistributionTier | null, minTierRequired)) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Your current tier does not meet program access requirements.',
-        });
-      }
-
-      await assertDevelopmentSubmissionEligible({
+      await assertPartnerDevelopmentProgramAccess({
+        db,
+        actor: {
+          userId: agentId,
+          role: String(ctx.user!.role || ''),
+        },
+        developmentId: Number(program.developmentId),
+      });
+      await assertPartnerDevelopmentReferralOpen({
         db,
         developmentId: Number(program.developmentId),
-        actor: { role: 'referrer', userId: agentId },
-        channel: 'submission',
+      });
+
+      // Keep this legacy submit route closed until the current Developer Engine projection
+      // is available to verify the requested sale/rent mode and capture its revision.
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Referral submission is unavailable because current Developer Engine availability is not connected to this Distribution build.',
       });
 
       const managerUserId = await getPrimaryManagerUserIdForProgram(db, input.programId);
@@ -6951,7 +7384,8 @@ const referrerDistributionRouter = router({
               scheduledEndAt: scheduledViewingEndAt
                 ? normalizeDateForSql(scheduledViewingEndAt)
                 : null,
-              timezone: normalizedReferralContext?.viewingSchedule?.timezone || 'Africa/Johannesburg',
+              timezone:
+                normalizedReferralContext?.viewingSchedule?.timezone || 'Africa/Johannesburg',
               locationName: normalizedReferralContext?.viewingSchedule?.locationName ?? null,
               status: 'scheduled',
               rescheduleCount: 0,
@@ -7098,7 +7532,6 @@ const referrerDistributionRouter = router({
           id: distributionDeals.id,
           programId: distributionDeals.programId,
           developmentId: distributionDeals.developmentId,
-          developmentName: developments.name,
           buyerName: distributionDeals.buyerName,
           buyerEmail: distributionDeals.buyerEmail,
           buyerPhone: distributionDeals.buyerPhone,
@@ -7113,7 +7546,6 @@ const referrerDistributionRouter = router({
           updatedAt: distributionDeals.updatedAt,
         })
         .from(distributionDeals)
-        .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
         .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
         .where(eq(distributionDeals.agentId, agentId))
         .orderBy(desc(distributionDeals.updatedAt))
@@ -7139,6 +7571,7 @@ const referrerDistributionRouter = router({
         const validation = latestValidationByDeal.get(deal.id);
         return {
           ...deal,
+          developmentName: `Development #${deal.developmentId}`,
           managerDisplayName: formatUserDisplayName({
             name: deal.managerName,
             firstName: deal.managerFirstName,
@@ -7179,7 +7612,6 @@ const referrerDistributionRouter = router({
           id: distributionDeals.id,
           programId: distributionDeals.programId,
           developmentId: distributionDeals.developmentId,
-          developmentName: developments.name,
           buyerName: distributionDeals.buyerName,
           buyerEmail: distributionDeals.buyerEmail,
           buyerPhone: distributionDeals.buyerPhone,
@@ -7196,7 +7628,6 @@ const referrerDistributionRouter = router({
           managerEmail: users.email,
         })
         .from(distributionDeals)
-        .innerJoin(developments, eq(distributionDeals.developmentId, developments.id))
         .leftJoin(users, eq(distributionDeals.managerUserId, users.id))
         .where(
           and(eq(distributionDeals.id, input.dealId), eq(distributionDeals.agentId, ctx.user!.id)),
@@ -7236,13 +7667,12 @@ const referrerDistributionRouter = router({
         conditions.push(eq(distributionCommissionEntries.entryStatus, input.entryStatus));
       }
 
-      return await db
+      const rows = await db
         .select({
           id: distributionCommissionEntries.id,
           dealId: distributionCommissionEntries.dealId,
           programId: distributionCommissionEntries.programId,
           developmentId: distributionCommissionEntries.developmentId,
-          developmentName: developments.name,
           commissionAmount: distributionCommissionEntries.commissionAmount,
           commissionPercent: distributionCommissionEntries.commissionPercent,
           calculationBaseAmount: distributionCommissionEntries.calculationBaseAmount,
@@ -7262,10 +7692,13 @@ const referrerDistributionRouter = router({
           distributionDeals,
           eq(distributionCommissionEntries.dealId, distributionDeals.id),
         )
-        .innerJoin(developments, eq(distributionCommissionEntries.developmentId, developments.id))
         .where(withConditions(conditions))
         .orderBy(desc(distributionCommissionEntries.updatedAt))
         .limit(limit);
+      return rows.map(row => ({
+        ...row,
+        developmentName: `Development #${row.developmentId}`,
+      }));
     }),
 });
 
@@ -7863,6 +8296,10 @@ export const distributionRouter = router({
     submodules: DISTRIBUTION_SUBMODULES,
   })),
 
+  getSelectedTeamQueueFeatureStatus: protectedProcedure.query(() => ({
+    enabled: ENV.distributionNetworkEnabled && ENV.distributionSelectedTeamQueueEnabled,
+  })),
+
   listSubmodules: superAdminProcedure.query(() => {
     assertDistributionEnabled();
     return DISTRIBUTION_SUBMODULES;
@@ -8137,7 +8574,11 @@ export const distributionRouter = router({
         });
       }
 
-      const userId = await findVerifiedRegistrationAccount(db, normalizedEmail, requireUser(ctx).id);
+      const userId = await findVerifiedRegistrationAccount(
+        db,
+        normalizedEmail,
+        requireUser(ctx).id,
+      );
       if (!userId)
         throw new TRPCError({
           code: 'PRECONDITION_FAILED',

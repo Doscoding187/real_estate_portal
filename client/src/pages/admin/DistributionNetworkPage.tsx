@@ -29,6 +29,13 @@ function formatMoney(value: number | null | undefined) {
   }).format(value);
 }
 
+function formatDealStage(value: string | null | undefined) {
+  const stage = String(value || 'unknown').toLowerCase();
+  if (stage === 'commission_pending') return 'Referral payout pending';
+  if (stage === 'commission_paid') return 'Referral payout paid';
+  return stage.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+}
+
 function collectErrorMessages(...errors: Array<{ message?: string } | null | undefined>) {
   return Array.from(
     new Set(
@@ -132,6 +139,7 @@ export default function DistributionNetworkPage() {
   const [location, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [brandSearch, setBrandSearch] = useState('');
+  const [selectedPractitionerSearch, setSelectedPractitionerSearch] = useState('');
   const [selectedPublisherId, setSelectedPublisherId] = useState<number | null>(null);
   const [selectedPublisherName, setSelectedBrandName] = useState('');
   const [onboardingDrawerOpen, setOnboardingDrawerOpen] = useState(false);
@@ -158,6 +166,10 @@ export default function DistributionNetworkPage() {
 
   const moduleStatusQuery = trpc.distribution.getModuleStatus.useQuery();
   const submodulesQuery = trpc.distribution.listSubmodules.useQuery();
+  const selectedTeamQueueFeatureQuery =
+    trpc.distribution.getSelectedTeamQueueFeatureStatus.useQuery(undefined, {
+      enabled: submoduleSlug === 'agent-network',
+    });
   const catalogQuery = trpc.distribution.admin.listDevelopmentCatalog.useQuery(
     {
       search,
@@ -191,6 +203,21 @@ export default function DistributionNetworkPage() {
     { limit: 200 },
     { enabled: submoduleSlug === 'agent-network' },
   );
+  const selectedPractitionersQuery = trpc.distribution.admin.listSelectedPractitioners.useQuery(
+    { includeInactive: true },
+    {
+      enabled:
+        submoduleSlug === 'agent-network' && selectedTeamQueueFeatureQuery.data?.enabled === true,
+    },
+  );
+  const setSelectedPractitionerStatusMutation =
+    trpc.distribution.admin.setSelectedPractitionerStatus.useMutation({
+      onSuccess: () => {
+        toast.success('Selected practitioner team updated');
+        selectedPractitionersQuery.refetch();
+      },
+      onError: error => toast.error(error.message),
+    });
   const teamRegistrationsQuery = trpc.distribution.admin.listTeamRegistrations.useQuery(
     { limit: 200 },
     {
@@ -431,7 +458,7 @@ export default function DistributionNetworkPage() {
         <CardHeader>
           <CardTitle>Distribution Network</CardTitle>
           <CardDescription>
-            Super admin module for referral operations, managers, deal flow, and commission control.
+            Super admin module for referral operations, managers, deal flow, and referral payout control.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
@@ -1095,6 +1122,97 @@ export default function DistributionNetworkPage() {
 
           <Card>
             <CardHeader>
+              <CardTitle>Selected practitioner team</CardTitle>
+              <CardDescription>
+                Only approved agents added here can receive leads from Property Listify listings.
+                General referral partners do not get access to this queue automatically.
+              </CardDescription>
+            </CardHeader>
+            {selectedTeamQueueFeatureQuery.isLoading ? (
+              <CardContent className="text-sm text-slate-500">
+                Checking selected team queue availability…
+              </CardContent>
+            ) : selectedTeamQueueFeatureQuery.data?.enabled ? (
+            <CardContent className="space-y-3">
+              <Input
+                value={selectedPractitionerSearch}
+                onChange={event => setSelectedPractitionerSearch(event.target.value)}
+                placeholder="Find an approved agent by name or email"
+              />
+              <div className="space-y-2">
+                {(selectedPractitionersQuery.data || [])
+                  .filter((practitioner: any) => {
+                    const term = selectedPractitionerSearch.trim().toLowerCase();
+                    if (!term) return true;
+                    return `${practitioner.displayName} ${practitioner.email}`
+                      .toLowerCase()
+                      .includes(term);
+                  })
+                  .slice(0, 50)
+                  .map((practitioner: any) => {
+                    const status = practitioner.membershipStatus;
+                    const nextStatus = status === 'active' ? 'paused' : 'active';
+                    return (
+                      <div
+                        key={practitioner.agentId}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded border p-3"
+                      >
+                        <div>
+                          <p className="font-medium">{practitioner.displayName || 'Agent'}</p>
+                          <p className="text-xs text-slate-500">{practitioner.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={status === 'active' ? 'default' : 'secondary'}>
+                            {status || 'not selected'}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant={status === 'active' ? 'outline' : 'default'}
+                            disabled={setSelectedPractitionerStatusMutation.isPending}
+                            onClick={() =>
+                              setSelectedPractitionerStatusMutation.mutate({
+                                agentId: Number(practitioner.agentId),
+                                status: nextStatus,
+                              })
+                            }
+                          >
+                            {status === 'active' ? 'Pause' : 'Add / restore'}
+                          </Button>
+                          {status && status !== 'revoked' ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={setSelectedPractitionerStatusMutation.isPending}
+                              onClick={() =>
+                                setSelectedPractitionerStatusMutation.mutate({
+                                  agentId: Number(practitioner.agentId),
+                                  status: 'revoked',
+                                })
+                              }
+                            >
+                              Remove
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                {!selectedPractitionersQuery.isLoading &&
+                !(selectedPractitionersQuery.data || []).length ? (
+                  <p className="text-sm text-slate-500">No approved agent accounts found.</p>
+                ) : null}
+              </div>
+            </CardContent>
+            ) : (
+              <CardContent className="text-sm text-slate-600">
+                The selected practitioner queue is disabled. Apply and verify migrations 0116–0118,
+                then enable <code>FEATURE_DISTRIBUTION_SELECTED_TEAM_QUEUE</code> to manage this roster.
+              </CardContent>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Referrer Application Queue</CardTitle>
               <CardDescription>Review pending applications and approve onboarding.</CardDescription>
             </CardHeader>
@@ -1214,7 +1332,7 @@ export default function DistributionNetworkPage() {
             <div className="flex flex-wrap gap-2">
               {pipelineStageCounts.map(([stage, count]) => (
                 <Badge key={stage} variant="secondary">
-                  {stage}: {count}
+                  {formatDealStage(stage)}: {count}
                 </Badge>
               ))}
             </div>
@@ -1225,7 +1343,7 @@ export default function DistributionNetworkPage() {
                     {deal.developmentName} - {deal.buyerName}
                   </p>
                   <p className="text-xs text-slate-500">
-                    Stage: {deal.currentStage} | Commission: {deal.commissionStatus}
+                    Stage: {formatDealStage(deal.currentStage)} | Referral payout: {formatDealStage(deal.commissionStatus)}
                   </p>
                 </div>
               ))}
@@ -1237,8 +1355,8 @@ export default function DistributionNetworkPage() {
       {submoduleSlug === 'commission-incentives' && (
         <Card>
           <CardHeader>
-            <CardTitle>Commission & Incentives</CardTitle>
-            <CardDescription>Commission entries and payout tracking.</CardDescription>
+            <CardTitle>Referral Payouts & Incentives</CardTitle>
+            <CardDescription>Referral payout records and payment tracking.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {(commissionQuery.data || []).slice(0, 40).map((entry: any) => (
@@ -1250,12 +1368,12 @@ export default function DistributionNetworkPage() {
                   <Badge variant="secondary">{entry.entryStatus}</Badge>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Commission: {formatMoney(Number(entry.commissionAmount || 0))}
+                  Referral payout: {formatMoney(Number(entry.commissionAmount || 0))}
                 </p>
               </div>
             ))}
             {!commissionQuery.isLoading && !(commissionQuery.data || []).length && (
-              <p className="text-sm text-slate-500">No commission entries found.</p>
+              <p className="text-sm text-slate-500">No referral payout records found.</p>
             )}
           </CardContent>
         </Card>

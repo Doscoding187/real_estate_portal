@@ -141,17 +141,6 @@ describe('PartnerReferralDetailPage', () => {
         },
         applicationDocuments: [
           {
-            templateId: 11,
-            documentCode: 'sale_agreement',
-            documentLabel: 'Developer sale agreement',
-            category: 'developer_document',
-            templateFileUrl: 'https://example.com/template.pdf',
-            templateFileName: 'sale-agreement.pdf',
-            isRequired: true,
-            sortOrder: 1,
-            status: 'pending',
-          },
-          {
             templateId: 12,
             documentCode: 'id_document',
             documentLabel: 'Buyer ID document',
@@ -161,16 +150,6 @@ describe('PartnerReferralDetailPage', () => {
             status: 'verified',
           },
         ],
-        programTerms: {
-          sourceDocuments: [
-            {
-              templateId: 20,
-              documentLabel: 'Unit / house plans',
-              fileUrl: 'https://example.com/plans.pdf',
-              fileName: 'plans.pdf',
-            },
-          ],
-        },
         timeline: [],
       },
     });
@@ -192,7 +171,7 @@ describe('PartnerReferralDetailPage', () => {
     expect(mutate).toHaveBeenCalledWith({ dealId: 42 });
   });
 
-  it('shows application upload and supporting document sections', () => {
+  it('shows Distribution process documents and no Developer resource link', () => {
     mockExportPackUseMutation.mockReturnValue({
       isPending: false,
       mutate: vi.fn(),
@@ -200,10 +179,12 @@ describe('PartnerReferralDetailPage', () => {
 
     render(<PartnerReferralDetailPage />);
 
-    expect(screen.getByText('Application and Supporting Documents')).toBeInTheDocument();
-    expect(screen.getByText('Developer sale agreement')).toBeInTheDocument();
+    expect(screen.getByText('Referral Process Documents')).toBeInTheDocument();
     expect(screen.getByText('Buyer ID document')).toBeInTheDocument();
-    expect(screen.getByText('Unit / house plans')).toBeInTheDocument();
-    expect(screen.getByText('Upload signed copy')).toBeInTheDocument();
+    expect(screen.getByText('Developer shared resources')).toBeInTheDocument();
+    expect(
+      screen.getByText('Shared sales files will appear here after an authorized delivery path is available.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Upload requested file')).toBeInTheDocument();
   });
 });

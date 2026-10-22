@@ -15,6 +15,7 @@ type DealChecklist = {
   developmentName: string;
   programId: number | null;
   payoutMilestone: string | null;
+  payoutMilestoneNotes?: string | null;
   currencyCode: string | null;
   commissionSummary: {
     commissionModel: string | null;
@@ -25,8 +26,6 @@ type DealChecklist = {
     templateId: number;
     documentCode: string;
     documentLabel: string;
-    templateFileUrl?: string | null;
-    templateFileName?: string | null;
     isRequired: boolean;
     sortOrder: number;
     isActive: boolean;
@@ -45,15 +44,16 @@ type DealChecklist = {
     requiredCount: number;
     verifiedRequiredCount: number;
     allRequiredVerified: boolean;
+    payoutMilestoneSupported?: boolean;
     payoutReady: boolean;
     blockers: string[];
   };
 };
 
-function formatCommission(checklist: DealChecklist) {
+function formatReferralPayout(checklist: DealChecklist) {
   const summary = checklist.commissionSummary;
   if (summary.commissionModel === 'flat_percentage' && summary.defaultCommissionPercent) {
-    return `${summary.defaultCommissionPercent}%`;
+    return `${summary.defaultCommissionPercent}% (calculation basis not configured)`;
   }
   if (summary.commissionModel === 'flat_amount' && summary.defaultCommissionAmount) {
     const currency = checklist.currencyCode || 'ZAR';
@@ -129,12 +129,22 @@ export function ManagerDealChecklistPanel({
         </CardHeader>
         <CardContent className="grid gap-2 text-sm md:grid-cols-3">
           <div>
-            <p className="text-xs text-slate-500">Commission</p>
-            <p className="font-medium">{formatCommission(checklist)}</p>
+            <p className="text-xs text-slate-500">Referral payout</p>
+            <p className="font-medium">{formatReferralPayout(checklist)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Payout Milestone</p>
-            <p className="font-medium">{checklist.payoutMilestone || 'Not configured'}</p>
+            <p className="font-medium">
+              {checklist.payoutMilestone?.replace(/_/g, ' ') || 'Not configured'}
+            </p>
+            {checklist.payoutMilestoneNotes ? (
+              <p className="mt-1 text-xs text-slate-600">{checklist.payoutMilestoneNotes}</p>
+            ) : null}
+            {checklist.computed.payoutMilestoneSupported === false ? (
+              <p className="mt-1 text-xs font-medium text-amber-700">
+                Manual administrator confirmation required
+              </p>
+            ) : null}
           </div>
           <div>
             <p className="text-xs text-slate-500">Currency</p>
@@ -161,8 +171,8 @@ export function ManagerDealChecklistPanel({
               </p>
             ))}
           <p className="text-xs text-slate-500">
-            Payout readiness uses verified documents and any milestone checks the system can prove
-            today. Unsupported milestones still require manual confirmation.
+            Payout readiness requires verified documents and a milestone the system can verify.
+            Unsupported milestones need a documented administrator confirmation.
           </p>
         </CardContent>
       </Card>
@@ -198,17 +208,6 @@ export function ManagerDealChecklistPanel({
                 <div>
                   <p className="font-medium">{document.documentLabel}</p>
                   <p className="text-xs text-slate-500">{document.documentCode}</p>
-                  {document.templateFileUrl ? (
-                    <a
-                      href={document.templateFileUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      Download document
-                      {document.templateFileName ? ` (${document.templateFileName})` : ''}
-                    </a>
-                  ) : null}
                 </div>
                 <Badge variant={document.isRequired ? 'default' : 'secondary'}>
                   {document.isRequired ? 'Required' : 'Optional'}

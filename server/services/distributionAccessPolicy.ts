@@ -262,19 +262,19 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     },
     readiness_commissionModel: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_defaultCommissionPercent: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_defaultCommissionAmount: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_defaultCommissionPercent_or_defaultCommissionAmount: {
       code: 'COMMISSION_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_tierAccessPolicy: {
       code: 'ACCESS_RULES_MISSING',
@@ -286,7 +286,7 @@ export function mapDistributionReasonToOpportunityReason(reason: string) {
     },
     readiness_currencyCode: {
       code: 'CURRENCY_MISSING',
-      message: 'Referral reward details are still being prepared.',
+      message: 'Referral payout terms are still being prepared.',
     },
     readiness_primaryManagerAssignment: {
       code: 'NO_MANAGER_ASSIGNED',

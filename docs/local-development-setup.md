@@ -61,7 +61,8 @@ COMMIT_SHA, CONTENTFUL_API_KEY, CONTENTFUL_SPACE_ID, DATABASE_URL, DB_HOST,
 DB_NAME, DEV, DISTRIBUTION_AFFORDABILITY_INTEREST_RATE_ANNUAL,
 DISTRIBUTION_AFFORDABILITY_LOW_CONFIDENCE_INCOME,
 DISTRIBUTION_AFFORDABILITY_MAX_REPAYMENT_RATIO, DISTRIBUTION_AFFORDABILITY_TERM_MONTHS,
-EMAIL_FROM, ENABLE_VIDEO_PIPELINE, FEATURE_DISTRIBUTION_NETWORK, FRONTEND_URL,
+EMAIL_FROM, ENABLE_VIDEO_PIPELINE, FEATURE_DISTRIBUTION_NETWORK,
+FEATURE_DISTRIBUTION_SELECTED_TEAM_QUEUE, FRONTEND_URL,
 GITHUB_SHA, GOOGLE_GEOCODING_API_KEY, GOOGLE_MAPS_API_KEY, GOOGLE_PLACES_API_KEY,
 GOOGLE_PLACES_COUNTRY_RESTRICTION, GOOGLE_STREET_VIEW_API_KEY, JWT_SECRET,
 MAX_IMAGE_SIZE_MB, MEDIA_RULES_PATH, MEDIACONVERT_ENDPOINT, MEDIACONVERT_ROLE_ARN,
@@ -357,26 +358,26 @@ Manual acceptance path:
 The fixture is restricted to the exact disposable worktree database; it does
 not access `listify_local`, staging, or production.
 
-2. Open `http://localhost:3009/login`.
+### Distribution Network partner workspace preview
 
-3. Log in as `referrer@listify.local` with your configured local demo password.
+The governed local-journey fixture creates `referrer@listify.local` with an
+active local Distribution identity. Prepare and verify it only after the exact
+worktree database has the current schema:
 
-4. Visit `http://localhost:3009/distribution/partner/overview`.
+```bash
+pnpm db:local-journey:prepare
+pnpm db:local-journey:verify
+pnpm local:journeys
+```
 
-5. Check:
+Open `http://localhost:5180` and use **Show local demo passwords** to obtain
+the machine-local password. Then sign in at `http://localhost:3009/login` and
+visit `http://localhost:3009/distribution/partner/overview`.
 
-- dashboard modules show available opportunities, buyers needing action, recent next steps, and reward progress
-- submit mode shows `[LOCAL DEMO] Hillside Gardens`
-- explore mode shows `[LOCAL DEMO] River Quarter` and `[LOCAL DEMO] Mandate Locked Estate` with non-submit labels/messages
-- buyer referral wizard shows required documents and saves local draft state while typing
-- referral detail page shows buyer status, assigned manager, document progress, and payout/reward progress
-- blocked opportunity messages are friendly and do not expose internal policy wording
-
-6. Log in as `agent@listify.local` to test the agency/agent referral path.
-
-7. Log in as `developer@listify.local` to inspect assigned referrals and manager/developer flows.
-
-8. Log in as `admin@listify.local` to inspect development readiness, documents, commissions, and access setup.
+This partner fixture intentionally seeds no active programs, referrals, or
+buyer details. The workspace therefore shows its empty and paused states; it
+does not simulate referral submission or payout. The retired sample names and
+accounts in the older scenario above are not created by this fixture.
 
 ## Running The App Locally
 

@@ -15,6 +15,8 @@ import {
   users,
   notifications,
   analyticsEvents,
+  distributionListingLeadQueue,
+  distributionSelectedPractitioners,
 } from '../drizzle/schema';
 import {
   asc,
@@ -37,6 +39,7 @@ import { EmailService } from './_core/emailService';
 import { resolveMediaDeliveryUrl } from './_core/mediaStorage';
 import { nowAsDbTimestamp, toDbTimestampRequired } from './utils/dbTypeUtils';
 import { requireUser } from './_core/requireUser';
+import { ENV } from './_core/env';
 import {
   buildAgentPublicSlug,
   findApprovedAgentIdBySlug,
@@ -211,7 +214,21 @@ function buildAgentLeadCustodyConditions(workspace: AgentLeadWorkspace): SQL[] {
   } else {
     conditions.push(isNull(leads.agencyId));
   }
-  return conditions;
+  const existingCustody = and(...conditions)!;
+  if (!ENV.distributionNetworkEnabled || !ENV.distributionSelectedTeamQueueEnabled) {
+    return [existingCustody];
+  }
+  const selectedTeamAssignment = sql`EXISTS (
+    SELECT 1
+    FROM ${distributionListingLeadQueue} AS selected_lead_queue
+    INNER JOIN ${distributionSelectedPractitioners} AS selected_practitioners
+      ON selected_practitioners.agent_id = selected_lead_queue.assigned_agent_id
+    WHERE selected_lead_queue.lead_id = ${leads.id}
+      AND selected_lead_queue.assigned_agent_id = ${workspace.agent.id}
+      AND selected_lead_queue.status = 'open'
+      AND selected_practitioners.status = 'active'
+  )`;
+  return [or(existingCustody, selectedTeamAssignment)!];
 }
 
 async function requireAgentCustodiedLead(

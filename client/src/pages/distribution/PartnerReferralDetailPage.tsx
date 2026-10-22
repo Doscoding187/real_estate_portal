@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useRoute } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
-import { Download, FileText, Loader2, UploadCloud, UserRound, WalletCards } from 'lucide-react';
+import { FileText, Loader2, UploadCloud, UserRound, WalletCards } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,17 +46,17 @@ function getNextActionHint(input: {
 }) {
   const normalized = normalizeStage(input.status);
   if (normalized === 'commission_paid') {
-    return 'Referral reward paid. Download supporting documents and submit your next buyer.';
+    return 'Referral payout recorded. Download supporting documents or prepare another referral.';
   }
   if (normalized === 'commission_pending') {
-    return 'Buyer converted. Monitor reward approval and payment timing.';
+    return 'A referral payout stage has been reached. Track its approval and payment record against the program terms.';
   }
   if (normalized === 'bond_approved' || normalized === 'contract_signed') {
-    return 'Keep all required documents complete while payout milestone is processed.';
+    return 'Keep required documents complete while the program milestone is reviewed.';
   }
   if (normalized === 'application_submitted') {
     if (input.docProgress.verifiedRequiredCount < input.docProgress.requiredCount) {
-      return 'Upload and verify remaining required documents to avoid reward delays.';
+      return 'Upload and verify the remaining required documents for this program step.';
     }
     return 'Application submitted. Track manager feedback and bond progression.';
   }
@@ -222,15 +222,6 @@ export default function PartnerReferralDetailPage() {
   const applicationDocuments = Array.isArray((referral as any).applicationDocuments)
     ? (referral as any).applicationDocuments
     : [];
-  const buyerApplicationDocuments = applicationDocuments.filter(
-    (document: any) => document.category !== 'developer_document',
-  );
-  const developerApplicationDocuments = applicationDocuments.filter(
-    (document: any) => document.category === 'developer_document',
-  );
-  const supportingDocuments = Array.isArray(referral.programTerms?.sourceDocuments)
-    ? referral.programTerms.sourceDocuments
-    : [];
 
   return (
     <ReferralAppShell>
@@ -249,7 +240,7 @@ export default function PartnerReferralDetailPage() {
               Back to My Buyers
             </Button>
             <Button variant="outline" onClick={() => setLocation('/distribution/partner/submit')}>
-              Submit Another Buyer
+              Referral Intake Status
             </Button>
             {referral.matchSnapshotId ? (
               <Button
@@ -273,7 +264,7 @@ export default function PartnerReferralDetailPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <WalletCards className="h-4 w-4 text-primary" />
-              Buyer Status and Reward Progress
+              Referral Status and Next Steps
             </CardTitle>
             <CardDescription>
               Stage {journeyProgress.index + 1} of {JOURNEY_STAGES.length} ({journeyProgress.percent}
@@ -312,7 +303,7 @@ export default function PartnerReferralDetailPage() {
             <div className="mt-3 flex flex-wrap gap-2">
               {actionCode === 'track_payout' ? (
                 <Button size="sm" onClick={() => setLocation('/distribution/partner/commissions')}>
-                  Open Commissions
+                  Open Referral Payouts
                 </Button>
               ) : null}
               {(actionCode === 'follow_up_manager' || referral.journey?.ownerRole === 'manager') &&
@@ -353,7 +344,7 @@ export default function PartnerReferralDetailPage() {
               })()}
               {actionCode === 'submit_next_referral' ? (
                 <Button size="sm" variant="conversion" onClick={() => setLocation('/distribution/partner/submit')}>
-                  Submit Next Referral
+                  View Referral Intake
                 </Button>
               ) : null}
             </div>
@@ -430,14 +421,18 @@ export default function PartnerReferralDetailPage() {
             </CardContent>
           </Card>
 
-          <PayoutRulesDisclosure developmentId={Number(referral.development.developmentId)} />
+          <PayoutRulesDisclosure
+            developmentId={Number(referral.development.developmentId)}
+            termsSnapshot={(referral as any).programTermsSnapshot || null}
+            historical
+          />
         </div>
 
         <Card className="mt-5 border-primary/15 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <FileText className="h-4 w-4 text-primary" />
-              Application and Supporting Documents
+              Referral Process Documents
             </CardTitle>
             <CardDescription>
               Upload completed application documents here. Supporting files are buyer-facing reference files.
@@ -445,139 +440,64 @@ export default function PartnerReferralDetailPage() {
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="space-y-3">
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                <p className="text-sm font-semibold text-amber-950">Developer application documents</p>
-                <p className="mt-1 text-xs text-amber-800">
-                  Download the template, get it signed or completed, then upload the signed copy for manager review.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {developerApplicationDocuments.map((document: any) => (
-                    <div
-                      key={document.templateId}
-                      className="rounded-md border border-amber-200 bg-white p-3 text-sm"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-foreground">{document.documentLabel}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Status: {String(document.status || 'pending').replace(/_/g, ' ')}
-                          </p>
-                          {document.submittedFileName ? (
-                            <p className="text-xs text-muted-foreground">
-                              Uploaded: {document.submittedFileName}
-                            </p>
-                          ) : null}
-                        </div>
-                        <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
-                          {document.status === 'verified'
-                            ? 'Verified'
-                            : document.status === 'received'
-                              ? 'Uploaded'
-                              : 'Needed'}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {document.templateFileUrl ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a href={document.templateFileUrl} target="_blank" rel="noreferrer">
-                              <Download className="mr-1 h-3.5 w-3.5" />
-                              Download template
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Template pending upload</span>
-                        )}
-                        {document.submittedFileUrl ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a href={document.submittedFileUrl} target="_blank" rel="noreferrer">
-                              View uploaded file
-                            </a>
-                          </Button>
-                        ) : null}
-                        <label className="inline-flex cursor-pointer items-center rounded-md border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">
-                          <UploadCloud className="mr-1 h-3.5 w-3.5" />
-                          {uploadingTemplateId === Number(document.templateId) ? 'Uploading...' : 'Upload signed copy'}
-                          <input
-                            type="file"
-                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                            className="sr-only"
-                            disabled={uploadingTemplateId === Number(document.templateId)}
-                            onChange={event => {
-                              const file = event.currentTarget.files?.[0] || null;
-                              void handleApplicationDocumentUpload(document, file);
-                              event.currentTarget.value = '';
-                            }}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ))}
-                  {!developerApplicationDocuments.length ? (
-                    <p className="rounded border border-dashed border-amber-200 bg-white p-3 text-sm text-amber-800">
-                      No developer application documents are configured for this referral yet.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-md border border-primary/15 bg-primary/5 p-3">
-                <p className="text-sm font-semibold text-foreground">Buyer application documents</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  These are buyer qualification files such as ID, income proof, bank statements, pre-approval, or proof of funds.
-                </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {buyerApplicationDocuments.map((document: any) => (
-                    <div key={document.templateId} className="rounded border border-primary/15 bg-white p-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-medium text-foreground">{document.documentLabel}</p>
-                        <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
-                          {document.status === 'verified'
-                            ? 'Verified'
-                            : document.status === 'received'
-                              ? 'Received'
-                              : 'Needed'}
-                        </Badge>
-                      </div>
+              <p className="text-sm text-muted-foreground">
+                These are Distribution referral-process documents. Upload the requested buyer file
+                here for the manager to review.
+              </p>
+              {applicationDocuments.map((document: any) => (
+                <div key={document.templateId} className="rounded-md border border-primary/15 bg-white p-3 text-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-foreground">{document.documentLabel}</p>
+                      <p className="text-xs text-muted-foreground">{document.documentCode}</p>
                       {document.submittedFileName ? (
-                        <p className="mt-1 text-muted-foreground">{document.submittedFileName}</p>
+                        <p className="text-xs text-muted-foreground">Uploaded: {document.submittedFileName}</p>
                       ) : null}
                     </div>
-                  ))}
-                  {!buyerApplicationDocuments.length ? (
-                    <p className="rounded border border-dashed bg-white p-3 text-sm text-muted-foreground sm:col-span-2">
-                      No buyer application documents are configured for this referral yet.
-                    </p>
-                  ) : null}
+                    <Badge variant={document.status === 'verified' ? 'default' : 'secondary'}>
+                      {document.status === 'verified'
+                        ? 'Verified'
+                        : document.status === 'received'
+                          ? 'Uploaded'
+                          : 'Needed'}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {document.submittedFileUrl ? (
+                      <Button asChild size="sm" variant="outline">
+                        <a href={document.submittedFileUrl} target="_blank" rel="noreferrer">View uploaded file</a>
+                      </Button>
+                    ) : null}
+                    <label className="inline-flex cursor-pointer items-center rounded-md border border-primary/15 bg-white px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/5">
+                      <UploadCloud className="mr-1 h-3.5 w-3.5" />
+                      {uploadingTemplateId === Number(document.templateId) ? 'Uploading...' : 'Upload requested file'}
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        className="sr-only"
+                        disabled={uploadingTemplateId === Number(document.templateId)}
+                        onChange={event => {
+                          const file = event.currentTarget.files?.[0] || null;
+                          void handleApplicationDocumentUpload(document, file);
+                          event.currentTarget.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
+              ))}
+              {!applicationDocuments.length ? (
+                <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
+                  No referral-process documents are configured for this referral.
+                </p>
+              ) : null}
             </div>
 
             <div className="rounded-md border border-primary/15 bg-white p-3">
-              <p className="text-sm font-semibold text-foreground">Supporting documents</p>
+              <p className="text-sm font-semibold text-foreground">Developer shared resources</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Share these with the buyer. They do not change application progress.
+                Shared sales files will appear here after an authorized delivery path is available.
               </p>
-              <div className="mt-3 space-y-2">
-                {supportingDocuments.map((document: any) => (
-                  <div key={document.templateId} className="rounded border border-primary/15 bg-surface p-2 text-sm">
-                    <p className="font-medium text-foreground">{document.documentLabel}</p>
-                    <p className="text-xs text-muted-foreground">{document.fileName || 'File pending upload'}</p>
-                    {document.fileUrl ? (
-                      <Button asChild size="sm" variant="outline" className="mt-2">
-                        <a href={document.fileUrl} target="_blank" rel="noreferrer">
-                          <Download className="mr-1 h-3.5 w-3.5" />
-                          Open file
-                        </a>
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-                {!supportingDocuments.length ? (
-                  <p className="rounded border border-dashed p-3 text-sm text-muted-foreground">
-                    No supporting files have been uploaded for this development yet.
-                  </p>
-                ) : null}
-              </div>
             </div>
           </CardContent>
         </Card>

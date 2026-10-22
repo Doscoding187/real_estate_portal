@@ -78,7 +78,7 @@ describe('PartnerDevelopmentsPage', () => {
               payoutMilestoneNotes: null,
             },
             computed: {
-              commissionDisplay: 'R 0',
+              commissionDisplay: 'Referral payout terms not configured',
               payoutDisplay: 'Paid after bond approval',
             },
             opportunity: {
@@ -88,14 +88,7 @@ describe('PartnerDevelopmentsPage', () => {
             requiredDocuments: [
               { templateId: 1, documentLabel: 'Buyer ID document', isRequired: true },
             ],
-            sourceDocuments: [
-              {
-                templateId: 2,
-                documentLabel: 'Brochure',
-                fileUrl: 'https://example.com/brochure.pdf',
-                fileName: 'brochure.pdf',
-              },
-            ],
+            sourceDocuments: [],
             unitTypes: [
               {
                 name: '2 Bed',
@@ -112,13 +105,13 @@ describe('PartnerDevelopmentsPage', () => {
     });
   });
 
-  it('shows sales inventory reward, payout, brochure, and submit actions', () => {
+  it('shows sales inventory payout terms, brochure, and submit actions', () => {
     render(<PartnerDevelopmentsPage />);
 
-    expect(screen.getByText('Estimated reward')).toBeInTheDocument();
-    expect(screen.getAllByText(/R 15\s000 estimated reward/)).not.toHaveLength(0);
+    expect(screen.getByText('Program referral payout terms')).toBeInTheDocument();
+    expect(screen.getByText('Referral payout terms not configured')).toBeInTheDocument();
     expect(screen.getByText('Paid after bond approval')).toBeInTheDocument();
-    expect(screen.getByText(/Best buyer:/)).toBeInTheDocument();
+    expect(screen.getByText(/Confirm the buyer's needs/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Submit Buyer' })).toBeEnabled();
     expect(screen.queryByText(/^R 0$/)).not.toBeInTheDocument();
   });
@@ -135,8 +128,8 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.getAllByText('Secure Estate')).not.toHaveLength(0);
     expect(screen.getByText('62m2 2 bed 1 bath')).toBeInTheDocument();
     expect(screen.getByText('R 1 000 000 - R 1 200 000')).toBeInTheDocument();
-    expect(screen.getAllByText('Estimated Bond Payment')).not.toHaveLength(0);
-    expect(screen.getAllByText('Qualifying income')).not.toHaveLength(0);
+    expect(screen.getAllByText('Illustrative Monthly Repayment')).not.toHaveLength(0);
+    expect(screen.getAllByText('Illustrative Gross Income')).not.toHaveLength(0);
     expect(screen.queryByText('Contact Nomsa')).not.toBeInTheDocument();
     expect(screen.getByText('Print / Download PDF')).toBeInTheDocument();
     expect(screen.queryByText('Referral Reward')).not.toBeInTheDocument();

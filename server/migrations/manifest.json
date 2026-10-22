@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0115_non_geographic_place_search_eligibility.sql",
+  "expectedHead": "0122_distribution_referral_intake_events.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1213,6 +1213,76 @@
       "parentChecksum": "44bd9e23779fefee710eb90da832261dc0ade2b51649a4b59fdefe675dd1d3a4",
       "kind": "transactional-data",
       "statementPolicy": "transactional-dml",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 116,
+      "filename": "0116_distribution_selected_practitioners.sql",
+      "checksum": "1cc044bd3053f7ef459d9e8e2d3fdd43ed88d94f4dcb01867e43e6b1983c18af",
+      "parent": "0115_non_geographic_place_search_eligibility.sql",
+      "parentChecksum": "53c65883b900d639d1ea989041386a4d4fea28e7a9a7b35579a52c449e9d649c",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 117,
+      "filename": "0117_distribution_listing_lead_queue.sql",
+      "checksum": "826e9c488aaa68556862bb78e8ce60a05944713377bca3b15ace46490ada5bec",
+      "parent": "0116_distribution_selected_practitioners.sql",
+      "parentChecksum": "1cc044bd3053f7ef459d9e8e2d3fdd43ed88d94f4dcb01867e43e6b1983c18af",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 118,
+      "filename": "0118_distribution_listing_lead_queue_events.sql",
+      "checksum": "c74b1ca088dcdf9a6621f32b29b41c96a6e35c6579eecf06358f5096ba7e6c3d",
+      "parent": "0117_distribution_listing_lead_queue.sql",
+      "parentChecksum": "826e9c488aaa68556862bb78e8ce60a05944713377bca3b15ace46490ada5bec",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 119,
+      "filename": "0119_distribution_referral_intake_policy_releases.sql",
+      "checksum": "61ba935567ec15d28bbddd6d425d67021e8799b6915d29c555ebbb2a31233f94",
+      "parent": "0118_distribution_listing_lead_queue_events.sql",
+      "parentChecksum": "c74b1ca088dcdf9a6621f32b29b41c96a6e35c6579eecf06358f5096ba7e6c3d",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 120,
+      "filename": "0120_distribution_referral_intake_sessions.sql",
+      "checksum": "48a864d46a89fdaefdac6ae84827fbef807ef4ff3a6377f0cb54dc7d91608f08",
+      "parent": "0119_distribution_referral_intake_policy_releases.sql",
+      "parentChecksum": "61ba935567ec15d28bbddd6d425d67021e8799b6915d29c555ebbb2a31233f94",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 121,
+      "filename": "0121_distribution_referral_intake_evidence.sql",
+      "checksum": "7ece8afc81d194df30a196584d22af171e0d5da80e905945ac7c66f831fd338a",
+      "parent": "0120_distribution_referral_intake_sessions.sql",
+      "parentChecksum": "48a864d46a89fdaefdac6ae84827fbef807ef4ff3a6377f0cb54dc7d91608f08",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 122,
+      "filename": "0122_distribution_referral_intake_events.sql",
+      "checksum": "3d9232e76e9414c202eed231d592e7cbf510d15acbf338f889c31031261589c9",
+      "parent": "0121_distribution_referral_intake_evidence.sql",
+      "parentChecksum": "7ece8afc81d194df30a196584d22af171e0d5da80e905945ac7c66f831fd338a",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null
     }
   ]
