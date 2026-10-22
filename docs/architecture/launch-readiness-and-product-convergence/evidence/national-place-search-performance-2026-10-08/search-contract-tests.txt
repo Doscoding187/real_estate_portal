@@ -1,0 +1,66 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project\=server server/services/__tests__/publicSearchService.contract.test.ts server/services/__tests__/propertySearchApprovedProjection.test.ts shared/__tests__/publicSearchValidation.test.ts server/services/__tests__/publicSearchValidation.test.ts
+
+[test:authority] target 3367a316fcda1581 (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_performa_2f31d79c9c2d
+
+stdout | shared/__tests__/publicSearchValidation.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  override existing env vars with { override: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_performa_2f31d79c9c2d
+
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_performa_2f31d79c9c2d
+
+stdout | shared/__tests__/publicSearchValidation.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| shared/__tests__/publicSearchValidation.test.ts (12 tests) 13ms
+stdout | server/services/__tests__/publicSearchValidation.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_performa_2f31d79c9c2d
+
+stdout | server/services/__tests__/publicSearchValidation.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publicSearchValidation.test.ts (4 tests) 9ms
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/propertySearchApprovedProjection.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/propertySearchApprovedProjection.test.ts (22 tests) 57ms
+stdout | server/services/__tests__/publicSearchService.contract.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/publicSearchService.contract.test.ts (16 tests) 28ms
+
+ Test Files  4 passed (4)
+      Tests  54 passed (54)
+   Start at  16:54:41
+   Duration  3.92s (transform 2.24s, setup 911ms, collect 5.58s, tests 107ms, environment 2ms, prepare 829ms)
+

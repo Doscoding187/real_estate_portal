@@ -1,0 +1,8 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/server/services/__tests__/canonicalPlaceSearchService.test.ts
+  190:79  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  216:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  217:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 3 problems (0 errors, 3 warnings)
+

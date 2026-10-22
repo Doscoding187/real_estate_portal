@@ -1,0 +1,47 @@
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/scripts/__tests__/nationalPlaceSearch.measurement.test.ts
+  204:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  205:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  346:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  377:61  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  491:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  505:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  528:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/scripts/__tests__/nationalPlaceSearch.postflight.test.ts
+   3:10  warning  'and' is defined but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  77:33  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+  78:20  warning  Unexpected any. Specify a different type                               @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/server/services/__tests__/canonicalPlaceSearchService.test.ts
+  173:79  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  199:22  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  200:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/server/services/propertySearchService.ts
+   149:58  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   151:90  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   156:39  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   251:62  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   277:50  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   451:55  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   460:48  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   726:41  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   749:26  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   758:73  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   784:13  warning  'securityTokens' is assigned a value but never used. Allowed unused vars must match /^_/u        @typescript-eslint/no-unused-vars
+   795:13  warning  'internetAvailability' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+   855:58  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+   886:13  warning  'builderLogo' is assigned a value but never used. Allowed unused vars must match /^_/u           @typescript-eslint/no-unused-vars
+  1009:39  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  1019:12  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  1485:31  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  1502:34  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+  1616:20  warning  Unexpected any. Specify a different type                                                         @typescript-eslint/no-explicit-any
+
+/home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008/server/services/publicSearchService.ts
+  317:63  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  320:8   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 34 problems (0 errors, 34 warnings)
+

@@ -1,0 +1,31 @@
+
+> real_estate_portal@1.0.0 test:authority /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008
+> cross-env NODE_ENV=test APP_ENV=test tsx scripts/runTestsUnderDatabaseAuthority.mts -- --project\=server server/services/__tests__/canonicalPlaceSearchService.test.ts
+
+[test:authority] target 3367a316fcda1581 (disposable-worktree)
+
+ RUN  v2.1.9 /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008
+
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[dotenv@17.2.4] injecting env (0) from .env.test -- tip: ⚙️  suppress all logs with { quiet: true }
+[Test Setup] Loaded .env.test
+[Test Setup] DATABASE_URL: mysql://listify_app:****@127.0.0.1:3307/listify_wt_national_place_search_performa_2f31d79c9c2d
+
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[ENV] Runtime configuration loaded {
+  nodeEnv: 'test',
+  hasDatabaseUrl: true,
+  hasMediaStorageConfiguration: false,
+  hasTransactionalEmailConfiguration: false
+}
+
+stdout | server/services/__tests__/canonicalPlaceSearchService.test.ts
+[Test Setup] SKIP_DB_INIT=1; skipping database initialization
+
+ ✓ |server| server/services/__tests__/canonicalPlaceSearchService.test.ts (14 tests) 21ms
+
+ Test Files  1 passed (1)
+      Tests  14 passed (14)
+   Start at  16:52:52
+   Duration  3.66s (transform 1.61s, setup 158ms, collect 2.98s, tests 21ms, environment 0ms, prepare 126ms)
+

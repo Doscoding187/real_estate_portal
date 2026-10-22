@@ -1,0 +1,11 @@
+
+> real_estate_portal@1.0.0 db:worktree:create /home/edwardspc/Desktop/Dev/worktrees/property-listify-national-place-search-performance-20261008
+> cross-env NODE_ENV=development APP_ENV=development tsx scripts/databaseAuthorityCli.ts worktree:create
+
+{
+  "operation": "create",
+  "targetFingerprintHash": "3367a316fcda158192af85ee789122866751ae7f2460b1039ac978dbad2c3a32",
+  "databaseName": "listify_wt_national_place_search_performa_2f31d79c9c2d",
+  "ownershipKey": "2f31d79c9c2df623a458aeb5",
+  "changed": true
+}
