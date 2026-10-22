@@ -403,10 +403,46 @@ jobs:
           test "${#SERVER_TESTS[@]}" -gt 0
           pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 --silent "${SERVER_TESTS[@]}"
 
+  journey-surface:
+    name: Geography Journey Surface
+    runs-on: ubuntu-latest
+
+    outputs:
+      changed: ${{ steps.surface.outputs.changed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The geography journey is a gate for the geography surface, not for every change on the
+      # platform. This decides whether the journey is in scope, so a change that cannot affect it
+      # neither spends the time nor blocks anything.
+      - name: Detect the geography journey surface
+        id: surface
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            head="${{ github.event.pull_request.head.sha }}"
+          else
+            base="${{ github.event.before }}"
+            head="${{ github.sha }}"
+          fi
+          changed=$(git diff --name-only "$base" "$head" 2>/dev/null || true)
+          if printf '%s\n' "$changed" | grep -qE '^(e2e/|playwright\.config\.ts$|\.github/workflows/ci\.yml$|client/src/(pages/|components/(search|city-guide|location|EnhancedHero|HomeAreaPicker)|lib/(location|search|cityGuide|heroJourney|homeArea))|server/(locationRouter\.ts|_core/vite\.ts|services/(location|nationalPlace|publicSearch|searchDiscovery|canonicalPlace))|shared/(locationAuthority|searchDiscovery|searchScope|placeAuthority)\.ts|drizzle/schema/(placeAuthority|locations)\.ts|data/(geography-coverage|gauteng-place-admission|place-admission-territories)|scripts/measure-city-scope-members)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
   browser-journey:
     name: Browser Journey (geography)
     runs-on: ubuntu-latest
-    needs: db-contract-verification
+    needs: [db-contract-verification, journey-surface]
+    # The journey is a gate for the geography surface. A change that cannot affect it skips the
+    # journey, so it never blocks an unrelated change and never costs it the runner time.
+    if: needs.journey-surface.outputs.changed == 'true'
 
     env:
       CI: 'true'
