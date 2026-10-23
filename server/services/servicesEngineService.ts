@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, like } from 'drizzle-orm';
 import {
   auditLogs,
   developers,
@@ -30,11 +30,7 @@ export type ServiceLeadEventType = (typeof SERVICE_LEAD_EVENT_TYPE_VALUES)[numbe
 export type ServiceSourceSurface = (typeof SERVICE_SOURCE_SURFACE_VALUES)[number];
 export type ServiceLeadStatus = (typeof SERVICE_LEAD_STATUS_VALUES)[number];
 
-export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = [
-  'publish',
-  'unpublish',
-  'reject',
-] as const;
+export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = ['publish', 'unpublish', 'reject'] as const;
 
 export type ServiceProviderPublicationDecision =
   (typeof SERVICE_PROVIDER_PUBLICATION_DECISIONS)[number];
@@ -56,6 +52,70 @@ export type ServiceProviderPublicationReadiness = {
   blockers: string[];
 };
 
+export type ServiceProviderPublicationBlocker =
+  | 'partner_inactive'
+  | 'profile_missing'
+  | 'profile_incomplete'
+  | 'no_active_service'
+  | 'no_valid_coverage'
+  | 'subscription_ineligible';
+
+export type ServiceProviderPublicationReadinessInput = {
+  providerId: number;
+  companyName: string | null;
+  verificationStatus: string | null | undefined;
+  isActive: boolean;
+  profileExists: boolean;
+  headline: string | null;
+  bio: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  directoryActive: boolean;
+  subscriptionStatus: string | null | undefined;
+  activeServiceCount: number;
+  validCoverageCount: number;
+};
+
+export type ServiceProviderPublicationQueueEntry = ServiceProviderPublicationReadiness & {
+  headline: string | null;
+  bio: string | null;
+  websiteUrl: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  serviceCategories: ServiceCategory[];
+  services: Array<{
+    serviceCode: string;
+    displayName: string;
+    category: ServiceCategory;
+    minPrice: number | null;
+    maxPrice: number | null;
+    currency: string;
+  }>;
+  coverageAreas: Array<{
+    province: string | null;
+    city: string | null;
+    suburb: string | null;
+  }>;
+  createdAt: string | null;
+};
+
+export type ServiceProviderPublicationQueue = {
+  entries: ServiceProviderPublicationQueueEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  counts: {
+    awaitingReview: number;
+    ready: number;
+    published: number;
+    blocked: number;
+    drifted: number;
+  };
+};
+
 type ProviderDirectoryRecord = {
   providerId: number;
   companyName: string;
@@ -68,6 +128,8 @@ type ProviderDirectoryRecord = {
   subscriptionTier: 'directory' | 'directory_explore' | 'ecosystem_pro';
   averageRating: number;
   reviewCount: number;
+  acceptingRequests: boolean | null;
+  createdAt: string | null;
   services: Array<{
     category: ServiceCategory;
     code: string;
@@ -85,12 +147,7 @@ type ProviderDirectoryRecord = {
 
 type PublicProviderDirectoryRecord = Omit<
   ProviderDirectoryRecord,
-  | 'trustScore'
-  | 'moderationTier'
-  | 'subscriptionTier'
-  | 'averageRating'
-  | 'reviewCount'
-  | 'locations'
+  'trustScore' | 'moderationTier' | 'subscriptionTier' | 'locations'
 > & {
   locations: Array<Omit<ProviderDirectoryRecord['locations'][number], 'radiusKm'>>;
 };
@@ -106,6 +163,10 @@ type ProviderProfileResult = {
   headline: string | null;
   bio: string | null;
   websiteUrl: string | null;
+  averageRating: number;
+  reviewCount: number;
+  acceptingRequests: boolean | null;
+  gallery: string[];
   moderationTier?: 'basic' | 'verified' | 'pro';
   directoryActive?: boolean;
   exploreCreatorActive?: boolean;
@@ -137,8 +198,10 @@ type ProviderProfileResult = {
   }>;
   reviews: Array<{
     id: number;
+    rating: number;
     title: string | null;
     content: string | null;
+    isVerified: boolean;
     createdAt: string;
   }>;
 };
@@ -168,6 +231,88 @@ function normalizeText(value: string | null | undefined): string | null {
 
 function normalizeGeographyValue(value: string | null | undefined): string | null {
   return normalizeText(value)?.toLowerCase() || null;
+}
+
+function providerMetadataRecord(metadata: unknown): Record<string, unknown> {
+  if (!metadata) return {};
+  if (typeof metadata === 'string') {
+    try {
+      const parsed = JSON.parse(metadata);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as Record<string, unknown>)
+    : {};
+}
+
+function normalizeAvailability(value: unknown): 'accepting' | 'waitlist' {
+  return String(value || '')
+    .trim()
+    .toLowerCase() === 'waitlist'
+    ? 'waitlist'
+    : 'accepting';
+}
+
+function providerAcceptingRequests(metadata: unknown): boolean | null {
+  const value = providerMetadataRecord(metadata).availability;
+  if (value === undefined || value === null || value === '') return null;
+  return normalizeAvailability(value) === 'accepting';
+}
+
+function providerGallery(metadata: unknown): string[] {
+  const raw = providerMetadataRecord(metadata).gallery;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(item => (typeof item === 'string' ? item.trim() : ''))
+    .filter(item => /^(https?:\/\/|\/)/i.test(item))
+    .slice(0, 12);
+}
+
+function providerProfileHasDetail(record: {
+  headline: string | null;
+  bio: string | null;
+  logoUrl: string | null;
+  websiteUrl?: string | null;
+}): number {
+  return [record.headline, record.bio, record.logoUrl, record.websiteUrl].filter(Boolean).length;
+}
+
+function relevanceScore(record: ProviderDirectoryRecord): number {
+  const priorRating = 3.5;
+  const priorWeight = 5;
+  const weightedRating =
+    (record.averageRating * record.reviewCount + priorRating * priorWeight) /
+    (record.reviewCount + priorWeight);
+  const detailScore = providerProfileHasDetail(record) / 4;
+  return (
+    weightedRating * 10 +
+    Math.log1p(record.reviewCount) * 2 +
+    detailScore * 4 +
+    Math.min(record.services.length, 3) * 0.5 +
+    Math.min(record.locations.length, 3) * 0.5 +
+    (record.acceptingRequests === true ? 1 : 0)
+  );
+}
+
+const REVIEW_TERMINAL_LEAD_STATUSES: ServiceLeadStatus[] = ['won', 'lost'];
+
+function servicePriceOverlaps(
+  service: { minPrice: number | null; maxPrice: number | null },
+  minPrice: number | null,
+  maxPrice: number | null,
+): boolean {
+  if (minPrice === null && maxPrice === null) return true;
+  const serviceMin = service.minPrice;
+  const serviceMax = service.maxPrice;
+  if (serviceMin === null && serviceMax === null) return false;
+  const low = serviceMin ?? serviceMax ?? 0;
+  const high = serviceMax ?? serviceMin ?? low;
+  if (minPrice !== null && high < minPrice) return false;
+  if (maxPrice !== null && low > maxPrice) return false;
+  return true;
 }
 
 const SERVICE_REQUEST_CONTEXT_KEYS = new Set([
@@ -347,6 +492,61 @@ export function hasProviderCoverage(location: {
   );
 }
 
+/**
+ * The single authority for Services publication readiness. Both the
+ * single-provider readiness inspection and the super-admin publication queue
+ * derive their blockers from this function, so a queue row and a reviewed
+ * transition can never disagree about why a provider is not publishable.
+ */
+export function computeProviderPublicationReadiness(
+  input: ServiceProviderPublicationReadinessInput,
+): ServiceProviderPublicationReadiness {
+  const verificationStatus = (input.verificationStatus ||
+    'pending') as ServiceProviderPublicationReadiness['verificationStatus'];
+  const subscriptionStatus =
+    (input.subscriptionStatus as ServiceProviderPublicationReadiness['subscriptionStatus']) || null;
+  const profileComplete = Boolean(
+    normalizeText(input.headline) &&
+    normalizeText(input.bio) &&
+    (normalizeText(input.contactEmail) || normalizeText(input.contactPhone)),
+  );
+
+  const blockers: ServiceProviderPublicationBlocker[] = [];
+  if (!input.isActive) blockers.push('partner_inactive');
+  if (!input.profileExists) blockers.push('profile_missing');
+  else if (!profileComplete) blockers.push('profile_incomplete');
+  if (input.activeServiceCount === 0) blockers.push('no_active_service');
+  if (input.validCoverageCount === 0) blockers.push('no_valid_coverage');
+  if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
+    blockers.push('subscription_ineligible');
+  }
+
+  return {
+    providerId: Number(input.providerId),
+    companyName: input.companyName || null,
+    verificationStatus,
+    isActive: input.isActive,
+    directoryActive: input.directoryActive,
+    profileExists: input.profileExists,
+    profileComplete,
+    subscriptionStatus,
+    activeServiceCount: input.activeServiceCount,
+    validCoverageCount: input.validCoverageCount,
+    isPublished:
+      isProviderDirectoryEligible({
+        verificationStatus,
+        isActive: input.isActive,
+        directoryActive: input.directoryActive,
+        subscriptionStatus,
+      }) &&
+      input.activeServiceCount > 0 &&
+      input.validCoverageCount > 0,
+    readyForPublication: blockers.length === 0,
+    publicationDriftDetected: input.directoryActive && verificationStatus !== 'verified',
+    blockers,
+  };
+}
+
 export function providerCoversLocation(
   locations: Array<{
     province: string | null;
@@ -520,6 +720,9 @@ export type UpsertProviderProfileInput = {
   websiteUrl?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  logoUrl?: string | null;
+  gallery?: string[] | null;
+  availability?: 'accepting' | 'waitlist';
   metadata?: Record<string, unknown> | null;
 };
 
@@ -553,7 +756,19 @@ type DirectorySearchInput = {
   province?: string;
   city?: string;
   suburb?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  availability?: 'accepting' | 'any';
+  sort?: 'relevance' | 'rating' | 'name';
   limit?: number;
+};
+
+type SubmitProviderReviewInput = {
+  providerId: number;
+  reviewerUserId: number;
+  rating: number;
+  title?: string | null;
+  content?: string | null;
 };
 
 /**
@@ -563,6 +778,26 @@ type DirectorySearchInput = {
  * loading the entire eligible directory before the in-memory limit is applied.
  */
 export const SERVICES_DIRECTORY_CANDIDATE_SCAN_LIMIT = 1000;
+
+/**
+ * The super-admin publication queue scans a bounded prefix of the service
+ * provider cohort before it filters and paginates in memory. The reviewed
+ * transition is unaffected by this bound: it re-checks one provider inside its
+ * own transaction.
+ */
+export const SERVICES_PUBLICATION_QUEUE_SCAN_LIMIT = 1000;
+
+export const SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS = [
+  'all',
+  'ready',
+  'awaiting_review',
+  'published',
+  'blocked',
+  'drifted',
+] as const;
+
+export type ServiceProviderPublicationQueueView =
+  (typeof SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS)[number];
 
 type CreateServiceLeadInput = {
   requesterUserId?: number | null;
@@ -632,6 +867,10 @@ export class ServicesEngineService {
         logoUrl: partners.logoUrl,
         verificationStatus: partners.verificationStatus,
         isActive: partners.isActive,
+        createdAt: partners.createdAt,
+        averageRating: serviceProviderProfiles.averageRating,
+        reviewCount: serviceProviderProfiles.reviewCount,
+        profileMetadata: serviceProviderProfiles.metadata,
         profileHeadline: serviceProviderProfiles.headline,
         profileBio: serviceProviderProfiles.bio,
         profileWebsiteUrl: serviceProviderProfiles.websiteUrl,
@@ -689,9 +928,10 @@ export class ServicesEngineService {
     const reviewRows = await db
       .select({
         id: serviceProviderReviews.id,
+        rating: serviceProviderReviews.rating,
         title: serviceProviderReviews.title,
-
         content: serviceProviderReviews.content,
+        isVerified: serviceProviderReviews.isVerified,
         createdAt: serviceProviderReviews.createdAt,
       })
       .from(serviceProviderReviews)
@@ -757,15 +997,20 @@ export class ServicesEngineService {
       headline: base.profileHeadline || null,
       bio: base.profileBio || null,
       websiteUrl: normalizePublicWebsiteUrl(base.profileWebsiteUrl),
+      averageRating: Number(base.averageRating || 0),
+      reviewCount: Number(base.reviewCount || 0),
+      acceptingRequests: providerAcceptingRequests(base.profileMetadata),
+      gallery: providerGallery(base.profileMetadata),
 
       services: includePrivate ? servicesResult : activeServicesResult,
 
       locations: locationsResult,
       reviews: reviewRows.map(item => ({
         id: Number(item.id),
+        rating: Number(item.rating || 0),
         title: item.title || null,
-
         content: item.content || null,
+        isVerified: Number(item.isVerified || 0) === 1,
         createdAt: String(item.createdAt),
       })),
     };
@@ -800,6 +1045,10 @@ export class ServicesEngineService {
       headline: profile.headline,
       bio: profile.bio,
       websiteUrl: profile.websiteUrl,
+      averageRating: profile.averageRating,
+      reviewCount: profile.reviewCount,
+      acceptingRequests: profile.acceptingRequests,
+      gallery: profile.gallery,
       services: profile.services.map(({ isActive: _isActive, ...service }) => service),
 
       locations: profile.locations.map(location => ({
@@ -826,12 +1075,13 @@ export class ServicesEngineService {
     const reviews = await db
       .select({
         id: serviceProviderReviews.id,
+        rating: serviceProviderReviews.rating,
         title: serviceProviderReviews.title,
         content: serviceProviderReviews.content,
+        isVerified: serviceProviderReviews.isVerified,
         createdAt: serviceProviderReviews.createdAt,
       })
       .from(serviceProviderReviews)
-
       .where(
         and(
           eq(serviceProviderReviews.providerId, providerId),
@@ -842,10 +1092,151 @@ export class ServicesEngineService {
       .limit(Math.max(1, Math.min(200, Number(limit || 50))));
 
     return reviews.map(review => ({
-      ...review,
       id: Number(review.id),
+      rating: Number(review.rating || 0),
+      title: review.title || null,
+      content: review.content || null,
+      isVerified: Number(review.isVerified || 0) === 1,
+      reviewerLabel: Number(review.isVerified || 0) === 1 ? 'Verified customer' : 'Customer',
       createdAt: String(review.createdAt),
     }));
+  }
+
+  async getProviderReviewEligibility(providerId: number, reviewerUserId: number) {
+    const profile = await this.getProviderPublicProfile(providerId);
+    if (!profile) return { eligible: false, hasReview: false, reason: 'provider_unavailable' };
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const [completedLead] = await db
+      .select({ id: serviceLeads.id })
+      .from(serviceLeads)
+      .where(
+        and(
+          eq(serviceLeads.providerId, providerId),
+          eq(serviceLeads.requesterUserId, reviewerUserId),
+          inArray(serviceLeads.status, REVIEW_TERMINAL_LEAD_STATUSES),
+        ),
+      )
+      .limit(1);
+    const [existingReview] = await db
+      .select({ id: serviceProviderReviews.id })
+      .from(serviceProviderReviews)
+      .where(
+        and(
+          eq(serviceProviderReviews.providerId, providerId),
+          eq(serviceProviderReviews.reviewerUserId, reviewerUserId),
+        ),
+      )
+      .limit(1);
+
+    return {
+      eligible: Boolean(completedLead) && !existingReview,
+      hasReview: Boolean(existingReview),
+      reason: existingReview ? 'already_reviewed' : completedLead ? null : 'no_completed_request',
+    };
+  }
+
+  async submitProviderReview(input: SubmitProviderReviewInput) {
+    const rating = Number(input.rating);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new Error('Rating must be between 1 and 5');
+    }
+    const title = normalizeText(input.title)?.slice(0, 200) || null;
+    const content = normalizeText(input.content)?.slice(0, 4000) || null;
+    if (!title && !content) {
+      throw new Error('Add a short review before submitting');
+    }
+
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const profile = await this.getProviderPublicProfile(input.providerId);
+    if (!profile) throw new Error('This provider is not currently available');
+
+    let reviewId = 0;
+    let averageRating = 0;
+    let reviewCount = 0;
+
+    await db.transaction(async tx => {
+      const [profileRow] = await tx
+        .select({ id: serviceProviderProfiles.id })
+        .from(serviceProviderProfiles)
+        .where(eq(serviceProviderProfiles.providerId, input.providerId))
+        .limit(1)
+        .for('update');
+      if (!profileRow) throw new Error('Provider profile not found');
+
+      const [completedLead] = await tx
+        .select({ id: serviceLeads.id })
+        .from(serviceLeads)
+        .where(
+          and(
+            eq(serviceLeads.providerId, input.providerId),
+            eq(serviceLeads.requesterUserId, input.reviewerUserId),
+            inArray(serviceLeads.status, REVIEW_TERMINAL_LEAD_STATUSES),
+          ),
+        )
+        .limit(1);
+      if (!completedLead) {
+        throw new Error('A completed or closed request is required before reviewing this provider');
+      }
+
+      const [existingReview] = await tx
+        .select({ id: serviceProviderReviews.id })
+        .from(serviceProviderReviews)
+        .where(
+          and(
+            eq(serviceProviderReviews.providerId, input.providerId),
+            eq(serviceProviderReviews.reviewerUserId, input.reviewerUserId),
+          ),
+        )
+        .limit(1);
+      if (existingReview) throw new Error('You have already reviewed this provider');
+
+      const insertResult = await tx.insert(serviceProviderReviews).values({
+        providerId: input.providerId,
+        reviewerUserId: input.reviewerUserId,
+        rating,
+        title,
+        content,
+        isVerified: 1,
+        isPublished: 1,
+      });
+      reviewId = Number((insertResult as any)?.[0]?.insertId || 0);
+      if (!reviewId) throw new Error('The review could not be saved');
+
+      const publishedReviews = await tx
+        .select({ rating: serviceProviderReviews.rating })
+        .from(serviceProviderReviews)
+        .where(
+          and(
+            eq(serviceProviderReviews.providerId, input.providerId),
+            eq(serviceProviderReviews.isPublished, 1),
+          ),
+        );
+      reviewCount = publishedReviews.length;
+      averageRating =
+        reviewCount === 0
+          ? 0
+          : Number(
+              (
+                publishedReviews.reduce((total, item) => total + Number(item.rating || 0), 0) /
+                reviewCount
+              ).toFixed(2),
+            );
+
+      await tx
+        .update(serviceProviderProfiles)
+        .set({
+          averageRating: averageRating.toFixed(2),
+          reviewCount,
+        })
+        .where(eq(serviceProviderProfiles.providerId, input.providerId));
+    });
+
+    return { reviewId, averageRating, reviewCount };
   }
 
   async getMyProviderProfile(userId: number) {
@@ -899,55 +1290,26 @@ export class ServicesEngineService {
     const profileExists = Boolean(base.profileId);
     const isActive = Number(base.isActive || 0) === 1;
     const directoryActive = Number(base.directoryActive || 0) === 1;
-    const verificationStatus = (base.verificationStatus ||
-      'pending') as 'pending' | 'verified' | 'rejected';
-    const subscriptionStatus =
-      (base.subscriptionStatus as ServiceProviderPublicationReadiness['subscriptionStatus']) ||
-      null;
-    const profileComplete = Boolean(
-      normalizeText(base.headline) &&
-        normalizeText(base.bio) &&
-        (normalizeText(base.contactEmail) || normalizeText(base.contactPhone)),
-    );
     const activeServiceCount = (services || []).filter(
       service => Number(service.isActive || 0) === 1,
     ).length;
     const validCoverageCount = (locations || []).filter(hasProviderCoverage).length;
 
-    const blockers: string[] = [];
-    if (!isActive) blockers.push('partner_inactive');
-    if (!profileExists) blockers.push('profile_missing');
-    else if (!profileComplete) blockers.push('profile_incomplete');
-    if (activeServiceCount === 0) blockers.push('no_active_service');
-    if (validCoverageCount === 0) blockers.push('no_valid_coverage');
-    if (subscriptionStatus !== 'trial' && subscriptionStatus !== 'active') {
-      blockers.push('subscription_ineligible');
-    }
-
-    return {
+    return computeProviderPublicationReadiness({
       providerId: Number(base.providerId),
       companyName: base.companyName || null,
-      verificationStatus,
+      verificationStatus: base.verificationStatus,
       isActive,
-      directoryActive,
       profileExists,
-      profileComplete,
-      subscriptionStatus,
+      headline: base.headline,
+      bio: base.bio,
+      contactEmail: base.contactEmail,
+      contactPhone: base.contactPhone,
+      directoryActive,
+      subscriptionStatus: base.subscriptionStatus,
       activeServiceCount,
       validCoverageCount,
-      isPublished:
-        isProviderDirectoryEligible({
-          verificationStatus,
-          isActive,
-          directoryActive,
-          subscriptionStatus,
-        }) &&
-        activeServiceCount > 0 &&
-        validCoverageCount > 0,
-      readyForPublication: blockers.length === 0,
-      publicationDriftDetected: directoryActive && verificationStatus !== 'verified',
-      blockers,
-    };
+    });
   }
 
   async getProviderPublicationReadiness(
@@ -959,6 +1321,182 @@ export class ServicesEngineService {
     const readiness = await this.readProviderPublicationReadiness(db, Number(providerId));
     if (!readiness) throw new Error('Provider not found');
     return readiness;
+  }
+
+  /**
+   * Super-admin publication review worklist.
+   *
+   * This is a read-only projection of canonical provider state. It never
+   * grants publication: the reviewed transition in `reviewProviderPublication`
+   * remains the only writer of `partners.verificationStatus` and
+   * `service_provider_profiles.directoryActive`, and it re-checks readiness
+   * inside its own transaction.
+   */
+  async listProviderPublicationQueue(options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    view?: ServiceProviderPublicationQueueView;
+  }): Promise<ServiceProviderPublicationQueue> {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const page = Math.max(1, Number(options?.page || 1));
+    const limit = Math.min(100, Math.max(1, Number(options?.limit || 25)));
+    const search = normalizeText(options?.search);
+    const view = options?.view || 'all';
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(users.role, 'service_provider')];
+    if (search) {
+      conditions.push(like(partners.companyName, `%${search}%`));
+    }
+
+    const baseRows = await db
+      .select({
+        providerId: partners.id,
+        companyName: partners.companyName,
+        verificationStatus: partners.verificationStatus,
+        isActive: partners.isActive,
+        createdAt: partners.createdAt,
+        profileId: serviceProviderProfiles.id,
+        headline: serviceProviderProfiles.headline,
+        bio: serviceProviderProfiles.bio,
+        websiteUrl: serviceProviderProfiles.websiteUrl,
+        contactEmail: serviceProviderProfiles.contactEmail,
+        contactPhone: serviceProviderProfiles.contactPhone,
+        directoryActive: serviceProviderProfiles.directoryActive,
+        subscriptionStatus: serviceProviderSubscriptions.status,
+      })
+      .from(partners)
+      .innerJoin(users, eq(users.id, partners.userId))
+      .leftJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
+      .leftJoin(
+        serviceProviderSubscriptions,
+        eq(serviceProviderSubscriptions.providerId, partners.id),
+      )
+      .where(and(...conditions))
+      .orderBy(desc(partners.createdAt), desc(partners.id))
+      .limit(SERVICES_PUBLICATION_QUEUE_SCAN_LIMIT);
+
+    const providerIds = baseRows.map(row => Number(row.providerId));
+    const serviceRows =
+      providerIds.length > 0
+        ? await db
+            .select({
+              providerId: serviceProviderServices.providerId,
+              serviceCategory: serviceProviderServices.serviceCategory,
+              serviceCode: serviceProviderServices.serviceCode,
+              displayName: serviceProviderServices.displayName,
+              description: serviceProviderServices.description,
+              minPrice: serviceProviderServices.minPrice,
+              maxPrice: serviceProviderServices.maxPrice,
+              currency: serviceProviderServices.currency,
+              isActive: serviceProviderServices.isActive,
+            })
+            .from(serviceProviderServices)
+            .where(inArray(serviceProviderServices.providerId, providerIds))
+        : [];
+    const locationRows =
+      providerIds.length > 0
+        ? await db
+            .select({
+              providerId: serviceProviderLocations.providerId,
+              province: serviceProviderLocations.province,
+              city: serviceProviderLocations.city,
+              suburb: serviceProviderLocations.suburb,
+            })
+            .from(serviceProviderLocations)
+            .where(inArray(serviceProviderLocations.providerId, providerIds))
+        : [];
+
+    const entries = baseRows.map(row => {
+      const providerId = Number(row.providerId);
+      const providerServices = serviceRows.filter(
+        service => Number(service.providerId) === providerId,
+      );
+      const providerLocations = locationRows.filter(
+        location => Number(location.providerId) === providerId,
+      );
+      const activeServices = providerServices.filter(
+        service => Number(service.isActive || 0) === 1,
+      );
+
+      const readiness = computeProviderPublicationReadiness({
+        providerId,
+        companyName: row.companyName || null,
+        verificationStatus: row.verificationStatus,
+        isActive: Number(row.isActive || 0) === 1,
+        profileExists: Boolean(row.profileId),
+        headline: row.headline,
+        bio: row.bio,
+        contactEmail: row.contactEmail,
+        contactPhone: row.contactPhone,
+        directoryActive: Number(row.directoryActive || 0) === 1,
+        subscriptionStatus: row.subscriptionStatus,
+        activeServiceCount: activeServices.length,
+        validCoverageCount: providerLocations.filter(hasProviderCoverage).length,
+      });
+
+      return {
+        ...readiness,
+        headline: row.headline || null,
+        bio: row.bio || null,
+        websiteUrl: row.websiteUrl || null,
+        contactEmail: row.contactEmail || null,
+        contactPhone: row.contactPhone || null,
+        serviceCategories: Array.from(
+          new Set(
+            activeServices.map(service => service.serviceCategory as unknown as ServiceCategory),
+          ),
+        ),
+        services: activeServices.map(service => ({
+          serviceCode: service.serviceCode,
+          displayName: service.displayName,
+          category: service.serviceCategory as unknown as ServiceCategory,
+          minPrice: service.minPrice ?? null,
+          maxPrice: service.maxPrice ?? null,
+          currency: service.currency,
+        })),
+        coverageAreas: providerLocations.filter(hasProviderCoverage).map(location => ({
+          province: location.province || null,
+          city: location.city || null,
+          suburb: location.suburb || null,
+        })),
+        createdAt: row.createdAt || null,
+      };
+    });
+
+    const counts = {
+      awaitingReview: entries.filter(entry => !entry.isPublished && entry.readyForPublication)
+        .length,
+      ready: entries.filter(entry => entry.readyForPublication).length,
+      published: entries.filter(entry => entry.isPublished).length,
+      blocked: entries.filter(entry => entry.blockers.length > 0).length,
+      drifted: entries.filter(entry => entry.publicationDriftDetected).length,
+    };
+
+    const filtered = entries.filter(entry => {
+      if (view === 'ready') return entry.readyForPublication;
+      if (view === 'awaiting_review') return !entry.isPublished && entry.readyForPublication;
+      if (view === 'published') return entry.isPublished;
+      if (view === 'blocked') return entry.blockers.length > 0;
+      if (view === 'drifted') return entry.publicationDriftDetected;
+      return true;
+    });
+
+    const pageEntries = filtered.slice(offset, offset + limit);
+
+    return {
+      entries: pageEntries,
+      pagination: {
+        page,
+        limit,
+        total: filtered.length,
+        totalPages: Math.ceil(filtered.length / limit),
+      },
+      counts,
+    };
   }
 
   /**
@@ -984,9 +1522,7 @@ export class ServicesEngineService {
     if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
       throw new Error('A reviewing operator is required');
     }
-    const decision = SERVICE_PROVIDER_PUBLICATION_DECISIONS.find(
-      value => value === input.decision,
-    );
+    const decision = SERVICE_PROVIDER_PUBLICATION_DECISIONS.find(value => value === input.decision);
     if (!decision) {
       throw new Error('Unsupported publication decision');
     }
@@ -1147,6 +1683,20 @@ export class ServicesEngineService {
       .where(eq(serviceProviderProfiles.providerId, providerId))
       .limit(1);
 
+    const metadata = {
+      ...providerMetadataRecord(existingProfile?.metadata),
+      ...(input.metadata === undefined ? {} : providerMetadataRecord(input.metadata)),
+    };
+    if (input.gallery !== undefined) {
+      metadata.gallery = (input.gallery || [])
+        .map(item => String(item || '').trim())
+        .filter(item => /^(https?:\/\/|\/)/i.test(item))
+        .slice(0, 12);
+    }
+    if (input.availability !== undefined) {
+      metadata.availability = normalizeAvailability(input.availability);
+    }
+
     const profileValues = {
       providerId,
       headline:
@@ -1171,8 +1721,15 @@ export class ServicesEngineService {
       directoryActive: existingProfile ? Number(existingProfile.directoryActive || 0) : 0,
       exploreCreatorActive: existingProfile ? Number(existingProfile.exploreCreatorActive || 0) : 0,
       dashboardActive: existingProfile ? Number(existingProfile.dashboardActive || 0) : 1,
-      metadata: input.metadata === undefined ? (existingProfile?.metadata ?? null) : input.metadata,
+      metadata: Object.keys(metadata).length > 0 ? metadata : null,
     };
+
+    if (input.logoUrl !== undefined) {
+      await db
+        .update(partners)
+        .set({ logoUrl: normalizeText(input.logoUrl) || null })
+        .where(eq(partners.id, providerId));
+    }
 
     await db
       .insert(serviceProviderProfiles)
@@ -1548,11 +2105,13 @@ export class ServicesEngineService {
         isActive: partners.isActive,
         headline: serviceProviderProfiles.headline,
         bio: serviceProviderProfiles.bio,
+        profileMetadata: serviceProviderProfiles.metadata,
         moderationTier: serviceProviderProfiles.moderationTier,
         averageRating: serviceProviderProfiles.averageRating,
         reviewCount: serviceProviderProfiles.reviewCount,
         subscriptionTier: serviceProviderSubscriptions.tier,
         subscriptionStatus: serviceProviderSubscriptions.status,
+        createdAt: partners.createdAt,
       })
       .from(partners)
       .innerJoin(serviceProviderProfiles, eq(serviceProviderProfiles.providerId, partners.id))
@@ -1645,20 +2204,42 @@ export class ServicesEngineService {
         'directory',
       averageRating: Number(row.averageRating || 0),
       reviewCount: Number(row.reviewCount || 0),
+      acceptingRequests: providerAcceptingRequests(row.profileMetadata),
+      createdAt: row.createdAt ? String(row.createdAt) : null,
       services: servicesByProvider.get(row.providerId) || [],
       locations: locationsByProvider.get(row.providerId) || [],
     }));
 
+    const minPrice =
+      input.minPrice !== undefined && Number.isFinite(Number(input.minPrice))
+        ? Math.max(0, Number(input.minPrice))
+        : null;
+    const maxPrice =
+      input.maxPrice !== undefined && Number.isFinite(Number(input.maxPrice))
+        ? Math.max(0, Number(input.maxPrice))
+        : null;
+    const availability = input.availability === 'accepting' ? 'accepting' : 'any';
+
     const filtered = records.filter(record => {
       if (record.services.length === 0 || record.locations.length === 0) return false;
 
-      if (input.category || normalizedServiceCode) {
-        const matchingService = record.services.find(
-          service =>
-            (!input.category || service.category === input.category) &&
-            (!normalizedServiceCode || service.code.toLowerCase() === normalizedServiceCode),
-        );
-        if (!matchingService) return false;
+      if (availability === 'accepting' && record.acceptingRequests !== true) return false;
+
+      const matchingServices = record.services.filter(
+        service =>
+          (!input.category || service.category === input.category) &&
+          (!normalizedServiceCode || service.code.toLowerCase() === normalizedServiceCode),
+      );
+      if ((input.category || normalizedServiceCode) && matchingServices.length === 0) return false;
+
+      const priceScope =
+        matchingServices.length > 0 && (input.category || normalizedServiceCode)
+          ? matchingServices
+          : record.services;
+      if (minPrice !== null || maxPrice !== null) {
+        if (!priceScope.some(service => servicePriceOverlaps(service, minPrice, maxPrice))) {
+          return false;
+        }
       }
 
       if (
@@ -1682,7 +2263,17 @@ export class ServicesEngineService {
       return haystack.includes(normalizedQuery);
     });
 
+    const sort = input.sort === 'name' || input.sort === 'rating' ? input.sort : 'relevance';
     filtered.sort((a, b) => {
+      if (sort === 'rating') {
+        const ratingComparison = b.averageRating - a.averageRating;
+        if (ratingComparison !== 0) return ratingComparison;
+        const reviewComparison = b.reviewCount - a.reviewCount;
+        if (reviewComparison !== 0) return reviewComparison;
+      } else if (sort === 'relevance') {
+        const relevanceComparison = relevanceScore(b) - relevanceScore(a);
+        if (relevanceComparison !== 0) return relevanceComparison;
+      }
       const companyComparison = a.companyName.localeCompare(b.companyName);
       return companyComparison || a.providerId - b.providerId;
     });
@@ -1701,6 +2292,10 @@ export class ServicesEngineService {
       verificationStatus: record.verificationStatus,
       headline: record.headline,
       bio: record.bio,
+      averageRating: record.averageRating,
+      reviewCount: record.reviewCount,
+      acceptingRequests: record.acceptingRequests,
+      createdAt: record.createdAt,
       services: record.services,
 
       locations: record.locations.map(location => ({

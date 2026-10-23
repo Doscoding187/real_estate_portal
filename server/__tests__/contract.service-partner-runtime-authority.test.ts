@@ -101,9 +101,53 @@ describe('canonical Service Partner publication authority', () => {
   const db = read('server/db.ts');
   const auditLog = read('server/_core/auditLog.ts');
 
+  function extractMethod(source: string, signature: string, nextSignature: string): string {
+    const start = source.indexOf(signature);
+    if (start < 0) return '';
+    const end = source.indexOf(nextSignature, start);
+    return source.slice(start, end < 0 ? source.length : end);
+  }
+
   it('exposes the reviewed publication transition only to super administrators', () => {
     expect(router).toContain('reviewProviderPublication: superAdminProcedure');
     expect(router).toContain('providerPublicationReadiness: superAdminProcedure');
+  });
+
+  it('exposes the publication review worklist to super administrators as a read', () => {
+    expect(router).toContain('listProviderPublicationQueue: superAdminProcedure');
+    expect(router).not.toContain('listProviderPublicationQueue: protectedProcedure');
+    expect(router).not.toContain('listProviderPublicationQueue: publicProcedure');
+  });
+
+  it('keeps the publication review worklist strictly read-only', () => {
+    const queueBody = extractMethod(
+      service,
+      'async listProviderPublicationQueue',
+      'async reviewProviderPublication',
+    );
+
+    expect(queueBody).not.toBe('');
+    expect(queueBody).not.toContain('update(');
+    expect(queueBody).not.toContain('.insert(');
+    expect(queueBody).not.toContain('.delete(');
+    expect(queueBody).not.toContain('auditLogs');
+  });
+
+  it('derives queue readiness and reviewed readiness from one authority', () => {
+    const singleProviderReadiness = extractMethod(
+      service,
+      'async readProviderPublicationReadiness',
+      'async getProviderPublicationReadiness',
+    );
+    const queueReadiness = extractMethod(
+      service,
+      'async listProviderPublicationQueue',
+      'async reviewProviderPublication',
+    );
+
+    expect(service).toContain('computeProviderPublicationReadiness');
+    expect(singleProviderReadiness).toContain('computeProviderPublicationReadiness');
+    expect(queueReadiness).toContain('computeProviderPublicationReadiness');
   });
 
   it('keeps publication controls out of provider self-service mutations', () => {

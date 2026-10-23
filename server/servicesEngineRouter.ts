@@ -1,14 +1,10 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import {
-  protectedProcedure,
-  publicProcedure,
-  router,
-  superAdminProcedure,
-} from './_core/trpc';
+import { protectedProcedure, publicProcedure, router, superAdminProcedure } from './_core/trpc';
 import { requireUser } from './_core/requireUser';
 import {
   hasProviderCoverage,
+  SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
 } from './services/servicesEngineService';
@@ -42,6 +38,9 @@ const intentStageSchema = z.enum([
 
 const sourceSurfaceSchema = z.enum(['directory', 'journey_injection', 'agent_dashboard']);
 const leadStatusSchema = z.enum(['new', 'accepted', 'quoted', 'won', 'lost', 'expired']);
+const publicationQueueViewSchema = z.enum(
+  SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS as unknown as [string, ...string[]],
+);
 const serviceCodeSchema = z.string().trim().min(1).max(80);
 const requestKeySchema = z
   .string()
@@ -245,6 +244,9 @@ export const servicesEngineRouter = router({
 
         contactEmail: z.string().trim().email().max(320).optional(),
         contactPhone: z.string().trim().max(50).optional(),
+        logoUrl: z.string().trim().max(500).optional(),
+        gallery: z.array(z.string().trim().url().max(500)).max(12).optional(),
+        availability: z.enum(['accepting', 'waitlist']).optional(),
         metadata: z.record(z.string(), z.unknown()).optional(),
       }),
     )
@@ -258,6 +260,9 @@ export const servicesEngineRouter = router({
         websiteUrl: input.websiteUrl,
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
+        logoUrl: input.logoUrl,
+        gallery: input.gallery,
+        availability: input.availability,
         metadata: input.metadata,
       });
     }),
@@ -333,6 +338,35 @@ export const servicesEngineRouter = router({
       }
     }),
 
+  /**
+   * Super-admin publication review worklist. It is read-only: it reports
+   * canonical provider state so a reviewer can decide, and it never grants
+   * publication. The reviewed transition below remains the only writer.
+   */
+  listProviderPublicationQueue: superAdminProcedure
+    .input(
+      z.object({
+        page: z.number().int().positive().default(1),
+        limit: z.number().int().min(1).max(100).default(25),
+        search: z.string().trim().max(255).optional(),
+        view: publicationQueueViewSchema.default('all'),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await servicesEngineService.listProviderPublicationQueue({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        view: input.view as
+          | 'all'
+          | 'ready'
+          | 'awaiting_review'
+          | 'published'
+          | 'blocked'
+          | 'drifted',
+      });
+    }),
+
   providerPublicationReadiness: superAdminProcedure
     .input(
       z.object({
@@ -394,6 +428,10 @@ export const servicesEngineRouter = router({
         province: z.string().trim().max(120).optional(),
         city: z.string().trim().max(120).optional(),
         suburb: z.string().trim().max(120).optional(),
+        minPrice: z.number().int().min(0).max(100_000_000).optional(),
+        maxPrice: z.number().int().min(0).max(100_000_000).optional(),
+        availability: z.enum(['accepting', 'any']).optional(),
+        sort: z.enum(['relevance', 'rating', 'name']).optional(),
         limit: z.number().int().min(1).max(50).optional(),
       }),
     )
@@ -417,6 +455,53 @@ export const servicesEngineRouter = router({
     .query(({ input }) =>
       servicesEngineService.getProviderReviews(input.providerId, input.limit || 50),
     ),
+
+  getProviderReviewEligibility: protectedProcedure
+    .input(
+      z.object({
+        providerId: z.number().int().positive(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      return servicesEngineService.getProviderReviewEligibility(input.providerId, user.id);
+    }),
+
+  submitProviderReview: protectedProcedure
+    .input(
+      z.object({
+        providerId: z.number().int().positive(),
+        rating: z.number().int().min(1).max(5),
+        title: z.string().trim().max(200).optional(),
+        content: z.string().trim().max(4000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        return await servicesEngineService.submitProviderReview({
+          providerId: input.providerId,
+          reviewerUserId: user.id,
+          rating: input.rating,
+          title: input.title ?? null,
+          content: input.content ?? null,
+        });
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (message === 'This provider is not currently available') {
+          throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (
+          message === 'You have already reviewed this provider' ||
+          message === 'A completed or closed request is required before reviewing this provider' ||
+          message === 'Rating must be between 1 and 5' ||
+          message === 'Add a short review before submitting'
+        ) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message });
+        }
+        throw error;
+      }
+    }),
 
   getLead: protectedProcedure
     .input(

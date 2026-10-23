@@ -21,6 +21,10 @@ import { trpc } from '@/lib/trpc';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentListingInventoryCard } from '@/components/agent/AgentListingInventoryCard';
 import {
+  AgentServicesReferral,
+  AgentServicesReferralPanel,
+} from '@/components/agent/AgentServicesReferral';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -327,24 +331,28 @@ export default function AgentListings() {
         ) : statusError ? (
           <AgentJourneyStatusErrorState onRetry={retryStatus} />
         ) : !dashboardUnlocked ? (
-          <AgentFeatureLockedState
-            title={
-              needsProfileCompletion
-                ? 'Complete your profile before opening listings'
-                : journeyAction.title
-            }
-            description={
-              needsProfileCompletion
-                ? 'Complete the remaining professional profile details to unlock your Agent workspace.'
-                : journeyAction.description
-            }
-            actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
-            onAction={() =>
-              setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
-            }
-          />
+          <div className="space-y-4">
+            <AgentFeatureLockedState
+              title={
+                needsProfileCompletion
+                  ? 'Complete your profile before opening listings'
+                  : journeyAction.title
+              }
+              description={
+                needsProfileCompletion
+                  ? 'Complete the remaining professional profile details to unlock your Agent workspace.'
+                  : journeyAction.description
+              }
+              actionLabel={journeyAction.waiting ? 'Return to dashboard' : journeyAction.label}
+              onAction={() =>
+                setLocation(journeyAction.waiting ? '/agent/dashboard' : journeyAction.href)
+              }
+            />
+            <AgentServicesReferralPanel />
+          </div>
         ) : (
           <>
+            <AgentServicesReferralPanel className="mb-6" />
             {listingAccessLocked && isDraftOrPending ? (
               <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-950">
                 <p className="font-medium">
@@ -578,6 +586,20 @@ export default function AgentListings() {
                             publicPropertyId == null
                               ? undefined
                               : () => setLocation(`/property/${publicPropertyId}`)
+                          }
+                          servicesReferral={
+                            listing.status &&
+                            ['draft', 'pending', 'pending_review', 'rejected'].includes(
+                              String(listing.status).toLowerCase(),
+                            ) ? (
+                              <AgentServicesReferral
+                                listingId={listing.listingId}
+                                propertyId={publicPropertyId}
+                                suburb={listing.suburb}
+                                city={listing.city}
+                                province={listing.province}
+                              />
+                            ) : null
                           }
                         />
                       );

@@ -12,6 +12,10 @@ export type ProviderDirectoryItem = {
   verificationStatus?: string | null;
   headline?: string | null;
   bio?: string | null;
+  averageRating?: number | null;
+  reviewCount?: number | null;
+  acceptingRequests?: boolean | null;
+  createdAt?: string | null;
   services?: Array<{
     category?: string;
     code?: string;

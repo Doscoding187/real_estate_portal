@@ -28,7 +28,13 @@ vi.mock('@/_core/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 1, role:
 vi.mock('@/components/agent/AgentAppShell', () => ({
   AgentAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
-vi.mock('wouter', () => ({ useLocation: () => ['/agent/listings', harness.navigate] }));
+vi.mock('wouter', async () => {
+  const actual = await vi.importActual<typeof import('wouter')>('wouter');
+  return {
+    ...actual,
+    useLocation: () => ['/agent/listings', harness.navigate],
+  };
+});
 vi.mock('@/hooks/useAgentOnboardingStatus', () => ({
   useAgentOnboardingStatus: () => ({
     status: {

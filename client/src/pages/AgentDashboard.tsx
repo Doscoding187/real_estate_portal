@@ -2,6 +2,7 @@ import { AgentAppShell } from '@/components/agent/AgentAppShell';
 import { AgentDashboardOverview } from '@/components/agent/AgentDashboardOverview';
 import { AgentStatusStrip } from '@/components/agent/AgentStatusStrip';
 import { AgentJourneyStatusErrorState } from '@/components/agent/AgentJourneyStatusErrorState';
+import { AgentServicesReferralPanel } from '@/components/agent/AgentServicesReferral';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 
 export default function AgentDashboard() {
@@ -43,6 +44,7 @@ export default function AgentDashboard() {
     <AgentAppShell>
       <div className="flex flex-col gap-4">
         <AgentStatusStrip agentLaunchAccessAvailable={agentLaunchAccessAvailable} />
+        <AgentServicesReferralPanel />
         {!status.fullFeaturesUnlocked ? (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-amber-950">
             <h2 className="text-lg font-semibold">Prepare your professional workspace</h2>

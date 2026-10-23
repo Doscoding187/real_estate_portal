@@ -1,11 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useRoute } from 'wouter';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { ArrowLeft, ArrowRight, BadgeCheck, MessageSquare, Star } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
-import { ArrowRight, BadgeCheck, Sparkles } from 'lucide-react';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { buildProviderProfilePath, toProviderSlug } from '@/features/services/catalog';
+import { servicesUi } from '@/features/services/design';
+import { EnhancedNavbar } from '@/components/EnhancedNavbar';
+import { ProviderRating, StarRating } from '@/components/services/ProviderShowcaseCard';
+import { ServicesSiteFooter } from '@/components/services/ServicesSiteFooter';
 import { useServicesLocation } from '@/features/services/useServicesLocation';
 
 function parsePositiveInteger(value: string | undefined): number | null {
@@ -15,10 +18,16 @@ function parsePositiveInteger(value: string | undefined): number | null {
 }
 
 export default function ServiceProviderReviewsPage() {
+  const { user } = useAuth();
   const { search } = useServicesLocation();
   const [, params] = useRoute('/services/reviews/:providerId');
   const providerId = parsePositiveInteger(params?.providerId);
   const routeProviderId = providerId || 0;
+  const [rating, setRating] = useState(5);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: routeProviderId },
     { enabled: Boolean(providerId) },
@@ -27,6 +36,29 @@ export default function ServiceProviderReviewsPage() {
     { providerId: routeProviderId, limit: 100 },
     { enabled: Boolean(providerId) },
   );
+  const eligibilityQuery = trpc.servicesEngine.getProviderReviewEligibility.useQuery(
+    { providerId: routeProviderId },
+    { enabled: Boolean(providerId && user) },
+  );
+  const utils = trpc.useUtils();
+  const submitReview = trpc.servicesEngine.submitProviderReview.useMutation({
+    onSuccess: async result => {
+      setSubmitMessage(
+        `Thank you. Your review is published and the provider rating is now ${result.averageRating.toFixed(1)} from ${result.reviewCount} review${result.reviewCount === 1 ? '' : 's'}.`,
+      );
+      setTitle('');
+      setContent('');
+      await utils.servicesEngine.getProviderReviews.invalidate({ providerId: routeProviderId });
+      await utils.servicesEngine.getProviderPublicProfile.invalidate({
+        providerId: routeProviderId,
+      });
+      await utils.servicesEngine.getProviderReviewEligibility.invalidate({
+        providerId: routeProviderId,
+      });
+    },
+    onError: error => setSubmitMessage(error.message),
+  });
+
   const profile = profileQuery.data;
   const providerName = profile?.companyName || 'Provider';
   const reviews = reviewsQuery.data || [];
@@ -36,11 +68,13 @@ export default function ServiceProviderReviewsPage() {
   const backToProfilePath = buildProviderProfilePath(profileSlug, search, {
     providerId: routeProviderId,
   });
+  const eligibility = eligibilityQuery.data;
+  const canReview = Boolean(user && eligibility?.eligible);
 
   useEffect(() => {
     applySeo({
-      title: `${providerName} Feedback | Property Listify Services`,
-      description: `Read published customer feedback for ${providerName} before requesting a service.`,
+      title: `${providerName} Reviews | Property Listify Services`,
+      description: `Read published customer reviews and ratings for ${providerName} before requesting a service.`,
       canonicalPath: `/services/reviews/${encodeURIComponent(routeProviderId)}`,
       noindex: true,
     });
@@ -48,142 +82,230 @@ export default function ServiceProviderReviewsPage() {
 
   if (!providerId) {
     return (
-      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
-        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
-          <CardContent className="p-8 text-sm text-slate-600">
-            This feedback link is not valid.
-          </CardContent>
-        </Card>
-      </main>
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8 text-sm text-[#4B5C6B]`}>
+            This review link is not valid.
+          </div>
+        </main>
+      </>
     );
   }
 
   if (profileQuery.isLoading || reviewsQuery.isLoading) {
     return (
-      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
-        <div className="mx-auto max-w-4xl animate-pulse space-y-4">
-          <div className="h-48 rounded-2xl bg-slate-200" />
-          <div className="h-64 rounded-2xl bg-slate-200" />
-        </div>
-      </main>
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
+          <div className="mx-auto max-w-4xl animate-pulse space-y-4">
+            <div className="h-48 rounded-3xl bg-[#E9F0F4]" />
+            <div className="h-64 rounded-3xl bg-[#E9F0F4]" />
+          </div>
+        </main>
+      </>
     );
   }
 
   if (profileQuery.error || reviewsQuery.error || !profile) {
     return (
-      <main className="min-h-screen bg-[#f7f4ec] px-4 py-12 md:px-6">
-        <Card className="mx-auto max-w-3xl border-[#0f3d91]/10 bg-white shadow-sm">
-          <CardContent className="space-y-4 p-8">
-            <h1 className="text-2xl font-semibold text-slate-950">Provider feedback unavailable</h1>
-            <p className="text-sm leading-6 text-slate-600">
-              This provider is not currently published, or the feedback could not be loaded.
+      <>
+        <EnhancedNavbar />
+        <main className="min-h-screen bg-[#FDFDFD] px-4 py-12 md:px-6">
+          <div className={`${servicesUi.surface} mx-auto max-w-3xl p-8`}>
+            <h1 className="font-['Sora'] text-2xl font-bold tracking-[-0.03em] text-[#0B1B2A]">
+              Provider reviews unavailable
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[#4B5C6B]">
+              This provider is not currently published, or the reviews could not be loaded.
             </p>
-            <Link href="/services">
-              <Button>Browse services</Button>
+            <Link href="/services" className={`${servicesUi.action} mt-6`}>
+              Browse services
             </Link>
-          </CardContent>
-        </Card>
-      </main>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f7f4ec]">
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[32rem] bg-[radial-gradient(circle_at_top_left,_rgba(15,61,145,0.14),_transparent_30%),radial-gradient(circle_at_80%_10%,_rgba(201,139,43,0.16),_transparent_22%),linear-gradient(180deg,_#f9f6ef_0%,_#eef4ff_56%,_#f7f4ec_100%)]" />
-        <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 md:px-6 md:py-12">
-          <section className="rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_24px_90px_-50px_rgba(15,61,145,0.55)] md:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[#0f3d91]/15 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f3d91]">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Property Listify Services
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-full bg-[#10294f] px-3 py-1 text-xs font-semibold text-white">
-                    <BadgeCheck className="h-3.5 w-3.5" />
-                    Published feedback
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Provider feedback
-                  </p>
-                  <h1 className="text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
-                    {providerName}
-                  </h1>
-                  <p className="mt-2 max-w-2xl text-slate-600">
-                    Read published customer feedback before deciding whether this provider fits your
-                    property need.
-                  </p>
-                </div>
+    <>
+      <EnhancedNavbar />
+      <main className="min-h-screen bg-[#FDFDFD] text-[#0B1B2A]">
+        <section className="bg-[#F7FAFB] px-4 py-10 md:px-6 md:py-14">
+          <div className="mx-auto w-full max-w-5xl">
+            <Link
+              href={backToProfilePath}
+              className="inline-flex items-center gap-2 text-[12px] font-semibold text-[#4B5C6B] transition hover:text-[#168363]"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+              Back to profile
+            </Link>
+            <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <p className={servicesUi.eyebrow}>Verified customer reviews</p>
+                <h1 className="mt-2 font-['Sora'] text-3xl font-bold tracking-[-0.03em] md:text-[42px]">
+                  {providerName}
+                </h1>
+                <ProviderRating
+                  averageRating={profile.averageRating}
+                  reviewCount={profile.reviewCount}
+                  className="mt-3"
+                />
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#4B5C6B]">
+                  Only customers with a completed or closed request can publish a review. Ratings
+                  are recomputed from the published review set.
+                </p>
               </div>
-              <Link href={backToProfilePath}>
-                <Button variant="outline">
-                  Back to profile
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+              <Link href={backToProfilePath} className={servicesUi.actionOutline}>
+                View profile
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[1.5rem] border border-slate-100 bg-[#faf7f0] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Published feedback
-                </p>
-                <p className="mt-2 text-base font-semibold text-slate-950">
-                  {reviews.length > 0 ? 'Available' : 'Not listed'}
-                </p>
-              </div>
-              <div className="rounded-[1.5rem] border border-slate-100 bg-[#faf7f0] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Evidence type
-                </p>
-                <p className="mt-2 text-base font-semibold text-slate-950">
-                  Written customer feedback
-                </p>
-              </div>
-              <div className="rounded-[1.5rem] border border-slate-100 bg-[#faf7f0] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Next step
-                </p>
-                <p className="mt-2 text-base font-semibold text-slate-950">
-                  Review the profile and request
-                </p>
-              </div>
-            </div>
-          </section>
+          </div>
+        </section>
 
-          <Card className="border-[#0f3d91]/10 bg-white/90 shadow-sm">
-            <CardContent className="space-y-3 p-6">
-              {reviews.map(review => (
-                <article
-                  key={review.id}
-                  className="rounded-[1rem] border border-slate-200 bg-white p-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="font-medium text-slate-900">
-                        {review.title || 'Published feedback'}
-                      </p>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      {String(review.createdAt || '').slice(0, 10)}
+        <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-10 md:px-6 md:py-12 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold">Published reviews</h2>
+            {reviews.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
+                No published reviews for this provider yet. Reviews appear after a completed or
+                closed request.
+              </div>
+            )}
+            {reviews.map(review => (
+              <article key={review.id} className={`${servicesUi.surface} p-5`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <StarRating rating={review.rating} />
+                    <p className="mt-2 text-[14px] font-semibold text-[#0B1B2A]">
+                      {review.title || 'Verified customer review'}
                     </p>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {review.content || 'No written comment.'}
-                  </p>
-                </article>
-              ))}
-              {reviews.length === 0 && (
-                <p className="text-sm text-slate-600">
-                  No published feedback for this provider yet.
+                  {review.isVerified && (
+                    <span className={servicesUi.greenChip}>
+                      <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                      Verified request
+                    </span>
+                  )}
+                </div>
+                <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
+                  {review.content || 'No written comment.'}
                 </p>
-              )}
-            </CardContent>
-          </Card>
+                <p className="mt-3 text-[11px] text-[#8A99A6]">
+                  {review.reviewerLabel} · {String(review.createdAt || '').slice(0, 10)}
+                </p>
+              </article>
+            ))}
+          </section>
+
+          <aside className="space-y-4">
+            {canReview && (
+              <form
+                onSubmit={event => {
+                  event.preventDefault();
+                  setSubmitMessage(null);
+                  submitReview.mutate({
+                    providerId: routeProviderId,
+                    rating,
+                    title: title.trim() || undefined,
+                    content: content.trim() || undefined,
+                  });
+                }}
+                className={`${servicesUi.surface} p-6`}
+              >
+                <h2 className="text-[15px] font-bold">Rate this provider</h2>
+                <div className="mt-3 flex gap-1.5" role="radiogroup" aria-label="Rating">
+                  {[1, 2, 3, 4, 5].map(value => (
+                    <button
+                      key={`rating-choice-${value}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={rating === value}
+                      aria-label={`${value} star${value === 1 ? '' : 's'}`}
+                      onClick={() => setRating(value)}
+                      className="rounded-md p-1"
+                    >
+                      <Star
+                        className={`h-6 w-6 ${
+                          value <= rating
+                            ? 'fill-[#F2B53B] text-[#F2B53B]'
+                            : 'fill-transparent text-[#CBD8E0]'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-4 block text-[12px] font-semibold text-[#4B5C6B]">
+                  Review title
+                  <input
+                    value={title}
+                    onChange={event => setTitle(event.target.value)}
+                    maxLength={200}
+                    placeholder="Summarise your experience"
+                    className="mt-2 h-11 w-full rounded-xl border border-[#E3EBF0] px-3 text-sm font-normal text-[#0B1B2A] outline-none focus:border-[#168363]"
+                  />
+                </label>
+                <label className="mt-3 block text-[12px] font-semibold text-[#4B5C6B]">
+                  Your review
+                  <textarea
+                    value={content}
+                    onChange={event => setContent(event.target.value)}
+                    maxLength={4000}
+                    rows={4}
+                    placeholder="What should other property owners know?"
+                    className="mt-2 w-full rounded-xl border border-[#E3EBF0] p-3 text-sm font-normal text-[#0B1B2A] outline-none focus:border-[#168363]"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={submitReview.isPending}
+                  className={`${servicesUi.action} mt-4 w-full`}
+                >
+                  {submitReview.isPending ? 'Publishing…' : 'Publish review'}
+                </button>
+              </form>
+            )}
+
+            {!user && (
+              <div className={`${servicesUi.tintPanel} p-6`}>
+                <MessageSquare className="h-5 w-5 text-[#168363]" aria-hidden="true" />
+                <h2 className="mt-3 text-[15px] font-bold">Completed a service?</h2>
+                <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
+                  Sign in to review this provider. Only customers with a completed or closed request
+                  can publish a review.
+                </p>
+                <Link
+                  href={`/login?redirect=${encodeURIComponent(`/services/reviews/${routeProviderId}`)}`}
+                  className={`${servicesUi.action} mt-4 w-full`}
+                >
+                  Sign in to review
+                </Link>
+              </div>
+            )}
+
+            {user && eligibility && !eligibility.eligible && (
+              <div className={`${servicesUi.tintPanel} p-6`}>
+                <h2 className="text-[15px] font-bold">Reviews require a completed request</h2>
+                <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
+                  {eligibility.reason === 'already_reviewed'
+                    ? 'You have already published a review for this provider.'
+                    : 'Once a request to this provider is completed or closed, you can publish a review from this page.'}
+                </p>
+              </div>
+            )}
+
+            {submitMessage && (
+              <div className="rounded-2xl border border-[#D8EDE7] bg-[#EDF8F6] p-4 text-[13px] leading-6 text-[#0B1B2A]">
+                {submitMessage}
+              </div>
+            )}
+          </aside>
         </div>
-      </div>
-    </main>
+
+        <ServicesSiteFooter />
+      </main>
+    </>
   );
 }
