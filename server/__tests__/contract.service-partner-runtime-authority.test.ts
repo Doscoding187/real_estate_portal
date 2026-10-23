@@ -180,4 +180,12 @@ describe('canonical Service Partner publication authority', () => {
       /withdrawsVerification[\s\S]{0,600}update\(serviceProviderProfiles\)\s*\.set\(\{ directoryActive: 0 \}\)/,
     );
   });
+
+  it('bounds review reporting with a shared reporter quota', () => {
+    expect(service).toContain('SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT');
+    expect(service).toMatch(/gte\(serviceProviderReviewReports\.createdAt/);
+    expect(service).toContain(".for('update')");
+    expect(router).toContain('SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE');
+    expect(router).toMatch(/code:\s*'TOO_MANY_REQUESTS'/);
+  });
 });

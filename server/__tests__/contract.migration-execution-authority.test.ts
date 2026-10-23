@@ -539,9 +539,10 @@ describe('migration execution authority', () => {
         '0149_service_provider_reviews_moderation.sql',
         '0150_service_provider_reviews_moderation_index.sql',
         '0151_service_provider_review_reports_sequenced.sql',
+        '0152_service_provider_review_reports_reporter_created_index.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0151_service_provider_review_reports_sequenced.sql',
+      '0152_service_provider_review_reports_reporter_created_index.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

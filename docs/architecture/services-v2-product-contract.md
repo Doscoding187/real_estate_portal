@@ -136,11 +136,16 @@ implemented:
   counted and returned publicly.
 - A reviewer may submit one review per provider, and a reporter may submit one
   report per review.
+- A reporter may create at most ten reports in a rolling 24-hour window. The
+  quota is counted from canonical report rows inside the report transaction,
+  and the reporter account row is locked so concurrent submissions across
+  application instances cannot exceed the limit. Exhaustion returns a
+  retryable rate-limit response without creating a report or audit event.
 
 **Remaining gaps before broad launch:** report triage is manual, and there is
-no automated abuse detection, report-rate limiting, or provider rebuttal flow.
-The surface must continue to say that reviews are limited to customers with a
-completed or closed request and that reviews are published after moderation.
+no automated abuse detection or provider rebuttal flow. The surface must
+continue to say that reviews are limited to customers with a completed or
+closed request and that reviews are published after moderation.
 
 **The platform must not display invented ratings, fabricated review counts, or
 star averages anywhere in the Services surface.** The canonical platform badge
@@ -209,7 +214,7 @@ Authority workstream.
 | # | Proposal | Dependency |
 | --- | --- | --- |
 | PROP-1 | Platform-hosted provider mini-site as a distinct surface | Provider content model; imagery; own SEO; own navigation |
-| PROP-2 | Public customer reviews and a rating signal | **MVP shipped** with terminal-request verification, pending-by-default moderation, report triage, and transactionally recomputed aggregates; automated abuse prevention remains |
+| PROP-2 | Public customer reviews and a rating signal | **MVP shipped** with terminal-request verification, pending-by-default moderation, report triage, a shared reporter quota, and transactionally recomputed aggregates; automated abuse prevention remains |
 | PROP-3 | Price-range and availability filtering in the results rail | **MVP shipped** server-side; availability is a provider-declared `accepting`/`waitlist` metadata value, not a calculated capacity |
 | PROP-4 | Provider galleries and project imagery | **MVP shipped** as provider-supplied gallery URLs in profile metadata and `partners.logoUrl`; a moderated media library remains the durable model |
 | PROP-5 | Explore feed entry for published providers | Section 3.4 boundary; Explore ranking is explicitly out of scope |
@@ -222,7 +227,7 @@ Authority workstream.
 | --- | --- | --- |
 | OPEN-1 | What makes a provider maintain a profile, and what would make participation worth paying for | Product + research |
 | OPEN-2 | Which revenue model works in South Africa without undermining consumer trust | Product + research |
-| OPEN-3 | Automated abuse prevention, report-rate limiting, and provider rebuttal for public reviews | Product + trust review |
+| OPEN-3 | Automated abuse prevention and provider rebuttal for public reviews | Product + trust review |
 | OPEN-4 | Whether the provider mini-site is the acquisition surface or a conversion surface | Product |
 | OPEN-5 | How Services complements agent, agency, and developer commercial models | Product |
 
@@ -343,6 +348,7 @@ built on an assumption.
 7. Typecheck, lint, and the Services client and server test suites pass with
    no new failures.
 8. The V1 contract is unchanged.
-9. The MVP records its own limits: review moderation and reporting are
-   manual, availability is provider-declared, and galleries are
-   provider-supplied URLs rather than a moderated media library.
+9. The MVP records its own limits: review triage remains manual, reporting is
+   bounded by a shared per-reporter quota, availability is provider-declared,
+   and galleries are provider-supplied URLs rather than a moderated media
+   library.

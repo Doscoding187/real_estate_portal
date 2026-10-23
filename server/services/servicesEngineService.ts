@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   auditLogs,
   developers,
@@ -63,6 +63,13 @@ export type ServiceProviderReviewDecision = (typeof SERVICE_PROVIDER_REVIEW_DECI
 export const SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS = ['resolve', 'dismiss'] as const;
 export type ServiceProviderReviewReportDecision =
   (typeof SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS)[number];
+
+export const SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT = Object.freeze({
+  windowMs: 24 * 60 * 60 * 1000,
+  maxReports: 10,
+});
+export const SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE =
+  'You have reached the review report limit. Try again later.';
 
 export type ServiceProviderReviewModerationStatus =
   (typeof SERVICE_PROVIDER_REVIEW_MODERATION_STATUS_VALUES)[number];
@@ -1494,6 +1501,16 @@ export class ServicesEngineService {
         throw new Error('You cannot report your own review');
       }
 
+      // Serialize the quota check and insert for this reporter so concurrent
+      // report submissions cannot pass the limit together.
+      const [reporter] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, reporterUserId))
+        .limit(1)
+        .for('update');
+      if (!reporter) throw new Error('A reporter is required');
+
       const [existing] = await tx
         .select({ id: serviceProviderReviewReports.id })
         .from(serviceProviderReviewReports)
@@ -1505,6 +1522,25 @@ export class ServicesEngineService {
         )
         .limit(1);
       if (existing) throw new Error('You have already reported this review');
+
+      const windowStart = new Date(
+        Date.now() - SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT.windowMs,
+      ).toISOString();
+      const [recentReportCount] = await tx
+        .select({ total: count() })
+        .from(serviceProviderReviewReports)
+        .where(
+          and(
+            eq(serviceProviderReviewReports.reporterUserId, reporterUserId),
+            gte(serviceProviderReviewReports.createdAt, windowStart),
+          ),
+        );
+      if (
+        Number(recentReportCount?.total || 0) >=
+        SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT.maxReports
+      ) {
+        throw new Error(SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE);
+      }
 
       const insertResult = await tx.insert(serviceProviderReviewReports).values({
         reviewId,

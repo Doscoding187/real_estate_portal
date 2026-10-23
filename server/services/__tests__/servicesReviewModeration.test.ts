@@ -7,7 +7,11 @@ const { mockGetDb } = vi.hoisted(() => ({
 vi.mock('../../db', () => ({ getDb: mockGetDb }));
 
 import { AuditActions } from '../../_core/auditLog';
-import { servicesEngineService } from '../servicesEngineService';
+import {
+  SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT,
+  SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE,
+  servicesEngineService,
+} from '../servicesEngineService';
 
 function makeSelectQuery(rows: unknown[], lock = false) {
   const query: Record<string, ReturnType<typeof vi.fn>> = {
@@ -158,7 +162,9 @@ describe('Services review moderation', () => {
             true,
           ),
         )
-        .mockReturnValueOnce(makeSelectQuery([])),
+        .mockReturnValueOnce(makeSelectQuery([{ id: 12 }], true))
+        .mockReturnValueOnce(makeSelectQuery([]))
+        .mockReturnValueOnce(makeSelectQuery([{ total: 0 }])),
       insert: insert.insert,
       update: vi.fn(),
     };
@@ -181,5 +187,47 @@ describe('Services review moderation', () => {
       reason: 'spam',
       status: 'pending',
     });
+  });
+
+  it('blocks a reporter after the rolling report quota', async () => {
+    const insert = makeInsert(45);
+    const tx = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce(
+          makeSelectQuery(
+            [
+              {
+                id: 77,
+                providerId: 20,
+                reviewerUserId: 9,
+                isPublished: 1,
+                moderationStatus: 'published',
+              },
+            ],
+            true,
+          ),
+        )
+        .mockReturnValueOnce(makeSelectQuery([{ id: 12 }], true))
+        .mockReturnValueOnce(makeSelectQuery([]))
+        .mockReturnValueOnce(
+          makeSelectQuery([{ total: SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMIT.maxReports }]),
+        ),
+      insert: insert.insert,
+      update: vi.fn(),
+    };
+    mockGetDb.mockResolvedValue({
+      transaction: (callback: (value: typeof tx) => unknown) => callback(tx),
+    });
+
+    await expect(
+      servicesEngineService.reportProviderReview({
+        reviewId: 77,
+        reporterUserId: 12,
+        reason: 'spam',
+        detail: 'One report too many.',
+      }),
+    ).rejects.toThrow(SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE);
+    expect(insert.insert).not.toHaveBeenCalled();
   });
 });

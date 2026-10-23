@@ -9,6 +9,7 @@ import {
   SERVICE_PROVIDER_REVIEW_MODERATION_QUEUE_VIEWS,
   SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS,
   SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS,
+  SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
   type ServiceProviderReviewReportReason,
@@ -594,6 +595,9 @@ export const servicesEngineRouter = router({
         const message = String(error?.message || '');
         if (message === 'Review not found') {
           throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (message === SERVICE_PROVIDER_REVIEW_REPORT_RATE_LIMITED_MESSAGE) {
+          throw new TRPCError({ code: 'TOO_MANY_REQUESTS', message });
         }
         if (
           message === 'Only published reviews can be reported' ||
