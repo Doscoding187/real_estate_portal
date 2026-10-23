@@ -405,7 +405,9 @@ describe('bounded Database Authority data adapters', () => {
     ]);
     expect(plan.products.every(product => product.state === 'missing')).toBe(true);
     expect(plan.pending.filter(item => item.action === 'insert_plan')).toHaveLength(3);
-    expect(plan.migrationHead).toBe('0151_service_provider_review_reports_sequenced.sql');
+    expect(plan.migrationHead).toBe(
+      '0152_service_provider_review_reports_reporter_created_index.sql',
+    );
   });
 
   it('fails closed when a protected commercial row conflicts with canonical authority', async () => {

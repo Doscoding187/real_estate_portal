@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0151_service_provider_review_reports_sequenced.sql",
+  "expectedHead": "0152_service_provider_review_reports_reporter_created_index.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1580,6 +1580,16 @@
       "checksum": "d1272ddd283c0ce679b9244823c1aeb2dd2b810a41652f00eb81711769897b60",
       "parent": "0150_service_provider_reviews_moderation_index.sql",
       "parentChecksum": "8745fdbc1076184f9515bd6802c745611c6ef318adbad64cd79fafd0a6f8ee7f",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 152,
+      "filename": "0152_service_provider_review_reports_reporter_created_index.sql",
+      "checksum": "aae6172f4bca9f11d5ff681cc7ed40649f515f2460b4ff0faa18f3828797f13d",
+      "parent": "0151_service_provider_review_reports_sequenced.sql",
+      "parentChecksum": "d1272ddd283c0ce679b9244823c1aeb2dd2b810a41652f00eb81711769897b60",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

@@ -1708,6 +1708,14 @@
       "approvedFiles": [
         "server/migrations/0151_service_provider_review_reports_sequenced.sql"
       ]
+    },
+    {
+      "path": "server/migrations/0152_service_provider_review_reports_reporter_created_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes review reports by reporter and creation time for the rolling report-rate-limit lookup.",
+      "approvedFiles": [
+        "server/migrations/0152_service_provider_review_reports_reporter_created_index.sql"
+      ]
     }
   ],
   "prohibitedPaths": [

@@ -408,6 +408,10 @@ export const serviceProviderReviewReports = mysqlTable(
     index('idx_service_provider_review_reports_review').on(table.reviewId),
     index('idx_service_provider_review_reports_status').on(table.status),
     index('idx_service_provider_review_reports_created').on(table.createdAt),
+    index('idx_service_provider_review_reports_reporter_created').on(
+      table.reporterUserId,
+      table.createdAt,
+    ),
     unique('ux_service_provider_review_reports_reporter').on(table.reviewId, table.reporterUserId),
     foreignKey({
       name: 'svc_review_reports_review_fk',
