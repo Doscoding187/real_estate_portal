@@ -87,4 +87,7 @@ export const AuditActions = {
 
   // Services V1 reviewed publication authority
   REVIEW_SERVICE_PROVIDER_PUBLICATION: 'services.provider_publication_reviewed',
+  MODERATE_SERVICE_PROVIDER_REVIEW: 'services.provider_review_moderated',
+  REPORT_SERVICE_PROVIDER_REVIEW: 'services.provider_review_reported',
+  RESOLVE_SERVICE_PROVIDER_REVIEW_REPORT: 'services.provider_review_report_resolved',
 } as const;

@@ -117,28 +117,34 @@ ships:
 5. **Transparency.** A published review count must equal the number of
    published reviews.
 
-**MVP implementation (2026-10-22).** The evidence standard is now implemented
-against the existing review and lead tables, without a schema change:
+**MVP implementation (2026-10-22).** The evidence and moderation standard is
+implemented:
 
 - Authorship is the authenticated `reviewerUserId`.
 - Completion is a `service_leads` row for the same provider and reviewer in a
   terminal `won` or `lost` state.
-- Aggregation is recomputed inside the submission transaction from published
-  reviews and written back to `service_provider_profiles.averageRating` and
-  `reviewCount`; the values are never accepted from the client.
-- Transparency is preserved because only published reviews are counted.
-- A reviewer may submit one review per provider.
+- New reviews are stored as `pending`, hidden from the public surface, and
+  require an explicit super-admin approval before they appear.
+- Reporting is available to authenticated consumers on published reviews.
+  Reports are triaged by a super-admin; resolving or dismissing a report never
+  changes publication state by itself.
+- Aggregation is recomputed inside submission and moderation transactions from
+  approved, published reviews and written back to
+  `service_provider_profiles.averageRating` and `reviewCount`; the values are
+  never accepted from the client.
+- Transparency is preserved because only approved, published reviews are
+  counted and returned publicly.
+- A reviewer may submit one review per provider, and a reporter may submit one
+  report per review.
 
-**Remaining gaps before broad launch:** moderation, reporting, and an abuse
-path are not yet implemented. Reviews publish immediately after the terminal
-request check. Until those controls exist, the surface must continue to say
-that reviews are limited to customers with a completed or closed request, and
-must not imply that the platform has independently moderated the wording.
+**Remaining gaps before broad launch:** report triage is manual, and there is
+no automated abuse detection, report-rate limiting, or provider rebuttal flow.
+The surface must continue to say that reviews are limited to customers with a
+completed or closed request and that reviews are published after moderation.
 
-**Until the remaining standard is implemented, the platform must not display
-invented ratings, fabricated review counts, or star averages anywhere in the
-Services surface.** The canonical platform badge remains **Platform verified**,
-backed by partner verification state.
+**The platform must not display invented ratings, fabricated review counts, or
+star averages anywhere in the Services surface.** The canonical platform badge
+remains **Platform verified**, backed by partner verification state.
 
 ### 3.4 Explore integration
 
@@ -190,7 +196,7 @@ In scope for the current delivery slice.
 | MVP-5 | Enquiry conversion: a clear, low-friction path from a provider to a request | |
 | MVP-6 | The agent referral handoff exposed on an agent surface where it genuinely helps, available with or without Launch Access | Server capability already exists |
 | MVP-7 | A documented provider mini-site content and capability specification | Specification, not build |
-| MVP-8 | Verified-request ratings and reviews with recomputed aggregates | Existing review and lead tables; moderation follow-up |
+| MVP-8 | Verified-request ratings and reviews with recomputed aggregates, moderation queue, and consumer reporting | `service_provider_reviews`, `service_provider_review_reports`, recomputed aggregates |
 | MVP-9 | Price-range and accepting-requests filters plus relevance, rating and name sorts | `service_provider_services`, profile metadata, `directorySearch` |
 | MVP-10 | Provider photos and galleries supplied from provider metadata | Existing `partners.logoUrl` and profile metadata |
 
@@ -203,7 +209,7 @@ Authority workstream.
 | # | Proposal | Dependency |
 | --- | --- | --- |
 | PROP-1 | Platform-hosted provider mini-site as a distinct surface | Provider content model; imagery; own SEO; own navigation |
-| PROP-2 | Public customer reviews and a rating signal | **MVP shipped** with terminal-request verification and transactionally recomputed aggregates; moderation, reporting and abuse controls remain |
+| PROP-2 | Public customer reviews and a rating signal | **MVP shipped** with terminal-request verification, pending-by-default moderation, report triage, and transactionally recomputed aggregates; automated abuse prevention remains |
 | PROP-3 | Price-range and availability filtering in the results rail | **MVP shipped** server-side; availability is a provider-declared `accepting`/`waitlist` metadata value, not a calculated capacity |
 | PROP-4 | Provider galleries and project imagery | **MVP shipped** as provider-supplied gallery URLs in profile metadata and `partners.logoUrl`; a moderated media library remains the durable model |
 | PROP-5 | Explore feed entry for published providers | Section 3.4 boundary; Explore ranking is explicitly out of scope |
@@ -216,14 +222,16 @@ Authority workstream.
 | --- | --- | --- |
 | OPEN-1 | What makes a provider maintain a profile, and what would make participation worth paying for | Product + research |
 | OPEN-2 | Which revenue model works in South Africa without undermining consumer trust | Product + research |
-| OPEN-3 | The evidence standard for public reviews, including moderation, reporting, and abuse prevention | Product + trust review |
+| OPEN-3 | Automated abuse prevention, report-rate limiting, and provider rebuttal for public reviews | Product + trust review |
 | OPEN-4 | Whether the provider mini-site is the acquisition surface or a conversion surface | Product |
 | OPEN-5 | How Services complements agent, agency, and developer commercial models | Product |
 
 ## 5. Boundaries this workstream must not cross
 
-- No schema change, no migration, and no Drizzle model change in this slice.
-  Anything requiring one is a separate Database Authority workstream.
+- The initial MVP slice made no schema, migration, or Drizzle model change.
+  The later review moderation and reporting slice is a separately authorized
+  Database Authority workstream; it adds only review moderation state and
+  report records and does not widen the MVP boundaries below.
 - No weakening of the reviewed publication transition, its fail-closed
   readiness gate, or its audit record.
 - No change to the public directory's eligibility conjunction. A provider
@@ -335,6 +343,6 @@ built on an assumption.
 7. Typecheck, lint, and the Services client and server test suites pass with
    no new failures.
 8. The V1 contract is unchanged.
-9. The MVP records its own limits: review moderation and abuse reporting are
-   not yet implemented, availability is provider-declared, and galleries are
+9. The MVP records its own limits: review moderation and reporting are
+   manual, availability is provider-declared, and galleries are
    provider-supplied URLs rather than a moderated media library.

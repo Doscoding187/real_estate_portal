@@ -5,15 +5,20 @@ import { requireUser } from './_core/requireUser';
 import {
   hasProviderCoverage,
   SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS,
+  SERVICE_PROVIDER_REVIEW_DECISIONS,
+  SERVICE_PROVIDER_REVIEW_MODERATION_QUEUE_VIEWS,
+  SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS,
+  SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS,
   SERVICE_REQUEST_REPLAY_UNAVAILABLE,
   servicesEngineService,
+  type ServiceProviderReviewReportReason,
 } from './services/servicesEngineService';
 import {
   checkPublicLeadRateLimit,
   getPublicLeadClientIp,
 } from './services/publicLeadRateLimitService';
 import { getDb } from './db';
-import { users } from '../drizzle/schema';
+import { SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES, users } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
 const serviceCategorySchema = z.enum([
@@ -40,6 +45,21 @@ const sourceSurfaceSchema = z.enum(['directory', 'journey_injection', 'agent_das
 const leadStatusSchema = z.enum(['new', 'accepted', 'quoted', 'won', 'lost', 'expired']);
 const publicationQueueViewSchema = z.enum(
   SERVICE_PROVIDER_PUBLICATION_QUEUE_VIEWS as unknown as [string, ...string[]],
+);
+const reviewModerationQueueViewSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_MODERATION_QUEUE_VIEWS as unknown as [string, ...string[]],
+);
+const reviewReportQueueViewSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS as unknown as [string, ...string[]],
+);
+const reviewDecisionSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_DECISIONS as unknown as [string, ...string[]],
+);
+const reviewReportDecisionSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS as unknown as [string, ...string[]],
+);
+const reviewReportReasonSchema = z.enum(
+  SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES as unknown as [string, ...string[]],
 );
 const serviceCodeSchema = z.string().trim().min(1).max(80);
 const requestKeySchema = z
@@ -497,6 +517,140 @@ export const servicesEngineRouter = router({
           message === 'Rating must be between 1 and 5' ||
           message === 'Add a short review before submitting'
         ) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message });
+        }
+        throw error;
+      }
+    }),
+
+  listProviderReviewModerationQueue: superAdminProcedure
+    .input(
+      z.object({
+        page: z.number().int().positive().default(1),
+        limit: z.number().int().min(1).max(100).default(25),
+        search: z.string().trim().max(255).optional(),
+        view: reviewModerationQueueViewSchema.default('pending'),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await servicesEngineService.listProviderReviewModerationQueue({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        view: input.view as 'pending' | 'published' | 'rejected' | 'all',
+      });
+    }),
+
+  reviewProviderReview: superAdminProcedure
+    .input(
+      z.object({
+        reviewId: z.number().int().positive(),
+        decision: reviewDecisionSchema,
+        notes: z.string().trim().max(1000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        return await servicesEngineService.reviewProviderReview({
+          reviewId: input.reviewId,
+          decision: input.decision as 'approve' | 'reject',
+          actorUserId: user.id,
+          notes: input.notes ?? null,
+        });
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (message === 'Review not found') {
+          throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (message === 'A reviewing operator is required') {
+          throw new TRPCError({ code: 'FORBIDDEN', message });
+        }
+        if (message === 'Unsupported review decision') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message });
+        }
+        throw error;
+      }
+    }),
+
+  reportProviderReview: protectedProcedure
+    .input(
+      z.object({
+        reviewId: z.number().int().positive(),
+        reason: reviewReportReasonSchema,
+        detail: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        return await servicesEngineService.reportProviderReview({
+          reviewId: input.reviewId,
+          reporterUserId: user.id,
+          reason: input.reason as ServiceProviderReviewReportReason,
+          detail: input.detail ?? null,
+        });
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (message === 'Review not found') {
+          throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (
+          message === 'Only published reviews can be reported' ||
+          message === 'You cannot report your own review' ||
+          message === 'You have already reported this review' ||
+          message === 'Unsupported report reason'
+        ) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message });
+        }
+        throw error;
+      }
+    }),
+
+  listProviderReviewReportQueue: superAdminProcedure
+    .input(
+      z.object({
+        page: z.number().int().positive().default(1),
+        limit: z.number().int().min(1).max(100).default(25),
+        search: z.string().trim().max(255).optional(),
+        view: reviewReportQueueViewSchema.default('pending'),
+      }),
+    )
+    .query(async ({ input }) => {
+      return await servicesEngineService.listProviderReviewReportQueue({
+        page: input.page,
+        limit: input.limit,
+        search: input.search,
+        view: input.view as 'pending' | 'resolved' | 'dismissed' | 'all',
+      });
+    }),
+
+  resolveProviderReviewReport: superAdminProcedure
+    .input(
+      z.object({
+        reportId: z.number().int().positive(),
+        decision: reviewReportDecisionSchema,
+        resolutionNote: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const user = requireUser(ctx);
+      try {
+        return await servicesEngineService.resolveProviderReviewReport({
+          reportId: input.reportId,
+          decision: input.decision as 'resolve' | 'dismiss',
+          actorUserId: user.id,
+          resolutionNote: input.resolutionNote ?? null,
+        });
+      } catch (error: any) {
+        const message = String(error?.message || '');
+        if (message === 'Report not found') {
+          throw new TRPCError({ code: 'NOT_FOUND', message });
+        }
+        if (message === 'A reviewing operator is required') {
+          throw new TRPCError({ code: 'FORBIDDEN', message });
+        }
+        if (message === 'Unsupported report decision') {
           throw new TRPCError({ code: 'BAD_REQUEST', message });
         }
         throw error;

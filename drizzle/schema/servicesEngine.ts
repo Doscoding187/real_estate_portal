@@ -1,5 +1,6 @@
 import {
   decimal,
+  foreignKey,
   index,
   int,
   json,
@@ -53,7 +54,14 @@ export const SERVICE_INTENT_STAGE_VALUES = [
   'agent_dashboard',
   'general',
 ] as const;
-export const SERVICE_LEAD_STATUS_VALUES = ['new', 'accepted', 'quoted', 'won', 'lost', 'expired'] as const;
+export const SERVICE_LEAD_STATUS_VALUES = [
+  'new',
+  'accepted',
+  'quoted',
+  'won',
+  'lost',
+  'expired',
+] as const;
 export const SERVICE_LEAD_EVENT_TYPE_VALUES = [
   'created',
   'assigned',
@@ -76,6 +84,23 @@ export const SERVICE_EXPLORE_VERTICAL_VALUES = [
   'finance_legal',
   'moving_lifestyle',
   'developer_story',
+] as const;
+export const SERVICE_PROVIDER_REVIEW_MODERATION_STATUS_VALUES = [
+  'pending',
+  'published',
+  'rejected',
+] as const;
+export const SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES = [
+  'abuse',
+  'spam',
+  'false_information',
+  'privacy',
+  'other',
+] as const;
+export const SERVICE_PROVIDER_REVIEW_REPORT_STATUS_VALUES = [
+  'pending',
+  'resolved',
+  'dismissed',
 ] as const;
 export const SERVICE_EXPLORE_MODERATION_STATUS_VALUES = [
   'pending',
@@ -340,10 +365,64 @@ export const serviceProviderReviews = mysqlTable(
     isVerified: tinyint('is_verified').default(0).notNull(),
     isPublished: tinyint('is_published').default(1).notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+    moderationStatus: mysqlEnum(
+      'moderation_status',
+      SERVICE_PROVIDER_REVIEW_MODERATION_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('published')
+      .notNull(),
+    moderationNote: text('moderation_note'),
+    moderatedAt: timestamp('moderated_at', { mode: 'string' }),
   },
   table => [
     index('idx_service_provider_reviews_provider').on(table.providerId),
     index('idx_service_provider_reviews_rating').on(table.rating),
     index('idx_service_provider_reviews_created').on(table.createdAt),
+    index('idx_service_provider_reviews_moderation_status').on(table.moderationStatus),
+  ],
+);
+
+export const serviceProviderReviewReports = mysqlTable(
+  'service_provider_review_reports',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    reviewId: int('review_id').notNull(),
+    reporterUserId: int('reporter_user_id'),
+    reason: mysqlEnum(
+      'reason',
+      SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES as unknown as [string, ...string[]],
+    ).notNull(),
+    detail: text('detail'),
+    status: mysqlEnum(
+      'status',
+      SERVICE_PROVIDER_REVIEW_REPORT_STATUS_VALUES as unknown as [string, ...string[]],
+    )
+      .default('pending')
+      .notNull(),
+    resolutionNote: text('resolution_note'),
+    resolvedByUserId: int('resolved_by_user_id'),
+    resolvedAt: timestamp('resolved_at', { mode: 'string' }),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  },
+  table => [
+    index('idx_service_provider_review_reports_review').on(table.reviewId),
+    index('idx_service_provider_review_reports_status').on(table.status),
+    index('idx_service_provider_review_reports_created').on(table.createdAt),
+    unique('ux_service_provider_review_reports_reporter').on(table.reviewId, table.reporterUserId),
+    foreignKey({
+      name: 'svc_review_reports_review_fk',
+      columns: [table.reviewId],
+      foreignColumns: [serviceProviderReviews.id],
+    }).onDelete('cascade'),
+    foreignKey({
+      name: 'svc_review_reports_reporter_fk',
+      columns: [table.reporterUserId],
+      foreignColumns: [users.id],
+    }).onDelete('set null'),
+    foreignKey({
+      name: 'svc_review_reports_resolver_fk',
+      columns: [table.resolvedByUserId],
+      foreignColumns: [users.id],
+    }).onDelete('set null'),
   ],
 );

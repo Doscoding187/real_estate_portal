@@ -527,9 +527,12 @@ describe('migration execution authority', () => {
         '0146_distribution_deal_prospect_check_fit_reference.sql',
         '0147_distribution_deal_prospect_check_fit_foreign_key.sql',
         '0148_distribution_prospect_check_fit_prospect_names.sql',
+        '0149_service_provider_reviews_moderation.sql',
+        '0150_service_provider_reviews_moderation_index.sql',
+        '0151_service_provider_review_reports_sequenced.sql',
     ]);
     expect(executionManifest.expectedHead).toBe(
-      '0148_distribution_prospect_check_fit_prospect_names.sql',
+      '0151_service_provider_review_reports_sequenced.sql',
     );
     expect(archivedSqlFiles.length).toBeGreaterThan(0);
     expect(activeSqlFiles.some(file => file.includes('_archived'))).toBe(false);

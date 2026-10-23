@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useRoute } from 'wouter';
-import { ArrowLeft, ArrowRight, BadgeCheck, MessageSquare, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Flag, MessageSquare, Star } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { applySeo } from '@/lib/seo';
 import { useAuth } from '@/_core/hooks/useAuth';
@@ -27,6 +27,12 @@ export default function ServiceProviderReviewsPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [reportingReviewId, setReportingReviewId] = useState<number | null>(null);
+  const [reportReason, setReportReason] = useState<
+    'abuse' | 'spam' | 'false_information' | 'privacy' | 'other'
+  >('abuse');
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportMessage, setReportMessage] = useState<string | null>(null);
 
   const profileQuery = trpc.servicesEngine.getProviderPublicProfile.useQuery(
     { providerId: routeProviderId },
@@ -44,7 +50,7 @@ export default function ServiceProviderReviewsPage() {
   const submitReview = trpc.servicesEngine.submitProviderReview.useMutation({
     onSuccess: async result => {
       setSubmitMessage(
-        `Thank you. Your review is published and the provider rating is now ${result.averageRating.toFixed(1)} from ${result.reviewCount} review${result.reviewCount === 1 ? '' : 's'}.`,
+        'Thank you. Your review was submitted for moderation. It will appear here once a reviewer approves it.',
       );
       setTitle('');
       setContent('');
@@ -57,6 +63,14 @@ export default function ServiceProviderReviewsPage() {
       });
     },
     onError: error => setSubmitMessage(error.message),
+  });
+  const reportReview = trpc.servicesEngine.reportProviderReview.useMutation({
+    onSuccess: () => {
+      setReportMessage('Report submitted. Our review team will look into it.');
+      setReportingReviewId(null);
+      setReportDetail('');
+    },
+    onError: error => setReportMessage(error.message),
   });
 
   const profile = profileQuery.data;
@@ -153,8 +167,9 @@ export default function ServiceProviderReviewsPage() {
                   className="mt-3"
                 />
                 <p className="mt-3 max-w-2xl text-sm leading-6 text-[#4B5C6B]">
-                  Only customers with a completed or closed request can publish a review. Ratings
-                  are recomputed from the published review set.
+                  Only customers with a completed or closed request can submit a review. Reviews are
+                  published after moderation, and ratings are recomputed from the approved review
+                  set.
                 </p>
               </div>
               <Link href={backToProfilePath} className={servicesUi.actionOutline}>
@@ -168,10 +183,15 @@ export default function ServiceProviderReviewsPage() {
         <div className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-10 md:px-6 md:py-12 lg:grid-cols-[minmax(0,1fr)_340px]">
           <section className="space-y-3">
             <h2 className="text-lg font-bold">Published reviews</h2>
+            {reportMessage && (
+              <div className="rounded-2xl border border-[#E3EBF0] bg-white p-3 text-[13px] leading-6 text-[#0B1B2A]">
+                {reportMessage}
+              </div>
+            )}
             {reviews.length === 0 && (
               <div className="rounded-2xl border border-dashed border-[#CBD8E0] bg-white p-8 text-sm leading-6 text-[#4B5C6B]">
-                No published reviews for this provider yet. Reviews appear after a completed or
-                closed request.
+                No published reviews for this provider yet. Approved reviews appear after a
+                completed or closed request.
               </div>
             )}
             {reviews.map(review => (
@@ -193,9 +213,81 @@ export default function ServiceProviderReviewsPage() {
                 <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
                   {review.content || 'No written comment.'}
                 </p>
-                <p className="mt-3 text-[11px] text-[#8A99A6]">
-                  {review.reviewerLabel} · {String(review.createdAt || '').slice(0, 10)}
-                </p>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] text-[#8A99A6]">
+                    {review.reviewerLabel} · {String(review.createdAt || '').slice(0, 10)}
+                  </p>
+                  {user && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReportMessage(null);
+                        setReportingReviewId(current => (current === review.id ? null : review.id));
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4B5C6B] underline-offset-2 hover:text-[#168363] hover:underline"
+                    >
+                      <Flag className="h-3 w-3" aria-hidden="true" />
+                      Report
+                    </button>
+                  )}
+                </div>
+                {reportingReviewId === review.id && (
+                  <form
+                    className="mt-3 space-y-2 rounded-xl border border-[#E3EBF0] bg-[#F7FAFB] p-3"
+                    onSubmit={event => {
+                      event.preventDefault();
+                      setReportMessage(null);
+                      reportReview.mutate({
+                        reviewId: review.id,
+                        reason: reportReason,
+                        detail: reportDetail.trim() || undefined,
+                      });
+                    }}
+                  >
+                    <label className="block text-[11px] font-semibold text-[#4B5C6B]">
+                      Reason
+                      <select
+                        aria-label={`Report reason for review ${review.id}`}
+                        value={reportReason}
+                        onChange={event =>
+                          setReportReason(
+                            event.target.value as
+                              | 'abuse'
+                              | 'spam'
+                              | 'false_information'
+                              | 'privacy'
+                              | 'other',
+                          )
+                        }
+                        className="mt-1 h-9 w-full rounded-lg border border-[#E3EBF0] bg-white px-2 text-[12px] font-normal"
+                      >
+                        <option value="abuse">Abuse or harassment</option>
+                        <option value="spam">Spam or advertising</option>
+                        <option value="false_information">False information</option>
+                        <option value="privacy">Privacy concern</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </label>
+                    <label className="block text-[11px] font-semibold text-[#4B5C6B]">
+                      Details (optional)
+                      <textarea
+                        aria-label={`Report details for review ${review.id}`}
+                        value={reportDetail}
+                        onChange={event => setReportDetail(event.target.value)}
+                        maxLength={2000}
+                        rows={2}
+                        className="mt-1 w-full rounded-lg border border-[#E3EBF0] bg-white p-2 text-[12px] font-normal"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={reportReview.isPending}
+                      className="rounded-lg bg-[#0B1B2A] px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-50"
+                    >
+                      {reportReview.isPending ? 'Submitting…' : 'Submit report'}
+                    </button>
+                  </form>
+                )}
               </article>
             ))}
           </section>
@@ -263,7 +355,7 @@ export default function ServiceProviderReviewsPage() {
                   disabled={submitReview.isPending}
                   className={`${servicesUi.action} mt-4 w-full`}
                 >
-                  {submitReview.isPending ? 'Publishing…' : 'Publish review'}
+                  {submitReview.isPending ? 'Submitting…' : 'Submit review'}
                 </button>
               </form>
             )}
@@ -274,7 +366,7 @@ export default function ServiceProviderReviewsPage() {
                 <h2 className="mt-3 text-[15px] font-bold">Completed a service?</h2>
                 <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
                   Sign in to review this provider. Only customers with a completed or closed request
-                  can publish a review.
+                  can submit a review for moderation.
                 </p>
                 <Link
                   href={`/login?redirect=${encodeURIComponent(`/services/reviews/${routeProviderId}`)}`}
@@ -290,8 +382,8 @@ export default function ServiceProviderReviewsPage() {
                 <h2 className="text-[15px] font-bold">Reviews require a completed request</h2>
                 <p className="mt-2 text-[13px] leading-6 text-[#4B5C6B]">
                   {eligibility.reason === 'already_reviewed'
-                    ? 'You have already published a review for this provider.'
-                    : 'Once a request to this provider is completed or closed, you can publish a review from this page.'}
+                    ? 'You have already submitted a review for this provider.'
+                    : 'Once a request to this provider is completed or closed, you can submit a review for moderation from this page.'}
                 </p>
               </div>
             )}

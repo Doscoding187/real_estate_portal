@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "canonicalAuthority": {
     "productionCommand": "pnpm db:release:apply",
     "testCommand": "pnpm db:migrate:test",
@@ -1678,6 +1678,35 @@
       "purpose": "Records the prospect name the referrer supplied, and the second applicant name for a joint application.",
       "approvedFiles": [
         "server/migrations/0148_distribution_prospect_check_fit_prospect_names.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0149_service_provider_reviews_moderation.sql",
+      "classification": "canonical active",
+      "purpose": "Adds review moderation state, operational note, timestamp, and status indexing to provider reviews.",
+      "approvedFiles": [
+        "server/migrations/0149_service_provider_reviews_moderation.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/0150_service_provider_reviews_moderation_index.sql",
+      "classification": "canonical active",
+      "purpose": "Indexes provider reviews by moderation status for the admin review queue.",
+      "approvedFiles": [
+        "server/migrations/0150_service_provider_reviews_moderation_index.sql"
+      ]
+    },
+    {
+      "path": "server/migrations/_archived/rejected-zero-statement/0151_service_provider_review_reports.sql",
+      "classification": "archived historical",
+      "purpose": "Preserves the unchanged checksum evidence for the rejected review-reports table migration whose foreign-key identifier exceeded MySQL's 64-character limit; it is never executable authority."
+    },
+    {
+      "path": "server/migrations/0151_service_provider_review_reports_sequenced.sql",
+      "classification": "canonical active",
+      "purpose": "Adds provider review reports with reasons, reporter identity, resolution state, lookup indexes, and bounded foreign-key identifiers.",
+      "approvedFiles": [
+        "server/migrations/0151_service_provider_review_reports_sequenced.sql"
       ]
     }
   ],

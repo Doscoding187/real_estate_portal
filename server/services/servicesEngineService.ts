@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, desc, eq, inArray, like } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, like, or, sql, type SQL } from 'drizzle-orm';
 import {
   auditLogs,
   developers,
@@ -12,13 +12,17 @@ import {
   SERVICE_LEAD_EVENT_TYPE_VALUES,
   SERVICE_LEAD_STATUS_VALUES,
   SERVICE_SOURCE_SURFACE_VALUES,
+  SERVICE_PROVIDER_REVIEW_MODERATION_STATUS_VALUES,
+  SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES,
+  SERVICE_PROVIDER_REVIEW_REPORT_STATUS_VALUES,
   serviceLeadEvents,
   serviceLeads,
   serviceProviderLocations,
   serviceProviderProfiles,
   serviceProviderServices,
-  serviceProviderSubscriptions,
   serviceProviderReviews,
+  serviceProviderReviewReports,
+  serviceProviderSubscriptions,
   users,
 } from '../../drizzle/schema';
 import { getDb } from '../db';
@@ -34,6 +38,38 @@ export const SERVICE_PROVIDER_PUBLICATION_DECISIONS = ['publish', 'unpublish', '
 
 export type ServiceProviderPublicationDecision =
   (typeof SERVICE_PROVIDER_PUBLICATION_DECISIONS)[number];
+
+export const SERVICE_PROVIDER_REVIEW_MODERATION_QUEUE_VIEWS = [
+  'pending',
+  'published',
+  'rejected',
+  'all',
+] as const;
+export type ServiceProviderReviewModerationQueueView =
+  (typeof SERVICE_PROVIDER_REVIEW_MODERATION_QUEUE_VIEWS)[number];
+
+export const SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS = [
+  'pending',
+  'resolved',
+  'dismissed',
+  'all',
+] as const;
+export type ServiceProviderReviewReportQueueView =
+  (typeof SERVICE_PROVIDER_REVIEW_REPORT_QUEUE_VIEWS)[number];
+
+export const SERVICE_PROVIDER_REVIEW_DECISIONS = ['approve', 'reject'] as const;
+export type ServiceProviderReviewDecision = (typeof SERVICE_PROVIDER_REVIEW_DECISIONS)[number];
+
+export const SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS = ['resolve', 'dismiss'] as const;
+export type ServiceProviderReviewReportDecision =
+  (typeof SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS)[number];
+
+export type ServiceProviderReviewModerationStatus =
+  (typeof SERVICE_PROVIDER_REVIEW_MODERATION_STATUS_VALUES)[number];
+export type ServiceProviderReviewReportReason =
+  (typeof SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES)[number];
+export type ServiceProviderReviewReportStatus =
+  (typeof SERVICE_PROVIDER_REVIEW_REPORT_STATUS_VALUES)[number];
 
 export type ServiceProviderPublicationReadiness = {
   providerId: number;
@@ -939,6 +975,7 @@ export class ServicesEngineService {
         and(
           eq(serviceProviderReviews.providerId, providerId),
           eq(serviceProviderReviews.isPublished, 1),
+          eq(serviceProviderReviews.moderationStatus, 'published'),
         ),
       )
       .orderBy(desc(serviceProviderReviews.createdAt))
@@ -1086,6 +1123,7 @@ export class ServicesEngineService {
         and(
           eq(serviceProviderReviews.providerId, providerId),
           eq(serviceProviderReviews.isPublished, 1),
+          eq(serviceProviderReviews.moderationStatus, 'published'),
         ),
       )
       .orderBy(desc(serviceProviderReviews.createdAt))
@@ -1202,41 +1240,470 @@ export class ServicesEngineService {
         title,
         content,
         isVerified: 1,
-        isPublished: 1,
+        isPublished: 0,
+        moderationStatus: 'pending',
       });
       reviewId = Number((insertResult as any)?.[0]?.insertId || 0);
       if (!reviewId) throw new Error('The review could not be saved');
 
-      const publishedReviews = await tx
-        .select({ rating: serviceProviderReviews.rating })
-        .from(serviceProviderReviews)
-        .where(
-          and(
-            eq(serviceProviderReviews.providerId, input.providerId),
-            eq(serviceProviderReviews.isPublished, 1),
-          ),
-        );
-      reviewCount = publishedReviews.length;
-      averageRating =
-        reviewCount === 0
-          ? 0
-          : Number(
-              (
-                publishedReviews.reduce((total, item) => total + Number(item.rating || 0), 0) /
-                reviewCount
-              ).toFixed(2),
-            );
-
-      await tx
-        .update(serviceProviderProfiles)
-        .set({
-          averageRating: averageRating.toFixed(2),
-          reviewCount,
-        })
-        .where(eq(serviceProviderProfiles.providerId, input.providerId));
+      const aggregate = await this.recomputeProviderReviewAggregate(tx, input.providerId);
+      averageRating = aggregate.averageRating;
+      reviewCount = aggregate.reviewCount;
     });
 
-    return { reviewId, averageRating, reviewCount };
+    return { reviewId, averageRating, reviewCount, moderationStatus: 'pending' as const };
+  }
+
+  private async recomputeProviderReviewAggregate(executor: any, providerId: number) {
+    const [summary] = await executor
+      .select({
+        reviewCount: count(),
+        averageRating: sql<string>`coalesce(avg(${serviceProviderReviews.rating}), 0)`,
+      })
+      .from(serviceProviderReviews)
+      .where(
+        and(
+          eq(serviceProviderReviews.providerId, providerId),
+          eq(serviceProviderReviews.isPublished, 1),
+          eq(serviceProviderReviews.moderationStatus, 'published'),
+        ),
+      );
+
+    const reviewCount = Number(summary?.reviewCount || 0);
+    const averageRating =
+      reviewCount === 0 ? 0 : Number(Number(summary?.averageRating || 0).toFixed(2));
+
+    await executor
+      .update(serviceProviderProfiles)
+      .set({ averageRating: averageRating.toFixed(2), reviewCount })
+      .where(eq(serviceProviderProfiles.providerId, providerId));
+
+    return { averageRating, reviewCount };
+  }
+
+  async listProviderReviewModerationQueue(input: {
+    page: number;
+    limit: number;
+    search?: string;
+    view: ServiceProviderReviewModerationQueueView;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const page = Math.max(1, Number(input.page || 1));
+    const limit = Math.max(1, Math.min(100, Number(input.limit || 25)));
+    const search = normalizeText(input.search);
+    const conditions: SQL[] = [];
+    if (input.view !== 'all') {
+      conditions.push(eq(serviceProviderReviews.moderationStatus, input.view));
+    }
+    if (search) {
+      conditions.push(
+        or(
+          like(partners.companyName, `%${search}%`),
+          like(users.name, `%${search}%`),
+          like(users.email, `%${search}%`),
+          like(serviceProviderReviews.title, `%${search}%`),
+          like(serviceProviderReviews.content, `%${search}%`),
+        )!,
+      );
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const countRows = await db
+      .select({ status: serviceProviderReviews.moderationStatus, total: count() })
+      .from(serviceProviderReviews)
+      .groupBy(serviceProviderReviews.moderationStatus);
+    const counts = { pending: 0, published: 0, rejected: 0 };
+    for (const row of countRows) {
+      if (row.status in counts) counts[row.status as keyof typeof counts] = Number(row.total || 0);
+    }
+
+    const [totalRow] = await db
+      .select({ total: count() })
+      .from(serviceProviderReviews)
+      .leftJoin(partners, eq(partners.id, serviceProviderReviews.providerId))
+      .leftJoin(users, eq(users.id, serviceProviderReviews.reviewerUserId))
+      .where(where);
+    const total = Number(totalRow?.total || 0);
+
+    const rows = await db
+      .select({
+        id: serviceProviderReviews.id,
+        providerId: serviceProviderReviews.providerId,
+        companyName: partners.companyName,
+        reviewerUserId: serviceProviderReviews.reviewerUserId,
+        reviewerName: users.name,
+        reviewerEmail: users.email,
+        rating: serviceProviderReviews.rating,
+        title: serviceProviderReviews.title,
+        content: serviceProviderReviews.content,
+        isVerified: serviceProviderReviews.isVerified,
+        isPublished: serviceProviderReviews.isPublished,
+        moderationStatus: serviceProviderReviews.moderationStatus,
+        moderationNote: serviceProviderReviews.moderationNote,
+        moderatedAt: serviceProviderReviews.moderatedAt,
+        createdAt: serviceProviderReviews.createdAt,
+        openReportCount: sql<number>`(SELECT COUNT(*) FROM service_provider_review_reports spr WHERE spr.review_id = ${serviceProviderReviews.id} AND spr.status = 'pending')`,
+      })
+      .from(serviceProviderReviews)
+      .leftJoin(partners, eq(partners.id, serviceProviderReviews.providerId))
+      .leftJoin(users, eq(users.id, serviceProviderReviews.reviewerUserId))
+      .where(where)
+      .orderBy(desc(serviceProviderReviews.createdAt))
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return {
+      entries: rows.map(row => ({
+        id: Number(row.id),
+        providerId: Number(row.providerId),
+        companyName: row.companyName || null,
+        reviewerUserId: row.reviewerUserId === null ? null : Number(row.reviewerUserId),
+        reviewerName: row.reviewerName || null,
+        reviewerEmail: row.reviewerEmail || null,
+        rating: Number(row.rating || 0),
+        title: row.title || null,
+        content: row.content || null,
+        isVerified: Number(row.isVerified || 0) === 1,
+        isPublished: Number(row.isPublished || 0) === 1,
+        moderationStatus: row.moderationStatus,
+        moderationNote: row.moderationNote || null,
+        moderatedAt: row.moderatedAt ? String(row.moderatedAt) : null,
+        createdAt: String(row.createdAt),
+        openReportCount: Number(row.openReportCount || 0),
+      })),
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      counts,
+    };
+  }
+
+  async reviewProviderReview(input: {
+    reviewId: number;
+    decision: ServiceProviderReviewDecision;
+    actorUserId: number;
+    notes?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const reviewId = Number(input.reviewId);
+    if (!Number.isInteger(reviewId) || reviewId <= 0) throw new Error('Review not found');
+    const actorUserId = Number(input.actorUserId);
+    if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
+      throw new Error('A reviewing operator is required');
+    }
+    const decision = SERVICE_PROVIDER_REVIEW_DECISIONS.find(value => value === input.decision);
+    if (!decision) throw new Error('Unsupported review decision');
+    const notes = normalizeText(input.notes);
+    const moderationStatus = decision === 'approve' ? 'published' : 'rejected';
+
+    return db.transaction(async tx => {
+      const [review] = await tx
+        .select({
+          id: serviceProviderReviews.id,
+          providerId: serviceProviderReviews.providerId,
+          moderationStatus: serviceProviderReviews.moderationStatus,
+          isPublished: serviceProviderReviews.isPublished,
+        })
+        .from(serviceProviderReviews)
+        .where(eq(serviceProviderReviews.id, reviewId))
+        .limit(1)
+        .for('update');
+      if (!review) throw new Error('Review not found');
+
+      await tx
+        .update(serviceProviderReviews)
+        .set({
+          moderationStatus,
+          isPublished: moderationStatus === 'published' ? 1 : 0,
+          moderationNote: notes,
+          moderatedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(eq(serviceProviderReviews.id, reviewId));
+
+      const aggregate = await this.recomputeProviderReviewAggregate(tx, Number(review.providerId));
+
+      await tx.insert(auditLogs).values({
+        userId: actorUserId,
+        action: AuditActions.MODERATE_SERVICE_PROVIDER_REVIEW,
+        targetType: 'service_provider_review',
+        targetId: reviewId,
+        metadata: JSON.stringify({
+          decision,
+          notes,
+          providerId: Number(review.providerId),
+          before: {
+            moderationStatus: review.moderationStatus,
+            isPublished: Number(review.isPublished || 0) === 1,
+          },
+          after: { moderationStatus, isPublished: moderationStatus === 'published' },
+          averageRating: aggregate.averageRating,
+          reviewCount: aggregate.reviewCount,
+        }),
+      });
+
+      return {
+        reviewId,
+        moderationStatus,
+        isPublished: moderationStatus === 'published',
+        ...aggregate,
+      };
+    });
+  }
+
+  async reportProviderReview(input: {
+    reviewId: number;
+    reporterUserId: number;
+    reason: ServiceProviderReviewReportReason;
+    detail?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const reviewId = Number(input.reviewId);
+    if (!Number.isInteger(reviewId) || reviewId <= 0) throw new Error('Review not found');
+    const reporterUserId = Number(input.reporterUserId);
+    if (!Number.isInteger(reporterUserId) || reporterUserId <= 0) {
+      throw new Error('A reporter is required');
+    }
+    const reason = SERVICE_PROVIDER_REVIEW_REPORT_REASON_VALUES.find(
+      value => value === input.reason,
+    );
+    if (!reason) throw new Error('Unsupported report reason');
+    const detail = normalizeText(input.detail)?.slice(0, 2000) || null;
+
+    return db.transaction(async tx => {
+      const [review] = await tx
+        .select({
+          id: serviceProviderReviews.id,
+          providerId: serviceProviderReviews.providerId,
+          reviewerUserId: serviceProviderReviews.reviewerUserId,
+          isPublished: serviceProviderReviews.isPublished,
+          moderationStatus: serviceProviderReviews.moderationStatus,
+        })
+        .from(serviceProviderReviews)
+        .where(eq(serviceProviderReviews.id, reviewId))
+        .limit(1)
+        .for('update');
+      if (!review) throw new Error('Review not found');
+      if (!review.isPublished || review.moderationStatus !== 'published') {
+        throw new Error('Only published reviews can be reported');
+      }
+      if (Number(review.reviewerUserId || 0) === reporterUserId) {
+        throw new Error('You cannot report your own review');
+      }
+
+      const [existing] = await tx
+        .select({ id: serviceProviderReviewReports.id })
+        .from(serviceProviderReviewReports)
+        .where(
+          and(
+            eq(serviceProviderReviewReports.reviewId, reviewId),
+            eq(serviceProviderReviewReports.reporterUserId, reporterUserId),
+          ),
+        )
+        .limit(1);
+      if (existing) throw new Error('You have already reported this review');
+
+      const insertResult = await tx.insert(serviceProviderReviewReports).values({
+        reviewId,
+        reporterUserId,
+        reason,
+        detail,
+        status: 'pending',
+      });
+      const reportId = Number((insertResult as any)?.[0]?.insertId || 0);
+      if (!reportId) throw new Error('The report could not be saved');
+
+      await tx.insert(auditLogs).values({
+        userId: reporterUserId,
+        action: AuditActions.REPORT_SERVICE_PROVIDER_REVIEW,
+        targetType: 'service_provider_review',
+        targetId: reviewId,
+        metadata: JSON.stringify({ reportId, reason, providerId: Number(review.providerId) }),
+      });
+
+      return { reportId, reviewId, status: 'pending' as const };
+    });
+  }
+
+  async listProviderReviewReportQueue(input: {
+    page: number;
+    limit: number;
+    search?: string;
+    view: ServiceProviderReviewReportQueueView;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const page = Math.max(1, Number(input.page || 1));
+    const limit = Math.max(1, Math.min(100, Number(input.limit || 25)));
+    const search = normalizeText(input.search);
+    const conditions: SQL[] = [];
+    if (input.view !== 'all') {
+      conditions.push(eq(serviceProviderReviewReports.status, input.view));
+    }
+    if (search) {
+      conditions.push(
+        or(
+          like(partners.companyName, `%${search}%`),
+          like(users.name, `%${search}%`),
+          like(users.email, `%${search}%`),
+          like(serviceProviderReviews.title, `%${search}%`),
+          like(serviceProviderReviews.content, `%${search}%`),
+          like(serviceProviderReviewReports.detail, `%${search}%`),
+        )!,
+      );
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const countRows = await db
+      .select({ status: serviceProviderReviewReports.status, total: count() })
+      .from(serviceProviderReviewReports)
+      .groupBy(serviceProviderReviewReports.status);
+    const counts = { pending: 0, resolved: 0, dismissed: 0 };
+    for (const row of countRows) {
+      if (row.status in counts) counts[row.status as keyof typeof counts] = Number(row.total || 0);
+    }
+
+    const [totalRow] = await db
+      .select({ total: count() })
+      .from(serviceProviderReviewReports)
+      .innerJoin(
+        serviceProviderReviews,
+        eq(serviceProviderReviews.id, serviceProviderReviewReports.reviewId),
+      )
+      .leftJoin(partners, eq(partners.id, serviceProviderReviews.providerId))
+      .leftJoin(users, eq(users.id, serviceProviderReviewReports.reporterUserId))
+      .where(where);
+    const total = Number(totalRow?.total || 0);
+
+    const rows = await db
+      .select({
+        id: serviceProviderReviewReports.id,
+        reviewId: serviceProviderReviewReports.reviewId,
+        providerId: serviceProviderReviews.providerId,
+        companyName: partners.companyName,
+        reporterUserId: serviceProviderReviewReports.reporterUserId,
+        reporterName: users.name,
+        reporterEmail: users.email,
+        reason: serviceProviderReviewReports.reason,
+        detail: serviceProviderReviewReports.detail,
+        status: serviceProviderReviewReports.status,
+        resolutionNote: serviceProviderReviewReports.resolutionNote,
+        resolvedByUserId: serviceProviderReviewReports.resolvedByUserId,
+        resolvedAt: serviceProviderReviewReports.resolvedAt,
+        createdAt: serviceProviderReviewReports.createdAt,
+        reviewRating: serviceProviderReviews.rating,
+        reviewTitle: serviceProviderReviews.title,
+        reviewContent: serviceProviderReviews.content,
+        reviewModerationStatus: serviceProviderReviews.moderationStatus,
+        reviewIsPublished: serviceProviderReviews.isPublished,
+      })
+      .from(serviceProviderReviewReports)
+      .innerJoin(
+        serviceProviderReviews,
+        eq(serviceProviderReviews.id, serviceProviderReviewReports.reviewId),
+      )
+      .leftJoin(partners, eq(partners.id, serviceProviderReviews.providerId))
+      .leftJoin(users, eq(users.id, serviceProviderReviewReports.reporterUserId))
+      .where(where)
+      .orderBy(desc(serviceProviderReviewReports.createdAt))
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    return {
+      entries: rows.map(row => ({
+        id: Number(row.id),
+        reviewId: Number(row.reviewId),
+        providerId: Number(row.providerId),
+        companyName: row.companyName || null,
+        reporterUserId: row.reporterUserId === null ? null : Number(row.reporterUserId),
+        reporterName: row.reporterName || null,
+        reporterEmail: row.reporterEmail || null,
+        reason: row.reason,
+        detail: row.detail || null,
+        status: row.status,
+        resolutionNote: row.resolutionNote || null,
+        resolvedByUserId:
+          row.resolvedByUserId === null ? null : Number(row.resolvedByUserId || 0) || null,
+        resolvedAt: row.resolvedAt ? String(row.resolvedAt) : null,
+        createdAt: String(row.createdAt),
+        review: {
+          rating: Number(row.reviewRating || 0),
+          title: row.reviewTitle || null,
+          content: row.reviewContent || null,
+          moderationStatus: row.reviewModerationStatus,
+          isPublished: Number(row.reviewIsPublished || 0) === 1,
+        },
+      })),
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      counts,
+    };
+  }
+
+  async resolveProviderReviewReport(input: {
+    reportId: number;
+    decision: ServiceProviderReviewReportDecision;
+    actorUserId: number;
+    resolutionNote?: string | null;
+  }) {
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+
+    const reportId = Number(input.reportId);
+    if (!Number.isInteger(reportId) || reportId <= 0) throw new Error('Report not found');
+    const actorUserId = Number(input.actorUserId);
+    if (!Number.isInteger(actorUserId) || actorUserId <= 0) {
+      throw new Error('A reviewing operator is required');
+    }
+    const decision = SERVICE_PROVIDER_REVIEW_REPORT_DECISIONS.find(
+      value => value === input.decision,
+    );
+    if (!decision) throw new Error('Unsupported report decision');
+    const resolutionNote = normalizeText(input.resolutionNote)?.slice(0, 2000) || null;
+    const status = decision === 'resolve' ? 'resolved' : 'dismissed';
+
+    return db.transaction(async tx => {
+      const [report] = await tx
+        .select({
+          id: serviceProviderReviewReports.id,
+          status: serviceProviderReviewReports.status,
+          reviewId: serviceProviderReviewReports.reviewId,
+        })
+        .from(serviceProviderReviewReports)
+        .where(eq(serviceProviderReviewReports.id, reportId))
+        .limit(1)
+        .for('update');
+      if (!report) throw new Error('Report not found');
+
+      await tx
+        .update(serviceProviderReviewReports)
+        .set({
+          status,
+          resolutionNote,
+          resolvedByUserId: actorUserId,
+          resolvedAt: sql`CURRENT_TIMESTAMP`,
+        })
+        .where(eq(serviceProviderReviewReports.id, reportId));
+
+      await tx.insert(auditLogs).values({
+        userId: actorUserId,
+        action: AuditActions.RESOLVE_SERVICE_PROVIDER_REVIEW_REPORT,
+        targetType: 'service_provider_review_report',
+        targetId: reportId,
+        metadata: JSON.stringify({
+          decision,
+          resolutionNote,
+          reviewId: Number(report.reviewId),
+          before: { status: report.status },
+          after: { status },
+        }),
+      });
+
+      return { reportId, reviewId: Number(report.reviewId), status };
+    });
   }
 
   async getMyProviderProfile(userId: number) {

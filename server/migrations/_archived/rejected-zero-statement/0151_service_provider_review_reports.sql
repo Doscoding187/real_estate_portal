@@ -1,0 +1,20 @@
+CREATE TABLE `service_provider_review_reports` (
+  `id` int AUTO_INCREMENT NOT NULL,
+  `review_id` int NOT NULL,
+  `reporter_user_id` int,
+  `reason` enum('abuse','spam','false_information','privacy','other') NOT NULL,
+  `detail` text,
+  `status` enum('pending','resolved','dismissed') NOT NULL DEFAULT 'pending',
+  `resolution_note` text,
+  `resolved_by_user_id` int,
+  `resolved_at` timestamp NULL,
+  `created_at` timestamp NOT NULL DEFAULT (now()),
+  CONSTRAINT `service_provider_review_reports_id` PRIMARY KEY(`id`),
+  INDEX `idx_service_provider_review_reports_review` (`review_id`),
+  INDEX `idx_service_provider_review_reports_status` (`status`),
+  INDEX `idx_service_provider_review_reports_created` (`created_at`),
+  CONSTRAINT `ux_service_provider_review_reports_reporter` UNIQUE(`review_id`,`reporter_user_id`),
+  CONSTRAINT `service_provider_review_reports_review_id_service_provider_reviews_id_fk` FOREIGN KEY (`review_id`) REFERENCES `service_provider_reviews`(`id`) ON DELETE cascade ON UPDATE no action,
+  CONSTRAINT `service_provider_review_reports_reporter_user_id_users_id_fk` FOREIGN KEY (`reporter_user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action,
+  CONSTRAINT `service_provider_review_reports_resolved_by_user_id_users_id_fk` FOREIGN KEY (`resolved_by_user_id`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action
+);
