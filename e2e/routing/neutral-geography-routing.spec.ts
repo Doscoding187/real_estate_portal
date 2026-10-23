@@ -140,7 +140,7 @@ test.describe('Neutral geography routing', () => {
       const locationInput = await openBuyHero(page);
       await locationInput.fill('Johannesburg');
 
-      const cityOption = page.getByRole('option', { name: 'Johannesburg City Location' });
+      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
       await waitForSuggestionsOrEmptyState(page, cityOption);
       test.skip(
         !(await cityOption.first().isVisible()),
@@ -168,7 +168,7 @@ test.describe('Neutral geography routing', () => {
       const locationInput = await openBuyHero(page);
       await locationInput.fill('Johannesburg');
 
-      const cityOption = page.getByRole('option', { name: 'Johannesburg City Location' });
+      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
       await waitForSuggestionsOrEmptyState(page, cityOption);
       test.skip(
         !(await cityOption.first().isVisible()),
