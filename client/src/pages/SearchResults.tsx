@@ -440,22 +440,29 @@ export default function SearchResults({
   // The location a search is scoped to, shown as a chip the customer can take away. The label is
   // the name the search authority resolved, so the chip never disagrees with the results.
   const selectedLocationChip = useMemo(() => {
-    if (!locationContext) return undefined;
-    const contextLabel =
-      locationContext.type === 'suburb'
+    const canonicalPlaceContext = publicSearchResults?.canonicalPlaceContext;
+    const label = canonicalPlaceContext?.label || locationContext?.name;
+    if (!label) return undefined;
+    const contextLabel = canonicalPlaceContext
+      ? canonicalPlaceContext.scope === 'locality'
+        ? canonicalPlaceContext.city || undefined
+        : canonicalPlaceContext.scope === 'metro_city'
+          ? canonicalPlaceContext.province || undefined
+          : undefined
+      : locationContext?.type === 'suburb'
         ? locationContext.hierarchy.city
-        : locationContext.type === 'city'
+        : locationContext?.type === 'city'
           ? locationContext.hierarchy.province
           : undefined;
     return {
-      label: publicSearchResults?.canonicalPlaceContext?.label || locationContext.name,
+      label,
       contextLabel,
       // Taking the location away returns the search to the country-wide default, which is the
       // same search a customer gets when they never chose a location.
       onRemove: () =>
         setLocation(generateIntentUrl({ ...searchIntent, geography: { level: 'country' } })),
     };
-  }, [locationContext, publicSearchResults?.canonicalPlaceContext?.label, searchIntent]);
+  }, [locationContext, publicSearchResults?.canonicalPlaceContext, searchIntent]);
 
   const pageNeedsNormalization = Boolean(publicSearchResults && effectivePage !== page);
   const navbarLocations = useMemo(() => {
