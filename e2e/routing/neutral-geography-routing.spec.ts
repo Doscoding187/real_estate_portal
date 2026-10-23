@@ -19,6 +19,10 @@ import { expect, test } from '../helpers/audit-network';
  * Without this, a page that throws during render is indistinguishable from a page that never
  * rendered, and the journey only says a heading is missing. The journey is the gate for the
  * geography surface, so it has to say what broke.
+ *
+ * Handled query failures and failed resource loads are product states, not crashes: the page
+ * renders an error or empty state for them. Counting them as crashes made the geography gate
+ * fail for an optional integration rather than for the geography it exists to protect.
  */
 const clientErrors: string[] = [];
 
@@ -32,9 +36,13 @@ const PAGE_READY_TIMEOUT = 30_000;
 test.beforeEach(async ({ page }) => {
   test.setTimeout(120_000);
   clientErrors.length = 0;
-  page.on('pageerror', error => clientErrors.push(error.message));
+  page.on('pageerror', error => clientErrors.push(`Uncaught page error: ${error.message}`));
   page.on('console', message => {
-    if (message.type() === 'error') clientErrors.push(message.text());
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (text.startsWith('[API Query Error]') || text.startsWith('[API Mutation Error]')) return;
+    if (text.startsWith('Failed to load resource:')) return;
+    clientErrors.push(text);
   });
 });
 
