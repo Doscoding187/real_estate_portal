@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PartnerSubmitReferralPage from './PartnerSubmitReferralPage';
 
@@ -51,6 +51,34 @@ vi.mock('@/components/referral/ReferralAppShell', () => ({
   ReferralAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@/components/distribution/partner/DevelopmentBrochureDialog', async () => {
+  const React = await import('react');
+  return {
+    DevelopmentBrochureDialog: ({
+      open,
+      onOpenChange,
+      onDownload,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onDownload?: () => void;
+    }) =>
+      open
+        ? React.createElement(
+            'button',
+            {
+              type: 'button',
+              onClick: () => {
+                onDownload?.();
+                onOpenChange(false);
+              },
+            },
+            'Print or save PDF',
+          )
+        : null,
+  };
+});
+
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -80,6 +108,9 @@ vi.mock('@/lib/trpc', () => ({
         },
         getProspectDocumentPacks: {
           useQuery: () => ({
+            isSuccess: true,
+            isError: false,
+            isLoading: false,
             data: [
               {
                 developmentId: 101,
@@ -89,6 +120,16 @@ vi.mock('@/lib/trpc', () => ({
                     label: 'Client info sheet',
                     url: '/api/local-media/object?key=properties%2Fdraft-1%2Fclient-info-sheet.pdf',
                     instructions: 'Complete it and upload the signed copy.',
+                    category: 'information_sheet',
+                    developmentId: 101,
+                  },
+                  {
+                    key: 'permission_to_share_101',
+                    label: 'Permission to share details',
+                    url: '/api/local-media/object?key=properties%2Fdraft-1%2Fpermission.pdf',
+                    instructions: 'Ask the person to sign it.',
+                    category: 'consent',
+                    developmentId: 101,
                   },
                 ],
                 uploads: [],
@@ -145,6 +186,8 @@ const requirementsFixture = {
 describe('PartnerSubmitReferralPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, '', '/distribution/partner/submit');
+    vi.stubGlobal('open', vi.fn());
     state.sessionStarted = false;
     state.sessionComplete = false;
     state.lastStartPayload = null;
@@ -209,6 +252,19 @@ describe('PartnerSubmitReferralPage', () => {
     });
   });
 
+  function downloadPreparationPack() {
+    fireEvent.click(screen.getByRole('button', { name: 'Download brochure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Print or save PDF' }));
+    fireEvent.click(screen.getByTitle('Client info sheet'));
+    fireEvent.click(screen.getByTitle('Permission to share details'));
+  }
+
+  function stepperStates() {
+    return within(screen.getByRole('list', { name: 'Referral progress' }))
+      .getAllByRole('listitem')
+      .map(item => item.getAttribute('data-state'));
+  }
+
   it('shows the paused state when no opportunity is open for referral', () => {
     mockListEligible.mockReturnValue({
       isLoading: false,
@@ -236,9 +292,22 @@ describe('PartnerSubmitReferralPage', () => {
     expect(screen.getByText('Introduce a prospect to property opportunities')).toBeInTheDocument();
     expect(screen.getByText('Documents to prepare')).toBeInTheDocument();
     expect(screen.getByText('POPIA consent form')).toBeInTheDocument();
-    expect(screen.getAllByText('Prepare the documents').length).toBeGreaterThan(0);
+    expect(screen.getByText('Prepare documents')).toBeInTheDocument();
+    expect(stepperStates()).toEqual(['active', 'upcoming', 'upcoming', 'upcoming']);
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Select Sky City' }));
+    expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download brochure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Print or save PDF' }));
+    fireEvent.click(screen.getByTitle('Client info sheet'));
+    expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
+
+    fireEvent.click(screen.getByTitle('Permission to share details'));
+    expect(stepperStates()).toEqual(['complete', 'complete', 'active', 'upcoming']);
+    expect(screen.getByText('Prepare the introduction')).toBeInTheDocument();
+    expect(window.open).toHaveBeenCalledTimes(2);
+
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
@@ -280,6 +349,7 @@ describe('PartnerSubmitReferralPage', () => {
     );
     const rendered = render(<PartnerSubmitReferralPage />);
 
+    downloadPreparationPack();
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));
@@ -312,6 +382,8 @@ describe('PartnerSubmitReferralPage', () => {
 
     render(<PartnerSubmitReferralPage />);
 
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Sky City' }));
+    downloadPreparationPack();
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));
     fireEvent.click(screen.getByRole('checkbox', { name: /privacy notice/i }));

@@ -197,6 +197,7 @@ export type PartnerProgramTermsItem = {
     bedrooms: number | null;
     bathrooms: number | null;
     size: number | null;
+    yardSize: number | null;
     imageUrl: string | null;
     media: DistributionUnitMedia;
     modes: Partial<Record<PartnerMode, PartnerModeProjection>>;
@@ -417,6 +418,7 @@ export async function listPartnerProgramTerms(
           bedrooms: unitType.bedrooms,
           bathrooms: unitType.bathrooms,
           size: unitType.size,
+          yardSize: unitType.yardSize,
           imageUrl: unitType.imageUrl,
           media: unitType.media,
           modes: partnerModes(unitType.modes),

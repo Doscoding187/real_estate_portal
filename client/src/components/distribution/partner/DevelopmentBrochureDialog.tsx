@@ -22,12 +22,14 @@ export function DevelopmentBrochureDialog({
   item,
   canStartReferral,
   onStartReferral,
+  onDownload,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: BrochureItem | null;
   canStartReferral?: boolean;
   onStartReferral?: () => void;
+  onDownload?: () => void;
 }) {
   if (!item) return null;
 
@@ -186,6 +188,7 @@ export function DevelopmentBrochureDialog({
                 if (typeof window !== 'undefined') {
                   openBrochurePrintWindow(item);
                 }
+                onDownload?.();
               }}
             >
               <FileDown className="mr-2 h-4 w-4" /> Print or save PDF

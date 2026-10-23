@@ -18,12 +18,21 @@ function buildItem(overrides: Record<string, unknown> = {}) {
     campaign: { developmentType: 'residential', images: ['a', 'b'], description: 'Homes' },
     inventory: {
       modes: {
-        sale: { availableCount: 4, priceFrom: 1200000, priceTo: 1450000, priceBasis: 'purchase_price' },
+        sale: {
+          availableCount: 4,
+          priceFrom: 1200000,
+          priceTo: 1450000,
+          priceBasis: 'purchase_price',
+        },
       },
     },
     program: { currencyCode: 'ZAR' },
     opportunity: { openForReferral: true, friendlyMessage: 'Open' },
-    unitTypes: [],
+    unitTypes: [
+      { bedrooms: 2, size: 58, yardSize: 92 },
+      { bedrooms: 3, size: 85, yardSize: null },
+      { bedrooms: 4, size: 120.5, yardSize: 210 },
+    ],
     affordability: {
       available: true,
       annualInterestRate: 10.5,
@@ -51,6 +60,10 @@ describe('DevelopmentOpportunityCard', () => {
 
     expect(screen.getByText('Sky City')).toBeInTheDocument();
     expect(screen.getByText('Soweto, Gauteng')).toBeInTheDocument();
+    expect(screen.getByTitle('Bedrooms')).toHaveTextContent('2 – 4 beds');
+    expect(screen.getByTitle('House size')).toHaveTextContent('58 – 120.5 m²');
+    expect(screen.getByTitle('Yard size')).toHaveTextContent('92 – 210 m²');
+    expect(screen.getByTitle('Price')).toHaveTextContent('R 1,2M – R 1,5M');
     expect(screen.getByAltText('Sky City')).toHaveAttribute(
       'src',
       'https://cdn.example/sky-city.jpg',

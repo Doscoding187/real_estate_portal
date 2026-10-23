@@ -222,7 +222,7 @@ describe('PartnerDevelopmentsPage', () => {
     const activeCard = cardFor('Hillside Gardens');
     expect(activeCard.getByText('Available to explore')).toBeInTheDocument();
     expect(activeCard.getByText('4 homes available')).toBeInTheDocument();
-    expect(activeCard.getByText(/R1\s000\s000 – R1\s500\s000/)).toBeInTheDocument();
+    expect(activeCard.getByText(/R 1M – R 1,5M/)).toBeInTheDocument();
     expect(activeCard.getByText('Open for referral')).toBeInTheDocument();
     expect(activeCard.getByText(/Minimum qualifying income/)).toBeInTheDocument();
     expect(activeCard.getByText(/R\s?33\s279/)).toBeInTheDocument();
@@ -265,7 +265,9 @@ describe('PartnerDevelopmentsPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('The developer has not published unit-level details for this development yet.'),
+      screen.getByText(
+        'The developer has not published unit-level details for this development yet.',
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Start a referral/ })).toBeDisabled();
   });
@@ -317,7 +319,7 @@ describe('PartnerDevelopmentsPage', () => {
     render(<PartnerDevelopmentsPage />);
 
     expect(screen.queryByText(/Minimum qualifying income/)).not.toBeInTheDocument();
-    expect(cardFor('Hillside Gardens').getByText(/R1\s000\s000 – R1\s500\s000/)).toBeInTheDocument();
+    expect(cardFor('Hillside Gardens').getByText(/R 1M – R 1,5M/)).toBeInTheDocument();
   });
 
   it('removes the shortlist workflow from the partner developments page', () => {
@@ -331,9 +333,7 @@ describe('PartnerDevelopmentsPage', () => {
     render(<PartnerDevelopmentsPage />);
 
     expect(screen.queryByLabelText('Monthly income')).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'I have a prospect' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'I have a prospect' })).toBeInTheDocument();
     expect(screen.getByText(/gross monthly income only/)).toBeInTheDocument();
   });
 });
