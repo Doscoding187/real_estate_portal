@@ -289,6 +289,7 @@ describe('SuburbGuidePage transaction lanes', () => {
       <SuburbGuidePage params={{ province: 'gauteng', city: 'johannesburg', suburb: 'sandton' }} />,
     );
 
+    expect(screen.getByRole('heading', { level: 1, name: /Explore Sandton/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Homes for sale in Sandton' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Homes to rent in Sandton' })).toBeInTheDocument();
     expect(
