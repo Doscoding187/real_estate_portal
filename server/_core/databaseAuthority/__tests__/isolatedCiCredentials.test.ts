@@ -120,14 +120,27 @@ describe('isolated CI physical credential boundary', () => {
 
   it('keeps CI role-bound steps explicit and bootstrap free of DATABASE_URL', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/ci.yml'), 'utf8');
+    // The jobs that reach the isolated CI database are named, so a new job that
+    // touches it has to be added here deliberately. Each named job provisions
+    // its own migration identity and its own runtime identity.
+    const BOOTSTRAP_JOBS = ['db-contract-verification', 'test', 'browser-journey'];
+    for (const job of BOOTSTRAP_JOBS) {
+      const block = workflow.match(new RegExp(`\\n  ${job}:[\\s\\S]*?(?=\\n  [a-z-]+:)`))?.[0] ?? '';
+      expect(block, `${job} must provision its own migration identity`).toContain(
+        '- name: Provision isolated CI migration identity',
+      );
+      expect(block, `${job} must provision its own runtime identity`).toContain(
+        '- name: Provision isolated CI runtime identities',
+      );
+    }
     const bootstrapBlocks = workflow.match(
       /- name: Provision isolated CI migration identity[\s\S]*?run: pnpm db:ci:identities:bootstrap/g,
     );
-    expect(bootstrapBlocks).toHaveLength(2);
+    expect(bootstrapBlocks).toHaveLength(BOOTSTRAP_JOBS.length);
     const allBootstrapBlocks = workflow.match(
       /- name: Provision isolated CI (?:migration identity|runtime identities)[\s\S]*?run: pnpm db:ci:identities:bootstrap/g,
     );
-    expect(allBootstrapBlocks).toHaveLength(4);
+    expect(allBootstrapBlocks).toHaveLength(BOOTSTRAP_JOBS.length * 2);
     for (const block of allBootstrapBlocks ?? []) {
       expect(block).toContain("DATABASE_URL: ''");
       expect(block).toContain("LISTIFY_E2E_DATABASE_URL: ''");

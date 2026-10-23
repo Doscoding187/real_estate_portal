@@ -13,6 +13,49 @@ import { expect, test } from '../helpers/audit-network';
  * environments without it the suite skips those cases with an honest reason.
  */
 
+/**
+ * A client-side crash must be reported as a crash.
+ *
+ * Without this, a page that throws during render is indistinguishable from a page that never
+ * rendered, and the journey only says a heading is missing. The journey is the gate for the
+ * geography surface, so it has to say what broke.
+ *
+ * Handled query failures and failed resource loads are product states, not crashes: the page
+ * renders an error or empty state for them. Counting them as crashes made the geography gate
+ * fail for an optional integration rather than for the geography it exists to protect.
+ */
+const clientErrors: string[] = [];
+
+/**
+ * The journey boots the whole application in a browser. A cold first load of a real page is not
+ * a five-second operation, especially on a fresh runner, so the journey waits for the page it
+ * actually means to see.
+ */
+const PAGE_READY_TIMEOUT = 30_000;
+
+test.beforeEach(async ({ page }) => {
+  test.setTimeout(120_000);
+  clientErrors.length = 0;
+  page.on('pageerror', error => clientErrors.push(`Uncaught page error: ${error.message}`));
+  page.on('console', message => {
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (text.startsWith('[API Query Error]') || text.startsWith('[API Mutation Error]')) return;
+    if (text.startsWith('Failed to load resource:')) return;
+    clientErrors.push(text);
+  });
+});
+
+test.afterEach(async ({ page }) => {
+  if (!clientErrors.length) return;
+  const errors = [...clientErrors];
+  clientErrors.length = 0;
+  await expect(
+    errors.length,
+    `the page raised a client-side error:\n${errors.join('\n')}`,
+  ).toBe(0);
+});
+
 const NEUTRAL_DISCOVERY_PAGES = [
   { path: '/gauteng', heading: /Explore Gauteng/i },
   { path: '/gauteng/johannesburg', heading: /Explore Johannesburg/i },
@@ -33,10 +76,10 @@ async function openBuyHero(page: Page): Promise<Locator> {
 
 async function waitForSuggestionsOrEmptyState(page: Page, option: Locator) {
   await Promise.race([
-    option.first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => null),
+    option.first().waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT }).catch(() => null),
     page
       .getByText('No locations found')
-      .waitFor({ state: 'visible', timeout: 10_000 })
+      .waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT })
       .catch(() => null),
   ]);
 }
@@ -46,7 +89,9 @@ test.describe('Neutral geography routing', () => {
     test(`${path} serves discovery content and never SRP controls`, async ({ page }) => {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
 
-      await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: heading }),
+      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
       await expect(
         page.locator('[data-testid="search-filters"], [data-testid="filters-sidebar"]'),
       ).toHaveCount(0);
@@ -59,7 +104,9 @@ test.describe('Neutral geography routing', () => {
   test('retired SRP-path geography URLs stay retired', async ({ page }) => {
     for (const path of RETIRED_SRP_GEOGRAPHY_PATHS) {
       await page.goto(path, { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { level: 1, name: 'Page not found' }),
+      ).toBeVisible({ timeout: PAGE_READY_TIMEOUT });
       await expect(page).toHaveURL(new RegExp(`${path.replaceAll('/', '\\/')}$`));
     }
   });
@@ -93,7 +140,7 @@ test.describe('Neutral geography routing', () => {
       const locationInput = await openBuyHero(page);
       await locationInput.fill('Johannesburg');
 
-      const cityOption = page.getByRole('option', { name: 'Johannesburg City Location' });
+      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
       await waitForSuggestionsOrEmptyState(page, cityOption);
       test.skip(
         !(await cityOption.first().isVisible()),
@@ -112,16 +159,23 @@ test.describe('Neutral geography routing', () => {
 
       await areaPicker.getByRole('button', { name: /Browse all Johannesburg/ }).click();
 
-      await expect(page).toHaveURL(/\/property-for-sale\?.*locationId=city%3A\d+/);
-      await expect(page).toHaveURL(/city=johannesburg/);
-      await expect(page).toHaveURL(/province=gauteng/);
+      await expect(page).toHaveURL(/\/property-for-sale\?.*canonicalPlaceId=/);
+      const resultUrl = new URL(page.url());
+      expect(resultUrl.pathname).toBe('/property-for-sale');
+      expect(resultUrl.searchParams.get('canonicalPlaceId')).toMatch(
+        /^pl-place-01-[a-f0-9]{24}$/,
+      );
+      for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
+        expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
+      }
+      await expect(page.getByTestId('selected-location-chip')).toContainText('Johannesburg');
     });
 
     test('area picker explore path lands on the canonical neutral city page', async ({ page }) => {
       const locationInput = await openBuyHero(page);
       await locationInput.fill('Johannesburg');
 
-      const cityOption = page.getByRole('option', { name: 'Johannesburg City Location' });
+      const cityOption = page.getByRole('option', { name: /^Johannesburg City/ });
       await waitForSuggestionsOrEmptyState(page, cityOption);
       test.skip(
         !(await cityOption.first().isVisible()),

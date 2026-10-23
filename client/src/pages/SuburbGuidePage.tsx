@@ -647,7 +647,7 @@ export default function SuburbGuidePage({ params }: SuburbGuidePageProps) {
         <div className="suburb-guide-hero__shade" />
         <div className="suburb-guide-rail suburb-guide-hero__content">
           <p className="suburb-guide-eyebrow">{verifiedSuburb.cityName} · Suburb guide</p>
-          <h1>{verifiedSuburb.name}</h1>
+          <h1>Explore {verifiedSuburb.name}</h1>
           <p className="suburb-guide-hero__intro">
             Find homes to buy or rent, and explore new developments listed in this area.
           </p>

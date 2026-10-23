@@ -45,7 +45,7 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL for tests
-    baseURL: process.env.BASE_URL || 'http://localhost:5000',
+    baseURL: process.env.BASE_URL || `http://localhost:${process.env.PLAYWRIGHT_SERVER_PORT || '5000'}`,
 
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
@@ -125,11 +125,17 @@ export default defineConfig({
     // Browser journeys need the application shell as well as the API. The
     // backend development script intentionally disables frontend serving for
     // API-only checks, so launch the same governed backend with Vite enabled.
-    command:
-      'cross-env NODE_ENV=development APP_ENV=development SKIP_FRONTEND=false tsx watch server/_core/start.ts',
+    // The server runs in the mode the environment asks for. A disposable CI target only
+    // resolves its class in the test runtime, so a browser job on an isolated CI database
+    // must start the application as a test runtime, not a development one.
+    command: `cross-env NODE_ENV=${
+      process.env.PLAYWRIGHT_SERVER_NODE_ENV || 'development'
+    } APP_ENV=${process.env.PLAYWRIGHT_SERVER_APP_ENV || 'development'} PORT=${
+      process.env.PLAYWRIGHT_SERVER_PORT || '5000'
+    } SKIP_FRONTEND=false tsx watch server/_core/start.ts`,
     // Probe the governed health endpoint so Playwright waits for an actual
     // ready response instead of the backend's intentional root 404.
-    url: 'http://127.0.0.1:5000/api/health',
+    url: `http://127.0.0.1:${process.env.PLAYWRIGHT_SERVER_PORT || '5000'}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
