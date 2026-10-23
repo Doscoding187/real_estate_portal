@@ -159,9 +159,16 @@ test.describe('Neutral geography routing', () => {
 
       await areaPicker.getByRole('button', { name: /Browse all Johannesburg/ }).click();
 
-      await expect(page).toHaveURL(/\/property-for-sale\?.*locationId=city%3A\d+/);
-      await expect(page).toHaveURL(/city=johannesburg/);
-      await expect(page).toHaveURL(/province=gauteng/);
+      await expect(page).toHaveURL(/\/property-for-sale\?.*canonicalPlaceId=/);
+      const resultUrl = new URL(page.url());
+      expect(resultUrl.pathname).toBe('/property-for-sale');
+      expect(resultUrl.searchParams.get('canonicalPlaceId')).toMatch(
+        /^pl-place-01-[a-f0-9]{24}$/,
+      );
+      for (const legacyKey of ['locationId', 'city', 'province', 'suburb']) {
+        expect(resultUrl.searchParams.has(legacyKey)).toBe(false);
+      }
+      await expect(page.getByTestId('selected-location-chip')).toContainText('Johannesburg');
     });
 
     test('area picker explore path lands on the canonical neutral city page', async ({ page }) => {
