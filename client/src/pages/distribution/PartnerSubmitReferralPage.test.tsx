@@ -131,6 +131,14 @@ vi.mock('@/lib/trpc', () => ({
                     category: 'consent',
                     developmentId: 101,
                   },
+                  {
+                    key: 'privacy_notice_101',
+                    label: 'Privacy notice',
+                    url: '/api/local-media/object?key=properties%2Fdraft-1%2Fprivacy-notice.pdf',
+                    instructions: 'Share this notice before their details are shared.',
+                    category: 'privacy_notice',
+                    developmentId: 101,
+                  },
                 ],
                 uploads: [],
                 signatureMethod: 'Signed electronic acknowledgement',
@@ -257,6 +265,7 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Print or save PDF' }));
     fireEvent.click(screen.getByTitle('Client info sheet'));
     fireEvent.click(screen.getByTitle('Permission to share details'));
+    fireEvent.click(screen.getByTitle('Privacy notice'));
   }
 
   function stepperStates() {
@@ -303,10 +312,27 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.click(screen.getByTitle('Client info sheet'));
     expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
 
+    expect(screen.getByText('2 files')).toBeInTheDocument();
     fireEvent.click(screen.getByTitle('Permission to share details'));
+    expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
+    expect(screen.getByTitle('Privacy notice')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Privacy notice'));
     expect(stepperStates()).toEqual(['complete', 'complete', 'active', 'upcoming']);
     expect(screen.getByText('Prepare the introduction')).toBeInTheDocument();
-    expect(window.open).toHaveBeenCalledTimes(2);
+    expect(window.open).toHaveBeenCalledTimes(3);
+    expect(window.open).toHaveBeenNthCalledWith(
+      2,
+      '/api/local-media/object?key=properties%2Fdraft-1%2Fpermission.pdf',
+      '_blank',
+      'noopener',
+    );
+    expect(window.open).toHaveBeenNthCalledWith(
+      3,
+      '/api/local-media/object?key=properties%2Fdraft-1%2Fprivacy-notice.pdf',
+      '_blank',
+      'noopener',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: /Buy/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /person agreed/i }));

@@ -388,7 +388,9 @@ export default function PartnerSubmitReferralPage() {
   const informationSheetDownloads = documentDownloads.filter(
     download => download.category === 'information_sheet',
   );
-  const consentDownloads = documentDownloads.filter(download => download.category === 'consent');
+  const consentDownloads = documentDownloads.filter(
+    download => download.category === 'consent' || download.category === 'privacy_notice',
+  );
 
   const hasSelection = sharedDevelopmentIds.length > 0;
   const brochureDownloadsComplete =
@@ -479,9 +481,14 @@ export default function PartnerSubmitReferralPage() {
     setDownloadedBrochureIds(current => (current.includes(id) ? current : [...current, id]));
   }
 
+  function nextProspectDocument(downloads: PackDownload[]) {
+    return (
+      downloads.find(download => !downloadedDocumentKeys.includes(download.key)) || downloads[0]
+    );
+  }
+
   function downloadNextProspectDocument(downloads: PackDownload[]) {
-    const next =
-      downloads.find(download => !downloadedDocumentKeys.includes(download.key)) || downloads[0];
+    const next = nextProspectDocument(downloads);
     if (!next) return;
     window.open(next.url, '_blank', 'noopener');
     setDownloadedDocumentKeys(current =>
@@ -725,7 +732,7 @@ export default function PartnerSubmitReferralPage() {
                         variant="outline"
                         size="sm"
                         className="h-9 min-w-[132px] border-[#9cc0ee] px-5 text-[12px] font-semibold text-[#1d6fe3] hover:bg-[#eff5fe]"
-                        title={informationSheetDownloads[0]?.label}
+                        title={nextProspectDocument(informationSheetDownloads)?.label}
                         onClick={() => downloadNextProspectDocument(informationSheetDownloads)}
                       >
                         <Download className="mr-1.5 h-3.5 w-3.5" /> Download
@@ -760,7 +767,7 @@ export default function PartnerSubmitReferralPage() {
                         variant="outline"
                         size="sm"
                         className="h-9 min-w-[132px] border-[#9cc0ee] px-5 text-[12px] font-semibold text-[#1d6fe3] hover:bg-[#eff5fe]"
-                        title={consentDownloads[0]?.label}
+                        title={nextProspectDocument(consentDownloads)?.label}
                         onClick={() => downloadNextProspectDocument(consentDownloads)}
                       >
                         <Download className="mr-1.5 h-3.5 w-3.5" /> Download

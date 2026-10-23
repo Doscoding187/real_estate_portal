@@ -101,14 +101,14 @@ export default function DevelopmentOpportunityCard({
           <label className="absolute right-3 top-3 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-[#9cc0ee] bg-white/95 shadow-sm">
             <input
               type="checkbox"
-              className="sr-only"
+              className="peer sr-only"
               checked={selected}
               onChange={() => onToggleSelected?.(item)}
               aria-label={`Select ${item.developmentName}`}
             />
             <span
               className={cn(
-                'flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border transition',
+                'flex h-[18px] w-[18px] items-center justify-center rounded-[4px] border transition peer-focus-visible:ring-2 peer-focus-visible:ring-[#1d6fe3] peer-focus-visible:ring-offset-2',
                 selected ? 'border-[#1d6fe3] bg-[#1d6fe3] text-white' : 'border-[#9cc0ee] bg-white',
               )}
             >
