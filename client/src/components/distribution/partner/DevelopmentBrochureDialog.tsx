@@ -86,9 +86,9 @@ export function DevelopmentBrochureDialog({
             </p>
           ) : null}
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-[11.5px]">
-              <thead>
+          <div className="overflow-x-auto p-3 sm:p-0">
+            <table className="block w-full border-collapse text-left text-[11.5px] sm:table">
+              <thead className="hidden sm:table-header-group">
                 <tr className="border-b border-[#0b1c3f]">
                   <th className="px-3 py-2 font-semibold uppercase text-muted-foreground">Unit</th>
                   <th className="px-3 py-2 font-semibold uppercase text-muted-foreground">Type</th>
@@ -101,40 +101,68 @@ export function DevelopmentBrochureDialog({
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block sm:table-row-group">
                 {visibleRows.length ? (
                   visibleRows.map(row => (
-                    <tr key={row.unit.id || row.unit.name} className="border-b border-border">
-                      <td className="px-3 py-2 font-semibold text-[#0b1c3f]">
-                        {row.unit.name || 'Unit'}
+                    <tr
+                      key={row.unit.id || row.unit.name}
+                      className="mb-3 grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-lg border border-border px-3 py-3 last:mb-0 sm:mb-0 sm:table-row sm:rounded-none sm:border-0 sm:border-b sm:border-border sm:p-0"
+                    >
+                      <td className="col-span-2 flex flex-col gap-0.5 sm:table-cell sm:px-3 sm:py-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
+                          Unit
+                        </span>
+                        <span className="font-semibold text-[#0b1c3f]">
+                          {row.unit.name || 'Unit'}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 text-muted-foreground">
-                        {[
-                          row.unit.size ? `${row.unit.size} m²` : null,
-                          row.unit.bedrooms ? `${row.unit.bedrooms} bed` : null,
-                          row.unit.bathrooms ? `${row.unit.bathrooms} bath` : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || '—'}
+                      <td className="flex flex-col gap-0.5 text-muted-foreground sm:table-cell sm:px-3 sm:py-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
+                          Type
+                        </span>
+                        <span>
+                          {[
+                            row.unit.size ? `${row.unit.size} m²` : null,
+                            row.unit.bedrooms ? `${row.unit.bedrooms} bed` : null,
+                            row.unit.bathrooms ? `${row.unit.bathrooms} bath` : null,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ') || '—'}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 font-semibold text-[#0b1c3f]">
-                        {formatBrochureCurrencyRange(row.priceFrom, row.priceTo)}
+                      <td className="flex flex-col gap-0.5 sm:table-cell sm:px-3 sm:py-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
+                          Price
+                        </span>
+                        <span className="font-semibold text-[#0b1c3f]">
+                          {formatBrochureCurrencyRange(row.priceFrom, row.priceTo)}
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
-                        {rateAvailable
-                          ? formatBrochureCurrency(row.monthlyRepayment)
-                          : 'Unavailable'}
+                      <td className="flex flex-col gap-0.5 sm:table-cell sm:px-3 sm:py-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
+                          Est. bond
+                        </span>
+                        <span>
+                          {rateAvailable
+                            ? formatBrochureCurrency(row.monthlyRepayment)
+                            : 'Unavailable'}
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
-                        {rateAvailable
-                          ? formatBrochureCurrency(row.qualifyingIncome)
-                          : 'Unavailable'}
+                      <td className="flex flex-col gap-0.5 sm:table-cell sm:px-3 sm:py-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:hidden">
+                          Qualifying income
+                        </span>
+                        <span>
+                          {rateAvailable
+                            ? formatBrochureCurrency(row.qualifyingIncome)
+                            : 'Unavailable'}
+                        </span>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-3 text-muted-foreground">
+                  <tr className="block rounded-lg border border-border sm:table-row sm:rounded-none sm:border-0">
+                    <td colSpan={5} className="block px-3 py-3 text-muted-foreground sm:table-cell">
                       Unit options available on request.
                     </td>
                   </tr>
