@@ -3,7 +3,7 @@
   "formatVersion": 2,
   "generatedFrom": "drizzle/schema/index.ts via drizzle-orm 0.44 normalized metadata",
   "generator": "scripts/generateCanonicalModelInventory.ts",
-  "structuralDigest": "b5d0691eda5568c5b7f7c7e1e2e27d45425c10efa8b97da569779080b567c309",
+  "structuralDigest": "e8e03c1e959899ecbcc144744349af2f82e2222676c71931c93b1b066a1cf404",
   "excludedRunnerControlTables": [
     "sql_migration_history",
     "sql_migration_attempts"
