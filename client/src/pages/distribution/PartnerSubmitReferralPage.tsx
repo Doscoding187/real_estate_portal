@@ -398,9 +398,16 @@ export default function PartnerSubmitReferralPage() {
   const informationSheetDownloadsComplete = informationSheetDownloads.every(download =>
     downloadedDocumentKeys.includes(download.key),
   );
-  const consentDownloadsComplete = consentDownloads.every(download =>
-    downloadedDocumentKeys.includes(download.key),
+  const hasSharingPermissionDownload = consentDownloads.some(
+    download => download.category === 'consent',
   );
+  const hasPrivacyNoticeDownload = consentDownloads.some(
+    download => download.category === 'privacy_notice',
+  );
+  const consentDownloadsComplete =
+    hasSharingPermissionDownload &&
+    hasPrivacyNoticeDownload &&
+    consentDownloads.every(download => downloadedDocumentKeys.includes(download.key));
   const downloadsComplete =
     hasSelection &&
     documentPackQuery.isSuccess &&
@@ -733,6 +740,7 @@ export default function PartnerSubmitReferralPage() {
                         size="sm"
                         className="h-9 min-w-[132px] border-[#9cc0ee] px-5 text-[12px] font-semibold text-[#1d6fe3] hover:bg-[#eff5fe]"
                         title={nextProspectDocument(informationSheetDownloads)?.label}
+                        aria-label={`Download ${nextProspectDocument(informationSheetDownloads)?.label || 'information sheet'}`}
                         onClick={() => downloadNextProspectDocument(informationSheetDownloads)}
                       >
                         <Download className="mr-1.5 h-3.5 w-3.5" /> Download
@@ -768,6 +776,7 @@ export default function PartnerSubmitReferralPage() {
                         size="sm"
                         className="h-9 min-w-[132px] border-[#9cc0ee] px-5 text-[12px] font-semibold text-[#1d6fe3] hover:bg-[#eff5fe]"
                         title={nextProspectDocument(consentDownloads)?.label}
+                        aria-label={`Download ${nextProspectDocument(consentDownloads)?.label || 'consent document'}`}
                         onClick={() => downloadNextProspectDocument(consentDownloads)}
                       >
                         <Download className="mr-1.5 h-3.5 w-3.5" /> Download
