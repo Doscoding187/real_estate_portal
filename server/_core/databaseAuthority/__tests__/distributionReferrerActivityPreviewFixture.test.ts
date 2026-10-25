@@ -322,22 +322,33 @@ const demoRequiredDocuments = [
   {
     id: 1210,
     document_code: 'custom',
-    document_label: 'Sample price list',
-    category: 'developer_document',
-    template_file_url: '/properties/f0xp6VWeaZSN.jpg',
-    template_file_name: 'sample-price-list.jpg',
+    document_label: 'Sample client information sheet',
+    category: 'client_required_document',
+    template_file_url: '/properties/distribution-preview-information-sheet.pdf',
+    template_file_name: 'distribution-preview-information-sheet.pdf',
     sort_order: 3,
-    is_required: 0,
+    is_required: 1,
     is_active: 1,
   },
   {
     id: 1211,
     document_code: 'custom',
+    document_label: 'Sample price list',
+    category: 'developer_document',
+    template_file_url: '/properties/f0xp6VWeaZSN.jpg',
+    template_file_name: 'sample-price-list.jpg',
+    sort_order: 4,
+    is_required: 0,
+    is_active: 1,
+  },
+  {
+    id: 1212,
+    document_code: 'custom',
     document_label: 'Sample site plan',
     category: 'developer_document',
     template_file_url: '/properties/cb6IeI4pBCAG.jpg',
     template_file_name: 'sample-site-plan.jpg',
-    sort_order: 4,
+    sort_order: 5,
     is_required: 0,
     is_active: 1,
   },
@@ -346,7 +357,7 @@ const demoRequiredDocuments = [
 const demoIntakePolicy = {
   id: 1210,
   program_id: 1204,
-  policy_version: 1,
+  policy_version: 2,
   status: 'active',
   configuration: {},
   configuration_digest: 'f'.repeat(64),
@@ -357,7 +368,7 @@ const demoIntakePolicy = {
 describe('Distribution referrer activity preview adapter', () => {
   it('declares a versioned dashboard sample-activity plus governed demo fixture without touching grants', () => {
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION).toBe(
-      'distribution-referrer-activity-preview-v4',
+      'distribution-referrer-activity-preview-v5',
     );
     expect(DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     const source = readFileSync(
@@ -368,7 +379,7 @@ describe('Distribution referrer activity preview adapter', () => {
       'utf8',
     );
     expect(source).toContain('assessAuthorizedDatabaseReadiness');
-    expect(source).toContain('layers.schemaCongruent.state !== \'ready\'');
+    expect(source).toContain("layers.schemaCongruent.state !== 'ready'");
     expect(source).toContain('db:distribution-referrer-preview:prepare');
     expect(source).toContain('INSERT INTO catalogue_publishers');
     expect(source).toContain('INSERT INTO unit_types');
@@ -380,6 +391,23 @@ describe('Distribution referrer activity preview adapter', () => {
     expect(source).not.toMatch(/DELETE\s+FROM/i);
     expect(source).not.toMatch(
       /INSERT\s+INTO\s+distribution_(agent_access|commission_ledger|viewing_validations)/i,
+    );
+  });
+
+  it('publishes the required preview consent and information-sheet downloads', () => {
+    const source = readFileSync(
+      join(
+        process.cwd(),
+        'server/_core/databaseAuthority/dataAdapters/distributionReferrerActivityPreviewFixture.ts',
+      ),
+      'utf8',
+    );
+    expect(source).toContain(
+      "downloadUrl: '/properties/distribution-preview-sharing-permission.pdf'",
+    );
+    expect(source).toContain("downloadUrl: '/properties/distribution-preview-privacy-notice.pdf'");
+    expect(source).toContain(
+      "templateFileUrl: '/properties/distribution-preview-information-sheet.pdf'",
     );
   });
 
@@ -459,9 +487,9 @@ describe('Distribution referrer activity preview adapter', () => {
         701,
       ),
     ).toThrow('program tier access policy');
-    expect(() =>
-      classifyDistributionReferrerActivityProgram(expectedProgram, 702),
-    ).toThrow('program development ID');
+    expect(() => classifyDistributionReferrerActivityProgram(expectedProgram, 702)).toThrow(
+      'program development ID',
+    );
   });
 
   it('creates or reuses only the exact sample deal at the viewing_scheduled stage', () => {
@@ -526,9 +554,7 @@ describe('Distribution referrer activity preview adapter', () => {
     expect(classifyDistributionReferrerActivityDemoPublisher(demoPublisher)).toEqual({
       state: 'reused',
     });
-    expect(() =>
-      assertDistributionReferrerActivityDemoPublisher(demoPublisher),
-    ).not.toThrow();
+    expect(() => assertDistributionReferrerActivityDemoPublisher(demoPublisher)).not.toThrow();
     expect(() =>
       classifyDistributionReferrerActivityDemoPublisher({
         ...demoPublisher,
@@ -602,9 +628,7 @@ describe('Distribution referrer activity preview adapter', () => {
     expect(classifyDistributionReferrerActivityDemoProgram(demoProgram, 1202)).toEqual({
       state: 'reused',
     });
-    expect(() =>
-      assertDistributionReferrerActivityDemoProgram(demoProgram, 1202),
-    ).not.toThrow();
+    expect(() => assertDistributionReferrerActivityDemoProgram(demoProgram, 1202)).not.toThrow();
     expect(() =>
       classifyDistributionReferrerActivityDemoProgram(
         { ...demoProgram, tier_access_policy: 'restricted' },
@@ -617,9 +641,9 @@ describe('Distribution referrer activity preview adapter', () => {
         1202,
       ),
     ).toThrow('demo program referral state');
-    expect(() =>
-      classifyDistributionReferrerActivityDemoProgram(demoProgram, 1203),
-    ).toThrow('demo program development ID');
+    expect(() => classifyDistributionReferrerActivityDemoProgram(demoProgram, 1203)).toThrow(
+      'demo program development ID',
+    );
   });
 
   it('creates or reuses only the exact active demo brand partnership', () => {
@@ -669,7 +693,9 @@ describe('Distribution referrer activity preview adapter', () => {
     expect(classifyDistributionReferrerActivityDemoManagerAssignment(null, expected)).toEqual({
       state: 'created',
     });
-    expect(classifyDistributionReferrerActivityDemoManagerAssignment(demoManagerAssignment, expected)).toEqual({
+    expect(
+      classifyDistributionReferrerActivityDemoManagerAssignment(demoManagerAssignment, expected),
+    ).toEqual({
       state: 'reused',
     });
     expect(() =>
@@ -704,7 +730,7 @@ describe('Distribution referrer activity preview adapter', () => {
         ...demoRequiredDocuments,
         {
           ...demoRequiredDocuments[0],
-          id: 1212,
+          id: 1213,
           document_code: 'proof_of_income',
         },
       ]),
