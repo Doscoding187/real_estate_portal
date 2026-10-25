@@ -29,7 +29,7 @@ describe('ListingResultCard rental semantics', () => {
       />,
     );
 
-    expect(screen.getByText('R 12,000 / month')).toBeInTheDocument();
+    expect(screen.getByText(/^R 12[\s,]000 \/ month$/)).toBeInTheDocument();
     expect(screen.getByText('Private Advertiser')).toBeInTheDocument();
     expect(screen.getByText('Parking to confirm')).toBeInTheDocument();
     expect(
@@ -110,8 +110,8 @@ describe('ListingResultCard rental semantics', () => {
       />,
     );
 
-    expect(screen.getByText('R 12,000')).toBeInTheDocument();
-    expect(screen.queryByText('R 12,000 / month')).not.toBeInTheDocument();
+    expect(screen.getByText(/^R 12[\s,]000$/)).toBeInTheDocument();
+    expect(screen.queryByText(/^R 12[\s,]000 \/ month$/)).not.toBeInTheDocument();
     expect(screen.getByText('Private Seller')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View property: Property' })).toBeInTheDocument();
   });

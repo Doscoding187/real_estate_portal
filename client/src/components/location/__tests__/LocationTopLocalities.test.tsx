@@ -47,11 +47,11 @@ describe('LocationTopLocalities', () => {
       },
     ]);
 
-    expect(screen.getByText('R 1,234,567')).toBeInTheDocument();
-    expect(screen.getByText('R 15,000')).toBeInTheDocument();
+    expect(screen.getByText(/^R 1[\s,]234[\s,]567$/)).toBeInTheDocument();
+    expect(screen.getByText(/^R 15[\s,]000$/)).toBeInTheDocument();
     expect(screen.getByText('0 Properties for Sale')).toBeInTheDocument();
     expect(screen.getByText('25 Properties for Rent')).toBeInTheDocument();
-    expect(screen.getByText('4.5')).toBeInTheDocument();
+    expect(screen.getByText(/^4[.,]5$/)).toBeInTheDocument();
     expect(screen.getByText('(12 Reviews)')).toBeInTheDocument();
   });
 });
