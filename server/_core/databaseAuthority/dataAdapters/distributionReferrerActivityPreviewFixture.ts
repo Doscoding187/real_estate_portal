@@ -26,7 +26,7 @@ import {
 } from './distributionReferrerPreviewFixture';
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION =
-  'distribution-referrer-activity-preview-v4' as const;
+  'distribution-referrer-activity-preview-v5' as const;
 
 const EXPECTED_MANAGER = Object.freeze({
   openId: 'distribution-referrer-activity-manager-v1',
@@ -264,13 +264,22 @@ const EXPECTED_DEMO_REQUIRED_DOCUMENTS = Object.freeze([
     sortOrder: 2,
   }),
   Object.freeze({
+    category: 'client_required_document',
+    documentCode: 'custom',
+    documentLabel: 'Sample client information sheet',
+    templateFileUrl: '/properties/distribution-preview-information-sheet.pdf',
+    templateFileName: 'distribution-preview-information-sheet.pdf',
+    isRequired: 1,
+    sortOrder: 3,
+  }),
+  Object.freeze({
     category: 'developer_document',
     documentCode: 'custom',
     documentLabel: 'Sample price list',
     templateFileUrl: '/properties/f0xp6VWeaZSN.jpg',
     templateFileName: 'sample-price-list.jpg',
     isRequired: 0,
-    sortOrder: 3,
+    sortOrder: 4,
   }),
   Object.freeze({
     category: 'developer_document',
@@ -279,22 +288,24 @@ const EXPECTED_DEMO_REQUIRED_DOCUMENTS = Object.freeze([
     templateFileUrl: '/properties/cb6IeI4pBCAG.jpg',
     templateFileName: 'sample-site-plan.jpg',
     isRequired: 0,
-    sortOrder: 4,
+    sortOrder: 5,
   }),
 ]);
 
 const DEMO_POLICY_CONFIGURATION = Object.freeze({
   sharingPermissionDocument: {
-    version: 'preview-demo-v2',
+    version: 'preview-demo-v3',
     title: 'Sample referral permission',
     content:
       'This synthetic preview permission records that the prospect agreed to share their details with the sample sales team for this demonstration referral.',
+    downloadUrl: '/properties/distribution-preview-sharing-permission.pdf',
   },
   privacyNoticeDocument: {
-    version: 'preview-demo-v2',
+    version: 'preview-demo-v3',
     title: 'Sample privacy notice',
     content:
       'This synthetic preview notice explains how a demonstration referral would treat prospect information; it is not a production privacy notice.',
+    downloadUrl: '/properties/distribution-preview-privacy-notice.pdf',
   },
   sharingPurpose: 'Sample referral introduction for local preview review.',
   namedRecipients: [
@@ -340,7 +351,7 @@ const DEMO_POLICY_CONFIGURATION = Object.freeze({
 });
 
 const EXPECTED_DEMO_POLICY = Object.freeze({
-  policyVersion: 1,
+  policyVersion: 2,
   status: 'active',
   approvalReference: 'PREVIEW-DEMO-INTAKE-POLICY-V2',
 });
@@ -693,7 +704,11 @@ export function assertDistributionReferrerActivityCommissionEntry(
     EXPECTED_COMMISSION_ENTRY.commissionAmount,
     'commission entry amount',
   );
-  requireExact(rowValue(row, 'currency'), EXPECTED_COMMISSION_ENTRY.currency, 'commission currency');
+  requireExact(
+    rowValue(row, 'currency'),
+    EXPECTED_COMMISSION_ENTRY.currency,
+    'commission currency',
+  );
 }
 
 export function assertDistributionReferrerActivityDemoPublisher(row: Row): void {
@@ -751,7 +766,11 @@ export function assertDistributionReferrerActivityDemoDevelopment(
     EXPECTED_DEMO_DEVELOPMENT.province,
     'demo development province',
   );
-  requireExact(rowValue(row, 'suburb'), EXPECTED_DEMO_DEVELOPMENT.suburb, 'demo development suburb');
+  requireExact(
+    rowValue(row, 'suburb'),
+    EXPECTED_DEMO_DEVELOPMENT.suburb,
+    'demo development suburb',
+  );
   requireExact(
     rowValue(row, 'transaction_type'),
     EXPECTED_DEMO_DEVELOPMENT.transactionType,
@@ -767,7 +786,11 @@ export function assertDistributionReferrerActivityDemoDevelopment(
     EXPECTED_DEMO_DEVELOPMENT.approvalStatus,
     'demo development approval status',
   );
-  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_DEVELOPMENT.status, 'demo development status');
+  requireExact(
+    rowValue(row, 'status'),
+    EXPECTED_DEMO_DEVELOPMENT.status,
+    'demo development status',
+  );
   requireExact(
     rowValue(row, 'inventory_mode'),
     EXPECTED_DEMO_DEVELOPMENT.inventoryMode,
@@ -779,7 +802,9 @@ export function assertDistributionReferrerActivityDemoDevelopment(
     'demo development publisher ID',
   );
   if (!rowValue(row, 'publishedAt')) {
-    throw new Error('Distribution referrer activity preview fixture demo development is unpublished.');
+    throw new Error(
+      'Distribution referrer activity preview fixture demo development is unpublished.',
+    );
   }
 }
 
@@ -837,18 +862,21 @@ export function assertDistributionReferrerActivityDemoUnitTypes(rows: Row[]): vo
   }
 }
 
-export function assertDistributionReferrerActivityDemoProgram(row: Row, developmentId: number): void {
-  requireExact(
-    rowValue(row, 'development_id'),
-    developmentId,
-    'demo program development ID',
-  );
+export function assertDistributionReferrerActivityDemoProgram(
+  row: Row,
+  developmentId: number,
+): void {
+  requireExact(rowValue(row, 'development_id'), developmentId, 'demo program development ID');
   requireExact(
     rowValue(row, 'is_referral_enabled'),
     EXPECTED_DEMO_PROGRAM.isReferralEnabled,
     'demo program referral state',
   );
-  requireExact(rowValue(row, 'is_active'), EXPECTED_DEMO_PROGRAM.isActive, 'demo program active state');
+  requireExact(
+    rowValue(row, 'is_active'),
+    EXPECTED_DEMO_PROGRAM.isActive,
+    'demo program active state',
+  );
   requireExact(
     rowValue(row, 'commission_model'),
     EXPECTED_DEMO_PROGRAM.commissionModel,
@@ -884,7 +912,11 @@ export function assertDistributionReferrerActivityDemoProgram(row: Row, developm
     EXPECTED_DEMO_PROGRAM.payoutMilestone,
     'demo program payout milestone',
   );
-  requireExact(rowValue(row, 'currency_code'), EXPECTED_DEMO_PROGRAM.currencyCode, 'demo program currency');
+  requireExact(
+    rowValue(row, 'currency_code'),
+    EXPECTED_DEMO_PROGRAM.currencyCode,
+    'demo program currency',
+  );
 }
 
 export function classifyDistributionReferrerActivityDemoProgram(
@@ -896,13 +928,20 @@ export function classifyDistributionReferrerActivityDemoProgram(
   return { state: 'reused' };
 }
 
-export function assertDistributionReferrerActivityDemoPartnership(row: Row, publisherId: number): void {
+export function assertDistributionReferrerActivityDemoPartnership(
+  row: Row,
+  publisherId: number,
+): void {
   requireExact(
     rowValue(row, 'catalogue_publisher_id'),
     publisherId,
     'demo partnership publisher ID',
   );
-  requireExact(rowValue(row, 'status'), EXPECTED_DEMO_PARTNERSHIP.status, 'demo partnership status');
+  requireExact(
+    rowValue(row, 'status'),
+    EXPECTED_DEMO_PARTNERSHIP.status,
+    'demo partnership status',
+  );
 }
 
 export function classifyDistributionReferrerActivityDemoPartnership(
@@ -918,7 +957,11 @@ export function assertDistributionReferrerActivityDemoAccess(
   row: Row,
   expected: { developmentId: number; brandPartnershipId: number; publisherId: number },
 ): void {
-  requireExact(rowValue(row, 'development_id'), expected.developmentId, 'demo access development ID');
+  requireExact(
+    rowValue(row, 'development_id'),
+    expected.developmentId,
+    'demo access development ID',
+  );
   requireExact(
     rowValue(row, 'brand_partnership_id'),
     expected.brandPartnershipId,
@@ -1350,7 +1393,10 @@ async function ensureManagerUser(
   const existing = await findManagerUser(connection);
   const classification = classifyDistributionReferrerActivityManager(existing);
   if (existing) {
-    return { id: asPositiveId(rowValue(existing, 'id'), 'manager user ID'), state: classification.state };
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'manager user ID'),
+      state: classification.state,
+    };
   }
 
   const id = await insertIdOf(
@@ -1774,6 +1820,7 @@ async function ensureDemoRequiredDocuments(
 ): Promise<{ state: PreparedState }> {
   const existing = await listDemoRequiredDocuments(connection, developmentId);
   let inserted = 0;
+  let updated = 0;
 
   for (const document of EXPECTED_DEMO_REQUIRED_DOCUMENTS) {
     const matches = existing.filter(
@@ -1782,7 +1829,37 @@ async function ensureDemoRequiredDocuments(
         comparable(rowValue(row, 'document_code')) === document.documentCode &&
         comparable(rowValue(row, 'document_label')) === document.documentLabel,
     );
-    if (matches.length > 0) continue;
+    if (matches.length > 1) {
+      throw new Error(
+        `Distribution referrer activity preview fixture requires exactly one demo document ${document.category}:${document.documentLabel}.`,
+      );
+    }
+    if (matches.length === 1) {
+      const row = matches[0];
+      const needsUpdate =
+        comparable(rowValue(row, 'template_file_url')) !== comparable(document.templateFileUrl) ||
+        comparable(rowValue(row, 'template_file_name')) !== comparable(document.templateFileName) ||
+        comparable(rowValue(row, 'is_required')) !== comparable(document.isRequired) ||
+        comparable(rowValue(row, 'sort_order')) !== comparable(document.sortOrder) ||
+        comparable(rowValue(row, 'is_active')) !== '1';
+      if (!needsUpdate) continue;
+
+      await connection.execute(
+        `UPDATE development_required_documents
+            SET template_file_url = ?, template_file_name = ?, is_required = ?,
+                sort_order = ?, is_active = 1
+          WHERE id = ?`,
+        [
+          document.templateFileUrl,
+          document.templateFileName,
+          document.isRequired,
+          document.sortOrder,
+          asPositiveId(rowValue(row, 'id'), 'demo document ID'),
+        ],
+      );
+      updated += 1;
+      continue;
+    }
 
     await connection.execute(
       `INSERT INTO development_required_documents
@@ -1805,7 +1882,7 @@ async function ensureDemoRequiredDocuments(
 
   const rows = await listDemoRequiredDocuments(connection, developmentId);
   assertDistributionReferrerActivityDemoRequiredDocuments(rows);
-  return { state: inserted > 0 ? 'created' : 'reused' };
+  return { state: inserted > 0 || updated > 0 ? 'created' : 'reused' };
 }
 
 async function ensureDemoIntakePolicy(
@@ -1813,12 +1890,25 @@ async function ensureDemoIntakePolicy(
   programId: number,
 ): Promise<{ id: number; state: PreparedState }> {
   const existing = await findDemoIntakePolicy(connection, programId);
-  const classification = classifyDistributionReferrerActivityDemoIntakePolicy(existing, programId);
   if (existing) {
-    return {
-      id: asPositiveId(rowValue(existing, 'id'), 'demo intake policy release ID'),
-      state: classification.state,
-    };
+    const versionMatches =
+      Number(rowValue(existing, 'policy_version')) === EXPECTED_DEMO_POLICY.policyVersion;
+    const digestMatches =
+      String(rowValue(existing, 'configuration_digest')) === DEMO_POLICY_CONFIGURATION_DIGEST;
+    const statusMatches = String(rowValue(existing, 'status')) === EXPECTED_DEMO_POLICY.status;
+    if (versionMatches && digestMatches && statusMatches) {
+      assertDistributionReferrerActivityDemoIntakePolicy(existing, programId);
+      return {
+        id: asPositiveId(rowValue(existing, 'id'), 'demo intake policy release ID'),
+        state: 'reused',
+      };
+    }
+    await connection.execute(
+      `UPDATE distribution_referral_intake_policy_releases
+          SET status = 'retired'
+        WHERE program_id = ? AND status = 'active'`,
+      [programId],
+    );
   }
 
   const id = await insertIdOf(
@@ -1826,9 +1916,10 @@ async function ensureDemoIntakePolicy(
     `INSERT INTO distribution_referral_intake_policy_releases
       (program_id, policy_version, status, configuration, configuration_digest,
        approval_reference, published_at)
-     VALUES (?, 1, 'active', ?, ?, ?, ?)`,
+     VALUES (?, ?, 'active', ?, ?, ?, ?)`,
     [
       programId,
+      EXPECTED_DEMO_POLICY.policyVersion,
       JSON.stringify(DEMO_POLICY_CONFIGURATION),
       DEMO_POLICY_CONFIGURATION_DIGEST,
       EXPECTED_DEMO_POLICY.approvalReference,
@@ -1895,7 +1986,8 @@ async function verifyFixture(input: {
   await assertNoProgramGrantOrAgentProfile(input.connection, input.referrerUserId);
 
   const manager = await findManagerUser(input.connection);
-  if (!manager) throw new Error('Distribution referrer activity preview fixture manager is missing.');
+  if (!manager)
+    throw new Error('Distribution referrer activity preview fixture manager is missing.');
   assertDistributionReferrerActivityManager(manager);
   const managerId = asPositiveId(rowValue(manager, 'id'), 'manager user ID');
 
@@ -1907,7 +1999,8 @@ async function verifyFixture(input: {
   const developmentId = asPositiveId(rowValue(development, 'id'), 'development ID');
 
   const program = await findProgram(input.connection, developmentId);
-  if (!program) throw new Error('Distribution referrer activity preview fixture program is missing.');
+  if (!program)
+    throw new Error('Distribution referrer activity preview fixture program is missing.');
   assertDistributionReferrerActivityProgram(program, developmentId);
   const programId = asPositiveId(rowValue(program, 'id'), 'program ID');
 
@@ -1922,7 +2015,8 @@ async function verifyFixture(input: {
   const dealId = asPositiveId(rowValue(deal, 'id'), 'deal ID');
 
   const viewing = await findViewing(input.connection, dealId);
-  if (!viewing) throw new Error('Distribution referrer activity preview fixture viewing is missing.');
+  if (!viewing)
+    throw new Error('Distribution referrer activity preview fixture viewing is missing.');
   assertDistributionReferrerActivityViewing(viewing, {
     dealId,
     programId,
@@ -1981,7 +2075,9 @@ async function verifyFixture(input: {
 
   const demoAccess = await findDemoAccess(input.connection, demoDevelopmentId);
   if (!demoAccess) {
-    throw new Error('Distribution referrer activity preview fixture demo development access is missing.');
+    throw new Error(
+      'Distribution referrer activity preview fixture demo development access is missing.',
+    );
   }
   assertDistributionReferrerActivityDemoAccess(demoAccess, {
     developmentId: demoDevelopmentId,
@@ -1995,19 +2091,26 @@ async function verifyFixture(input: {
     managerId,
   );
   if (!demoManagerAssignment) {
-    throw new Error('Distribution referrer activity preview fixture demo manager assignment is missing.');
+    throw new Error(
+      'Distribution referrer activity preview fixture demo manager assignment is missing.',
+    );
   }
   assertDistributionReferrerActivityDemoManagerAssignment(demoManagerAssignment, {
     developmentId: demoDevelopmentId,
     managerUserId: managerId,
   });
 
-  const demoRequiredDocuments = await listDemoRequiredDocuments(input.connection, demoDevelopmentId);
+  const demoRequiredDocuments = await listDemoRequiredDocuments(
+    input.connection,
+    demoDevelopmentId,
+  );
   assertDistributionReferrerActivityDemoRequiredDocuments(demoRequiredDocuments);
 
   const demoIntakePolicy = await findDemoIntakePolicy(input.connection, demoProgramId);
   if (!demoIntakePolicy) {
-    throw new Error('Distribution referrer activity preview fixture demo intake policy is missing.');
+    throw new Error(
+      'Distribution referrer activity preview fixture demo intake policy is missing.',
+    );
   }
   assertDistributionReferrerActivityDemoIntakePolicy(demoIntakePolicy, demoProgramId);
   const demoIntakePolicyReleaseId = asPositiveId(
