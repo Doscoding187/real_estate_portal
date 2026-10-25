@@ -53,9 +53,9 @@ const coverageBaselinePaths = resolvePlaceAdmissionCoverageBaselinePaths(territo
 function createIdentityGuardFixture() {
   const scratch = mkdtempSync(join(tmpdir(), 'place-identity-guard-'));
   for (const relative of [
-    'data/place-admission-territories.v0.1',
-    'data/gauteng-source-authority-v0.2',
-    'data/gauteng-place-admission-v0.1',
+    'data/place-admission-territories.v0.2',
+    'data/gauteng-source-authority-v0.3',
+    'data/gauteng-place-admission-v0.2',
   ]) {
     mkdirSync(join(scratch, 'data'), { recursive: true });
     cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -232,7 +232,7 @@ describe('Place admission: Place identity is assigned and stable', () => {
     const repositoryRoot = createIdentityGuardFixture();
     try {
       const registryRelative =
-        'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
+        'data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json';
       const registryPath = join(repositoryRoot, registryRelative);
       const original = readFileSync(registryPath, 'utf8');
 
@@ -364,13 +364,77 @@ describe('Place admission: relationships use only the V1 vocabulary', () => {
     }
   });
 
-  it('does not invent settlement or market relationships the evidence does not support', () => {
-    // Soweto's constituents are not linked to it: the approved source carries no
-    // evidence for that containment, so no relationship is emitted.
-    expect(relationships.some(r => r.relationship_type === 'settlement_within')).toBe(false);
+  it('emits settlement membership only where reviewed evidence authored it', () => {
+    // The v0.2 factual source carried no settlement linkage for Soweto's
+    // constituents, so the v0.1 package emitted none. The v0.3 authority adds a
+    // digest-pinned reviewed membership artifact, and the builder emits exactly
+    // those rows - never an inferred membership, never anything else.
+    const settlement = relationships.filter(r => r.relationship_type === 'settlement_within');
+    expect(settlement.length).toBe(351);
+    for (const edge of settlement) {
+      expect(edge.basis).toBe('reviewed_settlement_membership');
+      expect(edge.search_scope_authorized).toBe(0);
+      expect(edge.evidence_source).toBeTruthy();
+      expect(edge.reviewed_provenance).toBeTruthy();
+      expect(edge.reviewed_provenance.membership_confidence).toBeTruthy();
+      expect(edge.reviewed_provenance.child_disposition).toBeTruthy();
+    }
+    // Membership stays a governance attestation: it is never containment and
+    // never widens search, and the unsupported vocabulary remains absent.
+    expect(relationships.some(r => r.relationship_type === 'administratively_contains' && r.basis === 'reviewed_settlement_membership')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'market_association')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'succeeds')).toBe(false);
     expect(relationships.some(r => r.relationship_type === 'co_located_with')).toBe(false);
+    const parents = new Set(settlement.map(r => r.to_place_id));
+    expect(parents.size).toBe(8);
+  });
+});
+
+describe('Place admission: reviewed type corrections are applied, not re-decided', () => {
+  // The v0.3 source authority carries the reviewed Johannesburg corrections as a
+  // digest-pinned artifact; the package must reflect them verbatim.
+  const corrections = readJsonl(
+    resolvePlaceAdmissionSourcePaths(territory).artifacts.reviewed_type_corrections,
+  ) as {
+    identity_anchor: string;
+    corrected_type: string;
+    reviewed_search_scope: string | null;
+    confidence: string;
+  }[];
+  const correctionByAnchor = new Map(corrections.map(c => [c.identity_anchor, c]));
+  const primaryAnchors = new Set(places.map(p => p.primary_source_identity_id));
+
+  it('applies every reviewed correction to a real admitted Place', () => {
+    expect(corrections.length).toBe(48);
+    for (const [anchor, correction] of correctionByAnchor) {
+      const place = places.find(p => p.primary_source_identity_id === anchor);
+      expect(place).toBeTruthy();
+      expect(place!.place_type).toBe(correction.corrected_type);
+      const provenance = (place as any).reviewed_type_correction;
+      expect(provenance.type_basis).toBeTruthy();
+      expect(provenance.confidence).toBe(correction.confidence);
+      expect(provenance.identity_anchor).toBe(anchor);
+      expect(primaryAnchors.has(anchor)).toBe(true);
+    }
+  });
+
+  it('invents no review provenance and keeps corrected types scope-bearing', () => {
+    for (const place of places) {
+      const provenance = (place as any).reviewed_type_correction;
+      if (!provenance) continue;
+      expect(correctionByAnchor.has(provenance.identity_anchor)).toBe(true);
+      const baseScope = {
+        city: 'metro_city',
+        town: 'metro_city',
+        suburb: 'locality',
+        township: 'locality',
+        neighbourhood: 'locality',
+        locality: 'locality',
+        village: 'locality',
+      } as Record<string, string>;
+      expect(place.search_scope).toBe(baseScope[place.place_type]);
+      expect(PLACE_TYPES).toContain(place.place_type);
+    }
   });
 });
 
@@ -561,8 +625,8 @@ describe('Place admission: schema alignment', () => {
 });
 
 describe('Place admission: the identity guard, on the failure paths that lose allocations', () => {
-  const registryRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_id_registry.v0.1.json';
-  const placesRelative = 'data/gauteng-place-admission-v0.1/gauteng_place_admission_v0.1.jsonl';
+  const registryRelative = 'data/gauteng-place-admission-v0.2/gauteng_place_id_registry.v0.2.json';
+  const placesRelative = 'data/gauteng-place-admission-v0.2/gauteng_place_admission_v0.2.jsonl';
 
   // Each process owns its damaged copy. Concurrent authority gates must never
   // back up, mutate or restore the shared committed identity registry.
@@ -645,9 +709,9 @@ describe('Place admission: the identity guard, on the failure paths that lose al
     const scratch = mkdtempSync(join(tmpdir(), 'place-allocation-swap-'));
     try {
       for (const relative of [
-        'data/place-admission-territories.v0.1',
-        'data/gauteng-source-authority-v0.2',
-        'data/gauteng-place-admission-v0.1',
+        'data/place-admission-territories.v0.2',
+        'data/gauteng-source-authority-v0.3',
+        'data/gauteng-place-admission-v0.2',
       ]) {
         mkdirSync(join(scratch, 'data'), { recursive: true });
         cpSync(join(packageRoot, relative), join(scratch, relative), { recursive: true });
@@ -660,7 +724,7 @@ describe('Place admission: the identity guard, on the failure paths that lose al
         damaged.allocated[first],
       ];
       writeFileSync(registryPath, JSON.stringify(damaged));
-      const directory = join(scratch, 'data/gauteng-place-admission-v0.1');
+      const directory = join(scratch, 'data/gauteng-place-admission-v0.2');
       const snapshot = () =>
         readdirSync(directory).map(file => [file, readFileSync(join(directory, file), 'utf8')]);
       const before = snapshot();

@@ -1069,8 +1069,12 @@ export async function verifyNationalCanonicalPlaces(input: {
 
   // A containment forest must not become cyclic or gain a second parent once the
   // provinces share one table: that is a hazard that only exists nationally.
+  // Governance membership edges (`settlement_within`) are reviewed attestations
+  // about where an admitted place sits; they are not containment and may
+  // legitimately co-exist with the administrative parent.
   const parents = new Map<string, string>();
   for (const edge of stored.placeRelationship) {
+    if (String(edge.relationship_type) !== 'administratively_contains') continue;
     const child = String(edge.from_place_id);
     const parent = String(edge.to_place_id);
     const existing = parents.get(child);

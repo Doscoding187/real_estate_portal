@@ -139,6 +139,42 @@ const LICENSING_RESTRICTIVENESS = [
   'osm_only_odbl_provisional',
 ];
 
+/**
+ * Reviewed-correction inputs.
+ *
+ * A territory may declare digest-pinned reviewed-correction artifacts (see the
+ * registry's `PLACE_ADMISSION_REVIEWED_SOURCE_ARTIFACT_KEYS`). They are review
+ * outcomes with an owner, not new external facts: a reviewed type correction
+ * settles what an already-admitted referent is, and a reviewed settlement
+ * membership edge records which admitted main place an admitted sub place sits
+ * in. Applying them never mints, merges or re-anchors a Place, never widens
+ * search scope (relationship rows stay `search_scope_authorized: 0`), and never
+ * changes licensing or verification state.
+ */
+const REVIEWED_CORRECTION_TYPES = ['suburb', 'locality', 'township', 'neighbourhood', 'village'];
+const REVIEWED_CORRECTION_CONFIDENCES = ['high', 'medium', 'low'];
+const REVIEWED_SETTLEMENT_RELATIONSHIP = 'settlement_within';
+
+const readReviewJsonl = (path, artifactName) => {
+  if (path === undefined) return null;
+  if (!existsSync(resolve(ROOT, path))) {
+    throw new Error(
+      `place-admission refused: the registry declares reviewed artifact ${artifactName} (${path}) ` +
+        `but the file does not exist; a declared review overlay that disappears is a fail-closed defect`,
+    );
+  }
+  const declaredDigest = (sourceManifest.compact_artifacts ?? []).find(
+    artifact => artifact.path === path,
+  );
+  if (!declaredDigest) {
+    throw new Error(
+      `place-admission refused: reviewed artifact ${artifactName} is declared by the registry (${path}) ` +
+        `but is not digest-pinned by the source authority manifest`,
+    );
+  }
+  return readJsonl(path);
+};
+
 /* ------------------------------------------------------------------ *
  * Governed helpers
  * ------------------------------------------------------------------ */
@@ -212,7 +248,157 @@ const nameAssertions = readJsonl(sourcePaths.artifacts.names);
 const sourceLinks = readJsonl(sourcePaths.artifacts.source_links);
 const candidates = readJsonl(sourcePaths.artifacts.candidate_dispositions);
 
+/** Identity index, hoisted so the reviewed-correction validation can anchor rows. */
 const identityIndex = byId(identities, 'canonical_location_id');
+
+/**
+ * Governed search-scope categories by Place type (contract D1). A type carries
+ * the scope; establishment is resolved later against the containment path. It
+ * lives above the reviewed-correction loader because the loader validates a
+ * correction's scope assertion against this map.
+ */
+const D1_SCOPE_BY_TYPE = {
+  province: 'province',
+  city: 'metro_city',
+  town: 'metro_city',
+  township: 'locality',
+  suburb: 'locality',
+  neighbourhood: 'locality',
+  locality: 'locality',
+  village: 'locality',
+};
+
+/* ------------------------------------------------------------------ *
+ * 1a. Reviewed-correction inputs (optional governed overlay)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Load the territory's declared reviewed-correction artifacts.
+ *
+ * Declared means: the registry names the file, the file exists and parses, and
+ * the source authority manifest digest-pins the same path. Undeclared means:
+ * this territory carries no review overlay, and the builder must not invent
+ * one. The schema check is fail-closed: a row the engine cannot understand
+ * stops the build rather than being applied partially.
+ */
+const reviewedTypeCorrections = readReviewJsonl(
+  sourcePaths.artifacts.reviewed_type_corrections,
+  'reviewed_type_corrections',
+);
+const reviewedSettlementMembership = readReviewJsonl(
+  sourcePaths.artifacts.reviewed_settlement_membership,
+  'reviewed_settlement_membership',
+);
+
+const reviewedTypeCorrectionsProblems = [];
+function collectReviewedProblem(message) {
+  reviewedTypeCorrectionsProblems.push(message);
+}
+/**
+ * Identity-anchored type corrections. The anchor identity must belong to this
+ * authority, the corrected type must stay inside the governed scope-bearing
+ * settlement vocabulary, and two corrections for one identity must agree. The
+ * correction is recorded and applied when the Place for the anchor's group is
+ * typed; it never invents a Place and never demotes a container.
+ */
+const reviewedTypeCorrectionByIdentity = new Map();
+if (reviewedTypeCorrections !== null) {
+  for (const row of reviewedTypeCorrections) {
+    const anchor = String(row.identity_anchor ?? '');
+    const correctedType = row.corrected_type;
+    const identity = identityIndex.get(anchor);
+    if (!identity) {
+      collectReviewedProblem(`identities ${anchor} does not belong to this source authority`);
+      continue;
+    }
+    if (!REVIEWED_CORRECTION_TYPES.includes(correctedType)) {
+      collectReviewedProblem(
+        `type correction for ${anchor} (${identity.preferred_name}) proposes un-governed type ${JSON.stringify(correctedType)}`,
+      );
+      continue;
+    }
+    if (!REVIEWED_CORRECTION_CONFIDENCES.includes(row.confidence)) {
+      collectReviewedProblem(
+        `type correction for ${anchor} (${identity.preferred_name}) carries unknown confidence ${JSON.stringify(row.confidence)}`,
+      );
+      continue;
+    }
+    if (row.reviewed_search_scope != null && D1_SCOPE_BY_TYPE[correctedType] !== row.reviewed_search_scope) {
+      collectReviewedProblem(
+        `type correction for ${anchor} (${identity.preferred_name}) asserts scope ${JSON.stringify(row.reviewed_search_scope)}, ` +
+          `which is not the governed scope of ${correctedType}`,
+      );
+      continue;
+    }
+    const existing = reviewedTypeCorrectionByIdentity.get(anchor);
+    if (existing) {
+      collectReviewedProblem(
+        `type correction for ${anchor} (${identity.preferred_name}) is declared more than once` +
+          (existing.corrected_type === correctedType ? '' : ` with conflicting types ${existing.corrected_type}/${correctedType}`),
+      );
+      continue;
+    }
+    reviewedTypeCorrectionByIdentity.set(anchor, row);
+  }
+}
+
+/**
+ * Settlement membership rows: which admitted main place one admitted referent
+ * sits in. Both anchors belong to this authority, the recorded type must be the
+ * reviewed one, and the evidence string must fit the governed column. Anchor
+ * equality (child == parent) is refused at the place level after identities
+ * resolve, since a referent is never a member of itself.
+ */
+const reviewedSettlementMembershipRows = [];
+if (reviewedSettlementMembership !== null) {
+  for (const row of reviewedSettlementMembership) {
+    const child = String(row.child_canonical_location_id ?? '');
+    const parent = String(row.parent_canonical_location_id ?? '');
+    const childIdentity = identityIndex.get(child);
+    const parentIdentity = identityIndex.get(parent);
+    if (!childIdentity) {
+      collectReviewedProblem(`settlement membership child ${child} is not an admitted identity`);
+      continue;
+    }
+    if (!parentIdentity) {
+      collectReviewedProblem(`settlement membership parent ${parent} is not an admitted identity`);
+      continue;
+    }
+    if (row.relationship_type !== REVIEWED_SETTLEMENT_RELATIONSHIP) {
+      collectReviewedProblem(
+        `settlement membership row for ${child} records unsupported relationship_type ${JSON.stringify(row.relationship_type)}`,
+      );
+      continue;
+    }
+    if (typeof row.evidence_source !== 'string' || row.evidence_source.length === 0 || row.evidence_source.length > 64) {
+      collectReviewedProblem(
+        `settlement membership row for ${child} carries an unevidenced or oversized evidence_source`,
+      );
+      continue;
+    }
+    if (row.membership_confidence != null && !REVIEWED_CORRECTION_CONFIDENCES.includes(row.membership_confidence)) {
+      collectReviewedProblem(
+        `settlement membership row for ${child} carries unknown confidence ${JSON.stringify(row.membership_confidence)}`,
+      );
+      continue;
+    }
+    reviewedSettlementMembershipRows.push(row);
+  }
+}
+
+if (reviewedTypeCorrectionsProblems.length) {
+  throw new Error(
+    `place-admission refused: reviewed corrections failed validation:\n  ` +
+      `${reviewedTypeCorrectionsProblems.slice(0, 20).join('\n  ')}`,
+  );
+}
+
+/* reviewed corrections reconcile to the anchor set they claim to cover */
+const reviewedCorrectionsCount =
+  reviewedTypeCorrections === null ? 0 : reviewedTypeCorrections.length;
+const reviewedSettlementMembershipCount =
+  reviewedSettlementMembership === null ? 0 : reviewedSettlementMembership.length;
+
 const namesByIdentity = new Map();
 for (const assertion of nameAssertions) {
   const list = namesByIdentity.get(assertion.canonical_location_id) ?? [];
@@ -322,8 +508,53 @@ function choosePrimary(members) {
   })[0];
 }
 
-/** Governed type choice when member identities disagree on classification. */
+/**
+ * Governed type choice with reviewed corrections.
+ *
+ * A reviewed correction is the strongest type assertion a member identity can
+ * carry: it settles the type of its Place even when the unreviewed source
+ * classifications disagree, because it is a reviewed outcome with an owner, not
+ * another provider hint. All corrections inside one Place's member set were
+ * already required to agree; the corrected type is applied, and the remaining
+ * classification spread stays visible as alternatives. The Place's scope,
+ * verification and licensing flow from the reviewed type exactly as they would
+ * from a source type: nothing here invents a type the vocabulary does not hold,
+ * and nothing here re-types an administrative container.
+ */
 function chooseType(members, primary) {
+  const corrections = members
+    .map(member => reviewedTypeCorrectionByIdentity.get(member.canonical_location_id))
+    .filter(Boolean);
+  const correctedMembers = members.map(member => {
+    const correction = reviewedTypeCorrectionByIdentity.get(member.canonical_location_id);
+    return correction ? { ...member, canonical_type: correction.corrected_type } : member;
+  });
+  if (corrections.length) {
+    const outcome = chooseTypeBySourceClassification(correctedMembers, primary);
+    const correctionTypes = new Set(corrections.map(correction => correction.corrected_type));
+    if (correctionTypes.size !== 1 || outcome.type !== corrections[0].corrected_type) {
+      throw new Error(
+        `reviewed type correction could not be applied to the Place of ` +
+          `${corrections[0].identity_anchor} (` +
+          `corrections ${[...correctionTypes].join('+')}, chosen ${outcome.type})`,
+      );
+    }
+    return {
+      type: outcome.type,
+      alternatives: outcome.alternatives,
+      reviewed: {
+        type_basis: corrections[0].type_basis ?? null,
+        type_evidence: corrections[0].type_evidence ?? null,
+        confidence: corrections[0].confidence ?? null,
+        identity_anchor: corrections[0].identity_anchor ?? null,
+      },
+    };
+  }
+  return chooseTypeBySourceClassification(members, primary);
+}
+
+/** Governed type choice when member identities disagree on classification. */
+function chooseTypeBySourceClassification(members, primary) {
   const chosen = new Map();
   for (const member of members) {
     const list = chosen.get(member.canonical_type) ?? [];
@@ -372,17 +603,6 @@ function licensingOf(members) {
   }
   return worst;
 }
-
-const D1_SCOPE_BY_TYPE = {
-  province: 'province',
-  city: 'metro_city',
-  town: 'metro_city',
-  township: 'locality',
-  suburb: 'locality',
-  neighbourhood: 'locality',
-  locality: 'locality',
-  village: 'locality',
-};
 
 /* ------------------------------------------------------------------ *
  * 3. Place-ID allocation
@@ -601,7 +821,9 @@ for (const group of groups) {
   for (const member of group.members) placeIdByIdentity.set(member.canonical_location_id, placeId);
 
   const licensing = licensingOf(group.members);
-  const { type, alternatives } = chooseType(group.members, primary);
+  const typeChoice = chooseType(group.members, primary);
+  const { type, alternatives } = typeChoice;
+  const reviewedTypeCorrection = typeChoice.reviewed ?? null;
   const verificationStatus = verificationOf(group.members, licensing);
   const nonGeographicCodes = nonGeographicSourceCodes(group.members);
   const searchScope = nonGeographicCodes.length ? null : D1_SCOPE_BY_TYPE[type] ?? null;
@@ -637,6 +859,7 @@ for (const group of groups) {
         source_feature_codes: nonGeographicCodes,
       },
     } : {}),
+    ...(reviewedTypeCorrection ? { reviewed_type_correction: reviewedTypeCorrection } : {}),
     // Provenance back to the source identities that were adjudicated into this
     // Place. The Place is the identity; these are the evidence anchors.
     primary_source_identity_id: primary.canonical_location_id,
@@ -663,6 +886,41 @@ for (const group of groups) {
 }
 
 placeRows.sort((a, b) => byIdLex(a.place_id, b.place_id));
+
+/**
+ * Reviewed type corrections must reconcile to the Places they anchor, exactly:
+ * every declared anchor resolves to an admitted Place that carries the
+ * reviewed outcome. A correction that folded into nothing is a lost review, and
+ * a Place whose reviewed outcome disagrees with its type is an undecided
+ * assertion — both stop the build.
+ */
+{
+  const coverageProblems = [];
+  for (const anchor of reviewedTypeCorrectionByIdentity.keys()) {
+    const placeId = placeIdByIdentity.get(anchor);
+    const record = placeRows.find(row => row.place_id === placeId);
+    if (!record) {
+      coverageProblems.push(`type correction anchor ${anchor} resolved to no admitted Place`);
+      continue;
+    }
+    if (!record.reviewed_type_correction) {
+      coverageProblems.push(`Place ${record.place_id} of correction anchor ${anchor} carries no reviewed outcome`);
+      continue;
+    }
+    if (record.place_type !== reviewedTypeCorrectionByIdentity.get(anchor).corrected_type) {
+      coverageProblems.push(
+        `Place ${record.place_id} (${record.place_type}) does not carry its reviewed type ` +
+          `${reviewedTypeCorrectionByIdentity.get(anchor).corrected_type}`,
+      );
+    }
+  }
+  if (coverageProblems.length) {
+    throw new Error(
+      `place-admission refused: reviewed type corrections did not reconcile:\n  ` +
+        `${coverageProblems.slice(0, 20).join('\n  ')}`,
+    );
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * 5. Place names, governed preferred-public selection
@@ -904,6 +1162,67 @@ for (const placeRow of placeRows) {
     basis: parentBasis,
   });
 }
+
+/**
+ * 6a. Reviewed settlement membership.
+ *
+ * A reviewed membership edge says: this admitted referent sits inside that
+ * admitted main place, and the recorder reviewed what the evidence denotes. It
+ * is not administrative containment, so it never joins `containmentParent`: a
+ * suburb needs its municipality context, not a second containment parent, and
+ * the scope-establishment pass walks containment only. The edge carries the
+ * recorded evidence source and stays search-unauthorized (`search_scope_authorized: 0`),
+ * so it cannot widen any search by itself.
+ */
+const reviewedSettlementMembershipProblems = [];
+const reviewedSettlementMembershipApplied = [];
+for (const row of reviewedSettlementMembershipRows) {
+  const childPlaceId = placeIdByIdentity.get(row.child_canonical_location_id);
+  const parentPlaceId = placeIdByIdentity.get(row.parent_canonical_location_id);
+  if (!childPlaceId || !parentPlaceId) {
+    reviewedSettlementMembershipProblems.push(
+      `settlement membership row ${row.child_canonical_location_id} -> ${row.parent_canonical_location_id} ` +
+        `does not anchor to an admitted Place`,
+    );
+    continue;
+  }
+  if (childPlaceId === parentPlaceId) {
+    reviewedSettlementMembershipProblems.push(
+      `settlement membership row for ${row.child_name} (${
+        row.child_canonical_location_id
+      }) anchors both ends to one Place`,
+    );
+    continue;
+  }
+  reviewedSettlementMembershipApplied.push({ childName: row.child_name, parentName: row.parent_name });
+  addRelationship({
+    admission_version: ADMISSION_VERSION,
+    from_place_id: childPlaceId,
+    to_place_id: parentPlaceId,
+    relationship_type: row.relationship_type,
+    // A reviewed membership edge records what was reviewed; it authorizes no search.
+    search_scope_authorized: 0,
+    evidence_source: row.evidence_source,
+    valid_from: null,
+    valid_to: null,
+    basis: 'reviewed_settlement_membership',
+    reviewed_provenance: {
+      membership_confidence: row.membership_confidence ?? null,
+      child_disposition: row.child_disposition ?? null,
+      source_title: row.source?.title ?? null,
+      source_vintage: row.source?.vintage ?? null,
+      source_licence: row.source?.licence ?? null,
+      notes: row.notes ?? null,
+    },
+  });
+}
+if (reviewedSettlementMembershipProblems.length) {
+  throw new Error(
+    `place-admission refused: reviewed settlement membership failed validation:\n  ` +
+      `${reviewedSettlementMembershipProblems.slice(0, 20).join('\n  ')}`,
+  );
+}
+
 relationshipRows.sort(
   (a, b) =>
     byIdLex(a.from_place_id, b.from_place_id) ||
@@ -1567,6 +1886,17 @@ const manifest = {
     search_scope_authorization_in_slice_2: 0,
     place_id_allocation: 'assigned from a committed registry; never derived from name, slug, coordinates, parent, classification, natural key or source identity',
     source_geography_eligibility: PLACE_SOURCE_GEOGRAPHY_POLICY,
+    reviewed_corrections: {
+      input: 'territory-declared reviewed-correction source artifacts, digest-pinned by the source authority manifest',
+      type_corrections_declared: reviewedCorrectionsCount,
+      type_corrections_applied: placeRows.filter(row => row.reviewed_type_correction).length,
+      settlement_membership_declared: reviewedSettlementMembershipCount,
+      settlement_membership_applied: reviewedSettlementMembershipApplied.length,
+      settlement_types: REVIEWED_SETTLEMENT_RELATIONSHIP,
+      notes: reviewedTypeCorrections === null
+        ? 'no reviewed-correction overlay declared for this territory'
+        : 'type corrections override the settlement type only; verification, licensing and publication flow from the reviewed type exactly as from a source type; settlement membership is recorded, never search-authorizing',
+    },
   },
   counts: {
     source_identities: identities.length,
@@ -1653,6 +1983,8 @@ const manifest = {
     'no municipality is re-typed or promoted into the metro_city search tier',
     'a Place without a governed executable scope stays admitted but is neither searchable nor publishable',
     'the disposition ledger covers every source candidate',
+    'reviewed type corrections reconcile to exactly the admitted Places they anchor, and settle their type within the governed settlement vocabulary',
+    'reviewed settlement membership is recorded with its declared evidence and never search-authorizing',
   ],
 outputs: {
     places: packagePaths.artifacts.places,

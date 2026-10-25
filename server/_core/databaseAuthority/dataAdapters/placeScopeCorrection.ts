@@ -78,7 +78,11 @@ export const PLACE_SCOPE_CORRECTION_DIGEST = stableDigest({
     'properties',
     'listings',
   ],
-  canonicalPackageRebuildRequired: true,
+  /* The rebuild exists: gauteng-source-authority-v0.3 / gauteng-place-admission-v0.2
+   * derive the same 48 type corrections and 351 membership edges from a
+   * digest-pinned reviewed artifact, so the correction package no longer carries a
+   * forward-only delta against canonical admission. */
+  canonicalPackageRebuildRequired: false,
 });
 
 type Identity = {
@@ -800,8 +804,11 @@ function evidenceBase(input: {
     counts: input.inspection.counts,
     planDigest: input.inspection.planDigest,
     transactionOutcome: input.transactionOutcome,
-    canonicalAdmissionCompatible: false,
-    canonicalPackageRebuildRequired: true,
+    /* With gauteng-place-admission-v0.2 committed, the canonical package itself
+     * reproduces this correction from a digest-pinned reviewed artifact, so the
+     * correction package is an applied-and-retired delta, not a pending one. */
+    canonicalAdmissionCompatible: true,
+    canonicalPackageRebuildRequired: false,
     searchAuthorizationChanged: false,
     publicationChanged: false,
     schemaMutation: false,

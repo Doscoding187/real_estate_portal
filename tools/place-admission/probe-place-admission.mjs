@@ -40,9 +40,12 @@ import {
 import { queryRows } from '../../server/_core/databaseAuthority/dataAdapters/common.ts';
 import { normalizePlaceQuery } from '../../shared/placeAuthority.ts';
 import {
+  resolvePlaceAdmissionPackagePaths,
   loadPlaceAdmissionTerritoryRegistry,
   selectPlaceAdmissionTerritory,
 } from '../../shared/placeAdmissionTerritories.ts';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 
 const authority = resolveDatabaseAuthority({ operation: 'verification', credentialClass: 'read-only' });
 const decision = authorizeDatabaseOperation(authority, { approval: protectedDatabaseApprovalFromEnvironment(authority) });
@@ -55,6 +58,20 @@ const read = (sql, values = []) => queryRows(db, sql, values);
  */
 const probedTerritory = selectPlaceAdmissionTerritory(
   loadPlaceAdmissionTerritoryRegistry(process.cwd()).registry,
+);
+
+/* The national target is shared by every admitted province, so the pressure
+ * cases ofthe probed territory's authority are scoped to the places its
+ * package admits. Without that scope, cross-province homonym Places would
+ * turn a single-context case into a multi-count failure that has nothing to
+ * do with the behaviour under test. */
+const packagePaths = resolvePlaceAdmissionPackagePaths(probedTerritory);
+const packagePlaceIds = new Set(
+  readFileSync(resolve(process.cwd(), packagePaths.artifacts.places), 'utf8')
+    .split('\n')
+    .filter(line => line.trim().length > 0)
+    .map(line => JSON.parse(line))
+    .map(row => String(row.place_id)),
 );
 
 const results = [];
@@ -85,8 +102,24 @@ const countsBefore = {
   mapping: (await read('SELECT COUNT(*) AS n FROM `place_external_mapping`'))[0].n,
 };
 const idsBefore = (await read('SELECT place_id FROM `place` ORDER BY place_id')).map(r => r.place_id);
-check(countsBefore.place === 1466, 'admitted Place count', String(countsBefore.place));
-check(countsBefore.relationship === 1465, 'relationship count', String(countsBefore.relationship));
+/* The target holds the union of every registered package, so the row-count
+ * expectations are the registry sum. The territory's own expectations are
+ * exercised through the package-scoped pressure cases below, which is where a
+ * per-territory defensible claim lives. */
+const loadRegistry = loadPlaceAdmissionTerritoryRegistry(process.cwd()).registry;
+const expected = loadRegistry.territories.reduce(
+  (totals, territory) => ({
+    admitted_places: totals.admitted_places + territory.expectedCounts.admitted_places,
+    relationships: totals.relationships + territory.expectedCounts.relationships,
+  }),
+  { admitted_places: 0, relationships: 0 },
+);
+check(countsBefore.place === expected.admitted_places, 'admitted Place count', String(countsBefore.place));
+check(
+  countsBefore.relationship === expected.relationships,
+  'relationship count',
+  String(countsBefore.relationship),
+);
 
 /* ---- integrity ---- */
 const orphans = await read(`
@@ -106,11 +139,21 @@ const multiParent = await read(`SELECT from_place_id, COUNT(*) AS n FROM \`place
   WHERE relationship_type='administratively_contains' GROUP BY from_place_id HAVING n > 1`);
 check(multiParent.length === 0, 'containment has at most one parent per Place', String(multiParent.length));
 
-const roots = countsBefore.place - countsBefore.relationship;
-check(roots === 1, 'containment forest has exactly one root', `places=${countsBefore.place} rels=${countsBefore.relationship}`);
+/* The national containment forest holds one root per admitted province. The
+ * probed territory's own forest must still have exactly one root: every one of
+ * its package places except the province root must be an administrative child. */
+const adminChildren = new Map(
+  (await read('SELECT from_place_id, to_place_id FROM `place_relationship` WHERE relationship_type=\'administratively_contains\'')).map(r => [String(r.from_place_id), String(r.to_place_id)]),
+);
+const packageRoots = [...packagePlaceIds].filter(placeId => !adminChildren.has(placeId));
+check(
+  packageRoots.length === 1,
+  'the probed territory holds exactly one containment root',
+  `roots=${packageRoots.length}`,
+);
 
 // cycle detection in application code, mirroring the verifier
-const parentMap = new Map((await read(`SELECT from_place_id, to_place_id FROM \`place_relationship\` WHERE relationship_type='administratively_contains'`)).map(r => [r.from_place_id, r.to_place_id]));
+const parentMap = adminChildren;
 let cycles = 0;
 for (const start of parentMap.keys()) {
   const seen = new Set([start]);
@@ -132,10 +175,12 @@ const widening = await read('SELECT COUNT(*) AS n FROM `place_relationship` WHER
 check(widening[0].n === 0, 'no relationship-driven search widening in Slice 2', String(widening[0].n));
 
 /* ---- named pressure tests, resolved by real queries ---- */
-const bySearchableName = async name =>
-  read(`SELECT DISTINCT p.place_id, p.place_type, p.verification_status, p.search_scope, p.search_eligible, p.publication_eligible
+const bySearchableName = async name => {
+  const rows = await read(`SELECT DISTINCT p.place_id, p.place_type, p.verification_status, p.search_scope, p.search_eligible, p.publication_eligible
           FROM \`place\` p JOIN \`place_name\` n ON n.place_id = p.place_id
          WHERE n.normalized_name = ? AND n.is_searchable = 1`, [normalizePlaceQuery(name)]);
+  return rows.filter(row => packagePlaceIds.has(String(row.place_id)));
+};
 
 const cases = [
   ['Soweto', 1, 'one Place, not two, for sources that classified the referent differently'],
@@ -157,10 +202,17 @@ for (const [name, expected, why] of cases) {
   check(rows.length === expected, `pressure test: ${name}`, `expected ${expected}, got ${rows.length} — ${why}`);
 }
 
-// Centurion and Lyttelton are the same Place, and Centurion is a searchable alias
+// Centurion and Lyttelton are the same Place, and Centurion is a searchable alias.
+// The subquery may pick a same-name cross-province row, so resolve among the
+// package-scoped candidates.
+const lytteltonCandidates = await read(`SELECT DISTINCT p.place_id FROM \`place\` p
+  JOIN \`place_name\` n ON n.place_id=p.place_id
+ WHERE n.normalized_name='lyttelton' AND n.is_searchable=1`);
+const scopedLyttelton = lytteltonCandidates.map(r => String(r.place_id)).find(id => packagePlaceIds.has(id));
+check(!!scopedLyttelton, 'the package admits a Lyttelton Place', String(scopedLyttelton));
 const lyttelton = await read(`SELECT n.name, n.normalized_name, n.name_role, n.is_searchable FROM \`place\` p
   JOIN \`place_name\` n ON n.place_id=p.place_id
- WHERE p.place_id = (SELECT place_id FROM \`place_name\` WHERE normalized_name='lyttelton' AND is_searchable=1 LIMIT 1)`);
+ WHERE p.place_id = ?`, [scopedLyttelton ?? '']);
 const centurionRows = lyttelton.filter(r => r.normalized_name === 'centurion');
 check(centurionRows.length === 1, 'Centurion is a searchable name on the Lyttelton Place');
 check(lyttelton.some(r => r.name_role === 'preferred_public' && r.normalized_name === 'lyttelton'), 'Lyttelton is the governed preferred public name');
@@ -204,7 +256,7 @@ await expectRejected('an identity inside another Place, duplicating containment'
 
 /* ---- identity stability across a rerun materialization ---- */
 const { execFileSync } = await import('node:child_process');
-execFileSync('npx', ['tsx', 'scripts/databaseAuthorityCli.ts', 'places:prepare'], { stdio: 'pipe' });
+execFileSync('npx', ['tsx', 'scripts/databaseAuthorityCli.ts', 'places:prepare-national'], { stdio: 'pipe' });
 
 const after = await fingerprint();
 const idsAfter = (await read('SELECT place_id FROM `place` ORDER BY place_id')).map(r => r.place_id);

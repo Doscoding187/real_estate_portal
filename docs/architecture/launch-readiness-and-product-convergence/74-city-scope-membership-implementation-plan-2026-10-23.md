@@ -293,6 +293,62 @@ verifier, while the target holds the national package (17,664 Places versus the 
 package's 1,466). It also cannot accept the correction overlay until the admission package is
 rebuilt.
 
+### Phase 2.5 — Canonical package rebuild (executed 2026-10-25)
+
+The rebuild removed the overlay's forward-only delta by making the corrections part of the
+admitted data, through governed artifacts rather than edits to committed data:
+
+- `tools/place-admission/derive-source-authority-v0.3.mjs` (one-time, deterministic) derived
+  `data/gauteng-source-authority-v0.3/`: the four v0.2 source artifacts carried byte-identically
+  (verified digests), plus `gauteng_factual_canonical_reviewed_type_corrections_v0.3.jsonl`
+  (48 rows) and `gauteng_factual_canonical_reviewed_settlement_membership_v0.3.jsonl` (351 rows)
+  reproduced from the reviewed correction package, plus a v0.3 manifest digest-pinning all six
+  artifacts. The v0.2 factual manifest itself is never modified.
+- Registry `schema_version` bumped `0.1 → 0.2`; the file moved to
+  `data/place-admission-territories.v0.2/territory-registry.v0.2.json` (parallel Authorities
+  are not kept). Schema 0.2 adds two optional source-artifact keys
+  (`reviewed_type_corrections`, `reviewed_settlement_membership`) that only a territory carrying
+  reviewed-correction artifacts may declare; unknown keys are refused fail-closed.
+- `za-gp` moved to the v0.3 source authority and a new package
+  `data/gauteng-place-admission-v0.2/`; its `expected_counts.relationships` is 1,816
+  (1,465 administrative + 351 reviewed membership). The other eight provinces are untouched and
+  declare no correction artifacts.
+- The builder gained a fail-closed reviewed-correction overlay: type corrections override the
+  source-classification type choice (a discordant outcome aborts the build; a correction that
+  contradicts the governed scope asserts it explicitly), membership rows emit `settlement_within`
+  edges with `search_scope_authorized = 0`, `basis = reviewed_settlement_membership` and the
+  row's evidence string (Stats SA sub place / main place provenance), and a post-type
+  reconciliation pass refuses any correction that does not land on its anchor Place. No Place
+  was minted, merged or demoted by the rebuild (`minted=0, reused=1466`).
+- `pnpm place:admission:build` (za-gp) and `pnpm place:admission:check` (byte-identical replay,
+  both flags) pass with counts identities 1,488 / places 1,466 / names 2,476 / relationships
+  1,816 / evidence 4,463 / mappings 2,971 / ledger 4,350.
+- The national verifier's containment-forest check now filters `administratively_contains`
+  (reviewed membership is an attestation, not containment); the national collision-surface
+  tool got the same parentage filter. `db:places:verify-national` passes: 9/9 provinces
+  complete, identity drift 0, expected == stored (places 17,664; names 26,425; relationships
+  18,006; evidence 79,925; external mappings 19,792), containment edges 17,655.
+- The disposable target was re-materialized (`db:places:prepare-national`), then its 48
+  stale `place_evidence` note strings — the notes encode the admitted type, and the
+  insert-only materializer cannot rewrite existing rows — were refreshed to the v0.2 canonical
+  text by an authorized one-time repair restricted to a disposable target and refusing any
+  non-`note` column drift.
+- `db:places:release-preview:verify` now passes (`readyForDataRelease: true`, 0 pending rows,
+  161,812 existing rows), and `db:places:scope-correction:verify` passes with the adapter lens
+  flipped to `canonicalAdmissionCompatible: true` / `canonicalPackageRebuildRequired: false`
+  (its 351 edges observed, 0 pending, unchanged invariants).
+- The behaviour probe (`place:admission:probe`) is now registry-derived rather than hard-coded
+  (expected counts come from the registry; the national row-counts are the sum across
+  territories; pressure cases are scoped to the probed package; the rerun no-op uses
+  `places:prepare-national`) and passes 41/41 against the corrected target.
+- Contract suites pass: `contract.place-admission.test.ts` (35, including new settlement and
+  reviewed-correction assertions), `contract.place-admission-territory-neutrality.test.ts` (19),
+  the database-authority suite set (42 files / 409 tests), and
+  `_core/databaseAuthority/__tests__/placeScopeCorrection.test.ts`.
+- The correction package remains untouched (its digest is `36efde72f920b9c990aadfa8c81ce2069b4c8cf962f6678772dd411f680910e2`)
+  and continues to function as the reviewed decision record; the v0.3 source authority is its
+  digest-verified reproduction inside the admitted data.
+
 ### Phase 3 — Projection and URL handling
 
 Separate repository change after the dry run passes.

@@ -16,8 +16,9 @@ value — source-authority directory, digest-pinned source manifest, source
 artifact filenames, admission version, package directory, package artifact
 filenames and reviewed expected counts — comes from the one committed registry:
 
-`data/place-admission-territories.v0.1/territory-registry.v0.1.json`
-(validated by `shared/placeAdmissionTerritories.ts`).
+`data/place-admission-territories.v0.2/territory-registry.v0.2.json`
+(validated by `shared/placeAdmissionTerritories.ts`; schema 0.2 adds the two
+optional reviewed-correction artifact keys a territory may declare).
 
 Admitting a province is therefore a registry entry plus its governed source
 evidence. It is never a second engine, and never a copy of another territory's
@@ -81,6 +82,22 @@ Those cases assert what happened to specific real referents when *that*
 territory's source authority was adjudicated, so they are data, not architecture.
 Admitting another province extends the case list; it does not change the
 machinery around it.
+
+## Reviewed corrections (schema 0.2 overlay)
+
+A territory's source authority may additionally pin two optional artifacts in
+its manifest, declared in the registry:
+
+- `reviewed_type_corrections` — identity-anchored corrections to the type a
+  Place would otherwise inherit from its source classifications;
+- `reviewed_settlement_membership` — reviewed membership edges emitted as
+  `settlement_within` with `search_scope_authorized = 0`.
+
+The builder refuses an undeclared artifact, a declared artifact that is not
+manifest digest-pinned, a correction for an identity that does not belong to the
+authority, an un-governed type, a scope that contradicts the governed type, and
+any duplicate anchor. Applying corrections never mints, merges or demotes
+anything; it only re-types Places and adds reviewed membership edges.
 
 ## Boundaries
 

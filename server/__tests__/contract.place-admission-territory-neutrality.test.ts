@@ -39,7 +39,7 @@ const loadRawRegistry = () =>
 describe('Place admission territory registry: single authority', () => {
   it('loads and validates the committed registry', () => {
     const { registry, registrySha256 } = loadPlaceAdmissionTerritoryRegistry(repositoryRoot);
-    expect(registry.registryId).toBe('property-listify-place-admission-territories-v0.1');
+    expect(registry.registryId).toBe('property-listify-place-admission-territories-v0.2');
     expect(registry.territories.length).toBeGreaterThan(0);
     expect(registrySha256).toMatch(/^[a-f0-9]{64}$/);
     // The default must actually be registered, or selection would fall through

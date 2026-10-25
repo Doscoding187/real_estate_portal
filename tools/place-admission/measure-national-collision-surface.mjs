@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const REGISTRY = join(ROOT, 'data/place-admission-territories.v0.1/territory-registry.v0.1.json');
+const REGISTRY = join(ROOT, 'data/place-admission-territories.v0.2/territory-registry.v0.2.json');
 
 const registry = JSON.parse(readFileSync(REGISTRY, 'utf8'));
 
@@ -51,6 +51,10 @@ for (const territory of registry.territories) {
    * silently degenerates to a province-wide bare-name key and reports ordinary
    * homonyms as structural collisions. Build the real map first. */
   for (const edge of read('relationships')) {
+    /* Only administrative containment defines the natural key's parent. Reviewed
+     * settlement membership is a governance attestation, not parenthood, and
+     * folding it in would silently re-key a child and erase collisions. */
+    if (edge.relationship_type !== 'administratively_contains') continue;
     parents.set(`${edge.from_place_id}|${territory.territory_id}`, edge.to_place_id);
   }
 }
