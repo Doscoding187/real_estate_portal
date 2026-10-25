@@ -32,6 +32,7 @@ const {
     lastSubmitPayload: null as unknown,
     submitError: null as string | null,
     submitDealId: null as number | null,
+    missingPrivacyNotice: false,
   },
 }));
 
@@ -131,14 +132,18 @@ vi.mock('@/lib/trpc', () => ({
                     category: 'consent',
                     developmentId: 101,
                   },
-                  {
-                    key: 'privacy_notice_101',
-                    label: 'Privacy notice',
-                    url: '/api/local-media/object?key=properties%2Fdraft-1%2Fprivacy-notice.pdf',
-                    instructions: 'Share this notice before their details are shared.',
-                    category: 'privacy_notice',
-                    developmentId: 101,
-                  },
+                  ...(state.missingPrivacyNotice
+                    ? []
+                    : [
+                        {
+                          key: 'privacy_notice_101',
+                          label: 'Privacy notice',
+                          url: '/api/local-media/object?key=properties%2Fdraft-1%2Fprivacy-notice.pdf',
+                          instructions: 'Share this notice before their details are shared.',
+                          category: 'privacy_notice',
+                          developmentId: 101,
+                        },
+                      ]),
                 ],
                 uploads: [],
                 signatureMethod: 'Signed electronic acknowledgement',
@@ -202,6 +207,7 @@ describe('PartnerSubmitReferralPage', () => {
     state.lastSubmitPayload = null;
     state.submitError = null;
     state.submitDealId = null;
+    state.missingPrivacyNotice = false;
 
     mockUseAuth.mockReturnValue({ isAuthenticated: true, loading: false });
     mockUseLocation.mockReturnValue(['/distribution/partner/submit', mockSetLocation]);
@@ -316,6 +322,7 @@ describe('PartnerSubmitReferralPage', () => {
     fireEvent.click(screen.getByTitle('Permission to share details'));
     expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
     expect(screen.getByTitle('Privacy notice')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download Privacy notice' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTitle('Privacy notice'));
     expect(stepperStates()).toEqual(['complete', 'complete', 'active', 'upcoming']);
@@ -365,6 +372,27 @@ describe('PartnerSubmitReferralPage', () => {
       intakeSessionUuid: 'session-1',
       buyerName: 'Jane Buyer',
     });
+  });
+
+  it('keeps the documents step active when the privacy notice is not published', () => {
+    state.missingPrivacyNotice = true;
+    render(<PartnerSubmitReferralPage />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select Sky City' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Download brochure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Print or save PDF' }));
+    fireEvent.click(screen.getByTitle('Client info sheet'));
+    expect(
+      screen.getByRole('button', { name: 'Download Permission to share details' }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle('Permission to share details'));
+
+    const popiaRow = screen.getByText('POPIA consent form').parentElement?.parentElement;
+    expect(popiaRow).not.toBeNull();
+    expect(within(popiaRow as HTMLElement).getByText('1 file')).toBeInTheDocument();
+    expect(screen.queryByTitle('Privacy notice')).not.toBeInTheDocument();
+    expect(stepperStates()).toEqual(['complete', 'active', 'upcoming', 'upcoming']);
+    expect(screen.queryByText('Prepare the introduction')).not.toBeInTheDocument();
   });
 
   it('carries the prospect check fit into the referral', () => {
