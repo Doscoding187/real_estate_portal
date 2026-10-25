@@ -17,6 +17,7 @@ describe('Database Authority data-role manifest', () => {
       'reference.geography',
       'reference.places',
       'reference.places-release-preview',
+      'reference.places-scope-correction',
       'reference.platform-settings',
       'foundation.launch-access',
       'demo.listing-preview-authentication',
@@ -37,10 +38,18 @@ describe('Database Authority data-role manifest', () => {
       expect(role.digest).toMatch(/^[a-f0-9]{64}$/);
       expect(role.prepareCommand).toMatch(/^db:/);
       expect(role.verifyCommand).toMatch(/^db:/);
+      if (role.previewCommand) expect(role.previewCommand).toMatch(/^db:/);
+      if (role.previewOperation) expect(role.previewOperation).toBe('verification');
       expect(readFileSync(join(ROOT, role.adapterPath), 'utf8')).not.toMatch(
         /(?:mysql2\/promise|createConnection|createPool|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE)/i,
       );
     }
+
+    const correction = DATA_ROLE_MANIFEST.roles.find(
+      role => role.key === 'reference.places-scope-correction',
+    );
+    expect(correction?.previewCommand).toBe('db:places:scope-correction:preview');
+    expect(correction?.previewOperation).toBe('verification');
   });
 
   it('rejects duplicate or malformed role declarations', () => {

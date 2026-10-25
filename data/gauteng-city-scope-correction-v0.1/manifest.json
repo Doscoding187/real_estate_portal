@@ -1,0 +1,100 @@
+{
+  "correction_version": "gauteng-city-scope-correction-v0.1",
+  "counts": {
+    "demoted_scope_edges": 39,
+    "demoted_without_edge": 9,
+    "existing_locality_edges": 312,
+    "held_places": 2,
+    "high_confidence_edges": 268,
+    "medium_confidence_edges": 83,
+    "parents": 8,
+    "place_corrections": 48,
+    "retained_places": 13,
+    "settlement_within_edges": 351,
+    "target_type_locality": 7,
+    "target_type_suburb": 41
+  },
+  "held_place_ids": [
+    "pl-place-01-425822ad7a5a8e7ff2e1dc38",
+    "pl-place-01-5183abe5c5f567234b2d470b"
+  ],
+  "outputs": {
+    "place_corrections": {
+      "path": "place_corrections.jsonl",
+      "sha256": "d870905054c5115cdadb32d97cac87056fd4e44221042b2a8effdf6fbfc0803d"
+    },
+    "settlement_within_relationships": {
+      "path": "settlement_within_relationships.jsonl",
+      "sha256": "c80b1b6f132a7d408ef5380b4c2607919a97f4e5efa5f1426fd566521a8b9133"
+    }
+  },
+  "package_digest": "36efde72f920b9c990aadfa8c81ce2069b4c8cf962f6678772dd411f680910e2",
+  "parent_place_ids": [
+    "pl-place-01-0614f47352b29b431aee83fd",
+    "pl-place-01-21f154cd5d0954c29ec7525f",
+    "pl-place-01-27505a2efcfeee12ccf09ccb",
+    "pl-place-01-655f2aff2875a42ef11ef63f",
+    "pl-place-01-7e92e438655b8d2b97c1a395",
+    "pl-place-01-8f9ae41ec68191eec8e2c101",
+    "pl-place-01-99b91be60755ea1f09bf6349",
+    "pl-place-01-de64523ea374afb6295fcdc6"
+  ],
+  "policy": {
+    "administratively_contains": "untouched",
+    "canonical_package_rebuild_required": true,
+    "licensing_review": "UNVERIFIED: government GIS service terms and attribution require reviewer sign-off",
+    "listings": "untouched",
+    "properties": "untouched",
+    "publication_authorization": "none",
+    "publication_eligible": "preserve",
+    "relationship_type": "settlement_within",
+    "search_authorization": "none",
+    "search_eligible": "preserve",
+    "search_scope_authorized": 0
+  },
+  "purpose": "Correct the 48 Gauteng city place scopes that are sub places, and add the 351 reviewed settlement_within parent edges. This is a disposable-target correction overlay; it does not change canonical admission or authorize search/publication.",
+  "retained_place_ids": [
+    "pl-place-01-0614f47352b29b431aee83fd",
+    "pl-place-01-179295e3f3bc3ec124348cc8",
+    "pl-place-01-21f154cd5d0954c29ec7525f",
+    "pl-place-01-27505a2efcfeee12ccf09ccb",
+    "pl-place-01-4ea833754cb2c96d82bad067",
+    "pl-place-01-655f2aff2875a42ef11ef63f",
+    "pl-place-01-7e92e438655b8d2b97c1a395",
+    "pl-place-01-7fc415b6bd313a1f85812b4a",
+    "pl-place-01-85220e6c8c6279c775fd94be",
+    "pl-place-01-8f9ae41ec68191eec8e2c101",
+    "pl-place-01-99b91be60755ea1f09bf6349",
+    "pl-place-01-de64523ea374afb6295fcdc6",
+    "pl-place-01-f3e407e8a7e90a4fda92275d"
+  ],
+  "source_artifacts": [
+    {
+      "label": "settlement-within-candidates-v2",
+      "sha256": "fd597d528b5a180c9cea12394f75a2408318534bff02f6e50cebebfff97e9bb5"
+    },
+    {
+      "label": "63-scope-evidence-matrix",
+      "sha256": "85ac5447d745f17d9abd95a106fb0d69bc6111cafbfb6dba6abf814259399d49"
+    },
+    {
+      "label": "locality-assignment-v2",
+      "sha256": "4016344f43237cba5983d2c45a2a16736d6c54494f36268f99c67bb3e0c40f84"
+    },
+    {
+      "label": "gauteng-place-admission-v0.1",
+      "sha256": "9473b4bfb07da81d58f1e88d55ad3bc9d847877144d36e58bb7be8e00ec01984"
+    },
+    {
+      "label": "gauteng-place-relationships-v0.1",
+      "sha256": "8c7d934fde1d5b41e1937741c21dfddd1714771099cdd9306fc6e774d6979836"
+    }
+  ],
+  "target_invariants": {
+    "administratively_contains": 17655,
+    "listings_assigned_to_63": 0,
+    "properties_assigned_to_63": 0,
+    "search_scope_authorized_before": 0,
+    "settlement_within_before": 0
+  }
+}
