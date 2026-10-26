@@ -1,8 +1,8 @@
 # Referrer Search Assessment Migration Review
 
-**Phase:** verify; local disposable-worktree rehearsal completed  
-**Change class:** additive schema  
-**Worktree:** `property-listify-referrer-search-assessment-20261026`  
+**Phase:** verify; local disposable-worktree rehearsal completed
+**Change class:** additive schema
+**Worktree:** `property-listify-referrer-search-assessment-20261026`
 **Base:** `origin/main` at `0265866908a2026e25ef3aa8cf6d82145588d4f3`
 
 ## Migration lineage
