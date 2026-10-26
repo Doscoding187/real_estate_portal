@@ -254,7 +254,7 @@ export default function PartnerDashboardPage() {
   }, [payoutsQuery.data]);
 
   const savedShortlistCount = useMemo(() => {
-    if (savedSearchAssessmentsQuery.data) {
+    if (savedSearchAssessmentsQuery.data?.length) {
       return savedSearchAssessmentsQuery.data.reduce(
         (total, assessment) => total + assessment.selectedOpportunities.length,
         0,
@@ -543,7 +543,9 @@ export default function PartnerDashboardPage() {
                   <p className="mt-0.5 text-[13px] leading-5 text-muted-foreground">
                     Explore options before sharing someone's details.
                     {savedShortlistCount > 0
-                      ? ` ${savedShortlistCount} selected option${savedShortlistCount === 1 ? '' : 's'} saved to your account.`
+                      ? savedSearchAssessmentsQuery.data?.length
+                        ? ` ${savedShortlistCount} selected option${savedShortlistCount === 1 ? '' : 's'} saved to your account.`
+                        : ` ${savedShortlistCount} saved on this device.`
                       : ''}
                   </p>
                 </div>
