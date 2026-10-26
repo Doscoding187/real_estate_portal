@@ -354,7 +354,7 @@ describe('canonical migration manifest', () => {
       4, 15, 3, 3, 3, 4, 3, 3, 3, 3,
     ]);
     expect(manifest.expectedHead.filename).toBe(
-      '0152_service_provider_review_reports_reporter_created_index.sql',
+      '0153_distribution_referrer_search_assessments.sql',
     );
   });
 
@@ -371,11 +371,11 @@ describe('canonical migration manifest', () => {
         checksum: item.checksum,
       })),
       acceptedOldHead: currentIntegratedHead.filename,
-      expectedNewHead: '0152_service_provider_review_reports_reporter_created_index.sql',
+      expectedNewHead: '0153_distribution_referrer_search_assessments.sql',
     });
 
     expect(plan.acceptedOldHead).toBe('0007_paid_launch_access_invoice_term.sql');
-    expect(plan.pending).toHaveLength(145);
+    expect(plan.pending).toHaveLength(146);
     expect(plan.pending.map(item => item.filename)).toEqual([
         '0008_developer_organisations.sql',
         '0009_developer_organisation_memberships.sql',
@@ -522,9 +522,10 @@ describe('canonical migration manifest', () => {
         '0150_service_provider_reviews_moderation_index.sql',
         '0151_service_provider_review_reports_sequenced.sql',
         '0152_service_provider_review_reports_reporter_created_index.sql',
+        '0153_distribution_referrer_search_assessments.sql',
     ]);
     expect(plan.expectedNewHead).toBe(
-      '0152_service_provider_review_reports_reporter_created_index.sql',
+      '0153_distribution_referrer_search_assessments.sql',
     );
   });
 

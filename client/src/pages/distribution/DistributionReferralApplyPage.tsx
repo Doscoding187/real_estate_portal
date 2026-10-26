@@ -168,8 +168,8 @@ export default function DistributionReferralApplyPage() {
                           {carried.shortlistCount} selected option
                           {carried.shortlistCount === 1 ? '' : 's'}
                         </strong>
-                        . After you join and sign in on this browser, you can import them into your
-                        partner catalogue.
+                        . After you sign in, the saved search-only shortlist is attached to your
+                        account and appears on your referrer dashboard.
                       </li>
                     ) : null}
                     {carried.checkfit ? (
@@ -182,8 +182,8 @@ export default function DistributionReferralApplyPage() {
                     ) : null}
                   </ul>
                   <p className="mt-2 text-xs leading-5 text-slate-500">
-                    Same-browser convenience only. This is not a saved assessment or a submitted
-                    referral.
+                    A saved shortlist is not a financial check fit or a submitted referral. No
+                    prospect identity or contact details are included.
                   </p>
                 </div>
               ) : null}

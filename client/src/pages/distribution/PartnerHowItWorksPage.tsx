@@ -49,7 +49,7 @@ const AFTER_STEPS = [
   {
     icon: <ShieldCheck className="h-5 w-5" />,
     title: 'Your shortlist',
-    body: 'Exploring or printing a shortlist is not a referral. Shortlists stay in your browser with the prospect’s private details left out, and can be carried into your signed-in catalogue as a convenience.',
+    body: 'Exploring or printing a shortlist is not a referral. Search-only shortlists leave out the prospect’s private details and can be attached to your account when you sign in.',
   },
 ];
 

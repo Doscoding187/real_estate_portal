@@ -287,7 +287,7 @@ export function CheckfitCard({
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
             <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-              Your check-fit and shortlist stay in this browser and come with you when you apply.
+              This check-fit stays in this browser. Your selected shortlist can be attached to your account when you sign in.
             </p>
           </div>
         </div>

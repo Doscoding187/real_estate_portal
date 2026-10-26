@@ -4,7 +4,7 @@
   "historyTable": "sql_migration_history",
   "attemptTable": "sql_migration_attempts",
   "lockName": "property_listify_manifest_migrations",
-  "expectedHead": "0152_service_provider_review_reports_reporter_created_index.sql",
+  "expectedHead": "0153_distribution_referrer_search_assessments.sql",
   "migrations": [
     {
       "sequence": 0,
@@ -1590,6 +1590,16 @@
       "checksum": "aae6172f4bca9f11d5ff681cc7ed40649f515f2460b4ff0faa18f3828797f13d",
       "parent": "0151_service_provider_review_reports_sequenced.sql",
       "parentChecksum": "d1272ddd283c0ce679b9244823c1aeb2dd2b810a41652f00eb81711769897b60",
+      "kind": "ddl",
+      "statementPolicy": "single-ddl",
+      "requiredReferenceDataVersion": null
+    },
+    {
+      "sequence": 153,
+      "filename": "0153_distribution_referrer_search_assessments.sql",
+      "checksum": "717d90efef495747e013a3ae883e07d2486ee526985924737e514b8679f957f7",
+      "parent": "0152_service_provider_review_reports_reporter_created_index.sql",
+      "parentChecksum": "aae6172f4bca9f11d5ff681cc7ed40649f515f2460b4ff0faa18f3828797f13d",
       "kind": "ddl",
       "statementPolicy": "single-ddl",
       "requiredReferenceDataVersion": null

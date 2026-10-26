@@ -234,6 +234,14 @@ export default function DistributionNetworkPublicPage() {
       ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
       : 'Any bedroom count',
   ].filter(Boolean).join(' · ');
+  const shortlistFilters = useMemo(
+    () => ({
+      priceBandKey: matchPriceRange,
+      areaText: matchPlace?.label ?? '',
+      bedrooms: [...selectedBeds],
+    }),
+    [matchPriceRange, matchPlace, selectedBeds],
+  );
 
   return (
     <>
@@ -552,6 +560,7 @@ export default function DistributionNetworkPublicPage() {
                         marketMode={marketMode}
                         storageScope="public"
                         searchSummary={shortlistSummary}
+                        searchFilters={shortlistFilters}
                         opportunities={filteredShortlistOptions}
                         currentOpportunities={shortlistOptions}
                       />
