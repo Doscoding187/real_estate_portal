@@ -27,6 +27,55 @@ vi.mock('@/components/referral/ReferralAppShell', () => ({
   ReferralAppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({
+    value,
+    onChange,
+    label,
+  }: {
+    value: { label: string } | null;
+    onChange: (value: unknown) => void;
+    label: string;
+  }) => (
+    <div>
+      <span>{label}</span>
+      <button
+        type="button"
+        aria-label={value ? 'Clear selected Place' : 'Select Johannesburg Place'}
+        onClick={() =>
+          onChange(
+            value
+              ? null
+              : {
+                  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+                  label: 'Johannesburg',
+                  placeType: 'city',
+                  scope: 'metro_city',
+                  administrativeContext: 'City of Johannesburg',
+                },
+          )
+        }
+      >
+        {value?.label ?? 'Choose canonical Place'}
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onChange({
+            canonicalPlaceId: 'city:12',
+            label: 'Johannesburg',
+            placeType: 'city',
+            scope: 'metro_city',
+            administrativeContext: 'City of Johannesburg',
+          })
+        }
+      >
+        Inject malformed Place
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('@/components/distribution/partner/ProgramRequirementsDialog', () => ({
   ProgramRequirementsDialog: ({ open }: { open: boolean }) =>
     open ? <div>Referral process dialog</div> : null,
@@ -48,6 +97,7 @@ function buildItem(overrides: Record<string, unknown> = {}) {
   return {
     developmentId: 101,
     developmentName: 'Hillside Gardens',
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
     developmentFactsAvailable: true,
     city: 'Johannesburg',
     province: 'Gauteng',
@@ -163,6 +213,7 @@ const activeItem = buildItem();
 const pausedItem = buildItem({
   developmentId: 202,
   developmentName: 'Ridge View Estate',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000002',
   city: 'Midrand',
   imageUrl: null,
   campaign: {
@@ -237,6 +288,54 @@ describe('PartnerDevelopmentsPage', () => {
     expect(pausedCard.queryByText(/Minimum qualifying income/)).not.toBeInTheDocument();
   });
 
+  it('filters by exact Place ID and keeps typed area text out of matching', () => {
+    const mismatchedItem = buildItem({
+      developmentId: 303,
+      developmentName: 'Ridge View Estate',
+      canonicalPlaceId: 'pl-place-01-000000000000000000000002',
+      city: 'Johannesburg',
+    });
+    const unassignedItem = buildItem({
+      developmentId: 404,
+      developmentName: 'Unassigned Homes',
+      canonicalPlaceId: null,
+    });
+    const malformedItem = buildItem({
+      developmentId: 505,
+      developmentName: 'Malformed Homes',
+      canonicalPlaceId: 'city:12',
+    });
+    mockListProgramTermsQuery.mockReturnValue({
+      isLoading: false,
+      error: null,
+      data: { items: [activeItem, mismatchedItem, unassignedItem, malformedItem] },
+    });
+
+    render(<PartnerDevelopmentsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Select Johannesburg Place' }));
+
+    expect(screen.getByRole('heading', { name: 'Hillside Gardens' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ridge View Estate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Unassigned Homes' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Malformed Homes' })).not.toBeInTheDocument();
+    expect(screen.getByText('Showing 1 opportunity')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear selected Place' }));
+    fireEvent.change(screen.getByPlaceholderText('Search development names'), {
+      target: { value: 'Johannesburg' },
+    });
+    expect(screen.getByText('Showing 0 opportunities')).toBeInTheDocument();
+  });
+
+  it('fails closed when the selected Place ID is malformed', () => {
+    render(<PartnerDevelopmentsPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'Inject malformed Place' }));
+
+    expect(screen.queryByRole('heading', { name: 'Hillside Gardens' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Ridge View Estate' })).not.toBeInTheDocument();
+    expect(screen.getByText('Showing 0 opportunities')).toBeInTheDocument();
+  });
+
   it('opens the units dialog with published units and starts a referral', () => {
     render(<PartnerDevelopmentsPage />);
 
@@ -272,20 +371,9 @@ describe('PartnerDevelopmentsPage', () => {
     expect(screen.getByRole('button', { name: /Start a referral/ })).toBeDisabled();
   });
 
-  it('filters by area and bedrooms without discarding unknown availability', () => {
+  it('filters by bedrooms without discarding unknown availability', () => {
     render(<PartnerDevelopmentsPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('Search by area, suburb or development'), {
-      target: { value: 'Midrand' },
-    });
-
-    expect(screen.queryByRole('heading', { name: 'Hillside Gardens' })).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Ridge View Estate' })).toBeInTheDocument();
-    expect(screen.getByText('Showing 1 opportunity')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('Search by area, suburb or development'), {
-      target: { value: '' },
-    });
     fireEvent.change(screen.getByLabelText('Bedrooms'), { target: { value: '3' } });
 
     expect(screen.queryByRole('heading', { name: 'Hillside Gardens' })).not.toBeInTheDocument();
