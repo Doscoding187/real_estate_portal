@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
@@ -46,6 +46,7 @@ import {
   parseDistributionDealDocumentReference,
 } from '../services/distributionReferralEvidenceStorage';
 import { validateRegistrationLegalAcceptance } from '../services/legalAcceptancePolicy';
+import { installSyntheticLegalRelease } from '../test-utils/legalReleaseFixture';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const INTEGRATION_TIMEOUT_MS = 30_000;
@@ -607,9 +608,18 @@ async function seedScenario(input?: {
 }
 
 describeWithDb('distribution.partner.submitReferral integration', () => {
+  let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>> | undefined;
+
+  beforeAll(async () => {
+    if (hasDb) legalFixture = await installSyntheticLegalRelease();
+  });
+
   afterAll(async () => {
     const db = await getDb();
-    if (!db) return;
+    if (!db) {
+      await legalFixture?.cleanup();
+      return;
+    }
 
     const dealIds = uniqueIds(createdState.dealIds);
     if (dealIds.length) {
@@ -761,6 +771,7 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.legalAcceptanceIds = [];
     createdState.requiredDocumentIds = [];
     createdState.platformSettingKeys = [];
+    await legalFixture?.cleanup();
   });
 
   it('blocks submission when the program is inactive or referrals are disabled', async () => {
