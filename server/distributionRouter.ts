@@ -8860,7 +8860,7 @@ export const distributionRouter = router({
         success: true,
         registrationId,
         userId,
-        redirectPath: '/login',
+        redirectPath: '/distribution/manager',
       };
     }),
 

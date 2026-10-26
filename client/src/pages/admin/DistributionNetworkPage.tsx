@@ -796,7 +796,8 @@ export default function DistributionNetworkPage() {
             <CardHeader>
               <CardTitle>Invite Manager</CardTitle>
               <CardDescription>
-                Create an invite link. Manager completes profile + credentials from that link.
+                Create an invite link. The manager creates and verifies an account with this email,
+                then reopens the invite link to complete their profile and accept the invitation.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

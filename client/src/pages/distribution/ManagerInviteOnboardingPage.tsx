@@ -83,12 +83,9 @@ export default function ManagerInviteOnboardingPage() {
   }, [inviteQuery.data, form]);
 
   const completeMutation = trpc.distribution.completeManagerInviteRegistration.useMutation({
-    onSuccess: () => {
-      toast.success('Registration complete. You can now log in to your manager dashboard.');
-      const loginEmail = inviteQuery.data?.email || email;
-      setLocation(
-        `/login?email=${encodeURIComponent(loginEmail)}&next=${encodeURIComponent('/distribution/manager')}`,
-      );
+    onSuccess: result => {
+      toast.success('Manager invitation accepted. Opening your manager dashboard.');
+      setLocation(result.redirectPath || '/distribution/manager');
     },
     onError: error => {
       toast.error(error.message);

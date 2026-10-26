@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
@@ -23,10 +24,11 @@ import {
   assertDistributionReferrerPreviewUser,
   DISTRIBUTION_REFERRER_PREVIEW_EMAIL,
   DISTRIBUTION_REFERRER_PREVIEW_OPEN_ID,
+  resolveDistributionReferrerPreviewPassword,
 } from './distributionReferrerPreviewFixture';
 
 export const DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION =
-  'distribution-referrer-activity-preview-v5' as const;
+  'distribution-referrer-activity-preview-v6' as const;
 
 const EXPECTED_MANAGER = Object.freeze({
   openId: 'distribution-referrer-activity-manager-v1',
@@ -34,7 +36,17 @@ const EXPECTED_MANAGER = Object.freeze({
   name: 'Preview Sales Manager',
   firstName: 'Preview',
   lastName: 'Manager',
+  loginMethod: 'email',
+  emailVerified: 1,
   role: 'visitor',
+  onboardingComplete: 1,
+  onboardingStep: 0,
+});
+
+const EXPECTED_MANAGER_IDENTITY = Object.freeze({
+  identityType: 'manager',
+  active: 1,
+  displayName: EXPECTED_MANAGER.name,
 });
 
 const EXPECTED_DEVELOPMENT = Object.freeze({
@@ -368,6 +380,7 @@ const FIXTURE_PAYLOAD = Object.freeze({
     email: DISTRIBUTION_REFERRER_PREVIEW_EMAIL,
   },
   manager: EXPECTED_MANAGER,
+  managerIdentity: EXPECTED_MANAGER_IDENTITY,
   development: EXPECTED_DEVELOPMENT,
   program: EXPECTED_PROGRAM,
   deal: EXPECTED_DEAL,
@@ -398,8 +411,10 @@ type ViewingState = PreparedState | 'rescheduled';
 export type DistributionReferrerActivityPreviewEvidence = AdapterEvidence & {
   fixture: typeof DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION;
   account: { userId: number; email: typeof DISTRIBUTION_REFERRER_PREVIEW_EMAIL };
+  managerAccount: { userId: number; email: typeof EXPECTED_MANAGER.email };
   prepared: {
     manager: PreparedState;
+    managerIdentity: PreparedState;
     development: PreparedState;
     program: PreparedState;
     deal: PreparedState;
@@ -432,6 +447,8 @@ export type DistributionReferrerActivityPreviewEvidence = AdapterEvidence & {
     migrationHead: string;
     schemaCongruent: true;
     referrerAccount: true;
+    managerAccountLogin: true;
+    activeManagerIdentity: true;
     sampleDevelopmentUnpublished: true;
     restrictedReferralProgram: true;
     sampleDeal: true;
@@ -526,7 +543,19 @@ export function assertDistributionReferrerActivityManager(row: Row): void {
   requireExact(rowValue(row, 'name'), EXPECTED_MANAGER.name, 'manager name');
   requireExact(rowValue(row, 'firstName'), EXPECTED_MANAGER.firstName, 'manager firstName');
   requireExact(rowValue(row, 'lastName'), EXPECTED_MANAGER.lastName, 'manager lastName');
+  requireExact(rowValue(row, 'loginMethod'), EXPECTED_MANAGER.loginMethod, 'manager login method');
+  requireExact(rowValue(row, 'emailVerified'), EXPECTED_MANAGER.emailVerified, 'manager email verification');
   requireExact(rowValue(row, 'role'), EXPECTED_MANAGER.role, 'manager role');
+  requireExact(
+    rowValue(row, 'onboarding_complete'),
+    EXPECTED_MANAGER.onboardingComplete,
+    'manager onboarding state',
+  );
+  requireExact(
+    rowValue(row, 'onboarding_step'),
+    EXPECTED_MANAGER.onboardingStep,
+    'manager onboarding step',
+  );
 }
 
 export function classifyDistributionReferrerActivityManager(row: Row | null): {
@@ -1150,13 +1179,56 @@ async function findReferrerUser(connection: AuthoritySqlConnection): Promise<Row
 async function findManagerUser(connection: AuthoritySqlConnection): Promise<Row | null> {
   const rows = await queryRows(
     connection,
-    `SELECT id, openId, email, name, firstName, lastName, role
+    `SELECT id, openId, email, passwordHash, name, firstName, lastName, loginMethod,
+            emailVerified, role, onboarding_complete, onboarding_step
        FROM users
       WHERE email = ? OR openId = ?
       ORDER BY id`,
     [EXPECTED_MANAGER.email, EXPECTED_MANAGER.openId],
   );
   return requireOneOrNone(rows, 'sample manager user');
+}
+
+async function findManagerIdentity(
+  connection: AuthoritySqlConnection,
+  userId: number,
+): Promise<Row | null> {
+  const rows = await queryRows(
+    connection,
+    `SELECT id, user_id, identity_type, active, display_name
+       FROM distribution_identities
+      WHERE user_id = ? AND identity_type = ?
+      ORDER BY id`,
+    [userId, EXPECTED_MANAGER_IDENTITY.identityType],
+  );
+  return requireOneOrNone(rows, 'sample manager identity');
+}
+
+export function assertDistributionReferrerActivityManagerIdentity(
+  row: Row,
+  expectedUserId: number,
+): void {
+  requireExact(rowValue(row, 'user_id'), expectedUserId, 'manager identity user ID');
+  requireExact(
+    rowValue(row, 'identity_type'),
+    EXPECTED_MANAGER_IDENTITY.identityType,
+    'manager identity type',
+  );
+  requireExact(rowValue(row, 'active'), EXPECTED_MANAGER_IDENTITY.active, 'manager identity active state');
+  requireExact(
+    rowValue(row, 'display_name'),
+    EXPECTED_MANAGER_IDENTITY.displayName,
+    'manager identity display name',
+  );
+}
+
+export function classifyDistributionReferrerActivityManagerIdentity(
+  row: Row | null,
+  userId: number,
+): { state: PreparedState } {
+  if (!row) return { state: 'created' };
+  assertDistributionReferrerActivityManagerIdentity(row, userId);
+  return { state: 'reused' };
 }
 
 async function findDevelopment(connection: AuthoritySqlConnection): Promise<Row | null> {
@@ -1387,18 +1459,46 @@ async function insertIdOf(
   return asPositiveId(header?.insertId, `created ${label} ID`);
 }
 
+async function passwordHashMatches(password: string, hash: unknown): Promise<boolean> {
+  if (typeof hash !== 'string' || !hash) return false;
+  return bcrypt.compare(password, hash);
+}
+
 async function ensureManagerUser(
   connection: AuthoritySqlConnection,
+  password: string,
 ): Promise<{ id: number; state: PreparedState }> {
   const existing = await findManagerUser(connection);
   const classification = classifyDistributionReferrerActivityManager(existing);
   if (existing) {
+    const id = asPositiveId(rowValue(existing, 'id'), 'manager user ID');
+    if (await passwordHashMatches(password, rowValue(existing, 'passwordHash'))) {
+      return { id, state: classification.state };
+    }
+
+    const existingHash = rowValue(existing, 'passwordHash');
+    if (existingHash !== null && existingHash !== undefined && String(existingHash).length > 0) {
+      throw new Error(
+        'Distribution referrer activity preview fixture refuses to rotate a conflicting manager password.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await connection.execute(
+      'UPDATE users SET passwordHash = ? WHERE id = ? AND (passwordHash IS NULL OR passwordHash = ?)',
+      [passwordHash, id, ''],
+    );
+    const updated = await findManagerUser(connection);
+    if (!updated || !(await passwordHashMatches(password, rowValue(updated, 'passwordHash')))) {
+      throw new Error('Distribution referrer activity preview manager login could not be provisioned.');
+    }
     return {
-      id: asPositiveId(rowValue(existing, 'id'), 'manager user ID'),
+      id,
       state: classification.state,
     };
   }
 
+  const passwordHash = await bcrypt.hash(password, 10);
   const id = await insertIdOf(
     connection,
     `INSERT INTO users
@@ -1406,17 +1506,50 @@ async function ensureManagerUser(
        emailVerified, role, plan, trialStatus, onboarding_complete, onboarding_step,
        subscription_tier, subscription_status, agencyId, isSubaccount,
        passwordResetToken, passwordResetTokenExpiresAt, emailVerificationToken)
-     VALUES (?, ?, NULL, ?, ?, ?, NULL, 'email', 1, ?, 'trial', 'active', 1, 0,
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, 'trial', 'active', ?, ?,
              'free', 'trial', NULL, 0, NULL, NULL, NULL)`,
     [
       EXPECTED_MANAGER.openId,
       EXPECTED_MANAGER.email,
+      passwordHash,
       EXPECTED_MANAGER.name,
       EXPECTED_MANAGER.firstName,
       EXPECTED_MANAGER.lastName,
+      EXPECTED_MANAGER.loginMethod,
+      EXPECTED_MANAGER.emailVerified,
       EXPECTED_MANAGER.role,
+      EXPECTED_MANAGER.onboardingComplete,
+      EXPECTED_MANAGER.onboardingStep,
     ],
     'manager user',
+  );
+  return { id, state: 'created' };
+}
+
+async function ensureManagerIdentity(
+  connection: AuthoritySqlConnection,
+  userId: number,
+): Promise<{ id: number; state: PreparedState }> {
+  const existing = await findManagerIdentity(connection, userId);
+  const classification = classifyDistributionReferrerActivityManagerIdentity(existing, userId);
+  if (existing) {
+    return {
+      id: asPositiveId(rowValue(existing, 'id'), 'manager identity ID'),
+      state: classification.state,
+    };
+  }
+
+  const id = await insertIdOf(
+    connection,
+    `INSERT INTO distribution_identities (user_id, identity_type, active, display_name)
+     VALUES (?, ?, ?, ?)`,
+    [
+      userId,
+      EXPECTED_MANAGER_IDENTITY.identityType,
+      EXPECTED_MANAGER_IDENTITY.active,
+      EXPECTED_MANAGER_IDENTITY.displayName,
+    ],
+    'manager identity',
   );
   return { id, state: 'created' };
 }
@@ -1975,6 +2108,7 @@ async function requireCurrentCongruentSchema(input: {
 async function verifyFixture(input: {
   connection: AuthoritySqlConnection;
   referrerUserId: number;
+  managerPassword: string;
   migrationHead: string;
 }): Promise<{
   verified: DistributionReferrerActivityPreviewEvidence['verified'];
@@ -1990,6 +2124,17 @@ async function verifyFixture(input: {
     throw new Error('Distribution referrer activity preview fixture manager is missing.');
   assertDistributionReferrerActivityManager(manager);
   const managerId = asPositiveId(rowValue(manager, 'id'), 'manager user ID');
+  if (!(await passwordHashMatches(input.managerPassword, rowValue(manager, 'passwordHash')))) {
+    throw new Error(
+      'Distribution referrer activity preview fixture manager password hash does not match the local secret.',
+    );
+  }
+
+  const managerIdentity = await findManagerIdentity(input.connection, managerId);
+  if (!managerIdentity) {
+    throw new Error('Distribution referrer activity preview fixture manager identity is missing.');
+  }
+  assertDistributionReferrerActivityManagerIdentity(managerIdentity, managerId);
 
   const development = await findDevelopment(input.connection);
   if (!development) {
@@ -2139,6 +2284,8 @@ async function verifyFixture(input: {
       migrationHead: input.migrationHead,
       schemaCongruent: true,
       referrerAccount: true,
+      managerAccountLogin: true,
+      activeManagerIdentity: true,
       sampleDevelopmentUnpublished: true,
       restrictedReferralProgram: true,
       sampleDeal: true,
@@ -2198,9 +2345,11 @@ export async function prepareDistributionReferrerActivityPreviewFixture(input: {
   const referrer = await findReferrerUser(input.connection);
   assertDistributionReferrerActivityDependency(referrer);
   const referrerUserId = asPositiveId(rowValue(referrer!, 'id'), 'referrer user ID');
+  const managerPassword = resolveDistributionReferrerPreviewPassword();
 
   const prepared = await withTransaction(input.connection, async () => {
-    const manager = await ensureManagerUser(input.connection);
+    const manager = await ensureManagerUser(input.connection, managerPassword);
+    const managerIdentity = await ensureManagerIdentity(input.connection, manager.id);
     const development = await ensureDevelopment(input.connection);
     const program = await ensureProgram(input.connection, development.id);
     const deal = await ensureDeal(input.connection, {
@@ -2244,6 +2393,7 @@ export async function prepareDistributionReferrerActivityPreviewFixture(input: {
     const demoIntakePolicy = await ensureDemoIntakePolicy(input.connection, demoProgram.id);
     return {
       manager,
+      managerIdentity,
       development,
       program,
       deal,
@@ -2264,15 +2414,24 @@ export async function prepareDistributionReferrerActivityPreviewFixture(input: {
   const result = await verifyFixture({
     connection: input.connection,
     referrerUserId,
+    managerPassword,
     migrationHead: manifest.document.expectedHead,
   });
+
+  const manager = await findManagerUser(input.connection);
+  if (!manager) throw new Error('Distribution referrer activity preview fixture manager is missing.');
 
   return {
     ...base,
     fixture: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
     account: { userId: referrerUserId, email: DISTRIBUTION_REFERRER_PREVIEW_EMAIL },
+    managerAccount: {
+      userId: asPositiveId(rowValue(manager, 'id'), 'manager user ID'),
+      email: EXPECTED_MANAGER.email,
+    },
     prepared: {
       manager: prepared.manager.state,
+      managerIdentity: prepared.managerIdentity.state,
       development: prepared.development.state,
       program: prepared.program.state,
       deal: prepared.deal.state,
@@ -2313,19 +2472,29 @@ export async function verifyDistributionReferrerActivityPreviewFixture(input: {
   const referrer = await findReferrerUser(input.connection);
   assertDistributionReferrerActivityDependency(referrer);
   const referrerUserId = asPositiveId(rowValue(referrer!, 'id'), 'referrer user ID');
+  const managerPassword = resolveDistributionReferrerPreviewPassword();
 
   const result = await verifyFixture({
     connection: input.connection,
     referrerUserId,
+    managerPassword,
     migrationHead: manifest.document.expectedHead,
   });
+
+  const manager = await findManagerUser(input.connection);
+  if (!manager) throw new Error('Distribution referrer activity preview fixture manager is missing.');
 
   return {
     ...base,
     fixture: DISTRIBUTION_REFERRER_ACTIVITY_PREVIEW_VERSION,
     account: { userId: referrerUserId, email: DISTRIBUTION_REFERRER_PREVIEW_EMAIL },
+    managerAccount: {
+      userId: asPositiveId(rowValue(manager, 'id'), 'manager user ID'),
+      email: EXPECTED_MANAGER.email,
+    },
     prepared: {
       manager: 'reused',
+      managerIdentity: 'reused',
       development: 'reused',
       program: 'reused',
       deal: 'reused',
