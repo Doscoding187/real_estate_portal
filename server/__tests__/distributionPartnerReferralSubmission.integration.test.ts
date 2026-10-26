@@ -26,7 +26,6 @@ import {
   distributionReferralIntakePolicyReleases,
   distributionReferralIntakeSessions,
   distributionProspectCheckFits,
-  legalActiveRelease,
   legalReleases,
   platformTeamRegistrations,
   platformSettings,
@@ -68,10 +67,10 @@ const createdState = {
   intakePolicyReleaseIds: [] as number[],
   intakeSessionUuids: [] as string[],
   managerRegistrationIds: [] as number[],
-  legalAcceptanceIds: [] as string[],
   requiredDocumentIds: [] as number[],
   platformSettingKeys: [] as string[],
 };
+let managerLegalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>> | undefined;
 
 function uniqueIds(values: number[]) {
   return Array.from(new Set(values.filter(Boolean)));
@@ -403,16 +402,14 @@ async function completeIntake(input: {
   return session.sessionUuid;
 }
 
-async function recordCurrentRegistrationLegalAcceptance(userId: number) {
+async function recordCurrentRegistrationLegalAcceptance(userId: number, bundleId: string) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
-  const [activeRelease] = await db
-    .select({ release: legalReleases })
-    .from(legalActiveRelease)
-    .innerJoin(legalReleases, eq(legalActiveRelease.bundleId, legalReleases.bundleId))
-    .where(eq(legalActiveRelease.purpose, 'account_registration'))
+  const [release] = await db
+    .select()
+    .from(legalReleases)
+    .where(eq(legalReleases.bundleId, bundleId))
     .limit(1);
-  const release = activeRelease?.release;
   if (!release) throw new Error('Current account registration legal release is unavailable.');
 
   const acceptedAt = new Date();
@@ -447,7 +444,6 @@ async function recordCurrentRegistrationLegalAcceptance(userId: number) {
     acceptedAt: acceptedAt.toISOString().slice(0, 23).replace('T', ' '),
     source: 'account_registration',
   });
-  createdState.legalAcceptanceIds.push(evidenceId);
 }
 
 async function inviteAndOnboardManager(input: { managerUserId: number }) {
@@ -460,7 +456,9 @@ async function inviteAndOnboardManager(input: { managerUserId: number }) {
     .limit(1);
   if (!manager?.email) throw new Error('Manager account email is missing.');
 
-  await recordCurrentRegistrationLegalAcceptance(input.managerUserId);
+  const legalBundleId = managerLegalFixture?.registrationChoice.bundleId;
+  if (!legalBundleId) throw new Error('Synthetic registration legal fixture is unavailable.');
+  await recordCurrentRegistrationLegalAcceptance(input.managerUserId, legalBundleId);
   const inviterUserId = await insertUser('super_admin');
   const adminCaller = createCaller(inviterUserId, 'super_admin');
   const invitation = await adminCaller.distribution.admin.createManagerInvite({
@@ -608,16 +606,14 @@ async function seedScenario(input?: {
 }
 
 describeWithDb('distribution.partner.submitReferral integration', () => {
-  let legalFixture: Awaited<ReturnType<typeof installSyntheticLegalRelease>> | undefined;
-
   beforeAll(async () => {
-    if (hasDb) legalFixture = await installSyntheticLegalRelease();
+    if (hasDb) managerLegalFixture = await installSyntheticLegalRelease();
   });
 
   afterAll(async () => {
     const db = await getDb();
     if (!db) {
-      await legalFixture?.cleanup();
+      await managerLegalFixture?.cleanup();
       return;
     }
 
@@ -740,12 +736,9 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         .where(inArray(platformTeamRegistrations.id, managerRegistrationIds));
     }
 
-    const legalAcceptanceIds = uniqueStringIds(createdState.legalAcceptanceIds);
-    if (legalAcceptanceIds.length) {
-      await db
-        .delete(userLegalAcceptances)
-        .where(inArray(userLegalAcceptances.id, legalAcceptanceIds));
-    }
+    // The CI runtime role cannot delete legal evidence. The fixture authority
+    // owns cleanup of its synthetic release and every acceptance tied to it.
+    await managerLegalFixture?.cleanup();
 
     const userIds = uniqueIds(createdState.userIds);
     if (userIds.length) {
@@ -768,10 +761,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.intakePolicyReleaseIds = [];
     createdState.intakeSessionUuids = [];
     createdState.managerRegistrationIds = [];
-    createdState.legalAcceptanceIds = [];
     createdState.requiredDocumentIds = [];
     createdState.platformSettingKeys = [];
-    await legalFixture?.cleanup();
   });
 
   it('blocks submission when the program is inactive or referrals are disabled', async () => {
