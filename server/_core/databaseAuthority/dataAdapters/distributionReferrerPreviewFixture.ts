@@ -118,7 +118,7 @@ export function assertDistributionReferrerPreviewPassword(
   }
 }
 
-function localPreviewPassword(): string {
+export function resolveDistributionReferrerPreviewPassword(): string {
   const central = inspectCentralLocalEnvironment(resolveCentralLocalEnvironment());
   assertCentralEnvironmentReady(central);
   const password = central.values[DISTRIBUTION_REFERRER_PREVIEW_PASSWORD_VARIABLE];
@@ -395,7 +395,7 @@ export async function prepareDistributionReferrerPreviewFixture(input: {
     ...input,
     migrationHead: manifest.document.expectedHead,
   });
-  const password = localPreviewPassword();
+  const password = resolveDistributionReferrerPreviewPassword();
 
   const prepared = await withTransaction(input.connection, async () => {
     const user = await ensureUser(input.connection, password);
@@ -437,7 +437,7 @@ export async function verifyDistributionReferrerPreviewFixture(input: {
     ...input,
     migrationHead: manifest.document.expectedHead,
   });
-  const password = localPreviewPassword();
+  const password = resolveDistributionReferrerPreviewPassword();
   const user = await findUser(input.connection);
   if (!user) throw new Error('Distribution referrer preview fixture user is missing.');
   const userId = asPositiveId(rowValue(user, 'id'), 'user ID');

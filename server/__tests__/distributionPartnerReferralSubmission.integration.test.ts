@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { TRPCError } from '@trpc/server';
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
@@ -26,8 +26,12 @@ import {
   distributionReferralIntakePolicyReleases,
   distributionReferralIntakeSessions,
   distributionProspectCheckFits,
+  legalActiveRelease,
+  legalReleases,
+  platformTeamRegistrations,
   platformSettings,
   unitTypes,
+  userLegalAcceptances,
   users,
 } from '../../drizzle/schema';
 import { CANONICAL_PLATFORM_SETTINGS } from '../_core/databaseAuthority/dataAdapters/canonicalPlatformSettings';
@@ -37,9 +41,11 @@ import {
   upsertDevelopmentAccess,
 } from '../services/distributionAccessRepository';
 import {
+  deleteDistributionReferralEvidence,
   deleteDistributionDealDocument,
   parseDistributionDealDocumentReference,
 } from '../services/distributionReferralEvidenceStorage';
+import { validateRegistrationLegalAcceptance } from '../services/legalAcceptancePolicy';
 
 const hasDb = Boolean(process.env.DATABASE_URL);
 const INTEGRATION_TIMEOUT_MS = 30_000;
@@ -60,6 +66,8 @@ const createdState = {
   dealIds: [] as number[],
   intakePolicyReleaseIds: [] as number[],
   intakeSessionUuids: [] as string[],
+  managerRegistrationIds: [] as number[],
+  legalAcceptanceIds: [] as string[],
   requiredDocumentIds: [] as number[],
   platformSettingKeys: [] as string[],
 };
@@ -394,6 +402,108 @@ async function completeIntake(input: {
   return session.sessionUuid;
 }
 
+async function recordCurrentRegistrationLegalAcceptance(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const [activeRelease] = await db
+    .select({ release: legalReleases })
+    .from(legalActiveRelease)
+    .innerJoin(legalReleases, eq(legalActiveRelease.bundleId, legalReleases.bundleId))
+    .where(eq(legalActiveRelease.purpose, 'account_registration'))
+    .limit(1);
+  const release = activeRelease?.release;
+  if (!release) throw new Error('Current account registration legal release is unavailable.');
+
+  const acceptedAt = new Date();
+  const result = validateRegistrationLegalAcceptance(
+    { bundleId: release.bundleId, termsAccepted: true },
+    {
+      formatVersion: Number(release.formatVersion),
+      bundleId: release.bundleId,
+      effectiveAt: release.effectiveAt,
+      terms: { version: release.termsVersion, content: release.termsContent },
+      privacy: { version: release.privacyVersion, content: release.privacyContent },
+      status: 'approved',
+      approval: {
+        reference: release.approvalReference,
+        actor: release.approvalActor,
+        approvedAt: release.approvedAt,
+        contentSha256: release.contentSha256,
+      },
+    },
+    acceptedAt,
+  );
+  if (!result.ok) throw new Error(`Could not record registration acceptance: ${result.code}`);
+
+  const evidenceId = randomUUID();
+  await db.insert(userLegalAcceptances).values({
+    id: evidenceId,
+    userId,
+    bundleId: result.acceptance.bundleId,
+    termsSha256: result.acceptance.termsSha256,
+    privacyNoticeSha256: result.acceptance.privacyNoticeSha256,
+    releaseContentSha256: result.acceptance.releaseContentSha256,
+    acceptedAt: acceptedAt.toISOString().slice(0, 23).replace('T', ' '),
+    source: 'account_registration',
+  });
+  createdState.legalAcceptanceIds.push(evidenceId);
+}
+
+async function inviteAndOnboardManager(input: { managerUserId: number }) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const [manager] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, input.managerUserId))
+    .limit(1);
+  if (!manager?.email) throw new Error('Manager account email is missing.');
+
+  await recordCurrentRegistrationLegalAcceptance(input.managerUserId);
+  const inviterUserId = await insertUser('super_admin');
+  const adminCaller = createCaller(inviterUserId, 'super_admin');
+  const invitation = await adminCaller.distribution.admin.createManagerInvite({
+    fullName: 'Referral Journey Manager',
+    email: manager.email,
+    phone: '+27110000001',
+    company: 'Referral Journey Test',
+    currentRole: 'Sales manager',
+  });
+  createdState.managerRegistrationIds.push(invitation.registrationId);
+
+  const token = new URL(invitation.inviteUrl).searchParams.get('token');
+  if (!token) throw new Error('Manager invite did not produce a signed invite token.');
+
+  const managerCaller = createCaller(input.managerUserId, 'visitor');
+  const inviteDetails = await managerCaller.distribution.getManagerInvite({ token });
+  expect(inviteDetails).toMatchObject({
+    email: manager.email,
+    status: 'pending',
+    canComplete: true,
+  });
+
+  const accepted = await managerCaller.distribution.completeManagerInviteRegistration({
+    token,
+    fullName: 'Referral Journey Manager',
+    phone: '+27110000001',
+    currentRole: 'Sales manager',
+  });
+  expect(accepted).toMatchObject({
+    success: true,
+    userId: input.managerUserId,
+    redirectPath: '/distribution/manager',
+  });
+
+  const [registration] = await db
+    .select({ status: platformTeamRegistrations.status, userId: platformTeamRegistrations.userId })
+    .from(platformTeamRegistrations)
+    .where(eq(platformTeamRegistrations.id, invitation.registrationId))
+    .limit(1);
+  expect(registration).toMatchObject({ status: 'approved', userId: input.managerUserId });
+
+  return { managerCaller, adminCaller };
+}
+
 async function ensureCanonicalPrimeRate() {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
@@ -421,10 +531,14 @@ async function seedScenario(input?: {
   isActive?: boolean;
   isReferralEnabled?: boolean;
   includeSecondaryManagerFirst?: boolean;
+  managerInviteOnboarding?: boolean;
 }) {
   const actorUserId = await insertUser('agent');
   await insertReferrerIdentity(actorUserId);
-  const managerUserId = await insertUser('agent');
+  const managerUserId = await insertUser(input?.managerInviteOnboarding ? 'visitor' : 'agent');
+  const managerJourney = input?.managerInviteOnboarding
+    ? await inviteAndOnboardManager({ managerUserId })
+    : null;
   const caller = createCaller(actorUserId, 'agent');
 
   const developmentId = await insertDevelopment(`Referral Flow ${Date.now()}`);
@@ -444,12 +558,37 @@ async function seedScenario(input?: {
     });
   }
 
-  await insertManagerAssignment({
-    developmentId,
-    managerUserId,
-    isPrimary: true,
-    isActive: true,
-  });
+  if (managerJourney) {
+    await managerJourney.adminCaller.distribution.admin.assignManagerToDevelopment({
+      programId,
+      managerUserId,
+      isPrimary: true,
+      workloadCapacity: 0,
+      timezone: 'Africa/Johannesburg',
+      isActive: true,
+    });
+    const db = await getDb();
+    if (!db) throw new Error('Database not available');
+    const [assignment] = await db
+      .select({ id: developmentManagerAssignments.id })
+      .from(developmentManagerAssignments)
+      .where(
+        and(
+          eq(developmentManagerAssignments.developmentId, developmentId),
+          eq(developmentManagerAssignments.managerUserId, managerUserId),
+        ),
+      )
+      .limit(1);
+    if (!assignment) throw new Error('Manager development assignment could not be recorded.');
+    createdState.assignmentIds.push(Number(assignment.id));
+  } else {
+    await insertManagerAssignment({
+      developmentId,
+      managerUserId,
+      isPrimary: true,
+      isActive: true,
+    });
+  }
   const templateId = await insertRequiredDocument(developmentId);
   await insertNetworkAccess(developmentId, actorUserId);
   await insertActiveIntakePolicy(programId, actorUserId);
@@ -458,6 +597,7 @@ async function seedScenario(input?: {
   return {
     actorUserId,
     managerUserId,
+    managerCaller: managerJourney?.managerCaller,
     caller,
     developmentId,
     programId,
@@ -496,6 +636,24 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         .where(inArray(distributionReferralIntakeSessions.sessionUuid, sessionUuids));
       const sessionIds = sessions.map(row => Number(row.id));
       if (sessionIds.length) {
+        const storedEvidence = await db
+          .select({
+            storageAdapter: distributionReferralIntakeEvidence.storageAdapter,
+            storageKey: distributionReferralIntakeEvidence.storageKey,
+          })
+          .from(distributionReferralIntakeEvidence)
+          .where(inArray(distributionReferralIntakeEvidence.sessionId, sessionIds));
+        for (const row of storedEvidence) {
+          if (
+            (row.storageAdapter === 'local' || row.storageAdapter === 's3') &&
+            row.storageKey
+          ) {
+            await deleteDistributionReferralEvidence({
+              storageAdapter: row.storageAdapter,
+              storageKey: row.storageKey,
+            }).catch(() => undefined);
+          }
+        }
         await db
           .delete(distributionReferralIntakeEvidence)
           .where(inArray(distributionReferralIntakeEvidence.sessionId, sessionIds));
@@ -565,6 +723,20 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
         .where(inArray(cataloguePublishers.id, cataloguePublisherIds));
     }
 
+    const managerRegistrationIds = uniqueIds(createdState.managerRegistrationIds);
+    if (managerRegistrationIds.length) {
+      await db
+        .delete(platformTeamRegistrations)
+        .where(inArray(platformTeamRegistrations.id, managerRegistrationIds));
+    }
+
+    const legalAcceptanceIds = uniqueStringIds(createdState.legalAcceptanceIds);
+    if (legalAcceptanceIds.length) {
+      await db
+        .delete(userLegalAcceptances)
+        .where(inArray(userLegalAcceptances.id, legalAcceptanceIds));
+    }
+
     const userIds = uniqueIds(createdState.userIds);
     if (userIds.length) {
       await db.delete(users).where(inArray(users.id, userIds));
@@ -585,6 +757,8 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
     createdState.dealIds = [];
     createdState.intakePolicyReleaseIds = [];
     createdState.intakeSessionUuids = [];
+    createdState.managerRegistrationIds = [];
+    createdState.legalAcceptanceIds = [];
     createdState.requiredDocumentIds = [];
     createdState.platformSettingKeys = [];
   });
@@ -671,6 +845,67 @@ describeWithDb('distribution.partner.submitReferral integration', () => {
       fromStage: null,
       toStage: 'referral_received',
     });
+  }, INTEGRATION_TIMEOUT_MS);
+
+  it('onboards the invited manager, assigns the development, and exposes submitted checklist and intake evidence', async () => {
+    const scenario = await seedScenario({ managerInviteOnboarding: true });
+    const managerCaller = scenario.managerCaller;
+    if (!managerCaller) throw new Error('Manager invite onboarding did not return a manager caller.');
+
+    const submitted = await scenario.caller.distribution.partner.submitReferral({
+      developmentId: scenario.developmentId,
+      marketMode: 'sale',
+      intakeSessionUuid: scenario.intakeSessionUuid,
+      buyerName: 'Manager Handoff Buyer',
+      buyerEmail: `manager-handoff-${Date.now()}@example.com`,
+    });
+    const dealId = Number(submitted.dealId);
+    createdState.dealIds.push(dealId);
+    expect(Number(submitted.managerUserId)).toBe(scenario.managerUserId);
+
+    const assignments = await managerCaller.distribution.manager.myAssignments();
+    expect(assignments.some(row => Number(row.developmentId) === scenario.developmentId)).toBe(true);
+
+    const deals = await managerCaller.distribution.manager.listDealsForDevelopment({
+      developmentId: scenario.developmentId,
+      statusFilter: 'all',
+      limit: 50,
+    });
+    expect(deals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          dealId,
+          docs: expect.objectContaining({
+            requiredCount: 1,
+            verifiedRequiredCount: 0,
+            snapshotAvailable: true,
+          }),
+        }),
+      ]),
+    );
+
+    const checklist = await managerCaller.distribution.manager.getDealChecklist({ dealId });
+    expect(checklist.dealId).toBe(dealId);
+    expect(checklist.requiredDocuments).toHaveLength(1);
+    expect(checklist.requiredDocuments[0]).toMatchObject({
+      status: 'pending',
+      isRequired: true,
+    });
+
+    const evidence = await managerCaller.distribution.manager.listDealReferralIntakeEvidence({
+      dealId,
+    });
+    expect(evidence.map(item => item.evidenceType)).toEqual(
+      expect.arrayContaining(['sharing_permission', 'privacy_notice', 'identity_document']),
+    );
+    const downloadedEvidence = await managerCaller.distribution.manager.downloadDealReferralIntakeEvidence({
+      dealId,
+      evidenceUuid: evidence[0].evidenceUuid,
+    });
+    expect(downloadedEvidence.mimeType).toBe('application/pdf');
+    expect(Buffer.from(downloadedEvidence.base64Content, 'base64').toString('utf8')).toContain(
+      '%PDF-1.4',
+    );
   }, INTEGRATION_TIMEOUT_MS);
 
   it('requires the complete intake evidence before submission', async () => {
