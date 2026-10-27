@@ -17,10 +17,6 @@ import {
   type AdapterEvidence,
 } from './common';
 import {
-  verifyCanonicalGeographyReferenceData,
-  type GeographyReferenceEvidence,
-} from './canonicalGeography';
-import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
   CANONICAL_AGENCY_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
@@ -1062,10 +1058,6 @@ export async function ensureCanonicalManualFixture(
       'updatedAt',
       'publishedAt',
       'archivedAt',
-      'location_id',
-      'province_id',
-      'city_id',
-      'suburb_id',
       'canonical_place_id',
       'location_confirmation_state',
       'public_location_precision',
@@ -1100,10 +1092,6 @@ export async function ensureCanonicalManualFixture(
       FIXTURE_TIMESTAMP,
       publishedAt,
       archivedAt,
-      null,
-      null,
-      null,
-      null,
       canonicalPlaceId,
       'confirmed',
       'exact',
@@ -1223,10 +1211,6 @@ export async function ensureCanonicalManualFixture(
       'address',
       'city',
       'province',
-      'provinceId',
-      'cityId',
-      'suburbId',
-      'location_id',
       'canonical_place_id',
       'status',
       'featured',
@@ -1261,10 +1245,6 @@ export async function ensureCanonicalManualFixture(
       '1 DBA Verification Street',
       'Johannesburg',
       'Gauteng',
-      null,
-      null,
-      null,
-      null,
       canonicalPlaceId,
       fixture.propertyStatus,
       0,
@@ -1405,9 +1385,7 @@ export async function ensureCanonicalManualFixture(
 
 async function ensureOrphanProjection(
   connection: AuthoritySqlConnection,
-  provinceId: number,
-  cityId: number,
-  suburbId: number,
+  canonicalPlaceId: string,
 ): Promise<void> {
   await ensureDeterministicRow({
     connection,
@@ -1418,21 +1396,17 @@ async function ensureOrphanProjection(
       'title',
       'status',
       'listingType',
-      'provinceId',
-      'cityId',
-      'suburbId',
+      'canonical_place_id',
       'agentId',
       'ownerId',
       'sourceListingId',
       'catalogue_publisher_id',
     ],
     expected: {
-      title: 'DBA Orphan Legacy Projection',
+      title: 'DBA Unlinked Source Projection',
       status: 'available',
       listingType: 'sale',
-      provinceId,
-      cityId,
-      suburbId,
+      canonical_place_id: canonicalPlaceId,
       agentId: null,
       ownerId: SCENARIO_IDS.platformOperationsUser,
       sourceListingId: null,
@@ -1452,9 +1426,7 @@ async function ensureOrphanProjection(
       'address',
       'city',
       'province',
-      'provinceId',
-      'cityId',
-      'suburbId',
+      'canonical_place_id',
       'status',
       'featured',
       'views',
@@ -1464,8 +1436,8 @@ async function ensureOrphanProjection(
     ],
     insertValues: [
       SCENARIO_IDS.orphanProperty,
-      'DBA Orphan Legacy Projection',
-      'Historical projection intentionally lacking source provenance.',
+      'DBA Unlinked Source Projection',
+      'Canonical Place projection intentionally lacking source provenance.',
       'house',
       'sale',
       'sale',
@@ -1473,12 +1445,10 @@ async function ensureOrphanProjection(
       3,
       2,
       150,
-      'Legacy DBA Street',
+      'DBA Scenario Street',
       'Johannesburg',
       'Gauteng',
-      provinceId,
-      cityId,
-      suburbId,
+      canonicalPlaceId,
       'available',
       0,
       0,
@@ -1491,15 +1461,12 @@ async function ensureOrphanProjection(
 
 async function ensureManualPublicFixtures(
   connection: AuthoritySqlConnection,
-  provinceId: number,
-  cityId: number,
-  suburbId: number,
   canonicalPlaceId: string,
 ): Promise<void> {
   for (const fixture of MANUAL_FIXTURES) {
     await ensureCanonicalManualFixture(connection, fixture, canonicalPlaceId);
   }
-  await ensureOrphanProjection(connection, provinceId, cityId, suburbId);
+  await ensureOrphanProjection(connection, canonicalPlaceId);
 }
 
 async function ensureAgentBillableAccount(connection: AuthoritySqlConnection): Promise<unknown> {
@@ -1584,28 +1551,7 @@ async function ensureUserAgency(
   }
 }
 
-async function prepareScenarioRows(
-  connection: AuthoritySqlConnection,
-  geography: GeographyReferenceEvidence['verified'],
-): Promise<void> {
-  const locationRows = await queryRows(
-    connection,
-    `SELECT p.id AS province_id, c.id AS city_id, s.id AS suburb_id
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.slug = ? AND c.slug = ? AND s.slug = ?`,
-    ['gauteng', 'johannesburg', 'sandton'],
-  );
-  if (locationRows.length !== 1)
-    throw new Error('Search-to-Lead scenario requires one canonical Sandton hierarchy.');
-  const provinceId = asId({ id: rowValue(locationRows[0], 'province_id') }, 'province');
-  const cityId = asId({ id: rowValue(locationRows[0], 'city_id') }, 'city');
-  const suburbId = asId({ id: rowValue(locationRows[0], 'suburb_id') }, 'suburb');
-  if (geography.provinces < 3 || geography.cities < 4 || geography.suburbs < 1) {
-    throw new Error('Search-to-Lead scenario refused: canonical geography evidence is incomplete.');
-  }
-
+async function prepareScenarioRows(connection: AuthoritySqlConnection): Promise<void> {
   await ensureDeterministicRow({
     connection,
     table: 'users',
@@ -2305,13 +2251,7 @@ async function prepareScenarioRows(
       1,
     ],
   });
-  await ensureManualPublicFixtures(
-    connection,
-    provinceId,
-    cityId,
-    suburbId,
-    DEVELOPMENT_SITE_PLACE_ID,
-  );
+  await ensureManualPublicFixtures(connection, DEVELOPMENT_SITE_PLACE_ID);
 }
 
 async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
@@ -2804,33 +2744,6 @@ export async function verifySearchToLeadScenarioData(
     throw new Error('Search-to-Lead scenario property-detail contact fixture is incomplete.');
   }
 
-  if (
-    Number(rowValue(property, 'province_id')) <= 0 ||
-    Number(rowValue(property, 'city_id')) <= 0 ||
-    Number(rowValue(property, 'suburb_id')) <= 0
-  ) {
-    throw new Error('Search-to-Lead scenario property is not linked to canonical geography IDs.');
-  }
-  const locationRows = await queryRows(
-    connection,
-    `SELECT p.slug AS province_slug, c.slug AS city_slug, s.slug AS suburb_slug,
-            p.id AS province_id, c.id AS city_id, s.id AS suburb_id
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.id = ? AND c.id = ? AND s.id = ?`,
-    [property.province_id, property.city_id, property.suburb_id],
-  );
-  if (
-    locationRows.length !== 1 ||
-    rowValue(locationRows[0], 'province_slug') !== 'gauteng' ||
-    rowValue(locationRows[0], 'city_slug') !== 'johannesburg' ||
-    rowValue(locationRows[0], 'suburb_slug') !== 'sandton'
-  ) {
-    throw new Error(
-      'Search-to-Lead scenario property is not linked to Gauteng/Johannesburg/Sandton.',
-    );
-  }
   return {
     eligibleProperties: propertyRows.length,
     eligibleDevelopments: developmentRows.length,
@@ -2857,9 +2770,8 @@ export async function prepareSearchToLeadScenario(input: {
     connection: input.connection,
     profileRoot: input.profileRoot,
   });
-  const geography = await verifyCanonicalGeographyReferenceData(input.connection);
   await withTransaction(input.connection, () =>
-    prepareScenarioRows(withScenarioSqlDiagnostics(input.connection), geography),
+    prepareScenarioRows(withScenarioSqlDiagnostics(input.connection)),
   );
   const verified = await verifySearchToLeadScenarioData(input.connection);
   return {
@@ -3633,7 +3545,6 @@ export async function verifySearchToLeadScenario(input: {
     connection: input.connection,
     profileRoot: input.profileRoot,
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
   const verified = await verifySearchToLeadScenarioData(input.connection);
   const acceptance =
     input.decision.operation === 'readiness'
