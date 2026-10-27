@@ -974,7 +974,14 @@ describe.skip('Explore Agency Content Attribution - Unit Tests [LEGACY - uses ex
       // Test that all existing feed types still work
       const feedTypes: Array<{ type: any; options: any }> = [
         { type: 'recommended', options: { limit: 5, offset: 0 } },
-        { type: 'area', options: { location: 'Cape Town', limit: 5, offset: 0 } },
+        {
+          type: 'area',
+          options: {
+            canonicalPlaceId: 'pl-place-01-000000000000000000000007',
+            limit: 5,
+            offset: 0,
+          },
+        },
         { type: 'category', options: { category: 'luxury_homes', limit: 5, offset: 0 } },
       ];
 

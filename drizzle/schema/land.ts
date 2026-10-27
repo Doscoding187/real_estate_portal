@@ -15,8 +15,8 @@ import {
 import { sql } from 'drizzle-orm';
 import { agencies, agents } from './agencies';
 import { users } from './core';
-import { cities, provinces, suburbs } from './locations';
 import { listings } from './listings';
+import { place } from './placeAuthority';
 
 export const LAND_CLASSIFICATIONS = [
   'residential_stand',
@@ -33,9 +33,10 @@ export const landParcels = mysqlTable(
   {
     id: int().autoincrement().primaryKey(),
     jurisdictionCountryCode: varchar('jurisdiction_country_code', { length: 2 }).notNull(),
-    provinceId: int('province_id').references(() => provinces.id, { onDelete: 'set null' }),
-    cityId: int('city_id').references(() => cities.id, { onDelete: 'set null' }),
-    suburbId: int('suburb_id').references(() => suburbs.id, { onDelete: 'set null' }),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     parcelKind: mysqlEnum('parcel_kind', ['erf', 'portion', 'farm', 'remainder', 'other']).notNull(),
     privateIdentifier: varchar('private_identifier', { length: 500 }).notNull(),
     privateIdentifierHash: varchar('private_identifier_hash', { length: 64 }).notNull(),
@@ -52,7 +53,7 @@ export const landParcels = mysqlTable(
   },
   table => [
     unique('uq_land_parcels_jurisdiction_identifier').on(table.jurisdictionCountryCode, table.privateIdentifierHash),
-    index('idx_land_parcels_geography').on(table.provinceId, table.cityId, table.suburbId),
+    index('idx_land_parcels_canonical_place').on(table.canonicalPlaceId),
     index('idx_land_parcels_extent').on(table.extentM2),
   ],
 );

@@ -51,20 +51,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   const forYouData = forYouQuery.data;
   const forYouLoading = forYouQuery.isLoading;
 
-  const popularNearYouQuery = trpc.discovery.getFeed.useQuery(
-    {
-      mode: 'home',
-      contentType: 'video',
-      limit: 10,
-    },
-    {
-      enabled: !useMockData,
-    },
-  );
-
-  const popularNearYouData = popularNearYouQuery.data;
-  const popularNearYouLoading = popularNearYouQuery.isLoading;
-
   // Fetch "New Developments" content
   const newDevelopmentsQuery = trpc.discovery.getFeed.useQuery(
     {
@@ -98,10 +84,9 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
 
   // Calculate isLoading BEFORE using it in useEffect
   const isLoading =
-    !useMockData && (forYouLoading || popularNearYouLoading || newDevelopmentsLoading || trendingLoading);
+    !useMockData && (forYouLoading || newDevelopmentsLoading || trendingLoading);
   const error =
     forYouQuery.error ??
-    popularNearYouQuery.error ??
     newDevelopmentsQuery.error ??
     trendingQuery.error ??
     null;
@@ -173,35 +158,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
         },
       };
     };
-    const toNeighbourhoodDiscoveryItem = (item: any): DiscoveryItem => {
-      const source = getSourceMetadata(item);
-      const city = item?.location?.city || source?.location?.city;
-      const suburb = item?.location?.suburb || source?.location?.suburb || city;
-      const propertyCount = [source?.propertyCount, source?.stats?.propertyCount]
-        .map(asFiniteNumber)
-        .find(value => value !== undefined);
-      const avgPrice = [source?.avgPropertyPrice, source?.averagePropertyPrice]
-        .map(asFiniteNumber)
-        .find(value => value !== undefined);
-      const priceChange = asFiniteNumber(source?.priceChange);
-      const followerCount = asFiniteNumber(source?.followerCount);
-      return {
-        id: item.id,
-        type: 'neighbourhood',
-        data: {
-          id: source?.locationId || item.id,
-          name: suburb,
-          city,
-          heroBannerUrl: item?.thumbnailUrl || item?.mediaUrl,
-          imageUrl: item?.thumbnailUrl || item?.mediaUrl,
-          propertyCount,
-          avgPropertyPrice: avgPrice,
-          priceChange,
-          followerCount,
-          highlights: Array.isArray(source?.highlights) ? source.highlights : undefined,
-        },
-      };
-    };
     const toInsightDiscoveryItem = (item: any, index: number): DiscoveryItem => {
       const source = getSourceMetadata(item);
       const category = String(item?.category || '').toLowerCase();
@@ -252,7 +208,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
     const resolveItems = (payload: unknown) =>
       byCategory(useMockData ? mockItems : getFeedItems(payload));
     const forYouItems = resolveItems(forYouData);
-    const nearYouItems = resolveItems(popularNearYouData);
     const newListingItems = resolveItems(newDevelopmentsData);
     const trendingItems = resolveItems(trendingData);
 
@@ -427,26 +382,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
       videoAspect: 'square',
     });
 
-    const exploreNeighbourhoodsReal = pickUnique(
-      [...nearYouItems, ...combined],
-      item => isVideoItem(item),
-      8,
-    );
-    const exploreNeighbourhoodsFallback = pickUnique(mockItems, item => isVideoItem(item), 8);
-    const exploreNeighbourhoods = topUpRail(
-      exploreNeighbourhoodsReal,
-      exploreNeighbourhoodsFallback,
-      8,
-    );
-    newSections.push({
-      id: 'explore-neighbourhoods',
-      canonicalId: 'neighbourhoods',
-      title: 'Explore Neighbourhoods',
-      subtitle: 'Area snapshots and momentum signals',
-      type: 'popular-near-you',
-      items: exploreNeighbourhoods.map(toNeighbourhoodDiscoveryItem),
-    });
-
     const marketInsightsReal = pickUnique(
       [...financeEducation, ...combined],
       item =>
@@ -502,7 +437,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
   }, [
     categoryKey,
     forYouData,
-    popularNearYouData,
     newDevelopmentsData,
     trendingData,
     mockItems,
@@ -517,7 +451,6 @@ export function usePersonalizedContent(options: UsePersonalizedContentOptions = 
 
     return Promise.all([
       forYouQuery.refetch(),
-      popularNearYouQuery.refetch(),
       newDevelopmentsQuery.refetch(),
       trendingQuery.refetch(),
     ]);

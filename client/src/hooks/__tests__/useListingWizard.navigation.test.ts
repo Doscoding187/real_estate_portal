@@ -183,8 +183,6 @@ describe('useListingWizardStore navigation contract', () => {
         address: 'Katherine Street',
         latitude: null,
         longitude: null,
-        city: 'Johannesburg',
-        province: 'Gauteng',
         locationConfirmationState: 'needs_confirmation',
         coordinateSource: null,
         publicLocationPrecision: 'approximate',
@@ -195,9 +193,6 @@ describe('useListingWizardStore navigation contract', () => {
           placeType: 'suburb',
           administrativeContext: 'Gauteng',
         },
-        provinceId: 1,
-        cityId: 2,
-        suburbId: 3,
         privateAddress: { streetName: 'Katherine Street' },
       });
     });
@@ -220,9 +215,6 @@ describe('useListingWizardStore navigation contract', () => {
         address: '12 Katherine Street',
         latitude: null,
         longitude: null,
-        city: 'Johannesburg',
-        suburb: 'Sandton',
-        province: 'Gauteng',
         canonicalPlace: {
           canonicalPlaceId: 'pl-place-01-000000000000000000000001',
           label: 'Selected Locality',
@@ -230,9 +222,6 @@ describe('useListingWizardStore navigation contract', () => {
           placeType: 'suburb',
           administrativeContext: 'Gauteng',
         },
-        provinceId: 1,
-        cityId: 2,
-        suburbId: 3,
         privateAddress: { streetNumber: '12', streetName: 'Katherine Street' },
         locationConfirmationState: 'needs_confirmation' as const,
         coordinateSource: null,
@@ -255,8 +244,6 @@ describe('useListingWizardStore navigation contract', () => {
         address: 'Sandton',
         latitude: null,
         longitude: null,
-        city: 'Johannesburg',
-        province: 'Gauteng',
         locationConfirmationState: 'confirmed',
         coordinateSource: 'manual_confirmed',
         publicLocationPrecision: 'approximate',
@@ -267,9 +254,6 @@ describe('useListingWizardStore navigation contract', () => {
           placeType: 'suburb',
           administrativeContext: 'Gauteng',
         },
-        provinceId: 1,
-        cityId: 2,
-        suburbId: 3,
         privateAddress: null,
       });
     });
@@ -285,8 +269,6 @@ describe('useListingWizardStore navigation contract', () => {
         address: '10 Alice Lane',
         latitude: -26.1076,
         longitude: 28.0567,
-        city: 'Johannesburg',
-        province: 'Gauteng',
         canonicalPlace: {
           canonicalPlaceId: 'pl-place-01-000000000000000000000001',
           label: 'Selected Locality',
@@ -294,9 +276,6 @@ describe('useListingWizardStore navigation contract', () => {
           placeType: 'suburb',
           administrativeContext: 'Gauteng',
         },
-        provinceId: 1,
-        cityId: 2,
-        suburbId: 3,
         privateAddress: { streetNumber: '10', streetName: 'Alice Lane' },
         locationConfirmationState: 'confirmed',
         coordinateSource: 'autocomplete',
@@ -304,7 +283,7 @@ describe('useListingWizardStore navigation contract', () => {
       });
       result.current.setLocation({
         ...result.current.location!,
-        city: 'Pretoria',
+        privateAddress: { streetNumber: '10', streetName: 'Pretoria Avenue' },
         locationConfirmationState: undefined,
         coordinateSource: undefined,
       });

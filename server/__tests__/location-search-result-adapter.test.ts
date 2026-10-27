@@ -1,76 +1,62 @@
 import { describe, expect, it } from 'vitest';
 
-import { toLegacyLocationSearchResult } from '../locationRouter';
+import { toCanonicalPlaceLocationSearchResult } from '../locationRouter';
 
-describe('governed location search legacy adapter', () => {
-  it('preserves the canonical hierarchy and map metadata for city results', () => {
-    const result = toLegacyLocationSearchResult({
+describe('canonical Place location search adapter', () => {
+  it('preserves the exact Place identity and projected URL', () => {
+    const result = toCanonicalPlaceLocationSearchResult({
       kind: 'canonical_location',
-      canonicalLocationId: 'city:12',
+      canonicalLocationId: 'pl-place-01-21f154cd5d0954c29ec7525f',
       label: 'Johannesburg',
       factualLevel: 'city',
       searchScopeKind: 'metro_city',
       display: { typeLabel: 'City', contextLabel: 'Gauteng' },
       provinceSlug: 'gauteng',
       citySlug: 'johannesburg',
-      parentCanonicalLocationId: 'province:1',
       provinceName: 'Gauteng',
-      provinceCode: 'GP',
-      latitude: '-26.2041',
-      longitude: '28.0473',
-      isMetro: 0,
       canonicalPath: '/gauteng/johannesburg',
       source: 'canonical_geography',
       matchReason: 'exact',
     });
 
     expect(result).toMatchObject({
-      id: 12,
+      id: 'pl-place-01-21f154cd5d0954c29ec7525f',
       name: 'Johannesburg',
       slug: 'johannesburg',
       type: 'city',
-      canonicalLocationId: 'city:12',
-      provinceId: 1,
+      canonicalLocationId: 'pl-place-01-21f154cd5d0954c29ec7525f',
       provinceName: 'Gauteng',
-      provinceCode: 'GP',
-      latitude: '-26.2041',
-      longitude: '28.0473',
-      isMetro: 0,
       canonicalPath: '/gauteng/johannesburg',
       selectionTypeLabel: 'City',
       selectionContextLabel: 'Gauteng',
     });
   });
 
-  it('maps a suburb parent to the city identity and rejects malformed results', () => {
+  it('preserves administrative context without translating it to a legacy city handle', () => {
     expect(
-      toLegacyLocationSearchResult({
+      toCanonicalPlaceLocationSearchResult({
         kind: 'canonical_location',
-        canonicalLocationId: 'suburb:991',
-        label: 'Isando',
+        canonicalLocationId: 'pl-place-01-2bfd89dfb3b792235d492939',
+        label: 'Hiltonia',
         factualLevel: 'suburb',
         searchScopeKind: 'locality',
-        display: { typeLabel: 'Suburb', contextLabel: 'Kempton Park' },
+        display: { typeLabel: 'Locality', contextLabel: 'City of Johannesburg' },
         provinceSlug: 'gauteng',
-        citySlug: 'kempton-park',
-        suburbSlug: 'isando',
-        parentCanonicalLocationId: 'city:77',
+        suburbSlug: 'hiltonia',
         provinceName: 'Gauteng',
-        cityName: 'Kempton Park',
-        postalCode: '1619',
-        canonicalPath: '/gauteng/kempton-park/isando',
+        cityName: 'City of Johannesburg',
+        canonicalPath: '/gauteng/city-of-johannesburg/hiltonia',
         source: 'canonical_geography',
       }),
     ).toMatchObject({
-      id: 991,
+      id: 'pl-place-01-2bfd89dfb3b792235d492939',
       type: 'suburb',
-      cityId: 77,
-      cityName: 'Kempton Park',
-      postalCode: '1619',
+      cityName: 'City of Johannesburg',
+      canonicalPath: '/gauteng/city-of-johannesburg/hiltonia',
     });
 
     expect(
-      toLegacyLocationSearchResult({
+      toCanonicalPlaceLocationSearchResult({
         kind: 'canonical_location',
         canonicalLocationId: 'city:12',
         label: 'Broken',

@@ -294,10 +294,10 @@ pnpm db:worktree:create
 pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
-pnpm db:reference:prepare
+pnpm db:places:prepare-national
 pnpm db:foundation:prepare
 pnpm db:scenario:prepare
-pnpm db:reference:verify
+pnpm db:places:verify-national
 pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=<purpose>

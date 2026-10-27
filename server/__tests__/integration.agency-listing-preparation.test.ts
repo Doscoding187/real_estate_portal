@@ -465,9 +465,6 @@ describeWithDb('agency listing preparation acceptance', () => {
         status: listings.status,
         approvalStatus: listings.approvalStatus,
         canonicalPlaceId: listings.canonicalPlaceId,
-        provinceId: listings.provinceId,
-        cityId: listings.cityId,
-        suburbId: listings.suburbId,
         locationConfirmationState: listings.locationConfirmationState,
         coordinateSource: listings.coordinateSource,
       })
@@ -482,9 +479,6 @@ describeWithDb('agency listing preparation acceptance', () => {
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       status: 'draft',
       approvalStatus: 'pending',
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
       locationConfirmationState: 'confirmed',
       coordinateSource: 'manual_confirmed',
     });

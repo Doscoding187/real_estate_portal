@@ -14,18 +14,15 @@ const priorJwtSecret = vi.hoisted(() => {
 });
 
 import { COOKIE_NAME } from '../../shared/const';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
+import { CANONICAL_SANDTON_PLACE_ID } from './helpers/canonicalPlaceFixture';
 import {
   agencies,
   agencyBranding,
   agents,
   billableAccounts,
-  cities,
   invitations,
   plans,
-  provinces,
   subscriptions,
-  suburbs,
   users,
 } from '../../drizzle/schema';
 import { authService } from '../_core/auth';
@@ -78,30 +75,9 @@ function dbTimestamp(value: Date): string {
 }
 
 async function canonicalSandtonCoverageArea() {
-  const [location] = await db
-    .select({
-      provinceName: provinces.name,
-      cityName: cities.name,
-      suburbId: suburbs.id,
-      suburbName: suburbs.name,
-    })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
-    .where(
-      and(
-        eq(provinces.slug, 'gauteng'),
-        eq(cities.slug, 'johannesburg'),
-        eq(suburbs.slug, 'sandton'),
-      ),
-    )
-    .limit(1);
-  if (!location) {
-    throw new Error('Canonical Gauteng/Johannesburg/Sandton data is required by this fixture.');
-  }
   return {
-    canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.suburbId)),
-    label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+    canonicalLocationId: CANONICAL_SANDTON_PLACE_ID,
+    label: 'Sandton, Johannesburg, Gauteng',
   };
 }
 

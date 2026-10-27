@@ -1,3 +1,5 @@
+import { resolveSearchIntent } from './searchIntent';
+
 export const DEVELOPMENT_SEARCH_PATH = '/new-developments';
 export const DEVELOPMENT_SEARCH_RETURN_PARAM = 'returnTo';
 
@@ -28,6 +30,8 @@ export function normalizeDevelopmentSearchReturn(value: string | null | undefine
 
     const searchParams = new URLSearchParams(url.search);
     if (searchParams.has(DEVELOPMENT_SEARCH_RETURN_PARAM)) return null;
+    const intent = resolveSearchIntent(url.pathname, {}, searchParams);
+    if (intent.transactionType !== 'developments' || intent.validation) return null;
 
     return `${url.pathname}${url.search}`;
   } catch {

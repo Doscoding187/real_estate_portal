@@ -18,12 +18,6 @@ function toNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function getRawLocation(item: any): Record<string, unknown> | undefined {
-  if (item?.location && typeof item.location === 'object') return item.location;
-  if (item?.metadata?.location && typeof item.metadata.location === 'object') return item.metadata.location;
-  return undefined;
-}
-
 function getCreatedAt(item: any): Date | undefined {
   const value = item?.createdAt ?? item?.publishedAt ?? item?.metadata?.createdAt;
   const date = value ? new Date(value) : undefined;
@@ -40,16 +34,9 @@ function getCreatorActorId(item: any): number | undefined {
   );
 }
 
-function getLocationIdentity(item: any): { type?: string; id?: number } {
-  const location = getRawLocation(item);
-
-  return {
-    type: toLower(location?.type ?? item?.locationType ?? item?.metadata?.locationType),
-    id:
-      toNumber(location?.id) ??
-      toNumber(item?.locationId) ??
-      toNumber(item?.metadata?.locationId),
-  };
+function getLocationIdentity(item: any): { canonicalPlaceId?: string } {
+  const value = item?.canonicalPlaceId;
+  return { canonicalPlaceId: typeof value === 'string' ? value : undefined };
 }
 
 function getItemCategory(item: any): string {
@@ -158,14 +145,8 @@ function getQueryAffinity(item: any, query: DiscoveryQuery): number {
     score += creatorActorId === query.creatorActorId ? 0.6 : -0.4;
   }
 
-  if (query.location) {
-    if (itemLocation.id === query.location.id && itemLocation.type === query.location.type) {
-      score += 0.5;
-    } else if (itemLocation.id === query.location.id) {
-      score += 0.25;
-    } else {
-      score -= 0.2;
-    }
+  if (query.canonicalPlaceId) {
+    score += itemLocation.canonicalPlaceId === query.canonicalPlaceId ? 0.5 : -0.2;
   }
 
   score += getIntentAffinity(item, query);

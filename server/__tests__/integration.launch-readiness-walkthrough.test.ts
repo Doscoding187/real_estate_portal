@@ -126,7 +126,7 @@ beforeAll(async () => {
 
 
   // Seed the canonical Launch Access plan (fixture-only; production seeds via authority).
-  // Check if the canonical agency_launch_access plan already exists (seeded by db:reference:prepare).
+  // Check if the canonical agency_launch_access plan already exists (seeded by foundation prepare).
   const [existing] = await db.select().from(plans).where(eq(plans.name, 'agency_launch_access')).limit(1);
   if (existing) {
     planId = Number(existing.id);

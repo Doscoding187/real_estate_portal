@@ -16,6 +16,7 @@ function projectionDevelopment(
   return {
     id: 7,
     name: 'Greenstone Ridge',
+    canonicalPlaceId: null,
     slug: 'greenstone-ridge',
     description: null,
     images: [],
@@ -66,6 +67,7 @@ function development(
   return {
     id: 1,
     name: 'Greenstone Ridge',
+    canonicalPlaceId: null,
     slug: 'greenstone-ridge',
     canonicalRoute: '/development/greenstone-ridge',
     description: 'A published development.',
@@ -125,6 +127,21 @@ function development(
 }
 
 describe('public development search projection contract', () => {
+  it('carries only a validated canonical Place assignment into the public type contract', () => {
+    const placeId = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+    const assigned = projectPublicDevelopmentFacts(
+      projectionDevelopment({ canonicalPlaceId: placeId }),
+      [projectionUnit()],
+    );
+    const malformed = projectPublicDevelopmentFacts(
+      projectionDevelopment({ canonicalPlaceId: 'city:12' }),
+      [projectionUnit()],
+    );
+
+    expect(assigned?.canonicalPlaceId).toBe(placeId);
+    expect(malformed).toBeNull();
+  });
+
   it('projects one publisher-first development with active unit-aware facts', () => {
     const item = projectPublicDevelopmentFacts(projectionDevelopment(), [
       projectionUnit(),

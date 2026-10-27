@@ -121,6 +121,21 @@ export function getCanonicalDevelopmentLocation(payload: CanonicalRecord): Canon
   const locationStep = getCanonicalStepSlice(payload, 'location');
 
   return {
+    canonicalPlaceId: firstDefined(
+      locationStep.canonicalPlaceId,
+      locationStep.canonicalPlaceSelection?.canonicalPlaceId,
+      developmentData.canonicalPlaceId,
+      location.canonicalPlaceId,
+      location.canonicalPlaceSelection?.canonicalPlaceId,
+      payload.canonicalPlaceId,
+      payloadLocation.canonicalPlaceId,
+      payloadLocation.canonicalPlaceSelection?.canonicalPlaceId,
+    ),
+    canonicalPlaceSelection: firstDefined(
+      locationStep.canonicalPlaceSelection,
+      location.canonicalPlaceSelection,
+      payloadLocation.canonicalPlaceSelection,
+    ),
     address: firstDefined(
       locationStep.address,
       developmentData.address,

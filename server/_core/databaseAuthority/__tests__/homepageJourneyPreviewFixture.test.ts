@@ -49,7 +49,7 @@ describe('homepage journey preview Database Authority fixture', () => {
   });
 
   it('defines a ten-card Buy rail, a separate rental, and local-only login identities', () => {
-    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v2');
+    expect(HOMEPAGE_JOURNEY_PREVIEW_VERSION).toBe('homepage-journey-preview-v3');
     expect(HOMEPAGE_JOURNEY_PREVIEW_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).toHaveLength(10);
     expect(new Set(HOMEPAGE_JOURNEY_PREVIEW_SALE_PROPERTY_IDS).size).toBe(10);
@@ -60,7 +60,7 @@ describe('homepage journey preview Database Authority fixture', () => {
       agentEmail: 'home-preview-agent@listify.local',
       agencyAdminEmail: 'home-preview-agency@listify.local',
       developerEmail: 'home-preview-developer@listify.local',
-      canonicalLocation: 'gauteng/johannesburg/sandton',
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
     });
     expect(HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.agentEmail).not.toContain('@invalid.example');
     expect(HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.developerEmail).not.toContain('@invalid.example');

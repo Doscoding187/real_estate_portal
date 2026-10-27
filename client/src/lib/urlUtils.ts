@@ -1,9 +1,7 @@
 /**
  * URL Utilities for SEO-friendly property search URLs
  *
- * Converts between filter objects and URL-friendly slugs
- * Example: { listingType: 'sale', propertyType: 'house', city: 'Johannesburg' }
- *       -> /houses-for-sale/johannesburg/gauteng/123
+ * Builds the current transactional search URLs from explicit Place identity.
  */
 
 // Slug mappings for listing types
@@ -87,12 +85,6 @@ export interface SearchFilters {
   listingType?: 'sale' | 'rent' | 'rent_to_buy' | 'auction';
   listingSource?: 'manual' | 'development';
   propertyType?: string;
-  city?: string;
-  suburb?: string;
-  province?: string;
-  locationId?: string; // Added to support P24 ID
-  searchAreaId?: string;
-  searchAreaAvailability?: import('../../../shared/searchScope').SearchAreaSummary['availability'];
   minPrice?: number;
   maxPrice?: number;
   minBedrooms?: number;
@@ -103,27 +95,26 @@ export interface SearchFilters {
   maxArea?: number;
   amenities?: string[];
   furnished?: boolean;
-  locations?: Array<
-    | string
-    | {
-        slug: string;
-        type: 'province' | 'city' | 'suburb';
-        citySlug?: string;
-        provinceSlug?: string;
-        id?: string; // locationId for this location
-        name?: string;
-        fullAddress?: string;
-      }
-  >;
   // Additional filters stored in query params
   [key: string]: unknown;
 }
 
+const RETIRED_GEOGRAPHY_FILTER_KEYS = [
+  'province',
+  'city',
+  'suburb',
+  'location',
+  'slug',
+  'locationId',
+  'factualLocationId',
+  'locationIds',
+  'locations',
+  'canonicalPlaceIds',
+  'searchAreaId',
+  'searchAreaIds',
+] as const;
+
 import { generateIntentUrl, SearchIntent, type TransactionType } from './searchIntent';
-import {
-  buildTransactionalGeographyHref,
-  createCanonicalSearchScope,
-} from './geographySearchHandoff';
 import { toAbsoluteUrl } from './seo/structuredData';
 import { normalizeTransactionalResultState } from '../../../shared/transactionalSearchState';
 
@@ -135,17 +126,8 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
   return {
     transactionType,
     geography: {
-      level: filters.suburb
-        ? 'suburb'
-        : filters.city
-          ? 'city'
-          : filters.province
-            ? 'province'
-            : 'country',
-      province: filters.province,
-      city: filters.city,
-      suburb: filters.suburb,
-      locationId: filters.locationId,
+      level: filters.canonicalPlaceId ? 'canonical_place' : 'country',
+      ...(filters.canonicalPlaceId ? { canonicalPlaceId: filters.canonicalPlaceId } : {}),
     },
     filters: filters, // Pass full filters as query params source
     resultState: normalizeTransactionalResultState({
@@ -158,35 +140,20 @@ function filtersToIntent(filters: SearchFilters): SearchIntent {
 
 // Generate SEO-friendly URL from filters
 export function generatePropertyUrl(filters: SearchFilters): string {
+  if (
+    RETIRED_GEOGRAPHY_FILTER_KEYS.some(key => {
+      const value = filters[key];
+      return value !== undefined && value !== null && value !== '';
+    })
+  ) {
+    return '/';
+  }
+
   const journey =
     filters.listingType === 'rent' ? 'rent' : filters.listingType === 'sale' ? 'buy' : undefined;
-  const scope = filters.searchAreaId
-    ? { kind: 'search_area' as const, searchAreaId: filters.searchAreaId }
-    : filters.locationId
-      ? createCanonicalSearchScope(filters.locationId)
-      : undefined;
 
-  if (filters.searchAreaId || (filters.locationId && journey)) {
-    if (!journey || !scope) return '/';
-
-    return (
-      buildTransactionalGeographyHref({
-        journey,
-        scope,
-        searchAreaAvailability: filters.searchAreaAvailability,
-        localityRefinementId: filters.searchAreaId ? filters.locationId : undefined,
-        context: {
-          province: filters.province,
-          city: filters.city,
-          suburb: filters.suburb,
-        },
-        filters,
-        resultState: {
-          sort: filters.sort as any,
-          page: filters.page as any,
-        },
-      }) || '/'
-    );
+  if (filters.canonicalPlaceId && journey) {
+    return generateIntentUrl(filtersToIntent(filters));
   }
 
   // Use the single source of truth: searchIntent.ts
@@ -210,55 +177,8 @@ export function generateCanonicalUrl(filters: SearchFilters): string {
   return toAbsoluteUrl(generatePropertyUrl(filters));
 }
 
-// Parse URL params back to filters
-export interface ParsedUrlParams {
-  listingType?: string;
-  propertyType?: string;
-  location?: string; // city or suburb
-  suburb?: string;
-}
-
-export function parsePropertyUrl(
-  _params: ParsedUrlParams,
-  _searchParams?: URLSearchParams,
-): SearchFilters {
-  // This function is less critical now as we rely on resolveSearchIntent
-  // But strictly for backward compatibility or simple parsing:
-  const filters: SearchFilters = {};
-  // ... (keep existing logic if needed, but we mostly use resolveSearchIntent now)
-  // Just simplified return for now as heavy lifting is in searchIntent
-  return filters;
-}
-
-// Parse legacy query params (for backward compatibility)
-export function parseLegacyQueryParams(searchParams: URLSearchParams): SearchFilters {
-  const filters: SearchFilters = {};
-
-  // Legacy param mappings
-  const listingType = searchParams.get('listingType');
-  const propertyType = searchParams.get('propertyType') || searchParams.get('type');
-  const city = searchParams.get('city') || searchParams.get('search');
-  const suburb = searchParams.get('suburb');
-
-  if (listingType) filters.listingType = listingType as SearchFilters['listingType'];
-  if (propertyType) filters.propertyType = propertyType;
-  if (city) filters.city = city;
-  if (suburb) filters.suburb = suburb;
-
-  // Parse numeric filters
-  const minPrice = searchParams.get('minPrice');
-  const maxPrice = searchParams.get('maxPrice');
-  const minBedrooms = searchParams.get('minBedrooms');
-
-  if (minPrice) filters.minPrice = parseInt(minPrice);
-  if (maxPrice) filters.maxPrice = parseInt(maxPrice);
-  if (minBedrooms) filters.minBedrooms = parseInt(minBedrooms);
-
-  return filters;
-}
-
-// Generate page title for SEO
-export function generatePageTitle(filters: SearchFilters): string {
+// Generate page title for SEO. Place labels are supplied by the resolved Place response.
+export function generatePageTitle(filters: SearchFilters, placeLabel?: string | null): string {
   const parts: string[] = [];
 
   // Property type
@@ -276,18 +196,17 @@ export function generatePageTitle(filters: SearchFilters): string {
     parts.push('to Rent');
   }
 
-  // Location
-  if (filters.suburb && filters.city) {
-    parts.push(`in ${filters.suburb}, ${filters.city}`);
-  } else if (filters.city) {
-    parts.push(`in ${filters.city}`);
-  }
+  if (placeLabel) parts.push(`in ${placeLabel}`);
 
   return parts.join(' ') + ' | Property Listify';
 }
 
 // Generate meta description for SEO
-export function generateMetaDescription(filters: SearchFilters, resultCount?: number): string {
+export function generateMetaDescription(
+  filters: SearchFilters,
+  resultCount?: number,
+  placeLabel?: string | null,
+): string {
   const parts: string[] = [];
 
   if (resultCount !== undefined) {
@@ -311,13 +230,7 @@ export function generateMetaDescription(filters: SearchFilters, resultCount?: nu
     parts.push('to rent');
   }
 
-  // Location
-  if (filters.city) {
-    parts.push(`in ${filters.city}`);
-    if (filters.suburb) {
-      parts[parts.length - 1] = `in ${filters.suburb}, ${filters.city}`;
-    }
-  }
+  if (placeLabel) parts.push(`in ${placeLabel}`);
 
   return (
     parts.join(' ') +
@@ -331,12 +244,11 @@ export interface BreadcrumbItem {
   href: string;
 }
 
-export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
+export function generateBreadcrumbs(
+  filters: SearchFilters,
+  placeLabel?: string | null,
+): BreadcrumbItem[] {
   const breadcrumbs: BreadcrumbItem[] = [{ label: 'Home', href: '/' }];
-
-  // Breadcrumbs: Property for Sale > Province > City > Suburb
-  // But URL structure is Inverted or specific.
-  // We must generate HREF for each crumb using GeneratePropertyUrl (which calls generateIntentUrl).
 
   const isRent = filters.listingType === 'rent';
   const hasTransaction = filters.listingType === 'rent' || filters.listingType === 'sale';
@@ -348,50 +260,8 @@ export function generateBreadcrumbs(filters: SearchFilters): BreadcrumbItem[] {
     href: rootHref,
   });
 
-  // Province
-  if (filters.province) {
-    const provinceHref = generatePropertyUrl({
-      listingType: filters.listingType,
-      province: filters.province,
-      // No locationId for province usually, or maybe we have one?
-      // If we don't have it, logic relies on fallback or slug lookup if intent supports it.
-      // P24 Province pages have IDs too: /property-for-sale/gauteng/1
-    });
-
-    breadcrumbs.push({
-      label: filters.province,
-      href: provinceHref,
-    });
-
-    // City (Only if Province exists)
-    if (filters.city) {
-      const cityHref = generatePropertyUrl({
-        listingType: filters.listingType,
-        province: filters.province,
-        city: filters.city,
-      });
-
-      breadcrumbs.push({
-        label: filters.city,
-        href: cityHref,
-      });
-
-      // Suburb (Only if City exists)
-      if (filters.suburb) {
-        const suburbHref = generatePropertyUrl({
-          listingType: filters.listingType,
-          province: filters.province,
-          city: filters.city,
-          suburb: filters.suburb,
-          locationId: filters.locationId, // Pass specific ID for the leaf node
-        });
-
-        breadcrumbs.push({
-          label: filters.suburb,
-          href: suburbHref,
-        });
-      }
-    }
+  if (filters.canonicalPlaceId && placeLabel) {
+    breadcrumbs.push({ label: placeLabel, href: generatePropertyUrl(filters) });
   }
 
   return breadcrumbs;

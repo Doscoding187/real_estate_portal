@@ -79,10 +79,8 @@ describe('ServiceProviderProfilePage', () => {
         locations: [
           {
             id: 1,
-            suburb: 'Rondebosch',
-            city: 'Cape Town',
-            province: 'Western Cape',
-            radiusKm: 25,
+            canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+            label: 'Rondebosch, Cape Town, Western Cape',
           },
         ],
       }),
@@ -210,6 +208,8 @@ describe('ServiceProviderProfilePage', () => {
     expect(path).toContain('sourceSurface=journey_injection');
     expect(path).toContain('sourceDetail=saved_property');
     expect(path).toContain('reasonKey=move_ready');
+    expect(path).not.toContain('city=');
+    expect(path).not.toContain('province=');
   });
 
   it('has a clear unavailable state for unpublished providers', () => {

@@ -275,6 +275,7 @@ export async function getDevelopmentSalesProjection(
       development: {
         id: developments.id,
         cataloguePublisherId: developments.cataloguePublisherId,
+        canonicalPlaceId: developments.canonicalPlaceId,
         name: developments.name,
         marketingName: developments.marketingName,
         slug: developments.slug,
@@ -367,6 +368,7 @@ export async function getDevelopmentSalesProjection(
     development: {
       id: row.development.id,
       cataloguePublisherId: row.development.cataloguePublisherId,
+      canonicalPlaceId: row.development.canonicalPlaceId,
       developmentType: row.development.developmentType,
       transactionType: row.development.transactionType,
       isPublished: row.development.isPublished,

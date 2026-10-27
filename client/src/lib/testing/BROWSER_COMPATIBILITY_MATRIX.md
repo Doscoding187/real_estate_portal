@@ -167,7 +167,6 @@ This document provides a comprehensive compatibility matrix for the Explore fron
 | **useMapFeedSync** | ✅ | ✅ | ✅ | ✅ | None |
 | **useThrottle** | ✅ | ✅ | ✅ | ✅ | None |
 | **useDebounce** | ✅ | ✅ | ✅ | ✅ | None |
-| **useFilterUrlSync** | ✅ | ✅ | ✅ | ✅ | None |
 | **useImagePreload** | ✅ | ✅ | ✅ | ✅ | None |
 | **useOnlineStatus** | ✅ | ✅ | ✅ | ✅ | None |
 | **useKeyboardNavigation** | ✅ | ✅ | ✅ | ✅ | None |

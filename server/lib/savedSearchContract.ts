@@ -63,6 +63,7 @@ export function normalizeSavedSearch(row: SavedSearchRow): SavedSearch {
     id: Number(row.id),
     userId: Number(row.userId),
     name: row.name,
+    placeId: row.placeId ?? null,
     criteria: stripCriteriaMeta(rawCriteria),
     notificationFrequency: row.notificationFrequency ?? 'never',
     emailEnabled: deliveryPreferences.emailEnabled,

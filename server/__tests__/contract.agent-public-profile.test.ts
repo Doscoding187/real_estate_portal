@@ -1,17 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryBuilder } from 'drizzle-orm/mysql-core';
 
-const { mockGetDb } = vi.hoisted(() => ({
+const { mockGetDb, mockLoadCanonicalPlaceSearchProjection } = vi.hoisted(() => ({
   mockGetDb: vi.fn(),
+  mockLoadCanonicalPlaceSearchProjection: vi.fn(),
 }));
 
 vi.mock('../db', () => ({
   getDb: mockGetDb,
 }));
 
+vi.mock('../services/canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: mockLoadCanonicalPlaceSearchProjection,
+}));
+
 import { agentRouter } from '../agentRouter';
 import { APPROVED_AGENT } from '../services/agentPublicProfileService';
 import { agents } from '../../drizzle/schema';
+
+const SANDTON_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+const JOHANNESBURG_PLACE_ID = 'pl-place-01-21f154cd5d0954c29ec7525f';
+const GAUTENG_PLACE_ID = 'pl-place-01-131e3e75ad70424e0f9c869a';
+const UNAVAILABLE_PLACE_ID = 'pl-place-01-000000000000000000000099';
+
+const PLACE_PROJECTIONS = new Map([
+  [SANDTON_PLACE_ID, { scope: 'locality', label: 'Sandton', type: 'suburb', city: 'Johannesburg' }],
+  [
+    JOHANNESBURG_PLACE_ID,
+    { scope: 'metro_city', label: 'Johannesburg', type: 'city', city: 'Johannesburg' },
+  ],
+  [GAUTENG_PLACE_ID, { scope: 'province', label: 'Gauteng', type: 'province', city: '' }],
+]);
 
 function createCaller() {
   return agentRouter.createCaller({
@@ -101,7 +120,7 @@ const baseAgentRow = {
   licenseNumber: 'PG 123456',
   yearsExperience: 12,
   areasServed: JSON.stringify([
-    { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+    { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
   ]),
   languages: 'English, isiZulu',
   isVerified: 1,
@@ -186,13 +205,37 @@ describe('public agent discovery projection', () => {
 
     expect(agents).toHaveLength(1);
     expect(agents[0].areasServed).toEqual([
-      { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+      { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
     expect(Array.isArray(agents[0].areasServed)).toBe(true);
   });
 });
 
 describe('public agent web presence projection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLoadCanonicalPlaceSearchProjection.mockImplementation(
+      async (_database: unknown, options: { placeIds: readonly string[] }) => {
+        const executions = new Map<string, unknown>();
+        const labels = new Map<string, unknown>();
+        for (const placeId of options.placeIds) {
+          const projection = PLACE_PROJECTIONS.get(placeId);
+          if (!projection) continue;
+          executions.set(placeId, { placeId, scope: projection.scope });
+          labels.set(placeId, {
+            canonicalPlaceId: placeId,
+            label: projection.label,
+            placeType: projection.type,
+            scope: projection.scope,
+            city: projection.city,
+            province: 'Gauteng',
+          });
+        }
+        return { executions, labels };
+      },
+    );
+  });
+
   it('returns the deliberate public surface with derived slug and agency relationship', async () => {
     mockGetDb.mockResolvedValue(recordingDb(presenceBatches(baseAgentRow)).db);
 
@@ -226,11 +269,11 @@ describe('public agent web presence projection', () => {
     ).resolves.toBeNull();
   });
 
-  it('resolves a typed suburb claim by its exact canonical identity', async () => {
+  it('resolves a locality Place claim by its exact canonical identity', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
@@ -248,23 +291,22 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.areasServed).toEqual([
-      { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+      { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label is ignored' },
     ]);
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: 'suburb:11',
-        name: 'Bryanston, Sandton, Gauteng',
+        canonicalLocationId: SANDTON_PLACE_ID,
+        name: 'Sandton, Johannesburg, Gauteng',
         type: 'suburb',
-        url: '/gauteng/sandton/bryanston',
       },
     ]);
   });
 
-  it('links a typed city only through that city identity', async () => {
+  it('derives city scope from the Place Authority projection', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'city:31', label: 'Stellenbosch, Western Cape' },
+          { canonicalLocationId: JOHANNESBURG_PLACE_ID, label: 'Client city label' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 31,
@@ -281,19 +323,18 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: 'city:31',
-        name: 'Stellenbosch, Western Cape',
+        canonicalLocationId: JOHANNESBURG_PLACE_ID,
+        name: 'Johannesburg, Gauteng',
         type: 'city',
-        url: '/western-cape/stellenbosch',
       },
     ]);
   });
 
-  it('links a typed province only through that province identity', async () => {
+  it('derives province scope from the Place Authority projection', async () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'province:5', label: 'Western Cape' },
+          { canonicalLocationId: GAUTENG_PLACE_ID, label: 'Client province label' },
         ])), [ACTIVE_MEMBERSHIP], [
           { id: 5, name: 'Western Cape', slug: 'western-cape' },
         ]),
@@ -304,10 +345,9 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: 'province:5',
-        name: 'Western Cape',
+        canonicalLocationId: GAUTENG_PLACE_ID,
+        name: 'Gauteng',
         type: 'province',
-        url: '/western-cape',
       },
     ]);
   });
@@ -324,10 +364,14 @@ describe('public agent web presence projection', () => {
   });
 
   it('fails closed when the typed canonical record is unavailable', async () => {
+    mockLoadCanonicalPlaceSearchProjection.mockResolvedValueOnce({
+      executions: new Map(),
+      labels: new Map(),
+    });
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
+          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Sandton, Johannesburg, Gauteng' },
         ]))),
       ).db,
     );
@@ -336,10 +380,9 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: 'suburb:11',
-        name: 'Bryanston, Sandton, Gauteng',
+        canonicalLocationId: SANDTON_PLACE_ID,
+        name: 'Sandton, Johannesburg, Gauteng',
         type: null,
-        url: null,
       },
     ]);
   });
@@ -348,7 +391,7 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'suburb:11', label: 'Parklands, Sandton, Gauteng' },
+          { canonicalLocationId: UNAVAILABLE_PLACE_ID, label: 'Parklands, Sandton, Gauteng' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 61,
@@ -367,10 +410,9 @@ describe('public agent web presence projection', () => {
 
     expect(profile?.canonicalAreas).toEqual([
       {
-        canonicalLocationId: 'suburb:11',
+        canonicalLocationId: UNAVAILABLE_PLACE_ID,
         name: 'Parklands, Sandton, Gauteng',
         type: null,
-        url: null,
       },
     ]);
   });
@@ -379,8 +421,8 @@ describe('public agent web presence projection', () => {
     mockGetDb.mockResolvedValue(
       recordingDb(
         presenceBatches(makePresenceRow(JSON.stringify([
-          { canonicalLocationId: 'suburb:11', label: 'Bryanston, Sandton, Gauteng' },
-          { canonicalLocationId: 'suburb:11', label: 'Forged duplicate label' },
+          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Client label' },
+          { canonicalLocationId: SANDTON_PLACE_ID, label: 'Forged duplicate label' },
         ])), [ACTIVE_MEMBERSHIP], [
           {
             id: 11,
@@ -398,7 +440,7 @@ describe('public agent web presence projection', () => {
     const profile = await createCaller().getPublicProfileBySlug({ slug: 'jane-agent' });
 
     expect(profile?.canonicalAreas).toHaveLength(1);
-    expect(profile?.canonicalAreas?.[0].canonicalLocationId).toBe('suburb:11');
+    expect(profile?.canonicalAreas?.[0].canonicalLocationId).toBe(SANDTON_PLACE_ID);
   });
 });
 

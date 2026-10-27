@@ -16,8 +16,6 @@ import { SkipToContent } from './components/ui/SkipToContent';
 import '@/styles/keyboard-navigation.css';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ADMIN_DASHBOARD_ROUTES } from '@/pages/admin/adminRouteRegistry';
-import { isCanonicalProvinceSlug } from './lib/locationDiscovery';
-import { buildPropertiesCompatibilityRedirect } from './lib/searchNavigation';
 import { LandPublicLayout } from './components/land/LandPublicLayout';
 import { DistributionPartnerIdentityGate } from '@/components/referral/DistributionPartnerIdentityGate';
 
@@ -36,8 +34,7 @@ const Agents = lazy(() => import('./pages/Agents'));
 const AgentPublicProfile = lazy(() => import('./pages/AgentPublicProfile'));
 const AgentMicrosite = lazy(() => import('./pages/AgentMicrosite'));
 const CountryDiscoveryPage = lazy(() => import('./pages/CountryDiscoveryPage'));
-const ProvincePage = lazy(() => import('./pages/ProvincePage'));
-const CityPage = lazy(() => import('./pages/CityPage'));
+const CanonicalPlacePage = lazy(() => import('./pages/CanonicalPlacePage'));
 const SmartDashboardRedirect = lazy(() => import('./components/SmartDashboardRedirect'));
 const Login = lazy(() => import('./pages/Login'));
 
@@ -71,9 +68,6 @@ const ActivationComplete = lazy(() => import('./pages/ActivationComplete'));
 const SavedSearchManagePage = lazy(() => import('./pages/SavedSearchManagePage'));
 const ServicesHomePage = lazy(() => import('./pages/services/ServicesHomePage'));
 const ServicesCategoryPage = lazy(() => import('./pages/services/ServicesCategoryPage'));
-const ServicesLocalizedCategoryPage = lazy(
-  () => import('./pages/services/ServicesLocalizedCategoryPage'),
-);
 const ServicesRequestPage = lazy(() => import('./pages/services/ServicesRequestPage'));
 const ServicesResultsPage = lazy(() => import('./pages/services/ServicesResultsPage'));
 const ServiceProviderProfilePage = lazy(
@@ -196,7 +190,6 @@ const DistributionReferralApplyPage = lazy(
 
 // Import SearchResults page for SEO-friendly URLs
 const SearchResults = lazy(() => import('./pages/SearchResults'));
-const SuburbGuidePage = lazy(() => import('./pages/SuburbGuidePage'));
 
 function Router() {
   // Auto-migrate guest data on login
@@ -250,11 +243,10 @@ function Router() {
           <Route path="/developer/:slug" component={DeveloperPublisherPage} />
 
           {/* ============================================================== */}
-          {/* 1B. PUBLIC AND LEGACY PRODUCT ROUTES                           */}
+          {/* 1B. PUBLIC PRODUCT ROUTES                                      */}
           {/* ============================================================== */}
 
-          {/* IMPORTANT: Admin Review must be BEFORE legacy wildcards */}
-          {/* Otherwise /:action/:province/:locationId matches /admin/review/360002 */}
+          {/* Admin review must precede the dynamic public Place route patterns. */}
           <Route path="/admin/review/:id">
             <RequireRole role="super_admin" unauthenticatedAuthEntry="signin">
               <AdminPropertyReview />
@@ -271,15 +263,6 @@ function Router() {
             </RequireRole>
           </Route>
 
-          {/* Compatibility edge: preserve inbound query state, then hand off
-              immediately to the canonical Buy transaction root. */}
-          <Route
-            path="/properties"
-            component={() => {
-              window.location.replace(buildPropertiesCompatibilityRedirect(window.location.search));
-              return null;
-            }}
-          />
           <Route path="/property/:id" component={PropertyDetail} />
           <Route path="/favorites" component={Favorites} />
           <Route path="/agents" component={Agents} />
@@ -485,10 +468,6 @@ function Router() {
           <Route path="/services/results/:leadId" component={ServicesResultsPage} />
           <Route path="/services/provider/:slug" component={ServiceProviderProfilePage} />
           <Route path="/services/reviews/:providerId" component={ServiceProviderReviewsPage} />
-          <Route
-            path="/services/:category/:city/:province"
-            component={ServicesLocalizedCategoryPage}
-          />
           <Route path="/services/:category" component={ServicesCategoryPage} />
           <Route path="/services" component={ServicesHomePage} />
 
@@ -743,37 +722,10 @@ function Router() {
               by it. */}
           <Route path="/south-africa" component={CountryDiscoveryPage} />
 
-          {/* ============================================================== */}
-          {/* 3. VALIDATED NEUTRAL GEOGRAPHY AUTHORITY                       */}
-          {/* Static/product/detail routes and transaction roots are above.  */}
-          {/* ============================================================== */}
-          <Route path="/:province/:city/:suburb">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <SuburbGuidePage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
-          <Route path="/:province/:city">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <CityPage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
-          <Route path="/:province">
-            {params =>
-              isCanonicalProvinceSlug(params.province) ? (
-                <ProvincePage params={params as any} />
-              ) : (
-                <NotFound />
-              )
-            }
-          </Route>
+          {/* Place pages resolve exact paths from the admitted national projection. */}
+          <Route path="/:province/:context/:place" component={CanonicalPlacePage} />
+          <Route path="/:province/:place" component={CanonicalPlacePage} />
+          <Route path="/:province" component={CanonicalPlacePage} />
 
           {/* Final fallback route */}
           <Route component={NotFound} />

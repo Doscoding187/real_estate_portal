@@ -1,6 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { developments, unitTypes } from '../../drizzle/schema';
 import { assertSafeLocalMediaKey, isLocalMediaStorage } from '../_core/mediaStorage';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 export type SubmissionValidationError = {
   field: string;
@@ -23,6 +24,7 @@ export type PersistedRentalPriceResolution = {
 type PersistedDevelopment = Pick<
   typeof developments.$inferSelect,
   | 'name'
+  | 'canonicalPlaceId'
   | 'address'
   | 'description'
   | 'ownershipType'
@@ -229,6 +231,12 @@ export function validatePersistedSubmissionReadiness(
   const transactionType = String(development.transactionType ?? '').trim();
 
   if (!name) errors.push({ field: 'name', message: 'Development name is required.' });
+  if (!isCanonicalPlaceId(development.canonicalPlaceId)) {
+    errors.push({
+      field: 'canonicalPlaceId',
+      message: 'Select one admitted canonical Place before submitting this development.',
+    });
+  }
   if (!address) errors.push({ field: 'address', message: 'Development address is required.' });
   if (!['residential', 'commercial', 'mixed_use', 'land'].includes(developmentType)) {
     errors.push({

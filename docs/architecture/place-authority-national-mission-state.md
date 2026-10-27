@@ -1,5 +1,10 @@
 # Place Authority — National Rollout Mission State
 
+**Status:** Historical progress snapshot. The active runtime and admission
+authority is the canonical Place registry v0.2 and the territory packages it
+pins. The former numeric runtime projection, materializer and provenance
+command described below have been retired.
+
 This is the single canonical progress tracker for the national Place Authority
 mission. Do not create competing trackers.
 
@@ -20,7 +25,7 @@ provinces through one repeatable pipeline, produce deterministic Place identitie
 and artifacts, and prove every change physically on authorized disposable
 databases. Place Authority remains the only geographic identity source.
 
-## Active contract
+## Contract at the time of this snapshot
 
 - `docs/architecture/geography-coverage-contract.md` **v0.5**
 - Sections 0–19 are the delivered record. **Section 20 is the binding scope
@@ -777,10 +782,11 @@ right.
 
 ## Gauteng boundary provenance investigation
 
-Decision of record: investigate Gauteng's existing boundary provenance **before**
-considering re-acquisition, and preserve its Place IDs during the investigation.
-Re-run with `pnpm place:gauteng-provenance`. No evidence was re-acquired and no
-Place ID was touched.
+Decision of record at the time: investigate Gauteng's existing boundary
+provenance **before** considering re-acquisition, and preserve its Place IDs
+during the investigation. The former one-off investigation command has been
+retired; the current source artifacts and their digests are pinned by
+`data/gauteng-source-authority-v0.3/gauteng_source_manifest_v0.3.json`.
 
 ### What was recoverable
 

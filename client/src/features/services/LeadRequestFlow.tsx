@@ -11,17 +11,18 @@
  * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 14.2
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2 } from 'lucide-react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
 import { CategoryTileGrid } from '@/components/services/CategoryTileGrid';
 import {
-  parseServiceLocationInput,
-  SA_PROVINCES,
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
+import {
   type IntentStage,
   type ServiceCategory,
   type ServiceRequestSourceSurface,
@@ -32,9 +33,7 @@ export type LeadWizardSubmit = {
   intentStage: IntentStage;
   sourceSurface: ServiceRequestSourceSurface;
   notes: string;
-  province?: string;
-  city?: string;
-  suburb?: string;
+  canonicalPlaceId: string;
   propertyId?: number;
   listingId?: number;
   developmentId?: number;
@@ -45,12 +44,7 @@ export type LeadWizardSubmit = {
 
 export type LeadRequestFlowProps = {
   defaultCategory: ServiceCategory;
-  defaultLocation?: string;
-  defaultLocationParts?: {
-    suburb?: string;
-    city?: string;
-    province?: string;
-  };
+  defaultPlace?: CanonicalPlaceSelection | null;
   defaultIntentStage?: IntentStage;
   defaultSourceSurface?: ServiceRequestSourceSurface;
   propertyId?: number;
@@ -67,9 +61,7 @@ export type LeadRequestFlowProps = {
 type FlowState = {
   step: 1 | 2 | 3;
   category: ServiceCategory;
-  suburb: string;
-  city: string;
-  province: string;
+  place: CanonicalPlaceSelection | null;
   notes: string;
 };
 
@@ -87,8 +79,7 @@ const STEP_ENCOURAGING_COPY: Record<number, string> = {
  */
 export function LeadRequestFlow({
   defaultCategory,
-  defaultLocation = '',
-  defaultLocationParts,
+  defaultPlace = null,
   defaultIntentStage = 'general',
   defaultSourceSurface = 'directory',
   propertyId,
@@ -101,17 +92,17 @@ export function LeadRequestFlow({
   error,
   onSubmit,
 }: LeadRequestFlowProps) {
-  const parsedLocation = defaultLocationParts || parseServiceLocationInput(defaultLocation);
-
   const [state, setState] = useState<FlowState>({
     step: 1,
     category: defaultCategory,
-    suburb: parsedLocation.suburb || '',
-    city: parsedLocation.city || '',
-    province: parsedLocation.province || '',
+    place: defaultPlace,
     notes: '',
   });
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultPlace) setState(prev => ({ ...prev, place: defaultPlace }));
+  }, [defaultPlace]);
 
   function setField<K extends keyof FlowState>(field: K, value: FlowState[K]) {
     setValidationError(null);
@@ -119,8 +110,8 @@ export function LeadRequestFlow({
   }
 
   function goNext() {
-    if (state.step === 2 && !state.suburb.trim() && !state.city.trim() && !state.province) {
-      setValidationError('Add at least one area so the provider can check listed coverage.');
+    if (state.step === 2 && !state.place) {
+      setValidationError('Select an approved Place so the provider can check listed coverage.');
       return;
     }
     if (state.step === 3 && !state.notes.trim()) {
@@ -158,9 +149,7 @@ export function LeadRequestFlow({
       reasonKey,
 
       notes: state.notes.trim(),
-      suburb: state.suburb || undefined,
-      city: state.city || undefined,
-      province: state.province || undefined,
+      canonicalPlaceId: state.place!.canonicalPlaceId,
     });
   }
 
@@ -200,7 +189,7 @@ export function LeadRequestFlow({
             </div>
           )}
 
-          {/* Step 2: Location inputs */}
+          {/* Step 2: Canonical Place selection */}
           {state.step === 2 && (
             <div className="space-y-4">
               <div className="space-y-1">
@@ -212,52 +201,14 @@ export function LeadRequestFlow({
                   Providers use this to check the coverage areas they have listed.
                 </p>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <label htmlFor="lead-suburb" className="text-sm font-medium text-slate-700">
-                    Suburb
-                  </label>
-                  <Input
-                    id="lead-suburb"
-                    value={state.suburb}
-                    onChange={e => setField('suburb', e.target.value)}
-                    placeholder="e.g. Sandton"
-                    autoComplete="address-level3"
-                    className="border-slate-200 bg-white"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label htmlFor="lead-city" className="text-sm font-medium text-slate-700">
-                    City
-                  </label>
-                  <Input
-                    id="lead-city"
-                    value={state.city}
-                    onChange={e => setField('city', e.target.value)}
-                    placeholder="e.g. Johannesburg"
-                    autoComplete="address-level2"
-                    className="border-slate-200 bg-white"
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label htmlFor="lead-province" className="text-sm font-medium text-slate-700">
-                  Province
-                </label>
-                <select
-                  id="lead-province"
-                  value={state.province}
-                  onChange={e => setField('province', e.target.value)}
-                  className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0f3d91] focus-visible:ring-offset-2"
-                >
-                  <option value="">Select a province</option>
-                  {SA_PROVINCES.map(prov => (
-                    <option key={prov} value={prov}>
-                      {prov}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <CanonicalPlaceSelector
+                value={state.place}
+                onChange={place => setField('place', place)}
+                purpose="search"
+                label="Project Place"
+                placeholder="Search for an approved city, suburb or locality"
+                hint="The selected Place defines the request area."
+              />
             </div>
           )}
 

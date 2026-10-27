@@ -1,14 +1,18 @@
 # City scope membership implementation plan
 
-**Status:** Implemented and dry-run verified on the disposable target (2026-10-25). Review,
-commit, Phase 3 URL work and the canonical admission-package rebuild remain unauthorized.
+**Status:** Canonical admission rebuild committed as `47af2c618`; Phase 3 URL projection and
+the application-wide canonical Place cutover are implemented on the feature branch. Edward's
+2026-10-26 direction retires legacy geography paths without redirects or aliases. Cutover changes
+and migrations through 0194 remain uncommitted; Phase 4 database release remains unauthorized.
 **Founder confirmation:** Edward, 2026-10-23, confirmed the 13/48/2 disposition and the
 refined 351-edge evidence set.
 **Branch:** `feat/suburb-first-search-ux-20261022`
 **Base:** `origin/main`
 **Date:** 2026-10-23 (dry-run evidence added 2026-10-25)
 **Target:** disposable worktree target `listify_wt_suburb_first_search_20261022_53581aab324f`
-(fingerprint `840e8d36baa6bb48`, manifest head `0148`, schema congruent)
+(fingerprint `840e8d36baa6bb48`). It was schema-congruent at migration head 0148 for the
+admission rebuild; as of 2026-10-27 the authored 0149–0194 cutover migrations are unapplied and
+Database Authority reports `manifest-head-behind` / `schema-not-congruent`.
 
 ## 1. Decision
 
@@ -351,14 +355,68 @@ admitted data, through governed artifacts rather than edits to committed data:
 
 ### Phase 3 — Projection and URL handling
 
-Separate repository change after the dry run passes.
+The founder's 2026-10-26 direction supersedes the earlier redirect/alias recommendation: this is
+pre-launch, and the app uses one path generated from the admitted Place Authority. Former paths
+are retired without redirects or aliases. The 13 retained city routes remain unchanged.
 
-- Map each of the 48 published city paths to its locality path.
-- Add redirects/aliases for every demoted path.
-- Keep the 13 retained city paths unchanged.
-- Decide the destination for the 9 demoted rows whose parent is outside the 63; do not invent a
-  parent.
-- Confirm no city page remains for a demoted row and no locality page is orphaned.
+#### Phase 3 implementation (2026-10-26)
+
+- Added `data/place-url-projection-national-v0.1.json`, deterministically built from all nine
+  packages named by the active territory registry. It contains one exact route for each of 14,808
+  active, searchable Places and pins the registry, package manifests and relevant package files.
+- The route policy uses the province and Place name for province/city scopes. A locality uses its
+  reviewed `settlement_within` parent when available, otherwise admitted municipality context, and
+  otherwise a province `/localities/` namespace. Municipality path context does not grant search
+  scope. Collisions receive a stable Place-ID suffix.
+- Replaced the published-place registry search fallback with Place Authority search results joined
+  to the canonical URL projection. Search no longer reads old published labels, runtime handles or
+  legacy geography tables to form a Place URL.
+- Replaced the province/city/suburb URL handlers with exact path resolution through
+  `placeAuthority.resolveCanonicalUrl`. A path absent from the projection returns not found; the
+  route does not normalize, redirect or alias it.
+- Confirmed all 48 demoted Places are `locality` paths and none of their former one-segment Gauteng
+  city paths exists in the projection. The 13 retained city paths remain `/gauteng/<place>`.
+- Removed the old published-place registry artifact, builder, URL verifier and city-scope analysis
+  script. The URL compatibility exception is retired; the separate DBX for remaining runtime
+  projection readers is outside this route change.
+- Added projection checks for unique paths and IDs, exact lookup, the 13 retained routes, the 48
+  retired routes, and all 351 reviewed settlement contexts.
+- Referral distribution now filters opportunities by exact `canonicalPlaceId`; development city,
+  suburb and province snapshots are display-only and do not participate in matching.
+- Removed the remaining neighborhood follow/detail cache and mock neighborhood list; Explore’s
+  active feed uses the canonical Place selector and exact Place identity for area scoping. Explore
+  video submissions copy canonical Place identity from their linked listing/development and no
+  longer write a separate coordinate-based location assignment.
+- Removed the numeric location contract and duplicate city/suburb/province state from listing
+  authoring. Confirmed wizard state now requires the selected Place object for geographic identity;
+  provider observations cannot populate a parallel hierarchy. Retired the unused draft adapter
+  that serialized free-text geography and the unused database verifier that attempted a
+  `locationId` development write.
+- Removed stale test calls to the deleted `properties.search` compatibility route and tests for the
+  retired `location.getFeaturedListings` route. Detail continuation now verifies an exact
+  `canonicalPlaceId`; database lifecycle fixtures no longer select or assert retired numeric
+  geography columns. The orphan Similar Locations component, which constructed URLs from display
+  names, is deleted.
+- Aligned active location controls with their route contracts. Buy, Rent, Developments, Commercial
+  and the ListingNavbar use one canonical Place; choosing a new Place replaces the current one.
+  Land and Shared Living retain sibling OR selections through canonical Place IDs. Buy/Rent cannot
+  submit a multi-Place selection, and the neutral resolver prompts the user to remove extra Places.
+  `LocationAutosuggest` selects only Place Authority results with projected paths. Commercial
+  rejects retired text and numeric geography and resolves an initial selection only by
+  `canonicalPlaceId`.
+- Removed two unreferenced location entry components that used map geocoding or Google Places:
+  `LocationPicker` and `GoogleLocationAutocomplete`. No application or test imports remained.
+- Removed free-text geography from the Explore desktop and mobile filter panels, both Explore
+  filter stores, and filter persistence. Old saved text is discarded when state is rehydrated.
+  The unreferenced `useFilterUrlSync` hook, its tests and examples, and stale filter examples were
+  deleted; typed query text cannot create an Explore location scope. Focused state and panel tests
+  confirm the geography boundary in desktop and mobile filters.
+- Changed the referral opportunity browse filter to select one canonical Place and match its
+  exact `canonicalPlaceId`; the separate development-name search no longer matches city or
+  province labels, and candidates without canonical Place identity fail closed. Removed the
+  disconnected campaign wizard's raw city/province targeting controls while campaign procedures
+  remain blocked until a canonical campaign authority exists. Referral check-fit behavior was not
+  changed.
 
 ### Phase 4 — Release
 
@@ -379,8 +437,9 @@ separate approval and its own verification.
 
 ### Post-write
 
-The data assertions below were proven on the disposable target. The URL, search-behavior and
-contract-suite items are Phase 3/4 gates and remain open; the dry run does not claim them.
+The data assertions below were proven on the disposable target during the admission rebuild.
+Application-wide source checks on 2026-10-27 are recorded separately below; no migration apply or
+database write was performed for the application cutover.
 
 - 48 rows now have `search_scope = 'locality'`; 0 of them retain `metro_city`.
 - 13 retained rows still have `search_scope = 'metro_city'`.
@@ -391,12 +450,33 @@ contract-suite items are Phase 3/4 gates and remain open; the dry run does not c
 - 0 edges point to a held, excluded or pending-parent row.
 - 17,655 `administratively_contains` edges remain unchanged.
 - 0 property assignments and 0 published properties changed.
-- **Open (Phase 3):** every demoted published path resolves to a 200 locality page or a
-  reviewed redirect.
+- **Complete (Phase 3):** every active searchable Place has one exact canonical URL; demoted legacy
+  city paths have no route or redirect.
 - **Open (Phase 4):** locality search still returns the same localities; no city-scoped
   property search is authorized, and no authorization flag is added.
-- **Open (Phase 3/4):** contract tests for scope derivation, relationship vocabulary, no-self,
-  no-duplicate, no-authorization and publication continuity pass.
+
+### Application cutover verification (2026-10-27)
+
+- `pnpm place:admission:check` passes for za-gp: 1,466 Places.
+- `pnpm place:urls:check` reproduces all 14,808 active Place routes, including 787 stable collision
+  suffixes.
+- The focused canonical-search and consumer suite passes: 10 files / 91 tests. The frontend
+  production build also passes.
+- Additional focused canonical listing and wizard validation passes: 7 files / 160 tests across
+  canonical assignment, listing lifecycle, detail continuation, location authoring and draft
+  persistence. `pnpm build:frontend` passes after removing duplicate wizard geography state.
+- Active Place selection controls pass 7 focused files / 55 tests, covering canonical discovery,
+  single-Place transactional handoff, Commercial's rejection of retired geography, and supported
+  Land/Shared Living contracts. `pnpm build:frontend` passes; Vite reports its existing large
+  vendor chunk warning.
+- `pnpm place:boundary-currency:check` finds no unsupported claims across the nine provinces; it
+  does not prove boundary currency. Gauteng still has no recorded boundary provenance.
+- `pnpm db:authority:status` reports expected head 0194, no incomplete attempts, and the
+  disposable target at `manifest-head-behind` / `schema-not-congruent`. The canonical migrations
+  have not been applied.
+- Full-repository typecheck and the complete contract suite remain unverified for this cutover.
+  Full-repository TypeScript checking previously exceeded the worktree's available memory; the
+  focused consumer typecheck passed.
 
 ## 8. Rollback
 

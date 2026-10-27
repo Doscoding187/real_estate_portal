@@ -125,8 +125,6 @@ function seed() {
   s.setPricing({ askingPrice: 1000000 });
   s.setLocation({
     address: '',
-    city: '',
-    province: '',
     latitude: null,
     longitude: null,
     canonicalPlace: place,

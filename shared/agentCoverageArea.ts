@@ -1,18 +1,13 @@
-import {
-  encodeCanonicalLocationId,
-  parseCanonicalLocationId,
-  type CanonicalLocationLevel,
-} from './locationAuthority';
+import { isCanonicalPlaceId } from './placeAuthority';
 
 /** Agent onboarding and settings must mirror the product's bounded coverage selector. */
 export const AGENT_COVERAGE_AREA_MAX = 20;
 
 /**
- * New writes use the colon form only. The location authority still accepts a
- * hyphenated alias for legacy URL reads, but an agent coverage claim is not a
- * URL and must never persist that alias as a second spelling of one place.
+ * Agent coverage stores admitted Place identities. Historical numeric location
+ * handles are no longer parsed or resolved.
  */
-export const CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN = /^(province|city|suburb):[1-9]\d*$/;
+export const CANONICAL_AGENT_COVERAGE_PLACE_ID_PATTERN = /^pl-place-01-[a-f0-9]{24}$/;
 
 export type AgentCoverageArea = Readonly<{
   canonicalLocationId: string;
@@ -20,30 +15,10 @@ export type AgentCoverageArea = Readonly<{
   label: string;
 }>;
 
-function normalizeCoverageLocationId(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!CANONICAL_AGENT_COVERAGE_LOCATION_ID_PATTERN.test(trimmed)) return null;
-
-  const parsed = parseCanonicalLocationId(trimmed);
-  if (!parsed) return null;
-
-  const canonical = encodeCanonicalLocationId(parsed.level, parsed.id);
-  return trimmed === canonical ? canonical : null;
-}
-
 export function parseCanonicalAgentCoverageLocationId(value: unknown): {
   canonicalLocationId: string;
-  level: CanonicalLocationLevel;
-  id: number;
 } | null {
-  const canonicalLocationId = normalizeCoverageLocationId(value);
-  if (!canonicalLocationId) return null;
-
-  const parsed = parseCanonicalLocationId(canonicalLocationId);
-  if (!parsed) return null;
-
-  return { canonicalLocationId, ...parsed };
+  return isCanonicalPlaceId(value) ? { canonicalLocationId: value } : null;
 }
 
 function isCoverageArea(value: unknown): value is AgentCoverageArea {

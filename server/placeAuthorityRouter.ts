@@ -1,23 +1,17 @@
-/**
- * Place Authority — internal executable boundary (Slice 3).
- *
- * This is the read/resolve surface for the admitted Place dataset. It is
- * deliberately internal: it does not switch the public platform over, and it
- * does not replace any existing consumer. Its purpose is to prove that the
- * Place dataset is executable end to end — query, canonical selection, exact
- * scope execution — and that a caller supplying mixed authority is refused
- * rather than quietly widened.
- */
+/** Read, select, execute, and publish routes from the admitted Place Authority. */
 
 import { z } from 'zod';
-import { router, protectedProcedure, publicProcedure } from './_core/trpc';
-import { getDb } from './db';
-import { savedSearches } from '../drizzle/schema/leads';
+import { router, publicProcedure } from './_core/trpc';
 import {
   discoverPlaces,
-  discoverSearchAreasForPlace,
   executePlace,
 } from './services/placeDiscoveryService';
+import {
+  canonicalPlaceUrlByPath,
+  canonicalPlaceUrlByPlaceId,
+} from './services/canonicalPlaceUrlService';
+import { loadCanonicalPlaceSearchProjection } from './services/canonicalPlaceSearchService';
+import { isCanonicalPlaceId } from '../shared/placeAuthority';
 import {
   PLACE_DISCOVERY_KINDS,
   isPublishable,
@@ -25,20 +19,9 @@ import {
   type PlaceAuthorityClaim,
 } from '../shared/placeAuthority';
 
-/**
- * Exactly one authority. The procedure accepts the union of every geographic
- * input shape a caller might hold and then *rejects* any combination, so a
- * caller cannot smuggle a Place plus legacy text, a Place plus a legacy handle,
- * or a Search Area plus legacy geography into the executor.
- */
 const geographyAuthorityInput = z
   .object({
     placeId: z.string().nullish(),
-    searchAreaId: z.string().nullish(),
-    legacyLocationId: z.union([z.string(), z.number()]).nullish(),
-    legacyProvince: z.string().nullish(),
-    legacyCity: z.string().nullish(),
-    legacySuburb: z.string().nullish(),
   })
   .strict();
 
@@ -48,7 +31,73 @@ const authorityFailure = (reason: string) => ({
   message: `Rejected mixed or malformed geography authority: ${reason}`,
 });
 
+async function resolveCanonicalSearchPlaces(placeIds: readonly string[]) {
+  const validIds = [...new Set(placeIds.filter(isCanonicalPlaceId))];
+  if (!validIds.length) return placeIds.map(() => null);
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, { placeIds: validIds });
+  return placeIds.map(placeId => {
+    if (!isCanonicalPlaceId(placeId)) return null;
+    const execution = projection.executions.get(placeId);
+    const label = projection.labels.get(placeId);
+    if (!execution || !label) return null;
+    const path = canonicalPlaceUrlByPlaceId(placeId)?.path ?? null;
+    const administrativeContext =
+      execution.scope === 'province'
+        ? null
+        : execution.scope === 'metro_city'
+          ? label.province
+          : [label.city, label.province].filter(Boolean).join(', ');
+    return {
+      placeId,
+      label: label.label,
+      placeType: label.placeType,
+      searchScope: execution.scope,
+      provinceName: label.province,
+      administrativeContext,
+      provincePlaceId: execution.provincePlaceId,
+      cityPlaceId: execution.cityPlaceId,
+      canonicalPath: path,
+    };
+  });
+}
+
 export const placeAuthorityRouter = router({
+  /** Resolve one exact canonical path to its admitted Place identity. */
+  resolveCanonicalUrl: publicProcedure
+    .input(z.object({ path: z.string().min(1).max(500) }).strict())
+    .query(async ({ input }) => {
+      const entry = canonicalPlaceUrlByPath(input.path);
+      if (!entry) return null;
+
+      const resolved = await executePlace(entry.place_id);
+      if (!resolved.ok || resolved.execution.scope !== entry.search_scope) return null;
+
+      return {
+        placeId: entry.place_id,
+        path: entry.path,
+        label: entry.preferred_public_name,
+        placeType: entry.place_type,
+        searchScope: entry.search_scope,
+        provinceName: entry.province_name,
+        provinceSlug: entry.province_slug,
+        pathContext: entry.path_context,
+        publicationEligible: entry.publication_eligible,
+        verificationStatus: entry.verification_status,
+      };
+    }),
+
+  /** Resolve a selected Place identity for canonical search controls. */
+  resolveSearchPlace: publicProcedure
+    .input(z.object({ placeId: z.string().min(1).max(40) }).strict())
+    .query(async ({ input }) => {
+      return (await resolveCanonicalSearchPlaces([input.placeId]))[0];
+    }),
+
+  /** Resolve a bounded set of selected Place IDs for editable search filters. */
+  resolveSearchPlaces: publicProcedure
+    .input(z.object({ placeIds: z.array(z.string().min(1).max(40)).max(10) }).strict())
+    .query(async ({ input }) => ({ results: await resolveCanonicalSearchPlaces(input.placeIds) })),
+
   /**
    * Discover canonical Places by name. Returns a first-class ambiguity outcome
    * rather than collapsing distinct Places that share a name, and records a
@@ -84,6 +133,7 @@ export const placeAuthorityRouter = router({
           searchScope: candidate.searchScope,
           searchableNames: candidate.searchableNames,
           context: candidate.context,
+          canonicalPath: canonicalPlaceUrlByPlaceId(candidate.placeId)?.path ?? null,
         })),
       };
     }),
@@ -101,17 +151,6 @@ export const placeAuthorityRouter = router({
       const claim = input as PlaceAuthorityClaim;
       const resolution = resolveSingleGeographyAuthority(claim);
       if (!resolution.ok) return authorityFailure(resolution.reason);
-      if (resolution.authority.kind !== 'place') {
-        // Search Area and legacy shapes are not Place authority. They are
-        // reported as such rather than executed against the Place dataset.
-        return {
-          ok: false as const,
-          reason: 'not_place_authority',
-          message:
-            'This endpoint executes canonical Place authority only. ' +
-            'A Search Area or legacy geography shape is a different authority and must be executed by its own path.',
-        };
-      }
       const execution = await executePlace(resolution.authority.placeId);
       if (!execution.ok) {
         return {
@@ -123,98 +162,4 @@ export const placeAuthorityRouter = router({
       return { ok: true as const, execution: execution.execution };
     }),
 
-  /**
-   * Search Areas related to a Place, returned in their own typed shape. A Search
-   * Area membership never establishes factual Place containment, and a Search
-   * Area id is never a Place id.
-   */
-  relatedSearchAreas: publicProcedure
-    .input(z.object({ placeId: z.string() }))
-    .query(async ({ input }) => {
-      const areas = await discoverSearchAreasForPlace(input.placeId);
-      return { results: areas };
-    }),
-
-  /**
-   * Persist a saved search against one canonical Place identity.
-   *
-   * The saved search is the existing governed home of a versioned geographic
-   * query intent, so it can hold one canonical reference without becoming a
-   * geography authority itself. When `placeId` is present it is the sole
-   * geographic authority for the saved search; competing legacy geography text
-   * is rejected rather than merged or preferred.
-   */
-  createSavedSearch: protectedProcedure
-    .input(
-      z.object({
-        name: z.string().min(1).max(255),
-        query: z.string().min(1).max(200),
-        placeId: z.string().nullish(),
-        legacyLocationId: z.union([z.string(), z.number()]).nullish(),
-        legacyProvince: z.string().nullish(),
-        legacyCity: z.string().nullish(),
-        legacySuburb: z.string().nullish(),
-        notificationFrequency: z
-          .enum(['instant', 'daily', 'weekly', 'never'])
-          .default('daily'),
-      }),
-    )
-    .mutation(async ({ input, ctx }) => {
-      const resolution = resolveSingleGeographyAuthority({
-        placeId: input.placeId,
-        legacyLocationId: input.legacyLocationId,
-        legacyProvince: input.legacyProvince,
-        legacyCity: input.legacyCity,
-        legacySuburb: input.legacySuburb,
-      });
-      if (!resolution.ok) {
-        return authorityFailure(resolution.reason);
-      }
-      if (resolution.authority.kind !== 'place') {
-        return {
-          ok: false as const,
-          reason: 'not_place_authority',
-          message:
-            'Slice 3 persists a canonical Place reference only. ' +
-            'A saved search without a Place identity keeps its existing shape and is out of scope here.',
-        };
-      }
-      // Execution must succeed before the reference is persisted, so a saved
-      // search can never point at a Place that cannot be executed.
-      const execution = await executePlace(resolution.authority.placeId);
-      if (!execution.ok) {
-        return {
-          ok: false as const,
-          reason: execution.reason,
-          message: `Saved search rejected: Place scope could not be executed (${execution.reason}).`,
-        };
-      }
-      const userId = ctx.user?.id;
-      if (!userId) {
-        return {
-          ok: false as const,
-          reason: 'unauthenticated',
-          message: 'A saved search requires an authenticated user.',
-        };
-      }
-      const db = await getDb();
-      const [row] = await db
-        .insert(savedSearches)
-        .values({
-          userId,
-          name: input.name,
-          // The raw query is retained as the user's own wording. It is not an
-          // authority and is never resolved to geography at execution time.
-          criteria: { query: input.query },
-          placeId: resolution.authority.placeId,
-          notificationFrequency: input.notificationFrequency,
-        })
-        .$returningId();
-      return {
-        ok: true as const,
-        savedSearchId: row.id,
-        placeId: row.placeId,
-        execution: execution.execution,
-      };
-    }),
 });

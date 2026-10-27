@@ -17,7 +17,16 @@ describe('exploreFiltersStore', () => {
     expect(state.bedrooms).toBeNull();
     expect(state.bathrooms).toBeNull();
     expect(state.categoryId).toBeNull();
-    expect(state.location).toBeNull();
+  });
+
+  it('keeps geography out of property filter state and persistence', () => {
+    useExploreFiltersStore.getState().setCategoryId(5);
+
+    const state = useExploreFiltersStore.getState();
+    expect(state).not.toHaveProperty('location');
+
+    const persisted = JSON.parse(localStorage.getItem('explore-filters') ?? '{}');
+    expect(persisted.state).not.toHaveProperty('location');
   });
 
   it('should set property type', () => {
@@ -66,15 +75,6 @@ describe('exploreFiltersStore', () => {
     expect(state.categoryId).toBe(5);
   });
 
-  it('should set location', () => {
-    const { setLocation } = useExploreFiltersStore.getState();
-
-    setLocation('Cape Town');
-
-    const state = useExploreFiltersStore.getState();
-    expect(state.location).toBe('Cape Town');
-  });
-
   it('should clear all filters', () => {
     const {
       setPropertyType,
@@ -82,7 +82,6 @@ describe('exploreFiltersStore', () => {
       setBedrooms,
       setBathrooms,
       setCategoryId,
-      setLocation,
       clearFilters,
     } = useExploreFiltersStore.getState();
 
@@ -92,7 +91,6 @@ describe('exploreFiltersStore', () => {
     setBedrooms(3);
     setBathrooms(2);
     setCategoryId(5);
-    setLocation('Cape Town');
 
     // Clear all filters
     clearFilters();
@@ -104,7 +102,6 @@ describe('exploreFiltersStore', () => {
     expect(state.bedrooms).toBeNull();
     expect(state.bathrooms).toBeNull();
     expect(state.categoryId).toBeNull();
-    expect(state.location).toBeNull();
   });
 
   it('should calculate filter count correctly with no filters', () => {

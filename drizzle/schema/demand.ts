@@ -13,6 +13,7 @@ import { users, notifications } from './core';
 import { agents } from './agencies';
 import { properties } from './listings';
 import { leads } from './leads';
+import { place } from './placeAuthority';
 
 export const demandCampaigns = mysqlTable(
   'demand_campaigns',
@@ -24,6 +25,10 @@ export const demandCampaigns = mysqlTable(
     ownerId: int('owner_id').notNull(),
     createdBy: int('created_by').references(() => users.id, { onDelete: 'set null' }),
     name: varchar('name', { length: 255 }).notNull(),
+    canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+      () => place.placeId,
+      { onDelete: 'restrict', onUpdate: 'restrict' },
+    ),
     status: mysqlEnum('status', ['draft', 'active', 'paused', 'archived'])
       .default('draft')
       .notNull(),
@@ -34,9 +39,6 @@ export const demandCampaigns = mysqlTable(
       .default('shared')
       .notNull(),
     sharedRecipientCount: int('shared_recipient_count').default(3).notNull(),
-    city: varchar('city', { length: 100 }),
-    suburb: varchar('suburb', { length: 100 }),
-    province: varchar('province', { length: 100 }),
     propertyType: mysqlEnum('property_type', [
       'apartment',
       'house',
@@ -60,6 +62,7 @@ export const demandCampaigns = mysqlTable(
     index('idx_demand_campaigns_owner').on(table.ownerType, table.ownerId),
     index('idx_demand_campaigns_status').on(table.status),
     index('idx_demand_campaigns_source').on(table.sourceChannel),
+    index('idx_demand_campaigns_canonical_place_id').on(table.canonicalPlaceId),
   ],
 );
 

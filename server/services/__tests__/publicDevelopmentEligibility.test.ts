@@ -17,6 +17,7 @@ function catalogue(
   const defaultDevelopment: CanonicalDevelopmentCatalogue['development'] = {
     id: 101,
     cataloguePublisherId: 21,
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
     developmentType: 'residential',
     transactionType: 'for_sale',
     isPublished: 1,

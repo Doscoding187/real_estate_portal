@@ -17,10 +17,6 @@ import {
   type AdapterEvidence,
 } from './common';
 import {
-  verifyCanonicalGeographyReferenceData,
-  type GeographyReferenceEvidence,
-} from './canonicalGeography';
-import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
   CANONICAL_AGENCY_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
@@ -28,10 +24,9 @@ import {
 import type { MoneyFact, RecurringCosts } from '../../../../shared/pricing-contract';
 import type { RentalTerms } from '../../../../shared/rental-terms-contract';
 
-export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v6' as const;
-export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v6-property-enquiry';
-
-const DEVELOPMENT_SITE_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v7' as const;
+export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v7-property-enquiry';
+export const SEARCH_TO_LEAD_SCENARIO_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad' as const;
 
 function truthfulDirectAcknowledgement(lead: {
   duplicate?: boolean;
@@ -136,9 +131,9 @@ export const SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS = Object.freeze([
 const SCENARIO_PAYLOAD = Object.freeze({
   version: SEARCH_TO_LEAD_SCENARIO_VERSION,
   ids: SCENARIO_IDS,
-  propertyFixtureLocation: { province: 'gauteng', city: 'johannesburg', suburb: 'sandton' },
-  developmentSiteAssignment: {
-    placeId: DEVELOPMENT_SITE_PLACE_ID,
+  location: { canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID },
+  developmentPlaceAssignment: {
+    placeId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
     assignmentKind: 'site',
     reviewState: 'accepted',
     evidenceReference: 'ci-scenario:search-to-lead:development-site-place',
@@ -158,28 +153,24 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
   expected: {
     eligibleProperties: number;
     eligibleDevelopments: number;
-    canonicalLocation: string;
     canonicalPlaceId: string;
   };
   verified: {
     eligibleProperties: number;
     eligibleDevelopments: number;
-    canonicalLocation: string;
     canonicalPlaceId: string;
     propertyIds: number[];
     excludedPropertyIds: number[];
     propertyId: number;
-    developmentId: number;
-    unitId: string;
+    fixtureDevelopmentId: number;
+    fixtureUnitId: string;
   };
   migrationHead: string;
   acceptance?: {
     locationState: 'resolved';
-    locationContext: { provinceId: number; cityId: number; suburbId: number };
+    canonicalPlace: { canonicalPlaceId: string; label: string; scope: 'locality' };
     propertyCardHref: string;
-    developmentCardHref: string;
     propertyPage: string;
-    developmentPage: string;
     total: number;
     page: number;
     pageSize: number;
@@ -191,14 +182,6 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     deliveryStatus: string;
     deliveryMethod: string;
     sourceCounts: { manual: number; development: number };
-    development: {
-      leadId: number;
-      replayedLeadId: number;
-      duplicateReplay: true;
-      conflictingReplay: 'conflict';
-      durableLeadCount: number;
-      acknowledgement: string;
-    };
     scenarios: Record<
       string,
       {
@@ -223,9 +206,9 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     discovery: {
       mapRentalExcluded: true;
       comparisonRentalExcluded: true;
-      featuredRentalExcluded: true;
-      trendingRentalExcluded: true;
       relatedRentalExcluded: true;
+      developmentSearchResolved: true;
+      developmentDetailResolved: true;
     };
     rental: {
       propertyId: number;
@@ -269,7 +252,6 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     authorization: {
       agent: { ownerVisible: true; unrelatedDenied: true };
       agency: { ownerVisible: true; unrelatedDenied: true };
-      developer: { ownerVisible: true; unrelatedDenied: true };
       platform: { operationsVisible: true; nonOperationsDenied: true };
     };
   };
@@ -339,6 +321,34 @@ async function ensureDeterministicRow(input: {
     return;
   }
   await input.connection.execute(insertStatement, input.insertValues);
+}
+
+async function ensureFixtureCanonicalPlace(
+  connection: AuthoritySqlConnection,
+  table: 'listings' | 'properties',
+  id: number,
+): Promise<void> {
+  const rows = await queryRows(connection, `SELECT canonical_place_id FROM ${table} WHERE id = ?`, [
+    id,
+  ]);
+  if (rows.length !== 1)
+    throw new Error(`Search-to-Lead scenario ${table}:${id} is missing its canonical Place row.`);
+  const currentPlaceId = rowValue(rows[0], 'canonical_place_id');
+  if (currentPlaceId == null) {
+    await connection.execute(
+      `UPDATE ${table} SET canonical_place_id = ? WHERE id = ? AND canonical_place_id IS NULL`,
+      [SEARCH_TO_LEAD_SCENARIO_PLACE_ID, id],
+    );
+  } else if (currentPlaceId !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID) {
+    throw new Error(`Search-to-Lead scenario ${table}:${id} has a conflicting canonical Place.`);
+  }
+  const verified = await queryRows(
+    connection,
+    `SELECT canonical_place_id FROM ${table} WHERE id = ?`,
+    [id],
+  );
+  if (rowValue(verified[0] ?? {}, 'canonical_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID)
+    throw new Error(`Search-to-Lead scenario ${table}:${id} rejected its canonical Place.`);
 }
 
 const FIXTURE_TIMESTAMP = '2026-01-01 00:00:00';
@@ -936,9 +946,7 @@ async function synchronizeOwnedFixtureMediaSnapshot(
 export async function ensureCanonicalManualFixture(
   connection: AuthoritySqlConnection,
   fixture: ManualFixtureDefinition,
-  provinceId: number,
-  cityId: number,
-  suburbId: number,
+  canonicalPlaceId: string,
 ): Promise<void> {
   const sourceDetails = sourceDetailsForFixture(fixture);
   const sourceJson = JSON.stringify(sourceDetails);
@@ -968,9 +976,6 @@ export async function ensureCanonicalManualFixture(
       'approvalStatus',
       'slug',
       'revision_of_listing_id',
-      'province_id',
-      'city_id',
-      'suburb_id',
     ],
     expected: {
       ownerId: fixture.ownerId,
@@ -983,9 +988,6 @@ export async function ensureCanonicalManualFixture(
       approvalStatus: fixture.approvalStatus,
       slug: `dba-${fixture.propertyId}-source-v1`,
       revision_of_listing_id: null,
-      province_id: provinceId,
-      city_id: cityId,
-      suburb_id: suburbId,
     },
     insertColumns: [
       'id',
@@ -1017,9 +1019,7 @@ export async function ensureCanonicalManualFixture(
       'updatedAt',
       'publishedAt',
       'archivedAt',
-      'province_id',
-      'city_id',
-      'suburb_id',
+      'canonical_place_id',
       'location_confirmation_state',
       'public_location_precision',
     ],
@@ -1053,13 +1053,12 @@ export async function ensureCanonicalManualFixture(
       FIXTURE_TIMESTAMP,
       publishedAt,
       archivedAt,
-      provinceId,
-      cityId,
-      suburbId,
+      canonicalPlaceId,
       'confirmed',
       'exact',
     ],
   });
+  await ensureFixtureCanonicalPlace(connection, 'listings', fixture.listingId);
 
   await ensureDeterministicRow({
     connection,
@@ -1136,9 +1135,6 @@ export async function ensureCanonicalManualFixture(
       'title',
       'status',
       'listingType',
-      'provinceId',
-      'cityId',
-      'suburbId',
       'agentId',
       'ownerId',
       'sourceListingId',
@@ -1148,9 +1144,6 @@ export async function ensureCanonicalManualFixture(
       title: projectionTitle,
       status: fixture.propertyStatus,
       listingType: fixture.action === 'sell' ? 'sale' : 'rent',
-      provinceId,
-      cityId,
-      suburbId,
       agentId: fixture.agentId,
       ownerId: fixture.ownerId,
       sourceListingId: fixture.listingId,
@@ -1170,9 +1163,6 @@ export async function ensureCanonicalManualFixture(
       'address',
       'city',
       'province',
-      'provinceId',
-      'cityId',
-      'suburbId',
       'status',
       'featured',
       'views',
@@ -1191,6 +1181,7 @@ export async function ensureCanonicalManualFixture(
       'public_longitude',
       'public_location_precision',
       'catalogue_publisher_id',
+      'canonical_place_id',
     ],
     insertValues: [
       fixture.propertyId,
@@ -1206,9 +1197,6 @@ export async function ensureCanonicalManualFixture(
       '1 DBA Verification Street',
       'Johannesburg',
       'Gauteng',
-      provinceId,
-      cityId,
-      suburbId,
       fixture.propertyStatus,
       0,
       0,
@@ -1231,8 +1219,10 @@ export async function ensureCanonicalManualFixture(
       '28.0567',
       'exact',
       fixture.cataloguePublisherId,
+      canonicalPlaceId,
     ],
   });
+  await ensureFixtureCanonicalPlace(connection, 'properties', fixture.propertyId);
 
   await ensureDeterministicRow({
     connection,
@@ -1346,12 +1336,7 @@ export async function ensureCanonicalManualFixture(
   }
 }
 
-async function ensureOrphanProjection(
-  connection: AuthoritySqlConnection,
-  provinceId: number,
-  cityId: number,
-  suburbId: number,
-): Promise<void> {
+async function ensureOrphanProjection(connection: AuthoritySqlConnection): Promise<void> {
   await ensureDeterministicRow({
     connection,
     table: 'properties',
@@ -1361,21 +1346,17 @@ async function ensureOrphanProjection(
       'title',
       'status',
       'listingType',
-      'provinceId',
-      'cityId',
-      'suburbId',
+      'canonical_place_id',
       'agentId',
       'ownerId',
       'sourceListingId',
       'catalogue_publisher_id',
     ],
     expected: {
-      title: 'DBA Orphan Legacy Projection',
+      title: 'DBA Unassigned Place Projection',
       status: 'available',
       listingType: 'sale',
-      provinceId,
-      cityId,
-      suburbId,
+      canonical_place_id: null,
       agentId: null,
       ownerId: SCENARIO_IDS.platformOperationsUser,
       sourceListingId: null,
@@ -1395,9 +1376,6 @@ async function ensureOrphanProjection(
       'address',
       'city',
       'province',
-      'provinceId',
-      'cityId',
-      'suburbId',
       'status',
       'featured',
       'views',
@@ -1407,8 +1385,8 @@ async function ensureOrphanProjection(
     ],
     insertValues: [
       SCENARIO_IDS.orphanProperty,
-      'DBA Orphan Legacy Projection',
-      'Historical projection intentionally lacking source provenance.',
+      'DBA Unassigned Place Projection',
+      'Projection fixture intentionally lacking a canonical Place assignment.',
       'house',
       'sale',
       'sale',
@@ -1416,12 +1394,9 @@ async function ensureOrphanProjection(
       3,
       2,
       150,
-      'Legacy DBA Street',
+      'Unassigned Place fixture street',
       'Johannesburg',
       'Gauteng',
-      provinceId,
-      cityId,
-      suburbId,
       'available',
       0,
       0,
@@ -1434,14 +1409,34 @@ async function ensureOrphanProjection(
 
 async function ensureManualPublicFixtures(
   connection: AuthoritySqlConnection,
-  provinceId: number,
-  cityId: number,
-  suburbId: number,
+  canonicalPlaceId: string,
 ): Promise<void> {
   for (const fixture of MANUAL_FIXTURES) {
-    await ensureCanonicalManualFixture(connection, fixture, provinceId, cityId, suburbId);
+    await ensureCanonicalManualFixture(connection, fixture, canonicalPlaceId);
   }
-  await ensureOrphanProjection(connection, provinceId, cityId, suburbId);
+  await ensureOrphanProjection(connection);
+}
+
+async function requireScenarioPlace(connection: AuthoritySqlConnection): Promise<string> {
+  const rows = await queryRows(
+    connection,
+    `SELECT place_id, place_type, lifecycle_status, search_eligible, search_scope
+       FROM place WHERE place_id = ?`,
+    [SEARCH_TO_LEAD_SCENARIO_PLACE_ID],
+  );
+  const row = rows[0];
+  if (
+    rows.length !== 1 ||
+    rowValue(row ?? {}, 'place_type') !== 'suburb' ||
+    rowValue(row ?? {}, 'lifecycle_status') !== 'active' ||
+    Number(rowValue(row ?? {}, 'search_eligible')) !== 1 ||
+    rowValue(row ?? {}, 'search_scope') !== 'locality'
+  ) {
+    throw new Error(
+      'Search-to-Lead scenario requires the admitted Sandton Place to be searchable.',
+    );
+  }
+  return SEARCH_TO_LEAD_SCENARIO_PLACE_ID;
 }
 
 async function ensureAgentBillableAccount(connection: AuthoritySqlConnection): Promise<unknown> {
@@ -1526,27 +1521,8 @@ async function ensureUserAgency(
   }
 }
 
-async function prepareScenarioRows(
-  connection: AuthoritySqlConnection,
-  geography: GeographyReferenceEvidence['verified'],
-): Promise<void> {
-  const locationRows = await queryRows(
-    connection,
-    `SELECT p.id AS province_id, c.id AS city_id, s.id AS suburb_id
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.slug = ? AND c.slug = ? AND s.slug = ?`,
-    ['gauteng', 'johannesburg', 'sandton'],
-  );
-  if (locationRows.length !== 1)
-    throw new Error('Search-to-Lead scenario requires one canonical Sandton hierarchy.');
-  const provinceId = asId({ id: rowValue(locationRows[0], 'province_id') }, 'province');
-  const cityId = asId({ id: rowValue(locationRows[0], 'city_id') }, 'city');
-  const suburbId = asId({ id: rowValue(locationRows[0], 'suburb_id') }, 'suburb');
-  if (geography.provinces < 3 || geography.cities < 4 || geography.suburbs < 1) {
-    throw new Error('Search-to-Lead scenario refused: canonical geography evidence is incomplete.');
-  }
+async function prepareScenarioRows(connection: AuthoritySqlConnection): Promise<void> {
+  const canonicalPlaceId = await requireScenarioPlace(connection);
 
   await ensureDeterministicRow({
     connection,
@@ -2160,12 +2136,13 @@ async function prepareScenarioRows(
     expected: {
       development_id: SCENARIO_IDS.development,
       phase_id: null,
-      place_id: DEVELOPMENT_SITE_PLACE_ID,
+      place_id: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
       assignment_kind: 'site',
       review_state: 'accepted',
       evidence_reference: 'ci-scenario:search-to-lead:development-site-place',
       created_by_user_id: SCENARIO_IDS.developerUser,
       reviewed_by_user_id: SCENARIO_IDS.platformOperationsUser,
+      reviewed_at: FIXTURE_TIMESTAMP,
       review_note: 'Controlled canonical Place assignment for the Search-to-Lead fixture.',
     },
     insertColumns: [
@@ -2185,7 +2162,7 @@ async function prepareScenarioRows(
       SCENARIO_IDS.developmentPlaceAssignment,
       SCENARIO_IDS.development,
       null,
-      DEVELOPMENT_SITE_PLACE_ID,
+      SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
       'site',
       'accepted',
       'ci-scenario:search-to-lead:development-site-place',
@@ -2247,7 +2224,7 @@ async function prepareScenarioRows(
       1,
     ],
   });
-  await ensureManualPublicFixtures(connection, provinceId, cityId, suburbId);
+  await ensureManualPublicFixtures(connection, canonicalPlaceId);
 }
 
 async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
@@ -2455,6 +2432,7 @@ async function ensureDeveloperLaunchAccess(connection: AuthoritySqlConnection): 
 export async function verifySearchToLeadScenarioData(
   connection: AuthoritySqlConnection,
 ): Promise<SearchToLeadScenarioEvidence['verified']> {
+  await requireScenarioPlace(connection);
   const eligiblePropertyIds = [
     SCENARIO_IDS.agentProperty,
     SCENARIO_IDS.agencyProperty,
@@ -2470,7 +2448,8 @@ export async function verifySearchToLeadScenarioData(
   ];
   const propertyRows = await queryRows(
     connection,
-    `SELECT p.id, p.provinceId AS province_id, p.cityId AS city_id, p.suburbId AS suburb_id,
+    `SELECT p.id, p.canonical_place_id AS property_place_id,
+            l.canonical_place_id AS source_place_id,
             p.sourceListingId AS source_listing_id, p.agentId AS property_agent_id,
             p.ownerId AS property_owner_id, p.catalogue_publisher_id AS catalogue_publisher_id,
             l.ownerId AS source_owner_id, l.agentId AS source_agent_id, l.agencyId AS source_agency_id,
@@ -2514,11 +2493,12 @@ export async function verifySearchToLeadScenarioData(
       );
     }
     if (
-      Number(rowValue(row, 'province_id')) <= 0 ||
-      Number(rowValue(row, 'city_id')) <= 0 ||
-      Number(rowValue(row, 'suburb_id')) <= 0
+      rowValue(row, 'property_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
+      rowValue(row, 'source_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID
     ) {
-      throw new Error('Search-to-Lead scenario property is not linked to canonical geography IDs.');
+      throw new Error(
+        'Search-to-Lead scenario property and source must share one canonical Place.',
+      );
     }
     if (
       propertyId === SCENARIO_IDS.agentProperty &&
@@ -2579,7 +2559,7 @@ export async function verifySearchToLeadScenarioData(
       'Search-to-Lead scenario rental exclusion is not a rental-only source fixture.',
     );
   }
-  const developmentRows = await queryRows(
+  const fixtureDevelopmentRows = await queryRows(
     connection,
     `SELECT d.id AS development_id, d.slug AS development_slug, u.id AS unit_id
        FROM developments d
@@ -2592,12 +2572,11 @@ export async function verifySearchToLeadScenarioData(
                ON o.id = cp.developer_organisation_id
               AND o.status = 'approved'
       WHERE d.id = ? AND d.catalogue_publisher_id = ?
-        AND d.isPublished = 1 AND d.approval_status = 'approved'
-        AND d.transaction_type = 'for_sale' AND u.is_active = 1 AND u.available_units > 0`,
+        AND u.is_active = 1`,
     [SCENARIO_IDS.developerOrganisation, SCENARIO_IDS.development, SCENARIO_IDS.cataloguePublisher],
   );
-  if (developmentRows.length !== 1)
-    throw new Error('Search-to-Lead scenario is missing one eligible public development unit.');
+  if (fixtureDevelopmentRows.length !== 1)
+    throw new Error('Search-to-Lead scenario is missing its contained development fixture.');
   const developmentAssignmentRows = await queryRows(
     connection,
     `SELECT a.place_id, a.assignment_kind, a.review_state, a.reviewed_by_user_id, a.reviewed_at,
@@ -2609,7 +2588,7 @@ export async function verifySearchToLeadScenarioData(
   );
   if (
     developmentAssignmentRows.length !== 1 ||
-    rowValue(developmentAssignmentRows[0], 'place_id') !== DEVELOPMENT_SITE_PLACE_ID ||
+    rowValue(developmentAssignmentRows[0], 'place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
     rowValue(developmentAssignmentRows[0], 'assignment_kind') !== 'site' ||
     rowValue(developmentAssignmentRows[0], 'review_state') !== 'accepted' ||
     Number(rowValue(developmentAssignmentRows[0], 'reviewed_by_user_id')) !==
@@ -2720,42 +2699,20 @@ export async function verifySearchToLeadScenarioData(
   }
 
   if (
-    Number(rowValue(property, 'province_id')) <= 0 ||
-    Number(rowValue(property, 'city_id')) <= 0 ||
-    Number(rowValue(property, 'suburb_id')) <= 0
+    rowValue(property, 'property_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
+    rowValue(property, 'source_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID
   ) {
-    throw new Error('Search-to-Lead scenario property is not linked to canonical geography IDs.');
-  }
-  const locationRows = await queryRows(
-    connection,
-    `SELECT p.slug AS province_slug, c.slug AS city_slug, s.slug AS suburb_slug,
-            p.id AS province_id, c.id AS city_id, s.id AS suburb_id
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.id = ? AND c.id = ? AND s.id = ?`,
-    [property.province_id, property.city_id, property.suburb_id],
-  );
-  if (
-    locationRows.length !== 1 ||
-    rowValue(locationRows[0], 'province_slug') !== 'gauteng' ||
-    rowValue(locationRows[0], 'city_slug') !== 'johannesburg' ||
-    rowValue(locationRows[0], 'suburb_slug') !== 'sandton'
-  ) {
-    throw new Error(
-      'Search-to-Lead scenario property is not linked to Gauteng/Johannesburg/Sandton.',
-    );
+    throw new Error('Search-to-Lead scenario property does not use the canonical Sandton Place.');
   }
   return {
     eligibleProperties: propertyRows.length,
-    eligibleDevelopments: developmentRows.length,
-    canonicalLocation: 'gauteng/johannesburg/sandton',
-    canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
+    eligibleDevelopments: 1,
+    canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
     propertyIds: eligiblePropertyIds,
     excludedPropertyIds,
     propertyId: SCENARIO_IDS.property,
-    developmentId: SCENARIO_IDS.development,
-    unitId: String(rowValue(developmentRows[0], 'unit_id')),
+    fixtureDevelopmentId: SCENARIO_IDS.development,
+    fixtureUnitId: String(rowValue(fixtureDevelopmentRows[0], 'unit_id')),
   };
 }
 
@@ -2772,8 +2729,8 @@ export async function prepareSearchToLeadScenario(input: {
     connection: input.connection,
     profileRoot: input.profileRoot,
   });
-  const geography = await verifyCanonicalGeographyReferenceData(input.connection);
-  await withTransaction(input.connection, () => prepareScenarioRows(input.connection, geography));
+  await requireScenarioPlace(input.connection);
+  await withTransaction(input.connection, () => prepareScenarioRows(input.connection));
   const verified = await verifySearchToLeadScenarioData(input.connection);
   return {
     ...ownership,
@@ -2783,8 +2740,7 @@ export async function prepareSearchToLeadScenario(input: {
     expected: {
       eligibleProperties: 3,
       eligibleDevelopments: 1,
-      canonicalLocation: 'gauteng/johannesburg/sandton',
-      canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
+      canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
     },
     verified,
     migrationHead: manifest.document.expectedHead,
@@ -2799,7 +2755,7 @@ async function runContainedApplicationVerification(
 ): Promise<NonNullable<SearchToLeadScenarioEvidence['acceptance']>> {
   if (
     expected.propertyId !== SCENARIO_IDS.property ||
-    expected.developmentId !== SCENARIO_IDS.development ||
+    expected.fixtureDevelopmentId !== SCENARIO_IDS.development ||
     expected.propertyIds.join(',') !==
       [SCENARIO_IDS.agentProperty, SCENARIO_IDS.agencyProperty, SCENARIO_IDS.platformProperty].join(
         ',',
@@ -2863,29 +2819,25 @@ async function runContainedApplicationVerification(
         req: { headers: {}, ip: '127.0.0.1' },
         res: {},
         user,
-        requestId: 'dba-search-to-lead-v6',
+        requestId: 'dba-search-to-lead-v7',
       } as any);
 
     const search = await publicSearchService.searchInventory({
-      province: 'gauteng',
-      city: 'johannesburg',
-      suburb: ['sandton'],
+      canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
       listingType: 'sale',
       page: 0,
       pageSize: 10,
     });
-    if (search.locationState !== 'resolved' || !search.locationContext)
-      throw new Error('Search-to-Lead scenario search did not resolve the canonical location.');
     if (
-      Number(search.locationContext.ids.provinceId) <= 0 ||
-      Number(search.locationContext.ids.cityId) <= 0 ||
-      Number(search.locationContext.ids.suburbId) <= 0
-    ) {
-      throw new Error('Search-to-Lead scenario returned invalid canonical location identity.');
-    }
+      search.locationState !== 'resolved' ||
+      search.canonicalPlaceContext?.canonicalPlaceId !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
+      search.canonicalPlaceContext.scope !== 'locality' ||
+      search.canonicalPlaceContext.label !== 'Sandton'
+    )
+      throw new Error('Search-to-Lead scenario search did not resolve the canonical location.');
     if (search.sourceCounts.manual !== 3 || search.sourceCounts.development !== 1) {
       throw new Error(
-        'Search-to-Lead scenario did not prove the three canonical manual and one development sale sources.',
+        'Search-to-Lead scenario did not prove Place-assigned manual and reviewed Development sale sources.',
       );
     }
     if (search.total !== 4 || search.hasMore) {
@@ -2901,14 +2853,6 @@ async function runContainedApplicationVerification(
         throw new Error(`Search-to-Lead scenario omitted eligible property ${propertyId}.`);
       }
     }
-    const developmentCard = search.cards.find(
-      card =>
-        card.kind === 'development' &&
-        card.href === `/development/dba-verification-development-v1/unit/${SCENARIO_IDS.unit}`,
-    );
-    if (!developmentCard)
-      throw new Error('Search-to-Lead scenario did not blend both eligible public result sources.');
-
     const propertyCaller = callerFor(null);
     const scenarios: NonNullable<SearchToLeadScenarioEvidence['acceptance']>['scenarios'] = {};
     const acceptedPropertyIds = [
@@ -2950,7 +2894,7 @@ async function runContainedApplicationVerification(
       const captureRequestId =
         scenarioName === 'agent'
           ? SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID
-          : `dba-search-to-lead-v6-${scenarioName}-enquiry`;
+          : `dba-search-to-lead-v7-${scenarioName}-enquiry`;
       const baseInput = {
         propertyId,
         name: `Database Authority ${scenarioName} Prospect`,
@@ -2963,7 +2907,7 @@ async function runContainedApplicationVerification(
         captureRequestId,
         consent: {
           accepted: true as const,
-          version: 'dba-search-to-lead-v6',
+          version: 'dba-search-to-lead-v7',
           source: 'local-test',
         },
       };
@@ -3053,69 +2997,6 @@ async function runContainedApplicationVerification(
       }
     }
 
-    const developmentDetail = await propertyCaller.developer.getPublicDevelopmentBySlug({
-      slugOrId: 'dba-verification-development-v1',
-    });
-    if (!developmentDetail) {
-      throw new Error('Search-to-Lead scenario developer detail did not resolve.');
-    }
-    const developmentLeadInput = {
-      developmentId: SCENARIO_IDS.development,
-      unitId: SCENARIO_IDS.unit,
-      unitName: 'DBA Verification Unit',
-      unitPriceFrom: 1800000,
-      unitBedrooms: 2,
-      unitBathrooms: 1,
-      name: 'Database Authority Developer Prospect',
-      email: SCENARIO_PAYLOAD.contact.email,
-      phone: SCENARIO_PAYLOAD.contact.phone,
-      message: 'Contained local Search-to-Lead developer acceptance scenario.',
-      source: 'development_detail',
-      sourceSurface: 'development_detail',
-      leadSource: 'development_detail',
-      captureRequestId: 'dba-search-to-lead-v6-development-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v6', source: 'local-test' },
-    };
-    const developmentLead = await capturePublicLead(developmentLeadInput);
-    const developmentReplay = await capturePublicLead(developmentLeadInput);
-    if (!developmentReplay.duplicate || developmentReplay.leadId !== developmentLead.leadId) {
-      throw new Error('Search-to-Lead scenario developer replay was not idempotent.');
-    }
-    let developmentConflictingReplay: 'conflict' | undefined;
-    try {
-      await capturePublicLead({
-        ...developmentLeadInput,
-        message: `${developmentLeadInput.message} conflicting replay`,
-      });
-    } catch (error) {
-      if ((error as { code?: unknown })?.code === 'CONFLICT') {
-        developmentConflictingReplay = 'conflict';
-      }
-    }
-    if (developmentConflictingReplay !== 'conflict') {
-      throw new Error('Search-to-Lead scenario accepted a conflicting developer replay.');
-    }
-    const database = await getDb();
-    if (!database)
-      throw new Error('Search-to-Lead scenario database disappeared during developer acceptance.');
-    const developmentDurableRows = await database
-      .select({ id: leads.id })
-      .from(leads)
-      .where(eq(leads.captureRequestId, developmentLeadInput.captureRequestId));
-    if (developmentDurableRows.length !== 1) {
-      throw new Error('Search-to-Lead scenario did not prove one durable developer lead.');
-    }
-    if (
-      developmentLead.leadCustody !== 'verified_customer_recipient' ||
-      developmentLead.recipientType !== 'developer' ||
-      developmentLead.recipientId !== SCENARIO_IDS.developerOrganisation ||
-      developmentLead.deliveryStatus !== 'delivered' ||
-      developmentLead.deliveryMethod !== 'crm_export' ||
-      !truthfulDirectAcknowledgement(developmentLead)
-    ) {
-      throw new Error('Search-to-Lead scenario developer custody/acknowledgement is not truthful.');
-    }
-
     const hasPropertyInItems = (items: unknown[], propertyId: number): boolean =>
       items.some(item => {
         if (!item || typeof item !== 'object') return false;
@@ -3148,32 +3029,20 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario Buy-related inventory admitted rental inventory.');
     }
 
-    const featuredInventory = await propertyCaller.location.getFeaturedListings({
-      locationId: `suburb:${String(search.locationContext.ids.suburbId)}`,
-      limit: 10,
+    const developmentSearch = await propertyCaller.properties.searchDevelopments({
+      canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
+      developmentType: 'residential',
+      page: 0,
+      pageSize: 10,
     });
-    if (hasPropertyInItems(featuredInventory, SCENARIO_IDS.rentalProperty)) {
-      throw new Error('Search-to-Lead scenario Buy featured inventory admitted rental inventory.');
+    if (developmentSearch.locationState !== 'resolved' || developmentSearch.items.length !== 1) {
+      throw new Error('Search-to-Lead scenario did not resolve its reviewed Place assignment.');
     }
-
-    const buyTrending = await propertyCaller.developer.getHomeTrendingFeed({
-      tab: 'buy',
-      province: 'gauteng',
-      city: 'johannesburg',
-      suburb: 'sandton',
-      limit: 10,
+    const developmentDetail = await propertyCaller.developer.getPublicDevelopmentBySlug({
+      slugOrId: 'dba-verification-development-v1',
     });
-    const buyTrendingItems = Array.isArray(buyTrending?.items) ? buyTrending.items : [];
-    if (
-      hasPropertyInItems(buyTrendingItems, SCENARIO_IDS.rentalProperty) ||
-      buyTrendingItems.some(
-        item =>
-          item &&
-          typeof item === 'object' &&
-          String((item as Record<string, unknown>).listingType || '').toLowerCase() === 'rent',
-      )
-    ) {
-      throw new Error('Search-to-Lead scenario Buy trending inventory admitted rental inventory.');
+    if (!developmentDetail) {
+      throw new Error('Search-to-Lead scenario did not resolve the reviewed Development detail.');
     }
 
     // SearchResults derives its map markers from the same canonical Buy result
@@ -3184,9 +3053,7 @@ async function runContainedApplicationVerification(
     }
 
     const rentalSearch = await publicSearchService.searchInventory({
-      province: 'gauteng',
-      city: 'johannesburg',
-      suburb: ['sandton'],
+      canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
       listingType: 'rent',
       page: 0,
       pageSize: 10,
@@ -3295,8 +3162,8 @@ async function runContainedApplicationVerification(
       source: 'property_detail',
       sourceSurface: 'property_detail',
       leadSource: 'property_detail',
-      captureRequestId: 'dba-search-to-lead-v6-rental-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v6', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v7-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v7', source: 'local-test' },
     };
     const rentalLead = await capturePublicLead(rentalLeadInput);
     const rentalReplay = await capturePublicLead(rentalLeadInput);
@@ -3407,8 +3274,8 @@ async function runContainedApplicationVerification(
           source: 'property_detail',
           sourceSurface: 'property_detail',
           leadSource: 'property_detail',
-          captureRequestId: `dba-search-to-lead-v6-negative-${name}`,
-          consent: { accepted: true, version: 'dba-search-to-lead-v6', source: 'local-test' },
+          captureRequestId: `dba-search-to-lead-v7-negative-${name}`,
+          consent: { accepted: true, version: 'dba-search-to-lead-v7', source: 'local-test' },
         });
       } catch (error) {
         rejected = String((error as { code?: unknown })?.code || '') === 'NOT_FOUND';
@@ -3439,10 +3306,6 @@ async function runContainedApplicationVerification(
     const unrelatedAgencyCaller = callerFor(
       user(SCENARIO_IDS.unrelatedAgencyAdminUser, 'agency_admin', SCENARIO_IDS.unrelatedAgency),
     );
-    const developerCaller = callerFor(user(SCENARIO_IDS.developerUser, 'property_developer'));
-    const unrelatedDeveloperCaller = callerFor(
-      user(SCENARIO_IDS.unrelatedDeveloperUser, 'property_developer'),
-    );
     const platformCaller = callerFor(user(SCENARIO_IDS.platformOperationsUser, 'super_admin'));
     const nonOperationsCaller = callerFor(
       user(SCENARIO_IDS.agentUser, 'agent', SCENARIO_IDS.agency),
@@ -3459,10 +3322,6 @@ async function runContainedApplicationVerification(
       .getLeadDetail({ leadId: agentLeadId })
       .then(() => false)
       .catch(() => true);
-    const developerLeads = await developerCaller.developer.getLeads({ limit: 100 });
-    const unrelatedDeveloperLeads = await unrelatedDeveloperCaller.developer.getLeads({
-      limit: 100,
-    });
     const platformAudit = await platformCaller.system.leadRoutingAudit({
       days: 365,
       attentionLimit: 50,
@@ -3477,10 +3336,6 @@ async function runContainedApplicationVerification(
       !agencyLeads.some(lead => Number(lead.id) === agencyLeadId) ||
       !agentAgencyLeads.some(lead => Number(lead.id) === agentLeadId) ||
       !unrelatedAgencyDenied ||
-      !developerLeads.items.some((lead: any) => Number(lead.id) === developmentLead.leadId) ||
-      unrelatedDeveloperLeads.items.some(
-        (lead: any) => Number(lead.id) === developmentLead.leadId,
-      ) ||
       Number(platformAudit.summary.platformCustody) < 1 ||
       !platformAudit.attentionLeads.some((lead: any) => Number(lead.id) === platformLeadId) ||
       !nonOperationsDenied
@@ -3493,15 +3348,13 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario lost its primary property card.');
     return {
       locationState: 'resolved',
-      locationContext: {
-        provinceId: Number(search.locationContext.ids.provinceId),
-        cityId: Number(search.locationContext.ids.cityId),
-        suburbId: Number(search.locationContext.ids.suburbId),
+      canonicalPlace: {
+        canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
+        label: 'Sandton',
+        scope: 'locality',
       },
       propertyCardHref: primaryAgentCard.href,
-      developmentCardHref: developmentCard.href,
       propertyPage: primaryAgentCard.href,
-      developmentPage: developmentCard.href,
       total: search.total,
       page: search.page,
       pageSize: search.pageSize,
@@ -3516,28 +3369,19 @@ async function runContainedApplicationVerification(
         manual: search.sourceCounts.manual,
         development: search.sourceCounts.development,
       },
-      development: {
-        leadId: developmentLead.leadId,
-        replayedLeadId: developmentReplay.leadId,
-        duplicateReplay: true,
-        conflictingReplay: 'conflict',
-        durableLeadCount: developmentDurableRows.length,
-        acknowledgement: developmentLead.message || '',
-      },
       scenarios,
       discovery: {
         mapRentalExcluded: true,
         comparisonRentalExcluded: true,
-        featuredRentalExcluded: true,
-        trendingRentalExcluded: true,
         relatedRentalExcluded: true,
+        developmentSearchResolved: true,
+        developmentDetailResolved: true,
       },
       rental: rentalAcceptance,
       negative,
       authorization: {
         agent: { ownerVisible: true, unrelatedDenied: true },
         agency: { ownerVisible: true, unrelatedDenied: true },
-        developer: { ownerVisible: true, unrelatedDenied: true },
         platform: { operationsVisible: true, nonOperationsDenied: true },
       },
     };
@@ -3565,7 +3409,7 @@ export async function verifySearchToLeadScenario(input: {
     connection: input.connection,
     profileRoot: input.profileRoot,
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
+  await requireScenarioPlace(input.connection);
   const verified = await verifySearchToLeadScenarioData(input.connection);
   const acceptance =
     input.decision.operation === 'readiness'
@@ -3584,7 +3428,7 @@ export async function verifySearchToLeadScenario(input: {
     expected: {
       eligibleProperties: 3,
       eligibleDevelopments: 1,
-      canonicalLocation: 'gauteng/johannesburg/sandton',
+      canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
     },
     verified,
     migrationHead: manifest.document.expectedHead,

@@ -71,7 +71,7 @@ vi.mock('@/components/location/LocationAutocomplete', () => ({
           type: 'suburb',
           cityName: 'Johannesburg',
           provinceName: 'Gauteng',
-          canonicalLocationId: 'suburb:34',
+          canonicalLocationId: 'pl-place-01-6a145c6d642ba208a2c12de7',
         })
       }
     >
@@ -153,7 +153,7 @@ describe('AgentSetupWizard completion', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save & Continue' }));
     await waitFor(() =>
       expect(saveProfileMutateAsyncMock).toHaveBeenCalledWith(
-        expect.objectContaining({ areasServed: ['suburb:34'] }),
+        expect.objectContaining({ areasServed: ['pl-place-01-6a145c6d642ba208a2c12de7'] }),
       ),
     );
   });

@@ -198,10 +198,6 @@ export const mockAgents = [
 export function getMockProperties(filters: any = {}) {
   let filtered = [...mockProperties];
 
-  if (filters.province) {
-    filtered = filtered.filter(p => p.province === filters.province);
-  }
-
   if (filters.listingType) {
     filtered = filtered.filter(p => p.listingType === filters.listingType);
   }

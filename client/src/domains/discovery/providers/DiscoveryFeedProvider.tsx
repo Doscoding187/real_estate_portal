@@ -49,7 +49,7 @@ function buildQueryFingerprint(query: DiscoveryQuery): string {
   return JSON.stringify({
     mode: query.mode,
     intent: query.intent,
-    location: query.location,
+    canonicalPlaceId: query.canonicalPlaceId,
     category: query.category,
     priceRange: query.priceRange,
     creatorActorId: query.creatorActorId,

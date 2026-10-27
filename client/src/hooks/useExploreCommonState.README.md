@@ -310,7 +310,6 @@ This hook satisfies:
 
 - `useCategoryFilter`: Category selection state
 - `usePropertyFilters`: Property filter state
-- `useFilterUrlSync`: URL synchronization for filters
 - `useExploreFiltersStore`: Zustand store for filter persistence
 
 ## Testing

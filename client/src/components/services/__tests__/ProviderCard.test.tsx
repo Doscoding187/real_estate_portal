@@ -21,7 +21,7 @@ function buildProvider(overrides: Partial<ProviderDirectoryItem> = {}): Provider
     services: [
       { code: 'home-renovation', displayName: 'Home Renovation', category: 'home_improvement' },
     ],
-    locations: [{ suburb: 'Sandton', city: 'Johannesburg', province: 'Gauteng' }],
+    locations: [{ canonicalPlaceId: 'pl-place-01-000000000000000000000001', label: 'Sandton, Johannesburg, Gauteng' }],
     ...overrides,
   };
 }
@@ -51,7 +51,7 @@ describe('ProviderCard', () => {
       <ProviderCard
         provider={buildProvider({
           services: [{ displayName: 'Electrical Wiring', category: 'home_improvement' }],
-          locations: [{ suburb: 'Rondebosch', city: 'Cape Town', province: 'Western Cape' }],
+          locations: [{ canonicalPlaceId: 'pl-place-01-000000000000000000000002', label: 'Rondebosch, Cape Town, Western Cape' }],
         })}
       />,
     );

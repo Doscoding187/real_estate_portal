@@ -262,7 +262,6 @@ export const PRODUCT_SURFACES: ProductSurface[] = [
       '/services/results/:leadId',
       '/services/provider/:slug',
       '/services/reviews/:providerId',
-      '/services/:category/:city/:province',
       '/services/:category',
     ],
     owner: 'product',

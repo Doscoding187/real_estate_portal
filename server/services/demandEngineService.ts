@@ -22,15 +22,15 @@ import {
 } from './planAccessService';
 import { listCurrentActiveAgencyMembershipsByAgentId } from './agencyMembershipService';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import { TRPCError } from '@trpc/server';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
+import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 import { getRuntimeSchemaCapabilities, warnSchemaCapabilityOnce } from './runtimeSchemaCapabilities';
 
 type DemandOwnerType = 'agent' | 'agency' | 'developer' | 'private';
 type DemandDistributionMode = 'shared' | 'exclusive' | 'mixed';
 
 type DemandCriteria = {
-  city?: string | null;
-  suburb?: string | null;
-  province?: string | null;
   propertyType?:
     | 'apartment'
     | 'house'
@@ -52,6 +52,7 @@ export type CreateDemandCampaignInput = {
   ownerId: number;
   createdBy?: number | null;
   name: string;
+  canonicalPlaceId: string;
   status?: 'draft' | 'active' | 'paused' | 'archived';
   sourceChannel?: 'google' | 'meta' | 'tiktok' | 'internal' | 'manual';
   distributionMode?: DemandDistributionMode;
@@ -83,12 +84,6 @@ export type CaptureDemandLeadResult = {
   assignmentType: 'shared' | 'exclusive' | null;
   unmatched: boolean;
 };
-
-function normalizeText(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const next = value.trim();
-  return next.length > 0 ? next : null;
-}
 
 function toNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
@@ -174,15 +169,31 @@ function toDemandCriteria(
   budgetMax?: number | null,
 ): DemandCriteria {
   const merged: DemandCriteria = {
-    city: normalizeText(inputCriteria?.city) || normalizeText(campaign.city),
-    suburb: normalizeText(inputCriteria?.suburb) || normalizeText(campaign.suburb),
-    province: normalizeText(inputCriteria?.province) || normalizeText(campaign.province),
     propertyType: (inputCriteria?.propertyType || campaign.propertyType || null) as DemandCriteria['propertyType'],
     minBedrooms: toNumber(inputCriteria?.minBedrooms) ?? toNumber(campaign.minBedrooms),
     maxPrice: toNumber(inputCriteria?.maxPrice) ?? toNumber(budgetMax) ?? toNumber(campaign.maxPrice),
     minPrice: toNumber(inputCriteria?.minPrice) ?? toNumber(campaign.minPrice),
   };
   return merged;
+}
+
+async function requireSearchableCanonicalPlace(canonicalPlaceId: string | null | undefined) {
+  if (!isCanonicalPlaceId(canonicalPlaceId)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Demand routing requires one canonical Place identity.',
+    });
+  }
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: [canonicalPlaceId],
+  });
+  if (!projection.executions.has(canonicalPlaceId) || !projection.labels.has(canonicalPlaceId)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'The selected Place is not active and search eligible.',
+    });
+  }
+  return canonicalPlaceId;
 }
 
 async function ensureDemandEngineReady(operation: string): Promise<void> {
@@ -204,19 +215,18 @@ export async function createDemandCampaign(input: CreateDemandCampaignInput) {
   const db = await getDb();
   if (!db) throw new Error('Database not available');
 
+  const canonicalPlaceId = await requireSearchableCanonicalPlace(input.canonicalPlaceId);
   const criteria = input.criteria || null;
   const insertResult = await db.insert(demandCampaigns).values({
     ownerType: input.ownerType,
     ownerId: input.ownerId,
     createdBy: input.createdBy || null,
     name: input.name,
+    canonicalPlaceId,
     status: input.status || 'draft',
     sourceChannel: input.sourceChannel || 'manual',
     distributionMode: input.distributionMode || 'shared',
     sharedRecipientCount: clampRecipientCount(input.sharedRecipientCount ?? 3),
-    city: normalizeText(criteria?.city),
-    suburb: normalizeText(criteria?.suburb),
-    province: normalizeText(criteria?.province),
     propertyType: criteria?.propertyType || null,
     minBedrooms: toNumber(criteria?.minBedrooms),
     maxPrice: toNumber(criteria?.maxPrice),
@@ -266,6 +276,7 @@ export async function captureDemandLeadFromCampaign(
     throw new Error('Campaign is not active');
   }
 
+  const canonicalPlaceId = await requireSearchableCanonicalPlace(campaign.canonicalPlaceId);
   const effectiveCriteria = toDemandCriteria(campaign, input.criteria, input.budgetMax);
   return db.transaction(async tx => {
   const demandLeadInsert = await tx.insert(demandLeads).values({
@@ -290,12 +301,7 @@ export async function captureDemandLeadFromCampaign(
   const demandLeadId = Number((demandLeadInsert as any)?.[0]?.insertId || 0) || null;
 
   const propertyConditions = [inArray(properties.status, ['available', 'published']), sql`${properties.agentId} IS NOT NULL`];
-  if (effectiveCriteria.city) {
-    propertyConditions.push(eq(properties.city, effectiveCriteria.city));
-  }
-  if (effectiveCriteria.province) {
-    propertyConditions.push(eq(properties.province, effectiveCriteria.province));
-  }
+  propertyConditions.push(eq(properties.canonicalPlaceId, canonicalPlaceId));
   if (effectiveCriteria.propertyType) {
     propertyConditions.push(eq(properties.propertyType, effectiveCriteria.propertyType));
   }

@@ -117,10 +117,7 @@ export default function AgentMicrosite() {
     () => profile?.canonicalAreas || [],
     [profile?.canonicalAreas],
   );
-  const primaryArea =
-    areas.find(area => area.type === 'suburb' && area.url) ||
-    areas.find(area => area.url) ||
-    areas[0];
+  const primaryArea = areas.find(area => area.type === 'suburb') || areas[0];
   const [showAllAreas, setShowAllAreas] = useState(false);
   const [intent, setIntent] = useState<'all' | 'sale' | 'rent'>('all');
   const [inventoryArea, setInventoryArea] = useState('');
@@ -272,25 +269,6 @@ export default function AgentMicrosite() {
     });
     setIsEnquiryDialogOpen(true);
   };
-  const areaGuide = (area: CanonicalAreaLink) =>
-    area.url ? (
-      <a
-        className="as-area-guide-action"
-        aria-label={`Explore guide for ${area.name}`}
-        data-testid="area-guide-link"
-        href={area.url}
-        onClick={() =>
-          track(AGENT_PROFILE_EVENTS.areaGuideClick, {
-            slug: profile.slug,
-            agentId: profile.id,
-            area: area.name,
-            target: area.url,
-          })
-        }
-      >
-        Explore this area <ArrowRight size={14} />
-      </a>
-    ) : null;
   const whatsapp = (className = 'as-button as-whatsapp') =>
     whatsappHref ? (
       <a
@@ -691,13 +669,13 @@ export default function AgentMicrosite() {
                 <p className="as-eyebrow">Local expertise</p>
                 <h2>Areas I work in</h2>
                 <p>
-                  Explore {firstName}'s service areas and their local guides before your next move.
+                  {firstName} works across these service areas.
                 </p>
-                <a className="as-button as-primary as-all-area-guides" href="/tools/area-guides">
-                  Explore all area guides <ArrowRight size={16} />
+                <a className="as-button as-primary as-all-area-guides" href="/south-africa">
+                  Browse canonical places <ArrowRight size={16} />
                 </a>
               </div>
-              <div className="as-area-picker" role="group" aria-label="Service area guides">
+              <div className="as-area-picker" role="group" aria-label="Service areas">
                 {(showAllAreas ? areas : areas.slice(0, 4)).map(area => (
                   <article
                     key={area.canonicalLocationId}
@@ -716,11 +694,7 @@ export default function AgentMicrosite() {
                     <div className="as-area-card-body">
                       <h3>{area.name.split(',')[0]}</h3>
                       <p>{area.name.split(',').slice(1).join(',').trim() || 'Service area'}</p>
-                      {area.url ? (
-                        areaGuide(area)
-                      ) : (
-                        <p className="as-area-guide-unavailable">Guide not available yet</p>
-                      )}
+                      <p className="as-area-guide-unavailable">Service area</p>
                     </div>
                   </article>
                 ))}

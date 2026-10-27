@@ -1,4 +1,4 @@
-import { and, eq, ne, sql, type SQL } from 'drizzle-orm';
+import { and, eq, isNotNull, ne, sql, type SQL } from 'drizzle-orm';
 
 import {
   cataloguePublishers,
@@ -21,10 +21,12 @@ import {
   isLandVerticalAvailable,
 } from '../../shared/landLaunchPolicy';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 export type PublicDevelopmentEligibilityReason =
   | 'not_published'
   | 'not_approved'
+  | 'missing_canonical_place_assignment'
   | 'unsupported_transaction'
   | 'unsupported_development_type'
   | 'land_vertical_deferred'
@@ -61,6 +63,9 @@ export function evaluatePublicDevelopmentEligibility(
   if (catalogue.activeSupersessionSource) reasons.push('active_supersession_source');
   if (!isTinyIntTrue(development.isPublished)) reasons.push('not_published');
   if (development.approvalStatus !== 'approved') reasons.push('not_approved');
+  if (!isCanonicalPlaceId(development.canonicalPlaceId)) {
+    reasons.push('missing_canonical_place_assignment');
+  }
   // Commercial leasing has its own Asset → Space → Availability authority.
   // A legacy Developer catalogue row must not become a second public
   // Commercial inventory merely because its publication flags are live.
@@ -197,6 +202,7 @@ export function publicDevelopmentEligibilityConditions(): SQL {
   return and(
     eq(developments.isPublished, 1),
     eq(developments.approvalStatus, 'approved'),
+    isNotNull(developments.canonicalPlaceId),
     ne(developments.developmentType, 'commercial'),
     isLandVerticalAvailable() ? undefined : ne(developments.developmentType, 'land'),
     sql`(${developments.transactionType} IN ('for_sale', 'for_rent'))`,

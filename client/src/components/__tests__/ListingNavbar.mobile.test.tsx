@@ -26,9 +26,9 @@ vi.mock('@/components/LocationAutosuggest', () => ({
 }));
 
 const parkhurst: ListingNavbarLocation = {
-  id: 'suburb:501',
-  canonicalLocationId: 'suburb:501',
-  parentCanonicalLocationId: 'city:50',
+  id: 'pl-place-01-e6f8febdb59e5f93586f58c0',
+  canonicalLocationId: 'pl-place-01-e6f8febdb59e5f93586f58c0',
+  parentCanonicalLocationId: 'pl-place-01-21f154cd5d0954c29ec7525f',
   name: 'Parkhurst',
   slug: 'parkhurst',
   type: 'suburb',

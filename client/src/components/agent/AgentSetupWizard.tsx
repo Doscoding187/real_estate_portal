@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, ArrowRight, CheckCircle2, Upload, X } from 'lucide-react';
 import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
+import type { CanonicalLocationOption } from '@/components/location/LocationAutocomplete';
 import { apiFetch } from '@/lib/api';
 import type { AgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentProfileCompletionDescription } from '@/lib/agentJourney';
@@ -21,15 +22,6 @@ import {
 } from '@shared/agentCoverageArea';
 
 const TOTAL_STEPS = 5;
-
-type LocationOption = {
-  id: number;
-  name: string;
-  type: 'province' | 'city' | 'suburb';
-  provinceName?: string;
-  cityName?: string;
-  canonicalLocationId?: string;
-};
 
 function splitCsv(value: string) {
   return value
@@ -42,9 +34,9 @@ function joinCsv(values: string[] = []) {
   return values.join(', ');
 }
 
-function formatCoverageLabel(location: LocationOption) {
+function formatCoverageLabel(location: CanonicalLocationOption) {
   if (location.type === 'suburb') {
-    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
+    return [location.name, location.provinceName].filter(Boolean).join(', ');
   }
 
   if (location.type === 'city') {
@@ -54,7 +46,7 @@ function formatCoverageLabel(location: LocationOption) {
   return location.name;
 }
 
-function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
+function coverageAreaFromLocation(location: CanonicalLocationOption): AgentCoverageArea | null {
   const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
   if (!canonical) return null;
 
@@ -501,7 +493,7 @@ export function AgentSetupWizard() {
                   <LocationAutocomplete
                     value={areaSearch}
                     onValueChange={setAreaSearch}
-                    onLocationSelect={location => addCoverageArea(location as LocationOption)}
+                    onLocationSelect={location => addCoverageArea(location)}
                     placeholder="Search suburb, city, or province"
                     type="all"
                   />

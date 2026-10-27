@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { publicProcedure, protectedProcedure, router } from './_core/trpc';
 import { getDb } from './db';
 import { exploreFeedService } from './services/exploreFeedService';
@@ -10,7 +11,8 @@ import {
   getExplorePublishingAccessMessage,
   getExplorePublishingEligibility,
 } from './services/explorePublishingEligibilityService';
-import { exploreContent } from '../drizzle/schema';
+import { developments, exploreContent, listings } from '../drizzle/schema';
+import { PLACE_ID_REGEX } from '../shared/placeAuthority';
 
 function unavailableExploreCatalog(name: string): never {
   throw new TRPCError({
@@ -50,14 +52,31 @@ export const exploreRouter = router({
         feedType: z.enum(['recommended', 'area', 'category', 'agent', 'developer', 'agency']),
         limit: z.number().min(1).max(50).default(20),
         offset: z.number().min(0).default(0),
-        location: z.string().optional(),
+        canonicalPlaceId: z.string().regex(PLACE_ID_REGEX).optional(),
         category: z.string().optional(),
         agentId: z.number().optional(),
         developerId: z.number().optional(),
         agencyId: z.number().optional(),
         includeAgentContent: z.boolean().default(true),
         userId: z.number().optional(),
-      }),
+      })
+        .strict()
+        .superRefine((input, ctx) => {
+          if (input.feedType === 'area' && !input.canonicalPlaceId) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['canonicalPlaceId'],
+              message: 'Area feeds require one canonical Place ID.',
+            });
+          }
+          if (input.feedType !== 'area' && input.canonicalPlaceId) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['canonicalPlaceId'],
+              message: 'A canonical Place ID is valid only for an area feed.',
+            });
+          }
+        }),
     )
     .query(async ({ input, ctx }) => {
       const userId = ctx.user?.id || input.userId;
@@ -71,11 +90,8 @@ export const exploreRouter = router({
           });
 
         case 'area':
-          if (!input.location) {
-            throw new Error('Location is required for area feed');
-          }
           return exploreFeedService.getAreaFeed({
-            location: input.location,
+            canonicalPlaceId: input.canonicalPlaceId,
             limit: input.limit,
             offset: input.offset,
           });
@@ -212,10 +228,6 @@ export const exploreRouter = router({
     return unavailableExploreCatalog('Explore categories');
   }),
 
-  getFollowedItems: protectedProcedure.query(async () => {
-    return unavailableExploreCatalog('Followed Explore items');
-  }),
-
   // Get topics
   getTopics: publicProcedure.query(async () => {
     return unavailableExploreCatalog('Explore topics');
@@ -237,8 +249,11 @@ export const exploreRouter = router({
         caption: z.string().max(500).optional(),
         mediaUrls: z.array(z.string()).min(1).max(10),
         highlights: z.array(z.string()).max(4).optional(),
-        listingId: z.number().optional(),
-        developmentId: z.number().optional(),
+        listingId: z.number().int().positive().optional(),
+        developmentId: z.number().int().positive().optional(),
+      }).strict().refine(input => Boolean(input.listingId) !== Boolean(input.developmentId), {
+        message: 'Select exactly one canonical listing or development reference.',
+        path: ['listingId'],
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -257,9 +272,27 @@ export const exploreRouter = router({
 
       // Submission is deliberately non-public. A later approved publication
       // authority must activate it before the public feed can discover it.
+      let canonicalPlaceId: string | null = null;
+      if (input.listingId) {
+        const [listing] = await db
+          .select({ canonicalPlaceId: listings.canonicalPlaceId })
+          .from(listings)
+          .where(eq(listings.id, input.listingId))
+          .limit(1);
+        canonicalPlaceId = listing?.canonicalPlaceId ?? null;
+      } else if (input.developmentId) {
+        const [development] = await db
+          .select({ canonicalPlaceId: developments.canonicalPlaceId })
+          .from(developments)
+          .where(eq(developments.id, input.developmentId))
+          .limit(1);
+        canonicalPlaceId = development?.canonicalPlaceId ?? null;
+      }
+
       const result = await db.insert(exploreContent).values({
         contentType: 'video',
         referenceId: input.listingId || input.developmentId || 0,
+        canonicalPlaceId,
         creatorId: eligibility.creatorId,
         creatorType: eligibility.creatorType,
         agencyId: eligibility.agencyId,

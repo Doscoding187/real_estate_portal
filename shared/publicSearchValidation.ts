@@ -1,8 +1,5 @@
 import { isCanonicalPlaceId } from './placeAuthority';
-import { isFactualGeographyId } from './factualRuntimeGeographyBridge';
-import { parseCanonicalLocationId } from './locationAuthority';
 import { BUY_PUBLIC_PROPERTY_TYPES, RENT_PUBLIC_PROPERTY_TYPES } from './property-taxonomy';
-import { isSearchAreaId, MULTI_LOCATION_MAX, MULTI_LOCATION_MIN } from './searchScope';
 
 export interface PublicSearchInputValidationIssue {
   path: string;
@@ -11,16 +8,6 @@ export interface PublicSearchInputValidationIssue {
 
 interface PublicSearchInputLike {
   canonicalPlaceId?: string;
-  province?: string;
-  city?: string;
-  /** Developments accept a single suburb string or a list at the boundary. */
-  suburb?: string | string[];
-  locations?: string[];
-  locationId?: string;
-  factualLocationId?: string;
-  locationIds?: string[];
-  searchAreaId?: string;
-  searchAreaIds?: string[];
   listingType?: 'sale' | 'rent';
   propertyType?: string;
   minPrice?: number;
@@ -51,6 +38,26 @@ interface PublicSearchInputLike {
 export function validatePublicSearchInput(
   input: PublicSearchInputLike,
 ): PublicSearchInputValidationIssue | undefined {
+  const rawInput = input as PublicSearchInputLike & Record<string, unknown>;
+  for (const key of [
+    'province',
+    'city',
+    'suburb',
+    'locations',
+    'locationId',
+    'factualLocationId',
+    'locationIds',
+    'searchAreaIds',
+    'searchAreaId',
+  ]) {
+    if (rawInput[key] !== undefined && rawInput[key] !== null) {
+      return {
+        path: key,
+        message: 'Use one canonical Place identity. Search Area and legacy geography inputs are retired.',
+      };
+    }
+  }
+
   const listingType = input.listingType as unknown;
   if (listingType !== undefined && listingType !== 'sale' && listingType !== 'rent') {
     return {
@@ -148,188 +155,6 @@ export function validatePublicSearchInput(
         path: 'canonicalPlaceId',
         message: 'Choose a valid canonical Place identity.',
       };
-    if (
-      input.locationId ||
-      input.factualLocationId ||
-      input.locationIds?.length ||
-      input.searchAreaId ||
-      input.searchAreaIds?.length ||
-      input.province ||
-      input.city ||
-      input.suburb?.length ||
-      input.locations?.length
-    )
-      return {
-        path: 'canonicalPlaceId',
-        message: 'Canonical Place search cannot combine geography authorities.',
-      };
-  }
-
-  const canonicalLocation = input.locationId
-    ? parseCanonicalLocationId(input.locationId)
-    : undefined;
-
-  if (input.factualLocationId && !isFactualGeographyId(input.factualLocationId)) {
-    return {
-      path: 'factualLocationId',
-      message: 'The factual location ID must use a stable Property Listify identity.',
-    };
-  }
-
-  if (input.searchAreaId && !isSearchAreaId(input.searchAreaId)) {
-    return {
-      path: 'searchAreaId',
-      message: 'The Search Area ID must use a stable Property Listify identity.',
-    };
-  }
-
-  if (input.searchAreaIds?.some(searchAreaId => !isSearchAreaId(searchAreaId))) {
-    return {
-      path: 'searchAreaIds',
-      message: 'Every Search Area ID must use a stable Property Listify identity.',
-    };
-  }
-
-  if (input.locationIds?.some(locationId => !parseCanonicalLocationId(locationId))) {
-    return {
-      path: 'locationIds',
-      message: 'Every selected location must use a canonical Property Listify identity.',
-    };
-  }
-
-  if ((input.locationIds?.length || 0) > MULTI_LOCATION_MAX) {
-    return {
-      path: 'locationIds',
-      message: `A multi-location search cannot contain more than ${MULTI_LOCATION_MAX} locations.`,
-    };
-  }
-
-  if ((input.searchAreaIds?.length || 0) > MULTI_LOCATION_MAX) {
-    return {
-      path: 'searchAreaIds',
-      message: `A multi-location search cannot contain more than ${MULTI_LOCATION_MAX} Search Areas.`,
-    };
-  }
-
-  if (input.locationIds?.length && input.searchAreaIds?.length) {
-    return {
-      path: 'locationIds',
-      message: 'A multi-location search cannot mix canonical locations and Search Areas.',
-    };
-  }
-
-  if (input.locationIds !== undefined && input.locationIds.length < MULTI_LOCATION_MIN) {
-    return {
-      path: 'locationIds',
-      message: `A multi-location search requires at least ${MULTI_LOCATION_MIN} selected locations.`,
-    };
-  }
-
-  if (input.searchAreaIds !== undefined && input.searchAreaIds.length < MULTI_LOCATION_MIN) {
-    return {
-      path: 'searchAreaIds',
-      message: `A multi-location search requires at least ${MULTI_LOCATION_MIN} selected Search Areas.`,
-    };
-  }
-
-  const multiLocationIds = input.locationIds || [];
-  const parsedMultiLocationIds = multiLocationIds
-    .map(locationId => parseCanonicalLocationId(locationId))
-    .filter((value): value is NonNullable<typeof value> => Boolean(value));
-  if (
-    parsedMultiLocationIds.length > 1 &&
-    new Set(parsedMultiLocationIds.map(location => location.level)).size !== 1
-  ) {
-    return {
-      path: 'locationIds',
-      message: 'Multi-location selections must use one geographic level.',
-    };
-  }
-
-  if ((input.locationIds?.length || 0) > 0 || (input.searchAreaIds?.length || 0) > 0) {
-    if (
-      input.locationId ||
-      input.searchAreaId ||
-      input.province ||
-      input.city ||
-      input.suburb?.length ||
-      input.locations?.length
-    ) {
-      return {
-        path: 'locationIds',
-        message:
-          'Multi-location searches cannot combine selected locations with another geography authority.',
-      };
-    }
-  }
-
-  if (input.locationId && !canonicalLocation) {
-    return {
-      path: 'locationId',
-      message: 'The location ID must use a canonical Property Listify identity.',
-    };
-  }
-
-  if (
-    input.searchAreaId &&
-    (input.province ||
-      input.city ||
-      input.suburb?.length ||
-      input.locations?.length ||
-      input.locationIds?.length ||
-      input.searchAreaIds?.length)
-  ) {
-    return {
-      path: 'searchAreaId',
-      message: 'Search Area requests cannot combine a Search Area with broad geography fields.',
-    };
-  }
-
-  if (
-    input.factualLocationId &&
-    (input.searchAreaId ||
-      input.searchAreaIds?.length ||
-      input.locationIds?.length ||
-      input.locations?.length)
-  ) {
-    return {
-      path: 'factualLocationId',
-      message: 'A factual location identity cannot be combined with an OR geography selection.',
-    };
-  }
-
-  if (input.searchAreaId && canonicalLocation && canonicalLocation.level !== 'suburb') {
-    return {
-      path: 'locationId',
-      message: 'A Search Area may only be refined by a canonical locality.',
-    };
-  }
-
-  const deepestQueryLevel = input.suburb?.length
-    ? 'suburb'
-    : input.city
-      ? 'city'
-      : input.province
-        ? 'province'
-        : undefined;
-  if (canonicalLocation && deepestQueryLevel && canonicalLocation.level !== deepestQueryLevel) {
-    return {
-      path: 'locationId',
-      message: 'The location ID level must match the deepest submitted geography.',
-    };
-  }
-
-  // S2A is deliberately a single-location slice. Reject ambiguous sale
-  // requests at the public boundary rather than allowing the service to use
-  // only the first value.
-  if (
-    input.listingType === 'sale' &&
-    ((input.suburb?.length || 0) > 1 || (input.locations?.length || 0) > 0)
-  ) {
-    return {
-      path: 'suburb',
-      message: 'Buy search currently accepts one canonical location only.',
-    };
   }
 
   return undefined;

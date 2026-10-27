@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockResolvePublicLocation } = vi.hoisted(() => ({
-  mockResolvePublicLocation: vi.fn(),
+const { mockLoadPlaceProjection } = vi.hoisted(() => ({
+  mockLoadPlaceProjection: vi.fn(),
 }));
 
-vi.mock('../locationResolverService', () => ({
-  locationResolver: {
-    resolvePublicLocation: mockResolvePublicLocation,
-  },
+vi.mock('../canonicalPlaceSearchService', () => ({
+  loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
 }));
 
 import {
@@ -20,63 +18,67 @@ import {
   resolveSubmittedAgentCoverageAreas,
 } from '../agentCoverageAreaService';
 
+const SANDTON_ID = 'pl-place-01-000000000000000000000034';
 const resolvedSandton = {
-  status: 'resolved' as const,
-  location: {
-    level: 'suburb' as const,
-    province: { id: 1, name: 'Gauteng', slug: 'gauteng', code: 'GP' },
-    city: { id: 12, name: 'Johannesburg', slug: 'johannesburg', provinceId: 1 },
-    suburb: { id: 34, name: 'Sandton', slug: 'sandton', cityId: 12 },
-    confidence: 'exact' as const,
-    fallbackLevel: 'none' as const,
-    originalIntent: 'sandton, johannesburg, gauteng',
-  },
+  executions: new Map([[SANDTON_ID, { placeId: SANDTON_ID, scope: 'locality' }]]),
+  labels: new Map([
+    [
+      SANDTON_ID,
+      {
+        canonicalPlaceId: SANDTON_ID,
+        label: 'Sandton',
+        placeType: 'suburb',
+        scope: 'locality',
+        province: 'Gauteng',
+        city: 'Johannesburg',
+        locality: 'Sandton',
+      },
+    ],
+  ]),
 };
 
 describe('agent coverage-area authority', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockResolvePublicLocation.mockResolvedValue(resolvedSandton);
+    mockLoadPlaceProjection.mockResolvedValue(resolvedSandton);
   });
 
-  it('accepts only the current colon-form canonical location identity', () => {
-    expect(parseCanonicalAgentCoverageLocationId('suburb:34')).toEqual({
-      canonicalLocationId: 'suburb:34',
-      level: 'suburb',
-      id: 34,
+  it('accepts only an admitted canonical Place identity', () => {
+    expect(parseCanonicalAgentCoverageLocationId(SANDTON_ID)).toEqual({
+      canonicalLocationId: SANDTON_ID,
     });
-    expect(parseCanonicalAgentCoverageLocationId('suburb-34')).toBeNull();
+    expect(parseCanonicalAgentCoverageLocationId('suburb:34')).toBeNull();
     expect(parseCanonicalAgentCoverageLocationId('Sandton, Johannesburg, Gauteng')).toBeNull();
-    expect(parseCanonicalAgentCoverageLocationId('suburb:0')).toBeNull();
+    expect(parseCanonicalAgentCoverageLocationId('pl-place-01-not-a-place-id')).toBeNull();
   });
 
   it('fails closed for historic text and bare JSON label arrays', () => {
     expect(parseAgentCoverageAreas('Sandton, Johannesburg, Gauteng')).toEqual([]);
     expect(parseAgentCoverageAreas(JSON.stringify(['Sandton']))).toEqual([]);
-    expect(parseAgentCoverageAreas('{"canonicalLocationId":"suburb:34"}')).toEqual([]);
+    expect(parseAgentCoverageAreas(JSON.stringify({ canonicalLocationId: 'suburb:34' }))).toEqual([]);
   });
 
   it('serializes a single typed identity without treating an empty selection as coverage', () => {
     const serialized = serializeAgentCoverageAreas([
-      { canonicalLocationId: 'suburb:34', label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
 
     expect(serialized).toBe(
-      '[{"canonicalLocationId":"suburb:34","label":"Sandton, Johannesburg, Gauteng"}]',
+      `[{"canonicalLocationId":"${SANDTON_ID}","label":"Sandton, Johannesburg, Gauteng"}]`,
     );
     expect(parseAgentCoverageAreas(serialized)).toEqual([
-      { canonicalLocationId: 'suburb:34', label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
     expect(serializeAgentCoverageAreas([])).toBeNull();
   });
 
   it('deduplicates repeated canonical selections and generates the display label on the server', async () => {
-    const result = await resolveSubmittedAgentCoverageAreas(['suburb:34', 'suburb:34']);
+    const result = await resolveSubmittedAgentCoverageAreas([SANDTON_ID, SANDTON_ID]);
 
-    expect(mockResolvePublicLocation).toHaveBeenCalledTimes(1);
-    expect(mockResolvePublicLocation).toHaveBeenCalledWith({ locationId: 'suburb:34' });
+    expect(mockLoadPlaceProjection).toHaveBeenCalledTimes(1);
+    expect(mockLoadPlaceProjection).toHaveBeenCalledWith(undefined, { placeIds: [SANDTON_ID] });
     expect(result).toEqual([
-      { canonicalLocationId: 'suburb:34', label: 'Sandton, Johannesburg, Gauteng' },
+      { canonicalLocationId: SANDTON_ID, label: 'Sandton, Johannesburg, Gauteng' },
     ]);
   });
 
@@ -84,35 +86,20 @@ describe('agent coverage-area authority', () => {
     await expect(
       resolveSubmittedAgentCoverageAreas(['Sandton, Johannesburg, Gauteng']),
     ).rejects.toBeInstanceOf(AgentCoverageAreaValidationError);
-    expect(mockResolvePublicLocation).not.toHaveBeenCalled();
+    expect(mockLoadPlaceProjection).not.toHaveBeenCalled();
   });
 
-  it('rejects an unavailable or mismatched canonical record', async () => {
-    mockResolvePublicLocation.mockResolvedValueOnce({
-      status: 'unresolved',
-      location: null,
-      message: 'That suburb is no longer available.',
-    });
-    await expect(resolveSubmittedAgentCoverageAreas(['suburb:34'])).rejects.toThrow(
-      /current Property Listify location suggestions/,
-    );
-
-    mockResolvePublicLocation.mockResolvedValueOnce({
-      ...resolvedSandton,
-      location: {
-        ...resolvedSandton.location,
-        suburb: { ...resolvedSandton.location.suburb, id: 35 },
-      },
-    });
-    await expect(resolveSubmittedAgentCoverageAreas(['suburb:34'])).rejects.toBeInstanceOf(
+  it('rejects an unavailable canonical Place', async () => {
+    mockLoadPlaceProjection.mockResolvedValueOnce({ executions: new Map(), labels: new Map() });
+    await expect(resolveSubmittedAgentCoverageAreas([SANDTON_ID])).rejects.toBeInstanceOf(
       AgentCoverageAreaValidationError,
     );
   });
 
-  it('propagates an operational resolver failure instead of disguising it as a policy rejection', async () => {
-    mockResolvePublicLocation.mockRejectedValueOnce(new Error('canonical database unavailable'));
+  it('propagates an operational Place authority failure instead of disguising it as a policy rejection', async () => {
+    mockLoadPlaceProjection.mockRejectedValueOnce(new Error('canonical database unavailable'));
 
-    await expect(resolveSubmittedAgentCoverageAreas(['suburb:34'])).rejects.toThrow(
+    await expect(resolveSubmittedAgentCoverageAreas([SANDTON_ID])).rejects.toThrow(
       'canonical database unavailable',
     );
   });

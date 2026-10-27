@@ -61,19 +61,27 @@ function developmentHomeQuerySource() {
 
 let availabilityHistoryFixture: unknown[] = [];
 
-type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycleState>[0];
+type DevelopmentHomeStateInput = Parameters<typeof deriveDevelopmentHomeLifecycleState>[0] & {
+  canonicalPlaceId: string;
+};
 
 function developmentHomeState(
   approvalStatus: DevelopmentHomeStateInput['approvalStatus'],
   isPublished: DevelopmentHomeStateInput['isPublished'],
   overrides: Omit<Partial<DevelopmentHomeStateInput>, 'approvalStatus' | 'isPublished'> = {},
 ): DevelopmentHomeStateInput {
-  return { approvalStatus, isPublished, ...overrides };
+  return {
+    canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+    approvalStatus,
+    isPublished,
+    ...overrides,
+  };
 }
 
 const ownedDevelopment = {
   id: 42,
   name: 'Harbour Heights',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
   suburb: 'Sea Point',

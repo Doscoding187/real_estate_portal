@@ -7,7 +7,6 @@
  * TTL Configuration (per design spec):
  * - User preferences: 1 hour (3600s)
  * - Feed results: 5 minutes (300s)
- * - Neighbourhood data: 1 day (86400s)
  * - Video metadata: 1 hour (3600s)
  */
 
@@ -17,7 +16,6 @@ import { createClient, RedisClientType } from 'redis';
 export const CacheTTL = {
   USER_PREFERENCES: 3600, // 1 hour
   FEED_RESULTS: 300, // 5 minutes
-  NEIGHBOURHOOD_DATA: 86400, // 1 day
   VIDEO_METADATA: 3600, // 1 hour
   PERFORMANCE_SCORE: 900, // 15 minutes
   CATEGORIES: 86400, // 1 day
@@ -31,7 +29,6 @@ export const CachePrefix = {
   USER_PREFS: 'explore:user:prefs:',
   FEED: 'explore:feed:',
   VIDEO_FEED: 'explore:video:feed:',
-  NEIGHBOURHOOD: 'explore:neighbourhood:',
   CATEGORIES: 'explore:categories',
   SIMILAR: 'explore:similar:',
   BOOST: 'explore:boost:',
@@ -299,12 +296,6 @@ export const ExploreCacheKeys = {
 
   videoFeed: (category: string | undefined, limit: number, offset: number) =>
     `${CachePrefix.VIDEO_FEED}${category || 'all'}:${limit}:${offset}`,
-
-  neighbourhoodDetail: (neighbourhoodId: number) =>
-    `${CachePrefix.NEIGHBOURHOOD}detail:${neighbourhoodId}`,
-
-  neighbourhoodList: (limit: number, offset: number) =>
-    `${CachePrefix.NEIGHBOURHOOD}list:${limit}:${offset}`,
 
   categories: () => CachePrefix.CATEGORIES,
 

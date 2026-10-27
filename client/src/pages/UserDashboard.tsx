@@ -17,7 +17,6 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useComparison } from '@/contexts/ComparisonContext';
-import { useTrendingSuburbs } from '@/hooks/useTrendingSuburbs';
 import { normalizePropertyForUI } from '@/lib/normalizers';
 import {
   getSavedSearchDeliveryLabel,
@@ -27,6 +26,7 @@ import {
 import { buildCanonicalSearchUrl } from '@/lib/searchNavigation';
 import { trpc } from '@/lib/trpc';
 import type { SavedSearch } from '@shared/types';
+import { isCanonicalPlaceId } from '@shared/placeAuthority';
 import {
   Activity,
   ArrowRight,
@@ -97,32 +97,14 @@ function deferredBuyability(): DeferredBuyability | null {
 type FavoriteCard = ReturnType<typeof normalizePropertyForUI> & {
   savedAt?: string | null;
   property?: Record<string, unknown>;
-  suburb?: string;
-  city?: string;
-  province?: string;
+  canonicalPlaceId?: string;
 };
 type WatchArea = {
   key: string;
   label: string;
-  suburb?: string;
-  city?: string;
-  province?: string;
+  canonicalPlaceId: string;
   href: string;
   source: 'saved-home' | 'saved-search';
-};
-type MarketPulse = {
-  label: string;
-  city?: string;
-  province?: string;
-  averagePrice: number;
-  medianPrice: number;
-  propertyCount: number;
-  sixMonthGrowth: number;
-  trendingDirection: 'up' | 'down' | 'stable';
-  trendingScore?: number;
-  searchCount30d?: number;
-  insight?: string;
-  href: string;
 };
 type ChangeSignal = {
   title: string;
@@ -131,31 +113,6 @@ type ChangeSignal = {
   href?: string;
   cta?: string;
 };
-type HeatmapEntry = {
-  suburbId: number;
-  suburbName: string;
-  cityName: string;
-  province: string;
-  averagePrice: number;
-  medianPrice: number;
-  sixMonthGrowth: number;
-  trendingDirection: 'up' | 'down' | 'stable';
-  trendConfidence: number;
-  propertyCount: number;
-  heatmapIntensity: number;
-  color: string;
-  priceCategory: string;
-  growthInsight: string;
-};
-
-const ESTIMATED_VALUE_BAND_MIDPOINTS: Record<SellerEstimatedValueBand, number> = {
-  under_1m: 850000,
-  '1m_2m': 1500000,
-  '2m_3m': 2500000,
-  '3m_5m': 4000000,
-  '5m_plus': 6500000,
-};
-
 const SELLER_SELECT_LABELS = {
   propertyType: {
     apartment: 'Apartment',
@@ -198,20 +155,6 @@ function normalizeRole(value?: string | null) {
   return value;
 }
 
-function normalizeText(value?: string | null) {
-  return String(value || '')
-    .trim()
-    .toLowerCase();
-}
-
-function titleize(value?: string | null) {
-  if (!value) return '';
-  return String(value)
-    .split(/[-_\s]+/)
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
 
 function formatRand(value?: number | null) {
   if (!value || !Number.isFinite(value)) return 'R0';
@@ -223,11 +166,6 @@ function formatCompactRand(value?: number | null) {
   if (value >= 1000000) return `R${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `R${Math.round(value / 1000)}k`;
   return `R${Math.round(value)}`;
-}
-
-function roundToNearest(value: number, factor: number) {
-  if (!Number.isFinite(value) || !Number.isFinite(factor) || factor <= 0) return 0;
-  return Math.round(value / factor) * factor;
 }
 
 function formatDashboardDate(value?: string | null) {
@@ -247,105 +185,37 @@ function buildSearchHref(criteria: Record<string, unknown>) {
   return buildCanonicalSearchUrl(criteria);
 }
 
-function getCriteriaValue(criteria: RawCriteria, key: string) {
-  const value = criteria[key];
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value)) {
-    const first = value.find(item => typeof item === 'string');
-    return typeof first === 'string' ? first : undefined;
-  }
-  return undefined;
-}
-
-function makeWatchKey(suburb?: string, city?: string, province?: string) {
-  return [normalizeText(suburb), normalizeText(city), normalizeText(province)]
-    .filter(Boolean)
-    .join('|');
-}
-
-function blendNumbers(primary: number, secondary: number, primaryWeight: number) {
-  return primary * primaryWeight + secondary * (1 - primaryWeight);
-}
-
-function getPropertyLocationParts(raw?: Record<string, unknown> | null) {
-  if (!raw) {
-    return {
-      suburb: undefined,
-      city: undefined,
-      province: undefined,
-    };
+function buildSavedSearchHref(search: Pick<SavedSearch, 'placeId' | 'criteria'>): string | null {
+  const criteria = (search.criteria || {}) as RawCriteria;
+  const retiredKeys = [
+    'province',
+    'city',
+    'suburb',
+    'location',
+    'slug',
+    'locationId',
+    'locationIds',
+    'locations',
+    'factualLocationId',
+    'searchAreaIds',
+    'searchAreaId',
+  ];
+  if (
+    retiredKeys.some(key => criteria[key] !== undefined && criteria[key] !== null && criteria[key] !== '') ||
+    criteria.canonicalPlaceId !== undefined
+  ) {
+    return null;
   }
 
-  const location =
-    raw.location && typeof raw.location === 'object' && !Array.isArray(raw.location)
-      ? (raw.location as Record<string, unknown>)
-      : undefined;
-
-  const suburb =
-    (typeof raw.suburb === 'string' ? raw.suburb : undefined) ||
-    (typeof location?.suburb === 'string' ? location.suburb : undefined);
-  const city =
-    (typeof raw.city === 'string' ? raw.city : undefined) ||
-    (typeof location?.city === 'string' ? location.city : undefined);
-  const province =
-    (typeof raw.province === 'string' ? raw.province : undefined) ||
-    (typeof location?.province === 'string' ? location.province : undefined);
-
-  return { suburb, city, province };
-}
-
-function aggregateMarketPulse(
-  label: string,
-  href: string,
-  entries: HeatmapEntry[],
-): MarketPulse | null {
-  if (!entries.length) return null;
-
-  const totalPropertyCount = entries.reduce((sum, entry) => sum + entry.propertyCount, 0) || 1;
-  const weightedAveragePrice = Math.round(
-    entries.reduce((sum, entry) => sum + entry.averagePrice * entry.propertyCount, 0) /
-      totalPropertyCount,
-  );
-  const weightedMedianPrice = Math.round(
-    entries.reduce((sum, entry) => sum + entry.medianPrice * entry.propertyCount, 0) /
-      totalPropertyCount,
-  );
-  const weightedGrowth = Number(
-    (
-      entries.reduce((sum, entry) => sum + entry.sixMonthGrowth * entry.propertyCount, 0) /
-      totalPropertyCount
-    ).toFixed(1),
-  );
-
-  let trendingDirection: 'up' | 'down' | 'stable' = 'stable';
-  if (weightedGrowth >= 2) trendingDirection = 'up';
-  if (weightedGrowth <= -1) trendingDirection = 'down';
-
-  let insight = 'This market is holding steady, which is useful if you are comparing entry timing.';
-  if (weightedGrowth >= 4) {
-    insight =
-      'Pricing is climbing across multiple nearby suburbs, which usually means demand is outpacing new supply.';
-  } else if (weightedGrowth >= 1) {
-    insight =
-      'Values are edging upward, suggesting steady buyer interest without a full pricing spike yet.';
-  } else if (weightedGrowth <= -3) {
-    insight =
-      'Prices are softening across this market, which can create negotiation room for well-positioned buyers.';
-  } else if (weightedGrowth < 0) {
-    insight =
-      'Momentum is slightly softer right now, so patient offers may land better than they did earlier in the year.';
+  if (search.placeId && !isCanonicalPlaceId(search.placeId)) {
+    return null;
   }
 
-  return {
-    label,
-    averagePrice: weightedAveragePrice,
-    medianPrice: weightedMedianPrice,
-    propertyCount: entries.reduce((sum, entry) => sum + entry.propertyCount, 0),
-    sixMonthGrowth: weightedGrowth,
-    trendingDirection,
-    insight,
-    href,
-  };
+  const href = buildSearchHref({
+    ...criteria,
+    ...(search.placeId ? { canonicalPlaceId: search.placeId } : {}),
+  });
+  return href === '/' ? null : href;
 }
 
 function getToneClasses(tone: ChangeSignal['tone']) {
@@ -353,27 +223,6 @@ function getToneClasses(tone: ChangeSignal['tone']) {
   if (tone === 'amber') return 'border-amber-100 bg-amber-50 text-amber-800';
   if (tone === 'rose') return 'border-rose-100 bg-rose-50 text-rose-800';
   return 'border-blue-100 bg-blue-50 text-blue-800';
-}
-
-function buildDemandInsight(market: MarketPulse) {
-  if (market.insight) {
-    if (market.searchCount30d && market.searchCount30d >= 40) {
-      return `${market.insight} Search activity is elevated with ${market.searchCount30d} recent demand signals.`;
-    }
-    return market.insight;
-  }
-
-  if (market.trendingDirection === 'up') {
-    return market.searchCount30d
-      ? `Demand is heating up here with ${market.searchCount30d} recent search signals and prices moving higher.`
-      : 'Demand is heating up here and prices are moving higher across the local stock mix.';
-  }
-
-  if (market.trendingDirection === 'down') {
-    return 'Momentum is softer in this pocket, which may create room to negotiate or wait for stronger value.';
-  }
-
-  return 'This area is stable right now, which makes it easier to benchmark value against similar homes.';
 }
 
 export default function UserDashboard() {
@@ -434,16 +283,6 @@ export default function UserDashboard() {
     { ids: comparedProperties.slice(0, 4) },
     { enabled: isAuthenticated && comparedProperties.length > 0 },
   );
-  const { data: marketHeatmap, isLoading: marketHeatmapLoading } =
-    trpc.priceInsights.getSuburbPriceHeatmap.useQuery(
-      { limit: 120, offset: 0 },
-      { enabled: isAuthenticated },
-    );
-  const { data: trendingSuburbs, isLoading: trendingLoading } = useTrendingSuburbs({
-    limit: 12,
-    enabled: isAuthenticated,
-  });
-
   useEffect(() => {
     if (!consumerDashboardState || hydrationCompleteRef.current) return;
 
@@ -483,13 +322,15 @@ export default function UserDashboard() {
       (favoritesRaw || [])
         .map((entry: { createdAt?: string; property?: Record<string, unknown> }) => {
           const normalized = normalizePropertyForUI(entry.property);
-          const locationParts = getPropertyLocationParts(entry.property);
           return normalized
             ? ({
                 ...normalized,
                 savedAt: entry.createdAt,
                 property: entry.property,
-                ...locationParts,
+                canonicalPlaceId:
+                  typeof entry.property?.canonicalPlaceId === 'string'
+                    ? entry.property.canonicalPlaceId
+                    : undefined,
               } as FavoriteCard)
             : null;
         })
@@ -501,6 +342,32 @@ export default function UserDashboard() {
     .map(resolution => resolution.property)
     .filter(property => comparedProperties.includes(Number(property.id)));
 
+  const canonicalWatchPlaceIds = useMemo(() => {
+    const placeIds = new Set<string>();
+    favorites.forEach(favorite => {
+      if (favorite.canonicalPlaceId && isCanonicalPlaceId(favorite.canonicalPlaceId)) {
+        placeIds.add(favorite.canonicalPlaceId);
+      }
+    });
+    (savedSearches || []).forEach(search => {
+      if (search.placeId && isCanonicalPlaceId(search.placeId)) placeIds.add(search.placeId);
+    });
+    return [...placeIds].slice(0, 10);
+  }, [favorites, savedSearches]);
+  const { data: resolvedWatchPlaces } = trpc.placeAuthority.resolveSearchPlaces.useQuery(
+    { placeIds: canonicalWatchPlaceIds },
+    { enabled: isAuthenticated && canonicalWatchPlaceIds.length > 0 },
+  );
+  const watchPlaceLabels = useMemo(
+    () =>
+      new Map(
+        (resolvedWatchPlaces?.results || [])
+          .filter((place): place is NonNullable<typeof place> => Boolean(place))
+          .map(place => [place.placeId, place.label]),
+      ),
+    [resolvedWatchPlaces],
+  );
+
   const watchAreas = useMemo(() => {
     const areas = new Map<string, WatchArea>();
 
@@ -510,181 +377,42 @@ export default function UserDashboard() {
     };
 
     favorites.forEach(favorite => {
-      const suburb = favorite.suburb ? String(favorite.suburb) : undefined;
-      const city = favorite.city ? String(favorite.city) : undefined;
-      const province = favorite.province ? String(favorite.province) : undefined;
-      const label = [suburb, city, province].filter(Boolean).join(', ');
+      const placeId = favorite.canonicalPlaceId;
+      if (!placeId || !isCanonicalPlaceId(placeId)) return;
+      const label = watchPlaceLabels.get(placeId);
+      if (!label) return;
 
       registerArea({
-        key: makeWatchKey(suburb, city, province),
+        key: `place:${placeId}`,
         label,
-        suburb,
-        city,
-        province,
-        href: buildSearchHref({ suburb, city, province }),
+        canonicalPlaceId: placeId,
+        href: buildSearchHref({ canonicalPlaceId: placeId, listingType: 'sale' }),
         source: 'saved-home',
       });
     });
 
     (savedSearches || []).forEach(search => {
-      const criteria = (search.criteria || {}) as RawCriteria;
-      const suburb = getCriteriaValue(criteria, 'suburb');
-      const city = getCriteriaValue(criteria, 'city');
-      const province = getCriteriaValue(criteria, 'province');
-      const label = [titleize(suburb), titleize(city), titleize(province)]
-        .filter(Boolean)
-        .join(', ');
+      const href = buildSavedSearchHref(search);
+      if (!href) return;
 
-      registerArea({
-        key: makeWatchKey(suburb, city, province),
-        label,
-        suburb: titleize(suburb),
-        city: titleize(city),
-        province: titleize(province),
-        href: buildSearchHref(criteria),
-        source: 'saved-search',
-      });
+      if (search.placeId && isCanonicalPlaceId(search.placeId)) {
+        const label = watchPlaceLabels.get(search.placeId);
+        if (!label) return;
+        registerArea({
+          key: `place:${search.placeId}`,
+          label,
+          canonicalPlaceId: search.placeId,
+          href,
+          source: 'saved-search',
+        });
+        return;
+      }
     });
 
     return Array.from(areas.values()).slice(0, 6);
-  }, [favorites, savedSearches]);
+  }, [favorites, savedSearches, watchPlaceLabels]);
 
   const locations = useMemo(() => watchAreas.map(area => area.label).slice(0, 6), [watchAreas]);
-
-  const watchMarket = useMemo(() => {
-    const heatmapEntries = (marketHeatmap || []) as HeatmapEntry[];
-    const normalizedTrending =
-      trendingSuburbs?.map(suburb => ({
-        ...suburb,
-        suburbKey: makeWatchKey(
-          suburb.name,
-          suburb.cityName || undefined,
-          suburb.provinceName || undefined,
-        ),
-        cityKey: makeWatchKey(
-          undefined,
-          suburb.cityName || undefined,
-          suburb.provinceName || undefined,
-        ),
-        provinceKey: makeWatchKey(undefined, undefined, suburb.provinceName || undefined),
-      })) || [];
-
-    const cityBuckets = new Map<string, HeatmapEntry[]>();
-    const provinceBuckets = new Map<string, HeatmapEntry[]>();
-
-    heatmapEntries.forEach(entry => {
-      const cityKey = makeWatchKey(undefined, entry.cityName, entry.province);
-      const provinceKey = makeWatchKey(undefined, undefined, entry.province);
-      cityBuckets.set(cityKey, [...(cityBuckets.get(cityKey) || []), entry]);
-      provinceBuckets.set(provinceKey, [...(provinceBuckets.get(provinceKey) || []), entry]);
-    });
-
-    return watchAreas
-      .map(area => {
-        const suburbMatch = heatmapEntries.find(
-          entry =>
-            normalizeText(entry.suburbName) === normalizeText(area.suburb) &&
-            (!area.city || normalizeText(entry.cityName) === normalizeText(area.city)),
-        );
-
-        const suburbTrend = normalizedTrending.find(item => item.suburbKey === area.key);
-        const cityTrend = normalizedTrending.find(
-          item => item.cityKey === makeWatchKey(undefined, area.city, area.province),
-        );
-        const provinceTrend = normalizedTrending.find(
-          item => item.provinceKey === makeWatchKey(undefined, undefined, area.province),
-        );
-
-        if (suburbMatch) {
-          return {
-            area,
-            market: {
-              label: area.label,
-              city: suburbMatch.cityName,
-              province: suburbMatch.province,
-              averagePrice: suburbMatch.averagePrice,
-              medianPrice: suburbMatch.medianPrice,
-              propertyCount: suburbMatch.propertyCount,
-              sixMonthGrowth: suburbMatch.sixMonthGrowth,
-              trendingDirection: suburbMatch.trendingDirection,
-              trendingScore: suburbTrend?.trendingScore,
-              searchCount30d: suburbTrend?.searchCount30d,
-              insight: suburbMatch.growthInsight,
-              href: area.href,
-            } satisfies MarketPulse,
-          };
-        }
-
-        if (area.city) {
-          const aggregate = aggregateMarketPulse(
-            area.label,
-            area.href,
-            cityBuckets.get(makeWatchKey(undefined, area.city, area.province)) || [],
-          );
-          if (aggregate) {
-            return {
-              area,
-              market: {
-                ...aggregate,
-                city: area.city,
-                province: area.province,
-                trendingScore: cityTrend?.trendingScore,
-                searchCount30d: cityTrend?.searchCount30d,
-              } satisfies MarketPulse,
-            };
-          }
-        }
-
-        if (area.province) {
-          const aggregate = aggregateMarketPulse(
-            area.label,
-            area.href,
-            provinceBuckets.get(makeWatchKey(undefined, undefined, area.province)) || [],
-          );
-          if (aggregate) {
-            return {
-              area,
-              market: {
-                ...aggregate,
-                province: area.province,
-                trendingScore: provinceTrend?.trendingScore,
-                searchCount30d: provinceTrend?.searchCount30d,
-              } satisfies MarketPulse,
-            };
-          }
-        }
-
-        return { area, market: null };
-      })
-      .slice(0, 3);
-  }, [marketHeatmap, trendingSuburbs, watchAreas]);
-
-  const topTrendingAreas = useMemo(() => {
-    const watchKeys = new Set(watchAreas.map(area => area.key));
-    return (
-      (trendingSuburbs || [])
-        .filter(suburb =>
-          watchKeys.has(
-            makeWatchKey(
-              suburb.name,
-              suburb.cityName || undefined,
-              suburb.provinceName || undefined,
-            ),
-          ),
-        )
-        .slice(0, 3)
-        .map(suburb => ({
-          label: `${suburb.name}, ${suburb.cityName || suburb.provinceName || 'South Africa'}`,
-          trendingScore: suburb.trendingScore,
-          searchCount30d: suburb.searchCount30d,
-          href: buildSearchHref({
-            suburb: suburb.name,
-            city: suburb.cityName || undefined,
-            province: suburb.provinceName || undefined,
-          }),
-        })) || []
-    );
-  }, [trendingSuburbs, watchAreas]);
 
   const sellerReadiness = useMemo(() => {
     const signals = [
@@ -693,7 +421,7 @@ export default function UserDashboard() {
         detail:
           watchAreas.length > 0
             ? `${watchAreas.length} watch area${watchAreas.length === 1 ? '' : 's'} tracked from your saved homes and searches.`
-            : 'Save the suburbs or cities you would sell into so pricing guidance becomes location-specific.',
+            : 'Save a canonical Place or governed Search Area to keep your target market attached to your plan.',
         complete: watchAreas.length > 0,
       },
       {
@@ -706,10 +434,9 @@ export default function UserDashboard() {
       },
       {
         label: 'Live market movement available',
-        detail: watchMarket.some(item => item.market)
-          ? 'At least one of your focus areas already has live pricing movement and demand signals.'
-          : 'As soon as locality analytics are available for your watch areas, this dashboard will show the movement automatically.',
-        complete: watchMarket.some(item => item.market),
+        detail:
+          'Place based market analytics are not connected to the dashboard yet. No locality text or legacy IDs are used to estimate movement.',
+        complete: false,
       },
     ];
 
@@ -721,10 +448,10 @@ export default function UserDashboard() {
       signals,
       nextAction:
         score >= 67
-          ? 'You have enough market context to start valuation prep and line up your launch partners.'
-          : 'Tighten your market context first, then move into valuation and listing-prep services with much better timing.',
+          ? 'Your seller profile and canonical watch areas are saved. Arrange a professional valuation before choosing a list price.'
+          : 'Save your seller profile and canonical watch areas, then arrange a professional valuation before choosing a list price.',
     };
-  }, [favorites.length, savedSearches, watchAreas, watchMarket]);
+  }, [favorites.length, savedSearches, watchAreas]);
 
   const sellerProfileSummary = useMemo(() => {
     const entries = [
@@ -756,269 +483,41 @@ export default function UserDashboard() {
     sellerPlanning.propertyType,
   ]);
 
-  const sellerStrategy = useMemo(() => {
-    const activeMarkets = watchMarket
-      .filter(item => item.market)
-      .map(item => item.market as MarketPulse);
+  const sellerStrategy = useMemo(() => ({
+    marketTemperature: 'Place analytics unavailable',
+    strongestArea: watchAreas[0]?.label || 'No canonical watch area saved',
+    launchWindow:
+      sellerPlanning.timeline === '0_30_days'
+        ? 'Prepare the home and book a professional valuation soon'
+        : sellerPlanning.timeline === '6_months_plus'
+          ? 'Use the longer runway to prepare the home before valuation'
+          : 'Build a preparation plan before setting a list price',
+    summary:
+      sellerPlanning.readiness === 'needs_work'
+        ? 'Your seller plan is saved. Work through repairs and compliance before arranging a valuation.'
+        : 'Your seller plan is saved. The dashboard will not estimate a sale price until Place based market data is available.',
+  }), [sellerPlanning.readiness, sellerPlanning.timeline, watchAreas]);
 
-    if (activeMarkets.length === 0) {
-      return {
-        marketTemperature: 'Context building',
-        strongestArea: 'No tracked market yet',
-        launchWindow:
-          sellerPlanning.timeline === '0_30_days'
-            ? 'Urgent timeline, but build watch areas first'
-            : 'Build watch areas first',
-        summary:
-          'You need at least one live watch area before the dashboard can suggest pricing or launch timing with confidence.',
-      };
-    }
-
-    const strongestArea = [...activeMarkets].sort(
-      (left, right) => right.sixMonthGrowth - left.sixMonthGrowth,
-    )[0];
-    const averageGrowth =
-      activeMarkets.reduce((sum, market) => sum + market.sixMonthGrowth, 0) / activeMarkets.length;
-    const averageDemand =
-      activeMarkets.reduce((sum, market) => sum + Number(market.trendingScore || 0), 0) /
-      activeMarkets.length;
-
-    let marketTemperature = 'Stable market';
-    let launchWindow = 'Stage the home, then test pricing deliberately';
-    let summary =
-      'Your markets are balanced right now, so presentation quality and pricing discipline will matter more than speed.';
-
-    if (averageGrowth >= 3 || averageDemand >= 65) {
-      marketTemperature = 'Demand-forward market';
-      launchWindow = 'Prepare quickly and go to market while demand stays elevated';
-      summary =
-        'The areas you watch are showing strong movement or search demand, which usually rewards prepared sellers who launch with clean media and pricing confidence.';
-    } else if (averageGrowth <= -1) {
-      marketTemperature = 'Buyer-leaning market';
-      launchWindow = 'Use valuation prep before committing to a listing price';
-      summary =
-        'Momentum is softer across your tracked areas, so inspections, compliance work, and realistic pricing become more important than rushing live.';
-    }
-
-    if (sellerPlanning.timeline === '0_30_days') {
-      launchWindow = 'Fast-track prep and remove avoidable launch blockers this month';
-    } else if (sellerPlanning.timeline === '6_months_plus') {
-      launchWindow = 'Use the longer runway to improve presentation before launch';
-    }
-
-    if (sellerPlanning.readiness === 'needs_work') {
-      summary =
-        'Your market context is useful, but the property still needs prep. Condition and compliance work should happen before you rely on an ambitious price.';
-    } else if (
-      sellerPlanning.readiness === 'launch_ready' &&
-      marketTemperature !== 'Buyer-leaning market'
-    ) {
-      summary =
-        'Your markets are supportive and the property is close to launch-ready, so the next leverage point is clean valuation discipline and strong launch media.';
-    }
-
-    return {
-      marketTemperature,
-      strongestArea: strongestArea.label,
-      launchWindow,
-      summary,
-    };
-  }, [sellerPlanning.readiness, sellerPlanning.timeline, watchMarket]);
-
-  const sellerValuationGuide = useMemo(() => {
-    const activeMarkets = watchMarket
-      .filter(item => item.market)
-      .map(item => item.market as MarketPulse)
-      .sort((left, right) => right.sixMonthGrowth - left.sixMonthGrowth);
-
-    if (activeMarkets.length === 0) {
-      return {
-        area: 'Add a watch area first',
-        benchmarkLow: 0,
-        benchmarkHigh: 0,
-        pricingPosture: 'Context first',
-        rationale:
-          'Once you save the areas you care about, the dashboard will start forming a local benchmark band and launch posture.',
-        nextSteps: [
-          'Save target suburbs or cities to build comparable market context.',
-          'Create at least one saved search so new competing stock starts shaping your pricing view.',
-        ],
-      };
-    }
-
-    const anchor = activeMarkets[0];
-    const localAnchor = blendNumbers(anchor.medianPrice, anchor.averagePrice, 0.6);
-    const explicitValueMidpoint = sellerPlanning.estimatedValueBand
-      ? ESTIMATED_VALUE_BAND_MIDPOINTS[sellerPlanning.estimatedValueBand]
-      : null;
-    let calibratedAnchor =
-      explicitValueMidpoint && explicitValueMidpoint > 0
-        ? blendNumbers(localAnchor, explicitValueMidpoint, 0.68)
-        : localAnchor;
-
-    const propertyTypeMultiplier: Record<SellerPropertyType, number> = {
-      apartment: 0.94,
-      house: 1.05,
-      townhouse: 0.99,
-      vacant_land: 0.8,
-      commercial: 1.08,
-    };
-    const bedroomMultiplier: Record<SellerBedroomProfile, number> = {
-      studio_1: 0.9,
-      '2': 0.98,
-      '3': 1.05,
-      '4_plus': 1.12,
-    };
-    const readinessMultiplier: Record<SellerReadinessLevel, number> = {
-      needs_work: 0.95,
-      good_condition: 1,
-      launch_ready: 1.03,
-    };
-
-    if (sellerPlanning.propertyType) {
-      calibratedAnchor *= propertyTypeMultiplier[sellerPlanning.propertyType];
-    }
-    if (sellerPlanning.bedroomProfile) {
-      calibratedAnchor *= bedroomMultiplier[sellerPlanning.bedroomProfile];
-    }
-    if (sellerPlanning.readiness) {
-      calibratedAnchor *= readinessMultiplier[sellerPlanning.readiness];
-    }
-
-    const lowMultiplier =
-      sellerStrategy.marketTemperature === 'Demand-forward market'
-        ? 0.99
-        : sellerStrategy.marketTemperature === 'Buyer-leaning market'
-          ? 0.94
-          : 0.97;
-    const highMultiplier =
-      sellerStrategy.marketTemperature === 'Demand-forward market'
-        ? 1.04
-        : sellerStrategy.marketTemperature === 'Buyer-leaning market'
-          ? 1.0
-          : 1.02;
-
-    let benchmarkLow = roundToNearest(calibratedAnchor * lowMultiplier, 25000);
-    let benchmarkHigh = roundToNearest(calibratedAnchor * highMultiplier, 25000);
-
-    let pricingPosture = 'Price close to the market median';
-    let rationale =
-      'Your strongest watch area is balanced enough that accurate positioning and presentation should matter more than aggressive overpricing.';
-    let nextSteps = [
-      'Run valuation prep before finalizing a list price.',
-      'Prepare media once the pricing brief is aligned with current supply.',
-    ];
-    let confidenceLabel = 'Pattern read';
-    let confidenceDetail =
-      'This range is driven mainly by your strongest watched market. Add more home-profile detail to make the guidance more personal.';
-    let anchorSource = 'Local market movement';
-
-    if (sellerStrategy.marketTemperature === 'Demand-forward market') {
-      pricingPosture = 'Lead at the upper end of the local band';
-      rationale =
-        'Demand is strong enough that well-prepared listings can push closer to the top of the local range, provided the launch quality is tight.';
-      nextSteps = [
-        'Book inspections quickly so you do not lose momentum before launch.',
-        'Sequence photography and staging immediately after the valuation brief.',
-      ];
-    } else if (sellerStrategy.marketTemperature === 'Buyer-leaning market') {
-      pricingPosture = 'Stay disciplined and defensible';
-      rationale =
-        'Softer demand means the market will punish optimistic pricing faster, so compliance, condition, and realistic positioning should lead the strategy.';
-      nextSteps = [
-        'Use inspection and compliance work to remove buyer objections before launch.',
-        'Benchmark against active competing stock instead of older peak pricing.',
-      ];
-    }
-
-    if (sellerPlanning.pricingPriority === 'maximize_price') {
-      pricingPosture = 'Bias toward the upper half of the band';
-      benchmarkHigh = roundToNearest(benchmarkHigh * 1.02, 25000);
-      rationale =
-        'You are optimizing for price, so the strategy should protect launch quality and keep enough room for negotiation without sacrificing your ceiling too early.';
-    } else if (sellerPlanning.pricingPriority === 'sell_quickly') {
-      pricingPosture = 'Enter with a sharper, faster-moving price';
-      benchmarkLow = roundToNearest(benchmarkLow * 0.98, 25000);
-      rationale =
-        'Because speed matters more here, the band should reduce friction and encourage early buyer activity instead of testing the very top of the range.';
-    }
-
-    if (sellerPlanning.goal === 'test_market') {
-      pricingPosture = 'Start with a testable, feedback-driven price';
-      rationale =
-        'Because you are testing the market, the goal is to learn quickly from buyer reactions without anchoring too high too early.';
-    } else if (sellerPlanning.goal === 'upgrade') {
-      nextSteps = [
-        ...nextSteps,
-        'Keep your purchase plan updated so your next-home timing stays synchronized with the sale.',
-      ];
-    }
-
-    if (sellerPlanning.readiness === 'needs_work') {
-      nextSteps = [
-        'Prioritize repairs, compliance, and presentation work before committing to the top of the pricing band.',
-        ...nextSteps,
-      ].slice(0, 3);
-    }
-
-    if (sellerPlanning.occupancy === 'tenant_occupied') {
-      nextSteps = [
-        'Align tenant timing, notice periods, and access windows before booking media or valuation visits.',
-        ...nextSteps,
-      ].slice(0, 3);
-    } else if (sellerPlanning.occupancy === 'vacant') {
-      nextSteps = [
-        'Use the vacant window to tighten staging, repairs, and launch photography before the market sees the listing.',
-        ...nextSteps,
-      ].slice(0, 3);
-    }
-
-    const confidencePoints =
-      activeMarkets.length +
-      (sellerPlanning.estimatedValueBand ? 1 : 0) +
-      (sellerPlanning.propertyType ? 1 : 0) +
-      (sellerPlanning.bedroomProfile ? 1 : 0) +
-      (sellerPlanning.occupancy ? 1 : 0);
-
-    if (confidencePoints >= 6) {
-      confidenceLabel = 'High confidence';
-      confidenceDetail =
-        'You have enough market and home-profile detail for a sharper estimate frame. Use this to brief valuation and launch partners, not as a formal appraisal.';
-      anchorSource = explicitValueMidpoint
-        ? 'Blended local market + homeowner estimate'
-        : 'Multi-signal local market blend';
-    } else if (confidencePoints >= 4) {
-      confidenceLabel = 'Medium confidence';
-      confidenceDetail =
-        'The range is directionally useful now, but it will improve once you add either your value band or more detail about the home itself.';
-      anchorSource = explicitValueMidpoint
-        ? 'Local market adjusted by your estimate band'
-        : 'Local market benchmark';
-    }
-
-    return {
-      area: anchor.label,
-      benchmarkLow,
-      benchmarkHigh,
-      pricingPosture,
-      rationale,
-      nextSteps,
-      confidenceLabel,
-      confidenceDetail,
-      anchorSource,
-      calibratedAnchor: roundToNearest(calibratedAnchor, 25000),
-    };
-  }, [
-    sellerPlanning.bedroomProfile,
-    sellerPlanning.estimatedValueBand,
-    sellerPlanning.goal,
-    sellerPlanning.occupancy,
-    sellerPlanning.pricingPriority,
-    sellerPlanning.propertyType,
-    sellerPlanning.readiness,
-    sellerStrategy.marketTemperature,
-    watchMarket,
-  ]);
+  const sellerValuationGuide = useMemo(
+    () => ({
+      area: watchAreas[0]?.label || 'No canonical watch area saved',
+      benchmarkLow: 0,
+      benchmarkHigh: 0,
+      pricingPosture: 'Professional valuation required',
+      rationale:
+        'The dashboard does not calculate a price from display names or homeowner profile multipliers. Place based market benchmarks are not connected yet.',
+      nextSteps: [
+        'Use a professional valuation before choosing a list price.',
+        'Keep your exact Place or Search Area watchlist current for a future canonical market report.',
+      ],
+      confidenceLabel: 'Not calculated',
+      confidenceDetail:
+        'A confidence score will appear when a canonical Place market analytics source is available.',
+      anchorSource: 'No Place based analytics source',
+      calibratedAnchor: null as number | null,
+    }),
+    [watchAreas],
+  );
 
   const bridgePlan = useMemo(() => {
     if (intent !== 'both') return null;
@@ -1042,7 +541,7 @@ export default function UserDashboard() {
       return {
         headline: 'Your buyer side is ahead of your seller side',
         detail:
-          'Keep your purchase ceiling in place, but build seller market context next so your sale timing does not become the bottleneck.',
+          'Keep your purchase ceiling in place and complete the seller plan before arranging a professional valuation.',
         primaryLabel: 'Build seller context',
         primaryHref: '#overview-seller-readiness',
         secondaryLabel: 'Review watch areas',
@@ -1053,7 +552,7 @@ export default function UserDashboard() {
       return {
         headline: 'Your seller side is ahead of your buyer side',
         detail:
-          'You have enough market context to prepare a sale, but you still need a sharper affordability plan before making confident purchase decisions.',
+          'Your seller profile is saved, but complete an affordability plan before making purchase decisions.',
         primaryLabel: 'Open buyability planner',
         primaryHref: '#open-planner',
         secondaryLabel: 'Review seller readiness',
@@ -1063,7 +562,7 @@ export default function UserDashboard() {
     return {
       headline: 'Build both sides of the move before you transact',
       detail:
-        'Complete your affordability plan and tighten your target markets first. That gives you a cleaner handoff into valuation, media, and eventual property offers.',
+        'Complete your affordability plan and save canonical watch areas before arranging valuation and media services.',
       primaryLabel: 'Start buyability planner',
       primaryHref: '#open-planner',
       secondaryLabel: 'Save target areas',
@@ -1117,34 +616,6 @@ export default function UserDashboard() {
       });
     }
 
-    const hottestArea = watchMarket
-      .filter(item => item.market)
-      .sort(
-        (left, right) => (right.market?.sixMonthGrowth || 0) - (left.market?.sixMonthGrowth || 0),
-      )[0];
-
-    if (hottestArea?.market) {
-      const directionCopy =
-        hottestArea.market.trendingDirection === 'down'
-          ? 'is cooling'
-          : hottestArea.market.trendingDirection === 'up'
-            ? 'is heating up'
-            : 'is holding steady';
-
-      changes.push({
-        title: `${hottestArea.area.label} ${directionCopy}`,
-        detail: `${formatCompactRand(hottestArea.market.medianPrice)} median with ${hottestArea.market.sixMonthGrowth.toFixed(1)}% six-month movement.`,
-        tone:
-          hottestArea.market.trendingDirection === 'down'
-            ? 'amber'
-            : hottestArea.market.trendingDirection === 'up'
-              ? 'emerald'
-              : 'blue',
-        href: hottestArea.market.href,
-        cta: 'View area',
-      });
-    }
-
     if (buyabilityResults) {
       const affordableCount = favorites.filter(favorite => {
         const price = Number(favorite.price || 0);
@@ -1168,13 +639,13 @@ export default function UserDashboard() {
       changes.push({
         title: 'Your dashboard is primed for signals',
         detail:
-          'Save homes, save searches, and complete your buyability planner to unlock personalized market movement here.',
+          'Save homes and canonical searches to keep your shortlist current. Place based market movement is not available here yet.',
         tone: 'blue',
       });
     }
 
     return changes.slice(0, 4);
-  }, [alertHistory, buyabilityResults, favorites, lastVisitAt, watchMarket]);
+  }, [alertHistory, buyabilityResults, favorites, lastVisitAt]);
 
   const setFavoriteMutation = trpc.properties.setFavorite.useMutation({
     onSuccess: () => {
@@ -1756,68 +1227,16 @@ export default function UserDashboard() {
                       </Badge>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Estimate confidence
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-slate-900">
-                          {sellerValuationGuide.confidenceLabel}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {sellerValuationGuide.confidenceDetail}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Anchor source
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-slate-900">
-                          {sellerValuationGuide.anchorSource}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-600">
-                          Calibrated anchor{' '}
-                          {formatCompactRand(sellerValuationGuide.calibratedAnchor)}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Profile lift
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-slate-900">
-                          {sellerProfileSummary.completed >= 4
-                            ? 'Personalized frame'
-                            : 'Still market-led'}
-                        </p>
-                        <p className="mt-2 text-sm text-slate-600">
-                          {sellerProfileSummary.completed >= 4
-                            ? 'Your home profile is now influencing the estimate more directly.'
-                            : 'Add more homeowner detail so the estimate depends less on raw locality averages.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Suggested local band
-                        </p>
-                        <p className="mt-2 text-xl font-semibold text-slate-900">
-                          {sellerValuationGuide.benchmarkLow > 0
-                            ? `${formatRand(sellerValuationGuide.benchmarkLow)} - ${formatRand(
-                                sellerValuationGuide.benchmarkHigh,
-                              )}`
-                            : 'Build a watch area first'}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Positioning note
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {sellerValuationGuide.rationale}
-                        </p>
-                      </div>
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        Local price estimate
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-slate-900">
+                        No Place based estimate is available
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {sellerValuationGuide.rationale}
+                      </p>
                     </div>
 
                     <div className="mt-4 space-y-2">
@@ -1889,140 +1308,41 @@ export default function UserDashboard() {
                     Neighborhood watch
                   </CardTitle>
                   <CardDescription>
-                    Real movement across the areas showing up in your saved homes and search alerts.
+                    Exact Places and governed Search Areas from your saved homes and search alerts.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {marketHeatmapLoading || trendingLoading ? (
-                    <p className="text-sm text-slate-500">Loading area signals...</p>
-                  ) : watchMarket.length === 0 ? (
+                  {watchAreas.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5">
-                      <p className="font-semibold text-slate-900">No watch areas yet</p>
+                      <p className="font-semibold text-slate-900">No canonical watch areas yet</p>
                       <p className="mt-2 text-sm text-slate-600">
-                        Save homes or searches to build your neighborhood watchlist.
+                        Save a home with an admitted Place or save a search for one Place or governed Search Area.
                       </p>
                     </div>
                   ) : (
-                    watchMarket.map(item => (
+                    watchAreas.map(area => (
                       <div
-                        key={item.area.key}
+                        key={area.key}
                         className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="text-lg font-semibold text-slate-900">
-                              {item.area.label}
-                            </p>
+                            <p className="text-lg font-semibold text-slate-900">{area.label}</p>
                             <p className="mt-1 text-sm text-slate-500">
-                              Source:{' '}
-                              {item.area.source === 'saved-home' ? 'Saved homes' : 'Saved searches'}
+                              Saved from {area.source === 'saved-home' ? 'a saved home' : 'a saved search'}
+                              {' · canonical Place'}
                             </p>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setLocation(item.area.href)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => setLocation(area.href)}>
                             View homes
                           </Button>
                         </div>
-
-                        {item.market ? (
-                          <div className="mt-4 space-y-3">
-                            <div className="grid gap-3 md:grid-cols-4">
-                              <div className="rounded-xl bg-white px-3 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  Median
-                                </p>
-                                <p className="mt-2 text-lg font-semibold text-slate-900">
-                                  {formatCompactRand(item.market.medianPrice)}
-                                </p>
-                              </div>
-                              <div className="rounded-xl bg-white px-3 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  Avg price
-                                </p>
-                                <p className="mt-2 text-lg font-semibold text-slate-900">
-                                  {formatCompactRand(item.market.averagePrice)}
-                                </p>
-                              </div>
-                              <div className="rounded-xl bg-white px-3 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  6m movement
-                                </p>
-                                <p
-                                  className={`mt-2 text-lg font-semibold ${
-                                    item.market.trendingDirection === 'down'
-                                      ? 'text-amber-700'
-                                      : item.market.trendingDirection === 'up'
-                                        ? 'text-emerald-700'
-                                        : 'text-slate-900'
-                                  }`}
-                                >
-                                  {item.market.sixMonthGrowth > 0 ? '+' : ''}
-                                  {item.market.sixMonthGrowth.toFixed(1)}%
-                                </p>
-                              </div>
-                              <div className="rounded-xl bg-white px-3 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                  Market pulse
-                                </p>
-                                <div className="mt-2 flex items-center gap-2">
-                                  {item.market.trendingDirection === 'down' ? (
-                                    <TrendingDown className="h-4 w-4 text-amber-700" />
-                                  ) : item.market.trendingDirection === 'up' ? (
-                                    <TrendingUp className="h-4 w-4 text-emerald-700" />
-                                  ) : (
-                                    <Activity className="h-4 w-4 text-blue-700" />
-                                  )}
-                                  <span className="font-semibold text-slate-900">
-                                    {item.market.trendingScore
-                                      ? `${item.market.trendingScore}/100 demand`
-                                      : `${item.market.propertyCount} active homes`}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                Why this area is moving
-                              </p>
-                              <p className="mt-2 text-sm leading-6 text-slate-600">
-                                {buildDemandInsight(item.market)}
-                              </p>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="mt-4 text-sm text-slate-500">
-                            We have your watch area saved. Market pricing will appear here as more
-                            locality data becomes available.
-                          </p>
-                        )}
+                        <p className="mt-4 text-sm text-slate-500">
+                          Place based market analytics are not connected yet. No suburb text or numeric location IDs are used to estimate this area.
+                        </p>
                       </div>
                     ))
                   )}
-
-                  {topTrendingAreas.length > 0 ? (
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                      <div className="flex items-center gap-2 text-blue-800">
-                        <TrendingUp className="h-4 w-4" />
-                        <p className="text-sm font-semibold">Areas getting more attention</p>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {topTrendingAreas.map(area => (
-                          <Button
-                            key={area.label}
-                            variant="outline"
-                            className="border-blue-200 bg-white text-blue-800 hover:bg-blue-100"
-                            onClick={() => setLocation(area.href)}
-                          >
-                            {area.label} - {area.trendingScore}/100
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                 </CardContent>
               </Card>
 
@@ -2032,8 +1352,8 @@ export default function UserDashboard() {
                     <Clock3 className="h-5 w-5 text-slate-700" />
                     What changed
                   </CardTitle>
-                  <CardDescription>
-                    Signals generated from alerts, saved activity, and the markets you are watching.
+              <CardDescription>
+                    Signals generated from saved homes and canonical saved searches.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -2097,9 +1417,9 @@ export default function UserDashboard() {
                         <div>
                           <p className="text-lg font-semibold text-slate-900">{property.title}</p>
                           <p className="text-sm text-slate-500">
-                            {[property.suburb, property.city, property.province]
-                              .filter(Boolean)
-                              .join(', ') || 'South Africa'}
+                            {property.canonicalPlaceId && watchPlaceLabels.get(property.canonicalPlaceId)
+                              ? watchPlaceLabels.get(property.canonicalPlaceId)
+                              : 'Location not assigned to an admitted Place'}
                           </p>
                         </div>
                         <p className="text-xl font-semibold text-slate-900">
@@ -2264,12 +1584,14 @@ export default function UserDashboard() {
                       <Button
                         className="mt-4"
                         variant="outline"
-                        onClick={() =>
-                          setLocation(buildSearchHref((search.criteria as RawCriteria) ?? {}))
-                        }
+                        disabled={!buildSavedSearchHref(search)}
+                        onClick={() => {
+                          const href = buildSavedSearchHref(search);
+                          if (href) setLocation(href);
+                        }}
                       >
                         <Play className="mr-2 h-4 w-4" />
-                        Run search again
+                        {buildSavedSearchHref(search) ? 'Run search again' : 'Recreate this search'}
                       </Button>
                     </div>
                   ))
@@ -2309,7 +1631,8 @@ export default function UserDashboard() {
                   {comparisonItems.map(item => {
                     const property = normalizePropertyForUI(item);
                     if (!property) return null;
-                    const locationParts = getPropertyLocationParts(item as Record<string, unknown>);
+                    const canonicalPlaceId =
+                      typeof item.canonicalPlaceId === 'string' ? item.canonicalPlaceId : undefined;
 
                     return (
                       <Card key={item.id} className="border-white/60 bg-white/90">
@@ -2318,9 +1641,9 @@ export default function UserDashboard() {
                             <div>
                               <p className="font-semibold text-slate-900">{property.title}</p>
                               <p className="text-sm text-slate-500">
-                                {[locationParts.city, locationParts.province]
-                                  .filter(Boolean)
-                                  .join(', ') || 'South Africa'}
+                                {canonicalPlaceId && watchPlaceLabels.get(canonicalPlaceId)
+                                  ? watchPlaceLabels.get(canonicalPlaceId)
+                                  : 'Location not assigned to an admitted Place'}
                               </p>
                             </div>
                             <Button

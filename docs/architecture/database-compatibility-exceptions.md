@@ -784,7 +784,7 @@ Removal workstream: P8 Explore commercial authority.
 ## DBX-PLACE-PROJECTION-READ-2026-10-20-Edward
 
 Exception ID: DBX-PLACE-PROJECTION-READ-2026-10-20-Edward
-Status: approved compatibility read
+Status: retired 2026-10-26 by the pre-launch canonical Place URL decision.
 Owner: Property Listify senior product engineering
 Approved by Edward on: 2026-10-20, by the single-geography-authority directive recorded in
 [launch packet 63](launch-readiness-and-product-convergence/63-single-geography-authority-2026-10-20.md)
@@ -830,16 +830,12 @@ Status: approved compatibility read
 
 Owner: Property Listify senior product engineering
 
-Approved by Edward on: 2026-10-21, as the published-location fallback that keeps every
-published location findable while the Place Authority admits the places it does not yet carry.
+Approved by Edward on: 2026-10-21. Retired by Edward's 2026-10-26 direction to use only
+canonical Place identities and paths, with no old public path redirects or aliases.
 
-Business reason: the canonical Place Authority does not carry every location the product
-publishes. Five published Gauteng locations have no canonical Place identity, and the published
-runtime projection is therefore the only record of them. Without a bounded fallback, switching
-the customer-facing search surfaces to the national Place Authority would remove those five
-locations from search, and their published URLs would be reachable only by direct entry. The
-fallback keeps them findable at the URL we already publish, and shrinks as the Place Authority
-admits them.
+Historical business reason: the canonical Place Authority did not carry every location the
+product published. The pre-launch decision is now to serve only Places admitted to the canonical
+authority and retire old public paths without redirects or aliases.
 
 Canonical authority: the `place`, `place_name` and `place_relationship` tables remain the only
 authority for location identity, existence, search eligibility and publication eligibility. The
@@ -847,37 +843,58 @@ fallback never creates an identity, never asserts geography, and never widens a 
 published location the Place Authority carries is answered by the Place Authority, never by the
 projection.
 
-Exact files: `server/services/nationalPlaceSearchService.ts` holds the fallback;
-`server/services/geographyAuthorityService.ts` holds the single registered projection read it
-uses; `shared/searchDiscovery.ts` carries the `published_projection` result source;
-`data/geography-coverage-v0.1/output/gauteng_published_place_registry_v0.2.json` holds the
-bounded set.
+Historical files: the fallback was implemented in `server/services/nationalPlaceSearchService.ts`,
+read through `server/services/geographyAuthorityService.ts`, and bounded by
+`data/geography-coverage-v0.1/output/gauteng_published_place_registry_v0.2.json`. Those URL
+artifacts and the `published_projection` result source have been removed. Public Place routes and
+suggestions now use `shared/canonicalPlaceUrlProjection.ts` and
+`data/place-url-projection-national-v0.1.json`.
 
 Tables and columns: `provinces` (id, slug), `cities` (id, slug, status, provinceId), `suburbs`
 (id, slug, status, cityId), read only, and only through the registered boundary.
 
-Permitted read direction: read only, and only for a published location that the published-place
-registry records as having no canonical Place identity. A published location the Place
-Authority carries is never answered from the projection.
+Permitted read direction: none for public Place search or URL resolution.
 
 Permitted write direction: none.
 
-Failure and observability behavior: a published location the projection does not carry, or that
-two rows claim, is refused rather than guessed. Every fallback result declares
-`source: 'published_projection'`, so a result answered by the projection is distinguishable from
-one answered by the Place Authority. The published-place registry reports the whole bounded set
-and its count on every build, and the published-URL compatibility check reports it.
+Failure and observability behavior: a Place without an exact canonical URL projection entry is
+refused. An absent former URL returns not found and is not redirected or aliased.
 
-Automated evidence: `scripts/verify-published-urls.ts` proves that every published location URL
-is reproduced by the public place search, and reports the locations with no canonical identity
-and the one location the Place Authority marks not searchable;
-`server/__tests__/contract.geography-authority-single-read.test.ts` proves the projection still
-has a single registered reader.
+Automated evidence: `pnpm place:urls:check` verifies deterministic projection rebuild;
+`server/__tests__/contract.canonical-place-url.test.ts` verifies exact routes, unique paths, the
+retained and demoted Gauteng routes, and reviewed settlement contexts.
 
-Expiry or objective removal condition: the exception closes when the published-place registry
-records no published location without a canonical Place identity. Each location leaves the set
-when the Place Authority admits it, and the set is regenerated on every build, so the exception
-can only shrink.
+Expiry or objective removal condition: satisfied. The fallback, URL registry, builder and verifier
+are removed. This retires the published URL exception only; DBX-PLACE-PROJECTION-READ remains
+separately governed for other outstanding runtime readers.
 
 Removal workstream: single geography authority — Place Authority admission of the remaining
 published locations, then retirement of the published-location fallback.
+
+## DBX-PLACE-CANONICAL-CUTOVER-2026-10-26-Edward
+
+Exception ID: DBX-PLACE-CANONICAL-CUTOVER-2026-10-26-Edward
+Status: approved exceptional migration authoring; database application not authorized by this record.
+Owner: Property Listify senior product engineering
+Approved by Edward on: 2026-10-26, through the pre-launch direction to retire competing geography paths and use canonical Place as the sole app geography authority.
+Business reason: every active geographic identity, search, and assignment consumer must use one admitted Place identity. Numeric hierarchy assignments and typed city/suburb/province matching preserve competing authorities after runtime consumers move to Place.
+Canonical authority: `place`, `place_name`, and `place_relationship`; `canonicalPlaceId` is the only durable geography identity. Names and address snapshots are presentation data only.
+Exact files: `server/migrations/0149_developments_canonical_place_column.sql` through `server/migrations/0194_drop_seller_prospects_province.sql`, `server/migrations/manifest.json`, `docs/database-authority/migration-tree-authority.json`, `drizzle/schema/analytics.ts`, `drizzle/schema/canonical-model-inventory.json`, `drizzle/schema/canvassing.ts`, `drizzle/schema/commercial.ts`, `drizzle/schema/demand.ts`, `drizzle/schema/developments.ts`, `drizzle/schema/explore.ts`, `drizzle/schema/index.ts`, `drizzle/schema/land.ts`, `drizzle/schema/listings.ts`, `drizzle/schema/servicesEngine.ts`, `drizzle/schema/sharedLiving.ts`, deletion of `drizzle/schema/locations.ts`, `server/db.ts`, `server/db-connection.ts`, `server/demandRouter.ts`, `server/canvassingRouter.ts`, `server/adminRouter.ts`, `server/agencyRouter.ts`, `server/_core/mockData.ts`, `server/services/demandEngineService.ts`, `server/services/runtimeSchemaCapabilities.ts`, `server/services/developmentService.ts`, `server/services/developmentSubmissionReadiness.ts`, `server/services/developerEngineCatalogue.ts`, `server/services/developerOperatingHome.ts`, `server/services/developerOperatingLifecycle.ts`, `server/services/developmentSalesProjectionService.ts`, `server/services/publicDevelopmentEligibility.ts`, `server/services/publicDevelopmentSearchService.ts`, `server/services/propertySearchService.ts`, `server/services/similarPropertiesService.ts`, `server/services/landWorkflowService.ts`, `server/services/canonicalListingPlaceResolver.ts`, `server/services/servicesEngineService.ts`, `server/servicesEngineRouter.ts`, `server/developerRouter.ts`, `server/services/exploreFeedService.ts`, `server/exploreRouter.ts`, `server/exploreVideoUploadRouter.ts`, `server/routes/exploreShorts.ts`, `server/routes/exploreVideoUpload.ts`, `server/services/exploreVideoService.ts`, `server/_core/databaseAuthority/dataAdapters/placeReleaseInspection.ts`, `client/src/features/canvassing/CanvassingWorkspace.tsx`, `server/__tests__/integration.demand-routing-rollback.test.ts`, `server/__tests__/integration.agency-canvassing-mvp.test.ts`, `server/__tests__/contract.agency-canvassing-boundary.test.ts`, `server/__tests__/contract.database-canonical-model-authority.test.ts`, and the focused Place, development, Land, Explore, Services, and consumer contracts.
+Additional exact files for canonical search and presentation cutover: `client/src/pages/SearchResults.tsx`, `client/src/pages/PropertyDetailPage.tsx`, `client/src/lib/urlUtils.ts`, `client/src/lib/searchReturnState.ts`, `client/src/lib/developmentJourneyContinuity.ts`, `client/src/lib/searchZeroResultRecovery.ts`, `client/src/components/location/LocationMapPicker.tsx`, `client/src/components/property-results/SortControls.tsx`, `client/src/components/property-results/SortControls.README.md`, `shared/types.ts`, `client/src/lib/__tests__/searchNavigation.test.ts`, `client/src/lib/__tests__/searchIntent.test.ts`, `client/src/lib/__tests__/heroJourneySearch.test.ts`, `client/src/lib/__tests__/searchResultsQueryReactivity.test.tsx`, `client/src/lib/__tests__/searchZeroResultRecovery.test.ts`, `client/src/lib/__tests__/searchReturnState.test.ts`, `client/src/lib/__tests__/developmentJourneyContinuity.test.ts`, `client/src/lib/__tests__/geographySearchHandoff.test.ts`, `client/src/components/property-results/__tests__/SortControls.property.test.tsx`, `server/services/__tests__/propertySearchApprovedProjection.test.ts`, and `server/services/__tests__/propertySearchService.property.test.ts`. Retired unreferenced geographic components and tests in this cutover: `client/src/components/SearchBar.tsx`, `client/src/components/LocationRecommendations.tsx`, `client/src/components/explore/EnhancedSearchBar.tsx`, `client/src/components/location/LocationPropertyTypeExplorer.tsx`, `client/src/components/location/SearchStage.tsx`, `client/src/components/location/SearchRefinementBar.tsx`, `client/src/components/location/LocationPageLayout.tsx`, `client/src/components/location/__tests__/SearchRefinementBar.test.tsx`, `client/src/components/location/__tests__/SearchRefinementBar.property.test.tsx`, `client/src/hooks/useSimilarLocations.ts`, `client/src/components/LocationSelectionModal.tsx`, `client/src/components/PropertyShowcase.tsx`, `client/src/components/location/SEOTextBlock.tsx`, `client/src/lib/seoGenerator.ts`, `client/src/lib/__tests__/seoGenerator.test.ts`, and `server/services/locationSeoContent.ts`.
+Additional exact files for retiring unused numeric and slug-based geography artifacts: `server/_core/cache/redis.ts`, `server/services/publishNormalizer.ts`, `client/src/lib/analytics.ts`, deletion of `server/lib/performanceOptimization.ts`, `server/data/marketIntelligence.ts`, `client/src/components/location/HeroLocation.tsx`, `client/src/components/location/CityList.tsx`, `client/src/components/location/SuburbList.tsx`, `client/src/components/location/NearbySuburbs.tsx`, `client/src/components/location/LocationGrid.tsx`, `client/src/components/location/LOCATION_BREAKDOWN_README.md`, `client/src/components/location/__tests__/LocationGrid.test.tsx`, `client/src/pages/LocationBreakdownDemo.tsx`, `client/src/pages/NeighbourhoodDetail.tsx`, and `client/src/hooks/useNeighbourhoodDetail.ts`.
+Additional exact files for retiring residual numeric neighborhood state and mock geography: `server/services/cacheIntegrationService.ts`, `server/lib/redis.ts`, `server/services/recommendationEngineService.ts`, `server/services/exploreVideoService.ts`, `client/src/data/explorePlaceholderData.ts`, and `server/__tests__/explore-legacy-capability-boundary.test.ts`. The old neighborhood follow procedure, numeric detail cache, coordinate-based recommendation bonus, video coordinate writes, and mock neighborhood lists are removed; the active discovery feed scopes Places by exact canonical Place ID.
+Additional exact files for removing the obsolete listing geography state and numeric contract: `shared/location-contract.ts`, `shared/listing-types.ts`, `client/src/components/listing-wizard/steps/LocationStep.tsx`, `client/src/components/listing-wizard/ListingWizard.tsx`, `client/src/components/listing-wizard/steps/LocationStep.canonical.test.tsx`, `client/src/components/listing-wizard/ListingWizard.persistence.test.tsx`, `client/src/hooks/useListingWizard.ts`, `client/src/hooks/__tests__/useListingWizard.navigation.test.ts`, `shared/types.ts`, `client/src/App.tsx`, `client/src/lib/geographySearchHandoff.ts`, `client/src/lib/heroJourneySearch.ts`, `client/src/lib/__tests__/geographySearchHandoff.test.ts`, `client/src/lib/__tests__/heroJourneySearch.test.ts`, `server/__tests__/contract.location-contract.test.ts`, `server/__tests__/contract.canonical-listing-place.test.ts`, `server/__tests__/contract.listing-lifecycle-db.test.ts`, `server/__tests__/contract.property-search-detail-lead-ownership.test.ts`, `server/__tests__/integration.agency-listing-attribution.test.ts`, `server/__tests__/integration.agency-listing-preparation.test.ts`, `server/__tests__/integration.agency-listing-publication-lifecycle.test.ts`, `server/__tests__/integration.agent-launch-journey.test.ts`, `server/__tests__/integration.agency-listing-performance-mvp.test.ts`, `e2e/buy/buy-journey.fixture.spec.ts`, `server/__tests__/smoke.superadmin-publishing.test.ts`, deletion of `server/scripts/verify-development-validation.ts`, `client/src/lib/workflows/listing/listingDraftPayload.ts`, `client/src/lib/workflows/listing/__tests__/listingDraftPayload.test.ts`, `client/src/components/location/SimilarLocations.tsx`, `client/src/components/location/FinalCTA.tsx`, and `server/__tests__/contract.properties-search.test.ts`. The wizard carries only the selected canonical Place identity for geography; display labels and private address evidence remain presentation or authoring data. Homepage search uses canonical Place identity without label or slug fallback; a selected Place that is invalid is rejected instead of becoming a broader search. The old verifier's `locationId` write path, obsolete numeric schema and mapping contract, duplicate city/suburb/province wizard state, unreferenced draft adapter that serialized free-text geography, and orphan components that manufactured URLs or scope context from display names are removed. Tests use canonical Place assignments and no longer select or write retired numeric geography columns; legacy search request keys are tested as rejected inputs.
+
+Additional exact files for aligning the active location controls with the canonical request contract: `client/src/components/EnhancedHero.tsx`, `client/src/components/ListingNavbar.tsx`, `client/src/components/LocationAutosuggest.tsx`, `client/src/components/__tests__/EnhancedHero.journey-selection.test.tsx`, deletion of `client/src/components/__tests__/ListingNavbar.multiLocation.test.ts`, `client/src/components/__tests__/ListingNavbar.canonicalSelection.test.ts`, `client/src/components/__tests__/ListingNavbar.mobile.test.tsx`, deletion of `client/src/components/__tests__/LocationAutosuggest.fallback.test.tsx`, `client/src/components/__tests__/LocationAutosuggest.canonical.test.tsx`, and `client/src/pages/CommercialOffice.test.tsx`. Transactional Buy, Rent, Developments, Commercial and the ListingNavbar select one canonical Place; choosing another Place explicitly replaces the current selection. Land and Shared Living retain sibling OR selection through canonical Place IDs. Commercial rejects retired text and numeric geography inputs, resolves its selected Place by `canonicalPlaceId`, and never falls back to the displayed label.
+
+Unreferenced alternate location entry components retired from the same canonical-only cutover: `client/src/components/map/LocationPicker.tsx` and `client/src/components/maps/GoogleLocationAutocomplete.tsx`. Neither component had application or test imports; removing them leaves map geocoding and Google Places autocomplete outside the Place selection path.
+Additional exact files for removing Explore's free-text geography path: `client/src/store/exploreFiltersStore.ts`, `client/src/store/__tests__/exploreFiltersStore.test.ts`, `client/src/hooks/usePropertyFilters.ts`, `client/src/hooks/__tests__/usePropertyFilters.canonical.test.ts`, `client/src/components/explore-discovery/FilterPanel.tsx`, `client/src/components/explore-discovery/MobileFilterBottomSheet.tsx`, `client/src/components/explore-discovery/__tests__/FilterPanel.canonical.test.tsx`, and `client/src/components/explore-discovery/__tests__/MobileFilterBottomSheet.test.tsx`; the unreferenced `useFilterUrlSync` hook, tests, examples, and filter examples are deleted. Explore filter state has no geography field, old saved text is discarded on rehydration, and URL query text cannot create an applied location scope.
+The unreachable marketing campaign wizard no longer accepts or displays raw city/province targeting: `client/src/components/marketing/wizard/Step3Targeting.tsx`, `client/src/components/marketing/wizard/Step3Targeting.canonical.test.tsx`, and `client/src/components/marketing/wizard/Step7Review.tsx`. Campaign procedures remain precondition-blocked until a canonical campaign authority is admitted.
+Referral catalogue geography consumers: `client/src/pages/distribution/PartnerDevelopmentsPage.tsx`, `client/src/pages/distribution/PartnerDevelopmentsPage.test.tsx`, `shared/distributionOpportunityMatching.ts`, and `shared/__tests__/distributionOpportunityMatching.test.ts`. The row contract includes nullable `canonicalPlaceId: string | null` from the reviewed development assignment; rows browse only with a valid canonical ID. A selected Place matches by exact ID, while the separate development-name query does not inspect city, province, parent/child relationships, or display labels. Null and malformed assignments fail closed.
+Tables and columns: canonical `canonical_place_id` relationships on listings, properties, developments, Explore content, Land parcels, Commercial assets, Shared Living Places, service-provider coverage, service leads, demand campaigns, and seller prospects. Nullable development city/province snapshots are display-only. Historical service leads and pre-cutover demand campaigns can have no canonical Place assignment and fail closed for area matching; no text or numeric backfill is permitted. Numeric geography columns and the `provinces`, `cities`, `suburbs`, and `locations` tables are retired. Unused location analytics, provider mapping, cache, and amenity tables keyed by the retired hierarchy are dropped. New provider coverage writes, service requests, demand campaigns, and seller prospect area assignments require one resolved canonical Place ID. Generic agency and listing text search cannot match city or province snapshots, and old agency province filters are rejected; old free-text service and demand geography is not backfilled or matched.
+Permitted read direction: consumers may scope, resolve, match, and assign only through the exact canonical Place ID or an explicitly governed Place-derived scope. Display names may be rendered but may not resolve, filter, assign, or widen geography. Public property and area feeds require an exact active, search-eligible Place assignment.
+Permitted write direction: new assignments require a validated canonical Place ID selected from the Place authority. Explore assignments are copied only from the linked canonical listing/development. No text or numeric backfill is permitted. Only the canonical migration runner may apply the ordered migrations on an authorized target; this exception does not authorize database application.
+Failure and observability behavior: missing or invalid Place assignments fail closed for development authoring, area feeds, and demand routing. Demand campaigns without an active searchable canonical Place are refused, and candidate properties must match that exact Place ID. No text-based resolution, parent widening, alternate schema query, or fallback is allowed. Migration planning must fail on checksum, parent, target, lock, or schema-congruency mismatch.
+Automated evidence: migration manifest validation and authority status, canonical model inventory, admitted Place package checks, exact canonical URL projection check, focused demand routing and seller prospect location coverage, and the focused consumer typecheck recorded with the implementation.
+Expiry or objective removal condition: retain this record as historical evidence after the approved migration lineage reaches schema-congruent status and the retired hierarchy tables/columns are absent from the active database model.
+Removal workstream: single canonical Place authority — application-wide geography cutover.

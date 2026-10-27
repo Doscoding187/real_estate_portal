@@ -186,12 +186,11 @@ const updateAgencySchema = createAgencySchema.partial().extend({
 
 const agencyFiltersSchema = z.object({
   search: z.string().optional(),
-  province: z.string().optional(),
   subscriptionPlan: z.enum(['free', 'basic', 'premium', 'enterprise']).optional(),
   isVerified: z.boolean().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
-});
+}).strict();
 
 const leadStatusSchema = z.enum([
   'new',
@@ -2305,8 +2304,6 @@ function applyAgencyListingFilterConditions(
       or(
         like(listings.title, pattern),
         like(listings.address, pattern),
-        like(listings.city, pattern),
-        like(listings.province, pattern),
         like(listings.slug, pattern),
       )!,
     );
@@ -4618,13 +4615,8 @@ export const agencyRouter = router({
         or(
           like(agencies.name, `%${search}%`),
           like(agencies.email, `%${search}%`),
-          like(agencies.city, `%${search}%`),
         )!,
       );
-    }
-
-    if (input.province) {
-      conditions.push(eq(agencies.province, input.province));
     }
 
     if (input.subscriptionPlan) {

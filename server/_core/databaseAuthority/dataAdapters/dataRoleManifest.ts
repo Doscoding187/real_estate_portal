@@ -5,9 +5,11 @@ import {
   PLACE_SCOPE_CORRECTION_DIGEST,
   PLACE_SCOPE_CORRECTION_VERSION,
 } from './placeScopeCorrection';
-import { CANONICAL_PLACES_DIGEST, CANONICAL_PLACES_VERSION } from './canonicalPlaces';
+import {
+  CANONICAL_PLACES_NATIONAL_DIGEST,
+  CANONICAL_PLACES_NATIONAL_VERSION,
+} from './canonicalPlaces';
 import { CANONICAL_FOUNDATION_DIGEST, CANONICAL_FOUNDATION_VERSION } from './canonicalFoundation';
-import { CANONICAL_GEOGRAPHY_DIGEST, CANONICAL_GEOGRAPHY_VERSION } from './canonicalGeography';
 import {
   CANONICAL_PLATFORM_SETTINGS_DIGEST,
   CANONICAL_PLATFORM_SETTINGS_VERSION,
@@ -70,36 +72,20 @@ export const DATA_ROLE_MANIFEST: Readonly<{
   manifestVersion: DATA_ROLE_MANIFEST_VERSION,
   roles: Object.freeze([
     {
-      key: 'reference.geography',
-      role: 'reference',
-      adapter: 'canonical-geography',
-      adapterPath: 'server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts',
-      version: CANONICAL_GEOGRAPHY_VERSION,
-      digest: CANONICAL_GEOGRAPHY_DIGEST,
-      prepareCommand: 'db:reference:prepare',
-      verifyCommand: 'db:reference:verify',
-      prepareOperation: 'reference-seed',
-      verifyOperation: 'verification',
-      targetClasses: DISPOSABLE_TARGETS,
-      transaction: 'bounded',
-      schemaMutation: false,
-      requiredFor: ['location-discovery', 'search-to-lead'],
-    },
-    {
       key: 'reference.places',
       role: 'reference',
       adapter: 'canonical-places',
       adapterPath: 'server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts',
-      version: CANONICAL_PLACES_VERSION,
-      digest: CANONICAL_PLACES_DIGEST,
-      prepareCommand: 'db:places:prepare',
-      verifyCommand: 'db:places:verify',
+      version: CANONICAL_PLACES_NATIONAL_VERSION,
+      digest: CANONICAL_PLACES_NATIONAL_DIGEST,
+      prepareCommand: 'db:places:prepare-national',
+      verifyCommand: 'db:places:verify-national',
       prepareOperation: 'reference-seed',
       verifyOperation: 'verification',
       targetClasses: DISPOSABLE_TARGETS,
       transaction: 'bounded',
       schemaMutation: false,
-      requiredFor: ['place-authority', 'location-discovery'],
+      requiredFor: ['place-authority', 'location-discovery', 'search-to-lead'],
     },
     {
       key: 'reference.places-release-preview',

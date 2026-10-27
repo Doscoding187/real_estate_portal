@@ -25,8 +25,6 @@
     "server/scripts/**",
     "server/db_*.ts",
     "server/**/debug-*.ts",
-    "client/**/stories/**",
-    "server/services/locationPagesService.improved.ts",
-    "**/server/services/locationPagesService.improved.ts"
+    "client/**/stories/**"
   ]
 }

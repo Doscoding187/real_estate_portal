@@ -35,7 +35,6 @@ export interface LandFilters {
 export interface CommonFilters {
   priceMin?: number;
   priceMax?: number;
-  location?: string;
 }
 
 export interface PropertyFilters extends CommonFilters {
@@ -57,7 +56,9 @@ export function usePropertyFilters() {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored) as PropertyFilters & { location?: string };
+        const { location: _retiredTextLocation, ...filters } = parsed;
+        return { ...defaultFilters, ...filters };
       }
     } catch (error) {
       console.error('Failed to load filters from storage:', error);
@@ -149,7 +150,6 @@ export function usePropertyFilters() {
     // Count common filters
     if (filters.priceMin !== undefined) count++;
     if (filters.priceMax !== undefined) count++;
-    if (filters.location) count++;
     if (filters.propertyType !== 'all') count++;
 
     // Count residential filters

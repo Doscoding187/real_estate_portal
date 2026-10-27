@@ -1131,7 +1131,7 @@
 
 .public-navbar__city-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(17rem, 1.35fr);
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.8fr);
   min-width: 0;
 }
 

@@ -12,7 +12,7 @@ describe('discoveryCache', () => {
     const johannesburgKey = buildDiscoveryFeedCacheKey(
       {
         ...baseQuery,
-        location: { type: 'city' as const, id: 1 },
+        canonicalPlaceId: 'pl-place-01-000000000000000000000001',
         category: 'property' as const,
       },
       { userId: 42 },
@@ -21,7 +21,7 @@ describe('discoveryCache', () => {
     const capeTownKey = buildDiscoveryFeedCacheKey(
       {
         ...baseQuery,
-        location: { type: 'city' as const, id: 2 },
+        canonicalPlaceId: 'pl-place-01-000000000000000000000002',
         category: 'property' as const,
       },
       { userId: 42 },

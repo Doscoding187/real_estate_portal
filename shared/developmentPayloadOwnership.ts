@@ -33,7 +33,7 @@ export const CANONICAL_FLATTENED_PAYLOAD_FIELD_OWNERSHIP = {
     'completionDate',
   ],
   classification: ['propertyTypes'],
-  location: ['address', 'city', 'province', 'suburb', 'postalCode', 'latitude', 'longitude'],
+  location: ['canonicalPlaceId', 'address', 'postalCode', 'latitude', 'longitude'],
   amenitiesFeatures: ['amenities', 'features'],
   marketingSummary: ['description', 'tagline', 'highlights'],
   developmentMedia: ['images', 'videos', 'floorPlans', 'brochures'],

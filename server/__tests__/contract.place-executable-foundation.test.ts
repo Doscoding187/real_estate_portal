@@ -648,17 +648,9 @@ describe('Slice 3: mixed authority is rejected, never merged', () => {
 });
 
 describe('Slice 3: a provider observation cannot create a canonical locality', () => {
-  it('no longer auto-inserts a provisional provider suburb', async () => {
-    const { readFileSync } = await import('node:fs');
-    const source = readFileSync('server/services/listingLocationResolver.ts', 'utf8');
-    // The governed failure is structural: there is no code path that inserts a
-    // canonical locality row from a provider label.
-    expect(source).not.toMatch(/insert\(suburbs\)/);
-    expect(source).not.toMatch(/origin:\s*'provider'/);
-    expect(source).toMatch(/recordUnresolvedLocalityCandidate/);
-    // The governed outcome is an explicit unresolved refusal, not a fallback.
-    expect(source).toMatch(/requires admission before a listing can use it/);
-    expect(source).toMatch(/'unresolved'/);
+  it('retires the legacy provider-to-locality resolver', async () => {
+    const { existsSync } = await import('node:fs');
+    expect(existsSync('server/services/listingLocationResolver.ts')).toBe(false);
   });
 
   it('removes the unauthenticated provider location write procedure', async () => {

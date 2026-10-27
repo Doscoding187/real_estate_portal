@@ -14,7 +14,6 @@ describe('Database Authority data-role manifest', () => {
     expect(() => assertDataRoleManifest()).not.toThrow();
     expect(DATA_ROLE_MANIFEST.manifestVersion).toBe(DATA_ROLE_MANIFEST_VERSION);
     expect(DATA_ROLE_MANIFEST.roles.map(role => role.key)).toEqual([
-      'reference.geography',
       'reference.places',
       'reference.places-release-preview',
       'reference.places-scope-correction',
@@ -50,6 +49,14 @@ describe('Database Authority data-role manifest', () => {
     );
     expect(correction?.previewCommand).toBe('db:places:scope-correction:preview');
     expect(correction?.previewOperation).toBe('verification');
+
+    const places = DATA_ROLE_MANIFEST.roles.find(role => role.key === 'reference.places');
+    expect(places).toMatchObject({
+      adapter: 'canonical-places',
+      version: 'canonical-places-national-v1',
+      prepareCommand: 'db:places:prepare-national',
+      verifyCommand: 'db:places:verify-national',
+    });
   });
 
   it('rejects duplicate or malformed role declarations', () => {

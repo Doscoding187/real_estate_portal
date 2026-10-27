@@ -982,9 +982,9 @@ export async function applyPlaceScopeCorrection(input: {
       operationError && cleanupError
         ? `; lock cleanup failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`
         : '';
-    throw new Error(`${primary instanceof Error ? primary.message : String(primary)}${detail}`, {
-      cause: primary,
-    });
+    const error = new Error(`${primary instanceof Error ? primary.message : String(primary)}${detail}`);
+    (error as Error & { cause?: unknown }).cause = primary;
+    throw error;
   }
   if (!result) throw new Error('place-scope-correction refused: no transaction result');
   return {

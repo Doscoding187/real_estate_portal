@@ -11,6 +11,8 @@ import {
 
 /** Committed Gauteng admission identity; never create a substitute test locality. */
 export const CANONICAL_PLACE_FIXTURE_ID = 'pl-place-01-6a145c6d642ba208a2c12de7';
+export const CANONICAL_SANDTON_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+export const CANONICAL_JOHANNESBURG_PLACE_ID = 'pl-place-01-21f154cd5d0954c29ec7525f';
 
 function fixtureDatabase() {
   const authority = resolveDatabaseAuthority({ operation: 'test-fixture' });

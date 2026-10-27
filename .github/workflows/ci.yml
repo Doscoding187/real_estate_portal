@@ -170,8 +170,8 @@ jobs:
           S2_DB_TESTS: '1'
         run: pnpm test:authority -- server/__tests__/integration.developer-engine-s2-supersession.test.ts server/__tests__/integration.billing-billable-account.test.ts --reporter=basic
 
-  location-authority:
-    name: Location Authority
+  place-authority:
+    name: Canonical Place Authority
     runs-on: ubuntu-latest
 
     steps:
@@ -195,37 +195,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Record exact source recovery status
-        run: pnpm geography:coverage:source-status -- --json
+      - name: Rebuild and check admitted Place packages
+        run: pnpm place:admission:check
 
-      - name: Require missing exact sources to fail closed
-        run: |
-          if pnpm geography:coverage:source-status -- --strict; then
-            echo "Exact geography sources unexpectedly available in hermetic CI." >&2
-            exit 1
-          fi
+      - name: Check admitted Place boundary provenance
+        run: pnpm place:boundary-currency:check
 
-      - name: Require full regeneration to fail closed without exact sources
-        run: |
-          set +e
-          output="$(pnpm geography:coverage:check 2>&1)"
-          status=$?
-          set -e
-          printf '%s\n' "${output}"
-          test "${status}" -ne 0
-          case "${output}" in
-            *"Canonical layer files not found"*) ;;
-            *) exit 1 ;;
-          esac
+      - name: Probe canonical Place discovery and selection
+        run: pnpm place:admission:probe
 
-      - name: Verify aggregate location authority
-        run: pnpm location:authority:check
+      - name: Verify national Place package neutrality
+        run: pnpm place:admission:territory-neutrality
 
-      - name: Run checked-in geography artifact probes
-        run: pnpm geography:coverage:probes
-
-      - name: Run focused location authority contracts
-        run: pnpm location:authority:test
+      - name: Check canonical Place URL projection
+        run: pnpm place:urls:check
 
   lint-and-typecheck:
     name: Lint & TypeCheck
@@ -343,20 +326,13 @@ jobs:
           SKIP_DB_INIT: '1'
         run: pnpm test:authority -- --project server --minWorkers=1 --maxWorkers=1 --no-file-parallelism server/__tests__/integration.founder-google-identity.test.ts
 
-      - name: Prepare canonical disposable reference data
-        run: pnpm db:reference:prepare
-
-      - name: Verify canonical disposable reference data
-        run: pnpm db:reference:verify
-
-      # Gauteng's existing admitted package is the dependent test dataset.
+      # All admitted Place territories are the single geography reference data lane.
       # OSM-only assertions remain disposable-only; this is not a production release.
-      # Use the territory command: the national npm wrapper forces development.
       - name: Prepare admitted Place integration fixtures
-        run: pnpm db:places:prepare -- --territory=za-gp
+        run: pnpm db:places:prepare-national
 
       - name: Verify admitted Place integration fixtures
-        run: pnpm db:places:verify -- --territory=za-gp
+        run: pnpm db:places:verify-national
 
       - name: Require dependent admitted Place identities
         run: pnpm vitest run --project server --minWorkers=1 --maxWorkers=1 server/__tests__/contract.place-executable-foundation.test.ts -t 'requires the admitted Place fixture identities'
@@ -520,19 +496,13 @@ jobs:
           ISOLATED_CI_BOOTSTRAP_PHASE: full
         run: pnpm db:ci:identities:bootstrap
 
-      - name: Prepare canonical disposable reference data
-        run: pnpm db:reference:prepare
-
-      - name: Verify canonical disposable reference data
-        run: pnpm db:reference:verify
-
-      # Gauteng's existing admitted package is the dependent test dataset.
+      # All admitted Place territories are the single geography reference data lane.
       # OSM-only assertions remain disposable-only; this is not a production release.
       - name: Prepare admitted Place integration fixtures
-        run: pnpm db:places:prepare -- --territory=za-gp
+        run: pnpm db:places:prepare-national
 
       - name: Verify admitted Place integration fixtures
-        run: pnpm db:places:verify -- --territory=za-gp
+        run: pnpm db:places:verify-national
 
       - name: Prepare canonical disposable foundation data
         run: pnpm db:foundation:prepare

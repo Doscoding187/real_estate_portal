@@ -23,6 +23,7 @@ export type CanonicalDevelopmentCatalogue = {
     CanonicalDevelopmentRow,
     | 'id'
     | 'cataloguePublisherId'
+    | 'canonicalPlaceId'
     | 'developmentType'
     | 'transactionType'
     | 'isPublished'

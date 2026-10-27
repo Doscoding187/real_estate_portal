@@ -1,4 +1,7 @@
-import { canonicalPlaceFixtureLocation } from './helpers/canonicalPlaceFixture';
+import {
+  CANONICAL_PLACE_FIXTURE_ID,
+  canonicalPlaceFixtureLocation,
+} from './helpers/canonicalPlaceFixture';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
@@ -257,9 +260,7 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       phone: '+27115550123',
       email: `seller-${suffix}@example.com`,
       propertyAddress: '18 Mandate Avenue',
-      suburb: 'Parkhurst',
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       propertyType: 'house',
       source: 'door-to-door',
       canvassingMethod: 'door_knocking',
@@ -279,6 +280,7 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       assignedAgentId,
       stage: 'new',
       propertyAddress: '18 Mandate Avenue',
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       nextAction: 'Make first seller contact',
     });
 
@@ -486,7 +488,10 @@ describeWithTestDb('agency canvassing MVP integration', () => {
       sellerProspectId: createdProspect.sellerProspectId,
       action: 'sell',
       propertyType: 'house',
-      propertyLocation: { address: '18 Mandate Avenue', city: 'Johannesburg' },
+      propertyLocation: {
+        address: '18 Mandate Avenue',
+        canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
+      },
     });
     expect(prefill).not.toHaveProperty('ownerName');
     expect(prefill).not.toHaveProperty('email');

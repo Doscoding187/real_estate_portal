@@ -8,6 +8,7 @@ import {
 const validDevelopment = {
   id: 42,
   name: 'Harbour Heights',
+  canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
   suburb: 'Sea Point',

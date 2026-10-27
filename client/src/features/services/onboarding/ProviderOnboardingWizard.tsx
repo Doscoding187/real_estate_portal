@@ -6,12 +6,12 @@
  * completed onboarding.
  */
 
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef } from 'react';
 import { BadgeCheck, BriefcaseBusiness, MapPinned, Sparkles } from 'lucide-react';
 import { WizardProgressIndicator } from '@/components/services/WizardProgressIndicator';
-import { SA_PROVINCES, type SAProvince } from '@/features/services/catalog';
 import { useServiceProviderOnboardingStatus } from '@/hooks/useServiceProviderOnboardingStatus';
 import { trpc } from '@/lib/trpc';
+import { canonicalPlaceSelectionFromResolved } from '@/lib/canonicalPlaceSelection';
 import { isOnboardingStatePristine, useOnboardingReducer } from './useOnboardingReducer';
 import { BusinessBasicsStep } from './steps/BusinessBasicsStep';
 import { CompletionScreen } from './steps/CompletionScreen';
@@ -62,12 +62,8 @@ type ProviderProfileData = {
   }>;
   locations?: Array<{
     id?: number;
-    suburb?: string | null;
-    city?: string | null;
-    province?: string | null;
-    countryCode?: string | null;
-    postalCode?: string | null;
-    radiusKm?: number | null;
+    canonicalPlaceId?: string | null;
+    label?: string | null;
     isPrimary?: boolean | null;
   }>;
 } | null;
@@ -78,10 +74,6 @@ function makeRowId(prefix: 'svc' | 'loc') {
     : `${prefix}-${Math.random().toString(16).slice(2, 10)}`;
 }
 
-function toProvince(value?: string | null): SAProvince | '' {
-  return value && SA_PROVINCES.includes(value as SAProvince) ? (value as SAProvince) : '';
-}
-
 export function ProviderOnboardingWizard() {
   const { status, isLoading } = useServiceProviderOnboardingStatus();
   const [state, dispatch] = useOnboardingReducer();
@@ -89,6 +81,20 @@ export function ProviderOnboardingWizard() {
     enabled: Boolean(status?.hasProviderIdentity),
     refetchOnWindowFocus: false,
   });
+  const profilePlaceIds = useMemo(
+    () =>
+      (profileQuery.data as ProviderProfileData | undefined)?.locations
+        ?.map(location => location.canonicalPlaceId)
+        .filter((placeId): placeId is string => Boolean(placeId)) || [],
+    [profileQuery.data],
+  );
+  const resolvedProfilePlacesQuery = trpc.placeAuthority.resolveSearchPlaces.useQuery(
+    { placeIds: profilePlaceIds },
+    {
+      enabled: Boolean(profileQuery.data && profilePlaceIds.length > 0),
+      refetchOnWindowFocus: false,
+    },
+  );
   const hasHydratedProfileRef = useRef(false);
 
   const serverStep = status?.onboardingStep ?? 0;
@@ -104,6 +110,14 @@ export function ProviderOnboardingWizard() {
 
     const profile = profileQuery.data as ProviderProfileData;
     if (!profile) return;
+    if (profilePlaceIds.length > 0 && resolvedProfilePlacesQuery.isLoading) return;
+    const resolvedPlaces = new Map(
+      (resolvedProfilePlacesQuery.data?.results || []).flatMap(place =>
+        place
+          ? [[place.placeId, canonicalPlaceSelectionFromResolved(place)] as const]
+          : [],
+      ),
+    );
 
     dispatch({
       type: 'HYDRATE',
@@ -131,22 +145,23 @@ export function ProviderOnboardingWizard() {
         locations: (profile.locations || []).map((location, index) => ({
           id: makeRowId('loc'),
           recordId: location.id,
-          suburb: location.suburb || '',
-          city: location.city || '',
-          province: toProvince(location.province),
-          countryCode: location.countryCode || 'ZA',
-          postalCode: location.postalCode || '',
-          radiusKm:
-            location.radiusKm != null && Number.isFinite(Number(location.radiusKm))
-              ? String(location.radiusKm)
-              : '25',
+          place: location.canonicalPlaceId
+            ? resolvedPlaces.get(location.canonicalPlaceId) || null
+            : null,
           isPrimary: location.isPrimary === true || (location.isPrimary == null && index === 0),
         })),
       },
     });
 
     hasHydratedProfileRef.current = true;
-  }, [dispatch, profileQuery.data, state]);
+  }, [
+    dispatch,
+    profilePlaceIds.length,
+    profileQuery.data,
+    resolvedProfilePlacesQuery.data,
+    resolvedProfilePlacesQuery.isLoading,
+    state,
+  ]);
 
   function goToStep(step: number) {
     dispatch({ type: 'SET_STEP', step });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { HomeLayout } from '@/layouts/HomeLayout';
@@ -13,7 +13,6 @@ import { MetaControl } from '@/components/seo/MetaControl';
 import { HomeDesktopView } from '@/pages/home/HomeDesktopView';
 import { HomeMobileView } from '@/pages/home/HomeMobileView';
 import { useIsMobile } from '@/hooks/useMobile';
-import { trpc } from '@/lib/trpc';
 import { PageFrame } from '@/components/ui/page-frame';
 import {
   buildOrganizationStructuredData,
@@ -21,17 +20,11 @@ import {
   toAbsoluteUrl,
 } from '@/lib/seo/structuredData';
 import { VITE_APP_LOGO } from '@/const';
-import { PROVINCIAL_CONFIGS } from '@shared/provincialDiscovery';
 
 export default function Home() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const isMobile = useIsMobile();
-  const [selectedProvince, setSelectedProvince] = useState('Gauteng');
-  const [selectedCityGuideProvince, setSelectedCityGuideProvince] = useState('Gauteng');
-  const cityGuideProvince = Object.values(PROVINCIAL_CONFIGS).find(
-    province => province.name === selectedCityGuideProvince,
-  )!;
   const queryString = search;
   const rawIntent = new URLSearchParams(queryString).get('intent');
   const requestedJourney = normalizePublicHeroJourney(rawIntent);
@@ -62,11 +55,6 @@ export default function Home() {
     activeJourney && isHomepageHeroJourneyEnabled(activeJourney)
       ? (activeJourney as HeroTab)
       : 'buy';
-  const cityGuidesQuery = trpc.locationPages.getCityGuides.useQuery(
-    { limit: 24, provinceSlug: cityGuideProvince.slug },
-    { retry: false, staleTime: 10 * 60 * 1000, refetchOnWindowFocus: false },
-  );
-
   const handleTabChange = (tab: string) => {
     const normalizedTab = normalizeHeroUiTab(tab);
     if (!normalizedTab) return;
@@ -94,14 +82,6 @@ export default function Home() {
       description: homeDescription,
     }),
   ];
-  const cityGuides =
-    cityGuidesQuery.data?.map(city => ({
-      name: city.name,
-      province: city.provinceName,
-      slug: city.slug,
-      provinceSlug: city.provinceSlug,
-    })) ?? [];
-
   return (
     <HomeLayout>
       <MetaControl
@@ -118,42 +98,14 @@ export default function Home() {
               activeHeroTab={effectiveHeroTab}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
-              onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
-              cityGuides={cityGuides}
-              cityGuideProvince={{
-                name: cityGuideProvince.name,
-                slug: cityGuideProvince.slug,
-                onChange: setSelectedCityGuideProvince,
-              }}
-              cityGuidesState={{
-                isLoading: cityGuidesQuery.isLoading,
-                isError: cityGuidesQuery.isError,
-                isFetching: cityGuidesQuery.isFetching,
-                onRetry: () => void cityGuidesQuery.refetch(),
-              }}
-              selectedProvince={selectedProvince}
             />
           ) : (
             <HomeDesktopView
               activeHeroTab={effectiveHeroTab}
               heroTabValue={heroTabValue}
               onBrowseProperties={() => setLocation('/property-for-sale')}
-              onProvinceChange={setSelectedProvince}
               onTabChange={handleTabChange}
-              cityGuides={cityGuides}
-              cityGuideProvince={{
-                name: cityGuideProvince.name,
-                slug: cityGuideProvince.slug,
-                onChange: setSelectedCityGuideProvince,
-              }}
-              cityGuidesState={{
-                isLoading: cityGuidesQuery.isLoading,
-                isError: cityGuidesQuery.isError,
-                isFetching: cityGuidesQuery.isFetching,
-                onRetry: () => void cityGuidesQuery.refetch(),
-              }}
-              selectedProvince={selectedProvince}
             />
           )}
         </PageFrame>

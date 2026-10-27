@@ -12,8 +12,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { MapPin, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
-interface LocationOption {
-  id: number;
+export interface CanonicalLocationOption {
+  id: string;
   name: string;
   type: 'province' | 'city' | 'suburb';
   slug?: string;
@@ -35,7 +35,7 @@ interface LocationOption {
 interface LocationAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
-  onLocationSelect?: (location: LocationOption) => void;
+  onLocationSelect?: (location: CanonicalLocationOption) => void;
   placeholder?: string;
   type?: 'province' | 'city' | 'suburb' | 'address' | 'all';
   className?: string;
@@ -67,18 +67,38 @@ export function LocationAutocomplete({
   }, [searchQuery]);
 
   // Search locations
-  const { data: locations, isLoading } = trpc.location.searchLocations.useQuery(
-    {
-      query: debouncedQuery,
-      type,
-      limit: 10,
-    },
+  const { data: discovery, isLoading } = trpc.placeAuthority.discover.useQuery(
+    { query: debouncedQuery },
     {
       enabled: debouncedQuery.length > 2,
     },
   );
+  const locations = (discovery?.results || []).flatMap((candidate): CanonicalLocationOption[] => {
+    const canonicalPath = candidate.canonicalPath || undefined;
+    const placeLevel: CanonicalLocationOption['type'] | null = candidate.searchScope === 'province'
+      ? 'province'
+      : candidate.searchScope === 'metro_city'
+        ? 'city'
+        : candidate.searchScope === 'locality'
+          ? 'suburb'
+          : null;
+    if (!candidate.searchEligible || !placeLevel || (type !== 'all' && type !== placeLevel)) return [];
+    const segments = canonicalPath?.split('/').filter(Boolean) || [];
+    return [{
+      id: candidate.placeId,
+      name: candidate.preferredPublicLabel || candidate.matchedName,
+      type: placeLevel,
+        slug: segments[segments.length - 1] || candidate.placeId,
+      provinceSlug: segments[0],
+      citySlug: segments.length > 2 ? segments[1] : undefined,
+      canonicalLocationId: candidate.placeId,
+      parentCanonicalLocationId: candidate.context.cityPlaceId || candidate.context.provincePlaceId || undefined,
+      ...(canonicalPath ? { canonicalPath } : {}),
+      provinceName: candidate.context.administrativeContext || undefined,
+    }];
+  });
 
-  const handleSelect = (location: LocationOption) => {
+  const handleSelect = (location: CanonicalLocationOption) => {
     setSearchQuery(location.name);
     onValueChange(location.name);
     if (onLocationSelect) {

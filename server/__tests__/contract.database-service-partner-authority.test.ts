@@ -153,21 +153,12 @@ describe('canonical Service Partner database authority', () => {
       'serviceProviderServices',
     );
 
-    expect(locations).toContain(
-      "province: varchar('province'",
-    );
-
-    expect(locations).toContain(
-      "city: varchar('city'",
-    );
-
-    expect(locations).toContain(
-      "suburb: varchar('suburb'",
-    );
-
-    expect(locations).toContain(
-      "radiusKm: int('radius_km')",
-    );
+    expect(locations).toContain("canonicalPlaceId: varchar('canonical_place_id'");
+    expect(locations).toContain('() => place.placeId');
+    expect(locations).not.toContain("province: varchar('province'");
+    expect(locations).not.toContain("city: varchar('city'");
+    expect(locations).not.toContain("suburb: varchar('suburb'");
+    expect(locations).not.toContain("radiusKm: int('radius_km')");
   });
 
   it('anchors every Service Engine provider reference to integer partners.id', () => {
@@ -210,5 +201,10 @@ describe('canonical Service Partner database authority', () => {
         '.references(() => partners.id',
       );
     }
+
+    const leadBlock = tableBlock(servicesSchema, 'serviceLeads', 'serviceProviderReviews');
+    expect(leadBlock).toContain("canonicalPlaceId: varchar('canonical_place_id'");
+    expect(leadBlock).toContain('() => place.placeId');
+    expect(leadBlock).not.toContain("geoSuburb: varchar('geo_suburb'");
   });
 });

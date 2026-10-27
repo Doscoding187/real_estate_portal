@@ -9,6 +9,7 @@ import { exploreContent, properties } from '../../drizzle/schema';
 import { eq, and, gte, lte, sql, ne, inArray } from 'drizzle-orm';
 import { excludeLandFromGenericPublicProjection } from './landLaunchContainmentService';
 import { resolvePublicPropertyEligibilityIds } from './publicPropertyEligibilityService';
+import { isCanonicalPlaceId } from '../../shared/placeAuthority';
 
 interface SimilarProperty {
   contentId: number;
@@ -88,6 +89,7 @@ export class SimilarPropertiesService {
       latitude: referenceProperty[0].publicLatitude,
       longitude: referenceProperty[0].publicLongitude,
     };
+    if (!isCanonicalPlaceId(ref.canonicalPlaceId)) return [];
 
     // Calculate price range (±20%)
     const priceMin = ref.price ? ref.price * 0.8 : 0;
@@ -102,7 +104,7 @@ export class SimilarPropertiesService {
         price: properties.price,
         city: properties.city,
         province: properties.province,
-        suburbId: properties.suburbId,
+        canonicalPlaceId: properties.canonicalPlaceId,
         propertyType: properties.propertyType,
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
@@ -117,6 +119,7 @@ export class SimilarPropertiesService {
           ne(properties.propertyType, 'commercial'),
           excludeLandFromGenericPublicProjection(),
           eq(properties.status, 'available'),
+          eq(properties.canonicalPlaceId, ref.canonicalPlaceId),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),
         ),
@@ -247,65 +250,16 @@ export class SimilarPropertiesService {
 
   /**
    * Calculate location similarity score
-   * Same suburb = 100, same city = 70, same province = 40, different = 0
+   * Only an exact admitted Place identity receives geographic similarity.
    */
   private calculateLocationScore(reference: any, candidate: any): number {
-    // Same suburb (best match)
-    if (reference.suburbId && candidate.suburbId && reference.suburbId === candidate.suburbId) {
+    if (
+      isCanonicalPlaceId(reference.canonicalPlaceId) &&
+      candidate.canonicalPlaceId === reference.canonicalPlaceId
+    ) {
       return 100;
     }
-
-    // Same city (good match)
-    if (reference.city && candidate.city && reference.city === candidate.city) {
-      return 70;
-    }
-
-    // Same province (okay match)
-    if (reference.province && candidate.province && reference.province === candidate.province) {
-      return 40;
-    }
-
-    // If we have coordinates, calculate distance
-    if (reference.latitude && reference.longitude && candidate.latitude && candidate.longitude) {
-      const distance = this.calculateDistance(
-        reference.latitude,
-        reference.longitude,
-        candidate.latitude,
-        candidate.longitude,
-      );
-
-      // Within 5km = 90, 10km = 70, 20km = 50, 50km = 20, beyond = 0
-      if (distance <= 5) return 90;
-      if (distance <= 10) return 70;
-      if (distance <= 20) return 50;
-      if (distance <= 50) return 20;
-    }
-
     return 0;
-  }
-
-  /**
-   * Calculate distance between two coordinates in kilometers
-   * Using Haversine formula
-   */
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLon = this.toRad(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) *
-        Math.cos(this.toRad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  private toRad(degrees: number): number {
-    return (degrees * Math.PI) / 180;
   }
 
   /**
@@ -324,13 +278,11 @@ export class SimilarPropertiesService {
       }
     }
 
-    // Location match
-    if (reference.suburbId === candidate.suburbId && reference.suburbId) {
-      reasons.push('Same suburb');
-    } else if (reference.city === candidate.city) {
-      reasons.push('Same city');
-    } else if (reference.province === candidate.province) {
-      reasons.push('Same province');
+    if (
+      isCanonicalPlaceId(reference.canonicalPlaceId) &&
+      reference.canonicalPlaceId === candidate.canonicalPlaceId
+    ) {
+      reasons.push('Same Place');
     }
 
     // Property type match
@@ -376,7 +328,7 @@ export class SimilarPropertiesService {
         price: properties.price,
         city: properties.city,
         province: properties.province,
-        suburbId: properties.suburbId,
+        canonicalPlaceId: properties.canonicalPlaceId,
         propertyType: properties.propertyType,
         bedrooms: properties.bedrooms,
         bathrooms: properties.bathrooms,
@@ -391,6 +343,7 @@ export class SimilarPropertiesService {
           ne(properties.propertyType, 'commercial'),
           excludeLandFromGenericPublicProjection(),
           eq(properties.status, 'available'),
+          eq(properties.canonicalPlaceId, reference.canonicalPlaceId),
           gte(properties.price, priceMin),
           lte(properties.price, priceMax),
         ),

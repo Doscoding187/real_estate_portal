@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, lt, or, sql } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import type * as canonicalSchema from '../../drizzle/schema';
 
@@ -7,18 +7,16 @@ import {
   agencies,
   agents,
   billableAccounts,
-  cities,
   listings,
   plans,
-  provinces,
   properties,
-  suburbs,
   subscriptions,
 } from '../../drizzle/schema';
 import {
   loadCanonicalPlaceSearchProjection,
   canonicalPlaceSearchMembers,
 } from './canonicalPlaceSearchService';
+import { canonicalPlaceUrlByPlaceId } from './canonicalPlaceUrlService';
 import { slugify } from '../_core/utils/slug';
 import { isPaidMvpLaunchAccessSubscriptionEntitled } from './planAccessService';
 import { isCommercialActivationAvailable } from './commercialActivationPolicy';
@@ -33,7 +31,6 @@ import {
   parseCanonicalAgentCoverageLocationId,
   type AgentCoverageArea,
 } from '../../shared/agentCoverageArea';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
 
 /**
  * Anonymous public projections for Agent discovery and the Agent web presence.
@@ -278,30 +275,6 @@ export interface CanonicalAgentArea {
   url: string | null;
 }
 
-interface SuburbResolution {
-  id: number;
-  name: string;
-  slug: string;
-  cityName: string;
-  citySlug: string;
-  provinceName: string;
-  provinceSlug: string;
-}
-
-interface CityResolution {
-  id: number;
-  name: string;
-  slug: string;
-  provinceName: string;
-  provinceSlug: string;
-}
-
-interface ProvinceResolution {
-  id: number;
-  name: string;
-  slug: string;
-}
-
 function labelParts(...parts: Array<string | null | undefined>): string {
   return parts
     .map(part => String(part || '').trim())
@@ -322,10 +295,8 @@ function unresolvedCanonicalAgentArea(area: AgentCoverageArea): CanonicalAgentAr
 }
 
 /**
- * Resolves typed agent coverage claims by their stored canonical identity.
- * There is no text lookup: an old comma-separated value, a forged label, a
- * retired row, or an incomplete hierarchy fails closed and cannot turn into a
- * different public geography.
+ * Resolves agent coverage claims through the admitted Place Authority. Stored
+ * labels and historical numeric location handles never define the public area.
  */
 export async function resolveCanonicalAgentAreas(
   db: any,
@@ -334,120 +305,36 @@ export async function resolveCanonicalAgentAreas(
   const entries = Array.isArray(areasServed) ? areasServed : parseAgentCoverageAreas(areasServed);
   if (entries.length === 0) return [];
 
-  const selections = entries
-    .map(area => ({
-      area,
-      parsed: parseCanonicalAgentCoverageLocationId(area.canonicalLocationId),
-    }))
-    .filter(
-      (
-        selection,
-      ): selection is {
-        area: AgentCoverageArea;
-        parsed: NonNullable<ReturnType<typeof parseCanonicalAgentCoverageLocationId>>;
-      } => Boolean(selection.parsed),
-    );
-  if (selections.length === 0) return [];
+  const placeIds = entries.flatMap(area => {
+    const parsed = parseCanonicalAgentCoverageLocationId(area.canonicalLocationId);
+    return parsed ? [parsed.canonicalLocationId] : [];
+  });
+  if (!placeIds.length) return [];
 
-  const suburbIds = selections
-    .filter(selection => selection.parsed.level === 'suburb')
-    .map(selection => selection.parsed.id);
-  const cityIds = selections
-    .filter(selection => selection.parsed.level === 'city')
-    .map(selection => selection.parsed.id);
-  const provinceIds = selections
-    .filter(selection => selection.parsed.level === 'province')
-    .map(selection => selection.parsed.id);
+  const projection = await loadCanonicalPlaceSearchProjection(db, { placeIds });
+  return entries.map(area => {
+    const parsed = parseCanonicalAgentCoverageLocationId(area.canonicalLocationId);
+    const execution = parsed ? projection.executions.get(parsed.canonicalLocationId) : undefined;
+    const label = parsed ? projection.labels.get(parsed.canonicalLocationId) : undefined;
+    if (!parsed || !execution || !label) return unresolvedCanonicalAgentArea(area);
 
-  const suburbRows: SuburbResolution[] = suburbIds.length
-    ? await db
-        .select({
-          id: suburbs.id,
-          name: suburbs.name,
-          slug: suburbs.slug,
-          cityName: cities.name,
-          citySlug: cities.slug,
-          provinceName: provinces.name,
-          provinceSlug: provinces.slug,
-        })
-        .from(suburbs)
-        .innerJoin(cities, eq(suburbs.cityId, cities.id))
-        .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-        .where(
-          and(
-            inArray(suburbs.id, suburbIds),
-            ne(suburbs.status, 'retired'),
-            ne(cities.status, 'retired'),
-            ne(provinces.status, 'retired'),
-          ),
-        )
-    : [];
-  const cityRows: CityResolution[] = cityIds.length
-    ? await db
-        .select({
-          id: cities.id,
-          name: cities.name,
-          slug: cities.slug,
-          provinceName: provinces.name,
-          provinceSlug: provinces.slug,
-        })
-        .from(cities)
-        .innerJoin(provinces, eq(cities.provinceId, provinces.id))
-        .where(
-          and(
-            inArray(cities.id, cityIds),
-            ne(cities.status, 'retired'),
-            ne(provinces.status, 'retired'),
-          ),
-        )
-    : [];
-  const provinceRows: ProvinceResolution[] = provinceIds.length
-    ? await db
-        .select({
-          id: provinces.id,
-          name: provinces.name,
-          slug: provinces.slug,
-        })
-        .from(provinces)
-        .where(and(inArray(provinces.id, provinceIds), ne(provinces.status, 'retired')))
-    : [];
-
-  const suburbsById = new Map(suburbRows.map(row => [Number(row.id), row]));
-  const citiesById = new Map(cityRows.map(row => [Number(row.id), row]));
-  const provincesById = new Map(provinceRows.map(row => [Number(row.id), row]));
-
-  return selections.map(({ area, parsed }) => {
-    if (parsed.level === 'suburb') {
-      const row = suburbsById.get(parsed.id);
-      if (!row || !row.slug || !row.citySlug || !row.provinceSlug) {
-        return unresolvedCanonicalAgentArea(area);
-      }
-      return {
-        canonicalLocationId: parsed.canonicalLocationId,
-        name: labelParts(row.name, row.cityName, row.provinceName),
-        type: 'suburb' as const,
-        url: `/${row.provinceSlug}/${row.citySlug}/${row.slug}`,
-      };
-    }
-
-    if (parsed.level === 'city') {
-      const row = citiesById.get(parsed.id);
-      if (!row || !row.slug || !row.provinceSlug) return unresolvedCanonicalAgentArea(area);
-      return {
-        canonicalLocationId: parsed.canonicalLocationId,
-        name: labelParts(row.name, row.provinceName),
-        type: 'city' as const,
-        url: `/${row.provinceSlug}/${row.slug}`,
-      };
-    }
-
-    const row = provincesById.get(parsed.id);
-    if (!row || !row.slug) return unresolvedCanonicalAgentArea(area);
+    const type =
+      execution.scope === 'locality'
+        ? 'suburb'
+        : execution.scope === 'metro_city'
+          ? 'city'
+          : 'province';
+    const name =
+      execution.scope === 'locality'
+        ? labelParts(label.label, label.city, label.province)
+        : execution.scope === 'metro_city'
+          ? labelParts(label.label, label.province)
+          : labelParts(label.label);
     return {
       canonicalLocationId: parsed.canonicalLocationId,
-      name: labelParts(row.name),
-      type: 'province' as const,
-      url: `/${row.slug}`,
+      name,
+      type,
+      url: canonicalPlaceUrlByPlaceId(parsed.canonicalLocationId)?.path ?? null,
     };
   });
 }
@@ -563,24 +450,22 @@ async function loadEntitledAgencyIds(db: any, agencyIds: number[]): Promise<Set<
  * identity only; no label, partial-text, inferred-location, or historical
  * profile-affiliation fallback exists.
  */
-export async function findAgentsServingLocation(
+export async function findAgentsServingPlace(
   db: any,
-  locationType: 'province' | 'city' | 'suburb',
-  locationId: number,
+  canonicalPlaceId: string,
 ): Promise<AgentAreaRecommendationDto[]> {
-  const id = Number(locationId);
-  if (!Number.isSafeInteger(id) || id <= 0) return [];
-
-  const locationTable =
-    locationType === 'suburb' ? suburbs : locationType === 'city' ? cities : provinces;
-  const [location] = await db
-    .select({ id: locationTable.id })
-    .from(locationTable)
-    .where(and(eq(locationTable.id, id), ne(locationTable.status, 'retired')))
-    .limit(1);
-  if (!location) return [];
-
-  const canonicalLocationId = encodeCanonicalLocationId(locationType, id);
+  const parsedPlace = parseCanonicalAgentCoverageLocationId(canonicalPlaceId);
+  if (!parsedPlace) return [];
+  const canonicalLocationId = parsedPlace.canonicalLocationId;
+  const placeProjection = await loadCanonicalPlaceSearchProjection(db, {
+    placeIds: [canonicalLocationId],
+  });
+  if (
+    !placeProjection.executions.has(canonicalLocationId) ||
+    !placeProjection.labels.has(canonicalLocationId)
+  ) {
+    return [];
+  }
   const candidates: AgentAreaRecommendationRow[] = await db
     .select({
       id: agents.id,

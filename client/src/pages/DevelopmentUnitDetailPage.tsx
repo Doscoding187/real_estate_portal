@@ -280,7 +280,7 @@ export default function DevelopmentUnitDetailPage() {
   >('info');
   const [leadDialogLocation, setLeadDialogLocation] = useState('unit_detail_page');
 
-  const { data: dev, isLoading } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
+  const { data: dev, isLoading, error: developmentError } = trpc.developer.getPublicDevelopmentBySlug.useQuery(
     { slugOrId: slug || '' },
     { enabled: !!slug },
   );
@@ -546,9 +546,12 @@ export default function DevelopmentUnitDetailPage() {
         <div className="mx-auto max-w-3xl px-4 py-16">
           <Card className="border-slate-200">
             <CardContent className="p-10 text-center">
-              <h1 className="text-2xl font-bold text-slate-900">Unit not found</h1>
+              <h1 className="text-2xl font-bold text-slate-900">
+                {developmentError ? 'Development details unavailable' : 'Unit not found'}
+              </h1>
               <p className="mt-3 text-sm text-slate-600">
-                The unit you are looking for is unavailable or no longer part of this development.
+                {developmentError?.message ||
+                  'The unit you are looking for is unavailable or no longer part of this development.'}
               </p>
               <Button className="mt-6" onClick={() => setLocation(backToDevelopmentHref)}>
                 Back to development

@@ -10,8 +10,8 @@
  *    never of insertion order;
  *  - the derived search-scope projection, which reads the projection-owned
  *    `place.search_scope` and never coerces an unsupported type;
- *  - the mixed-authority rejection rules, so a caller cannot combine a canonical
- *    Place, legacy geography text, a legacy numeric handle, or a Search Area.
+ *  - the geography boundary, so every scoped caller supplies an admitted
+ *    canonical Place identity.
  *
  * Authority is never inferred from a name. Every function here takes or returns a
  * canonical identity.
@@ -20,6 +20,22 @@
 /** Public search scopes. A projection of Place identity, never identity itself. */
 export const PLACE_SEARCH_SCOPES = ['province', 'metro_city', 'locality'] as const;
 export type PlaceSearchScope = (typeof PLACE_SEARCH_SCOPES)[number];
+
+/** Factual types carried into Place admission without coercing their referents. */
+export const PLACE_FACTUAL_TYPES = [
+  'province',
+  'district_municipality',
+  'local_municipality',
+  'city',
+  'town',
+  'township',
+  'suburb',
+  'neighbourhood',
+  'locality',
+  'village',
+  'estate/residential_development_candidate',
+  'other',
+] as const;
 
 /** How a query matched a Place name. Governed by contract D8 ordering. */
 export const PLACE_MATCH_REASONS = [
@@ -35,26 +51,14 @@ export type PlaceMatchReason = (typeof PLACE_MATCH_REASONS)[number];
 export const PLACE_DISCOVERY_OUTCOMES = ['resolved', 'ambiguous', 'no_result'] as const;
 export type PlaceDiscoveryOutcome = (typeof PLACE_DISCOVERY_OUTCOMES)[number];
 
-/** A candidate is always either a canonical Place or a Search Area, never both. */
-export const PLACE_DISCOVERY_KINDS = ['canonical_place', 'search_area'] as const;
+/** Discovery candidates always resolve to an admitted canonical Place. */
+export const PLACE_DISCOVERY_KINDS = ['canonical_place'] as const;
 export type PlaceDiscoveryKind = (typeof PLACE_DISCOVERY_KINDS)[number];
 
 export const PLACE_ID_PREFIX = 'pl-place-01-';
 export const PLACE_ID_REGEX = /^pl-place-01-[a-f0-9]{24}$/;
-export const SEARCH_AREA_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 export function isCanonicalPlaceId(value: unknown): value is string {
   return typeof value === 'string' && PLACE_ID_REGEX.test(value);
-}
-
-export function isSearchAreaId(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    value.length > 0 &&
-    value.length <= 120 &&
-    SEARCH_AREA_ID_REGEX.test(value) &&
-    !isCanonicalPlaceId(value)
-  );
 }
 
 /**
@@ -206,107 +210,31 @@ export function resolveDiscoveryOutcome(
  * Mixed-authority rejection
  * ------------------------------------------------------------------ */
 
-/** The authority shapes a caller may claim. Exactly one may be present. */
+/** The only public geography authority. */
 export interface PlaceAuthorityClaim {
   placeId?: string | null;
-  searchAreaId?: string | null;
-  legacyLocationId?: string | number | null;
-  legacyProvince?: string | null;
-  legacyCity?: string | null;
-  legacySuburb?: string | null;
 }
 
-export type PlaceAuthorityRejection =
-  | 'no_geography_authority'
-  | 'competing_place_and_legacy_geography'
-  | 'competing_place_and_search_area'
-  | 'competing_place_and_legacy_handle'
-  | 'competing_search_area_and_legacy_geography'
-  | 'competing_legacy_handle_and_legacy_geography'
-  | 'multiple_legacy_geography_fields'
-  | 'malformed_place_id'
-  | 'malformed_search_area_id';
+export type PlaceAuthorityRejection = 'no_geography_authority' | 'malformed_place_id';
 
 export type PlaceAuthorityResolution =
   | { ok: true; authority: { kind: 'place'; placeId: string } }
-  | { ok: true; authority: { kind: 'search_area'; searchAreaId: string } }
-  | { ok: true; authority: { kind: 'legacy'; legacyLocationId: string } }
-  | {
-      ok: true;
-      authority: { kind: 'legacy_text'; province?: string; city?: string; suburb?: string };
-    }
   | { ok: false; reason: PlaceAuthorityRejection };
 
 const present = (value: unknown) =>
   value !== undefined && value !== null && String(value).trim() !== '';
 
 /**
- * Exactly one geography authority per request. A caller may not claim a
- * canonical Place together with legacy geography text, a legacy numeric handle,
- * or a Search Area, and may not combine Search Area with legacy geography.
- *
- * Transitional coexistence is governed, not silent: when `placeId` is present it
- * is the sole authority and the legacy fields are rejected rather than merged,
- * so a request can never be widened or guessed.
+ * A scoped request may use one canonical Place. Text, slug, provider IDs,
+ * numeric runtime handles, and other geography objects are not executable.
  */
 export function resolveSingleGeographyAuthority(
   claim: PlaceAuthorityClaim,
 ): PlaceAuthorityResolution {
   const hasPlace = present(claim.placeId);
-  const hasSearchArea = present(claim.searchAreaId);
-  const hasLegacyHandle = present(claim.legacyLocationId);
-  const legacyTextFields = [
-    present(claim.legacyProvince),
-    present(claim.legacyCity),
-    present(claim.legacySuburb),
-  ];
-  const hasLegacyText = legacyTextFields.some(Boolean);
-  const legacyTextCount = legacyTextFields.filter(Boolean).length;
-
-  if (hasPlace) {
-    if (!isCanonicalPlaceId(claim.placeId)) return { ok: false, reason: 'malformed_place_id' };
-    if (hasSearchArea) return { ok: false, reason: 'competing_place_and_search_area' };
-    if (hasLegacyHandle) return { ok: false, reason: 'competing_place_and_legacy_handle' };
-    if (hasLegacyText) return { ok: false, reason: 'competing_place_and_legacy_geography' };
-    return { ok: true, authority: { kind: 'place', placeId: claim.placeId as string } };
-  }
-
-  if (hasSearchArea) {
-    if (!isSearchAreaId(claim.searchAreaId))
-      return { ok: false, reason: 'malformed_search_area_id' };
-    if (hasLegacyHandle) return { ok: false, reason: 'competing_search_area_and_legacy_geography' };
-    if (hasLegacyText) return { ok: false, reason: 'competing_search_area_and_legacy_geography' };
-    return {
-      ok: true,
-      authority: { kind: 'search_area', searchAreaId: claim.searchAreaId as string },
-    };
-  }
-
-  if (hasLegacyHandle) {
-    if (hasLegacyText) return { ok: false, reason: 'competing_legacy_handle_and_legacy_geography' };
-    return {
-      ok: true,
-      authority: { kind: 'legacy', legacyLocationId: String(claim.legacyLocationId) },
-    };
-  }
-
-  if (hasLegacyText) {
-    // Transitional compatibility: a coherent single-level legacy text claim is
-    // still accepted, because pre-Place consumers have not converged. Competing
-    // or multi-level claims are not.
-    if (legacyTextCount > 1) return { ok: false, reason: 'multiple_legacy_geography_fields' };
-    return {
-      ok: true,
-      authority: {
-        kind: 'legacy_text',
-        province: claim.legacyProvince ?? undefined,
-        city: claim.legacyCity ?? undefined,
-        suburb: claim.legacySuburb ?? undefined,
-      },
-    };
-  }
-
-  return { ok: false, reason: 'no_geography_authority' };
+  if (!hasPlace) return { ok: false, reason: 'no_geography_authority' };
+  if (!isCanonicalPlaceId(claim.placeId)) return { ok: false, reason: 'malformed_place_id' };
+  return { ok: true, authority: { kind: 'place', placeId: claim.placeId as string } };
 }
 
 /* ------------------------------------------------------------------ *

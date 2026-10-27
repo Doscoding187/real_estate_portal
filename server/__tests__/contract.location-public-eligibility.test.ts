@@ -6,24 +6,15 @@ function readRepoFile(relativePath: string): string {
   return readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
 }
 
-describe('location discovery commercial-expiry boundary', () => {
-  it('rechecks map and heatmap candidates through canonical public eligibility', () => {
-    const source = readRepoFile('server/locationRouter.ts');
+describe('map inventory uses the canonical public search path', () => {
+  it('does not expose legacy map, heatmap, or duplicate location router paths', () => {
+    const locationRouter = readRepoFile('server/locationRouter.ts');
+    const rootRouter = readRepoFile('server/routers.ts');
 
-    expect(source).toContain('resolvePublicPropertyEligibilityIds');
-    expect(source.match(/resolvePublicPropertyEligibilityIds\(/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(source).toContain('const candidateProperties = await db');
-    expect(source).toContain('const candidateRows = await db');
-  });
-
-  it('does not paginate or aggregate enhanced-location rows before expiry filtering', () => {
-    const source = readRepoFile('server/enhancedLocationRouter.ts');
-
-    expect(source).toContain('const orderedCandidates = await orderedQuery');
-    expect(source).toContain('const eligibleCandidates = orderedCandidates.filter');
-    expect(source).toContain('const countsByCell = new Map<string, number>()');
-    expect(source).toContain('resolvePublicPropertyEligibilityIds(candidateRows.map');
-    expect(source).toContain('const similarCandidates = await db');
+    expect(locationRouter).not.toContain('getPropertiesOnMap:');
+    expect(locationRouter).not.toContain('getPropertyHeatmap:');
+    expect(locationRouter).not.toContain('calculateDistance:');
+    expect(rootRouter).not.toContain('enhancedLocation');
   });
 
   it('keeps generic public search and development discovery on canonical eligibility', () => {

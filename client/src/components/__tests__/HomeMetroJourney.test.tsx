@@ -1,22 +1,23 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LocationNode } from '@/types/location';
-import type { SearchDiscoveryResult } from '@shared/searchDiscovery';
+import type { CanonicalPlaceOption } from '@/components/location/CanonicalPlaceSelector';
 import { HomeSearchProvider } from '@/contexts/HomeSearchContext';
 import { EnhancedHero } from '@/components/EnhancedHero';
 import { HomeAreaPicker } from '@/components/HomeAreaPicker';
 
-const { navigate, lookup, current } = vi.hoisted(() => ({
+const { navigate, placeLookup, areaLookup, current } = vi.hoisted(() => ({
   navigate: vi.fn(),
-  lookup: vi.fn(),
+  placeLookup: vi.fn(),
+  areaLookup: vi.fn(),
   current: { location: null as LocationNode | null },
 }));
 vi.mock('wouter', () => ({ useLocation: () => ['/', navigate] }));
 vi.mock('@/lib/trpc', () => ({
   trpc: {
-    location: {
-      searchDiscoverySuggestions: { useQuery: (...args: unknown[]) => lookup(...args) },
-      placeSuggestions: { useQuery: (...args: unknown[]) => lookup(...args) },
+    placeAuthority: {
+      discover: { useQuery: (...args: unknown[]) => placeLookup(...args) },
+      discoverSearchAreas: { useQuery: (...args: unknown[]) => areaLookup(...args) },
     },
   },
 }));
@@ -36,24 +37,24 @@ const cases = [
   ['Gqeberha', '3', 'eastern-cape', 'city'],
   ['Centurion', '50', 'gauteng', 'town'],
 ] as const;
-function discovery(location: LocationNode): SearchDiscoveryResult {
+function discovery(location: LocationNode): CanonicalPlaceOption {
   return {
-    kind: 'canonical_location',
-    canonicalLocationId: location.id,
-    label: location.name,
-    factualLevel: 'city',
-    factualType: location.factualType,
-    searchScopeKind: 'metro_city',
-    provinceSlug: location.provinceSlug!,
-    citySlug: location.slug,
-    display: { typeLabel: location.factualType === 'town' ? 'Town' : 'City' },
-    canonicalPath: `/${location.provinceSlug}/${location.slug}`,
-    source: 'canonical_geography',
+    placeId: location.id,
+    preferredPublicLabel: location.name,
+    matchedName: location.name,
+    matchedNameRole: 'preferred_public',
+    isAliasMatch: false,
+    placeType: location.factualType || 'city',
+    searchEligible: true,
+    searchScope: 'metro_city',
+    context: { administrativeContext: 'Ekurhuleni' },
+    canonicalPath: location.canonicalPath || `/${location.provinceSlug}/${location.slug}`,
   };
 }
 beforeEach(() => {
   navigate.mockClear();
-  lookup.mockReset();
+  placeLookup.mockReturnValue({ data: undefined, isFetching: false, isError: false });
+  areaLookup.mockReturnValue({ data: undefined, isFetching: false, isError: false });
 });
 afterEach(cleanup);
 describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarification', journey => {
@@ -61,16 +62,16 @@ describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarific
     'clarifies %s before opening its full scope, even without finer suggestions',
     (name, id, province, factualType) => {
       const location: LocationNode = {
-        id: `city:${id}`,
-        canonicalLocationId: `city:${id}`,
+        id: `pl-place-01-${Number(id).toString(16).padStart(24, '0')}`,
+        canonicalLocationId: `pl-place-01-${Number(id).toString(16).padStart(24, '0')}`,
         type: 'city',
         factualType,
         name,
         slug: name.toLowerCase().replace(/\s+/g, '-'),
         provinceSlug: province,
+        canonicalPath: `/${province}/${name.toLowerCase().replace(/\s+/g, '-')}`,
       };
       current.location = location;
-      lookup.mockReturnValue({ data: [discovery(location)], isFetching: false, isError: false });
       render(
         <HomeSearchProvider journey={journey} onJourneyChange={vi.fn()}>
           <EnhancedHero activeTab={journey} />
@@ -80,31 +81,33 @@ describe.each(['buy', 'rent'] as const)('Country-wide homepage %s scope clarific
       fireEvent.click(screen.getByRole('button', { name: 'Search', exact: true }));
       expect(navigate).not.toHaveBeenCalled();
       const dialog = screen.getByRole('dialog');
-      expect(within(dialog).getByText(`Which part of ${name}?`)).toBeInTheDocument();
+      expect(within(dialog).getByText(`Choose an area in ${name}`)).toBeInTheDocument();
       expect(within(dialog).queryByRole('option')).toBeNull();
-      expect(within(dialog).getByRole('status')).toHaveTextContent(
-        'Search a suburb or more specific area',
-      );
-      fireEvent.click(within(dialog).getByRole('button', { name: `Browse all ${name}` }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Search this place' }));
       const url = new URL(navigate.mock.calls[0][0], 'http://localhost');
       expect(url.pathname).toBe(journey === 'buy' ? '/property-for-sale' : '/property-to-rent');
-      expect(url.searchParams.get('locationId')).toBe(location.id);
+      expect(url.searchParams.get('canonicalPlaceId')).toBe(location.id);
       expect(url.searchParams.has('searchAreaId')).toBe(false);
     },
   );
 });
-it('does not turn municipality-context suggestions into a municipality-wide query', () => {
+it('keeps municipality-context town selection on its exact Place identity', async () => {
   const alberton: LocationNode = {
-    id: 'city:12',
+    id: 'pl-place-01-00000000000000000000000c',
+    canonicalLocationId: 'pl-place-01-00000000000000000000000c',
     type: 'city',
     factualType: 'town',
     name: 'Alberton',
     slug: 'alberton',
     provinceSlug: 'gauteng',
+    canonicalPath: '/south-africa/gauteng/alberton--0000000c',
   };
   const record = discovery(alberton);
-  record.display.contextLabel = 'Ekurhuleni';
-  lookup.mockReturnValue({ data: [record], isFetching: false, isError: false });
+  placeLookup.mockReturnValue({
+    data: { query: 'alberton', outcome: 'resolved', results: [record] },
+    isFetching: false,
+    isError: false,
+  });
   const confirm = vi.fn();
   render(
     <HomeAreaPicker
@@ -117,14 +120,15 @@ it('does not turn municipality-context suggestions into a municipality-wide quer
       onExplore={vi.fn()}
     />,
   );
-  expect(screen.queryByRole('button', { name: 'Browse all Ekurhuleni' })).toBeNull();
-  fireEvent.click(screen.getByRole('option', { name: /Alberton.*Ekurhuleni/ }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'Search a city, town, suburb or locality' }), {
+    target: { value: 'Alberton' },
+  });
+  fireEvent.click(await screen.findByRole('option', { name: /Alberton.*Ekurhuleni/ }));
   expect(confirm).not.toHaveBeenCalled();
-  expect(screen.getByText('Which part of Alberton?')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Browse all Alberton' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Search this place' }));
   expect(confirm).toHaveBeenCalledWith(
     expect.objectContaining({
-      locations: [expect.objectContaining({ id: 'city:12', name: 'Alberton' })],
+      locations: [expect.objectContaining({ id: 'pl-place-01-00000000000000000000000c', name: 'Alberton' })],
       searchArea: null,
     }),
   );

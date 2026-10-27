@@ -6,13 +6,11 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import dotenv from 'dotenv';
 import { afterEach, describe, expect, it } from 'vitest';
-import { and, eq } from 'drizzle-orm';
-import { encodeCanonicalLocationId } from '../../shared/locationAuthority';
+import { eq } from 'drizzle-orm';
 
 import {
   agents,
   billableAccounts,
-  cities,
   leads,
   listingAnalytics,
   listingApprovalQueue,
@@ -20,17 +18,15 @@ import {
   listings,
   planEntitlements,
   plans,
-  provinces,
   properties,
   subscriptions,
-  suburbs,
   users,
 } from '../../drizzle/schema';
 import { approveListing, createListing, getDb, submitListingForReview } from '../db';
 import { appRouter } from '../routers';
 import { assertListingPublicationEntitled } from '../services/listingPublicationEntitlementService';
 import { capturePublicLead } from '../services/publicLeadCaptureService';
-import { findAgentsServingLocation } from '../services/agentPublicProfileService';
+import { findAgentsServingPlace } from '../services/agentPublicProfileService';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: false });
 
@@ -57,33 +53,6 @@ function insertId(result: any) {
 
 function toMySqlTimestamp(value: Date) {
   return value.toISOString().slice(0, 19).replace('T', ' ');
-}
-
-async function canonicalJourneyGeography(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
-  const [location] = await db
-    .select({
-      provinceId: provinces.id,
-      cityId: cities.id,
-      suburbId: suburbs.id,
-    })
-    .from(provinces)
-    .innerJoin(cities, eq(cities.provinceId, provinces.id))
-    .innerJoin(suburbs, eq(suburbs.cityId, cities.id))
-    .where(
-      and(
-        eq(provinces.slug, 'gauteng'),
-        eq(cities.slug, 'johannesburg'),
-        eq(suburbs.slug, 'sandton'),
-      ),
-    )
-    .limit(1);
-
-  if (!location) {
-    throw new Error(
-      'Canonical Gauteng/Johannesburg/Sandton geography is required by this fixture.',
-    );
-  }
-  return location;
 }
 
 afterEach(async () => {
@@ -128,8 +97,6 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     const suffix = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-    const location = await canonicalJourneyGeography(db);
-
     const [userResult] = await db.insert(users).values({
       email: `solo-agent-${suffix}@example.com`,
       name: 'Amina Journey',
@@ -163,7 +130,7 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       approvedAt: new Date(),
       areasServed: JSON.stringify([
         {
-          canonicalLocationId: encodeCanonicalLocationId('suburb', Number(location.suburbId)),
+          canonicalLocationId: CANONICAL_PLACE_FIXTURE_ID,
           label: 'Sandton, Johannesburg, Gauteng',
         },
       ]),
@@ -245,10 +212,6 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
         agentId: listings.agentId,
         agencyId: listings.agencyId,
         canonicalPlaceId: listings.canonicalPlaceId,
-        locationId: listings.locationId,
-        provinceId: listings.provinceId,
-        cityId: listings.cityId,
-        suburbId: listings.suburbId,
       })
       .from(listings)
       .where(eq(listings.id, created.listingId))
@@ -257,10 +220,6 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       agentId: created.agentId,
       agencyId: null,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
     });
 
     await expect(
@@ -279,10 +238,6 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
         id: properties.id,
         agentId: properties.agentId,
         canonicalPlaceId: properties.canonicalPlaceId,
-        locationId: properties.locationId,
-        provinceId: properties.provinceId,
-        cityId: properties.cityId,
-        suburbId: properties.suburbId,
       })
       .from(properties)
       .where(eq(properties.sourceListingId, created.listingId))
@@ -292,13 +247,9 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
     expect(projection).toMatchObject({
       agentId: created.agentId,
       canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
-      locationId: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
     });
 
-    const serving = await findAgentsServingLocation(db as never, 'suburb', location.suburbId);
+    const serving = await findAgentsServingPlace(db as never, CANONICAL_PLACE_FIXTURE_ID);
     expect(serving.map(entry => entry.id)).toContain(created.agentId);
 
     const lead = await capturePublicLead({
@@ -354,7 +305,7 @@ describeWithDb('independent agent launch journey (publish → receive)', () => {
       .where(eq(subscriptions.id, created.subscriptionId));
 
     expect(
-      (await findAgentsServingLocation(db as never, 'suburb', location.suburbId)).map(
+      (await findAgentsServingPlace(db as never, CANONICAL_PLACE_FIXTURE_ID)).map(
         entry => entry.id,
       ),
     ).not.toContain(created.agentId);

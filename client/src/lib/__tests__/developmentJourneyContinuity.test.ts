@@ -7,7 +7,7 @@ import {
 
 describe('development journey continuity', () => {
   const searchPath =
-    '/new-developments?locationId=za-gp-jhb&transaction=for_rent&bedrooms=2&sort=price_asc&page=3';
+    '/new-developments?canonicalPlaceId=pl-place-01-000000000000000000000001&transaction=for_rent&bedrooms=2&sort=price_asc&page=3';
 
   it('preserves the canonical search URL on a development route', () => {
     const detailPath = appendDevelopmentSearchReturn(
@@ -38,6 +38,11 @@ describe('development journey continuity', () => {
     ).toBeNull();
     expect(getDevelopmentSearchReturn('returnTo=%2Fnew-developments%3FreturnTo%3Dfoo')).toBeNull();
     expect(getDevelopmentSearchReturn('returnTo=not-a-path')).toBeNull();
+  });
+
+  it('rejects return URLs that carry retired geography text or runtime IDs', () => {
+    expect(normalizeDevelopmentSearchReturn('/new-developments?city=johannesburg')).toBeNull();
+    expect(normalizeDevelopmentSearchReturn('/new-developments?locationId=city%3A12')).toBeNull();
   });
 
   it('does not invent a return path for direct detail entry', () => {

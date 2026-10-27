@@ -21,6 +21,7 @@ import {
   users,
 } from '../../drizzle/schema';
 import { captureDemandLeadFromCampaign } from '../services/demandEngineService';
+import { CANONICAL_PLACE_FIXTURE_ID } from './helpers/canonicalPlaceFixture';
 
 const describeDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -82,8 +83,6 @@ describeDatabase('demand routing transaction rollback', () => {
     const db = await getDb();
     if (!db) throw new Error('Database not available');
     const suffix = randomUUID();
-    const demandCity = `Demand City ${suffix}`;
-    const demandProvince = `Demand Province ${suffix}`;
 
     const [userInsert] = await db.insert(users).values({
       email: `demand-rollback-${suffix}@invalid.example`,
@@ -169,8 +168,9 @@ describeDatabase('demand routing transaction rollback', () => {
       bathrooms: 2,
       area: 140,
       address: '1 Rollback Street',
-      city: demandCity,
-      province: demandProvince,
+      city: 'Johannesburg',
+      province: 'Gauteng',
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       status: 'available',
       featured: 0,
       views: 0,
@@ -189,8 +189,7 @@ describeDatabase('demand routing transaction rollback', () => {
       sourceChannel: 'manual',
       distributionMode: 'exclusive',
       sharedRecipientCount: 1,
-      city: demandCity,
-      province: demandProvince,
+      canonicalPlaceId: CANONICAL_PLACE_FIXTURE_ID,
       propertyType: 'house',
     } as any);
     created.campaignId = Number(campaignInsert.insertId);
@@ -212,7 +211,7 @@ describeDatabase('demand routing transaction rollback', () => {
           name: 'Rollback Buyer',
           email: `rollback-buyer-${suffix}@invalid.example`,
           message: 'This must not survive the failed routing transaction.',
-          criteria: { city: demandCity, province: demandProvince, propertyType: 'house' },
+          criteria: { propertyType: 'house' },
         }),
       ).rejects.toThrow('injected demand routing failure');
     } finally {
@@ -222,8 +221,11 @@ describeDatabase('demand routing transaction rollback', () => {
     // The active Agency term was sufficient to route before the injected
     // rollback. The original transactional assertions below prove none of
     // that temporary routing graph survived the failed transaction.
-    expect(routedBeforeRollback?.leadIds).toHaveLength(1);
-    expect(routedBeforeRollback?.assignedAgentIds).toEqual([created.agentId]);
+    const routedResult = routedBeforeRollback as Awaited<
+      ReturnType<typeof captureDemandLeadFromCampaign>
+    > | null;
+    expect(routedResult?.leadIds).toHaveLength(1);
+    expect(routedResult?.assignedAgentIds).toEqual([created.agentId]);
 
     const survivingDemandLeads = await db
       .select({ id: demandLeads.id })
@@ -267,7 +269,7 @@ describeDatabase('demand routing transaction rollback', () => {
       name: 'Expired-term Buyer',
       email: `expired-demand-${suffix}@invalid.example`,
       message: 'This must not become a new paid enquiry after expiry.',
-      criteria: { city: demandCity, province: demandProvince, propertyType: 'house' },
+      criteria: { propertyType: 'house' },
     });
     expect(expiredResult).toMatchObject({
       leadIds: [],

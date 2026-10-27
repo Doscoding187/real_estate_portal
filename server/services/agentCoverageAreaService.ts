@@ -3,7 +3,7 @@ import {
   parseCanonicalAgentCoverageLocationId,
   type AgentCoverageArea,
 } from '../../shared/agentCoverageArea';
-import { locationResolver, type ResolvedLocation } from './locationResolverService';
+import { loadCanonicalPlaceSearchProjection } from './canonicalPlaceSearchService';
 
 export class AgentCoverageAreaValidationError extends Error {
   constructor(message: string) {
@@ -12,33 +12,11 @@ export class AgentCoverageAreaValidationError extends Error {
   }
 }
 
-function coverageLabel(location: ResolvedLocation): string {
-  if (location.level === 'suburb' && location.suburb && location.city) {
-    return [location.suburb.name, location.city.name, location.province.name].join(', ');
-  }
-  if (location.level === 'city' && location.city) {
-    return [location.city.name, location.province.name].join(', ');
-  }
-  return location.province.name;
-}
-
-function resolvedLocationMatchesCanonicalId(
-  canonicalLocationId: string,
-  location: ResolvedLocation,
-): boolean {
-  const parsed = parseCanonicalAgentCoverageLocationId(canonicalLocationId);
-  if (!parsed || parsed.level !== location.level) return false;
-
-  if (location.level === 'province') return location.province.id === parsed.id;
-  if (location.level === 'city') return location.city?.id === parsed.id;
-  return location.suburb?.id === parsed.id;
-}
-
 /**
  * Canonicalize a submitted agent coverage selection before it reaches the
  * agents table. Labels in browser input are never trusted: the exact typed
- * identity is resolved through the governed location authority and the server
- * writes its current hierarchy label.
+ * Place identity is resolved through the admitted Place Authority and the
+ * server writes its current hierarchy label.
  */
 export async function resolveSubmittedAgentCoverageAreas(
   values: readonly string[],
@@ -49,37 +27,37 @@ export async function resolveSubmittedAgentCoverageAreas(
     );
   }
 
-  const canonicalLocationIds: string[] = [];
+  const canonicalPlaceIds: string[] = [];
   const seen = new Set<string>();
   for (const value of values) {
     const parsed = parseCanonicalAgentCoverageLocationId(value);
     if (!parsed) {
       throw new AgentCoverageAreaValidationError(
-        'Choose coverage areas from the current Property Listify location suggestions.',
+        'Choose coverage areas from the admitted canonical Place suggestions.',
       );
     }
     if (seen.has(parsed.canonicalLocationId)) continue;
     seen.add(parsed.canonicalLocationId);
-    canonicalLocationIds.push(parsed.canonicalLocationId);
+    canonicalPlaceIds.push(parsed.canonicalLocationId);
   }
 
-  return Promise.all(
-    canonicalLocationIds.map(async canonicalLocationId => {
-      const resolved = await locationResolver.resolvePublicLocation({ locationId: canonicalLocationId });
-      if (
-        resolved.status !== 'resolved' ||
-        !resolved.location ||
-        !resolvedLocationMatchesCanonicalId(canonicalLocationId, resolved.location)
-      ) {
-        throw new AgentCoverageAreaValidationError(
-          'Choose coverage areas from the current Property Listify location suggestions.',
-        );
-      }
-
-      return {
-        canonicalLocationId,
-        label: coverageLabel(resolved.location),
-      };
-    }),
-  );
+  const projection = await loadCanonicalPlaceSearchProjection(undefined, {
+    placeIds: canonicalPlaceIds,
+  });
+  return canonicalPlaceIds.map(canonicalLocationId => {
+    const execution = projection.executions.get(canonicalLocationId);
+    const label = projection.labels.get(canonicalLocationId);
+    if (!execution || !label) {
+      throw new AgentCoverageAreaValidationError(
+        'Choose active, searchable coverage areas from the admitted canonical Place suggestions.',
+      );
+    }
+    const hierarchy =
+      execution.scope === 'locality'
+        ? [label.label, label.city, label.province]
+        : execution.scope === 'metro_city'
+          ? [label.label, label.province]
+          : [label.label];
+    return { canonicalLocationId, label: hierarchy.filter(Boolean).join(', ') };
+  });
 }

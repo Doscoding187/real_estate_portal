@@ -92,10 +92,9 @@ export const exploreVideoUploadRouter = router({
           tags: z.array(z.string()).min(1, 'At least one tag is required'),
           lifestyleCategories: z.array(z.string()),
           price: z.number().optional(),
-          location: z.string().optional(),
           beds: z.number().optional(),
           baths: z.number().optional(),
-        }),
+        }).strict(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -161,10 +160,9 @@ export const exploreVideoUploadRouter = router({
         tags: z.array(z.string()),
         lifestyleCategories: z.array(z.string()),
         price: z.number().optional(),
-        location: z.string().optional(),
         beds: z.number().optional(),
         baths: z.number().optional(),
-      }),
+      }).strict(),
     )
     .query(({ input }) => {
       const validation = validateVideoMetadata(input);

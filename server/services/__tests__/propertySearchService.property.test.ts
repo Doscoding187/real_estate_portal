@@ -347,33 +347,6 @@ describe('PropertySearchService - Property-Based Tests', () => {
       );
     });
 
-    it('should correctly sort properties by suburb alphabetically', async () => {
-      if (skipTests) return;
-
-      await fc.assert(
-        fc.asyncProperty(
-          fc.record({
-            province: fc.constant(fixtureProvince),
-          }),
-          async filters => {
-            const results = await propertySearchService.searchProperties(
-              filters,
-              'suburb_asc',
-              1,
-              10,
-            );
-
-            // Verify sort order: suburbs should be in alphabetical order
-            for (let i = 1; i < results.properties.length; i++) {
-              const prevSuburb = results.properties[i - 1].suburb.toLowerCase();
-              const currSuburb = results.properties[i].suburb.toLowerCase();
-              expect(currSuburb.localeCompare(prevSuburb)).toBeGreaterThanOrEqual(0);
-            }
-          },
-        ),
-        { numRuns: 20 },
-      );
-    });
   });
 
   /**

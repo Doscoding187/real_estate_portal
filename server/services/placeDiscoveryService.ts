@@ -22,7 +22,6 @@ import {
   placeEvidence,
   placeName,
   placeRelationship,
-  searchAreaMember,
 } from '../../drizzle/schema/placeAuthority';
 import {
   PLACE_PREFERRED_ROLE,
@@ -106,8 +105,6 @@ async function recordCoverageSignal(kind: 'unresolved_query' | 'ambiguous_query'
 }
 
 export interface PlaceDiscoveryOptions {
-  /** Include Search Areas in the response, typed separately. Never merged. */
-  includeSearchAreas?: boolean;
   /** Record a governed coverage signal for no_result / ambiguous outcomes. */
   recordCoverage?: boolean;
 }
@@ -524,34 +521,6 @@ async function loadContainmentAncestry(
     cursor = parentId;
   }
   throw new PlaceContainmentError('unresolved_parent');
-}
-
-/**
- * Search Areas are returned only when explicitly requested, and only in their own
- * typed shape. A Search Area id is never a Place id, and a Search Area membership
- * never establishes factual containment.
- */
-export async function discoverSearchAreasForPlace(placeId: string) {
-  const db = await getDb();
-  const rows = await db
-    .select({
-      searchAreaId: searchAreaMember.searchAreaId,
-      state: searchAreaMember.memberState,
-      evidenceSource: searchAreaMember.evidenceSource,
-    })
-    .from(searchAreaMember)
-    .where(
-      and(eq(searchAreaMember.placeId, placeId), ne(searchAreaMember.memberState, 'excluded')),
-    );
-  return rows.map(row => ({
-    kind: 'search_area' as const,
-    searchAreaId: row.searchAreaId,
-    memberState: row.state,
-    evidenceSource: row.evidenceSource,
-    // Explicitly not a Place identity and not containment.
-    isCanonicalPlace: false,
-    establishesPlaceContainment: false,
-  }));
 }
 
 export const __testing = { classifyMatch, coverageSubject };

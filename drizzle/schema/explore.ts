@@ -12,13 +12,14 @@ import {
   primaryKey,
   uniqueIndex,
 } from 'drizzle-orm/mysql-core';
+import { place } from './placeAuthority';
 
 /**
  * Explore schema authority.
  *
  * explore_content is the primary launch feed authority.
- * content_topics and explore_shorts remain compatibility authorities.
- * Explore redesign and compatibility retirement are separate workstreams.
+ * Area matching uses one explicit canonical Place assignment. Display metadata
+ * and provider observations never assign or widen its geography.
  *
  * These definitions must match the active launch database contract.
  */
@@ -31,6 +32,10 @@ export const exploreContent = mysqlTable('explore_content', {
 
   contentType: varchar('content_type', { length: 50 }).notNull(),
   referenceId: int('reference_id').notNull(),
+  canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
+    () => place.placeId,
+    { onDelete: 'restrict', onUpdate: 'restrict' },
+  ),
 
   creatorId: int('creator_id'), // nullable
   creatorType: mysqlEnum('creator_type', ['user', 'agent', 'developer', 'agency'])
@@ -67,7 +72,7 @@ export const exploreContent = mysqlTable('explore_content', {
 
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
-});
+}, table => [index('idx_explore_content_canonical_place_id').on(table.canonicalPlaceId)]);
 
 /**
  * explore_engagements

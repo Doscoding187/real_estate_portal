@@ -17,20 +17,14 @@ import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 import { useAgentOnboardingStatus } from '@/hooks/useAgentOnboardingStatus';
 import { getAgentJourneyAction } from '@/lib/agentJourney';
-import { LocationAutocomplete } from '@/components/location/LocationAutocomplete';
+import {
+  LocationAutocomplete,
+  type CanonicalLocationOption,
+} from '@/components/location/LocationAutocomplete';
 import {
   parseCanonicalAgentCoverageLocationId,
   type AgentCoverageArea,
 } from '@shared/agentCoverageArea';
-
-type LocationOption = {
-  id: number;
-  name: string;
-  type: 'province' | 'city' | 'suburb';
-  provinceName?: string;
-  cityName?: string;
-  canonicalLocationId?: string;
-};
 
 const AGENT_BIO_MAX_LENGTH = 1000;
 
@@ -45,9 +39,9 @@ function joinCsv(values: string[] = []) {
   return values.join(', ');
 }
 
-function formatCoverageLabel(location: LocationOption) {
+function formatCoverageLabel(location: CanonicalLocationOption) {
   if (location.type === 'suburb') {
-    return [location.name, location.cityName, location.provinceName].filter(Boolean).join(', ');
+    return [location.name, location.provinceName].filter(Boolean).join(', ');
   }
 
   if (location.type === 'city') {
@@ -57,7 +51,7 @@ function formatCoverageLabel(location: LocationOption) {
   return location.name;
 }
 
-function coverageAreaFromLocation(location: LocationOption): AgentCoverageArea | null {
+function coverageAreaFromLocation(location: CanonicalLocationOption): AgentCoverageArea | null {
   const canonical = parseCanonicalAgentCoverageLocationId(location.canonicalLocationId);
   if (!canonical) return null;
 
@@ -472,7 +466,7 @@ export default function AgentSettings() {
                         value={areaSearch}
                         onValueChange={setAreaSearch}
                         onLocationSelect={location => {
-                          const nextArea = coverageAreaFromLocation(location as LocationOption);
+                          const nextArea = coverageAreaFromLocation(location);
                           if (!nextArea) {
                             toast.error(
                               'Choose a current location from the Property Listify suggestions.',

@@ -84,7 +84,8 @@ describe('usePersonalizedContent mock-mode boundary', () => {
 
     const { result } = renderHook(() => usePersonalizedContent());
 
-    await waitFor(() => expect(result.current.sections).toHaveLength(8));
+    await waitFor(() => expect(result.current.sections).toHaveLength(7));
+    expect(result.current.sections.map(section => section.id)).not.toContain('neighbourhoods');
 
     const forYou = result.current.sections.find(section => section.id === 'for-you');
     expect(forYou?.items).toHaveLength(1);
@@ -94,7 +95,7 @@ describe('usePersonalizedContent mock-mode boundary', () => {
   it('keeps empty live responses empty', async () => {
     const { result } = renderHook(() => usePersonalizedContent());
 
-    await waitFor(() => expect(result.current.sections).toHaveLength(8));
+    await waitFor(() => expect(result.current.sections).toHaveLength(7));
 
     expect(result.current.sections.every(section => section.items.length === 0)).toBe(true);
     expect(result.current.isEmpty).toBe(true);
@@ -105,7 +106,7 @@ describe('usePersonalizedContent mock-mode boundary', () => {
 
     const { result } = renderHook(() => usePersonalizedContent());
 
-    await waitFor(() => expect(result.current.sections).toHaveLength(8));
+    await waitFor(() => expect(result.current.sections).toHaveLength(7));
 
     const forYou = result.current.sections.find(section => section.id === 'for-you');
     expect(forYou?.items[0]?.id).toBe(mockItem.id);

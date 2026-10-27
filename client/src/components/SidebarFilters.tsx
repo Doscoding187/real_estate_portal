@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import type { SearchFilters } from '@/lib/urlUtils';
 import { BUY_FILTER_PRICE_CEILING } from '@shared/buySearchContract';
 import { RENT_FILTER_PRICE_CEILING, RENT_FILTER_PRICE_STEP } from '@shared/rentSearchContract';
-import type { SearchResults } from '@shared/types';
 
 interface SidebarFiltersProps {
   filters: SearchFilters;
@@ -16,13 +15,11 @@ interface SidebarFiltersProps {
     byBathrooms?: Record<string, number>;
     byLocation?: Array<{ name: string; slug: string; count: number }>;
   };
-  locationContext?: SearchResults['locationContext'];
   onFilterChange: (newFilters: SearchFilters) => void;
   onSaveSearch?: () => void;
   allowedPropertyTypes?: readonly string[];
   listingType?: 'sale' | 'rent';
   showAmenities?: boolean;
-  showLocationRefinement?: boolean;
   showHeader?: boolean;
 }
 export const FALLBACK_PROPERTY_TYPES = [

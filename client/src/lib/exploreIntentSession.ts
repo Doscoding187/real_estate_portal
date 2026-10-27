@@ -6,8 +6,7 @@ export type ExploreFocus =
   | 'renovate'
   | 'services'
   | 'finance'
-  | 'invest'
-  | 'neighbourhood';
+  | 'invest';
 
 export interface ExploreIntentSessionValue {
   focus: ExploreFocus;
@@ -25,7 +24,6 @@ const VALID_FOCUS: Record<ExploreFocus, true> = {
   services: true,
   finance: true,
   invest: true,
-  neighbourhood: true,
 };
 
 export function mapFocusToLegacyIntent(focus: ExploreFocus): ExploreIntent {
@@ -40,7 +38,6 @@ export function mapFocusToLegacyIntent(focus: ExploreFocus): ExploreIntent {
     case 'services':
       return 'improve';
     case 'finance':
-    case 'neighbourhood':
       return 'learn';
     default:
       return 'buy';

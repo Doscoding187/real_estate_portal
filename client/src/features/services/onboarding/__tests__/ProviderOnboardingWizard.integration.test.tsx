@@ -6,6 +6,17 @@ const mockProfile = vi.fn();
 const mockProfileLoading = vi.fn(() => false);
 const mockReplaceServices = vi.fn();
 const mockReplaceLocations = vi.fn();
+const PLACE_SANDTON = 'pl-place-01-000000000000000000000001';
+const PLACE_ARCADIA = 'pl-place-01-000000000000000000000002';
+const selectedCoveragePlace = {
+  canonicalPlaceId: PLACE_SANDTON,
+  label: 'Sandton, Johannesburg, Gauteng',
+  placeType: 'suburb',
+  scope: 'locality' as const,
+  administrativeContext: 'Johannesburg, Gauteng',
+  canonicalPath: null,
+  parentPlaceId: 'pl-place-01-111111111111111111111111',
+};
 
 vi.mock('@/lib/trpc', () => ({
   trpc: {
@@ -56,7 +67,49 @@ vi.mock('@/lib/trpc', () => ({
         }),
       },
     },
+    placeAuthority: {
+      resolveSearchPlaces: {
+        useQuery: ({ placeIds }: { placeIds: string[] }) => ({
+          data: {
+            results: placeIds.map(placeId => ({
+              placeId,
+              label: placeId === PLACE_SANDTON ? 'Sandton, Johannesburg, Gauteng' : 'Arcadia, Pretoria, Gauteng',
+              placeType: 'suburb',
+              searchScope: 'locality',
+              administrativeContext: 'Gauteng',
+              provincePlaceId: 'pl-place-01-111111111111111111111111',
+              cityPlaceId: 'pl-place-01-222222222222222222222222',
+              canonicalPath: null,
+            })),
+          },
+          isLoading: false,
+          error: null,
+        }),
+      },
+    },
   },
+}));
+
+vi.mock('@/components/location/CanonicalPlaceSelector', () => ({
+  CanonicalPlaceSelector: ({
+    value,
+    label,
+    onChange,
+  }: {
+    value: { label: string } | null;
+    label: string;
+    onChange: (place: typeof selectedCoveragePlace) => void;
+  }) => (
+    <div>
+      <span>{label}</span>
+      {value?.label && <span>{value.label}</span>}
+      {!value && (
+        <button type="button" onClick={() => onChange(selectedCoveragePlace)}>
+          Select Sandton coverage Place
+        </button>
+      )}
+    </div>
+  ),
 }));
 
 vi.mock('@/_core/hooks/useAuth', () => ({
@@ -161,9 +214,7 @@ describe('ProviderOnboardingWizard', () => {
     });
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 4 of 5')).toBeInTheDocument());
-    fireEvent.change(screen.getByPlaceholderText(/johannesburg/i), {
-      target: { value: 'Cape Town' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: /select sandton coverage place/i }));
     await clickContinue();
     await waitFor(() => expect(screen.getByText('Step 5 of 5')).toBeInTheDocument());
 
@@ -171,6 +222,14 @@ describe('ProviderOnboardingWizard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Profile setup complete')).toBeInTheDocument();
+    });
+    expect(mockReplaceLocations).toHaveBeenCalledWith({
+      locations: [
+        expect.objectContaining({
+          canonicalPlaceId: PLACE_SANDTON,
+          isPrimary: true,
+        }),
+      ],
     });
     expect(screen.getByText(/not publicly published yet/i)).toBeInTheDocument();
   });
@@ -230,12 +289,8 @@ describe('ProviderOnboardingWizard', () => {
       locations: [
         {
           id: 51,
-          suburb: 'Sandton',
-          city: 'Johannesburg',
-          province: 'Gauteng',
-          countryCode: 'ZA',
-          postalCode: '2196',
-          radiusKm: 40,
+          canonicalPlaceId: PLACE_SANDTON,
+          label: 'Sandton, Johannesburg, Gauteng',
           isPrimary: true,
         },
       ],
@@ -269,9 +324,7 @@ describe('ProviderOnboardingWizard', () => {
       locations: [
         expect.objectContaining({
           id: 51,
-          countryCode: 'ZA',
-          postalCode: '2196',
-          radiusKm: 40,
+          canonicalPlaceId: PLACE_SANDTON,
           isPrimary: true,
         }),
       ],
@@ -324,22 +377,14 @@ describe('ProviderOnboardingWizard', () => {
       locations: [
         {
           id: 51,
-          suburb: 'Sandton',
-          city: 'Johannesburg',
-          province: 'Gauteng',
-          countryCode: 'ZA',
-          postalCode: '2196',
-          radiusKm: 40,
+          canonicalPlaceId: PLACE_SANDTON,
+          label: 'Sandton, Johannesburg, Gauteng',
           isPrimary: true,
         },
         {
           id: 52,
-          suburb: 'Arcadia',
-          city: 'Pretoria',
-          province: 'Gauteng',
-          countryCode: 'ZA',
-          postalCode: '0008',
-          radiusKm: 20,
+          canonicalPlaceId: PLACE_ARCADIA,
+          label: 'Arcadia, Pretoria, Gauteng',
           isPrimary: false,
         },
       ],
@@ -361,7 +406,7 @@ describe('ProviderOnboardingWizard', () => {
     });
     await waitFor(() => expect(mockReplaceLocations).toHaveBeenCalled());
     expect(mockReplaceLocations.mock.calls[0]?.[0]).toEqual({
-      locations: [expect.objectContaining({ id: 51, suburb: 'Sandton' })],
+      locations: [expect.objectContaining({ id: 51, canonicalPlaceId: PLACE_SANDTON })],
     });
   });
 

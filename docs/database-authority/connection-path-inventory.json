@@ -10,7 +10,6 @@
     "scripts/canonicalPlaceRuntimeGrantCli.ts",
     "server/_core/databaseAuthority/legalRuntimeGrants.ts",
     "scripts/legalRuntimeGrantCli.ts",
-    "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalCommercial.ts",
     "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
     "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
@@ -95,7 +94,7 @@
     "scope": "service-only; no application database, user, grant, migration, reference data, scenario data, or disposal"
   },
   "operationAdapters": {
-    "canonicalReferenceData": "server/_core/databaseAuthority/dataAdapters/canonicalGeography.ts",
+    "canonicalReferenceData": "server/_core/databaseAuthority/dataAdapters/canonicalPlaces.ts",
     "canonicalFoundationData": "server/_core/databaseAuthority/dataAdapters/canonicalFoundation.ts",
     "listingPreviewDemo": "server/_core/databaseAuthority/dataAdapters/listingPreviewFixture.ts",
     "homepageJourneyPreviewDemo": "server/_core/databaseAuthority/dataAdapters/homepageJourneyPreviewFixture.ts",
@@ -104,7 +103,7 @@
     "pleReviewerFixture": "server/_core/databaseAuthority/dataAdapters/pleReviewerFixture.ts",
     "dataRoleManifest": "server/_core/databaseAuthority/dataAdapters/dataRoleManifest.ts",
     "targetRequirement": "exact owned disposable worktree profile and accepted manifest head",
-    "legacyLocationsAuthority": "never written or used as canonical geography authority"
+    "legacyLocationTables": "retired from application geography authority; canonical Place tables are the only geography identity source"
   },
   "temporaryCompatibility": [
     {

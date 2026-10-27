@@ -1,8 +1,18 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const { mockLoadPlaceProjection } = vi.hoisted(() => ({
+  mockLoadPlaceProjection: vi.fn(),
+}));
+
+vi.mock('../services/canonicalPlaceSearchService', async importOriginal => ({
+  ...(await importOriginal<typeof import('../services/canonicalPlaceSearchService')>()),
+  loadCanonicalPlaceSearchProjection: mockLoadPlaceProjection,
+}));
+
 import {
-  findAgentsServingLocation,
+  findAgentsServingPlace,
   type AgentAreaRecommendationDto,
 } from '../services/agentPublicProfileService';
 
@@ -29,7 +39,14 @@ function makeQueueDb(results: Array<Record<string, unknown>[] | Record<string, u
   };
 }
 
-const SUBURB_ROW = [{ id: 501 }];
+const PLACE_ID = 'pl-place-01-000000000000000000000001';
+
+beforeEach(() => {
+  mockLoadPlaceProjection.mockResolvedValue({
+    executions: new Map([[PLACE_ID, { placeId: PLACE_ID, scope: 'locality' }]]),
+    labels: new Map([[PLACE_ID, { canonicalPlaceId: PLACE_ID, label: 'Bryanston' }]]),
+  });
+});
 
 const launchPlan = (segment: 'agent' | 'agency') => ({
   name: `${segment}_launch_access`,
@@ -53,14 +70,13 @@ const baseAgent = {
   profileImage: 'amina.jpg',
   isVerified: 1,
   areasServed: JSON.stringify([
-    { canonicalLocationId: 'suburb:501', label: 'Bryanston, Sandton, Gauteng' },
+    { canonicalLocationId: PLACE_ID, label: 'Bryanston, Sandton, Gauteng' },
   ]),
 };
 
-describe('agents serving location authority', () => {
+describe('agents serving canonical Place authority', () => {
   it('returns an approved entitled solo agent claiming the exact area', async () => {
     const { db } = makeQueueDb([
-      SUBURB_ROW,
       [baseAgent],
       [
         {
@@ -73,11 +89,7 @@ describe('agents serving location authority', () => {
         },
       ],
     ]);
-    const result: AgentAreaRecommendationDto[] = await findAgentsServingLocation(
-      db as never,
-      'suburb',
-      501,
-    );
+    const result: AgentAreaRecommendationDto[] = await findAgentsServingPlace(db as never, PLACE_ID);
 
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
@@ -92,14 +104,13 @@ describe('agents serving location authority', () => {
   });
 
   it('excludes an unentitled agent without a verified current agency membership', async () => {
-    const { db } = makeQueueDb([SUBURB_ROW, [{ ...baseAgent, userId: 71, isVerified: 0 }], [], []]);
-    const result = await findAgentsServingLocation(db as never, 'suburb', 501);
+    const { db } = makeQueueDb([[{ ...baseAgent, userId: 71, isVerified: 0 }], [], [], []]);
+    const result = await findAgentsServingPlace(db as never, PLACE_ID);
     expect(result).toEqual([]);
   });
 
   it('includes an unbadged agent whose current canonical membership belongs to a verified agency', async () => {
     const { db } = makeQueueDb([
-      SUBURB_ROW,
       [
         {
           ...baseAgent,
@@ -137,7 +148,7 @@ describe('agents serving location authority', () => {
         },
       ],
     ]);
-    const result = await findAgentsServingLocation(db as never, 'suburb', 501);
+    const result = await findAgentsServingPlace(db as never, PLACE_ID);
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
       isVerified: false,
@@ -148,17 +159,16 @@ describe('agents serving location authority', () => {
 
   it('fails closed on partial or non-exact area claims', async () => {
     const { db } = makeQueueDb([
-      SUBURB_ROW,
       [
         {
           ...baseAgent,
           areasServed: JSON.stringify([
-            { canonicalLocationId: 'suburb:502', label: 'Bryanston Ext, Sandton City' },
+            { canonicalLocationId: 'pl-place-01-000000000000000000000002', label: 'Bryanston Ext, Sandton City' },
           ]),
         },
       ],
     ]);
-    const result = await findAgentsServingLocation(db as never, 'suburb', 501);
+    const result = await findAgentsServingPlace(db as never, PLACE_ID);
     expect(result).toEqual([]);
   });
 
@@ -176,18 +186,23 @@ describe('agents serving location authority', () => {
     expect(source).toContain("eq(subscriptions.ownerType, 'agent')");
   });
 
-  it('returns nothing for an unknown or retired location', async () => {
-    const { db } = makeQueueDb([[]]);
-    const result = await findAgentsServingLocation(db as never, 'suburb', 404);
+  it('rejects a legacy numeric location token without querying geography tables', async () => {
+    const { db } = makeQueueDb([]);
+    const result = await findAgentsServingPlace(db as never, 'suburb:404');
     expect(result).toEqual([]);
+    expect(db.select).not.toHaveBeenCalled();
+    expect(mockLoadPlaceProjection).not.toHaveBeenCalled();
   });
 
-  it('keeps the router wired to the canonical resolver instead of the retired stub', () => {
+  it('keeps the public resolver wired to canonical Place IDs', () => {
     const source = readFileSync(
       path.resolve(process.cwd(), 'server/monetizationRouter.ts'),
       'utf8',
     );
-    expect(source).toContain('findAgentsServingLocation');
+    expect(source).toContain('findAgentsServingPlace');
+    expect(source).toContain('canonicalPlaceId');
+    expect(source).not.toContain('locationType');
+    expect(source).not.toContain('locationId');
     expect(source).not.toContain('getRecommendedAgents called but disabled');
   });
 

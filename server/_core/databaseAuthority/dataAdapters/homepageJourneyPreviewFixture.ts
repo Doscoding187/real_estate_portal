@@ -3,7 +3,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
-import { encodeCanonicalLocationId } from '../../../../shared/locationAuthority';
+import { SEARCH_TO_LEAD_SCENARIO_PLACE_ID } from './searchToLeadScenario';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
   assertOperation,
@@ -15,7 +15,6 @@ import {
   withTransaction,
   type AdapterEvidence,
 } from './common';
-import { verifyCanonicalGeographyReferenceData } from './canonicalGeography';
 import {
   CANONICAL_AGENCY_LAUNCH_ACCESS,
   CANONICAL_AGENT_LAUNCH_ACCESS,
@@ -34,7 +33,7 @@ import {
  * replace Search-to-Lead acceptance data or the small PLE authentication
  * fixture, and it never writes to a shared or protected target.
  */
-export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v2' as const;
+export const HOMEPAGE_JOURNEY_PREVIEW_VERSION = 'homepage-journey-preview-v3' as const;
 
 const TARGET = Object.freeze({
   host: '127.0.0.1',
@@ -113,7 +112,7 @@ export const HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES = Object.freeze({
   developerOpenId: USERS.developer.openId,
   agencySlug: 'homepage-preview-agency-v1',
   developerSlug: 'homepage-preview-developer-v1',
-  canonicalLocation: 'gauteng/johannesburg/sandton',
+  canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
 });
 
 const AGENCY = Object.freeze({
@@ -458,8 +457,8 @@ const FIXTURE_PAYLOAD = Object.freeze({
   agency: AGENCY,
   agentProfile: AGENT_PROFILE,
   coverageAuthority: {
-    location: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalLocation,
-    format: 'typed-canonical-location-id-with-resolved-label',
+    canonicalPlaceId: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalPlaceId,
+    labelIsDisplayOnly: true,
   },
   developer: {
     organisationId: IDS.developerOrganisation,
@@ -481,7 +480,7 @@ export type HomepageJourneyPreviewEvidence = AdapterEvidence & {
   expected: {
     saleCards: 10;
     rentalCards: 1;
-    canonicalLocation: typeof HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalLocation;
+    canonicalPlaceId: typeof HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalPlaceId;
     accounts: {
       agentEmail: string;
       agencyAdminEmail: string;
@@ -1221,19 +1220,15 @@ async function ensureLaunchAccessSubscription(input: {
 }
 
 type CanonicalSandtonLocation = {
-  provinceId: number;
-  provinceName: string;
-  cityId: number;
-  cityName: string;
-  suburbId: number;
-  suburbName: string;
+  canonicalPlaceId: string;
+  label: string;
 };
 
 function serializedSandtonCoverage(location: CanonicalSandtonLocation): string {
   const coverage = serializeAgentCoverageAreas([
     {
-      canonicalLocationId: encodeCanonicalLocationId('suburb', location.suburbId),
-      label: [location.suburbName, location.cityName, location.provinceName].join(', '),
+      canonicalLocationId: location.canonicalPlaceId,
+      label: location.label,
     },
   ]);
   if (!coverage) throw new Error('Homepage journey preview fixture requires one canonical agent coverage area.');
@@ -1245,27 +1240,25 @@ async function resolveExactSandtonLocation(
 ): Promise<CanonicalSandtonLocation> {
   const rows = await queryRows(
     connection,
-    `SELECT p.id AS province_id, p.name AS province_name,
-            c.id AS city_id, c.name AS city_name,
-            s.id AS suburb_id, s.name AS suburb_name
-       FROM provinces p
-       INNER JOIN cities c ON c.provinceId = p.id
-       INNER JOIN suburbs s ON s.cityId = c.id
-      WHERE p.slug = ? AND c.slug = ? AND s.slug = ?`,
-    ['gauteng', 'johannesburg', 'sandton'],
+    `SELECT p.place_id, n.name
+       FROM place p
+       INNER JOIN place_name n
+               ON n.place_id = p.place_id
+              AND n.name_role = 'preferred_public'
+              AND n.name_state = 'active'
+      WHERE p.place_id = ?
+        AND p.place_type = 'suburb'
+        AND p.lifecycle_status = 'active'
+        AND p.search_eligible = 1
+        AND p.search_scope = 'locality'`,
+    [SEARCH_TO_LEAD_SCENARIO_PLACE_ID],
   );
   if (rows.length !== 1) {
-    throw new Error(
-      'Homepage journey preview fixture requires the canonical Gauteng/Johannesburg/Sandton hierarchy.',
-    );
+    throw new Error('Homepage journey preview fixture requires the searchable Sandton Place.');
   }
   return {
-    provinceId: asId({ id: rowValue(rows[0], 'province_id') }, 'province'),
-    provinceName: String(rowValue(rows[0], 'province_name') || '').trim(),
-    cityId: asId({ id: rowValue(rows[0], 'city_id') }, 'city'),
-    cityName: String(rowValue(rows[0], 'city_name') || '').trim(),
-    suburbId: asId({ id: rowValue(rows[0], 'suburb_id') }, 'suburb'),
-    suburbName: String(rowValue(rows[0], 'suburb_name') || '').trim(),
+    canonicalPlaceId: String(rowValue(rows[0], 'place_id')),
+    label: String(rowValue(rows[0], 'name') || '').trim(),
   };
 }
 
@@ -1277,10 +1270,10 @@ async function verifyPreviewRows(
   const rows = await queryRows(
     connection,
     `SELECT p.id, p.title, p.listingType AS listing_type, p.status AS property_status,
-            p.provinceId AS province_id, p.cityId AS city_id, p.suburbId AS suburb_id,
+            p.canonical_place_id AS property_place_id,
             p.sourceListingId AS source_listing_id, p.mainImage,
             l.id AS listing_id, l.status AS listing_status, l.approvalStatus AS approval_status,
-            l.revision_of_listing_id
+            l.revision_of_listing_id, l.canonical_place_id AS source_place_id
        FROM properties p
        INNER JOIN listings l ON l.id = p.sourceListingId
       WHERE p.id IN (${ids.map(() => '?').join(', ')})`,
@@ -1338,12 +1331,11 @@ async function verifyPreviewRows(
       `property ${fixture.propertyId} image`,
     );
     if (
-      Number(rowValue(row, 'province_id')) <= 0 ||
-      Number(rowValue(row, 'city_id')) <= 0 ||
-      Number(rowValue(row, 'suburb_id')) <= 0
+      rowValue(row, 'property_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
+      rowValue(row, 'source_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID
     ) {
       throw new Error(
-        `Homepage journey preview property ${fixture.propertyId} lacks exact geography.`,
+        `Homepage journey preview property ${fixture.propertyId} lacks its canonical Place assignment.`,
       );
     }
     if (fixture.action === 'sell') saleCards += 1;
@@ -1359,9 +1351,8 @@ async function verifyPreviewRows(
   if (
     !rows.every(
       row =>
-        Number(rowValue(row, 'province_id')) === location.provinceId &&
-        Number(rowValue(row, 'city_id')) === location.cityId &&
-        Number(rowValue(row, 'suburb_id')) === location.suburbId,
+        rowValue(row, 'property_place_id') === location.canonicalPlaceId &&
+        rowValue(row, 'source_place_id') === location.canonicalPlaceId,
     )
   ) {
     throw new Error('Homepage journey preview fixture widened or mixed its canonical location.');
@@ -1497,7 +1488,7 @@ function expectedEvidence() {
   return {
     saleCards: 10 as const,
     rentalCards: 1 as const,
-    canonicalLocation: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalLocation,
+    canonicalPlaceId: HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES.canonicalPlaceId,
     accounts: {
       agentEmail: USERS.agent.email,
       agencyAdminEmail: USERS.agencyAdmin.email,
@@ -1518,7 +1509,6 @@ export async function prepareHomepageJourneyPreviewFixture(input: {
     authority: input.authority,
     connection: input.connection,
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
   const location = await resolveExactSandtonLocation(input.connection);
   const password = localPreviewPassword();
 
@@ -1559,9 +1549,7 @@ export async function prepareHomepageJourneyPreviewFixture(input: {
       await ensureCanonicalManualFixture(
         input.connection,
         fixture,
-        location.provinceId,
-        location.cityId,
-        location.suburbId,
+        location.canonicalPlaceId,
       );
     }
     return {
@@ -1613,7 +1601,7 @@ export async function verifyHomepageJourneyPreviewFixture(input: {
     authority: input.authority,
     connection: input.connection,
   });
-  await verifyCanonicalGeographyReferenceData(input.connection);
+  await resolveExactSandtonLocation(input.connection);
   const verified = await verifyPreviewRows(input.connection, localPreviewPassword());
   return {
     ...base,

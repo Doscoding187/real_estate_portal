@@ -7,21 +7,15 @@ import {
   DISCOVERY_FEED_MODES,
   DISCOVERY_INTENTS,
   DISCOVERY_ITEM_TYPES,
-  DISCOVERY_LOCATION_TYPES,
 } from './contracts';
+import { PLACE_ID_REGEX } from '../placeAuthority';
 
 export const discoveryFeedModeSchema = z.enum(DISCOVERY_FEED_MODES);
 export const discoveryIntentSchema = z.enum(DISCOVERY_INTENTS);
-export const discoveryLocationTypeSchema = z.enum(DISCOVERY_LOCATION_TYPES);
 export const discoveryCategorySchema = z.enum(DISCOVERY_CATEGORIES);
 export const discoveryContentTypeSchema = z.enum(DISCOVERY_CONTENT_TYPES);
 export const discoveryItemTypeSchema = z.enum(DISCOVERY_ITEM_TYPES);
 export const discoveryEngagementActionSchema = z.enum(DISCOVERY_ENGAGEMENT_ACTIONS);
-
-export const discoveryLocationFilterSchema = z.object({
-  type: discoveryLocationTypeSchema,
-  id: z.number().int().positive(),
-});
 
 export const discoveryPriceRangeSchema = z
   .object({
@@ -40,14 +34,14 @@ export const discoveryPriceRangeSchema = z
 export const discoveryQuerySchema = z.object({
   mode: discoveryFeedModeSchema,
   intent: discoveryIntentSchema.optional(),
-  location: discoveryLocationFilterSchema.optional(),
+  canonicalPlaceId: z.string().regex(PLACE_ID_REGEX).optional(),
   category: discoveryCategorySchema.optional(),
   priceRange: discoveryPriceRangeSchema.optional(),
   creatorActorId: z.number().int().positive().optional(),
   contentType: discoveryContentTypeSchema.optional(),
   cursor: z.string().min(1).optional(),
   limit: z.number().int().min(1).max(50).optional().default(DEFAULT_DISCOVERY_PAGE_SIZE),
-});
+}).strict();
 
 export const discoveryMediaAssetSchema = z.object({
   coverUrl: z.string().min(1),
@@ -68,6 +62,7 @@ export const discoveryItemEngagementSchema = z.object({
 export const discoveryFeedItemSchema = z.object({
   id: z.string().min(1),
   type: discoveryItemTypeSchema,
+  canonicalPlaceId: z.string().regex(PLACE_ID_REGEX).optional(),
   title: z.string().min(1).optional(),
   description: z.string().min(1).optional(),
   media: discoveryMediaAssetSchema,

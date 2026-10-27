@@ -8,7 +8,6 @@ import {
   approveListing,
   archiveListing,
   rejectListing,
-  updateProperty,
   getPlatformSetting,
   setPlatformSetting,
   getAllPlatformSettings,
@@ -594,7 +593,7 @@ export const adminRouter = router({
         page: z.number().default(1),
         limit: z.number().default(50),
         search: z.string().optional(),
-      }),
+      }).strict(),
     )
     .query(
       async ({
@@ -617,9 +616,7 @@ export const adminRouter = router({
         const offset = (input.page - 1) * input.limit;
 
         const search = input.search?.trim();
-        const where = search
-          ? or(like(agencies.name, `%${search}%`), like(agencies.city, `%${search}%`))!
-          : undefined;
+        const where = search ? like(agencies.name, `%${search}%`) : undefined;
 
         const [agenciesList, totalResult] = await Promise.all([
           db
@@ -872,7 +869,7 @@ export const adminRouter = router({
           .optional(),
         agencyId: z.number().optional(),
         search: z.string().optional(),
-      }),
+      }).strict(),
     )
     .query(
       async ({
@@ -905,7 +902,6 @@ export const adminRouter = router({
             or(
               like(listings.title, `%${input.search}%`),
               like(listings.address, `%${input.search}%`),
-              like(listings.city, `%${input.search}%`),
               like(listings.slug, `%${input.search}%`),
             )!,
           );
@@ -1150,39 +1146,11 @@ export const adminRouter = router({
         return { success: true };
       }
 
-      let newStatus: string;
-      switch (input.action) {
-        case 'approve':
-          newStatus = 'available';
-          break;
-        case 'reject':
-          newStatus = 'archived';
-          break;
-        case 'archive':
-          newStatus = 'archived';
-          break;
-        default:
-          throw new Error('Invalid action');
-      }
-
-      await updateProperty(
-        input.propertyId,
-        ctx.user.id,
-        { status: newStatus as any },
-        ctx.user.role,
-      );
-
-      await logAudit({
-        userId: ctx.user.id,
-        action:
-          input.action === 'approve' ? AuditActions.APPROVE_PROPERTY : AuditActions.REJECT_PROPERTY,
-        targetType: 'property',
-        targetId: input.propertyId,
-        metadata: { reason: input.reason, newStatus },
-        req: ctx.req,
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message:
+          'Unlinked property records are retired. Approve or reject the canonical source Listing instead.',
       });
-
-      return { success: true };
     }),
 
   /**

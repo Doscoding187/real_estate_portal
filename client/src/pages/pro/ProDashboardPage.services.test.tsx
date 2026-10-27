@@ -58,9 +58,10 @@ vi.mock('@/lib/trpc', () => ({
               requesterName: 'Requester Name',
               requesterEmail: 'requester@example.com',
               requesterPhone: '+27 11 000 0000',
-              geoSuburb: 'Sandton',
-              geoCity: 'Johannesburg',
-              geoProvince: 'Gauteng',
+              location: {
+                canonicalPlaceId: 'pl-place-01-000000000000000000000001',
+                label: 'Sandton, Johannesburg, Gauteng',
+              },
               notes: 'Need a repair before transfer.',
               status: 'new',
               createdAt: '2026-01-10 00:00:00',

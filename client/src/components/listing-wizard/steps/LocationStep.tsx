@@ -35,9 +35,6 @@ const EMPTY_LOCATION: LocationData = {
   address: '',
   latitude: null,
   longitude: null,
-  city: '',
-  suburb: '',
-  province: '',
   postalCode: '',
   privateAddress: null,
   coordinateSource: null,
@@ -88,7 +85,7 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
     .filter(Boolean)
     .join(', ');
   const hasResolvedLocation = Boolean(
-    resolvedStreet || resolvedRuralContext || resolvedArea || currentLocation.province,
+    resolvedStreet || resolvedRuralContext || resolvedArea,
   );
   const confirmationPrerequisiteIssues = useMemo(
     () => getLocationEvidenceValidationIssues({ propertyType, location }),
@@ -175,9 +172,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
       longitude: selected.longitude ?? null,
       postalCode: selected.postalCode || component('postal_code') || '',
       // Provider enrichment preserves the explicit approved Place choice.
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
       placeId: selected.placeId,
       providerLocationPlaceId: selected.placeId,
       provider: 'google',
@@ -245,12 +239,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                 resetLocationEvidence({
                   canonicalPlace,
                   canonicalLocationRefusal: null,
-                  provinceId: null,
-                  cityId: null,
-                  suburbId: null,
-                  city: '',
-                  province: '',
-                  suburb: '',
                 }),
               );
               setManualError('');
@@ -381,9 +369,6 @@ const LocationStep: React.FC<{ addressHint?: string }> = ({ addressHint }) => {
                   </p>
                 )}
                 {resolvedArea && <p className="text-sm text-slate-700">{resolvedArea}</p>}
-                {currentLocation.province && (
-                  <p className="text-sm text-slate-600">{currentLocation.province}</p>
-                )}
               </>
             ) : (
               <p className="text-sm text-slate-600">

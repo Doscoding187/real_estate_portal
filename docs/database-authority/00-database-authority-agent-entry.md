@@ -24,7 +24,7 @@ in `authority-manifest.json`; operation permissions are in `operation-policy.jso
 | Layered readiness                   | `readiness.ts`                                            |
 | Operating procedure                 | `01-database-operating-playbook.md`                       |
 | Local service lifecycle             | `scripts/local-db.sh`, `localServicePaths.ts`             |
-| Canonical geography reference data  | `dataAdapters/canonicalGeography.ts`                      |
+| Admitted Place reference data       | `dataAdapters/canonicalPlaces.ts`                         |
 | Canonical commercial reference data | `dataAdapters/canonicalCommercial.ts`                     |
 | Data-role versions and boundaries   | `dataAdapters/dataRoleManifest.ts`                        |
 | Canonical commercial release        | `scripts/databaseAuthorityCli.ts` (`release-reference:*`) |
@@ -59,10 +59,10 @@ pnpm db:worktree:create
 pnpm db:migrate:plan
 pnpm db:migrate:apply -- --accepted-old-head=<head-or-none> --expected-new-head=<manifest-head>
 pnpm db:schema:congruency
-pnpm db:reference:prepare
+pnpm db:places:prepare-national
 pnpm db:foundation:prepare
 pnpm db:scenario:prepare
-pnpm db:reference:verify
+pnpm db:places:verify-national
 pnpm db:foundation:verify
 pnpm db:scenario:verify
 pnpm db:readiness -- --purpose=location-discovery
@@ -109,14 +109,15 @@ their declared capability anchors. They are never part of ordinary service
 startup. Each role has an independent version and verifier; replay is explicit:
 
 ```sh
-pnpm db:reference:verify
+pnpm db:places:verify-national
 pnpm db:foundation:verify
 pnpm db:scenario:verify
 ```
 
-Canonical commercial and Azure geography reference data use a protected
-release authority. The generic `db:reference:prepare` operation remains
-restricted to disposable targets and `productionSeedAuthority` remains `none`.
+Canonical commercial reference data uses the protected release authority.
+Canonical Place packages are materialized only through the registered Place
+adapter, and OSM-only packages remain disposable-only until the founder gate is
+cleared. `productionSeedAuthority` remains `none`.
 For staging or production, the supported sequence is explicit:
 
 ```text
@@ -128,7 +129,8 @@ release:plan
 → readiness/deployment smoke checks
 ```
 
-`--adapter=geography` selects the catalog-bound Azure path documented in `azure-geography-reference-release-2026-09-30.md`. Plan and verify are read-only. The commercial apply command
+The retired numeric geography adapter is not available. Place release uses
+`--adapter=places`; plan and verify are read-only. The commercial apply command
 uses the canonical commercial adapter, requires protected release approval and
 an exact target acknowledgement, runs transactionally under a named MySQL
 lock, and is idempotent. Missing approved products or entitlements are inserted;

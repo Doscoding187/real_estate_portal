@@ -69,8 +69,8 @@ export const PLACE_CLASSIFICATIONS = ['statutory', 'non_statutory'] as const;
 export type PlaceClassification = (typeof PLACE_CLASSIFICATIONS)[number];
 
 /**
- * Place type. Values are the committed factual geography vocabulary
- * (`FACTUAL_GEOGRAPHY_TYPES` in `shared/factualRuntimeGeographyBridge.ts`)
+ * Place type. Values carry forward the factual geography vocabulary in
+ * `shared/placeAuthority.ts`
  * plus the three non-statutory types D4 admits. No type is ever rewritten to
  * fit storage (Section 4, D0).
  */

@@ -406,7 +406,7 @@ describe('Listing transaction locks and persistence boundary', () => {
     ).rejects.toThrow('lock timeout');
   });
 
-  it('persists identity and actual labels while clearing all numeric authorities', async () => {
+  it('persists canonical identity and actual display labels', async () => {
     const input = {
       ...location,
       coordinates: { latitude: -26.12345, longitude: 28.45678 },
@@ -422,10 +422,6 @@ describe('Listing transaction locks and persistence boundary', () => {
     const stored = canonicalListingLocationPersistence(input, assignment);
     expect(stored).toEqual({
       canonicalPlaceId: id,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
-      locationId: null,
       city: '',
       province: 'Chosen Province',
       suburb: 'Chosen Locality',
@@ -479,10 +475,6 @@ describe('Listing transaction locks and persistence boundary', () => {
       city: '',
       province: '',
       suburb: null,
-      provinceId: null,
-      cityId: null,
-      suburbId: null,
-      locationId: null,
     });
     expect(validateCanonicalListingRecordLocation(stored)).toEqual([
       'Confirm the current location before publication.',

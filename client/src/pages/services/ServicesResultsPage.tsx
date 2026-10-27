@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ProviderCard, type ProviderDirectoryItem } from '@/components/services/ProviderCard';
 import { trpc } from '@/lib/trpc';
 import {
-  formatArea,
+  buildServiceCategoryPath,
   formatCategoryLabel,
   isServiceCategory,
   type ServiceCategory,
@@ -35,18 +35,13 @@ export default function ServicesResultsPage() {
     ? (categoryParam as ServiceCategory)
     : ('home_improvement' as ServiceCategory);
   const location = lead?.location || {
-    city: null,
-    province: null,
-    suburb: null,
+    canonicalPlaceId: null,
+    label: null,
   };
-  const locationLabel = formatArea(location.city, location.province, location.suburb);
-  const directorySearch = new URLSearchParams();
-  if (location.suburb) directorySearch.set('suburb', location.suburb);
-  if (location.city) directorySearch.set('city', location.city);
-  if (location.province) directorySearch.set('province', location.province);
-  const directoryPath = `/services/${category}${
-    directorySearch.toString() ? `?${directorySearch.toString()}` : ''
-  }`;
+  const locationLabel = location.label || 'Selected Place unavailable';
+  const directoryPath = buildServiceCategoryPath(category, {
+    canonicalPlaceId: location.canonicalPlaceId || undefined,
+  });
   const intentStage = lead?.intentStage || 'general';
   const provider = lead?.provider as ProviderDirectoryItem | null | undefined;
   const notes = lead?.notes || null;

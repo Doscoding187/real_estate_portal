@@ -118,10 +118,6 @@ export function canonicalListingLocationPersistence(
   const privateAddress = location.privateAddress;
   return {
     canonicalPlaceId: location.canonicalPlaceId,
-    provinceId: null,
-    cityId: null,
-    suburbId: null,
-    locationId: null,
     city: assignment?.labels.city ?? '',
     province: assignment?.labels.province ?? '',
     suburb: assignment?.execution.scope === 'locality' ? assignment.labels.selected : null,

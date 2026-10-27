@@ -1,7 +1,6 @@
 import { trpc } from './trpc';
 
 type EventName =
-  | 'location_view'
   | 'development_view'
   | 'listing_view'
   | 'hero_ad_click'
@@ -12,8 +11,6 @@ type EventName =
   | 'hero_campaign_click';
 
 interface EventProperties {
-  locationId?: number;
-  locationType?: 'province' | 'city' | 'suburb';
   developmentId?: number;
   listingId?: number;
   adId?: number;

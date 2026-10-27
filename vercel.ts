@@ -1,5 +1,3 @@
-import { GUIDE_HTML_ROUTES } from './shared/guideRoutes';
-
 // Vercel evaluates this at deployment time. Only the approved production
 // target may proxy dynamic sitemap requests to the production API.
 const production =
@@ -41,12 +39,9 @@ export const config = {
         ]),
     { src: '/assets/(.*)', dest: '/assets/$1' },
     { src: '/version.json', dest: '/version.json' },
-    // Each guide route serves its own built document. Without these routes a city or
-    // suburb guide request would fall through to the generic application shell.
-    ...GUIDE_HTML_ROUTES.map(path => ({
-      src: `/${path}/?`,
-      dest: `/${path}/index.html`,
-    })),
+    // The national entry gets a static document. Every geographic path below it resolves
+    // through the canonical Place URL projection in the application.
+    { src: '/south-africa/?', dest: '/south-africa/index.html' },
     { src: '/(.*)', dest: '/index.html' },
   ],
 };
