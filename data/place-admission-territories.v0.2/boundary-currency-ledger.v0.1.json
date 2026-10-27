@@ -1,6 +1,6 @@
 {
   "ledger_version": "0.1",
-  "generated_on": "2026-10-02",
+  "generated_on": "2026-10-25",
   "evidence_represents": "2020-01-01",
   "scope": "Every admitted province. This ledger records how old each province's boundary evidence is and refuses to certify currency. It is a publication gate, not a currency assessment, and it never substitutes newer boundaries.",
   "all_provinces_uncertified": true,
@@ -44,8 +44,8 @@
       "admitted_places": 1862,
       "source_identity_count": 1905,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-kzn",
@@ -60,8 +60,8 @@
       "admitted_places": 2090,
       "source_identity_count": 2170,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-ec",
@@ -76,8 +76,8 @@
       "admitted_places": 5084,
       "source_identity_count": 5328,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-fs",
@@ -92,8 +92,8 @@
       "admitted_places": 1544,
       "source_identity_count": 1572,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-mp",
@@ -108,8 +108,8 @@
       "admitted_places": 1045,
       "source_identity_count": 1078,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-li",
@@ -124,8 +124,8 @@
       "admitted_places": 1669,
       "source_identity_count": 1747,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-nw",
@@ -140,8 +140,8 @@
       "admitted_places": 1352,
       "source_identity_count": 1445,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     },
     {
       "territory_id": "za-nc",
@@ -156,8 +156,8 @@
       "admitted_places": 1552,
       "source_identity_count": 1576,
       "provenance_recorded": true,
-      "days_since_upstream_source_data": 1352,
-      "days_since_boundary_build": 1025
+      "days_since_upstream_source_data": 1375,
+      "days_since_boundary_build": 1048
     }
   ]
 }

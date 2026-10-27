@@ -1,18 +1,9 @@
 import { LOCAL_JOURNEY_VERSION, LOCAL_JOURNEY_DIGEST } from './localJourneyPreview';
 import type { DatabaseOperation } from '../types';
 import { PLACE_RELEASE_DIGEST, PLACE_RELEASE_POLICY } from './placeRelease';
-import {
-  CANONICAL_PLACES_DIGEST,
-  CANONICAL_PLACES_VERSION,
-} from './canonicalPlaces';
-import {
-  CANONICAL_FOUNDATION_DIGEST,
-  CANONICAL_FOUNDATION_VERSION,
-} from './canonicalFoundation';
-import {
-  CANONICAL_GEOGRAPHY_DIGEST,
-  CANONICAL_GEOGRAPHY_VERSION,
-} from './canonicalGeography';
+import { CANONICAL_PLACES_DIGEST, CANONICAL_PLACES_VERSION } from './canonicalPlaces';
+import { CANONICAL_FOUNDATION_DIGEST, CANONICAL_FOUNDATION_VERSION } from './canonicalFoundation';
+import { CANONICAL_GEOGRAPHY_DIGEST, CANONICAL_GEOGRAPHY_VERSION } from './canonicalGeography';
 import {
   CANONICAL_PLATFORM_SETTINGS_DIGEST,
   CANONICAL_PLATFORM_SETTINGS_VERSION,
@@ -37,10 +28,7 @@ import {
   PLE_PUBLICATION_ENTITLEMENT_DIGEST,
   PLE_PUBLICATION_ENTITLEMENT_VERSION,
 } from './plePublicationEntitlement';
-import {
-  PLE_REVIEWER_FIXTURE_DIGEST,
-  PLE_REVIEWER_FIXTURE_VERSION,
-} from './pleReviewerFixture';
+import { PLE_REVIEWER_FIXTURE_DIGEST, PLE_REVIEWER_FIXTURE_VERSION } from './pleReviewerFixture';
 import {
   SEARCH_TO_LEAD_SCENARIO_DIGEST,
   SEARCH_TO_LEAD_SCENARIO_VERSION,

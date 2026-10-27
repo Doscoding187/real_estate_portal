@@ -41,6 +41,7 @@ describe('Database Authority data-role manifest', () => {
         /(?:mysql2\/promise|createConnection|createPool|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE|TRUNCATE\s+TABLE)/i,
       );
     }
+
   });
 
   it('rejects duplicate or malformed role declarations', () => {
