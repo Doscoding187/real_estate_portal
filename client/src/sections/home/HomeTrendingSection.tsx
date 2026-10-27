@@ -350,15 +350,7 @@ export function HomeTrendingSection({
               {isFetching ? 'Trying again…' : 'Try again'}
             </Button>
             <Button asChild>
-              <a
-                href={
-                  activeHeroTab === 'rent'
-                    ? '/property-to-rent'
-                    : activeHeroTab === 'developments'
-                      ? '/new-developments'
-                      : '/property-for-sale'
-                }
-              >
+              <a href={activeHeroTab === 'rent' ? '/property-to-rent' : '/property-for-sale'}>
                 Open property search
               </a>
             </Button>
@@ -449,13 +441,7 @@ export function HomeTrendingSection({
             search while more listings are being added.
           </p>
           <a
-            href={
-              activeHeroTab === 'rent'
-                ? '/property-to-rent'
-                : activeHeroTab === 'developments'
-                  ? '/new-developments'
-                  : '/property-for-sale'
-            }
+            href={activeHeroTab === 'rent' ? '/property-to-rent' : '/property-for-sale'}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
           >
             Browse available property

@@ -27,7 +27,7 @@ import type { RentalTerms } from '../../../../shared/rental-terms-contract';
 export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v8' as const;
 export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v8-property-enquiry';
 
-const DEVELOPMENT_SITE_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
+export const DEVELOPMENT_SITE_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 
 function truthfulDirectAcknowledgement(lead: {
   duplicate?: boolean;
@@ -320,7 +320,6 @@ function withScenarioSqlDiagnostics(connection: AuthoritySqlConnection): Authori
     } catch (error) {
       throw new Error(
         `Search-to-Lead scenario ${method} failed for SQL ${statement.slice(0, 180)}: ${error instanceof Error ? error.message : String(error)}`,
-        { cause: error },
       );
     }
   };
@@ -375,7 +374,6 @@ async function ensureDeterministicRow(input: {
   } catch (error) {
     throw new Error(
       `Search-to-Lead scenario insert failed for ${input.table}:${input.id}: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
     );
   }
 }

@@ -752,13 +752,17 @@ const initialState: Omit<DevelopmentWizardState, keyof ReturnType<typeof createA
 // =============================================================================
 const _DEFAULT_DEVELOPMENT_DATA = initialState.developmentData;
 
+type DevelopmentDataUpdates = Omit<Partial<typeof _DEFAULT_DEVELOPMENT_DATA>, 'location'> & {
+  location?: Partial<typeof _DEFAULT_DEVELOPMENT_DATA.location>;
+};
+
 /**
  * Normalizes developmentData to ensure critical fields are never undefined.
  * This prevents "Cannot read properties of undefined" errors in wizard phases.
  */
 function normalizeDevelopmentData(
   current: typeof _DEFAULT_DEVELOPMENT_DATA,
-  updates: Partial<typeof _DEFAULT_DEVELOPMENT_DATA>,
+  updates: DevelopmentDataUpdates,
 ): typeof _DEFAULT_DEVELOPMENT_DATA {
   const mergedLocation = {
     ...(current.location || initialState.developmentData.location),
