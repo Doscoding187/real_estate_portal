@@ -153,7 +153,7 @@ export const serviceProviderLocations = mysqlTable(
       .references(() => partners.id, { onDelete: 'cascade' }),
     canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
       () => place.placeId,
-      { onDelete: 'restrict' },
+      { onDelete: 'restrict', onUpdate: 'restrict' },
     ),
     isPrimary: tinyint('is_primary').default(0).notNull(),
     createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
@@ -300,7 +300,7 @@ export const serviceLeads = mysqlTable(
     }),
     canonicalPlaceId: varchar('canonical_place_id', { length: 40 }).references(
       () => place.placeId,
-      { onDelete: 'restrict' },
+      { onDelete: 'restrict', onUpdate: 'restrict' },
     ),
     notes: text('notes'),
     contextJson: json('context_json'),
