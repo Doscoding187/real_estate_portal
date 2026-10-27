@@ -21,7 +21,11 @@ import {
   CANONICAL_AGENT_LAUNCH_ACCESS,
   CANONICAL_DEVELOPER_LAUNCH_ACCESS,
 } from './canonicalCommercial';
-import { ensureCanonicalManualFixture, type ManualFixtureDefinition } from './searchToLeadScenario';
+import {
+  DEVELOPMENT_SITE_PLACE_ID,
+  ensureCanonicalManualFixture,
+  type ManualFixtureDefinition,
+} from './searchToLeadScenario';
 import {
   assertCentralEnvironmentReady,
   inspectCentralLocalEnvironment,
@@ -1556,13 +1560,7 @@ export async function prepareHomepageJourneyPreviewFixture(input: {
       createdBy: USERS.developer.id,
     });
     for (const fixture of HOME_FIXTURES) {
-      await ensureCanonicalManualFixture(
-        input.connection,
-        fixture,
-        location.provinceId,
-        location.cityId,
-        location.suburbId,
-      );
+      await ensureCanonicalManualFixture(input.connection, fixture, DEVELOPMENT_SITE_PLACE_ID);
     }
     return {
       agency,

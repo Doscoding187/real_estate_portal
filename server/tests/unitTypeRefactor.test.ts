@@ -16,8 +16,6 @@ const TEST_DEV_DATA = {
   name: TEST_DEV_NAME,
   developmentType: 'residential',
   address: '123 Test St',
-  city: 'Johannesburg',
-  province: 'Gauteng',
   latitude: '-26.1',
   longitude: '28.1',
   priceFrom: 1000000,
@@ -157,7 +155,9 @@ describeWithDb('Unit Type Refactoring Integration', () => {
     const renamed = await developmentService.getDevelopmentWithPhases(createdDevId);
     expect(renamed.name).toBe('Integration Test Dev Refactor Renamed');
     expect(renamed.description).toBe(TEST_DEV_DATA.description);
-    expect(renamed.city).toBe(TEST_DEV_DATA.city);
+    expect(renamed).not.toHaveProperty('city');
+    expect(renamed).not.toHaveProperty('province');
+    expect(renamed).not.toHaveProperty('suburb');
 
     const fetched = await developmentService.getDevelopmentWithPhases(createdDevId);
     const typeA = fetched.unitTypes.find(u => u.name === 'Type A - V2');

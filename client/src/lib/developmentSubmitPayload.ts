@@ -662,6 +662,9 @@ export function buildDevelopmentSubmitPayload(input: DevelopmentSubmitPayloadInp
         completedSteps: canonicalSnapshot.completedSteps,
         stepData: {
           ...(canonicalSnapshot.stepData ?? {}),
+          ...(canonicalSnapshot.stepData?.location !== undefined
+            ? { location: canonicalDevelopmentData.location }
+            : {}),
           unit_types: {
             ...(canonicalSnapshot.stepData?.unit_types ?? {}),
             unitTypes,

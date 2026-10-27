@@ -40,19 +40,17 @@ describe('useDevelopmentWizard Validation Logic', () => {
       expect(validation.errors).toContain('Please select at least one ownership type');
     });
 
-    it('phase 5 enforces location address and city', () => {
+    it('phase 5 enforces location address and verified entrance coordinates', () => {
       const { result } = renderHook(() => useDevelopmentWizard());
       const invalid = result.current.validatePhase(5);
       expect(invalid.isValid).toBe(false);
       expect(invalid.errors).toContain('Location is required');
-      expect(invalid.errors).toContain('City is required');
+      expect(invalid.errors).toContain('Verified development entrance coordinates are required');
 
       act(() => {
         result.current.setIdentity({
           location: {
             address: '123 Main Road',
-            city: 'Cape Town',
-            province: 'Western Cape',
             latitude: '-33.9',
             longitude: '18.4',
           },

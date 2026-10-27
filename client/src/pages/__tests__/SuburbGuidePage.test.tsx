@@ -365,7 +365,7 @@ describe('SuburbGuidePage transaction lanes', () => {
     );
   });
 
-  it('does not expose Development results from a legacy text-scoped suburb route', () => {
+  it('keeps Development results out of the legacy text-scoped suburb route', () => {
     mocks.suburbData = zeroSupplyData();
     withFeedItems(['buy', 'rent']);
 
@@ -375,12 +375,9 @@ describe('SuburbGuidePage transaction lanes', () => {
 
     expect(container.querySelector('#supply-guidance')).not.toBeNull();
     expect(screen.queryByRole('heading', { name: 'New developments in Sandton' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Homes for sale in Sandton' })).toBeNull();
-    expect(screen.queryByRole('heading', { name: 'Homes to rent in Sandton' })).toBeNull();
     const nav = container.querySelector('.suburb-guide-quick-nav');
     expect(nav).not.toHaveTextContent('Developments');
-    expect(nav).not.toHaveTextContent('For sale');
-    expect(nav).not.toHaveTextContent('Rentals');
+    expect(Array.from(new Set(mocks.feedInputs.map(input => input.tab)))).toEqual(['buy', 'rent']);
     expect(container.querySelector('#suburb-inventory')).not.toBeNull();
   });
 
