@@ -249,10 +249,10 @@ Phase 2 therefore requires one of:
 
 A one-off `UPDATE` script is not an acceptable path, even inside a rollback transaction.
 
-**Selected: option 1.** The reviewed overlays are:
+**Selected at the time: option 1. Superseded by Phase 2.5.** The reviewed correction artifacts are:
 `data/gauteng-city-scope-correction-v0.1/` and
-`server/_core/databaseAuthority/dataAdapters/placeScopeCorrection.ts`, registered as
-`reference.places-scope-correction`. The adapter is deliberately an overlay: it reports
+the manifest-pinned files in that directory. The temporary adapter was registered as
+`reference.places-scope-correction`. It deliberately reported
 `canonicalAdmissionCompatible: false` and `canonicalPackageRebuildRequired: true` after apply,
 because the committed admission package still asserts all 63 rows as `town`/`city`.
 The source CSV/GeoJSON evidence is referenced by SHA-256 in the manifest but is not copied into
@@ -334,20 +334,28 @@ admitted data, through governed artifacts rather than edits to committed data:
   text by an authorized one-time repair restricted to a disposable target and refusing any
   non-`note` column drift.
 - `db:places:release-preview:verify` now passes (`readyForDataRelease: true`, 0 pending rows,
-  161,812 existing rows), and `db:places:scope-correction:verify` passes with the adapter lens
-  flipped to `canonicalAdmissionCompatible: true` / `canonicalPackageRebuildRequired: false`
-  (its 351 edges observed, 0 pending, unchanged invariants).
+  161,812 existing rows). At that time, `db:places:scope-correction:verify` also confirmed the
+  rebuilt package matched the corrected disposable target (351 edges observed, 0 pending,
+  unchanged invariants).
 - The behaviour probe (`place:admission:probe`) is now registry-derived rather than hard-coded
   (expected counts come from the registry; the national row-counts are the sum across
   territories; pressure cases are scoped to the probed package; the rerun no-op uses
   `places:prepare-national`) and passes 41/41 against the corrected target.
 - Contract suites pass: `contract.place-admission.test.ts` (35, including new settlement and
   reviewed-correction assertions), `contract.place-admission-territory-neutrality.test.ts` (19),
-  the database-authority suite set (42 files / 409 tests), and
-  `_core/databaseAuthority/__tests__/placeScopeCorrection.test.ts`.
+  and the database-authority suite set (42 files / 409 tests).
 - The correction package remains untouched (its digest is `36efde72f920b9c990aadfa8c81ce2069b4c8cf962f6678772dd411f680910e2`)
   and continues to function as the reviewed decision record; the v0.3 source authority is its
   digest-verified reproduction inside the admitted data.
+
+### Phase 2.6 — Retire the temporary correction writer (2026-10-27)
+
+The Gauteng v0.2 admission package now carries the reviewed type and settlement membership
+corrections. The one-shot `placeScopeCorrection` database adapter, its preview/apply/verify CLI
+commands, its data-role registration, and its adapter tests were removed so the same reviewed
+correction cannot be applied through a second executable path. The v0.1 correction artifacts stay
+as the audited source for deterministic v0.3 derivation; future Place releases use the canonical
+admission package and normal Place release path. No database write was made during this retirement.
 
 ### Phase 3 — Projection and URL handling
 
