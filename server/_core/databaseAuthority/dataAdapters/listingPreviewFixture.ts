@@ -3,7 +3,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
-import { SEARCH_TO_LEAD_SCENARIO_PLACE_ID } from './searchToLeadScenario';
+import { DEVELOPMENT_SITE_PLACE_ID } from './searchToLeadScenario';
 import {
   PLE_MANUAL_LOCATION_CAPABILITY,
   assertOperation,
@@ -79,7 +79,7 @@ const FIXTURE_PAYLOAD = Object.freeze({
   agentProfile: FIXTURE.agentProfile,
   branding: FIXTURE.branding,
   coverageAuthority: {
-    canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
+    canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
     format: 'typed-canonical-location-id-with-resolved-label',
   },
   publicationEntitlement: 'not-provisioned',
@@ -462,7 +462,7 @@ async function resolveExactSandtonLocation(
         AND p.lifecycle_status = 'active'
         AND p.search_eligible = 1
         AND p.search_scope = 'locality'`,
-    [SEARCH_TO_LEAD_SCENARIO_PLACE_ID],
+    [DEVELOPMENT_SITE_PLACE_ID],
   );
   if (rows.length !== 1) {
     throw new Error('Listing preview fixture requires the searchable Sandton Place.');

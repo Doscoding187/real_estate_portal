@@ -108,7 +108,7 @@ describe('developer public profile contract', () => {
     expect(mockListPublicDevelopments).toHaveBeenCalledWith({ cataloguePublisherId: 44 });
   });
 
-  it('passes only pagination to the public project service', async () => {
+  it('passes the exact canonical Place and page boundaries to the public project service', async () => {
     const caller = developerRouter.createCaller({
       req: { headers: {} },
       res: {},
@@ -116,11 +116,13 @@ describe('developer public profile contract', () => {
     } as any);
     await caller.getPublicDevelopmentsForPublisher({
       cataloguePublisherId: 44,
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       limit: 13,
       offset: 12,
     });
     expect(mockListPublicDevelopments).toHaveBeenCalledWith({
       cataloguePublisherId: 44,
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       limit: 13,
       offset: 12,
     });
@@ -134,6 +136,12 @@ describe('developer public profile contract', () => {
     } as any);
     await expect(
       caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44, province: 'Gauteng' } as never),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      caller.getPublicDevelopmentsForPublisher({
+        cataloguePublisherId: 44,
+        canonicalPlaceId: 'malformed-place-id',
+      }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     await expect(
       caller.getPublicDevelopmentsForPublisher({ cataloguePublisherId: 44, offset: -1 }),

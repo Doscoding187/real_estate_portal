@@ -13,8 +13,14 @@ vi.mock('../services/propertySearchService', () => ({
 
 import { appRouter } from '../routers';
 import { getDb } from '../db-connection';
-import { developmentApprovalQueue, developments, users } from '../../drizzle/schema';
+import {
+  developmentApprovalQueue,
+  developmentPlaceAssignments,
+  developments,
+  users,
+} from '../../drizzle/schema';
 import { developmentService } from '../services/developmentService';
+import { recordReviewedDevelopmentPlaceAssignment } from '../services/developmentPlaceAssignmentService';
 import {
   activateDeveloperTestLaunchAccess,
   createDeveloperTestContext,
@@ -55,6 +61,9 @@ describeWithDb('Development Card Data Flow Integration', () => {
       await db
         .delete(developmentApprovalQueue)
         .where(eq(developmentApprovalQueue.developmentId, createdDevelopmentId));
+      await db
+        .delete(developmentPlaceAssignments)
+        .where(eq(developmentPlaceAssignments.developmentId, createdDevelopmentId));
       await db.delete(developments).where(eq(developments.id, createdDevelopmentId));
       createdDevelopmentId = null;
     }
@@ -120,9 +129,6 @@ describeWithDb('Development Card Data Flow Integration', () => {
       name: developmentName,
       developmentType: 'residential',
       transactionType: 'for_sale',
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      suburb: 'Berea',
       address: '1 Contract Test Road',
       status: 'selling',
       ownershipType: 'sectional-title',
@@ -147,6 +153,14 @@ describeWithDb('Development Card Data Flow Integration', () => {
     } as any);
 
     createdDevelopmentId = Number(createdDevelopment.id);
+    await recordReviewedDevelopmentPlaceAssignment({
+      developmentId: createdDevelopmentId,
+      phaseId: null,
+      placeId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      assignmentKind: 'site',
+      evidenceReference: `test-fixture:development-place:${createdDevelopmentId}`,
+      reviewerUserId,
+    });
 
     await developmentService.publishDevelopment(createdDevelopmentId, testUserId);
     await developmentService.approveDevelopment(createdDevelopmentId, reviewerUserId);
@@ -158,8 +172,7 @@ describeWithDb('Development Card Data Flow Integration', () => {
     } as any);
 
     const result = await caller.properties.searchPublicInventory({
-      city: 'Johannesburg',
-      province: 'Gauteng',
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
       listingType: 'sale',
       listingSource: 'development',
       page: 0,
@@ -174,9 +187,8 @@ describeWithDb('Development Card Data Flow Integration', () => {
     expect(matched).toMatchObject({
       kind: 'development',
       title: '2 Bed Apartment',
-      city: 'Johannesburg',
-      suburb: 'Berea',
-      province: 'Gauteng',
+      canonicalPlaceId: 'pl-place-01-dee61758ef3bda7cd1a258ad',
+      locationLabels: ['Sandton'],
       price: 1200000,
       description: 'Card-flow test unit type',
       listingType: 'sale',
@@ -247,9 +259,6 @@ describeWithDb('Development Card Data Flow Integration', () => {
       name: `No Description Development ${suffix}`,
       developmentType: 'residential',
       transactionType: 'for_sale',
-      city: 'Johannesburg',
-      province: 'Gauteng',
-      suburb: 'Berea',
       address: '2 Contract Test Road',
       status: 'selling',
       ownershipType: 'sectional-title',

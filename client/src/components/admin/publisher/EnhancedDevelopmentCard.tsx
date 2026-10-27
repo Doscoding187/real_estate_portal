@@ -25,8 +25,8 @@ interface EnhancedDevelopmentCardProps {
     id: number;
     name: string;
     description?: string;
-    city?: string;
     address?: string;
+    locationLabels?: string[];
     priceFrom?: number;
     priceTo?: number;
     images?: string[];

@@ -84,9 +84,6 @@ const ownedDevelopment = {
   canonicalPlaceId: 'pl-place-01-000000000000000000000001',
   slug: 'harbour-heights',
   address: '1 Harbour Road',
-  suburb: 'Sea Point',
-  city: 'Cape Town',
-  province: 'Western Cape',
   transactionType: 'for_sale',
   approvalStatus: 'approved',
   isPublished: 1,
@@ -108,6 +105,7 @@ function configureDevelopmentQuery(
 ) {
   const results = [
     developmentResult,
+    [], // No accepted Development-to-Place assignment in this fixture.
     unitTypeResult,
     reviewResult,
     ...(summaryResults.length ? summaryResults : [[], [], [], []]),

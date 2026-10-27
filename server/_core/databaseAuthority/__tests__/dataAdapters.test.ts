@@ -151,7 +151,7 @@ class UnexpectedConnection implements AuthoritySqlConnection {
 
 describe('bounded Database Authority data adapters', () => {
   it('publishes deterministic versions for active reference and scenario adapters', () => {
-    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v7');
+    expect(SEARCH_TO_LEAD_SCENARIO_VERSION).toBe('search-to-lead-v8');
     expect(SEARCH_TO_LEAD_SCENARIO_DIGEST).toMatch(/^[a-f0-9]{64}$/);
     expect(CANONICAL_FOUNDATION_VERSION).toBe('canonical-launch-foundation-v1');
     expect(CANONICAL_FOUNDATION_DIGEST).toMatch(/^[a-f0-9]{64}$/);
@@ -403,9 +403,6 @@ describe('bounded Database Authority data adapters', () => {
           'developer_id',
           'name',
           'developmentType',
-          'city',
-          'province',
-          'suburb',
           'slug',
           'isPublished',
           'approval_status',

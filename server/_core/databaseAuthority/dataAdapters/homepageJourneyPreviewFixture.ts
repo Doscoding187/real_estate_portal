@@ -3,7 +3,7 @@ import type { AuthorizedDatabaseOperation } from '../authorization';
 import type { AuthoritySqlConnection } from '../connectionAuthority';
 import { assertOwnedDisposableTarget } from '../lifecycle';
 import { serializeAgentCoverageAreas } from '../../../../shared/agentCoverageArea';
-import { SEARCH_TO_LEAD_SCENARIO_PLACE_ID } from './searchToLeadScenario';
+import { DEVELOPMENT_SITE_PLACE_ID } from './searchToLeadScenario';
 import type { ResolvedDatabaseAuthority } from '../types';
 import {
   assertOperation,
@@ -112,7 +112,7 @@ export const HOMEPAGE_JOURNEY_PREVIEW_IDENTITIES = Object.freeze({
   developerOpenId: USERS.developer.openId,
   agencySlug: 'homepage-preview-agency-v1',
   developerSlug: 'homepage-preview-developer-v1',
-  canonicalPlaceId: SEARCH_TO_LEAD_SCENARIO_PLACE_ID,
+  canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
 });
 
 const AGENCY = Object.freeze({
@@ -1251,7 +1251,7 @@ async function resolveExactSandtonLocation(
         AND p.lifecycle_status = 'active'
         AND p.search_eligible = 1
         AND p.search_scope = 'locality'`,
-    [SEARCH_TO_LEAD_SCENARIO_PLACE_ID],
+    [DEVELOPMENT_SITE_PLACE_ID],
   );
   if (rows.length !== 1) {
     throw new Error('Homepage journey preview fixture requires the searchable Sandton Place.');
@@ -1331,8 +1331,8 @@ async function verifyPreviewRows(
       `property ${fixture.propertyId} image`,
     );
     if (
-      rowValue(row, 'property_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID ||
-      rowValue(row, 'source_place_id') !== SEARCH_TO_LEAD_SCENARIO_PLACE_ID
+      rowValue(row, 'property_place_id') !== DEVELOPMENT_SITE_PLACE_ID ||
+      rowValue(row, 'source_place_id') !== DEVELOPMENT_SITE_PLACE_ID
     ) {
       throw new Error(
         `Homepage journey preview property ${fixture.propertyId} lacks its canonical Place assignment.`,
