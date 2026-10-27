@@ -1627,7 +1627,7 @@
     {
       "sequence": 156,
       "filename": "0156_distribution_check_fit_location_label.sql",
-      "checksum": "f26969e541fc99558f765bc252c34a4c7817f1485c76ab0ce3f433cd58b91faf",
+      "checksum": "ef4b0550375db6d085698d4836cd1c7206fa50443f237a2d2d0b5ceb3f87e35f",
       "parent": "0155_development_place_assignments.sql",
       "parentChecksum": "034cf1900b1623fc3d8fa545144c9e26666bba58957d20853e4f0c11c5a6a254",
       "kind": "exceptional",
@@ -1640,7 +1640,7 @@
       "filename": "0157_developments_canonical_place_only.sql",
       "checksum": "3dbddd436420556f2831b729f016a46a0095397961a33b5035995a1be991b140",
       "parent": "0156_distribution_check_fit_location_label.sql",
-      "parentChecksum": "f26969e541fc99558f765bc252c34a4c7817f1485c76ab0ce3f433cd58b91faf",
+      "parentChecksum": "ef4b0550375db6d085698d4836cd1c7206fa50443f237a2d2d0b5ceb3f87e35f",
       "kind": "exceptional",
       "statementPolicy": "approved-exception",
       "requiredReferenceDataVersion": null,
