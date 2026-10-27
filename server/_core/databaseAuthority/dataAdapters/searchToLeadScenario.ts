@@ -321,6 +321,12 @@ async function ensureDeterministicRow(input: {
     input.insertColumns,
     input.insertValues,
   );
+  const undefinedBindIndex = input.insertValues.findIndex(value => value === undefined);
+  if (undefinedBindIndex !== -1) {
+    throw new Error(
+      `Search-to-Lead scenario insert for ${input.table}:${input.id} has an undefined bind for ${input.insertColumns[undefinedBindIndex]}.`,
+    );
+  }
   const rows = await queryRows(
     input.connection,
     `SELECT ${input.columns.join(', ')} FROM ${input.table} WHERE id = ?`,
@@ -340,7 +346,14 @@ async function ensureDeterministicRow(input: {
     }
     return;
   }
-  await input.connection.execute(insertStatement, input.insertValues);
+  try {
+    await input.connection.execute(insertStatement, input.insertValues);
+  } catch (error) {
+    throw new Error(
+      `Search-to-Lead scenario insert failed for ${input.table}:${input.id}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
 }
 
 const FIXTURE_TIMESTAMP = '2026-01-01 00:00:00';
