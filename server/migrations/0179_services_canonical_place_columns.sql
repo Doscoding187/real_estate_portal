@@ -10,4 +10,4 @@ ALTER TABLE `service_provider_locations`
   DROP COLUMN `latitude`,
   DROP COLUMN `longitude`,
   DROP COLUMN `radius_km`,
-  ADD COLUMN `canonical_place_id` varchar(40) NULL;
+  ADD COLUMN `canonical_place_id` varchar(40) NULL AFTER `provider_id`;

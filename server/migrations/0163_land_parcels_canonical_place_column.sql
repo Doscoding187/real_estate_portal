@@ -6,4 +6,4 @@ ALTER TABLE `land_parcels`
   DROP COLUMN `province_id`,
   DROP COLUMN `city_id`,
   DROP COLUMN `suburb_id`,
-  ADD COLUMN `canonical_place_id` varchar(40) NULL;
+  ADD COLUMN `canonical_place_id` varchar(40) NULL AFTER `jurisdiction_country_code`;
