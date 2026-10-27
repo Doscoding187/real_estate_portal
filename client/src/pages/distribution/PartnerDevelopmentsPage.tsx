@@ -11,6 +11,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { ReferralAppShell } from '@/components/referral/ReferralAppShell';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { ProgramRequirementsDialog } from '@/components/distribution/partner/ProgramRequirementsDialog';
 import { DevelopmentUnitsDialog } from '@/components/distribution/partner/DevelopmentUnitsDialog';
 import { DevelopmentBrochureDialog } from '@/components/distribution/partner/DevelopmentBrochureDialog';
@@ -25,6 +29,7 @@ import {
 import {
   DISTRIBUTION_BEDROOM_FILTERS,
   DISTRIBUTION_PRICE_BANDS,
+  matchesCanonicalPlaceSelection,
   type DistributionBedroomFilter,
   type DistributionMarketMode,
 } from '@shared/distributionOpportunityMatching';
@@ -56,6 +61,7 @@ export default function PartnerDevelopmentsPage() {
   const { isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
+  const [matchPlace, setMatchPlace] = useState<CanonicalPlaceSelection | null>(null);
   const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
   const [priceBand, setPriceBand] = useState('any');
   const [bedroomFilter, setBedroomFilter] = useState('');
@@ -82,11 +88,12 @@ export default function PartnerDevelopmentsPage() {
     const selectedBedrooms = bedroomFilterValue(bedroomFilter);
 
     return allItems.filter(item => {
-      const locationText = [item.developmentName, item.city, item.province]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      if (query && !locationText.includes(query)) return false;
+      if (!matchesCanonicalPlaceSelection(item.canonicalPlaceId, matchPlace?.canonicalPlaceId)) {
+        return false;
+      }
+
+      const developmentName = String(item.developmentName || '').toLowerCase();
+      if (query && !developmentName.includes(query)) return false;
 
       const mode = item.inventory?.modes?.[marketMode] as OpportunityModeProjection | undefined;
       if (hasPriceBand && hasPublishedMode(mode)) {
@@ -117,7 +124,7 @@ export default function PartnerDevelopmentsPage() {
 
       return true;
     });
-  }, [allItems, marketMode, priceBand, search, bedroomFilter]);
+  }, [allItems, marketMode, priceBand, search, bedroomFilter, matchPlace]);
   const sortedItems = useMemo(() => {
     if (sort === 'recommended') return filteredItems;
     const priceOf = (item: any) => {
@@ -203,13 +210,24 @@ export default function PartnerDevelopmentsPage() {
               </div>
             </div>
 
+            <div className="text-[12px] font-medium text-muted-foreground">
+              <CanonicalPlaceSelector
+                value={matchPlace}
+                onChange={setMatchPlace}
+                purpose="search"
+                label="Area"
+                placeholder="Choose a city, suburb, or locality"
+                hint="Only opportunities assigned to this exact Place are included."
+              />
+            </div>
+
             <label className="relative block text-[12px] font-medium text-muted-foreground">
-              Location or development
+              Development name
               <Search className="pointer-events-none absolute left-3 top-[2.35rem] h-4 w-4 text-muted-foreground" />
               <input
                 value={search}
                 onChange={event => setSearch(event.target.value)}
-                placeholder="Search by area, suburb or development"
+                placeholder="Search development names"
                 className="mt-1.5 h-10 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm font-normal text-foreground placeholder:text-muted-foreground"
               />
             </label>

@@ -25,6 +25,7 @@ import {
   resolveCheckfitV1Rate,
 } from './checkfitV1Service';
 import type { DistributionUnitMedia } from '../../shared/distributionUnitMedia';
+import type { DistributionOpportunityPlaceAssignment } from '../../shared/distributionOpportunityMatching';
 
 type ProgramPromotion = {
   headline?: string | null;
@@ -154,7 +155,7 @@ async function getPublisherScopedDevelopmentIds(
   return allowed;
 }
 
-export type PartnerProgramTermsItem = {
+export type PartnerProgramTermsItem = DistributionOpportunityPlaceAssignment & {
   developmentId: number;
   developmentName: string;
   developmentFactsAvailable: true;
@@ -375,6 +376,9 @@ export async function listPartnerProgramTerms(
       return {
         developmentId,
         developmentName: projection.campaign.name,
+        // The development record has no reviewed Place assignment yet. City
+        // and province fields below remain display-only.
+        canonicalPlaceId: null as DistributionOpportunityPlaceAssignment['canonicalPlaceId'],
         developmentFactsAvailable: true as const,
         city: projection.campaign.city,
         province: projection.campaign.province,

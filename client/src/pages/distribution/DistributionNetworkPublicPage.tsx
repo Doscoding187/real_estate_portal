@@ -25,6 +25,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { MobileStickyCTA, useMobileStickyCTA } from '@/components/advertise/MobileStickyCTA';
 import { SEOHead } from '@/components/advertise/SEOHead';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  CanonicalPlaceSelector,
+  type CanonicalPlaceSelection,
+} from '@/components/location/CanonicalPlaceSelector';
 import { trpc } from '@/lib/trpc';
 import {
   DISTRIBUTION_BEDROOM_FILTERS,
@@ -72,7 +76,7 @@ export default function DistributionNetworkPublicPage() {
   // Matcher state starts empty.
   const [marketMode, setMarketMode] = useState<DistributionMarketMode>('sale');
   const [matchPriceRange, setMatchPriceRange] = useState('any');
-  const [matchArea, setMatchArea] = useState('');
+  const [matchPlace, setMatchPlace] = useState<CanonicalPlaceSelection | null>(null);
   // Bedrooms = multi-select chip set
   const [selectedBeds, setSelectedBeds] = useState<Set<DistributionBedroomFilter>>(new Set());
 
@@ -115,6 +119,7 @@ export default function DistributionNetworkPublicPage() {
       if (!searchMetadata) return [];
       return [{
         id: item.developmentId,
+        canonicalPlaceId: item.canonicalPlaceId,
         name: item.campaign.name,
         suburb: searchMetadata.suburb || null,
         city: item.campaign.city,
@@ -161,25 +166,23 @@ export default function DistributionNetworkPublicPage() {
     const priceRange = DISTRIBUTION_PRICE_BANDS[marketMode].find(
       option => option.key === matchPriceRange,
     );
-    const areaKeyword = matchArea.trim().toLowerCase();
-
     const selectedBandIsAny = !priceRange || priceRange.key === 'any';
     const criteria = {
       marketMode,
+      ...(matchPlace ? { canonicalPlaceId: matchPlace.canonicalPlaceId } : {}),
       minPrice: selectedBandIsAny ? null : priceRange?.minPrice ?? null,
       maxPrice: selectedBandIsAny ? null : priceRange?.maxPrice ?? null,
-      areaKeywords: areaKeyword ? [areaKeyword] : [],
       bedrooms: [...selectedBeds],
     };
 
     return projectedDevelopments.filter(dev => {
       const mode = dev.inventory.modes[marketMode];
       return matchesDistributionOpportunity({
+        canonicalPlaceId: dev.canonicalPlaceId,
         marketMode,
         available: Boolean(mode),
         priceFrom: mode?.priceFrom ?? null,
         priceTo: mode?.priceTo ?? null,
-        locationText: [dev.suburb, dev.city, dev.province].filter(Boolean).join(' '),
         unitTypes: dev.inventory.unitTypes.map(unit => {
           const unitMode = unit.modes[marketMode];
           return {
@@ -192,7 +195,7 @@ export default function DistributionNetworkPublicPage() {
         }),
       }, criteria);
     });
-  }, [marketMode, matchPriceRange, matchArea, selectedBeds, projectedDevelopments]);
+  }, [marketMode, matchPriceRange, matchPlace, selectedBeds, projectedDevelopments]);
   const shortlistOptions = useMemo<ShortlistOption[]>(
     () => projectedDevelopments.map(dev => {
       const mode = dev.inventory.modes[marketMode];
@@ -226,7 +229,7 @@ export default function DistributionNetworkPublicPage() {
     matchPriceRange !== 'any'
       ? DISTRIBUTION_PRICE_BANDS[marketMode].find(option => option.key === matchPriceRange)?.label
       : 'Any listed price',
-    matchArea.trim() ? `Preferred area: ${matchArea.trim()}` : 'Any area',
+    matchPlace ? `Preferred area: ${matchPlace.label}` : 'Any area',
     selectedBeds.size
       ? [...selectedBeds].map(key => DISTRIBUTION_BEDROOM_FILTERS.find(option => option.key === key)?.label).filter(Boolean).join(', ')
       : 'Any bedroom count',
@@ -418,7 +421,7 @@ export default function DistributionNetworkPublicPage() {
                   </h2>
                   <p className="text-lg text-slate-600 mb-6 leading-relaxed">
                     Choose whether they want to buy or rent, then narrow current opportunities by
-                    price, area, and bedrooms. This is a property search, not a credit decision.
+                    price, a selected Place, and bedrooms. This is a property search, not a credit decision.
                   </p>
                   <div className="bg-primary/5 border-l-4 border-primary p-4 rounded-r-lg text-slate-700 font-medium">
                     Prices and availability can change. After you join, you’ll see which options are
@@ -476,22 +479,16 @@ export default function DistributionNetworkPublicPage() {
                       </div>
                     </div>
 
-                    {/* Area */}
+                    {/* Area is executable only after selecting a canonical Place. */}
                     <div>
-                      <label htmlFor="distribution-public-area" className="block text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-                        Preferred area
-                      </label>
-                      <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                          id="distribution-public-area"
-                          type="search"
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-900 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-                          value={matchArea}
-                          onChange={event => setMatchArea(event.target.value)}
-                          placeholder="City, suburb, or province"
-                        />
-                      </div>
+                      <CanonicalPlaceSelector
+                        value={matchPlace}
+                        onChange={setMatchPlace}
+                        purpose="search"
+                        label="Preferred area"
+                        placeholder="Choose a city, suburb, or locality"
+                        hint="Only opportunities assigned to this exact Place are included."
+                      />
                     </div>
 
                     {/* Bedrooms: select any number of options. */}

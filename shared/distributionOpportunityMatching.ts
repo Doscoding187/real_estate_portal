@@ -1,3 +1,5 @@
+import { isCanonicalPlaceId } from './placeAuthority';
+
 export type DistributionMarketMode = 'sale' | 'rent';
 export type DistributionBedroomFilter = 'studio' | 1 | 2 | 3 | '4+';
 
@@ -64,23 +66,45 @@ export type DistributionOpportunityUnit = {
   priceTo: number | null;
 };
 
+/** Reviewed Place identity for a development; null means no reviewed assignment exists. */
+export type DistributionOpportunityPlaceAssignment = {
+  canonicalPlaceId: string | null;
+};
+
 /** A normalized candidate built only from the catalogue already visible to the caller. */
-export type DistributionOpportunityCandidate = {
+export type DistributionOpportunityCandidate = DistributionOpportunityPlaceAssignment & {
   marketMode: DistributionMarketMode;
   available: boolean;
   priceFrom: number | null;
   priceTo: number | null;
-  locationText: string;
   unitTypes: DistributionOpportunityUnit[];
 };
 
 export type DistributionOpportunityCriteria = {
   marketMode: DistributionMarketMode;
+  /** Optional selected Place; if present, only exact identity equality matches. */
+  canonicalPlaceId?: string;
   minPrice?: number | null;
   maxPrice?: number | null;
-  areaKeywords?: readonly string[];
   bedrooms?: readonly DistributionBedroomFilter[];
 };
+
+/**
+ * Geography matching is exact Place identity only. With no selected Place the
+ * browse remains unscoped; once selected, malformed or unassigned candidates
+ * fail closed.
+ */
+export function matchesCanonicalPlaceSelection(
+  candidateCanonicalPlaceId: unknown,
+  selectedCanonicalPlaceId?: unknown,
+) {
+  if (selectedCanonicalPlaceId === undefined) return true;
+  return (
+    isCanonicalPlaceId(selectedCanonicalPlaceId) &&
+    isCanonicalPlaceId(candidateCanonicalPlaceId) &&
+    candidateCanonicalPlaceId === selectedCanonicalPlaceId
+  );
+}
 
 function validPriceRange(priceFrom: number | null, priceTo: number | null) {
   return (
@@ -134,17 +158,8 @@ export function matchesDistributionOpportunity(
   criteria: DistributionOpportunityCriteria,
 ) {
   if (candidate.marketMode !== criteria.marketMode || !candidate.available) return false;
-
-  const selectedAreaKeywords = (criteria.areaKeywords || [])
-    .map(keyword => keyword.trim().toLowerCase())
-    .filter(Boolean);
-  const normalizedLocation = candidate.locationText.toLowerCase();
-  if (
-    selectedAreaKeywords.length > 0 &&
-    !selectedAreaKeywords.some(keyword => normalizedLocation.includes(keyword))
-  ) {
+  if (!matchesCanonicalPlaceSelection(candidate.canonicalPlaceId, criteria.canonicalPlaceId))
     return false;
-  }
 
   const selectedBedrooms = criteria.bedrooms || [];
   if (selectedBedrooms.length > 0) {
