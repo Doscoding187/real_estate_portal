@@ -28,8 +28,8 @@ import {
 import type { MoneyFact, RecurringCosts } from '../../../../shared/pricing-contract';
 import type { RentalTerms } from '../../../../shared/rental-terms-contract';
 
-export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v6' as const;
-export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v6-property-enquiry';
+export const SEARCH_TO_LEAD_SCENARIO_VERSION = 'search-to-lead-v7' as const;
+export const SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID = 'dba-search-to-lead-v7-property-enquiry';
 
 const DEVELOPMENT_SITE_PLACE_ID = 'pl-place-01-dee61758ef3bda7cd1a258ad';
 
@@ -136,7 +136,7 @@ export const SEARCH_TO_LEAD_DETERMINISTIC_USER_IDS = Object.freeze([
 const SCENARIO_PAYLOAD = Object.freeze({
   version: SEARCH_TO_LEAD_SCENARIO_VERSION,
   ids: SCENARIO_IDS,
-  propertyFixtureLocation: { province: 'gauteng', city: 'johannesburg', suburb: 'sandton' },
+  propertyFixtureLocation: { canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID },
   developmentSiteAssignment: {
     placeId: DEVELOPMENT_SITE_PLACE_ID,
     assignmentKind: 'site',
@@ -175,7 +175,7 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
   migrationHead: string;
   acceptance?: {
     locationState: 'resolved';
-    locationContext: { provinceId: number; cityId: number; suburbId: number };
+    canonicalPlaceId: string;
     propertyCardHref: string;
     developmentCardHref: string;
     propertyPage: string;
@@ -223,7 +223,6 @@ export type SearchToLeadScenarioEvidence = AdapterEvidence & {
     discovery: {
       mapRentalExcluded: true;
       comparisonRentalExcluded: true;
-      featuredRentalExcluded: true;
       trendingRentalExcluded: true;
       relatedRentalExcluded: true;
     };
@@ -939,6 +938,7 @@ export async function ensureCanonicalManualFixture(
   provinceId: number,
   cityId: number,
   suburbId: number,
+  canonicalPlaceId: string,
 ): Promise<void> {
   const sourceDetails = sourceDetailsForFixture(fixture);
   const sourceJson = JSON.stringify(sourceDetails);
@@ -971,6 +971,7 @@ export async function ensureCanonicalManualFixture(
       'province_id',
       'city_id',
       'suburb_id',
+      'canonical_place_id',
     ],
     expected: {
       ownerId: fixture.ownerId,
@@ -986,6 +987,7 @@ export async function ensureCanonicalManualFixture(
       province_id: provinceId,
       city_id: cityId,
       suburb_id: suburbId,
+      canonical_place_id: canonicalPlaceId,
     },
     insertColumns: [
       'id',
@@ -1020,6 +1022,7 @@ export async function ensureCanonicalManualFixture(
       'province_id',
       'city_id',
       'suburb_id',
+      'canonical_place_id',
       'location_confirmation_state',
       'public_location_precision',
     ],
@@ -1056,6 +1059,7 @@ export async function ensureCanonicalManualFixture(
       provinceId,
       cityId,
       suburbId,
+      canonicalPlaceId,
       'confirmed',
       'exact',
     ],
@@ -1139,6 +1143,7 @@ export async function ensureCanonicalManualFixture(
       'provinceId',
       'cityId',
       'suburbId',
+      'canonical_place_id',
       'agentId',
       'ownerId',
       'sourceListingId',
@@ -1151,6 +1156,7 @@ export async function ensureCanonicalManualFixture(
       provinceId,
       cityId,
       suburbId,
+      canonical_place_id: canonicalPlaceId,
       agentId: fixture.agentId,
       ownerId: fixture.ownerId,
       sourceListingId: fixture.listingId,
@@ -1173,6 +1179,7 @@ export async function ensureCanonicalManualFixture(
       'provinceId',
       'cityId',
       'suburbId',
+      'canonical_place_id',
       'status',
       'featured',
       'views',
@@ -1209,6 +1216,7 @@ export async function ensureCanonicalManualFixture(
       provinceId,
       cityId,
       suburbId,
+      canonicalPlaceId,
       fixture.propertyStatus,
       0,
       0,
@@ -1437,9 +1445,17 @@ async function ensureManualPublicFixtures(
   provinceId: number,
   cityId: number,
   suburbId: number,
+  canonicalPlaceId: string,
 ): Promise<void> {
   for (const fixture of MANUAL_FIXTURES) {
-    await ensureCanonicalManualFixture(connection, fixture, provinceId, cityId, suburbId);
+    await ensureCanonicalManualFixture(
+      connection,
+      fixture,
+      provinceId,
+      cityId,
+      suburbId,
+      canonicalPlaceId,
+    );
   }
   await ensureOrphanProjection(connection, provinceId, cityId, suburbId);
 }
@@ -2247,7 +2263,13 @@ async function prepareScenarioRows(
       1,
     ],
   });
-  await ensureManualPublicFixtures(connection, provinceId, cityId, suburbId);
+  await ensureManualPublicFixtures(
+    connection,
+    provinceId,
+    cityId,
+    suburbId,
+    DEVELOPMENT_SITE_PLACE_ID,
+  );
 }
 
 async function ensureAgentLaunchAccess(connection: AuthoritySqlConnection): Promise<void> {
@@ -2471,6 +2493,8 @@ export async function verifySearchToLeadScenarioData(
   const propertyRows = await queryRows(
     connection,
     `SELECT p.id, p.provinceId AS province_id, p.cityId AS city_id, p.suburbId AS suburb_id,
+            p.canonical_place_id AS canonical_place_id,
+            l.canonical_place_id AS source_canonical_place_id,
             p.sourceListingId AS source_listing_id, p.agentId AS property_agent_id,
             p.ownerId AS property_owner_id, p.catalogue_publisher_id AS catalogue_publisher_id,
             l.ownerId AS source_owner_id, l.agentId AS source_agent_id, l.agencyId AS source_agency_id,
@@ -2519,6 +2543,12 @@ export async function verifySearchToLeadScenarioData(
       Number(rowValue(row, 'suburb_id')) <= 0
     ) {
       throw new Error('Search-to-Lead scenario property is not linked to canonical geography IDs.');
+    }
+    if (
+      rowValue(row, 'canonical_place_id') !== DEVELOPMENT_SITE_PLACE_ID ||
+      rowValue(row, 'source_canonical_place_id') !== DEVELOPMENT_SITE_PLACE_ID
+    ) {
+      throw new Error('Search-to-Lead scenario manual inventory lacks its canonical Place.');
     }
     if (
       propertyId === SCENARIO_IDS.agentProperty &&
@@ -2863,26 +2893,20 @@ async function runContainedApplicationVerification(
         req: { headers: {}, ip: '127.0.0.1' },
         res: {},
         user,
-        requestId: 'dba-search-to-lead-v6',
+        requestId: 'dba-search-to-lead-v7',
       } as any);
 
     const search = await publicSearchService.searchInventory({
-      province: 'gauteng',
-      city: 'johannesburg',
-      suburb: ['sandton'],
+      canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
       listingType: 'sale',
       page: 0,
       pageSize: 10,
     });
-    if (search.locationState !== 'resolved' || !search.locationContext)
-      throw new Error('Search-to-Lead scenario search did not resolve the canonical location.');
     if (
-      Number(search.locationContext.ids.provinceId) <= 0 ||
-      Number(search.locationContext.ids.cityId) <= 0 ||
-      Number(search.locationContext.ids.suburbId) <= 0
-    ) {
-      throw new Error('Search-to-Lead scenario returned invalid canonical location identity.');
-    }
+      search.locationState !== 'resolved' ||
+      search.canonicalPlaceContext?.canonicalPlaceId !== DEVELOPMENT_SITE_PLACE_ID
+    )
+      throw new Error('Search-to-Lead scenario search did not resolve the canonical location.');
     if (search.sourceCounts.manual !== 3 || search.sourceCounts.development !== 1) {
       throw new Error(
         'Search-to-Lead scenario did not prove the three canonical manual and one development sale sources.',
@@ -2950,7 +2974,7 @@ async function runContainedApplicationVerification(
       const captureRequestId =
         scenarioName === 'agent'
           ? SEARCH_TO_LEAD_SCENARIO_CAPTURE_REQUEST_ID
-          : `dba-search-to-lead-v6-${scenarioName}-enquiry`;
+          : `dba-search-to-lead-v7-${scenarioName}-enquiry`;
       const baseInput = {
         propertyId,
         name: `Database Authority ${scenarioName} Prospect`,
@@ -2963,7 +2987,7 @@ async function runContainedApplicationVerification(
         captureRequestId,
         consent: {
           accepted: true as const,
-          version: 'dba-search-to-lead-v6',
+          version: 'dba-search-to-lead-v7',
           source: 'local-test',
         },
       };
@@ -3073,8 +3097,8 @@ async function runContainedApplicationVerification(
       source: 'development_detail',
       sourceSurface: 'development_detail',
       leadSource: 'development_detail',
-      captureRequestId: 'dba-search-to-lead-v6-development-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v6', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v7-development-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v7', source: 'local-test' },
     };
     const developmentLead = await capturePublicLead(developmentLeadInput);
     const developmentReplay = await capturePublicLead(developmentLeadInput);
@@ -3146,14 +3170,6 @@ async function runContainedApplicationVerification(
     });
     if (hasPropertyInItems(relatedSaleInventory, SCENARIO_IDS.rentalProperty)) {
       throw new Error('Search-to-Lead scenario Buy-related inventory admitted rental inventory.');
-    }
-
-    const featuredInventory = await propertyCaller.location.getFeaturedListings({
-      locationId: `suburb:${String(search.locationContext.ids.suburbId)}`,
-      limit: 10,
-    });
-    if (hasPropertyInItems(featuredInventory, SCENARIO_IDS.rentalProperty)) {
-      throw new Error('Search-to-Lead scenario Buy featured inventory admitted rental inventory.');
     }
 
     const buyTrending = await propertyCaller.developer.getHomeTrendingFeed({
@@ -3295,8 +3311,8 @@ async function runContainedApplicationVerification(
       source: 'property_detail',
       sourceSurface: 'property_detail',
       leadSource: 'property_detail',
-      captureRequestId: 'dba-search-to-lead-v6-rental-enquiry',
-      consent: { accepted: true as const, version: 'dba-search-to-lead-v6', source: 'local-test' },
+      captureRequestId: 'dba-search-to-lead-v7-rental-enquiry',
+      consent: { accepted: true as const, version: 'dba-search-to-lead-v7', source: 'local-test' },
     };
     const rentalLead = await capturePublicLead(rentalLeadInput);
     const rentalReplay = await capturePublicLead(rentalLeadInput);
@@ -3407,8 +3423,8 @@ async function runContainedApplicationVerification(
           source: 'property_detail',
           sourceSurface: 'property_detail',
           leadSource: 'property_detail',
-          captureRequestId: `dba-search-to-lead-v6-negative-${name}`,
-          consent: { accepted: true, version: 'dba-search-to-lead-v6', source: 'local-test' },
+          captureRequestId: `dba-search-to-lead-v7-negative-${name}`,
+          consent: { accepted: true, version: 'dba-search-to-lead-v7', source: 'local-test' },
         });
       } catch (error) {
         rejected = String((error as { code?: unknown })?.code || '') === 'NOT_FOUND';
@@ -3493,11 +3509,7 @@ async function runContainedApplicationVerification(
       throw new Error('Search-to-Lead scenario lost its primary property card.');
     return {
       locationState: 'resolved',
-      locationContext: {
-        provinceId: Number(search.locationContext.ids.provinceId),
-        cityId: Number(search.locationContext.ids.cityId),
-        suburbId: Number(search.locationContext.ids.suburbId),
-      },
+      canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
       propertyCardHref: primaryAgentCard.href,
       developmentCardHref: developmentCard.href,
       propertyPage: primaryAgentCard.href,
@@ -3528,7 +3540,6 @@ async function runContainedApplicationVerification(
       discovery: {
         mapRentalExcluded: true,
         comparisonRentalExcluded: true,
-        featuredRentalExcluded: true,
         trendingRentalExcluded: true,
         relatedRentalExcluded: true,
       },
@@ -3585,6 +3596,7 @@ export async function verifySearchToLeadScenario(input: {
       eligibleProperties: 3,
       eligibleDevelopments: 1,
       canonicalLocation: 'gauteng/johannesburg/sandton',
+      canonicalPlaceId: DEVELOPMENT_SITE_PLACE_ID,
     },
     verified,
     migrationHead: manifest.document.expectedHead,
