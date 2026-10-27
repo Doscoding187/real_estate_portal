@@ -850,6 +850,9 @@ describeWithDb('Developer Engine S2 supersession lifecycle integration', () => {
       },
     );
 
+    await db
+      .delete(developmentPlaceAssignments)
+      .where(eq(developmentPlaceAssignments.developmentId, pair.sourceId));
     await expectMySqlConstraintViolation(
       db.delete(developments).where(eq(developments.id, pair.sourceId)),
       {
