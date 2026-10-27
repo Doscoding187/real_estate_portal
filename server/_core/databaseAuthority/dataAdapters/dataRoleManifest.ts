@@ -2,10 +2,6 @@ import { LOCAL_JOURNEY_VERSION, LOCAL_JOURNEY_DIGEST } from './localJourneyPrevi
 import type { DatabaseOperation } from '../types';
 import { PLACE_RELEASE_DIGEST, PLACE_RELEASE_POLICY } from './placeRelease';
 import {
-  PLACE_SCOPE_CORRECTION_DIGEST,
-  PLACE_SCOPE_CORRECTION_VERSION,
-} from './placeScopeCorrection';
-import {
   CANONICAL_PLACES_NATIONAL_DIGEST,
   CANONICAL_PLACES_NATIONAL_VERSION,
 } from './canonicalPlaces';
@@ -53,9 +49,7 @@ export type DataRoleManifestEntry = Readonly<{
   digest: string;
   prepareCommand: string;
   verifyCommand: string;
-  previewCommand?: string;
   prepareOperation: DatabaseOperation;
-  previewOperation?: DatabaseOperation;
   verifyOperation: DatabaseOperation;
   targetClasses: readonly ['disposable-worktree', 'disposable-test'];
   transaction: 'bounded';
@@ -102,24 +96,6 @@ export const DATA_ROLE_MANIFEST: Readonly<{
       transaction: 'bounded',
       schemaMutation: false,
       requiredFor: ['place-release-preview'],
-    },
-    {
-      key: 'reference.places-scope-correction',
-      role: 'reference',
-      adapter: 'canonical-places-scope-correction',
-      adapterPath: 'server/_core/databaseAuthority/dataAdapters/placeScopeCorrection.ts',
-      version: PLACE_SCOPE_CORRECTION_VERSION,
-      digest: PLACE_SCOPE_CORRECTION_DIGEST,
-      prepareCommand: 'db:places:scope-correction:apply',
-      verifyCommand: 'db:places:scope-correction:verify',
-      previewCommand: 'db:places:scope-correction:preview',
-      prepareOperation: 'reference-seed',
-      previewOperation: 'verification',
-      verifyOperation: 'verification',
-      targetClasses: DISPOSABLE_TARGETS,
-      transaction: 'bounded',
-      schemaMutation: false,
-      requiredFor: ['city-scope-correction-dry-run'],
     },
     {
       key: 'reference.platform-settings',

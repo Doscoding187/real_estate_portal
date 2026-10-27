@@ -24,11 +24,6 @@ import {
   previewCanonicalPlaceRelease,
 } from '../server/_core/databaseAuthority/dataAdapters/placeRelease';
 import { inspectPlaceReleaseTarget } from '../server/_core/databaseAuthority/dataAdapters/placeReleaseInspection';
-import {
-  applyPlaceScopeCorrection,
-  previewPlaceScopeCorrection,
-  verifyPlaceScopeCorrection,
-} from '../server/_core/databaseAuthority/dataAdapters/placeScopeCorrection';
 import { resolve } from 'node:path';
 import {
   installLegalRelease,
@@ -189,9 +184,6 @@ type Command =
   | 'release-reference:inspect'
   | 'places:release-preview:prepare'
   | 'places:release-preview:verify'
-  | 'places:scope-correction:preview'
-  | 'places:scope-correction:apply'
-  | 'places:scope-correction:verify'
   | 'release-reference:apply'
   | 'release-reference:verify'
   | 'legal-release:prepare'
@@ -754,35 +746,6 @@ async function run(command: Command): Promise<void> {
     return;
   }
 
-  if (
-    command === 'places:scope-correction:preview' ||
-    command === 'places:scope-correction:apply' ||
-    command === 'places:scope-correction:verify'
-  ) {
-    const isApply = command === 'places:scope-correction:apply';
-    const isPreview = command === 'places:scope-correction:preview';
-    const operation: DatabaseOperation = isApply ? 'reference-seed' : 'verification';
-    const authority = authorityFor(operation, isApply ? 'local-owner' : undefined);
-    const decision = authorizationFor(authority);
-    const connection = await createAuthoritySqlConnection(authority, decision);
-    try {
-      const evidence = isApply
-        ? await applyPlaceScopeCorrection({
-            authority,
-            decision,
-            connection,
-            expectedPlanDigest: requiredOption('plan-digest'),
-          })
-        : isPreview
-          ? await previewPlaceScopeCorrection({ authority, decision, connection })
-          : await verifyPlaceScopeCorrection({ authority, decision, connection });
-      print(evidence);
-    } finally {
-      await connection.end();
-    }
-    return;
-  }
-
   if (command === 'places:release-preview:prepare' || command === 'places:release-preview:verify') {
     const prepare = command.endsWith(':prepare');
     const authority = authorityFor(
@@ -1260,9 +1223,6 @@ const commands = new Set<Command>([
   'release-reference:inspect',
   'places:release-preview:prepare',
   'places:release-preview:verify',
-  'places:scope-correction:preview',
-  'places:scope-correction:apply',
-  'places:scope-correction:verify',
   'release-reference:apply',
   'release-reference:verify',
   'legal-release:prepare',

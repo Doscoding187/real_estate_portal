@@ -3,17 +3,18 @@
 **Status:** Canonical admission rebuild committed as `47af2c618`; Phase 3 URL projection and
 the application-wide canonical Place cutover are implemented on the feature branch. Edward's
 2026-10-27 pre-launch direction retires legacy geography paths without redirects, aliases or
-fallbacks. The cutover and migrations through 0197 are authored in the feature branch; Phase 4
-database release remains unauthorized.
+fallbacks. Migrations through 0197 are authored on PR #693 and remain unapplied; Phase 4 database
+release remains unauthorized.
 **Founder confirmation:** Edward, 2026-10-23, confirmed the 13/48/2 disposition and the
 refined 351-edge evidence set.
-**Branch:** `feat/suburb-first-search-ux-20261022`
+**Branch:** `feat/canonical-place-geography-phase3-20261027`
 **Base:** `origin/main`
 **Date:** 2026-10-23 (dry-run evidence added 2026-10-25)
 **Target:** disposable worktree target `listify_wt_suburb_first_search_20261022_53581aab324f`
 (fingerprint `840e8d36baa6bb48`). It was schema-congruent at migration head 0148 for the
-admission rebuild; as of 2026-10-27 the authored 0149–0194 cutover migrations are unapplied and
-Database Authority reports `manifest-head-behind` / `schema-not-congruent`.
+admission rebuild. On 2026-10-27 Database Authority reported expected head 0197 but the local
+database was unreachable; migration state and schema congruency could not be evaluated. No
+migration was applied for this cutover.
 
 ## 1. Decision
 
@@ -104,12 +105,10 @@ The 48 demotions are recorded in
 2. **No inference.** Membership may not be derived from the municipality container, name
    equality, display text, coordinates alone, market association or search-area membership.
 3. **`place_type` owns `search_scope`.** The database derives `search_scope` from `place_type`.
-   A city/town row cannot be made a locality by updating the scope column alone; the Place type
-   must change through a governed admission correction. No application code may run an ad hoc
-   `UPDATE` against the Place Authority. The current `canonical-places` materializer loads an
-   admitted package and **refuses identity-field drift**, and `place-release` only inserts
-   pending package rows. A correction adapter or a rebuilt admission package is therefore a
-   prerequisite for Phase 2.
+   A city/town row cannot be made a locality by updating the scope column alone. The 48 reviewed
+   type changes and 351 membership relationships are now part of the admitted Gauteng v0.2
+   package, built from source authority v0.3. The runtime uses canonical Place identity; no
+   separate correction writer or ad hoc Place update remains.
 4. **One scope per Place.** A Place cannot be both a locality and a main place. Sandton cannot
    remain a searchable locality and also become a city scope without a separate product
    decision.
@@ -121,16 +120,18 @@ The 48 demotions are recorded in
 7. **Evidence per edge.** Every edge carries a source title, URL, scope, vintage, licence state
    and confidence. The Stats SA/DPME licence state is still `UNVERIFIED`.
 
-## 4. Safe implementation now
+## 4. Original data plan (superseded by Phase 2.5)
+
+This section records the reviewed 13/48/2 decision. The implementation now uses the canonical
+admission package described in Phase 2.5; these notes are not a separate write procedure.
 
 ### 4.1 Reclassify the 48
 
-Change only the 48 confirmed non-main-place rows. Use `suburb` where the evidence classifies the
-row as a suburb or neighbourhood, and `locality` where it is an agricultural holding, industrial
-area or other non-residential locality. The adapter sets `search_scope = 'locality'` in the same
-statement; `chk_place_search_scope_derived_from_type` enforces the derivation. The per-row type
-map is an implementation artifact and must be reviewed; it is not inferred from the proposed
-parent. Do not change `publication_eligible` or `search_eligible` in this phase.
+The admitted package applies the 48 reviewed type corrections: `suburb` for the evidenced suburbs
+and neighbourhoods, and `locality` for agricultural holdings, industrial areas and other
+non-residential localities. `search_scope` remains derived from `place_type`; the per-row map is
+reviewed evidence, never an inference from the proposed parent. Publication and search eligibility
+are unchanged.
 
 The reviewed map assigns **41 `suburb`** and **7 `locality`**. The 7 localities are `Althea`,
 `Brink’s Vlakfontein`, `Hiltonia`, `Inadan`, `Jackson’s Drift`, `Van Wyksrus` and `Zonnehoeve`.
@@ -145,12 +146,12 @@ Do not reclassify:
 - `Elandsfontein` or `Northdene`;
 - any row outside the 63.
 
-The 48 published paths remain customer-visible. Each needs a locality URL or a redirect before
-the city row disappears; no path may 404.
+The 48 former city paths are retired. The pre-launch route policy uses one canonical path per
+Place and adds no redirects or aliases.
 
 ### 4.2 Add the 351 edges
 
-Insert in this order:
+The admitted package emits these reviewed relationships:
 
 1. 312 edges for existing locality scopes.
 2. 39 edges for the demoted scopes, after their type change succeeds.
@@ -234,18 +235,23 @@ main places remain pending.
 - Resolve every child and parent Place ID; fail closed on any missing referent.
 - Produce a dry-run report with 48 type changes and 351 edge inserts, zero writes.
 
-### Phase 1.5 — Establish a governed write path (blocker)
+### Phase 1.5 — Governed write-path decision (resolved)
 
-No existing named Database Authority command can perform this correction:
+At the time of the original plan, no existing named Database Authority command could perform the
+correction:
 
 - `db:places:prepare` loads a digest-pinned admission package and refuses to change an existing
   Place's identity fields, including `place_type`;
 - `db:places:release-preview:prepare` only inserts rows that are pending from the admitted
   package and rejects stored rows whose admitted values drift;
-- the Gauteng package currently records all 63 rows as `town` or `city` with
+- the then-current Gauteng v0.1 package recorded all 63 rows as `town` or `city` with
   `search_scope = 'metro_city'`.
 
-Phase 2 therefore requires one of:
+The decision initially selected a reviewed overlay, then changed to a deterministic canonical
+package rebuild in Phase 2.5. The v0.3 source authority and v0.2 admission package are now the
+only executable correction path; the temporary overlay writer was removed in Phase 2.6.
+
+The original options were:
 
 1. a reviewed, digest-pinned correction package and adapter with preview/apply/verify commands
    registered in the data-role manifest (recommended); or
@@ -254,30 +260,27 @@ Phase 2 therefore requires one of:
 
 A one-off `UPDATE` script is not an acceptable path, even inside a rollback transaction.
 
-**Selected: option 1.** The reviewed overlays are:
-`data/gauteng-city-scope-correction-v0.1/` and
-`server/_core/databaseAuthority/dataAdapters/placeScopeCorrection.ts`, registered as
-`reference.places-scope-correction`. The adapter is deliberately an overlay: it reports
-`canonicalAdmissionCompatible: false` and `canonicalPackageRebuildRequired: true` after apply,
-because the committed admission package still asserts all 63 rows as `town`/`city`.
-The source CSV/GeoJSON evidence is referenced by SHA-256 in the manifest but is not copied into
-the repository while the Stats SA/DPME licensing review is unverified.
+**Decision history:** Option 1 was initially implemented as a reviewed overlay. After validation,
+Phase 2.5 made the corrections part of canonical admission, and Phase 2.6 removed the temporary
+writer. The v0.1 correction artifacts remain the audited source for deterministic derivation;
+`data/gauteng-source-authority-v0.3/` and
+`data/gauteng-place-admission-v0.2/` are the current admitted authority. The source CSV/GeoJSON
+evidence is referenced by SHA-256 in the manifest but is not copied into the repository while the
+Stats SA/DPME licensing review is unverified.
 
-### Phase 2 — Disposable-target dry run
+### Phase 2 — Disposable-target dry run (completed 2026-10-25)
 
-Requires explicit database write approval for the disposable target, not production, **and a
-governed write path from Phase 1.5**.
+The initial overlay was exercised on the disposable target under the approval recorded below. This
+is historical evidence; the overlay writer has since been retired.
 
-- Begin one transaction.
-- Reclassify the 48; verify derived scopes and publication flags.
-- Insert the 312 existing-locality edges.
-- Insert the 39 demoted-scope edges.
-- Re-run all preflight and post-write assertions.
-- Roll back or leave the disposable target in the approved dry-run state.
-- Do not authorize search scope, do not change `administratively_contains`, do not modify
-  properties.
+- One bounded transaction reclassified the 48 and verified derived scopes and publication flags.
+- It inserted the 312 existing-locality edges and 39 demoted-scope edges.
+- The preflight and post-write assertions were re-run; the authorized disposable target was left
+  in the corrected dry-run state.
+- No search scope was authorized, `administratively_contains` was unchanged, and no property was
+  modified.
 
-**Dry-run evidence (2026-10-25, disposable target, prior approval).** The overlay package
+**Initial overlay dry-run evidence (2026-10-25, disposable target, prior approval).** The overlay package
 digest is `36efde72f920b9c990aadfa8c81ce2069b4c8cf962f6678772dd411f680910e2`; the adapter
 digest is `14f142d7e6c86ec658f24ada33cd5fcb887b59d2d00aa28a3e061b439a955335`.
 Pre-apply plan digest `e48a4805dc34cafc7fcf44a0f948b202c0017d714ed6dde21b826819191e8569`
@@ -338,21 +341,30 @@ admitted data, through governed artifacts rather than edits to committed data:
   insert-only materializer cannot rewrite existing rows — were refreshed to the v0.2 canonical
   text by an authorized one-time repair restricted to a disposable target and refusing any
   non-`note` column drift.
-- `db:places:release-preview:verify` now passes (`readyForDataRelease: true`, 0 pending rows,
-  161,812 existing rows), and `db:places:scope-correction:verify` passes with the adapter lens
-  flipped to `canonicalAdmissionCompatible: true` / `canonicalPackageRebuildRequired: false`
-  (its 351 edges observed, 0 pending, unchanged invariants).
+- `db:places:release-preview:verify` passed (`readyForDataRelease: true`, 0 pending rows,
+  161,812 existing rows). At that time, the temporary scope-correction verifier also passed with
+  `canonicalAdmissionCompatible: true` / `canonicalPackageRebuildRequired: false` (351 edges
+  observed, 0 pending, unchanged invariants); that writer and command were retired in Phase 2.6.
 - The behaviour probe (`place:admission:probe`) is now registry-derived rather than hard-coded
   (expected counts come from the registry; the national row-counts are the sum across
   territories; pressure cases are scoped to the probed package; the rerun no-op uses
   `places:prepare-national`) and passes 41/41 against the corrected target.
-- Contract suites pass: `contract.place-admission.test.ts` (35, including new settlement and
-  reviewed-correction assertions), `contract.place-admission-territory-neutrality.test.ts` (19),
-  the database-authority suite set (42 files / 409 tests), and
-  `_core/databaseAuthority/__tests__/placeScopeCorrection.test.ts`.
+- Contract suites passed at rebuild time: `contract.place-admission.test.ts` (35, including new
+  settlement and reviewed-correction assertions),
+  `contract.place-admission-territory-neutrality.test.ts` (19), and the database-authority suite
+  set (42 files / 409 tests). The temporary adapter test was removed with its writer in Phase 2.6.
 - The correction package remains untouched (its digest is `36efde72f920b9c990aadfa8c81ce2069b4c8cf962f6678772dd411f680910e2`)
   and continues to function as the reviewed decision record; the v0.3 source authority is its
   digest-verified reproduction inside the admitted data.
+
+### Phase 2.6 — Retire the temporary correction writer (2026-10-27)
+
+The Gauteng v0.2 admission package now carries the reviewed type and settlement membership
+corrections. The one-shot `placeScopeCorrection` database adapter, its preview/apply/verify CLI
+commands, its data-role registration, and its adapter tests were removed so the same reviewed
+correction has one executable path: the canonical admission package and normal Place release
+workflow. The v0.1 correction artifacts remain the audited source for deterministic v0.3
+derivation. No database write was made during this retirement.
 
 ### Phase 3 — Projection and URL handling
 
@@ -472,9 +484,9 @@ database write was performed for the application cutover.
   vendor chunk warning.
 - `pnpm place:boundary-currency:check` finds no unsupported claims across the nine provinces; it
   does not prove boundary currency. Gauteng still has no recorded boundary provenance.
-- `pnpm db:authority:status` reports expected head 0194, no incomplete attempts, and the
-  disposable target at `manifest-head-behind` / `schema-not-congruent`. The canonical migrations
-  have not been applied.
+- `pnpm db:authority:status` reports expected head 0197, but the disposable target is
+  `database-unreachable`; migration state and schema congruency are unevaluated. The canonical
+  migrations have not been applied.
 - Full-repository typecheck and the complete contract suite remain unverified for this cutover.
   Full-repository TypeScript checking previously exceeded the worktree's available memory; the
   focused consumer typecheck passed.
@@ -483,10 +495,9 @@ database write was performed for the application cutover.
 
 - The digest-pinned package is the rollback record: each correction carries its full
   `expected_identity`, and each edge carries its exact child/parent/type key.
-- The v0.1 adapter does not expose an automatic rollback command. The disposable target was
-  intentionally left corrected under the approved dry-run decision.
-- A future rollback must reverse the edge inserts and type changes in one governed transaction,
-  using the package identities and keys; it must not delete a Place or property assignment.
+- The temporary v0.1 adapter was retired; the correction package and v0.3 authority remain the
+  audit and deterministic rebuild record. Any future database rollback requires the Database
+  Authority workflow and a separately approved migration or data operation.
 - Keep the candidate evidence, dry-run output and package digest as the audit trail.
 - A failed parent/child referent aborts the whole transaction; no partial membership set.
 
@@ -494,7 +505,7 @@ database write was performed for the application cutover.
 
 | Decision | Recommendation |
 | --- | --- |
-| Governing write path for 48 type changes + 351 edges | **Selected:** reviewed correction adapter/package v0.1; no ad hoc SQL |
+| Governing write path for 48 type changes + 351 edges | **Selected:** Gauteng v0.2 canonical admission package built from reviewed v0.3 artifacts; temporary writer retired |
 | Sandton: locality, city target or Search Area | Keep locality; defer its 52 children |
 | City of Johannesburg NU | Defer; requires a new canonical Place |
 | Lenasia South / smaller parents | Defer; 18 children remain pending |
